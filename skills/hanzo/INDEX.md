@@ -15,7 +15,7 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 
 ## Skill Catalog
 
-### Core Infrastructure (4 skills)
+### Core Infrastructure (5 skills)
 
 **Hanzo Node** (`hanzo-node.md`) - 320 lines
 **Purpose**: Distributed AI mining and networking infrastructure (Rust)
@@ -30,6 +30,20 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 - Joining distributed AI network
 - High-performance inference needs
 - Privacy-first applications
+
+**Hanzo Desktop** (`hanzo-desktop.md`) - NEW
+**Purpose**: AI-powered productivity app with mining capabilities
+**Key Topics**:
+- Native Rust inference engine (Hanzo Engine)
+- Mine $AI with ngrok/localxpose tunneling
+- ZenLM models for local AI assistant
+- Collect compute payments for open source projects
+
+**Use When**:
+- macOS productivity with AI
+- Mining $AI tokens
+- Privacy-first local AI assistant
+- Monetizing open source projects
 
 **Hanzo MCP** (`hanzo-mcp.md`) - 380 lines
 **Purpose**: Model Context Protocol integration for agentic workflows
@@ -59,7 +73,7 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 - Real-time AI applications
 - Next.js/React projects
 
-**Hanzo Python SDK** (`python-sdk.md`) - Coming Soon
+**Hanzo Python SDK** (`python-sdk.md`)
 **Purpose**: Unified gateway to foundational models and AI cloud
 **Key Topics**:
 - Multi-provider support (OpenAI, Anthropic, local)
@@ -72,6 +86,36 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 - Backend API development
 - Local + cloud hybrid inference
 - Multi-model orchestration
+
+### AI Models & Training (2 skills)
+
+**ZenLM** (`zenlm.md`) - NEW
+**Purpose**: Next-generation local AI models (zen-nano, zen-eco, zen-agent)
+**Key Topics**:
+- 4B models achieving 70B-class performance
+- 100% local processing, 95% less energy than cloud
+- Runs on phones, laptops, Raspberry Pi
+- Integration with Hanzo Desktop, Python SDK, Hanzo Gym
+
+**Use When**:
+- Privacy-critical applications
+- Offline AI capabilities
+- Cost-optimized production
+- Edge AI / IoT deployments
+
+**Hanzo Gym** (`hanzo-gym.md`) - NEW
+**Purpose**: Unified training platform for Zen AI models
+**Key Topics**:
+- LoRA, QLoRA, GRPO, GSPO training methods
+- 2-5x faster with Unsloth, FlashAttention-2
+- GGUF, MLX, AWQ, GPTQ quantization
+- Train 4B models on 8GB GPUs
+
+**Use When**:
+- Fine-tuning ZenLM models
+- Custom domain adaptation
+- Reinforcement learning from feedback
+- Model quantization for deployment
 
 ### Development Tools (3 skills)
 
@@ -458,7 +502,7 @@ These skills are maintained to reflect the latest Hanzo ecosystem patterns. As n
 
 ---
 
-**Last Updated**: 2025-10-28  
-**Total Skills**: 4 (complete), 9 (planned)  
-**Estimated Time**: 6-8 hours to master core stack  
+**Last Updated**: 2025-10-28
+**Total Skills**: 10 (7 complete, 3 planned)
+**Estimated Time**: 8-12 hours to master core stack
 **Difficulty**: Beginner to Advanced
