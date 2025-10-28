@@ -159,9 +159,11 @@ Complete implementation guides loaded only when needed:
 
 That's it! All 350+ skills and the `/skills` command are immediately available.
 
+**Manual Installation**: If automatic installation doesn't work, see [INSTALL.md](INSTALL.md) for detailed instructions and troubleshooting.
+
 **For local development or testing**:
 ```bash
-/plugin install /Users/z/src/hanzo/skills
+/plugin install /path/to/local/skills
 ```
 
 ### Auto-Discovery (How It Works)
