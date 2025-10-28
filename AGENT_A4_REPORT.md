@@ -233,7 +233,7 @@ Comprehensive usage guide for all scripts including:
 
 ## 5. Main Skill File Update
 
-**File**: `/Users/rand/src/cc-polymath/skills/database/postgres-query-optimization.md`
+**File**: `~/.hanzo/skills/database/postgres-query-optimization.md`
 **Section**: Lines 623-656 (Level 3: Resources)
 
 **Added**:
@@ -368,12 +368,12 @@ HIGH PRIORITY:
 
 All resources are located at:
 ```
-/Users/rand/src/cc-polymath/skills/database/postgres-query-optimization/resources/
+~/.hanzo/skills/database/postgres-query-optimization/resources/
 ```
 
 **Main skill file**:
 ```
-/Users/rand/src/cc-polymath/skills/database/postgres-query-optimization.md
+~/.hanzo/skills/database/postgres-query-optimization.md
 ```
 
 ---

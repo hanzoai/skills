@@ -4,18 +4,18 @@
 
 **Version:** 2.0.0
 **Date:** 2025-10-27
-**Location:** `/Users/rand/src/cc-polymath/slash-commands`
+**Location:** `~/.hanzo/skills/slash-commands`
 
 ---
 
 ## What Was Built
 
-A context-aware skills discovery slash command for Claude Code that helps users discover and activate relevant skills from their `~/.claude/skills/` library using a gateway-based progressive loading architecture.
+A context-aware skills discovery slash command for Claude Code that helps users discover and activate relevant skills from their `~/.claude~/.hanzo/skills/` library using a gateway-based progressive loading architecture.
 
 ## Project Files
 
 ```
-cc-polymath/slash-commands/
+hanzo-skills/slash-commands/
 ├── skills/
 │   ├── skills.md          # The slash command file (~10 KB)
 │   ├── README.md          # Complete documentation
@@ -131,13 +131,13 @@ Finds gateway and specific skills matching the search term.
 
 **Option 1: Automated (Recommended)**
 ```bash
-cd /path/to/cc-polymath
+cd /path/to/hanzo-skills
 ./slash-commands/install.sh
 ```
 
 **Option 2: Manual**
 ```bash
-ln -sf /path/to/cc-polymath/slash-commands/skills/skills.md ~/.claude/commands/skills.md
+ln -sf /path/to/hanzo-skills/slash-commands~/.hanzo/skills/.md ~/.claude/commands/skills.md
 ```
 
 ### Already Installed
@@ -153,7 +153,7 @@ Just use:
 
 **Option 1: Automated (Recommended)**
 ```bash
-cd /path/to/cc-polymath
+cd /path/to/hanzo-skills
 ./slash-commands/uninstall.sh
 ```
 
@@ -175,15 +175,15 @@ Complete removal with no traces left.
 
 **Dependencies:**
 - None (uses Claude Code built-in slash command system)
-- Reads from existing `~/.claude/skills/` directory
+- Reads from existing `~/.claude~/.hanzo/skills/` directory
 - Compatible with all skill discovery mechanisms
 
 ### Read Operations
 
 The command reads from:
-- `~/.claude/skills/README.md` (master catalog)
-- `~/.claude/skills/{category}/INDEX.md` (category indexes)
-- `~/.claude/skills/discover-*/SKILL.md` (gateway skills)
+- `~/.claude~/.hanzo/skills/README.md` (master catalog)
+- `~/.claude~/.hanzo/skills/{category}/INDEX.md` (category indexes)
+- `~/.claude~/.hanzo/skills/discover-*/SKILL.md` (gateway skills)
 - Current working directory (for project detection)
 - Conversation context (provided by Claude Code)
 
@@ -253,7 +253,7 @@ The command reads from:
 
 4. **Read full docs:**
    ```
-   cat /path/to/cc-polymath/slash-commands/skills/README.md
+   cat /path/to/hanzo-skills/slash-commands~/.hanzo/skills/README.md
    ```
 
 ### For Developers

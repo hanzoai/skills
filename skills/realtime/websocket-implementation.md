@@ -686,7 +686,7 @@ ws.onmessage = (event) => {
 
 ### Comprehensive Reference
 
-**Location**: `/Users/rand/src/cc-polymath/skills/realtime/websocket-implementation/resources/REFERENCE.md`
+**Location**: `~/.hanzo/skills/realtime/websocket-implementation/resources/REFERENCE.md`
 
 The comprehensive reference (1,900+ lines) covers:
 - WebSocket protocol fundamentals (RFC 6455)
@@ -707,7 +707,7 @@ The comprehensive reference (1,900+ lines) covers:
 
 ### Testing & Analysis Scripts
 
-**Location**: `/Users/rand/src/cc-polymath/skills/realtime/websocket-implementation/resources/scripts/`
+**Location**: `~/.hanzo/skills/realtime/websocket-implementation/resources/scripts/`
 
 **test_websocket.py** - WebSocket testing tool
 - Test connectivity, echo, latency, ping/pong
@@ -739,7 +739,7 @@ The comprehensive reference (1,900+ lines) covers:
 
 ### Production Examples
 
-**Location**: `/Users/rand/src/cc-polymath/skills/realtime/websocket-implementation/resources/examples/`
+**Location**: `~/.hanzo/skills/realtime/websocket-implementation/resources/examples/`
 
 **Node.js Server** (`node/websocket-server.js`)
 - Production-ready WebSocket server using 'ws' library
