@@ -117,7 +117,7 @@ cat skills/hanzo/INDEX.md
 
 **Organizations**:
 - **Hanzo AI** (github.com/hanzoai): AI tools, SDKs, Desktop, Node, Engine
-- **ZooLM** (github.com/zoolm): ZenLM models on GitHub & HuggingFace
+- **ZenLM** (github.com/zenlm): ZenLM models on GitHub & HuggingFace
 - **Zoo AI** (github.com/zooai): Zoo Gym training platform
 - **Zoo Labs Foundation** (zoo.ngo): 501(c)(3) for wildlife conservation AI
 

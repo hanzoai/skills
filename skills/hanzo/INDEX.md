@@ -15,7 +15,29 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 
 ## Skill Catalog
 
-### Core Infrastructure (5 skills)
+### Core Infrastructure (6 skills)
+
+**Hanzo Engine** (`hanzo-engine.md`) - 650 lines
+**Purpose**: Native Rust inference & embedding engine for the entire Hanzo ecosystem
+**Key Topics**:
+- Blazingly fast LLM & embedding inference (Rust)
+- Multimodal: text, vision, audio, embeddings, reranking
+- PagedAttention, FlashAttention, ISQ, MLX support
+- Optimized for Qwen3-Embedding (#1 on MTEB)
+- OpenAI-compatible API (port 36900)
+- MCP support built-in
+- Embedded in Hanzo Node, Cloud Nodes, Hanzo Desktop
+
+**Use When**:
+- Running ZenLM models natively
+- Maximum inference performance needed
+- Embedding generation (Qwen3-Embedding)
+- Multimodal AI applications
+- Direct Rust integration for AI
+
+**Organizations**:
+- Engine: github.com/hanzoai/engine
+- Based on mistral.rs (Eric Buehler)
 
 **Hanzo Node** (`hanzo-node.md`) - 320 lines
 **Purpose**: Distributed AI mining and networking infrastructure (Rust)
@@ -131,7 +153,7 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 - Edge AI / IoT deployments
 
 **Organizations**:
-- Models: github.com/zoolm, huggingface.co/zoolm
+- Models: github.com/zenlm, huggingface.co/zenlm
 - Training: github.com/zooai/gym
 - Deployment: github.com/hanzoai
 
@@ -153,7 +175,7 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 
 **Organizations**:
 - Zoo Gym: github.com/zooai/gym
-- ZenLM Models: github.com/zoolm, huggingface.co/zoolm
+- ZenLM Models: github.com/zenlm, huggingface.co/zenlm
 - Hanzo AI: github.com/hanzoai
 
 ### Development Tools (3 skills)

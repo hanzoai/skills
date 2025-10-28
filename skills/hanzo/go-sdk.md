@@ -3,7 +3,7 @@
 **Category**: Hanzo Ecosystem
 **Skill Level**: Intermediate to Advanced
 **Prerequisites**: Go 1.18+, basic understanding of LLM APIs
-**Related Skills**: python-sdk.md, rust-sdk-ai.md, hanzo-node.md
+**Related Skills**: python-sdk.md, hanzo-engine.md, hanzo-node.md
 
 ## Overview
 
@@ -582,7 +582,7 @@ func retryWithBackoff(ctx context.Context, fn func() error) error {
 ## Related Skills
 
 - **python-sdk.md** - Python SDK for ML/AI workflows
-- **rust-sdk-ai.md** - Rust SDK for maximum performance
+- **hanzo-engine.md** - Native Rust inference & embedding engine
 - **hanzo-node.md** - Local AI inference infrastructure
 - **hanzo-dev.md** - Terminal AI coding agent (available in Go)
 
