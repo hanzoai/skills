@@ -53,6 +53,29 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 - High-performance inference needs
 - Privacy-first applications
 
+**Hanzo Network** (`hanzo-network.md`) - 550 lines - NEW
+**Purpose**: Distributed AI agent topology across heterogeneous devices
+**Key Topics**:
+- Automatic peer discovery (UDP broadcast + manual config)
+- Heterogeneous device support (M1/M2/M3, RTX GPUs, ARM, Linux)
+- Device capability detection (TFLOPS, memory, chip type)
+- QR code joining (planned - JSON config current workaround)
+- Intelligent agent routing (capability-based, load-balanced)
+- 100% Python/Go feature parity
+- Cross-node state synchronization via gRPC
+
+**Use When**:
+- Distributed AI across multiple devices (MacBook + RTX 4090 + Raspberry Pi)
+- Leveraging heterogeneous compute (M3 + NVIDIA + ARM)
+- QR code device joining (scan → join network)
+- Intelligent workload routing to optimal device
+- Local network AI cluster
+- Production multi-device deployments
+
+**Organizations**:
+- Python: github.com/hanzoai/network
+- Go: github.com/luxfi/node (network/)
+
 **Hanzo Desktop** (`hanzo-desktop.md`) - NEW
 **Purpose**: AI-powered productivity app with mining capabilities (github.com/hanzoai)
 **Key Topics**:
