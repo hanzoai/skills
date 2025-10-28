@@ -6,7 +6,7 @@
 
 **Context-efficient development knowledge via progressive skill discovery**
 
-> **Claude Code Plugin**: Install with `/plugin install https://github.com/rand/cc-polymath`
+> **Claude Code Plugin**: Install with `/plugin install https://github.com/hanzoai/skills`
 
 This repository solves a tradeoff problem: how to give Claude Code access to comprehensive development knowledge without overwhelming its context window on boot. The solution is atomic, composable skills organized through a multi-tier discovery system.
 
