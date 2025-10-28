@@ -248,7 +248,7 @@ jobs:
 
       - name: Analyze migrations
         run: |
-          ./skills/database/postgres-migrations/resources/scripts/analyze_migration.py \
+          .~/.hanzo/skills/database/postgres-migrations/resources/scripts/analyze_migration.py \
             --dir migrations/ --json > analysis.json
 
           # Fail if any errors
@@ -259,7 +259,7 @@ jobs:
 
       - name: Test migrations
         run: |
-          ./skills/database/postgres-migrations/resources/scripts/test_migration.sh \
+          .~/.hanzo/skills/database/postgres-migrations/resources/scripts/test_migration.sh \
             --migrations-dir migrations/ --json > test-results.json
 
           # Fail if any tests failed

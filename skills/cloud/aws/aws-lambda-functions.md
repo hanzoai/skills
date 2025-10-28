@@ -647,7 +647,7 @@ def lambda_handler(event, context):
 
 ### Reference Material
 
-**Comprehensive Reference**: `/Users/rand/src/cc-polymath/skills/cloud/aws-lambda-deployment/resources/REFERENCE.md` (~1,800 lines)
+**Comprehensive Reference**: `~/.hanzo/skills/cloud/aws-lambda-deployment/resources/REFERENCE.md` (~1,800 lines)
 - Lambda fundamentals and execution model
 - All supported runtimes (Python, Node.js, Go, Rust, Java, .NET, custom)
 - Function configuration (memory, timeout, environment variables, layers)
@@ -709,7 +709,7 @@ def lambda_handler(event, context):
 **Container Images**:
 - `Dockerfile` - Container Lambda examples for Python, Node.js, Go with multi-stage builds
 
-All resources located in: `/Users/rand/src/cc-polymath/skills/cloud/aws-lambda-deployment/resources/`
+All resources located in: `~/.hanzo/skills/cloud/aws-lambda-deployment/resources/`
 
 ---
 

@@ -649,7 +649,7 @@ signtool verify /pa /tw application.exe
 
 ## Level 3: Resources
 
-**Location**: `/Users/rand/src/cc-polymath/skills/cryptography/signing-verification/resources/`
+**Location**: `~/.hanzo/skills/cryptography/signing-verification/resources/`
 
 This skill includes comprehensive Level 3 resources for production signing and verification implementations.
 
@@ -768,7 +768,7 @@ Comprehensive technical reference covering:
 
 ```bash
 # Validate signature
-cd /Users/rand/src/cc-polymath/skills/cryptography/signing-verification/resources/scripts
+cd ~/.hanzo/skills/cryptography/signing-verification/resources/scripts
 ./validate_signatures.py --file document.p7s --check-chain --check-revocation
 
 # Sign artifact with timestamp

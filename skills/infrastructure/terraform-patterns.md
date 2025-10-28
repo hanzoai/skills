@@ -732,7 +732,7 @@ resource "aws_db_instance" "main" {
 
 ## Level 3: Resources
 
-**Location**: `/Users/rand/src/cc-polymath/skills/infrastructure/terraform-best-practices/resources/`
+**Location**: `~/.hanzo/skills/infrastructure/terraform-best-practices/resources/`
 
 ### Comprehensive Reference
 

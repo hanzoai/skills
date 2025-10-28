@@ -5,7 +5,7 @@ Get the `/skills` command working in 60 seconds.
 ## Installation
 
 ```bash
-cd /path/to/cc-polymath
+cd /path/to/hanzo-skills
 ./slash-commands/install.sh
 ```
 
@@ -52,7 +52,7 @@ COMMANDS:
 ## Uninstall
 
 ```bash
-cd /path/to/cc-polymath
+cd /path/to/hanzo-skills
 ./slash-commands/uninstall.sh
 ```
 

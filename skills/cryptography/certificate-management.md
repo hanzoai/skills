@@ -585,7 +585,7 @@ certbot renew --dry-run --debug
 
 ## Level 3: Resources
 
-**Location**: `/Users/rand/src/cc-polymath/skills/cryptography/certificate-management/resources/`
+**Location**: `~/.hanzo/skills/cryptography/certificate-management/resources/`
 
 This skill includes comprehensive Level 3 resources for production certificate management implementations:
 
@@ -732,7 +732,7 @@ Comprehensive technical reference covering:
 
 ```bash
 # Validate remote certificate
-cd /Users/rand/src/cc-polymath/skills/cryptography/certificate-management/resources/scripts
+cd ~/.hanzo/skills/cryptography/certificate-management/resources/scripts
 ./validate_certificates.py --host example.com --check-revocation
 
 # Renew certificate automatically

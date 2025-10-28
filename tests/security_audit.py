@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Security Audit Script for cc-polymath Skills Library
+Security Audit Script for hanzo-skills Skills Library
 
 Scans all skills, scripts, and examples for security vulnerabilities and
 safety issues. Produces a comprehensive report with findings categorized
@@ -351,7 +351,7 @@ class SecurityAuditor:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description='Security audit scanner for cc-polymath skills library'
+        description='Security audit scanner for hanzo-skills skills library'
     )
     parser.add_argument('--path', type=Path, default=Path('skills'),
                        help='Path to scan (default: skills/)')

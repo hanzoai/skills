@@ -154,14 +154,14 @@ Complete implementation guides loaded only when needed:
 
 **As Claude Code Plugin (Recommended)**:
 ```bash
-/plugin install https://github.com/rand/cc-polymath
+/plugin install https://github.com/hanzoai/skills
 ```
 
 That's it! All 350+ skills and the `/skills` command are immediately available.
 
 **For local development or testing**:
 ```bash
-/plugin install /Users/rand/src/cc-polymath
+/plugin install /skills
 ```
 
 ### Auto-Discovery (How It Works)

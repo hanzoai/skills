@@ -207,7 +207,7 @@ anti-slop
 Comprehensive toolkit for detecting and eliminating "AI slop" - generic, low-quality AI-generated patterns in natural language, code, and design. Use when reviewing or improving content quality, preventing generic AI patterns, cleaning up existing content, or enforcing quality standards in writing, code, or design work.
 </description>
 <location>
-/mnt/skills/user/anti-slop/SKILL.md
+/mnt~/.hanzo/skills/user/anti-slop/SKILL.md
 </location>
 </skill>
 ```
