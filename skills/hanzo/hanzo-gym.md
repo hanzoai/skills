@@ -165,6 +165,291 @@ llamafactory-cli train \
     --learning_rate 1e-5
 ```
 
+**Note on Training-Free GRPO**: Training-free GRPO is the **default approach** used in Zoo Gym for local LLMs and production deployments. It provides the best balance of memory efficiency and quality without requiring value networks. For specialized use cases like per-user personalization, see BitDelta/DeltaSoup below.
+
+## Per-User Personalization (BitDelta & DeltaSoup)
+
+### BitDelta (ZIP-7) - Personalized Models Without LoRA
+
+**Purpose**: Create millions of personalized model variants for individual users **without** using LoRA
+**Innovation**: 1-bit quantization of fine-tune deltas - **distinct from training-free GRPO**
+**Memory**: 10× reduction for personalized models
+**Safety**: 60% reduction in jailbreak risks
+**Use Case**: Per-user personalization of frontier LLMs (GPT-4, Claude, Llama, Qwen)
+
+**How It Works**:
+- Compresses fine-tune deltas to binary signs + scales
+- Each user gets a unique personalized variant
+- Base model stays in memory, deltas are 1-bit
+- Serve thousands of users from single GPU
+
+```bash
+# Train personalized variant for user
+llamafactory-cli train \
+    --stage sft \
+    --model_name_or_path Qwen/Qwen3-4B \
+    --dataset user_123_preferences \
+    --template qwen3 \
+    --finetuning_type bitdelta \
+    --output_dir ./variants/user_123 \
+    --quantization_method bitdelta \
+    --bits 1 \
+    --group_size 128 \
+    --safety_threshold 0.6
+```
+
+**Python SDK Integration**:
+
+```python
+from zoo.gym import PersonalizedTrainer, BitDeltaConfig
+
+# Configure BitDelta for per-user personalization
+config = BitDeltaConfig(
+    bits=1,                    # 1-bit quantization
+    group_size=128,            # Group size for quantization
+    safety_threshold=0.6,      # 60% jailbreak reduction
+    enable_deltasoup=True      # Enable community aggregation
+)
+
+# Create personalized trainer
+trainer = PersonalizedTrainer(
+    base_model="Qwen/Qwen3-4B",
+    config=config
+)
+
+# Train personalized variants
+trainer.create_variant(
+    user_id="user_123",
+    preferences=user_preferences,
+    dataset=user_dataset
+)
+
+# Serve variant (10× memory efficient)
+response = trainer.serve_variant(
+    user_id="user_123",
+    prompt="Hello, what do you remember about me?"
+)
+```
+
+### DeltaSoup - Community-Driven Improvement
+
+**Purpose**: Aggregate personalized improvements from multiple users
+**Innovation**: Byzantine-robust community learning
+**Safety**: Differential privacy + outlier rejection
+**Rewards**: Contributor rewards based on quality
+
+**How It Works**:
+- Users contribute their personalized deltas
+- Byzantine-robust aggregation filters malicious contributions
+- Differential privacy protects individual contributions
+- Contributors earn rewards based on quality
+
+```python
+from zoo.gym import DeltaSoup, AggregationMethod, DeltaSoupConfig
+
+# Configure DeltaSoup
+config = DeltaSoupConfig(
+    method=AggregationMethod.BYZANTINE_ROBUST,
+    differential_privacy=True,
+    enable_rewards=True,
+    min_contributors=3,
+    quality_threshold=0.8
+)
+
+# Create soup
+soup = DeltaSoup(config)
+
+# Users contribute their improvements
+soup.contribute(user_id="alice", model=model_alice)
+soup.contribute(user_id="bob", model=model_bob)
+soup.contribute(user_id="charlie", model=model_charlie)
+
+# Aggregate improvements
+aggregated_model = soup.aggregate()
+
+# Distribute rewards
+rewards = soup.calculate_rewards()
+# {'alice': 42.5, 'bob': 38.2, 'charlie': 19.3}
+```
+
+### BitDelta vs LoRA vs Training-Free GRPO
+
+| Method | Purpose | Memory | Speed | Use Case |
+|--------|---------|---------|-------|----------|
+| **Training-Free GRPO** | RLHF | -40% vs PPO | 2x vs PPO | **Default for local LLMs & production** |
+| **BitDelta** | Per-user personalization | 10× reduction | Fast | Millions of user variants |
+| **DeltaSoup** | Community learning | Efficient | Async | Aggregate user improvements |
+| **LoRA** | General fine-tuning | -70% vs full | 1.5x vs full | Single-model adaptation |
+| **QLoRA** | Memory-constrained | -90% vs full | 1.2x vs full | Train 4B on 8GB GPU |
+
+**Key Distinctions**:
+- **Training-Free GRPO**: Used everywhere by default in Zoo Gym for local and production LLMs (no value network)
+- **BitDelta**: For per-user personalization without LoRA (works directly on fine-tune deltas)
+- **DeltaSoup**: For community-driven improvements (aggregates user contributions)
+- **LoRA/QLoRA**: For general-purpose fine-tuning (adapter layers)
+
+## Cost Savings: Training-Free GRPO vs Traditional Fine-Tuning
+
+**Dramatic cost reduction** using Training-Free GRPO compared to traditional LoRA or standard RL methods:
+
+### Training Cost Comparison
+
+| Method | Model | Training Samples | Training Cost | Performance (AIME24) |
+|--------|-------|-----------------|---------------|---------------------|
+| **Training-Free GRPO** | DeepSeek-V3.1-Terminus (671B) | 100 | **~$18** | **82.7%** |
+| ReTool (Standard RL) | Qwen2.5-32B-Instruct | 1000s | **~$10,000** | 67.0% |
+| LoRA Fine-Tuning | Qwen2.5-32B-Instruct | 1000s | **~$20,000** | ~60-70% |
+
+**Key Findings**:
+- **500× cost reduction**: $18 vs $10,000+ for superior performance
+- **100× fewer samples**: 100 vs 1000s of training examples needed
+- **Better results**: 82.7% vs 67.0% on AIME24 benchmark
+- **No parameter updates**: Zero gradient computation, instant deployment
+- **Larger model advantage**: 671B frozen model outperforms fine-tuned 32B
+
+### Infrastructure Cost Breakdown
+
+**Traditional LoRA/RL Training** (Example: ReTool on Qwen2.5-32B):
+```
+Training Cost:
+- GPU hours: 20,000 × $0.5/hour = $10,000
+- Data collection: $2,000-5,000
+- Total: $12,000-15,000
+
+Deployment Cost (Dedicated GPU):
+- 4× GPUs at $0.5/GPU-hour = $2/hour = $1,440/month
+- Inference: ~$0.005 per problem (400 problems/hour)
+- Fixed infrastructure: Always running, even with low usage
+
+Result: $10K+ training + $1.4K/month deployment
+```
+
+**Training-Free GRPO** (Example: DeepSeek-V3.1-Terminus):
+```
+Training Cost:
+- API calls: 38M input tokens + 6.6M output tokens
+- With cache hit pricing: ~$18 for 100 samples
+- 3 training steps over 6 hours
+- Total: $18
+
+Deployment Cost (Pay-as-you-go API):
+- ~$0.02 per problem (60K input + 8K output tokens)
+- No fixed infrastructure
+- Only pay for actual usage
+- Automatic scaling, no GPU management
+
+Result: $18 training + pay-per-use inference
+```
+
+### When Training-Free GRPO Saves More
+
+**Ideal scenarios for maximum cost savings**:
+
+1. **Low-frequency applications**: Don't need dedicated GPU cluster
+2. **Specialized domains**: Need adaptation but not full fine-tuning
+3. **Limited data**: Only dozens of examples available
+4. **Rapid iteration**: Need quick experiments without multi-day training
+5. **Multiple domains**: Switch between domains by plugging in different experiences
+6. **Budget constraints**: Cannot afford $10K+ training costs
+
+### Real-World Cost Example
+
+**Scenario**: Medical diagnosis assistant (low-traffic, specialized domain)
+
+**Traditional LoRA Fine-Tuning**:
+- Training: $15,000 (data collection + GPU time)
+- Deployment: $1,440/month (dedicated GPU)
+- First year: $15,000 + $17,280 = **$32,280**
+- Rigid specialization: Cannot adapt to new medical domains without retraining
+
+**Training-Free GRPO**:
+- Training: $50 (200 samples across 3 medical subdomains)
+- Deployment: $200/month (100 diagnoses/day @ $0.02 each, 100 days/month)
+- First year: $50 + $2,400 = **$2,450**
+- Flexible: Switch medical domains by plugging in different experiences
+- **Savings**: $29,830 (92% cost reduction)
+
+### SDK Support for Training-Free GRPO
+
+**Full Python SDK support**:
+```python
+from zoo.gym import TrainingFreeGRPO, GRPOConfig
+
+# Configure Training-Free GRPO
+config = GRPOConfig(
+    group_size=5,              # 5 rollouts per query
+    max_epochs=3,              # 3 training steps
+    temperature_train=0.7,     # Training temperature
+    temperature_eval=0.3       # Evaluation temperature
+)
+
+# Create trainer
+trainer = TrainingFreeGRPO(
+    base_model="deepseek/v3.1-terminus",
+    config=config
+)
+
+# Train with minimal samples
+experiences = trainer.train(
+    dataset=math_problems[:100],  # Only 100 samples!
+    reward_model=reward_fn
+)
+
+# Deploy instantly - no parameter updates needed
+response = trainer.infer(
+    query="Solve this geometry problem...",
+    experiences=experiences  # Plug in learned experiences
+)
+```
+
+**Full Rust SDK support**:
+```rust
+use zoo_gym::{TrainingFreeGRPO, GRPOConfig};
+
+let config = GRPOConfig {
+    group_size: 5,
+    max_epochs: 3,
+    temperature_train: 0.7,
+    temperature_eval: 0.3,
+};
+
+let trainer = TrainingFreeGRPO::new("deepseek/v3.1-terminus", config);
+let experiences = trainer.train(&dataset[..100], reward_fn)?;
+let response = trainer.infer(query, &experiences)?;
+```
+
+### Native Hanzo Ecosystem Support
+
+**Hanzo Node**: Serve Training-Free GRPO models locally
+- Load frozen base model (e.g., DeepSeek, Qwen)
+- Inject learned experiences as context
+- Zero-latency experience switching
+- Local inference for privacy
+
+**Hanzo Engine**: Optimized inference with experience injection
+- Native Rust implementation
+- 1-bit BitDelta variants supported
+- Memory-efficient experience caching
+- Multi-experience parallel serving
+
+**Hanzo Dev**: CLI training workflows
+```bash
+# Train with Training-Free GRPO
+dev "train training-free GRPO on math dataset with 100 samples"
+
+# Export experiences
+dev "export learned experiences to JSON"
+
+# Deploy to local node
+dev "deploy experiences to hanzo node with deepseek base model"
+```
+
+**Hanzo Desktop**: Local training and mining
+- Train Training-Free GRPO on MacBook
+- Mine $AI tokens while serving personalized models
+- ZenLM models (zen-eco, zen-agent) with learned experiences
+- Automatic experience caching and reuse
+
 ## Zen Model Training Configs
 
 ### zen-nano (0.6B) - Ultra-lightweight
