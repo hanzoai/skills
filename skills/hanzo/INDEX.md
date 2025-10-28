@@ -32,18 +32,24 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 - Privacy-first applications
 
 **Hanzo Desktop** (`hanzo-desktop.md`) - NEW
-**Purpose**: AI-powered productivity app with mining capabilities
+**Purpose**: AI-powered productivity app with mining capabilities (github.com/hanzoai)
 **Key Topics**:
 - Native Rust inference engine (Hanzo Engine)
 - Mine $AI with ngrok/localxpose tunneling
 - ZenLM models for local AI assistant
 - Collect compute payments for open source projects
+- Part of Hanzo AI Ecosystem (One, Team, hanzo.app)
 
 **Use When**:
 - macOS productivity with AI
-- Mining $AI tokens
+- Mining $AI tokens passively
 - Privacy-first local AI assistant
 - Monetizing open source projects
+
+**Hanzo Ecosystem**:
+- AI Tools: github.com/hanzoai (Desktop, Node, SDK, Engine)
+- Business Apps: Hanzo One, Hanzo Team, hanzo.app
+- Most AI users: use hanzoai ecosystem
 
 **Hanzo MCP** (`hanzo-mcp.md`) - 380 lines
 **Purpose**: Model Context Protocol integration for agentic workflows
@@ -94,8 +100,9 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 **Key Topics**:
 - 4B models achieving 70B-class performance
 - 100% local processing, 95% less energy than cloud
-- Runs on phones, laptops, Raspberry Pi
-- Integration with Hanzo Desktop, Python SDK, Hanzo Gym
+- Runs on phones, laptops, Raspberry Pi at 50+ tokens/sec
+- Integration with Hanzo Desktop, Python SDK, Zoo Gym
+- Hanzo AI × Zoo Labs Foundation collaboration
 
 **Use When**:
 - Privacy-critical applications
@@ -103,19 +110,31 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 - Cost-optimized production
 - Edge AI / IoT deployments
 
-**Hanzo Gym** (`hanzo-gym.md`) - NEW
-**Purpose**: Unified training platform for Zen AI models
+**Organizations**:
+- Models: github.com/zoolm, huggingface.co/zoolm
+- Training: github.com/zooai/gym
+- Deployment: github.com/hanzoai
+
+**Zoo Gym** (`hanzo-gym.md`) - NEW
+**Purpose**: Unified training platform for ZenLM AI models (Zoo Labs Foundation)
 **Key Topics**:
-- LoRA, QLoRA, GRPO, GSPO training methods
+- GRPO (training-free reinforcement learning) innovation
+- LoRA, QLoRA, GSPO, DPO, PPO training methods
 - 2-5x faster with Unsloth, FlashAttention-2
 - GGUF, MLX, AWQ, GPTQ quantization
 - Train 4B models on 8GB GPUs
+- Wildlife conservation AI research (501c3)
 
 **Use When**:
 - Fine-tuning ZenLM models
+- Training-free reinforcement learning
 - Custom domain adaptation
-- Reinforcement learning from feedback
 - Model quantization for deployment
+
+**Organizations**:
+- Zoo Gym: github.com/zooai/gym
+- ZenLM Models: github.com/zoolm, huggingface.co/zoolm
+- Hanzo AI: github.com/hanzoai
 
 ### Development Tools (3 skills)
 

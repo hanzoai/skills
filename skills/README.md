@@ -99,8 +99,8 @@ cat skills/diagrams/INDEX.md
 
 ### Hanzo Ecosystem (10 skills)
 **Gateway**: `discover-hanzo`
-**Keywords**: Hanzo, local AI, privacy, Hanzo Node, Hanzo SDK, Hanzo MCP, streaming, ZenLM, training, mining
-**Skills**: Hanzo Node (local inference), Python SDK (multi-provider), @hanzo/ui (React components), Hanzo MCP (agentic workflows), Hanzo Dev (terminal agent), Hanzo Live (streaming), ZenLM (local AI models), Hanzo Gym (model training), Hanzo Desktop (productivity & mining), Hanzo Chat (conversation interface)
+**Keywords**: Hanzo, local AI, privacy, Hanzo Node, Hanzo SDK, Hanzo MCP, streaming, ZenLM, training, mining, Zoo Gym
+**Skills**: Hanzo Node (local inference), Python SDK (multi-provider), @hanzo/ui (React components), Hanzo MCP (agentic workflows), Hanzo Dev (terminal agent), Hanzo Live (streaming), ZenLM (local AI models), Zoo Gym (model training), Hanzo Desktop (productivity & mining), Hanzo Chat (conversation interface)
 
 ```bash
 cat skills/hanzo/INDEX.md
@@ -113,6 +113,13 @@ cat skills/hanzo/INDEX.md
 - 💰 **Cost optimization**: Built-in cost tracking + mine $AI tokens with Desktop
 - 🔄 **Production-ready**: Automatic retries, circuit breaking, caching included
 - 🌱 **Sustainable**: ZenLM models use 95% less energy than cloud AI
+- 💚 **Wildlife conservation**: Zoo Gym by Zoo Labs Foundation (501c3)
+
+**Organizations**:
+- **Hanzo AI** (github.com/hanzoai): AI tools, SDKs, Desktop, Node, Engine
+- **ZooLM** (github.com/zoolm): ZenLM models on GitHub & HuggingFace
+- **Zoo AI** (github.com/zooai): Zoo Gym training platform
+- **Zoo Labs Foundation** (zoo.ngo): 501(c)(3) for wildlife conservation AI
 
 ---
 

@@ -9,6 +9,13 @@
 
 **Hanzo Desktop** is an AI-powered command palette and local AI assistant for macOS that merges powerful app launcher capabilities with advanced local AI features. Built on Tauri with embedded Rust high-performance engine, it's the ultimate productivity tool with **AI mining capabilities**.
 
+Part of the **Hanzo AI Ecosystem** (github.com/hanzoai) - the complete AI infrastructure:
+- **Hanzo Desktop** (this app): macOS productivity + AI mining
+- **Hanzo Node**: High-performance local inference engine
+- **Hanzo One**: Open source business apps ecosystem
+- **Hanzo Team**: Slack/Jira alternative with AI agents
+- **hanzo.app**: Online web app and app builder
+
 **Key Features**:
 - 🚀 **Native Rust Engine**: Blazingly fast LLM & embedding inference (Hanzo Engine)
 - 💰 **Mine $AI**: Earn $AI tokens by sharing compute with ngrok/localxpose
@@ -619,10 +626,51 @@ hanzo-engine default zen-nano-instruct-4bit
 - **python-sdk.md**: Build apps using Hanzo Desktop API
 - **hanzo-gym.md**: Train custom models for Hanzo Desktop
 
+## The Hanzo AI Ecosystem
+
+### For AI Users (github.com/hanzoai)
+
+**Hanzo Desktop** - This app (macOS productivity + AI mining)
+- Mine $AI tokens passively
+- Local AI assistant with Tab key access
+- Embedded Hanzo Node + Hanzo Engine
+
+**Hanzo Node** - High-performance local inference
+- Port 3690: AI agent infrastructure
+- Port 36900: Rust inference engine (Hanzo Engine)
+- MCP server for tool orchestration
+
+**Hanzo SDK** - Python/TypeScript AI development
+- Unified multi-provider interface
+- Automatic model routing
+- Local + cloud hybrid inference
+
+### For Business Users
+
+**Hanzo One** - Open source business apps ecosystem
+- Complete suite of business applications
+- Self-hosted or cloud-deployed
+- AI-powered workflows
+
+**Hanzo Team** - Slack/Jira alternative with AI agents
+- Team collaboration with AI
+- Project management
+- Automated workflows
+
+**hanzo.app** - Online web app and app builder
+- Build custom apps visually
+- Deploy AI-powered applications
+- No-code/low-code platform
+
+### Other Hanzo Organizations
+
+While Hanzo has multiple GitHub organizations for different purposes, **most AI users will primarily use the hanzoai ecosystem** (github.com/hanzoai) which contains all the AI-related tools, SDKs, and infrastructure.
+
 ## Additional Resources
 
 - **Website**: [hanzo.app](https://hanzo.app)
-- **GitHub**: [github.com/hanzoai/app-v2](https://github.com/hanzoai/app-v2)
+- **GitHub (AI)**: [github.com/hanzoai](https://github.com/hanzoai)
+- **Desktop Repo**: [github.com/hanzoai/app-v2](https://github.com/hanzoai/app-v2)
 - **Engine Repo**: [github.com/hanzoai/engine](https://github.com/hanzoai/engine)
 - **Discord**: [discord.gg/hanzoai](https://discord.gg/hanzoai)
 - **Mining Dashboard**: [hanzo.ai/mining](https://hanzo.ai/mining)
@@ -634,4 +682,5 @@ hanzo-engine default zen-nano-instruct-4bit
 
 **Mine $AI while you sleep. Support open source. Own your AI.**
 
+Part of the **Hanzo AI Ecosystem** (github.com/hanzoai)
 © 2025 Hanzo Industries Inc • MIT License
