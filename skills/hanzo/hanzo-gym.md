@@ -1,4 +1,4 @@
-# Hanzo Gym - Unified AI Model Training Platform
+# Zoo Gym - Unified AI Model Training Platform
 
 **Category**: Hanzo Ecosystem
 **Difficulty**: Intermediate
@@ -7,23 +7,29 @@
 
 ## Overview
 
-Hanzo Gym (Zen Gym) is the unified training infrastructure for all Zen AI models, built on LLaMA Factory. It provides comprehensive support for fine-tuning, reinforcement learning, and quantization across the entire Zen model family—from zen-nano (0.6B) to zen-musician (7B).
+**Zoo Gym** is the unified training infrastructure for all ZenLM AI models, built on LLaMA Factory. Developed by Zoo Labs Foundation (501(c)(3) charitable organization dedicated to AI research for wildlife conservation and preservation), it provides comprehensive support for fine-tuning, reinforcement learning, and quantization across the entire ZenLM model family—from zen-nano (0.6B) to zen-musician (7B).
 
-**Why Hanzo Gym?**
-- **Unified Platform**: Train all Zen models with consistent tooling
-- **Production-Grade**: Battle-tested methods (LoRA, QLoRA, GRPO, GSPO, DPO, PPO)
+**Why Zoo Gym?**
+- **Unified Platform**: Train all ZenLM models with consistent tooling
+- **Production-Grade**: Battle-tested methods including GRPO (Group Relative Policy Optimization)
+- **GRPO Innovation**: Training-free reinforcement learning - no value network needed
 - **Performance Optimized**: 2-5x faster with Unsloth, FlashAttention-2, Liger Kernel
 - **Hardware Efficient**: Train 4B models on 8GB GPUs with QLoRA
 - **Export Ready**: GGUF, MLX, AWQ, GPTQ quantization for deployment
+- **Wildlife Conservation**: Part of Zoo Labs Foundation's mission to aid conservation efforts
 
 ## Quick Start
 
 ### Installation
 
 ```bash
-cd /Users/z/work/zen/gym
-conda create -n zen-gym python=3.10
-conda activate zen-gym
+# Clone Zoo Gym repository
+git clone https://github.com/zooai/gym.git
+cd gym
+
+# Create environment
+conda create -n zoo-gym python=3.10
+conda activate zoo-gym
 pip install -r requirements.txt
 
 # FlashAttention-2 (recommended - 2x faster)
@@ -59,7 +65,7 @@ llamafactory-cli train \
 ### GUI Training Interface
 
 ```bash
-# Launch Zen Gym web interface
+# Launch Zoo Gym web interface
 llamafactory-cli webui
 ```
 
@@ -119,7 +125,8 @@ llamafactory-cli train \
 ### 3. GRPO (Group Relative Policy Optimization)
 
 **Best for**: Reinforcement learning from human feedback
-**Memory**: 40-60% less than PPO (no value network)
+**Innovation**: Training-free reinforcement learning - no value network required
+**Memory**: 40-60% less than PPO (eliminates value network overhead)
 **Speed**: 2x faster than PPO
 **Quality**: Superior to DPO for instruction following
 
@@ -433,7 +440,7 @@ nvidia-smi -l 1
 --gradient_accumulation_steps 4
 ```
 
-## Comparison: Manual Training vs Hanzo Gym
+## Comparison: Manual Training vs Zoo Gym
 
 ### Manual PyTorch Training (50-100+ lines)
 
@@ -491,7 +498,7 @@ model.save_pretrained("./output")
 # ... 20+ more lines ...
 ```
 
-### Hanzo Gym (1 command)
+### Zoo Gym (1 command)
 
 ```bash
 llamafactory-cli train \
@@ -513,7 +520,7 @@ llamafactory-cli train \
 
 **Result**: 50-100 lines → 1 command, **10-50x faster development**
 
-## Integration with Hanzo Ecosystem
+## Integration with Hanzo/ZooLM Ecosystem
 
 ### Train with Hanzo Python SDK
 
@@ -571,7 +578,7 @@ llamafactory-cli train --model_name_or_path m-a-p/YuE-s1-7B ...
 ### 2. Use GUI for Experimentation
 
 ```bash
-# Launch GUI for visual configuration
+# Launch Zoo Gym GUI for visual configuration
 llamafactory-cli webui
 
 # Export config once satisfied
@@ -604,19 +611,28 @@ llamafactory-cli train --model_name_or_path Qwen/Qwen3-4B ...
 
 ## Related Skills
 
-- **zenlm.md**: Learn about Zen model family and capabilities
+- **zenlm.md**: Learn about ZenLM model family and capabilities
 - **python-sdk.md**: Deploy trained models with Hanzo SDK
 - **hanzo-dev.md**: Use terminal agent to automate training workflows
 - **hanzo-desktop.md**: Run trained models locally with mining capabilities
 
 ## Additional Resources
 
-- **Official Docs**: https://gym.readthedocs.io/
-- **Training Configs**: `/Users/z/work/zen/gym/configs/`
-- **Qwen3 Guide**: `/Users/z/work/zen/gym/configs/qwen3_training_guide.md`
+- **GitHub**: https://github.com/zooai/gym
+- **Zoo Labs Foundation**: https://zoo.ngo (501(c)(3) charitable organization)
 - **LLaMA Factory**: https://github.com/hiyouga/LLaMA-Factory
+- **HuggingFace Models**: https://huggingface.co/zoolm
+
+## Zoo Labs Foundation
+
+Zoo Gym is developed and maintained by **Zoo Labs Foundation** (501(c)(3) tax-exempt charitable organization) dedicated to AI research for wildlife conservation, preservation, and environmental protection.
+
+**Tax ID**: 88-3538992
+**Mission**: Leverage AI technology to aid in wildlife conservation efforts globally
+
+By using Zoo Gym, you're supporting open-source AI research that directly contributes to environmental conservation.
 
 ---
 
-**Hanzo Gym** - Train any Zen model with production-grade efficiency.
-Part of the **Hanzo AI** ecosystem.
+**Zoo Gym** - Train any ZenLM model with production-grade efficiency.
+Developed by **Zoo Labs Foundation** for conservation through AI.
