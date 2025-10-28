@@ -807,7 +807,7 @@ llamafactory-cli train \
 
 **Result**: 50-100 lines → 1 command, **10-50x faster development**
 
-## Integration with Hanzo/ZooLM Ecosystem
+## Integration with Hanzo/ZenLM Ecosystem
 
 ### Train with Hanzo Python SDK
 
@@ -908,7 +908,7 @@ llamafactory-cli train --model_name_or_path Qwen/Qwen3-4B ...
 - **GitHub**: https://github.com/zooai/gym
 - **Zoo Labs Foundation**: https://zoo.ngo (501(c)(3) charitable organization)
 - **LLaMA Factory**: https://github.com/hiyouga/LLaMA-Factory
-- **HuggingFace Models**: https://huggingface.co/zoolm
+- **HuggingFace Models**: https://huggingface.co/zenlm
 
 ## Zoo Labs Foundation
 
