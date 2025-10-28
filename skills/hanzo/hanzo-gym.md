@@ -12,7 +12,7 @@
 **Why Zoo Gym?**
 - **Unified Platform**: Train all ZenLM models with consistent tooling
 - **Production-Grade**: Battle-tested methods including GRPO (Group Relative Policy Optimization)
-- **GRPO Innovation**: Training-free reinforcement learning - no value network needed
+- **Training-Free GRPO Innovation**: Distinct implementation based on Tencent's youtu-agent research - no value network needed
 - **Performance Optimized**: 2-5x faster with Unsloth, FlashAttention-2, Liger Kernel
 - **Hardware Efficient**: Train 4B models on 8GB GPUs with QLoRA
 - **Export Ready**: GGUF, MLX, AWQ, GPTQ quantization for deployment
@@ -125,10 +125,12 @@ llamafactory-cli train \
 ### 3. GRPO (Group Relative Policy Optimization)
 
 **Best for**: Reinforcement learning from human feedback
-**Innovation**: Training-free reinforcement learning - no value network required
+**Innovation**: Zoo Gym's distinct training-free GRPO implementation - no value network required
 **Memory**: 40-60% less than PPO (eliminates value network overhead)
 **Speed**: 2x faster than PPO
 **Quality**: Superior to DPO for instruction following
+
+**Implementation**: Zoo Gym uses a distinct training-free GRPO variant based on [Tencent's youtu-agent research](https://github.com/TencentCloudADP/youtu-agent/tree/training_free_GRPO/training_free_grpo). This eliminates the value network entirely, unlike standard GRPO implementations (e.g., DeepSeek), making it truly training-free and more memory-efficient for RLHF workflows.
 
 ```bash
 llamafactory-cli train \

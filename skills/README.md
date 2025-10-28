@@ -1,6 +1,6 @@
 # Skills Catalog
 
-**Total Skills**: 305 across 32 categories
+**Total Skills**: 306 across 32 categories
 **Gateway Skills**: 29 (auto-discovered by Claude Code)
 **Agent Skills**: 3 (elegant-design, anti-slop, typed-holes-refactor)
 
@@ -97,10 +97,10 @@ cat skills/diagrams/INDEX.md
 
 ---
 
-### Hanzo Ecosystem (10 skills)
+### Hanzo Ecosystem (11 skills)
 **Gateway**: `discover-hanzo`
-**Keywords**: Hanzo, local AI, privacy, Hanzo Node, Hanzo SDK, Hanzo MCP, streaming, ZenLM, training, mining, Zoo Gym
-**Skills**: Hanzo Node (local inference), Python SDK (multi-provider), @hanzo/ui (React components), Hanzo MCP (agentic workflows), Hanzo Dev (terminal agent), Hanzo Live (streaming), ZenLM (local AI models), Zoo Gym (model training), Hanzo Desktop (productivity & mining), Hanzo Chat (conversation interface)
+**Keywords**: Hanzo, local AI, privacy, Hanzo Node, Hanzo SDK, Hanzo MCP, streaming, ZenLM, training, mining, Zoo Gym, Go, Rust, Python
+**Skills**: Hanzo Node (local inference), Python SDK (multi-provider), Go SDK (concurrent backend), @hanzo/ui (React components), Hanzo MCP (agentic workflows), Hanzo Dev (terminal agent - Rust/JS/Python), Hanzo Live (streaming), ZenLM (local AI models), Zoo Gym (training-free GRPO), Hanzo Desktop (productivity & mining), Hanzo Chat (conversation interface)
 
 ```bash
 cat skills/hanzo/INDEX.md

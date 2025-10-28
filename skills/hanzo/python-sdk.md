@@ -49,6 +49,40 @@ pip install -e .
 pip install hanzo[all]
 ```
 
+## API Key & Free Credits
+
+### Sign Up for Hanzo API
+
+Get started with Hanzo API and receive **free credits** or **subscription discounts**:
+
+1. **Create Account**: Visit [https://hanzo.ai/signup](https://hanzo.ai/signup)
+2. **Get API Key**: Navigate to dashboard → API Keys → Create New Key
+3. **Free Credits**: New signups receive $10 in free credits (no credit card required)
+4. **Subscription Discounts**: Annual plans get 20% off, students/educators get 50% off
+
+### API Key Setup
+
+```bash
+# Set environment variable (recommended)
+export HANZO_API_KEY="hanz_..."
+
+# Or in code
+hanzo = Hanzo(api_key="hanz_...")
+```
+
+**Note**: For local-only inference (Hanzo Node), no API key needed. API key is only required for cloud routing or when using cloud models.
+
+## SDK Equivalency
+
+The Hanzo Python SDK is **feature-equivalent** with:
+- **Rust SDK** (`github.com/hanzoai/rust-sdk`) - For systems programming and high-performance applications
+- **Go SDK** (`github.com/hanzoai/go-sdk`) - For backend services and blockchain nodes
+- **JavaScript/TypeScript SDK** (`@hanzo/sdk`) - For web and Node.js applications
+
+All SDKs share the same API surface, making it easy to switch languages while maintaining the same functionality. Choose Python for ML/AI workflows, Rust for maximum performance, Go for concurrent services, or JS/TS for web applications.
+
+**Coming Soon**: Golang Node implementation (blockchain node rewritten in Go, currently Rust-based).
+
 ## Quick Start
 
 ### Basic Usage (Local Inference)
@@ -842,6 +876,17 @@ hanzo.configure_cache(
     cache_ttl=86400  # 24 hours
 )
 ```
+
+## Cloud Infrastructure
+
+**Note**: Hanzo's cloud infrastructure is fully managed and optimized for performance and cost. When using cloud routing, the SDK automatically handles:
+- Load balancing across regions
+- Model availability and failover
+- Rate limiting and quotas
+- SSL/TLS encryption
+- Request queuing and prioritization
+
+You don't need to worry about cloud infrastructure details - just use the SDK and it handles all routing, failover, and optimization automatically.
 
 ## Next Steps
 

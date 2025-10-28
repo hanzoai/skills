@@ -8,7 +8,9 @@
 
 Hanzo Dev is an AI-powered terminal coding agent that brings the power of local AI directly to your development workflow. Unlike cloud-based coding assistants that require internet connectivity and send your code to external servers, Hanzo Dev runs entirely on your machine using Hanzo Node, ensuring your code never leaves your infrastructure.
 
-**Core Philosophy**: AI-assisted development with privacy, speed, and terminal-native workflows.
+**Available in**: Rust (native CLI), JavaScript/TypeScript (@hanzo/dev), and Python (hanzo-dev)
+
+**Core Philosophy**: AI-assisted development with privacy, speed, and terminal-native workflows across all major programming languages.
 
 ## Key Features
 
@@ -57,11 +59,22 @@ hanzo-node start --gpu
 
 ### Install Hanzo Dev
 
+**Language Support**: Hanzo Dev is available for **Rust**, **JavaScript/TypeScript**, and **Python** - ensuring high performance and easy integration regardless of your preferred language.
+
 ```bash
-# From binary (recommended)
+# Rust (Native CLI - highest performance)
+cargo install hanzo-dev
+
+# JavaScript/TypeScript (Node.js)
+npm install -g @hanzo/dev
+
+# Python
+pip install hanzo-dev
+
+# Or from binary (recommended for CLI usage)
 curl -fsSL https://install.hanzo.ai/dev | sh
 
-# From source
+# From source (Rust)
 git clone https://github.com/hanzoai/dev
 cd dev
 cargo install --path .
@@ -69,6 +82,8 @@ cargo install --path .
 # Verify installation
 hanzo-dev --version
 ```
+
+**Language Equivalency**: All three language implementations (Rust, JS/TS, Python) provide the same CLI interface and functionality, making it easy to integrate Hanzo Dev into projects regardless of language choice. The Rust version offers maximum performance, while JS/TS and Python versions integrate seamlessly with their respective ecosystems.
 
 ### Shell Integration
 
