@@ -156,6 +156,140 @@ print(f"Routed to: {response.model}")
 print(f"Response: {response.choices[0].message.content}")
 ```
 
+## Hanzo SDK Integration
+
+### Automatic Model Routing with Hanzo
+
+**Instead of manual RouteLLM implementation**, use Hanzo SDK's built-in intelligent routing:
+
+```python
+from hanzo import Hanzo
+
+# Initialize with hybrid mode (local + cloud with automatic routing)
+hanzo = Hanzo(
+    inference_mode='hybrid',  # Combines local + cloud models
+    auto_route=True,          # Enable intelligent routing
+    cost_optimize=True        # Optimize for cost
+)
+
+# Automatic routing based on query complexity
+response = hanzo.chat.completions.create(
+    messages=[{"role": "user", "content": query}],
+    # No need to specify model - Hanzo routes automatically
+)
+
+# Hanzo automatically:
+# 1. Analyzes query complexity
+# 2. Checks local models (Hanzo Node) first for privacy
+# 3. Routes to cloud only if needed
+# 4. Caches results for repeated queries
+# 5. Tracks costs and latency
+print(f"Routed to: {response.model}")
+print(f"Cost: ${response.usage.cost:.4f}")
+print(f"Latency: {response.latency_ms}ms")
+```
+
+### Hanzo Routing Strategies
+
+```python
+# 1. Privacy-First Routing (local whenever possible)
+hanzo = Hanzo(
+    inference_mode='hybrid',
+    prefer_local=True,        # Use Hanzo Node first
+    node_url='http://localhost:8080'
+)
+
+# Simple queries stay local (privacy + no cost)
+response = hanzo.chat.completions.create(
+    messages=[{"role": "user", "content": "What is 2+2?"}]
+)
+# Routed to: local-llama-3-8b
+
+# Complex queries go to cloud
+response = hanzo.chat.completions.create(
+    messages=[{"role": "user", "content": "Analyze quantum cryptography"}]
+)
+# Routed to: claude-3.5-sonnet
+
+# 2. Cost-Optimized Routing
+hanzo = Hanzo(
+    inference_mode='cloud',
+    cost_limit_per_request=0.01,  # Max $0.01 per request
+    fallback_on_limit=True         # Use cheaper model if exceeded
+)
+
+# 3. Latency-Optimized Routing
+hanzo = Hanzo(
+    inference_mode='hybrid',
+    max_latency_ms=500,      # Sub-500ms required
+    prefer_local=True        # Local models are fastest
+)
+
+# 4. Quality-Focused Routing
+hanzo = Hanzo(
+    inference_mode='cloud',
+    quality_tier='high',      # Only top-tier models
+    models=['gpt-4', 'claude-3.5-sonnet']
+)
+```
+
+### Hanzo MCP Tool for Agents
+
+Expose Hanzo routing as MCP tool for agentic workflows:
+
+```typescript
+import { MCPServer, Tool } from '@hanzo/mcp'
+import { Hanzo } from 'hanzo'  // Python SDK
+
+const hanzo = new Hanzo({
+  inference_mode: 'hybrid',
+  auto_route: true
+})
+
+const hanzoRouteTool: Tool = {
+  name: 'hanzo_route_and_infer',
+  description: 'Automatically route query to best model and generate response',
+  parameters: {
+    prompt: { type: 'string', required: true },
+    strategy: {
+      type: 'string',
+      enum: ['cost', 'latency', 'quality', 'privacy'],
+      default: 'cost'
+    }
+  },
+  async execute({ prompt, strategy }) {
+    const response = await hanzo.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      routing_strategy: strategy
+    })
+    
+    return {
+      text: response.choices[0].message.content,
+      model: response.model,
+      cost: response.usage.cost,
+      latency_ms: response.latency_ms
+    }
+  }
+}
+```
+
+### Hanzo vs Manual RouteLLM
+
+| Feature | Manual RouteLLM | Hanzo SDK |
+|---------|-----------------|-----------|
+| **Setup** | 50+ lines config | 3 lines |
+| **Local Models** | Not supported | Built-in (Hanzo Node) |
+| **Privacy** | Manual logic | Automatic (local-first) |
+| **Cost Tracking** | Custom implementation | Built-in |
+| **Caching** | Manual | Automatic |
+| **MCP Integration** | Custom wrapper | Native support |
+| **Fallback** | Manual chains | Automatic |
+| **Monitoring** | Custom Prometheus | Built-in dashboard |
+
+**When to Use What**:
+- **Hanzo SDK**: Most use cases (simpler, more features)
+- **Manual RouteLLM**: Research, custom training, non-Hanzo stack
+
 ### RouteLLM: Threshold Tuning
 
 ```python
