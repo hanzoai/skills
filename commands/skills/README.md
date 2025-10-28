@@ -25,10 +25,10 @@ All without leaving your Claude Code session.
 
 ### Plugin Installation (Recommended)
 
-The `/skills` command is part of the **cc-polymath** Claude Code plugin. Install the entire plugin to get all 292 skills and commands:
+The `/skills` command is part of the **hanzo-skills** Claude Code plugin. Install the entire plugin to get all 292 skills and commands:
 
 ```bash
-/plugin install https://github.com/rand/cc-polymath
+/plugin install https://github.com/hanzoai/skills
 ```
 
 That's it! The plugin auto-registers all skills and commands, including `/skills`.
@@ -39,7 +39,7 @@ That's it! The plugin auto-registers all skills and commands, including `/skills
 /plugin list
 ```
 
-You should see `cc-polymath` in the list of installed plugins. The `/skills` command is now available.
+You should see `hanzo-skills` in the list of installed plugins. The `/skills` command is now available.
 
 ## Usage
 
@@ -97,7 +97,7 @@ RECOMMENDED FOR THIS PROJECT:
 CATEGORIES (292 total skills):
 Frontend (8) | Database (8) | API (7) | Testing (6) | Diagrams (8) | ML (30)
 Math (19) | Debugging (14) | Build Systems (8) | Caching (7) | Observability (8)
-[View full catalog: ~/.claude/skills/README.md]
+[View full catalog: ~/.claude~/.hanzo/skills/README.md]
 
 COMMANDS:
 /skills frontend     - View all Frontend skills
@@ -174,9 +174,9 @@ Based on detected context, it recommends skills that:
 ### Read-Only Operations
 
 The command **only reads** from:
-- `~/.claude/skills/README.md` (master catalog)
-- `~/.claude/skills/{category}/INDEX.md` (category indexes)
-- `~/.claude/skills/discover-*/SKILL.md` (gateway skills)
+- `~/.claude~/.hanzo/skills/README.md` (master catalog)
+- `~/.claude~/.hanzo/skills/{category}/INDEX.md` (category indexes)
+- `~/.claude~/.hanzo/skills/discover-*/SKILL.md` (gateway skills)
 - Current working directory (for project detection)
 
 It **never modifies**:
@@ -190,7 +190,7 @@ It **never modifies**:
 ### Plugin Uninstallation
 
 ```bash
-/plugin uninstall cc-polymath
+/plugin uninstall hanzo-skills
 ```
 
 **That's it!** All skills, commands, and plugin data are cleanly removed.
@@ -201,7 +201,7 @@ It **never modifies**:
 /plugin list
 ```
 
-The `cc-polymath` plugin should no longer appear in the list. All commands (including `/skills`) are automatically unregistered.
+The `hanzo-skills` plugin should no longer appear in the list. All commands (including `/skills`) are automatically unregistered.
 
 ## Compatibility
 
@@ -229,8 +229,8 @@ The `cc-polymath` plugin should no longer appear in the list. All commands (incl
 **Problem:** `/skills` doesn't work in Claude Code
 
 **Solution:**
-1. Verify plugin installed: `/plugin list` (should show `cc-polymath`)
-2. If not installed: `/plugin install https://github.com/rand/cc-polymath`
+1. Verify plugin installed: `/plugin list` (should show `hanzo-skills`)
+2. If not installed: `/plugin install https://github.com/hanzoai/skills`
 3. Restart Claude Code session if needed
 
 ### No Recommendations
@@ -239,16 +239,16 @@ The `cc-polymath` plugin should no longer appear in the list. All commands (incl
 
 **Possible causes:**
 - Empty/new project directory → Expected behavior, shows general skills
-- Skills catalog not found → Check `~/.claude/skills/README.md` exists
+- Skills catalog not found → Check `~/.claude~/.hanzo/skills/README.md` exists
 
 ### Skills Catalog Not Found
 
 **Problem:** Error message about missing `README.md`
 
 **Solution:**
-1. Verify skills directory: `ls ~/.claude/skills/`
-2. Check catalog exists: `cat ~/.claude/skills/README.md`
-3. If missing, restore from your skills repository (cc-polymath)
+1. Verify skills directory: `ls ~/.claude~/.hanzo/skills/`
+2. Check catalog exists: `cat ~/.claude~/.hanzo/skills/README.md`
+3. If missing, restore from your skills repository (hanzo-skills)
 
 ## Examples
 
@@ -297,8 +297,8 @@ cd ~/projects/slow-app
 
 ## Technical Details
 
-- **Plugin:** cc-polymath v2.0.0
-- **File:** Auto-installed to `~/.claude/plugins/cc-polymath/commands/skills.md`
+- **Plugin:** hanzo-skills v2.0.0
+- **File:** Auto-installed to `~/.claude/plugins/hanzo-skills/commands/skills.md`
 - **Size:** ~10 KB (325 lines)
 - **Format:** Markdown with YAML frontmatter
 - **Dependencies:** None (uses Claude Code plugin system)
@@ -309,7 +309,7 @@ cd ~/projects/slow-app
 
 This slash command is designed to be self-contained and maintenance-free. However, if you find issues or have suggestions:
 
-1. The command reads from `~/.claude/skills/README.md` (master catalog)
+1. The command reads from `~/.claude~/.hanzo/skills/README.md` (master catalog)
 2. Keep that file updated as you add new skills
 3. Update individual category `INDEX.md` files as needed
 4. The command will automatically show new skills
@@ -331,7 +331,7 @@ This slash command is provided as-is for use with Claude Code and compatible wit
 
 ```bash
 # Install Plugin
-/plugin install https://github.com/rand/cc-polymath
+/plugin install https://github.com/hanzoai/skills
 
 # Use
 /skills                  # Context-aware recommendations
@@ -340,5 +340,5 @@ This slash command is provided as-is for use with Claude Code and compatible wit
 /skills list             # All categories
 
 # Uninstall Plugin
-/plugin uninstall cc-polymath
+/plugin uninstall hanzo-skills
 ```

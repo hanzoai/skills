@@ -1,4 +1,4 @@
-# cc-polymath Claude Code Plugin
+# hanzo-skills Claude Code Plugin
 
 **Version:** 2.0.0
 **Type:** Skills & Commands Plugin
@@ -7,12 +7,12 @@
 
 ## Overview
 
-cc-polymath is a comprehensive Claude Code plugin that provides 292 atomic, composable skills across 31 categories, plus context-aware skill discovery commands. It uses a gateway-based progressive loading architecture to minimize context usage while maximizing skill availability.
+hanzo-skills is a comprehensive Claude Code plugin that provides 292 atomic, composable skills across 31 categories, plus context-aware skill discovery commands. It uses a gateway-based progressive loading architecture to minimize context usage while maximizing skill availability.
 
 ## Plugin Structure
 
 ```
-cc-polymath/
+hanzo-skills/
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin manifest
 ├── skills/                       # 292 skills, 31 categories
@@ -44,11 +44,11 @@ cc-polymath/
 Install the plugin with a single command:
 
 ```bash
-/plugin install https://github.com/rand/cc-polymath
+/plugin install https://github.com/hanzoai/skills
 ```
 
 Claude Code will:
-1. Clone the repository to `~/.claude/plugins/cc-polymath/`
+1. Clone the repository to `~/.claude/plugins/hanzo-skills/`
 2. Register all commands (e.g., `/skills`)
 3. Make all 292 skills available for discovery
 4. Enable gateway-based progressive loading
@@ -58,8 +58,8 @@ Claude Code will:
 Clone the repository to develop locally:
 
 ```bash
-git clone https://github.com/rand/cc-polymath
-cd cc-polymath
+git clone https://github.com/hanzoai/skills
+cd hanzo-skills
 
 # Install as plugin from local directory
 /plugin install file://$(pwd)
@@ -154,12 +154,12 @@ Project detected → Gateway activates → Category shown → Skill loaded
 
 ```json
 {
-  "name": "cc-polymath",
+  "name": "hanzo-skills",
   "version": "2.0.0",
   "description": "292 atomic skills with gateway-based progressive loading",
   "author": "rand",
-  "homepage": "https://github.com/rand/cc-polymath",
-  "repository": "https://github.com/rand/cc-polymath",
+  "homepage": "https://github.com/hanzoai/skills",
+  "repository": "https://github.com/hanzoai/skills",
   "license": "MIT",
   "keywords": [
     "skills", "gateway", "progressive-loading",
@@ -187,18 +187,18 @@ Project detected → Gateway activates → Category shown → Skill loaded
 
 ### Installation
 ```bash
-/plugin install https://github.com/rand/cc-polymath
+/plugin install https://github.com/hanzoai/skills
 ```
 
 **Process:**
-1. Claude Code clones repository to `~/.claude/plugins/cc-polymath/`
+1. Claude Code clones repository to `~/.claude/plugins/hanzo-skills/`
 2. Reads `.claude-plugin/plugin.json` for metadata
 3. Registers commands from `commands/` directory
-4. Makes skills available at `~/.claude/plugins/cc-polymath/skills/`
+4. Makes skills available at `~/.claude/plugins/hanzo-skills~/.hanzo/skills/`
 
 ### Updates
 ```bash
-/plugin update cc-polymath
+/plugin update hanzo-skills
 ```
 
 **Process:**
@@ -209,12 +209,12 @@ Project detected → Gateway activates → Category shown → Skill loaded
 
 ### Uninstallation
 ```bash
-/plugin uninstall cc-polymath
+/plugin uninstall hanzo-skills
 ```
 
 **Process:**
 1. Unregisters all commands
-2. Removes `~/.claude/plugins/cc-polymath/` directory
+2. Removes `~/.claude/plugins/hanzo-skills/` directory
 3. Cleans up plugin metadata
 4. No traces left in Claude Code configuration
 
@@ -300,7 +300,7 @@ Project detected → Gateway activates → Category shown → Skill loaded
 
 ```bash
 # Install from local directory
-cd /path/to/cc-polymath
+cd /path/to/hanzo-skills
 /plugin install file://$(pwd)
 
 # Test commands
@@ -311,7 +311,7 @@ cd /path/to/cc-polymath
 cat skills/your-category/your-skill.md
 
 # Uninstall local version
-/plugin uninstall cc-polymath
+/plugin uninstall hanzo-skills
 ```
 
 ## Plugin Best Practices
@@ -320,7 +320,7 @@ cat skills/your-category/your-skill.md
 
 1. **Use `/skills` for discovery** - Don't manually browse directories
 2. **Load skills on-demand** - Let gateways guide you
-3. **Update regularly** - `/plugin update cc-polymath` for latest skills
+3. **Update regularly** - `/plugin update hanzo-skills` for latest skills
 4. **Provide feedback** - Report issues or suggest improvements
 
 ### For Plugin Developers
@@ -370,7 +370,7 @@ cat skills/your-category/your-skill.md
 ```bash
 # Restart Claude Code session
 # Then verify
-/plugin list  # Should show cc-polymath
+/plugin list  # Should show hanzo-skills
 /skills       # Should work
 ```
 
@@ -379,18 +379,18 @@ cat skills/your-category/your-skill.md
 **Check:**
 ```bash
 # Verify plugin directory exists
-ls ~/.claude/plugins/cc-polymath/skills/
+ls ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
 
 # Reinstall if missing
-/plugin uninstall cc-polymath
-/plugin install https://github.com/rand/cc-polymath
+/plugin uninstall hanzo-skills
+/plugin install https://github.com/hanzoai/skills
 ```
 
 ### Want to modify skills
 
 **Location:**
 ```bash
-cd ~/.claude/plugins/cc-polymath/skills/
+cd ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
 # Edit skills here
 # Changes will persist until plugin update
 ```
@@ -402,7 +402,7 @@ cd ~/.claude/plugins/cc-polymath/skills/
 ### File Structure
 
 ```
-~/.claude/plugins/cc-polymath/
+~/.claude/plugins/hanzo-skills/
 ├── .claude-plugin/
 │   └── plugin.json          # Metadata read by Claude Code
 ├── skills/                   # Discovered by skill system
@@ -451,7 +451,7 @@ cd ~/.claude/plugins/cc-polymath/skills/
 
 ### Community Requests
 
-See [GitHub Issues](https://github.com/rand/cc-polymath/issues) for feature requests and discussions.
+See [GitHub Issues](https://github.com/hanzoai~/.hanzo/skills/issues) for feature requests and discussions.
 
 ## Support
 
@@ -460,15 +460,15 @@ See [GitHub Issues](https://github.com/rand/cc-polymath/issues) for feature requ
 - **README.md** - Main documentation and quick start
 - **PLUGIN.md** - This file (plugin details)
 - **MIGRATION.md** - Migration from manual installation
-- **commands/skills/README.md** - /skills command documentation
+- **commands~/.hanzo/skills/README.md** - /skills command documentation
 - **skills/README.md** - Master skills catalog
 
 ### Getting Help
 
 1. **Check documentation** - README.md, PLUGIN.md, MIGRATION.md
-2. **Browse issues** - https://github.com/rand/cc-polymath/issues
+2. **Browse issues** - https://github.com/hanzoai~/.hanzo/skills/issues
 3. **Open new issue** - Provide details about problem
-4. **Discussions** - https://github.com/rand/cc-polymath/discussions
+4. **Discussions** - https://github.com/hanzoai~/.hanzo/skills/discussions
 
 ### Contributing
 
@@ -487,7 +487,7 @@ MIT License - See [LICENSE](LICENSE) file for details.
 ## Credits
 
 **Author:** rand
-**Repository:** https://github.com/rand/cc-polymath
+**Repository:** https://github.com/hanzoai/skills
 **Plugin System:** Claude Code by Anthropic
 
 ---

@@ -649,7 +649,7 @@ Before Running Migrations:
 
 ## Level 3: Resources
 
-**Location**: `/Users/rand/src/cc-polymath/skills/database/postgres-migrations/resources/`
+**Location**: `~/.hanzo/skills/database/postgres-migrations/resources/`
 
 This skill includes comprehensive Level 3 resources for advanced migration management:
 

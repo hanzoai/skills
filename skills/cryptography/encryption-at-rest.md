@@ -483,7 +483,7 @@ kms.disable_key(old_key_id)
 
 ## Level 3: Resources
 
-**Location**: `/Users/rand/src/cc-polymath/skills/cryptography/encryption-at-rest/resources/`
+**Location**: `~/.hanzo/skills/cryptography/encryption-at-rest/resources/`
 
 This skill includes comprehensive Level 3 resources for production encryption implementations:
 
@@ -608,7 +608,7 @@ Comprehensive technical reference covering:
 
 ```bash
 # Validate encryption configuration
-cd /Users/rand/src/cc-polymath/skills/cryptography/encryption-at-rest/resources/scripts
+cd ~/.hanzo/skills/cryptography/encryption-at-rest/resources/scripts
 ./validate_encryption.py --config-file /etc/app/db.conf --check-compliance PCI-DSS
 
 # Benchmark encryption performance
