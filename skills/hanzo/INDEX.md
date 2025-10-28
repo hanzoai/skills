@@ -86,12 +86,32 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 - Local inference via Hanzo Node
 - Model routing and fallback
 - Cost optimization
+- API key signup with free credits
 
 **Use When**:
 - Python AI applications
 - Backend API development
 - Local + cloud hybrid inference
 - Multi-model orchestration
+
+**Hanzo Go SDK** (`go-sdk.md`) - NEW
+**Purpose**: Type-safe Go interface for Hanzo AI with high-performance concurrency
+**Key Topics**:
+- Idiomatic Go API with context support
+- Goroutine-safe concurrent requests
+- HTTP/gRPC integration patterns
+- Blockchain node integration
+- Feature parity with Python/Rust SDKs
+
+**Use When**:
+- Backend services requiring concurrency
+- Blockchain node applications
+- Microservices architectures
+- Systems requiring goroutine-based parallelism
+
+**Organizations**:
+- SDK: github.com/hanzoai/go-sdk
+- Coming Soon: Golang Node (blockchain node in Go)
 
 ### AI Models & Training (2 skills)
 
