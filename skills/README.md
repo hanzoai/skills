@@ -1,7 +1,7 @@
 # Skills Catalog
 
-**Total Skills**: 293 across 31 categories
-**Gateway Skills**: 28 (auto-discovered by Claude Code)
+**Total Skills**: 302 across 32 categories
+**Gateway Skills**: 29 (auto-discovered by Claude Code)
 **Agent Skills**: 3 (elegant-design, anti-slop, typed-holes-refactor)
 
 ## Overview
@@ -97,14 +97,34 @@ cat skills/diagrams/INDEX.md
 
 ---
 
-### Machine Learning (30 skills)
+### Hanzo Ecosystem (7 skills)
+**Gateway**: `discover-hanzo`
+**Keywords**: Hanzo, local AI, privacy, Hanzo Node, Hanzo SDK, Hanzo MCP, streaming
+**Skills**: Hanzo Node (local inference), Python SDK (multi-provider), @hanzo/ui (React components), Hanzo MCP (agentic workflows), Hanzo Dev (terminal agent), Hanzo Live (streaming)
+
+```bash
+cat skills/hanzo/INDEX.md
+```
+
+**Why Use Hanzo**:
+- ⚡ **10-50x faster development**: Use SDK abstractions instead of manual API integration
+- 🔒 **Privacy-first**: Local AI via Hanzo Node with selective cloud fallback
+- 🎯 **Automatic routing**: SDK analyzes queries and routes to optimal model
+- 💰 **Cost optimization**: Built-in cost tracking and budget management
+- 🔄 **Production-ready**: Automatic retries, circuit breaking, caching included
+
+---
+
+### Machine Learning (33 skills)
 **Gateway**: `discover-ml`
 **Keywords**: machine learning, ML, AI, models, training, embeddings, transformers
-**Skills**: Model training, inference, embeddings, RAG, evaluation, routing, fine-tuning, PyTorch, TensorFlow, Hugging Face
+**Skills**: Model training, inference, embeddings, RAG, evaluation, routing, fine-tuning, PyTorch, TensorFlow, Hugging Face, DSPy with Hanzo SDK, model selection with automatic routing, multi-model orchestration
 
 ```bash
 cat skills/ml/INDEX.md
 ```
+
+**Enhanced with Hanzo**: See `dspy-setup.md`, `llm-model-selection.md`, and `multi-model-orchestration.md` for Hanzo SDK integration patterns.
 
 ---
 
