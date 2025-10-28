@@ -2,7 +2,7 @@
 
 ## Overview
 
-The cc-polymath skills library contains educational content, code examples, and executable scripts. Security is paramount to ensure users can safely learn and apply these skills without exposing their systems to risk.
+The hanzo-skills skills library contains educational content, code examples, and executable scripts. Security is paramount to ensure users can safely learn and apply these skills without exposing their systems to risk.
 
 ## Our Commitment
 
@@ -15,7 +15,7 @@ We are committed to:
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in cc-polymath, please report it responsibly:
+If you discover a security vulnerability in hanzo-skills, please report it responsibly:
 
 1. **DO NOT** open a public GitHub issue
 2. Email security concerns to: [rand.arete@gmail.com]
