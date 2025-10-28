@@ -1,6 +1,6 @@
 # Skills Catalog
 
-**Total Skills**: 302 across 32 categories
+**Total Skills**: 305 across 32 categories
 **Gateway Skills**: 29 (auto-discovered by Claude Code)
 **Agent Skills**: 3 (elegant-design, anti-slop, typed-holes-refactor)
 
@@ -97,10 +97,10 @@ cat skills/diagrams/INDEX.md
 
 ---
 
-### Hanzo Ecosystem (7 skills)
+### Hanzo Ecosystem (10 skills)
 **Gateway**: `discover-hanzo`
-**Keywords**: Hanzo, local AI, privacy, Hanzo Node, Hanzo SDK, Hanzo MCP, streaming
-**Skills**: Hanzo Node (local inference), Python SDK (multi-provider), @hanzo/ui (React components), Hanzo MCP (agentic workflows), Hanzo Dev (terminal agent), Hanzo Live (streaming)
+**Keywords**: Hanzo, local AI, privacy, Hanzo Node, Hanzo SDK, Hanzo MCP, streaming, ZenLM, training, mining
+**Skills**: Hanzo Node (local inference), Python SDK (multi-provider), @hanzo/ui (React components), Hanzo MCP (agentic workflows), Hanzo Dev (terminal agent), Hanzo Live (streaming), ZenLM (local AI models), Hanzo Gym (model training), Hanzo Desktop (productivity & mining), Hanzo Chat (conversation interface)
 
 ```bash
 cat skills/hanzo/INDEX.md
@@ -110,8 +110,9 @@ cat skills/hanzo/INDEX.md
 - ⚡ **10-50x faster development**: Use SDK abstractions instead of manual API integration
 - 🔒 **Privacy-first**: Local AI via Hanzo Node with selective cloud fallback
 - 🎯 **Automatic routing**: SDK analyzes queries and routes to optimal model
-- 💰 **Cost optimization**: Built-in cost tracking and budget management
+- 💰 **Cost optimization**: Built-in cost tracking + mine $AI tokens with Desktop
 - 🔄 **Production-ready**: Automatic retries, circuit breaking, caching included
+- 🌱 **Sustainable**: ZenLM models use 95% less energy than cloud AI
 
 ---
 
