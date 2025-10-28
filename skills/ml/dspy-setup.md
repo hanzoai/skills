@@ -350,6 +350,138 @@ dspy.configure(lm=lm)
 - Cost-free experimentation
 - Custom fine-tuned models
 
+### Pattern 7.5: Hanzo SDK (Unified Multi-Provider with Auto-Routing)
+
+```python
+import dspy
+from hanzo import Hanzo
+
+# Initialize Hanzo SDK with hybrid mode (local + cloud)
+hanzo = Hanzo(
+    inference_mode='hybrid',  # Local first, cloud fallback
+    auto_route=True,          # Automatic model selection
+    cost_optimize=True,       # Optimize for cost
+    
+    # Optional: Provider credentials (falls back to env vars)
+    node_url='http://localhost:8080',  # Hanzo Node for local
+    openai_api_key='sk-...',
+    anthropic_api_key='sk-ant-...'
+)
+
+# Create DSPy-compatible LM wrapper
+class HanzoLM(dspy.LM):
+    def __init__(self, hanzo_client, model=None):
+        self.hanzo = hanzo_client
+        self.model = model
+        super().__init__(model=model or "auto")
+    
+    def __call__(self, prompt, **kwargs):
+        response = self.hanzo.chat.completions.create(
+            messages=[{'role': 'user', 'content': prompt}],
+            model=self.model if self.model else None,  # Auto-route if no model
+            **kwargs
+        )
+        return response.choices[0].message.content
+
+# Configure DSPy with Hanzo
+lm = HanzoLM(hanzo, model='llama-3-8b')  # Or model=None for auto-routing
+dspy.configure(lm=lm)
+
+# Alternative: Use Hanzo for specific operations
+local_lm = HanzoLM(Hanzo(inference_mode='local'), model='llama-3-8b')
+cloud_lm = HanzoLM(Hanzo(inference_mode='cloud'), model='gpt-4')
+
+# Privacy-sensitive operations use local
+dspy.configure(lm=local_lm)
+sensitive_result = predictor(private_data)
+
+# Complex operations use cloud
+with dspy.context(lm=cloud_lm):
+    complex_result = predictor(complex_query)
+```
+
+**When to use**:
+- **Multi-provider flexibility**: Switch between local, OpenAI, Anthropic automatically
+- **Cost optimization**: Automatic routing to cheapest suitable model
+- **Privacy requirements**: Local-first with selective cloud fallback
+- **Production reliability**: Automatic failover and retry logic
+
+**Benefits over direct provider integration**:
+- **Automatic routing**: SDK analyzes query complexity and routes to best model
+- **Cost tracking**: Built-in cost monitoring and budget limits
+- **Caching**: Semantic caching reduces redundant inference
+- **Privacy-first**: Tries local Hanzo Node before cloud providers
+- **Unified interface**: One API for all providers (local + cloud)
+- **Resilience**: Automatic retries, circuit breaking, fallbacks
+
+**Comparison: Manual DSPy LM vs Hanzo SDK**:
+
+| Feature | Manual DSPy LM | Hanzo SDK + DSPy |
+|---------|----------------|------------------|
+| Provider setup | Configure each provider separately | One unified client |
+| Model routing | Manual selection per query | Automatic based on complexity |
+| Local inference | Requires separate Ollama/vLLM setup | Built-in via Hanzo Node |
+| Cost tracking | Custom implementation | Built-in |
+| Caching | Manual implementation | Automatic semantic caching |
+| Failover | Custom retry logic | Automatic with fallbacks |
+| Privacy | Separate local/cloud paths | Local-first automatic routing |
+| Lines of code | 50+ per provider | 10-15 total |
+
+**Example: DSPy Optimizer with Hanzo**:
+
+```python
+import dspy
+from hanzo import Hanzo
+from dspy.teleprompt import BootstrapFewShot
+
+# Initialize Hanzo for optimization (use cheaper models)
+hanzo_optimizer = Hanzo(
+    inference_mode='hybrid',
+    routing_strategy='cost_optimized',
+    preferred_models=['llama-3-8b', 'gpt-3.5-turbo']
+)
+
+lm_optimizer = HanzoLM(hanzo_optimizer)
+
+# Initialize Hanzo for production (use best models)
+hanzo_prod = Hanzo(
+    inference_mode='hybrid',
+    routing_strategy='quality_focused',
+    preferred_models=['gpt-4', 'claude-3-opus']
+)
+
+lm_prod = HanzoLM(hanzo_prod)
+
+# Define DSPy program
+class QA(dspy.Module):
+    def __init__(self):
+        super().__init__()
+        self.generate_answer = dspy.ChainOfThought("question -> answer")
+    
+    def forward(self, question):
+        return self.generate_answer(question=question)
+
+# Optimize with cheap models via Hanzo
+dspy.configure(lm=lm_optimizer)
+optimizer = BootstrapFewShot(metric=qa_metric)
+optimized_qa = optimizer.compile(QA(), trainset=train_data)
+
+# Deploy with best models via Hanzo
+dspy.configure(lm=lm_prod)
+result = optimized_qa(question="What is quantum computing?")
+
+# Hanzo automatically:
+# - Used llama-3-8b for optimization (fast, cheap)
+# - Uses gpt-4 for production (high quality)
+# - Tracked costs for both phases
+# - Cached repeated prompts during optimization
+```
+
+**See Also**:
+- **python-sdk.md** - Complete Hanzo SDK documentation
+- **hanzo-node.md** - Local inference setup
+- **llm-model-routing.md** - Automatic routing strategies
+
 ### Pattern 8: Multi-Model Setup
 
 ```python
