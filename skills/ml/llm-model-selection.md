@@ -536,6 +536,164 @@ Open-source self-host   | 70-100%  | High       | Very high volume
 
 ---
 
+## Hanzo SDK: Automatic Model Selection
+
+Instead of manually implementing model selection logic, use **Hanzo SDK** for automatic routing with privacy-first local inference and intelligent cloud fallback.
+
+### Quick Start
+
+```python
+from hanzo import Hanzo
+
+# Initialize with automatic routing
+hanzo = Hanzo(
+    inference_mode='hybrid',  # Local + cloud
+    auto_route=True,          # Automatic model selection
+    routing_strategy='balanced'  # balance quality/cost/latency
+)
+
+# Hanzo automatically selects best model for each query
+response = hanzo.chat.completions.create(
+    messages=[{'role': 'user', 'content': query}]
+    # No model specified - SDK chooses based on:
+    # 1. Query complexity analysis
+    # 2. Available local models (Hanzo Node)
+    # 3. Cost constraints
+    # 4. Latency requirements
+)
+
+print(f"Model used: {response.model}")
+print(f"Reasoning: {response.routing_reason}")
+print(f"Cost: ${response.cost:.4f}")
+```
+
+### Hanzo vs Manual Model Selection
+
+| Aspect | Manual Selection | Hanzo SDK |
+|--------|-----------------|-----------|
+| Setup | 100+ lines per provider | 3 lines total |
+| Model registry | Manual tracking | Automatic discovery |
+| Cost tracking | Custom implementation | Built-in |
+| Routing logic | Manual complexity analysis | Automatic |
+| Local models | Separate setup (Ollama/vLLM) | Built-in (Hanzo Node) |
+| Privacy | Manual local/cloud split | Local-first automatic |
+| Failover | Custom retry logic | Automatic |
+| Caching | Manual implementation | Semantic caching |
+| Budget limits | Custom enforcement | Built-in guardrails |
+
+### Routing Strategies
+
+```python
+# Cost-optimized: Prefer cheapest models
+hanzo = Hanzo(
+    routing_strategy='cost_optimized',
+    max_cost_per_request=0.01,
+    preferred_models=['llama-3-8b', 'gpt-4o-mini']
+)
+
+# Quality-focused: Use best models
+hanzo = Hanzo(
+    routing_strategy='quality_focused',
+    min_quality_threshold='excellent',
+    preferred_models=['gpt-4', 'claude-3-5-sonnet']
+)
+
+# Latency-optimized: Fastest responses
+hanzo = Hanzo(
+    routing_strategy='latency_optimized',
+    max_latency_ms=500,
+    prefer_streaming=True
+)
+
+# Privacy-first: Local only, never cloud
+hanzo = Hanzo(
+    inference_mode='local',
+    fallback_on_error=False
+)
+```
+
+### Comparison: Manual Portfolio vs Hanzo SDK
+
+**Manual Model Portfolio** (from examples above):
+```python
+# 100+ lines of ModelPortfolio class
+# Manual model registry
+# Manual cost calculation
+# Manual routing logic
+
+portfolio = ModelPortfolio()
+model = portfolio.recommend("code_generation")[0]
+# Still need to call the right API manually
+```
+
+**Hanzo SDK Equivalent**:
+```python
+# 3 lines total
+from hanzo import Hanzo
+
+hanzo = Hanzo(inference_mode='hybrid', auto_route=True)
+
+response = hanzo.chat.completions.create(
+    messages=[{'role': 'user', 'content': 'Write a sorting function'}]
+)
+# Automatically:
+# - Analyzed query complexity
+# - Selected Claude 3.5 Sonnet (best for code)
+# - Routed to local Hanzo Node if available
+# - Tracked cost ($0.012)
+# - Cached for future identical queries
+```
+
+### Model Selection Decision Tree with Hanzo
+
+```
+Start here -> Use Hanzo SDK
+
+Hanzo automatically:
+  ├─ Detects cost constraints -> Routes to DeepSeek/Gemini Flash
+  ├─ Detects quality needs -> Routes to GPT-4o/Claude 3.5
+  ├─ Detects latency needs -> Uses fastest available model
+  ├─ Detects privacy needs -> Uses local Hanzo Node
+  └─ Balances all constraints -> Optimal model for each query
+
+No manual decision tree needed!
+```
+
+### Advanced: Custom Selection Logic
+
+```python
+from hanzo import Hanzo
+from hanzo.routing import RoutingStrategy
+
+class CustomStrategy(RoutingStrategy):
+    """Custom model selection based on business rules."""
+    
+    def select_model(self, messages, options):
+        # Your custom logic (with Hanzo's automatic fallback)
+        if 'pricing' in messages[-1]['content'].lower():
+            return 'gpt-4'  # Complex financial analysis
+        elif len(messages[-1]['content']) < 100:
+            return 'llama-3-8b'  # Simple queries use local
+        else:
+            return None  # Let Hanzo auto-route
+    
+    def should_use_local(self, messages, options):
+        # Force local for PII
+        return self.contains_pii(messages)
+
+hanzo = Hanzo(
+    inference_mode='hybrid',
+    routing_strategy=CustomStrategy()
+)
+```
+
+**See Also**:
+- **python-sdk.md** - Complete Hanzo SDK documentation
+- **hanzo-node.md** - Local model inference setup
+- **llm-model-routing.md** - Detailed routing strategies
+
+---
+
 ## Related Skills
 
 - `llm-model-routing.md` - Dynamic routing between models for cost optimization
@@ -544,8 +702,10 @@ Open-source self-host   | 70-100%  | High       | Very high volume
 - `api-rate-limiting.md` - Managing rate limits across providers
 - `llm-dataset-preparation.md` - Preparing evaluation datasets
 - `observability-distributed-tracing.md` - Monitoring model performance
+- **`python-sdk.md`** - Hanzo SDK for automatic model selection
+- **`hanzo-node.md`** - Local AI inference infrastructure
 
 ---
 
-**Last Updated**: 2025-10-26
+**Last Updated**: 2025-10-28
 **Format Version**: 1.0 (Atomic)

@@ -706,6 +706,239 @@ else:
 
 ---
 
+## Hanzo SDK: Simplified Multi-Model Orchestration
+
+Instead of manually implementing orchestration patterns, use **Hanzo SDK** for automatic multi-model coordination with built-in routing, caching, and failover.
+
+### Pipeline Pattern with Hanzo
+
+```python
+from hanzo import Hanzo
+
+# Initialize with different strategies for different stages
+hanzo_fast = Hanzo(routing_strategy='latency_optimized')
+hanzo_smart = Hanzo(routing_strategy='quality_focused')
+
+async def research_pipeline(topic: str) -> str:
+    # Stage 1: Fast outline generation
+    outline = await hanzo_fast.chat.completions.create_async(
+        messages=[{
+            'role': 'user',
+            'content': f'Create a research outline for: {topic}'
+        }]
+    )
+    
+    # Stage 2: Quality content generation
+    content = await hanzo_smart.chat.completions.create_async(
+        messages=[{
+            'role': 'user',
+            'content': f'Write detailed content for: {outline.content}'
+        }]
+    )
+    
+    return content.choices[0].message.content
+
+# Hanzo automatically:
+# - Routed stage 1 to fastest model (Gemini Flash)
+# - Routed stage 2 to best model (GPT-4)
+# - Handled retries and fallbacks
+# - Tracked costs per stage
+```
+
+### Ensemble Pattern with Hanzo
+
+```python
+from hanzo import Hanzo
+
+async def ensemble_decision(query: str) -> str:
+    # Hanzo can query multiple models in parallel
+    hanzo = Hanzo(inference_mode='hybrid')
+    
+    # Parallel calls to different models
+    responses = await hanzo.chat.completions.batch_create_async([
+        {'messages': [{'role': 'user', 'content': query}], 'model': 'gpt-4'},
+        {'messages': [{'role': 'user', 'content': query}], 'model': 'claude-3-5-sonnet'},
+        {'messages': [{'role': 'user', 'content': query}], 'model': 'gemini-2.5-pro'}
+    ])
+    
+    # Extract answers
+    answers = [r.choices[0].message.content for r in responses]
+    
+    # Aggregate with another model
+    final = await hanzo.chat.completions.create_async(
+        messages=[{
+            'role': 'user',
+            'content': f'Synthesize these expert opinions:\n\n' + '\n\n'.join(answers)
+        }],
+        model='gpt-4'  # Use best model for synthesis
+    )
+    
+    return final.choices[0].message.content
+```
+
+### Specialist Routing with Hanzo MCP
+
+```python
+from hanzo import Hanzo
+from hanzo.mcp import MCPClient
+
+# Hanzo can use MCP tools for specialized tasks
+hanzo = Hanzo(
+    inference_mode='hybrid',
+    mcp_servers=['http://localhost:8081']
+)
+
+mcp = MCPClient('http://localhost:8081')
+
+async def route_by_intent(query: str) -> str:
+    # First, classify intent
+    intent = await hanzo.chat.completions.create_async(
+        messages=[{
+            'role': 'user',
+            'content': f'Classify this query intent (code/search/analyze): {query}'
+        }],
+        model='gpt-4o-mini'  # Fast classifier
+    )
+    
+    if 'code' in intent.content.lower():
+        # Use code specialist model
+        return await hanzo.chat.completions.create_async(
+            messages=[{'role': 'user', 'content': query}],
+            model='claude-3-5-sonnet'  # Best for code
+        )
+    elif 'search' in intent.content.lower():
+        # Use MCP search tool
+        tools = mcp.get_tools()
+        return await hanzo.chat.completions.create_async(
+            messages=[{'role': 'user', 'content': query}],
+            tools=tools,
+            tool_choice='auto'
+        )
+    else:
+        # General analysis
+        return await hanzo.chat.completions.create_async(
+            messages=[{'role': 'user', 'content': query}],
+            model='gpt-4'  # Best for analysis
+        )
+```
+
+### Cascade Pattern with Hanzo
+
+```python
+from hanzo import Hanzo
+
+hanzo_local = Hanzo(inference_mode='local')
+hanzo_cloud = Hanzo(inference_mode='cloud')
+
+async def cascade_query(query: str, complexity_threshold: float = 0.7) -> str:
+    # Try fast local model first
+    try:
+        response = await hanzo_local.chat.completions.create_async(
+            messages=[{'role': 'user', 'content': query}],
+            model='llama-3-8b',
+            timeout=5  # Fast timeout
+        )
+        
+        # Check confidence (if model provides it)
+        if hasattr(response, 'confidence') and response.confidence > complexity_threshold:
+            return response.choices[0].message.content
+    except TimeoutError:
+        pass  # Fall through to cloud
+    
+    # Escalate to cloud model
+    response = await hanzo_cloud.chat.completions.create_async(
+        messages=[{'role': 'user', 'content': query}],
+        model='gpt-4'  # Best model for complex queries
+    )
+    
+    return response.choices[0].message.content
+```
+
+### Comparison: Manual Orchestration vs Hanzo SDK
+
+| Pattern | Manual Implementation | Hanzo SDK |
+|---------|----------------------|-----------|
+| **Pipeline** | 50+ lines, manual routing | 10-15 lines, auto-routing |
+| **Ensemble** | Custom parallel execution | Built-in batch API |
+| **Specialist** | Manual intent classification | Automatic or MCP-based |
+| **Cascade** | Custom timeout/retry logic | Built-in with fallbacks |
+| **Cost Tracking** | Custom per-pattern | Automatic all patterns |
+| **Caching** | Manual between stages | Automatic semantic cache |
+| **Observability** | Manual OpenTelemetry | Built-in metrics |
+| **Error Handling** | Custom per model | Automatic retry/circuit breaker |
+
+### Advanced: Multi-Model Workflow
+
+```python
+from hanzo import Hanzo
+from hanzo.workflows import Pipeline
+
+# Define reusable workflow
+class ResearchWorkflow(Pipeline):
+    def __init__(self):
+        super().__init__()
+        
+        # Different Hanzo instances for different stages
+        self.fast_hanzo = Hanzo(routing_strategy='latency_optimized')
+        self.smart_hanzo = Hanzo(routing_strategy='quality_focused')
+        self.local_hanzo = Hanzo(inference_mode='local')
+    
+    async def research(self, topic: str) -> dict:
+        # Stage 1: Generate outline (fast)
+        outline = await self.fast_hanzo.chat.completions.create_async(
+            messages=[{'role': 'user', 'content': f'Outline: {topic}'}]
+        )
+        
+        # Stage 2: Parallel research on each section
+        sections = outline.content.split('\n')
+        research_tasks = [
+            self.local_hanzo.chat.completions.create_async(
+                messages=[{'role': 'user', 'content': f'Research: {section}'}]
+            )
+            for section in sections
+        ]
+        research_results = await asyncio.gather(*research_tasks)
+        
+        # Stage 3: Synthesize with best model
+        synthesis = await self.smart_hanzo.chat.completions.create_async(
+            messages=[{
+                'role': 'user',
+                'content': f'Synthesize:\n\n' + '\n\n'.join([r.content for r in research_results])
+            }]
+        )
+        
+        return {
+            'outline': outline.content,
+            'research': [r.content for r in research_results],
+            'synthesis': synthesis.content,
+            'total_cost': sum([
+                outline.cost,
+                sum(r.cost for r in research_results),
+                synthesis.cost
+            ])
+        }
+
+# Use workflow
+workflow = ResearchWorkflow()
+result = await workflow.research('Quantum Computing Applications')
+print(f"Total cost: ${result['total_cost']:.4f}")
+```
+
+**Key Benefits**:
+- **10x less code**: Hanzo SDK handles routing, retries, caching automatically
+- **Built-in observability**: Automatic cost tracking and performance metrics
+- **Privacy-first**: Local models via Hanzo Node before cloud escalation
+- **Production-ready**: Circuit breakers, retries, fallbacks included
+- **Type-safe**: Full TypeScript support with Python compatibility
+
+**See Also**:
+- **python-sdk.md** - Complete Hanzo SDK documentation
+- **hanzo-mcp.md** - MCP tool integration for workflows
+- **hanzo-node.md** - Local model inference
+- **llm-model-routing.md** - Automatic routing strategies
+
+---
+
 ## Related Skills
 
 - `llm-model-routing.md` - Routing strategies and RouteLLM framework
@@ -714,8 +947,11 @@ else:
 - `observability-distributed-tracing.md` - OpenTelemetry and Phoenix
 - `modal-web-endpoints.md` - Deploying orchestration as FastAPI services
 - `redis-caching.md` - Shared state and caching for multi-model systems
+- **`python-sdk.md`** - Hanzo SDK for multi-model orchestration
+- **`hanzo-mcp.md`** - MCP tools for specialized tasks
+- **`hanzo-node.md`** - Local inference infrastructure
 
 ---
 
-**Last Updated**: 2025-10-26
+**Last Updated**: 2025-10-28
 **Format Version**: 1.0 (Atomic)
