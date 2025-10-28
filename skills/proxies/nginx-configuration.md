@@ -901,15 +901,15 @@ Programmatic configuration generation:
 cat skills/proxies/nginx-configuration/resources/REFERENCE.md
 
 # 2. Validate existing configuration
-./skills/proxies/nginx-configuration/resources/scripts/validate_config.py \
+.~/.hanzo/skills/proxies/nginx-configuration/resources/scripts/validate_config.py \
   --config-file /etc/nginx/nginx.conf
 
 # 3. Generate optimized configuration
-./skills/proxies/nginx-configuration/resources/scripts/optimize_settings.py \
+.~/.hanzo/skills/proxies/nginx-configuration/resources/scripts/optimize_settings.py \
   --traffic-profile high > nginx-optimized.conf
 
 # 4. Test performance
-./skills/proxies/nginx-configuration/resources/scripts/test_performance.sh \
+.~/.hanzo/skills/proxies/nginx-configuration/resources/scripts/test_performance.sh \
   --url http://localhost --concurrency 100
 
 # 5. Use example configurations
@@ -917,7 +917,7 @@ cp skills/proxies/nginx-configuration/resources/examples/reverse-proxy/nginx.con
   /etc/nginx/nginx.conf
 
 # 6. Generate custom configuration
-./skills/proxies/nginx-configuration/resources/examples/python/config-generator.py \
+.~/.hanzo/skills/proxies/nginx-configuration/resources/examples/python/config-generator.py \
   --template ssl --domain mysite.com --output nginx.conf
 ```
 
