@@ -30,8 +30,8 @@
 | **zen-director** | 5B | Text-to-video generation | Video content |
 | **zen-musician** | 7B | Music generation with lyrics | Music creation |
 
-**GitHub Organization**: [github.com/zoolm](https://github.com/zoolm)
-**HuggingFace Organization**: [huggingface.co/zoolm](https://huggingface.co/zoolm)
+**GitHub Organization**: [github.com/zenlm](https://github.com/zenlm)
+**HuggingFace Organization**: [huggingface.co/zenlm](https://huggingface.co/zenlm)
 
 ## Performance Benchmarks
 
@@ -59,11 +59,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Load zen-nano-instruct
 model = AutoModelForCausalLM.from_pretrained(
-    "zoolm/zen-nano-instruct",
+    "zenlm/zen-nano-instruct",
     torch_dtype="auto",
     device_map="auto"
 )
-tokenizer = AutoTokenizer.from_pretrained("zoolm/zen-nano-instruct")
+tokenizer = AutoTokenizer.from_pretrained("zenlm/zen-nano-instruct")
 
 # Generate response
 input_text = "Explain quantum computing in simple terms"
@@ -82,7 +82,7 @@ pip install mlx-lm
 from mlx_lm import load, generate
 
 # Load zen-nano-instruct (optimized for M-series)
-model, tokenizer = load("zoolm/zen-nano-instruct")
+model, tokenizer = load("zenlm/zen-nano-instruct")
 
 # Generate at 50+ tokens/sec on M1 Pro
 response = generate(
@@ -103,7 +103,7 @@ git clone https://github.com/ggerganov/llama.cpp
 cd llama.cpp && make
 
 # Download GGUF version (1.5GB quantized)
-huggingface-cli download zoolm/zen-nano-instruct-4bit \
+huggingface-cli download zenlm/zen-nano-instruct-4bit \
     --include "*.gguf" \
     --local-dir ./models
 
@@ -124,8 +124,8 @@ huggingface-cli download zoolm/zen-nano-instruct-4bit \
 ```python
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-model = AutoModelForCausalLM.from_pretrained("zoolm/zen-nano-instruct")
-tokenizer = AutoTokenizer.from_pretrained("zoolm/zen-nano-instruct")
+model = AutoModelForCausalLM.from_pretrained("zenlm/zen-nano-instruct")
+tokenizer = AutoTokenizer.from_pretrained("zenlm/zen-nano-instruct")
 
 messages = [
     {"role": "system", "content": "You are a helpful AI assistant."},
@@ -143,8 +143,8 @@ print(tokenizer.decode(outputs[0]))
 **Best for**: Math, logic, transparent reasoning
 
 ```python
-model = AutoModelForCausalLM.from_pretrained("zoolm/zen-nano-thinking")
-tokenizer = AutoTokenizer.from_pretrained("zoolm/zen-nano-thinking")
+model = AutoModelForCausalLM.from_pretrained("zenlm/zen-nano-thinking")
+tokenizer = AutoTokenizer.from_pretrained("zenlm/zen-nano-thinking")
 
 # Enable chain-of-thought
 messages = [
@@ -173,8 +173,8 @@ response = tokenizer.decode(outputs[0])
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import json
 
-model = AutoModelForCausalLM.from_pretrained("zoolm/zen-agent")
-tokenizer = AutoTokenizer.from_pretrained("zoolm/zen-agent")
+model = AutoModelForCausalLM.from_pretrained("zenlm/zen-agent")
+tokenizer = AutoTokenizer.from_pretrained("zenlm/zen-agent")
 
 # Define available tools
 tools = [
@@ -220,7 +220,7 @@ response = tokenizer.decode(outputs[0])
 # Full 4B model (3.8GB memory)
 python -c "
 from mlx_lm import load, generate
-model, tokenizer = load('zoolm/zen-nano-instruct')
+model, tokenizer = load('zenlm/zen-nano-instruct')
 print(generate(model, tokenizer, prompt='Hello!'))
 "
 ```
@@ -231,7 +231,7 @@ print(generate(model, tokenizer, prompt='Hello!'))
 # 4-bit quantized (1.5GB memory)
 python -c "
 from mlx_lm import load, generate
-model, tokenizer = load('zoolm/zen-nano-instruct-4bit')
+model, tokenizer = load('zenlm/zen-nano-instruct-4bit')
 print(generate(model, tokenizer, prompt='Hello!'))
 "
 ```
@@ -255,7 +255,7 @@ import { pipeline } from '@xenova/transformers';
 // Load zen-nano in browser
 const generator = await pipeline(
   'text-generation',
-  'zoolm/zen-nano-instruct',
+  'zenlm/zen-nano-instruct',
   { device: 'webgpu' }
 );
 
@@ -278,7 +278,7 @@ console.log(output[0].generated_text);
 
 ```bash
 # Download specific quantization
-huggingface-cli download zoolm/zen-nano-instruct-4bit \
+huggingface-cli download zenlm/zen-nano-instruct-4bit \
     --include "*Q4_K_M.gguf" \
     --local-dir ./models
 ```
@@ -289,7 +289,7 @@ huggingface-cli download zoolm/zen-nano-instruct-4bit \
 # 4-bit MLX (optimized for M-series)
 pip install mlx-lm
 python -m mlx_lm.convert \
-    --hf-path zoolm/zen-nano-instruct \
+    --hf-path zenlm/zen-nano-instruct \
     --mlx-path ./zen-nano-mlx \
     --quantize
 ```
@@ -302,7 +302,7 @@ from auto_gptq import AutoGPTQForCausalLM
 
 # 4-bit GPTQ for NVIDIA
 model = AutoGPTQForCausalLM.from_quantized(
-    "zoolm/zen-nano-instruct-gptq",
+    "zenlm/zen-nano-instruct-gptq",
     device="cuda:0"
 )
 ```
@@ -318,7 +318,7 @@ from hanzo import Hanzo
 hanzo = Hanzo(
     inference_mode='local',
     node_url='http://localhost:8080',
-    local_model='zoolm/zen-nano-instruct'
+    local_model='zenlm/zen-nano-instruct'
 )
 
 # Automatic routing: local for small tasks, cloud for complex
@@ -360,7 +360,7 @@ cd /Users/z/work/zen/gym
 # Fine-tune zen-nano for your domain
 llamafactory-cli train \
     --stage sft \
-    --model_name_or_path zoolm/zen-nano-instruct \
+    --model_name_or_path zenlm/zen-nano-instruct \
     --dataset your_dataset \
     --template qwen3 \
     --finetuning_type lora \
@@ -404,7 +404,7 @@ response = client.chat.completions.create(
 from mlx_lm import load, generate
 
 # No API key, no internet, no subscription
-model, tokenizer = load("zoolm/zen-nano-instruct")
+model, tokenizer = load("zenlm/zen-nano-instruct")
 
 response = generate(
     model,
@@ -455,8 +455,8 @@ Learn more: [zoolabs.org](https://zoolabs.io)
 # Medical records, financial data, legal documents
 # Data never leaves your device
 
-model = AutoModelForCausalLM.from_pretrained("zoolm/zen-nano-instruct")
-tokenizer = AutoTokenizer.from_pretrained("zoolm/zen-nano-instruct")
+model = AutoModelForCausalLM.from_pretrained("zenlm/zen-nano-instruct")
+tokenizer = AutoTokenizer.from_pretrained("zenlm/zen-nano-instruct")
 
 # Process sensitive data locally
 sensitive_text = "Patient diagnosis: ..."
@@ -473,7 +473,7 @@ summary = tokenizer.decode(outputs[0])
 from mlx_lm import load, generate
 
 # Works 100% offline
-model, tokenizer = load("zoolm/zen-nano-instruct-4bit")
+model, tokenizer = load("zenlm/zen-nano-instruct-4bit")
 response = generate(model, tokenizer, prompt="Help with code offline")
 ```
 
@@ -487,7 +487,7 @@ from hanzo import Hanzo
 # Local for 80% of queries, cloud for 20%
 hanzo = Hanzo(
     inference_mode='hybrid',
-    local_model='zoolm/zen-nano-instruct',
+    local_model='zenlm/zen-nano-instruct',
     cost_optimize=True
 )
 
@@ -516,7 +516,7 @@ response = hanzo.chat.completions.create(
 ```python
 # Lightweight agents for tool calling
 
-model = AutoModelForCausalLM.from_pretrained("zoolm/zen-agent")
+model = AutoModelForCausalLM.from_pretrained("zenlm/zen-agent")
 
 # Each sub-agent runs zen-agent locally (4GB memory)
 # Coordinate 10+ agents on single machine
@@ -535,7 +535,7 @@ RUN pip install transformers torch mlx-lm
 # Download model
 RUN python -c "
 from transformers import AutoModelForCausalLM, AutoTokenizer
-AutoModelForCausalLM.from_pretrained('zoolm/zen-nano-instruct')
+AutoModelForCausalLM.from_pretrained('zenlm/zen-nano-instruct')
 "
 
 EXPOSE 8080
@@ -555,7 +555,7 @@ spec:
     spec:
       containers:
       - name: zenlm
-        image: zoolm/zen-nano-instruct:latest
+        image: zenlm/zen-nano-instruct:latest
         resources:
           limits:
             memory: "4Gi"
@@ -566,7 +566,7 @@ spec:
 
 ```javascript
 // zen-nano-instruct compiled to WASM
-import { generate } from '@zoolm/zen-nano-wasm';
+import { generate } from '@zenlm/zen-nano-wasm';
 
 export default {
   async fetch(request) {
@@ -581,10 +581,10 @@ export default {
 
 ### Get Involved
 
-- ⭐ **Star on GitHub**: [github.com/zoolm](https://github.com/zoolm)
-- 💬 **Join Discord**: [discord.gg/zoolm](https://discord.gg/zoolm)
-- 🐦 **Follow Twitter**: [@zoolm_ai](https://twitter.com/zenlm_ai)
-- 📧 **Newsletter**: [zoolm.org/newsletter](https://zoolm.org/newsletter)
+- ⭐ **Star on GitHub**: [github.com/zenlm](https://github.com/zenlm)
+- 💬 **Join Discord**: [discord.gg/zenlm](https://discord.gg/zenlm)
+- 🐦 **Follow Twitter**: [@zenlm_ai](https://twitter.com/zenlm_ai)
+- 📧 **Newsletter**: [zenlm.org/newsletter](https://zenlm.org/newsletter)
 
 ### For Developers
 
@@ -616,11 +616,11 @@ export default {
 
 ## Additional Resources
 
-- **Website**: [zoolm.org](https://zoolm.org)
-- **GitHub**: [github.com/zoolm](https://github.com/zoolm)
-- **HuggingFace**: [huggingface.co/zoolm](https://huggingface.co/zoolm)
-- **Documentation**: [docs.zoolm.org](https://docs.zoolm.org)
-- **Research Papers**: [zoolm.org/research](https://zoolm.org/research)
+- **Website**: [zenlm.org](https://zenlm.org)
+- **GitHub**: [github.com/zenlm](https://github.com/zenlm)
+- **HuggingFace**: [huggingface.co/zenlm](https://huggingface.co/zenlm)
+- **Documentation**: [docs.zenlm.org](https://docs.zenlm.org)
+- **Research Papers**: [zenlm.org/research](https://zenlm.org/research)
 
 ## Citation
 
@@ -631,7 +631,7 @@ If you use ZenLM in your research:
   title={ZenLM: Next-Generation Local AI Models},
   author={Zen AI Team},
   year={2025},
-  howpublished={\url{https://github.com/zoolm}}
+  howpublished={\url{https://github.com/zenlm}}
 }
 ```
 
