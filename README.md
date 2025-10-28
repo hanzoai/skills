@@ -161,7 +161,7 @@ That's it! All 350+ skills and the `/skills` command are immediately available.
 
 **For local development or testing**:
 ```bash
-/plugin install /skills
+/plugin install /Users/z/src/hanzo/skills
 ```
 
 ### Auto-Discovery (How It Works)
