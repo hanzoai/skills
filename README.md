@@ -166,12 +166,50 @@ That's it! All 350+ skills and the `/skills` command are immediately available.
 /plugin install /path/to/local/skills
 ```
 
-### Auto-Discovery (How It Works)
-Just start working. Claude Code automatically activates relevant gateway skills based on your task keywords.
+### How Skills Work
 
-**Example**: Mention "REST API with PostgreSQL" → `discover-api` and `discover-database` gateways activate automatically.
+Skills activate in three ways:
 
-### Manual Loading
+**1. Auto-Discovery (Automatic)**
+Gateway skills (`discover-*`) automatically activate when you mention relevant keywords:
+- Say "REST API" → `discover-api` loads automatically
+- Say "PostgreSQL" → `discover-database` loads automatically
+- Say "machine learning" → `discover-ml` loads automatically
+
+You don't need to do anything - just work naturally.
+
+**2. Manual Loading (Explicit)**
+Load skills when you need specific knowledge:
+```bash
+# Load a skill to teach Claude about a topic
+cat skills/api/rest-api-design.md
+
+# Load multiple related skills
+cat skills/database/postgres-schema-design.md
+cat skills/database/postgres-query-optimization.md
+```
+
+Claude reads the skill and applies that knowledge to your project.
+
+**3. Tool Usage (Executable)**
+Some skills include Python scripts and tools:
+```bash
+# First, load the skill so Claude knows how to use it
+cat skills/anti-slop/SKILL.md
+
+# Then Claude can run the tools
+python skills/anti-slop/scripts/detect_slop.py file.md
+
+# Or ask Claude: "Check this file for AI slop patterns"
+# Claude will load the skill and run the tool automatically
+```
+
+**How to Tell When Skills Are Active**:
+- Gateway skills mention themselves when they activate
+- Claude will reference skill content in responses
+- You can ask: "What skills are you currently using?"
+
+### Manual Loading for Advanced Use
 When you need to browse or plan:
 
 ```bash
@@ -189,6 +227,45 @@ cat skills/discover-ml/SKILL.md  # ML gateway with quick reference
 cat skills/api/rest-api-design.md
 cat skills/database/postgres-query-optimization.md
 ```
+
+### Using Skills with Tools
+
+Many skills include executable scripts and tools. Here's how to use them:
+
+**Anti-Slop Skill** - Check for AI-generated patterns:
+```bash
+# Load the skill first (shows Claude how to detect slop)
+cat skills/anti-slop/SKILL.md
+
+# Run detection on a file
+python skills/anti-slop/scripts/detect_slop.py path/to/file.md --verbose
+
+# Clean up detected patterns
+python skills/anti-slop/scripts/clean_slop.py path/to/file.md --save
+
+# Preview changes without saving
+python skills/anti-slop/scripts/clean_slop.py path/to/file.md
+```
+
+**Example Output**:
+```
+======================================================================
+AI Slop Detection Report: document.md
+======================================================================
+
+Overall Slop Score: 0/100
+Assessment: ✅ Low slop detected - Writing appears authentic and purposeful
+```
+
+**Other Agent Skills with Tools**:
+- `skills/elegant-design/` - UI design analysis and recommendations
+- `skills/typed-holes-refactor/` - Systematic refactoring with type-driven development
+- `skills/discover-*/` - Gateway skills that auto-activate on keywords
+
+**General Pattern**:
+1. Load the skill: `cat skills/category/skill-name/SKILL.md`
+2. Use the tools: `python skills/category/skill-name/scripts/tool.py`
+3. Check references: `cat skills/category/skill-name/references/*.md`
 
 ### Composing Workflows
 
