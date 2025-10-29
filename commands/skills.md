@@ -74,23 +74,27 @@ Based on the argument provided:
 
 Display in this format:
 ```
+━━━ SKILLS DISCOVERY ━━━
+
 RECOMMENDED FOR THIS PROJECT:
 → discover-[category]
+  Keywords: [key topics]
   cat skills/discover-[category]/SKILL.md
 
 → discover-[category]
+  Keywords: [key topics]
   cat skills/discover-[category]/SKILL.md
 
-CATEGORIES (292 skills):
+CATEGORIES (292 skills, 28 gateways):
 Frontend (8) | Database (8) | API (7) | Testing (6) | Diagrams (8) | ML (30)
 Math (19) | Debugging (14) | Build Systems (8) | Caching (7) | Observability (8)
 Containers (5) | CI/CD (4) | PLT (13) | Formal (10) | Cloud (13)
 
 COMMANDS:
-/skills api              - View API skills
-/skills frontend         - View frontend skills
-/skills postgres         - Search for 'postgres'
-/skills list             - Show all categories
+/skills api          - View API skills
+/skills frontend     - View frontend skills
+/skills postgres     - Search for 'postgres'
+/skills list         - Show all categories
 ```
 
 Recommend 2-4 gateway skills that match:
@@ -98,36 +102,27 @@ Recommend 2-4 gateway skills that match:
 - Topics discussed in conversation
 - Common workflows for the project type
 
-### Gateway-First Recommendations:
-
-**Format:**
-```
-RECOMMENDED GATEWAYS:
-→ discover-api
-  Keywords: REST, GraphQL, authentication, authorization, rate limiting
-  cat skills/discover-api/SKILL.md
-
-→ discover-database
-  Keywords: PostgreSQL, MongoDB, Redis, query optimization
-  cat skills/discover-database/SKILL.md
-```
-
 **If ARGUMENT = category name:**
-
-Two scenarios:
 
 **A) If discover-{category} gateway exists:**
 ```
-{CATEGORY} SKILLS
-Total: [N] skills
+━━━ {CATEGORY} SKILLS (N total) ━━━
+
 Keywords: [comma-separated keywords]
 
 KEY SKILLS:
-[List 3-5 key skills with one-line descriptions]
+→ [skill-name] - [one-line description]
+→ [skill-name] - [one-line description]
+→ [skill-name] - [one-line description]
 
-LOAD:
-cat skills/{category}/INDEX.md          # All skills in category
-cat skills/discover-{category}/SKILL.md # Gateway overview
+LOAD GATEWAY:
+cat skills/discover-{category}/SKILL.md    # Overview + quick reference
+
+LOAD FULL INDEX:
+cat skills/{category}/INDEX.md              # All skills with details
+
+LOAD SPECIFIC SKILL:
+cat skills/{category}/[skill-name].md       # Individual skill
 ```
 
 **B) If searching root-level skills:**
@@ -140,22 +135,23 @@ Display similarly but note they're at root level.
 
 **Example for `/skills api`:**
 ```
-API SKILLS (7 total)
+━━━ API SKILLS (7 total) ━━━
+
 Keywords: REST, GraphQL, authentication, authorization, rate limiting
 
-SKILLS:
-1. rest-api-design - RESTful resource modeling, HTTP semantics
-2. graphql-schema-design - GraphQL types, resolvers, N+1 prevention
-3. api-authentication - JWT, OAuth 2.0, API keys, sessions
-4. api-authorization - RBAC, ABAC, policy engines
-5. api-rate-limiting - Token bucket, sliding window algorithms
-6. api-versioning - API versioning, deprecation, compatibility
-7. api-error-handling - RFC 7807, validation errors
+KEY SKILLS:
+→ rest-api-design - RESTful resource modeling, HTTP semantics
+→ graphql-schema-design - GraphQL types, resolvers, N+1 prevention
+→ api-authentication - JWT, OAuth 2.0, API keys, sessions
+→ api-authorization - RBAC, ABAC, policy engines
+→ api-rate-limiting - Token bucket, sliding window algorithms
+→ api-versioning - API versioning, deprecation, compatibility
+→ api-error-handling - RFC 7807, validation errors
 
 LOAD:
-cat skills/api/INDEX.md                  # Full details
-cat skills/discover-api/SKILL.md         # Gateway overview
-cat skills/api/rest-api-design.md        # Specific skill
+cat skills/discover-api/SKILL.md       # Gateway overview
+cat skills/api/INDEX.md                # Full details
+cat skills/api/rest-api-design.md     # Specific skill
 ```
 
 **If ARGUMENT = search term:**
@@ -168,34 +164,38 @@ Search across:
 
 Display matching gateway categories FIRST, then specific skills:
 ```
-SEARCH: 'postgres'
+━━━ SEARCH: 'postgres' ━━━
 
 GATEWAY:
 → discover-database
   Keywords: PostgreSQL, MongoDB, Redis, query optimization
   cat skills/discover-database/SKILL.md
 
-SKILLS:
-→ postgres-query-optimization.md
+MATCHING SKILLS:
+→ postgres-query-optimization.md - Database/Performance
   Debug slow queries, EXPLAIN plans, index design
   cat skills/database/postgres-query-optimization.md
 
-→ postgres-migrations.md
+→ postgres-migrations.md - Database/Schema
   Schema changes, zero-downtime deployments
   cat skills/database/postgres-migrations.md
 
-→ postgres-schema-design.md
+→ postgres-schema-design.md - Database/Design
   Designing schemas, relationships, data types
   cat skills/database/postgres-schema-design.md
 
-RELATED: discover-observability, discover-caching
+RELATED GATEWAYS:
+discover-observability, discover-caching, discover-debugging
+
+[Refine search: /skills postgres optimization]
+[View category: /skills database]
 ```
 
 **If ARGUMENT = "list":**
 
 Show all 28 gateway categories:
 ```
-ALL CATEGORIES (292 skills)
+━━━ ALL CATEGORIES (292 skills, 28 gateways) ━━━
 
 BACKEND & DATA:
   discover-api (7)         - REST, GraphQL, auth, rate limiting
@@ -243,13 +243,17 @@ AGENT SKILLS (Root):
 META SKILLS (Root):
   skill-*.md              - Discovery and creation
   beads-*.md              - Workflow and task management
+
+[View category: /skills api]
+[Search: /skills postgres]
 ```
 
 ### 5. Output Requirements
 
 **Format Guidelines:**
-- Keep output concise and scannable
+- Use Unicode box drawing (━ ─ │) for section headers
 - Use `→` for list items
+- Keep output under 30 lines for default view
 - Include clear, copy-paste commands
 - Group related items logically
 - Show only relevant categories/skills for the context
@@ -272,12 +276,14 @@ META SKILLS (Root):
 
 **If skills/README.md not found:**
 ```
+━━━ ERROR ━━━
+
 Skills catalog not found at skills/README.md
 
 Expected structure:
 skills/
 ├── README.md              (Master catalog)
-├── discover-*/SKILL.md    (27 gateway skills)
+├── discover-*/SKILL.md    (28 gateway skills)
 └── {category}/INDEX.md    (Category indexes)
 
 Is your repository in a different location?
@@ -285,13 +291,15 @@ Is your repository in a different location?
 
 **If no matches for search:**
 ```
-No skills found matching '$ARGUMENTS'
+━━━ NO RESULTS: '$ARGUMENTS' ━━━
 
-Try:
-- Broader search term
-- View all gateways: /skills list
-- Browse full catalog: cat skills/README.md
-- Check a category: /skills api
+No skills found matching your search.
+
+TRY:
+→ Broader search term
+→ View all gateways: /skills list
+→ Browse full catalog: cat skills/README.md
+→ Check a category: /skills api
 ```
 
 **If empty project directory:**
@@ -302,7 +310,7 @@ No project files detected in current directory.
 
 GENERAL-PURPOSE GATEWAYS:
 → discover-collab - Collaboration, documentation, CodeTour walkthroughs
-  Load: cat skills/discover-collab/SKILL.md
+  cat skills/discover-collab/SKILL.md
 
 ROOT-LEVEL SKILLS:
 → beads-workflow.md - Multi-session task management
@@ -321,4 +329,5 @@ ROOT-LEVEL SKILLS:
 - Keep output concise and actionable
 - Never modify the skills library
 - Provide clear, copy-paste commands
+- Use Unicode box drawing for visual clarity
 - The catalog has: 292 skills, 28 gateways, 31 categories
