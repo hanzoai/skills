@@ -15,7 +15,7 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 
 ## Skill Catalog
 
-### Core Infrastructure (6 skills)
+### Core Infrastructure (8 skills)
 
 **Hanzo Engine** (`hanzo-engine.md`) - 650 lines
 **Purpose**: Native Rust inference & embedding engine for the entire Hanzo ecosystem
@@ -158,6 +158,85 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 - SDK: github.com/hanzoai/go-sdk
 - Coming Soon: Golang Node (blockchain node in Go)
 
+### Cloud Services (5 skills)
+
+**Hanzo Chat** (`hanzo-chat.md`)
+**Purpose**: Unified LLM API for 86+ models across all major providers
+**Key Topics**:
+- Single OpenAI-compatible endpoint (api.hanzo.ai/v1)
+- 86+ models: Zen, OpenAI, Anthropic, Google, Meta, Mistral
+- Streaming, function calling, vision, tool use
+- Smart routing with automatic provider fallback
+- Python, TypeScript, Go, Rust SDK support
+
+**Use When**:
+- Calling LLMs programmatically via a single API
+- Multi-model access or fallback chains
+- Building AI applications with chat completions
+- Using Zen frontier models (600M - 480B params)
+
+**Hanzo Web3** (`hanzo-web3.md`)
+**Purpose**: Blockchain API for 100+ EVM and non-EVM chains
+**Key Topics**:
+- JSON-RPC proxy for 100+ chains (Ethereum, Solana, Base, Lux, etc.)
+- Structured data APIs (tokens, NFTs, transfers, portfolio)
+- Managed webhooks for onchain events
+- ERC-4337 smart wallets with gas sponsorship
+- Solana Yellowstone gRPC and DAS
+
+**Use When**:
+- Reading or writing blockchain data
+- Token balances, NFT metadata, transaction history
+- Deploying or interacting with smart contracts
+- Real-time onchain event notifications
+- Account abstraction / smart wallets
+
+**Hanzo Web3 Gateway** (`hanzo-web3-gateway.md`)
+**Purpose**: Keyless blockchain access via x402 USDC micropayments
+**Key Topics**:
+- Zero-config: no API key, no account, no billing dashboard
+- x402 protocol (EIP-712 signed USDC on Base)
+- Same 100+ chains as Hanzo Web3
+- Sub-cent pricing ($0.000001 - $0.0001 per request)
+- SIWE (Sign-In with Ethereum) auth
+
+**Use When**:
+- Autonomous agents needing keyless blockchain access
+- Pay-per-request with USDC micropayments
+- No human needs to create API keys or manage billing
+- Building agents that sign up and pay independently
+
+**Hanzo Commerce** (`hanzo-commerce.md`)
+**Purpose**: Billing, payments, and e-commerce API
+**Key Topics**:
+- Products, orders, subscriptions, invoices, payments
+- Usage-based metering (per API call, token, or compute unit)
+- Multi-currency: fiat (USD, EUR) and crypto (USDC, ETH, LUX)
+- Webhook events for payment lifecycle
+- PCI-compliant card tokenization
+
+**Use When**:
+- Creating products, plans, or pricing
+- Processing payments or managing subscriptions
+- Usage-based billing for API or compute services
+- Building e-commerce features into applications
+
+**Hanzo Console** (`hanzo-console.md`)
+**Purpose**: AI observability, tracing, and prompt management
+**Key Topics**:
+- Full trace capture for every LLM call, tool use, agent step
+- Per-request cost attribution by model and provider
+- Prompt versioning, testing, and deployment registry
+- Evaluation datasets and automated scoring
+- Langfuse SDK compatible (drop-in replacement)
+
+**Use When**:
+- Tracing and debugging LLM calls
+- Cost analysis across models and providers
+- Managing prompt versions and deployments
+- Building evaluation datasets and scoring pipelines
+- Monitoring AI application performance
+
 ### AI Models & Training (2 skills)
 
 **ZenLM** (`zenlm.md`) - NEW
@@ -201,7 +280,7 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 - ZenLM Models: github.com/zenlm, huggingface.co/zenlm
 - Hanzo AI: github.com/hanzoai
 
-### Development Tools (3 skills)
+### Development Tools (2 skills)
 
 **Hanzo Dev** (`hanzo-dev.md`) - Coming Soon
 **Purpose**: Terminal-based AI coding agent
@@ -230,20 +309,6 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 - Streaming text/image generation
 - Live dashboards
 - Interactive AI applications
-
-**Hanzo Chat** (`hanzo-chat.md`) - Coming Soon
-**Purpose**: AI conversation interface
-**Key Topics**:
-- Multi-model chat
-- Conversation history
-- Context management
-- UI integration
-
-**Use When**:
-- Building chat interfaces
-- Multi-turn conversations
-- Chat-based AI applications
-- Customer support bots
 
 ### Architecture & Patterns (4 skills)
 
@@ -586,7 +651,7 @@ These skills are maintained to reflect the latest Hanzo ecosystem patterns. As n
 
 ---
 
-**Last Updated**: 2025-10-28
-**Total Skills**: 10 (7 complete, 3 planned)
-**Estimated Time**: 8-12 hours to master core stack
+**Last Updated**: 2026-02-26
+**Total Skills**: 15 (12 complete, 3 planned)
+**Estimated Time**: 10-16 hours to master core stack
 **Difficulty**: Beginner to Advanced
