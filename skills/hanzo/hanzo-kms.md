@@ -17,7 +17,7 @@ Hanzo KMS is a **centralized secret management platform** for the Hanzo ecosyste
 
 ### OSS Base
 
-Fork of **Infisical** with 8 ported Vault subsystems. Repo: `hanzoai/kms`.
+Fork of **Infisical** with 9 ported Vault subsystems. Backend is TypeScript/Node.js. Repo: `hanzoai/kms`.
 
 ### Vault Subsystems
 
@@ -28,7 +28,7 @@ Fork of **Infisical** with 8 ported Vault subsystems. Repo: `hanzoai/kms`.
 5. **ACL Policies** — Fine-grained access control per path/operation
 6. **Token Management** — Scoped, renewable auth tokens with TTL
 7. **Dynamic Secrets** — On-demand credential generation (DB users, cloud IAM)
-8. **TFHE Bridge** — Fully homomorphic encryption for compute-on-encrypted-secrets
+8. **TFHE Bridge** — Fully homomorphic encryption for compute-on-encrypted-secrets (in development)
 9. **Per-Org Root Key Isolation** — Each organization has its own root encryption key
 
 ## When to use

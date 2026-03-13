@@ -1,140 +1,148 @@
-# Hanzo Contracts - Legacy Smart Contract Infrastructure
+# Hanzo Contracts - AI Infrastructure Smart Contracts
 
 **Category**: Hanzo Ecosystem
 **Related Skills**: `hanzo/hanzo-evm.md`, `hanzo/hanzo-web3.md`
 
 ## Overview
 
-Hanzo Contracts is a **legacy smart contract repository** containing 5 infrastructure contracts built with Truffle and Solidity <0.6.0. These are foundational proxy/access-control contracts from Hanzo's earlier blockchain work.
+Hanzo Contracts is the **smart contract repository** for the Hanzo AI ecosystem. Built with **Foundry** and **Solidity 0.8.31**, it contains three core contracts for the AI token economy, faucet distribution, and on-chain identity registry.
 
-**NOTE**: This is a legacy repo. It uses **Truffle** (not Foundry), **Solidity <0.6.0** (not 0.8+), and contains only 5 infrastructure contracts — NOT a full DeFi suite. For modern EVM work, see `hanzo/hanzo-evm.md`.
+The contracts use `@luxfi/` imports (from the Lux standard library) and OpenZeppelin for ERC20, access control, and utility patterns. The repo targets the Cancun EVM version with via-IR compilation and optimizer enabled.
 
-### Contracts
-
-| Contract | Purpose |
-|----------|---------|
-| `Proxy` | Upgradeable proxy pattern |
-| `Versioned` | Contract versioning |
-| `Blacklist` | Address blacklist access control |
-| `Whitelist` | Address whitelist access control |
-| `Migrations` | Truffle migration tracking |
-
-### OSS Info
-
-Repo: `hanzoai/contracts`. Stack: Truffle + Solidity <0.6.0.
+**Note**: The `master` branch contains legacy Truffle-era contracts (Proxy, Versioned, Blacklist, Whitelist, Migrations with Solidity <0.6.0). The active `main` branch is the current Foundry-based codebase documented here.
 
 ## When to use
 
-- Understanding Hanzo's legacy contract infrastructure
-- Upgrading or migrating legacy proxy contracts
-- Reference for access-control patterns
-- **NOT for new contract development** — use Foundry + Solidity 0.8+ instead
+- Deploying or interacting with the $AI governance token
+- Setting up token vesting schedules or staking
+- Distributing tokens via the faucet mechanism
+- Managing on-chain identity via HanzoRegistry
+- Understanding the Hanzo AI token economics
 
 ## Hard requirements
 
-1. **Truffle** framework
-2. **Solidity <0.6.0** compiler
-3. **Node.js** (for Truffle)
+1. **Foundry** (forge, cast, anvil)
+2. **Solidity 0.8.31** compiler
+3. Git submodules for dependencies (`@luxfi/standard`, `forge-std`)
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
-| Framework | Truffle |
-| Solidity | <0.6.0 |
+| Framework | Foundry |
+| Solidity | 0.8.31 |
+| EVM target | Cancun |
 | Repo | `github.com/hanzoai/contracts` |
-| Build | `truffle compile` |
-| Test | `truffle test` |
-| Deploy | `truffle migrate --network <network>` |
-| Contracts | 5 (Proxy, Versioned, Blacklist, Whitelist, Migrations) |
+| Branch | `main` |
+| Build | `forge build` |
+| Test | `forge test` |
+| Format | `forge fmt` |
+| Optimizer | 200 runs, via-IR |
+| License | MIT |
 
-## Project Structure
+## Contracts
+
+| Contract | Path | Purpose |
+|----------|------|---------|
+| AIToken | `src/AIToken.sol` | ERC20 governance token with staking, vesting, and deflationary burn |
+| AIFaucet | `src/AIFaucet.sol` | Token distribution / faucet mechanism |
+| HanzoRegistry | `src/identity-registry/HanzoRegistry.sol` | On-chain identity registry |
+
+## Project structure
 
 ```
-contracts/
-├── contracts/
-│   ├── Proxy.sol           # Upgradeable proxy
-│   ├── Versioned.sol       # Version tracking
-│   ├── Blacklist.sol       # Address blacklist
-│   ├── Whitelist.sol       # Address whitelist
-│   └── Migrations.sol      # Truffle migrations
-├── migrations/             # Truffle deployment scripts
-├── test/                   # JavaScript tests
-├── truffle-config.js       # Truffle configuration
-└── package.json
+contracts/          (main branch)
+├── foundry.toml    # Foundry config (solc 0.8.31, Cancun, via-IR)
+├── foundry.lock
+├── package.json
+├── src/
+│   ├── AIToken.sol
+│   ├── AIFaucet.sol
+│   └── identity-registry/
+│       └── HanzoRegistry.sol
+├── scripts/        # Deployment scripts
+├── broadcast/      # Deployment artifacts
+├── lib/            # Git submodule dependencies
+│   ├── standard/   # @luxfi/standard (Lux standard library)
+│   └── forge-std/  # Foundry test utilities
+└── .github/        # CI workflows
 ```
 
-## Contract Details
+## AIToken.sol
 
-### Proxy.sol
+ERC20 governance token ("AI Token", ticker "AI") with a 1 billion max supply:
 
-Upgradeable proxy pattern allowing contract logic upgrades without changing the contract address:
+- **Distribution**: 15% team, 35% ecosystem, 20% public sale, 10% liquidity, 20% staking rewards
+- **Staking**: Lock periods of 0/30/90/180/365 days with 1-15% APR reward rates
+- **Vesting**: Per-address vesting schedules with cliff and linear unlock
+- **Burn**: Deflationary 0.1% burn rate on transfers (configurable by owner)
+- **Pausable**: Owner can pause all transfers
+- **Imports**: `@luxfi/tokens/LRC20/LRC20.sol`, `@luxfi/access/Access.sol`, `@luxfi/utils/Utils.sol`
 
-```solidity
-// Solidity <0.6.0
-pragma solidity ^0.5.0;
+## Foundry remappings
 
-contract Proxy {
-    address public implementation;
-    address public admin;
-
-    function upgradeTo(address newImplementation) external;
-    fallback() external payable;
-}
+```toml
+remappings = [
+    "@luxfi/=lib/standard/contracts/",
+    "@luxfi/standard/=lib/standard/contracts/",
+    "@openzeppelin/contracts/=lib/standard/lib/openzeppelin-contracts/contracts/",
+    "@openzeppelin/contracts-upgradeable/=lib/standard/lib/openzeppelin-contracts-upgradeable/contracts/",
+    "forge-std/=lib/forge-std/src/",
+]
 ```
 
-### Blacklist.sol / Whitelist.sol
+## RPC endpoints (from foundry.toml)
 
-Access control contracts for managing allowed/denied addresses:
-
-```solidity
-pragma solidity ^0.5.0;
-
-contract Whitelist {
-    mapping(address => bool) public whitelisted;
-
-    function addToWhitelist(address account) external;
-    function removeFromWhitelist(address account) external;
-    function isWhitelisted(address account) external view returns (bool);
-}
+```toml
+hanzo_mainnet = "http://127.0.0.1:19630/ext/bc/.../rpc"
+hanzo_testnet = "http://127.0.0.1:19640/ext/bc/.../rpc"
+hanzo_devnet  = "http://127.0.0.1:19650/ext/bc/.../rpc"
 ```
 
-### Versioned.sol
-
-Tracks contract versions for upgrade management:
-
-```solidity
-pragma solidity ^0.5.0;
-
-contract Versioned {
-    uint256 public version;
-
-    function setVersion(uint256 newVersion) external;
-}
-```
+These point to local Lux subnet RPC endpoints for development.
 
 ## Development
 
 ```bash
 git clone https://github.com/hanzoai/contracts.git
 cd contracts
-npm install
-truffle compile
-truffle test
-truffle migrate --network development
+git checkout main
+git submodule update --init --recursive
+forge build
+forge test
+forge fmt
 ```
 
-## Migration to Modern Stack
+## One-file quickstart
 
-For new smart contract development, use:
-- **Foundry** (forge, cast, anvil) instead of Truffle
-- **Solidity 0.8.20+** with OpenZeppelin v5
-- **ERC standards**: ERC20, ERC721, ERC1155, ERC4626
-- See `hanzo/hanzo-evm.md` for the modern EVM execution engine
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.31;
+
+import {AIToken} from "src/AIToken.sol";
+
+// Deploy with treasury address
+// AIToken token = new AIToken(treasuryAddress);
+// token.stake(1000 * 10**18, 90);  // Stake 1000 AI for 90 days at 6% APR
+```
+
+## Legacy branch (master)
+
+The `master` branch is a historical artifact containing the original Hanzo Solidity contracts:
+
+| Contract | Solidity | Framework |
+|----------|----------|-----------|
+| Proxy.sol | >=0.4.25 <0.6.0 | Truffle |
+| Versioned.sol | >=0.4.25 <0.6.0 | Truffle |
+| Blacklist.sol | >=0.4.25 <0.6.0 | Truffle |
+| Whitelist.sol | >=0.4.25 <0.6.0 | Truffle |
+| Migrations.sol | >=0.4.25 <0.6.0 | Truffle |
+
+Published as `hanzo-solidity` v0.2.1 on npm. Uses `openzeppelin-solidity` v2.1.2. Not used for new development.
 
 ## Related Skills
 
-- `hanzo/hanzo-evm.md` - Modern EVM execution engine (Rust, reth fork)
+- `hanzo/hanzo-evm.md` - Rust EVM execution engine (reth fork)
 - `hanzo/hanzo-web3.md` - Blockchain API access
 - `hanzo/hanzo-web3-gateway.md` - Keyless blockchain access via x402
 
@@ -142,5 +150,5 @@ For new smart contract development, use:
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: solidity, truffle, legacy, proxy, access-control
-**Prerequisites**: Truffle, Solidity basics
+**Related**: solidity, foundry, erc20, staking, vesting, luxfi
+**Prerequisites**: Foundry, Solidity basics
