@@ -17,7 +17,7 @@ Hanzo LLM Gateway is a **unified proxy** that routes requests to 100+ LLM provid
 
 ### OSS Base
 
-Fork of **LiteLLM** proxy. Repo: `hanzoai/llm`. Local: ``github.com/hanzoai/llm``.
+Fork of **LiteLLM** proxy. Repo: `github.com/hanzoai/llm`.
 
 ## When to use
 
