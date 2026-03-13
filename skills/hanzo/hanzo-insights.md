@@ -5,29 +5,55 @@
 
 ## Overview
 
-Hanzo Insights is a **full product analytics platform** — fork of PostHog with feature flags, session recording, A/B testing, InsightsQL, and ClickHouse-powered analytics. Self-hostable with privacy-first architecture.
-
-**NOTE**: This is a **PostHog fork**, NOT just analytics SDKs. It includes the full PostHog feature set: event analytics, session recording, feature flags, A/B testing, heatmaps, and a custom query language (InsightsQL).
+Hanzo Insights is a **full product analytics platform** -- a PostHog fork with product analytics, feature flags, session recording, A/B testing, heatmaps, LLM analytics, error tracking, surveys, web analytics, and a custom query language (InsightsQL). Polyglot monorepo: Django/Python backend, React/TypeScript frontend, Rust high-performance services, Go livestream server. ClickHouse for event storage, PostgreSQL for metadata, Kafka for event streaming, Redis for caching. Self-hostable with Docker Compose or K8s.
 
 ### Why Hanzo Insights?
 
-- **PostHog fork**: Full product analytics suite, self-hosted
-- **Feature flags**: Gradual rollouts, user targeting, percentage-based
-- **Session recording**: Replay user sessions with DOM snapshots
-- **A/B testing**: Experiment framework with statistical significance
-- **InsightsQL**: Custom query language for complex analytics queries
-- **ClickHouse**: High-performance columnar storage for event data
-- **Privacy-first**: No third-party data sharing, self-hostable
-- **Multi-language SDKs**: Go, JavaScript/TypeScript, Rust
+- **PostHog fork**: Full product analytics suite, rebranded under `@hanzo/` namespace
+- **40+ product modules**: analytics, feature flags, experiments, session replay, error tracking, LLM analytics, surveys, web analytics, notebooks, workflows, data warehouse, CDP
+- **InsightsQL**: Custom SQL-like query language (ANTLR grammar, Python + C++ parsers)
+- **Multi-language SDKs**: JavaScript (`@hanzo/insights`), Node.js (`@hanzo/insights-node`), Python (`hanzo_insights`), Go (`insights-go`), Rust (`insights-rs`)
+- **Rust services**: High-performance capture, feature-flag evaluation, webhook delivery, error symbolication (cymbal), Kafka dedup, person resolution
+- **MCP server**: Model Context Protocol integration for AI agent access to analytics data
+- **CLI**: Rust CLI (`insights-cli`) for queries, sourcemap uploads, endpoint management
+
+### Tech Stack
+
+- **Backend**: Django 4.2 + DRF on Python 3.12 (Granian ASGI server)
+- **Frontend**: React 18 + TypeScript + Kea state management + Vite + Tailwind
+- **Rust services**: axum, rdkafka, sqlx, clickhouse-rs (workspace with 30+ crates)
+- **Livestream**: Go service for real-time event streaming
+- **Query engine**: InsightsQL (ANTLR4 grammar -> Python3 + C++ targets)
+- **Databases**: ClickHouse (events), PostgreSQL (metadata), Kafka (streaming), Redis (cache)
+- **Task queue**: Celery + Temporal (batch exports, async workflows)
+- **Data pipelines**: Dagster (orchestration), dlt (data loading)
+- **Build**: pnpm workspace + Turborepo (JS), uv (Python), Cargo workspace (Rust)
+- **Package manager**: pnpm 10.x, Node 24, Python 3.12.12, uv 0.10.x
+
+### OSS Base
+
+Repo: `hanzoai/insights`. License: MIT.
 
 ## When to use
 
-- Product analytics beyond basic event tracking
+- Product analytics and event tracking for any application
 - Feature flag management and gradual rollouts
-- A/B testing with statistical analysis
+- A/B testing / experimentation with statistical analysis
 - Session recording and user behavior replay
-- Funnel analysis and conversion tracking
-- Self-hosted analytics without third-party dependencies
+- LLM/AI application observability and analytics
+- Error tracking with sourcemap support
+- Web analytics (privacy-first alternative to GA)
+- User surveys and feedback collection
+- Data warehouse querying (Snowflake, BigQuery, Postgres, S3)
+- Self-hosted analytics with full data ownership
+
+## Hard requirements
+
+1. **ClickHouse** for event storage (columnar analytics)
+2. **PostgreSQL** for metadata and Django ORM
+3. **Kafka** (Redpanda) for event streaming pipeline
+4. **Redis** for caching and task queues
+5. **Object storage** (MinIO/S3/SeaweedFS) for session recordings and batch exports
 
 ## Quick reference
 
@@ -35,273 +61,205 @@ Hanzo Insights is a **full product analytics platform** — fork of PostHog with
 |------|-------|
 | Repo | `github.com/hanzoai/insights` |
 | Upstream | PostHog fork |
-| Storage | ClickHouse (events), PostgreSQL (metadata) |
-| Dashboard | Integrated in Hanzo Cloud |
-| API Endpoint | `https://api.hanzo.ai/v1/insights` |
+| License | MIT |
+| Dashboard | `https://insights.hanzo.ai` |
+| API | `https://insights.hanzo.ai/api/` |
+| CLI host | `https://insights.hanzo.ai` |
+| Python | 3.12.12 |
+| Node | >=24 <25 |
+| pnpm | 10.29.3 |
+| uv | ~0.10.2 |
 
-| SDK | Package |
-|-----|---------|
-| Go | `github.com/hanzoai/insights-go` |
-| JavaScript | `@hanzo/insights` |
-| Rust | `hanzo-insights` |
+### SDKs
 
-## Features
+| Language | Package | Repo |
+|----------|---------|------|
+| JavaScript (browser) | `@hanzo/insights` v6.0.0 | in-repo `common/insights-js` |
+| JavaScript (lite) | `@hanzo/insights-lite` | in-repo `common/insights-js-lite` |
+| Node.js | `@hanzo/insights-node` v6.0.0 | in-repo `common/insights-node` |
+| Python | `hanzo_insights` | `hanzoai/insights-python` |
+| Go | `github.com/hanzoai/insights-go` | `hanzoai/insights-go` |
+| Rust | `insights-rs` | `hanzoai/insights-rs` |
 
-### Event Analytics
+## Monorepo structure
 
-```typescript
-import { Insights } from "@hanzo/insights"
-
-const insights = new Insights({
-  apiKey: process.env.HANZO_API_KEY,
-})
-
-// Track events
-insights.track("page_view", {
-  path: "/dashboard",
-  referrer: document.referrer,
-})
-
-insights.track("button_click", {
-  button: "upgrade",
-  page: "/pricing",
-})
-
-// Identify user
-insights.identify("user_123", {
-  name: "Alice",
-  plan: "pro",
-  created_at: "2026-01-15",
-})
-
-// Group (organization)
-insights.group("org_456", {
-  name: "Acme Corp",
-  plan: "enterprise",
-})
+```
+insights/
+  insights/           # Django app (Python backend)
+    api/              # REST API views (DRF)
+    insightsql/       # Query language (ANTLR grammar + interpreter)
+    models/           # Django models
+    clickhouse/       # ClickHouse query builders
+    session_recordings/
+    heatmaps/
+    batch_exports/
+    cdp/              # Customer Data Platform
+    llm/              # LLM integration helpers
+    warehouse/        # Data warehouse connectors
+    tasks/            # Celery tasks
+    temporal/         # Temporal workflow definitions
+  frontend/           # React + TypeScript (Vite, Kea, Tailwind)
+    src/
+    @hanzo/           # Shared frontend packages
+  products/           # Product modules (each has backend/ + frontend/)
+    product_analytics/
+    feature_flags/
+    experiments/
+    replay/             # Session recording
+    error_tracking/
+    llm_analytics/      # LLM observability (Dockerfile.llm-analytics)
+    web_analytics/
+    surveys/
+    cohorts/
+    dashboards/
+    notebooks/
+    workflows/
+    data_warehouse/
+    marketing_analytics/
+    revenue_analytics/
+    customer_analytics/
+    cdp/
+    ...40+ total
+  rust/               # Rust workspace (30+ crates)
+    capture/          # High-performance event capture (axum)
+    feature-flags/    # Rust feature flag evaluator
+    hook-worker/      # Webhook delivery
+    hook-api/         # Webhook API
+    cymbal/           # Error symbolication
+    cyclotron-core/   # Job scheduler
+    embedding-worker/ # Embedding generation
+    kafka-deduplicator/
+    personinsights-*/  # Person resolution services
+    property-defs-rs/
+    common/           # Shared Rust libs (kafka, redis, metrics, health, etc.)
+  livestream/         # Go service (real-time event streaming)
+  cli/                # Rust CLI (insights-cli)
+  funnel-udf/         # Rust ClickHouse UDF for funnels
+  common/             # Shared packages
+    insights-js/      # Browser SDK wrapper (@hanzo/insights)
+    insights-js-lite/ # Lightweight browser SDK
+    insights-node/    # Node.js SDK wrapper (@hanzo/insights-node)
+    insightsql_parser/  # InsightsQL parser (Python package)
+    insightscli/      # Internal dev CLI tooling
+    design-system/    # Shared UI components
+    tailwind/         # Tailwind config
+    storybook/
+    siphash/          # SipHash implementation
+    scriptvm/         # Script VM (TypeScript + Rust)
+    ingestion/        # Shared ingestion code
+  services/
+    mcp/              # MCP server (Cloudflare Worker, TypeScript)
+    llm-gateway/      # LLM gateway integration
+  nodejs/             # Node.js plugin server
+  docs/               # Internal documentation
+  docker/             # Docker configs (ClickHouse, Caddy, Temporal, etc.)
+  proto/              # Protobuf definitions
+  terraform/          # Infrastructure as code
+  playwright/         # E2E tests
 ```
 
-### Feature Flags
+## Development commands
 
-```typescript
-// Check feature flag
-const showNewUI = await insights.isFeatureEnabled("new-dashboard-ui", "user_123")
+```bash
+# Python backend
+uv sync --all-extras          # Install Python deps
+pytest                        # Run all backend tests
+pytest path/to/test.py::TestClass::test_method  # Single test
+ruff check . --fix && ruff format .   # Lint + format Python
+python manage.py migrate      # Run Django migrations
 
-if (showNewUI) {
-  renderNewDashboard()
-} else {
-  renderClassicDashboard()
-}
+# Frontend
+pnpm install                  # Install JS deps
+pnpm --filter=@hanzo/frontend build   # Build frontend
+pnpm --filter=@hanzo/frontend test    # Run frontend tests
+pnpm --filter=@hanzo/frontend format  # Format frontend
 
-// Get feature flag payload (variant data)
-const variant = await insights.getFeatureFlag("pricing-experiment", "user_123")
-// Returns: { key: "variant-b", payload: { price: 29.99, cta: "Start Free Trial" } }
+# Full stack
+./bin/start                   # Start dev server (backend + frontend)
 
-// Feature flag with properties for targeting
-insights.identify("user_123", {
-  plan: "pro",
-  company_size: 50,
-  country: "US",
-})
-// Flag rules can target based on these properties
+# InsightsQL grammar
+pnpm grammar:build:python     # Rebuild ANTLR Python parser
+pnpm grammar:build:cpp        # Rebuild ANTLR C++ parser
+
+# Schema / OpenAPI
+pnpm schema:build             # Build TypeScript schema from Django serializers
+pnpm openapi:build            # Generate OpenAPI spec + TS types via Orval
+
+# Rust services
+cd rust && cargo build        # Build all Rust services
+cd rust && cargo test         # Test all Rust services
+
+# CLI
+cd cli && cargo build         # Build insights-cli
+
+# Docker (self-host)
+docker compose -f docker-compose.hobby.yml up  # Full self-hosted stack
 ```
 
-### Session Recording
+## Self-hosting
 
-```typescript
-// Enable session recording
-const insights = new Insights({
-  apiKey: process.env.HANZO_API_KEY,
-  sessionRecording: {
-    enabled: true,
-    sampleRate: 0.1,        // Record 10% of sessions
-    maskTextContent: true,   // Mask sensitive text
-    maskInputs: true,        // Mask form inputs
-    blockSelectors: [".pii"], // Block specific elements
-  },
-})
+The `docker-compose.hobby.yml` runs the complete stack:
 
-// Recordings available in dashboard for replay
-// Includes DOM snapshots, clicks, scrolls, console logs
+- `web`: Django app (Granian ASGI)
+- `worker`: Celery worker
+- `plugins`: Node.js plugin server
+- `db`: PostgreSQL (`ghcr.io/hanzoai/sql`)
+- `kv`: Redis
+- `datastore`: ClickHouse
+- `kafka`: Redpanda
+- `capture`: Rust event capture
+- `feature-flags`: Rust flag evaluator
+- `property-defs-rs`: Rust property definitions
+- `livestream`: Go real-time events
+- `cymbal`: Rust error symbolication
+- `objectstorage`: MinIO
+- `seaweedfs`: Session recording storage
+- `temporal`: Workflow orchestration
+- `proxy`: Caddy reverse proxy
+
+```bash
+# Minimal self-host
+export DOMAIN=insights.example.com
+export INSIGHTS_SECRET=$(openssl rand -hex 32)
+docker compose -f docker-compose.hobby.yml up -d
 ```
 
-### A/B Testing
+## InsightsQL
 
-```typescript
-// Run experiment
-const experiment = await insights.getExperiment("checkout-flow", "user_123")
+Custom query language with ANTLR4 grammar. Two parser targets: Python3 (backend queries) and C++ (ClickHouse UDFs). Supports:
 
-switch (experiment.variant) {
-  case "control":
-    showClassicCheckout()
-    break
-  case "streamlined":
-    showStreamlinedCheckout()
-    break
-  case "one-click":
-    showOneClickCheckout()
-    break
-}
+- Event queries with property filters
+- Funnel analysis
+- Retention cohorts
+- Path analysis
+- Aggregations, breakdowns, sampling
 
-// Track conversion
-insights.track("purchase_completed", {
-  experiment: "checkout-flow",
-  variant: experiment.variant,
-  revenue: 49.99,
-})
+Security: never interpolate user data into InsightsQL f-strings. Use `ast.Constant()` placeholders or pass entire expressions through the parser.
+
+## CLI
+
+```bash
+insights-cli login                    # Authenticate interactively
+insights-cli query "SELECT count() FROM events"  # Run InsightsQL query
+insights-cli sourcemap upload ./dist  # Upload sourcemaps for error tracking
+insights-cli exp endpoints list       # List data endpoints
 ```
 
-### InsightsQL
+Environment variables: `INSIGHTS_CLI_HOST`, `INSIGHTS_CLI_API_KEY`, `INSIGHTS_CLI_PROJECT_ID`.
 
-Custom query language for complex analytics:
+## Architecture guidelines
 
-```sql
--- Funnel analysis
-SELECT funnel(
-  step("page_view", properties.path = "/pricing"),
-  step("button_click", properties.button = "start_trial"),
-  step("purchase_completed")
-) FROM events
-WHERE timestamp > now() - interval 30 day
-GROUP BY properties.plan
-
--- Retention cohorts
-SELECT retention(
-  first("signup"),
-  returning("page_view"),
-  period("week")
-) FROM events
-WHERE timestamp > now() - interval 90 day
-
--- User paths
-SELECT paths(
-  start("page_view"),
-  end("purchase_completed"),
-  max_steps(5)
-) FROM events
-WHERE timestamp > now() - interval 7 day
-```
-
-## Go SDK
-
-```go
-import insights "github.com/hanzoai/insights-go"
-
-client := insights.New(insights.Config{
-    APIKey:   os.Getenv("HANZO_API_KEY"),
-})
-defer client.Close()
-
-// Track
-client.Track("api_call", insights.Properties{
-    "endpoint": "/v1/chat/completions",
-    "model":    "zen-70b",
-    "latency":  142,
-})
-
-// Feature flags
-enabled := client.IsFeatureEnabled("new-api", "user_123")
-
-// Identify
-client.Identify("user_123", insights.Traits{
-    "plan": "enterprise",
-})
-```
-
-## Rust SDK
-
-```rust
-use hanzo_insights::Client;
-
-let client = Client::new(std::env::var("HANZO_API_KEY")?);
-
-client.track("inference", &[
-    ("model", "zen-70b"),
-    ("latency_ms", "142"),
-]).await?;
-
-let enabled = client.is_feature_enabled("new-api", "user_123").await?;
-
-client.flush().await?;
-```
-
-## React Integration
-
-```typescript
-import { InsightsProvider, useInsights, useFeatureFlag } from "@hanzo/insights/react"
-
-function App() {
-  return (
-    <InsightsProvider apiKey={process.env.NEXT_PUBLIC_HANZO_KEY}>
-      <MyApp />
-    </InsightsProvider>
-  )
-}
-
-function Dashboard() {
-  const { track } = useInsights()
-  const showNewUI = useFeatureFlag("new-dashboard-ui")
-
-  return (
-    <div>
-      {showNewUI ? <NewDashboard /> : <ClassicDashboard />}
-      <button onClick={() => track("cta_click", { variant: "hero" })}>
-        Get Started
-      </button>
-    </div>
-  )
-}
-```
-
-## Self-Hosting
-
-```yaml
-# compose.yml
-services:
-  insights:
-    image: hanzoai/insights:latest
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://...
-      - CLICKHOUSE_URL=clickhouse://...
-      - SECRET_KEY=${SECRET_KEY}
-    depends_on:
-      - clickhouse
-      - postgres
-
-  clickhouse:
-    image: clickhouse/clickhouse-server:latest
-    ports:
-      - "8123:8123"
-      - "9000:9000"
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: insights
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-
-volumes:
-  clickhouse_data:
-  pg_data:
-```
-
-## Privacy
-
-- **No cookies by default** — uses anonymous IDs
-- **IP anonymization** — last octet zeroed before storage
-- **Data retention** — configurable (default: 90 days)
-- **Self-hostable** — run your own endpoint
-- **GDPR compliant** — delete user data via API
-- **Session recording masking** — auto-mask inputs and PII elements
+- API views declare request/response schemas via `@validated_request` or `@extend_schema`
+- Django serializers are source of truth for frontend types (auto-generated via drf-spectacular + Orval)
+- New features go in `products/` directory (each has `backend/`, `frontend/`, `manifest.tsx`)
+- Always filter querysets by `team_id`
+- Do not add domain-specific fields to `Team` model -- use Team Extension pattern
+- Frontend state management: Kea (not React hooks for business logic)
+- Conventional commits: `feat(scope):`, `fix(scope):`, `chore(scope):`
 
 ## Related Skills
 
-- `hanzo/hanzo-o11y.md` - Technical observability (metrics, traces — different from product analytics)
+- `hanzo/hanzo-o11y.md` - Technical observability (metrics, traces -- different from product analytics)
 - `hanzo/hanzo-console.md` - LLM-specific observability
 - `hanzo/hanzo-cloud.md` - Dashboard with analytics views
 
@@ -309,5 +267,5 @@ volumes:
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: analytics, posthog, feature-flags, ab-testing, session-recording, clickhouse
-**Prerequisites**: JavaScript/Go/Rust basics, analytics concepts
+**Related**: analytics, posthog, feature-flags, ab-testing, session-recording, clickhouse, insightsql, llm-analytics, error-tracking
+**Prerequisites**: Python, TypeScript, Docker, analytics concepts
