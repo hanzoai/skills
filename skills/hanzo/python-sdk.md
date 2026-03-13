@@ -42,7 +42,7 @@ The Hanzo Python SDK provides a unified interface to foundational AI models with
 pip install hanzo
 
 # From source (current)
-cd ~/work/hanzo/sdk/python
+cd `github.com/hanzoai/sdk`python
 pip install -e .
 
 # With all optional dependencies
