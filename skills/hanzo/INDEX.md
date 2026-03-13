@@ -1,10 +1,10 @@
 # Hanzo Ecosystem Skills
 
-**Complete guide to Hanzo's AI infrastructure, components, and integration patterns**
+**Complete guide to Hanzo's AI infrastructure, services, and developer tools**
 
 ## Overview
 
-Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with production-ready abstractions. These skills cover the entire stack from distributed Rust infrastructure to React UI components, with emphasis on composability and agentic workflows.
+Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to production infrastructure (PaaS, KMS, IAM) to developer tools (SDKs, CLI, extensions). 49 skills cover every component with progressive disclosure.
 
 ### Philosophy
 
@@ -15,643 +15,143 @@ Hanzo is a comprehensive ecosystem for **privacy-first, locally-run AI** with pr
 
 ## Skill Catalog
 
-### Core Infrastructure (8 skills)
+### Core AI Infrastructure (8 skills)
 
-**Hanzo Engine** (`hanzo-engine.md`) - 650 lines
-**Purpose**: Native Rust inference & embedding engine for the entire Hanzo ecosystem
-**Key Topics**:
-- Blazingly fast LLM & embedding inference (Rust)
-- Multimodal: text, vision, audio, embeddings, reranking
-- PagedAttention, FlashAttention, ISQ, MLX support
-- Optimized for Qwen3-Embedding (#1 on MTEB)
-- OpenAI-compatible API (port 36900)
-- MCP support built-in
-- Embedded in Hanzo Node, Cloud Nodes, Hanzo Desktop
+| Skill | Description | Load |
+|-------|-------------|------|
+| `hanzo-engine.md` | Rust inference & embedding engine (mistral.rs fork) | `cat skills/hanzo/hanzo-engine.md` |
+| `hanzo-node.md` | Rust AI agent node with P2P/MCP/WASM (v1.1.20, 30+ crates) | `cat skills/hanzo/hanzo-node.md` |
+| `hanzo-network.md` | Distributed AI agent topology | `cat skills/hanzo/hanzo-network.md` |
+| `hanzo-llm-gateway.md` | Unified LLM proxy (100+ providers, LiteLLM v1.82.1 fork) | `cat skills/hanzo/hanzo-llm-gateway.md` |
+| `hanzo-mcp.md` | MCP server — 13 HIP-0300 unified tools (`@hanzo/mcp` v2.4.1) | `cat skills/hanzo/hanzo-mcp.md` |
+| `hanzo-agent.md` | Multi-agent SDK (`hanzoai` v0.0.4, OpenAI agents fork) | `cat skills/hanzo/hanzo-agent.md` |
+| `hanzo-desktop.md` | AI desktop app with mining | `cat skills/hanzo/hanzo-desktop.md` |
+| `hanzo-operative.md` | Computer use agent (Anthropic fork, v0.1.1) | `cat skills/hanzo/hanzo-operative.md` |
 
-**Use When**:
-- Running ZenLM models natively
-- Maximum inference performance needed
-- Embedding generation (Qwen3-Embedding)
-- Multimodal AI applications
-- Direct Rust integration for AI
+### Cloud Services (6 skills)
 
-**Organizations**:
-- Engine: github.com/hanzoai/engine
-- Based on mistral.rs (Eric Buehler)
+| Skill | Description | Load |
+|-------|-------------|------|
+| `hanzo-chat.md` | Hanzo Chat (LibreChat v0.8.3-rc1 fork) at chat.hanzo.ai | `cat skills/hanzo/hanzo-chat.md` |
+| `hanzo-cloud.md` | AI provider management (Go/Beego, MySQL, 66+ models) | `cat skills/hanzo/hanzo-cloud.md` |
+| `hanzo-console.md` | AI observability, tracing, cost tracking | `cat skills/hanzo/hanzo-console.md` |
+| `hanzo-commerce-api.md` | Billing, payments, subscriptions | `cat skills/hanzo/hanzo-commerce-api.md` |
+| `hanzo-web3.md` | Blockchain API (100+ EVM/non-EVM chains) | `cat skills/hanzo/hanzo-web3.md` |
+| `hanzo-web3-gateway.md` | Keyless blockchain via x402 micropayments | `cat skills/hanzo/hanzo-web3-gateway.md` |
 
-**Hanzo Node** (`hanzo-node.md`) - 320 lines
-**Purpose**: Distributed AI mining and networking infrastructure (Rust)
-**Key Topics**:
-- GPU/CPU scheduling for local inference
-- P2P networking and consensus
-- Model serving (OpenAI API, gRPC, MCP)
-- Production deployment (Docker, K8s)
+### Platform & Deployment (6 skills)
 
-**Use When**:
-- Running local AI models privately
-- Joining distributed AI network
-- High-performance inference needs
-- Privacy-first applications
+| Skill | Description | Load |
+|-------|-------------|------|
+| `hanzo-platform.md` | PaaS (Dokploy fork, Hono.js API + Next.js 16) | `cat skills/hanzo/hanzo-platform.md` |
+| `hanzo-studio.md` | Visual AI engine (ComfyUI fork, port 8188) | `cat skills/hanzo/hanzo-studio.md` |
+| `hanzo-search.md` | Search engine (Meilisearch v1.37.0 fork, Rust, 21 crates) | `cat skills/hanzo/hanzo-search.md` |
+| `hanzo-flow.md` | Visual workflow builder (Langflow fork, Python, port 7860) | `cat skills/hanzo/hanzo-flow.md` |
+| `hanzo-stack.md` | Full local dev environment | `cat skills/hanzo/hanzo-stack.md` |
+| `hanzo-universe.md` | Production K8s infrastructure (private) | `cat skills/hanzo/hanzo-universe.md` |
 
-**Hanzo Network** (`hanzo-network.md`) - 550 lines - NEW
-**Purpose**: Distributed AI agent topology across heterogeneous devices
-**Key Topics**:
-- Automatic peer discovery (UDP broadcast + manual config)
-- Heterogeneous device support (M1/M2/M3, RTX GPUs, ARM, Linux)
-- Device capability detection (TFLOPS, memory, chip type)
-- QR code joining (planned - JSON config current workaround)
-- Intelligent agent routing (capability-based, load-balanced)
-- 100% Python/Go feature parity
-- Cross-node state synchronization via gRPC
+### SDKs & Libraries (6 skills)
 
-**Use When**:
-- Distributed AI across multiple devices (MacBook + RTX 4090 + Raspberry Pi)
-- Leveraging heterogeneous compute (M3 + NVIDIA + ARM)
-- QR code device joining (scan → join network)
-- Intelligent workload routing to optimal device
-- Local network AI cluster
-- Production multi-device deployments
+| Skill | Description | Load |
+|-------|-------------|------|
+| `python-sdk.md` | Python SDK (`hanzoai` v2.2.0, Stainless, 9 packages) | `cat skills/hanzo/python-sdk.md` |
+| `js-sdk.md` | TypeScript SDK (`hanzoai` v0.1.0-alpha.2, Stainless) | `cat skills/hanzo/js-sdk.md` |
+| `go-sdk.md` | Go SDK (`github.com/hanzoai/go-sdk` v0.1.0-alpha.4) | `cat skills/hanzo/go-sdk.md` |
+| `rust-sdk.md` | Rust SDK (v1.1.12, 14 crates: agents, MCP, PQC, guard) | `cat skills/hanzo/rust-sdk.md` |
+| `hanzo-orm.md` | Go generics ORM (`github.com/hanzoai/orm`) | `cat skills/hanzo/hanzo-orm.md` |
+| `hanzo-insights.md` | Multi-language analytics SDKs | `cat skills/hanzo/hanzo-insights.md` |
 
-**Organizations**:
-- Python: github.com/hanzoai/network
-- Go: github.com/luxfi/node (network/)
+### Identity & Security (3 skills)
 
-**Hanzo Desktop** (`hanzo-desktop.md`) - NEW
-**Purpose**: AI-powered productivity app with mining capabilities (github.com/hanzoai)
-**Key Topics**:
-- Native Rust inference engine (Hanzo Engine)
-- Mine $AI with ngrok/localxpose tunneling
-- ZenLM models for local AI assistant
-- Collect compute payments for open source projects
-- Part of Hanzo AI Ecosystem (One, Team, hanzo.app)
+| Skill | Description | Load |
+|-------|-------------|------|
+| `hanzo-id.md` | Identity & auth (Casdoor fork, OAuth2/OIDC, RFC 6749) | `cat skills/hanzo/hanzo-id.md` |
+| `hanzo-kms.md` | Secret management (Infisical fork + 8 Vault subsystems) | `cat skills/hanzo/hanzo-kms.md` |
+| `hanzo-vault.md` | PCI-compliant card tokenization (Go) | `cat skills/hanzo/hanzo-vault.md` |
 
-**Use When**:
-- macOS productivity with AI
-- Mining $AI tokens passively
-- Privacy-first local AI assistant
-- Monetizing open source projects
+### Developer Tools (4 skills)
 
-**Hanzo Ecosystem**:
-- AI Tools: github.com/hanzoai (Desktop, Node, SDK, Engine)
-- Business Apps: Hanzo One, Hanzo Team, hanzo.app
-- Most AI users: use hanzoai ecosystem
+| Skill | Description | Load |
+|-------|-------------|------|
+| `hanzo-extension.md` | Browser & IDE extensions v1.8.0 (pnpm monorepo) | `cat skills/hanzo/hanzo-extension.md` |
+| `hanzo-cli.md` | Command-line interface | `cat skills/hanzo/hanzo-cli.md` |
+| `hanzo-dev.md` | Terminal AI coding agent | `cat skills/hanzo/hanzo-dev.md` |
+| `hanzo-live.md` | Real-time generative AI pipelines | `cat skills/hanzo/hanzo-live.md` |
 
-**Hanzo MCP** (`hanzo-mcp.md`) - 380 lines
-**Purpose**: Model Context Protocol integration for agentic workflows
-**Key Topics**:
-- MCP servers (tools, resources, prompts)
-- Multi-agent coordination patterns
-- Tool orchestration across Hanzo ecosystem
-- Integration with Hanzo Dev
+### AI Models & Training (3 skills)
 
-**Use When**:
-- Building AI agents with MCP
-- Multi-agent workflows
-- Terminal-based coding agents
-- Context sharing between agents
+| Skill | Description | Load |
+|-------|-------------|------|
+| `zenlm.md` | Zen frontier models (MoDE, 600M-480B params) | `cat skills/hanzo/zenlm.md` |
+| `hanzo-gym.md` | Unified training platform (Zoo Labs) | `cat skills/hanzo/hanzo-gym.md` |
+| `hanzo-jin.md` | Multimodal LLM (text/vision/audio/3D) | `cat skills/hanzo/hanzo-jin.md` |
 
-**@hanzo/ui** (`hanzo-ui.md`) - 340 lines
-**Purpose**: React component library for AI+Blockchain apps
-**Key Topics**:
-- AI components (AIChat, ModelSelector, StreamingText)
-- Blockchain components (WalletConnect, TransactionStatus)
-- Production patterns and performance
-- Integration with Hanzo Node and Hanzo Live
+### ML Infrastructure (3 skills)
 
-**Use When**:
-- Building AI dashboards
-- Blockchain user interfaces
-- Real-time AI applications
-- Next.js/React projects
+| Skill | Description | Load |
+|-------|-------------|------|
+| `hanzo-candle.md` | Rust ML framework (HF candle fork) | `cat skills/hanzo/hanzo-candle.md` |
+| `hanzo-ane.md` | Apple Neural Engine training (M1+) | `cat skills/hanzo/hanzo-ane.md` |
+| `hanzo-evm.md` | Rust EVM (reth v1.11.0 fork, Rust 2024, MSRV 1.93) | `cat skills/hanzo/hanzo-evm.md` |
 
-**Hanzo Python SDK** (`python-sdk.md`)
-**Purpose**: Unified gateway to foundational models and AI cloud
-**Key Topics**:
-- Multi-provider support (OpenAI, Anthropic, local)
-- Local inference via Hanzo Node
-- Model routing and fallback
-- Cost optimization
-- API key signup with free credits
+### Data & Observability (4 skills)
 
-**Use When**:
-- Python AI applications
-- Backend API development
-- Local + cloud hybrid inference
-- Multi-model orchestration
+| Skill | Description | Load |
+|-------|-------------|------|
+| `hanzo-database.md` | PostgreSQL, Redis, pgvector | `cat skills/hanzo/hanzo-database.md` |
+| `hanzo-datastore.md` | Vector database integration | `cat skills/hanzo/hanzo-datastore.md` |
+| `hanzo-o11y.md` | OpenTelemetry, Prometheus, Sentry | `cat skills/hanzo/hanzo-o11y.md` |
+| `hanzo-docs.md` | Documentation site (Next.js/MDX) | `cat skills/hanzo/hanzo-docs.md` |
 
-**Hanzo Go SDK** (`go-sdk.md`) - NEW
-**Purpose**: Type-safe Go interface for Hanzo AI with high-performance concurrency
-**Key Topics**:
-- Idiomatic Go API with context support
-- Goroutine-safe concurrent requests
-- HTTP/gRPC integration patterns
-- Blockchain node integration
-- Feature parity with Python/Rust SDKs
+### Blockchain & Contracts (2 skills)
 
-**Use When**:
-- Backend services requiring concurrency
-- Blockchain node applications
-- Microservices architectures
-- Systems requiring goroutine-based parallelism
+| Skill | Description | Load |
+|-------|-------------|------|
+| `hanzo-contracts.md` | ERC20/721/1155, DeFi, governance | `cat skills/hanzo/hanzo-contracts.md` |
+| `hanzo-commerce.md` | Commerce platform (legacy Go) | `cat skills/hanzo/hanzo-commerce.md` |
 
-**Organizations**:
-- SDK: github.com/hanzoai/go-sdk
-- Coming Soon: Golang Node (blockchain node in Go)
+### Brand & Automation (3 skills)
 
-### Cloud Services (5 skills)
+| Skill | Description | Load |
+|-------|-------------|------|
+| `hanzo-brand.md` | Brand guidelines, colors, logo | `cat skills/hanzo/hanzo-brand.md` |
+| `hanzo-bot.md` | Bot framework & skills (739 repos) | `cat skills/hanzo/hanzo-bot.md` |
+| `hanzo-ui.md` | React component library | `cat skills/hanzo/hanzo-ui.md` |
 
-**Hanzo Chat** (`hanzo-chat.md`)
-**Purpose**: Unified LLM API for 86+ models across all major providers
-**Key Topics**:
-- Single OpenAI-compatible endpoint (api.hanzo.ai/v1)
-- 86+ models: Zen, OpenAI, Anthropic, Google, Meta, Mistral
-- Streaming, function calling, vision, tool use
-- Smart routing with automatic provider fallback
-- Python, TypeScript, Go, Rust SDK support
+### Guides (1 skill)
 
-**Use When**:
-- Calling LLMs programmatically via a single API
-- Multi-model access or fallback chains
-- Building AI applications with chat completions
-- Using Zen frontier models (600M - 480B params)
+| Skill | Description | Load |
+|-------|-------------|------|
+| `ai-development-guide.md` | How to use AI with Hanzo + Lux | `cat skills/hanzo/ai-development-guide.md` |
 
-**Hanzo Web3** (`hanzo-web3.md`)
-**Purpose**: Blockchain API for 100+ EVM and non-EVM chains
-**Key Topics**:
-- JSON-RPC proxy for 100+ chains (Ethereum, Solana, Base, Lux, etc.)
-- Structured data APIs (tokens, NFTs, transfers, portfolio)
-- Managed webhooks for onchain events
-- ERC-4337 smart wallets with gas sponsorship
-- Solana Yellowstone gRPC and DAS
+## Decision Tree
 
-**Use When**:
-- Reading or writing blockchain data
-- Token balances, NFT metadata, transaction history
-- Deploying or interacting with smart contracts
-- Real-time onchain event notifications
-- Account abstraction / smart wallets
-
-**Hanzo Web3 Gateway** (`hanzo-web3-gateway.md`)
-**Purpose**: Keyless blockchain access via x402 USDC micropayments
-**Key Topics**:
-- Zero-config: no API key, no account, no billing dashboard
-- x402 protocol (EIP-712 signed USDC on Base)
-- Same 100+ chains as Hanzo Web3
-- Sub-cent pricing ($0.000001 - $0.0001 per request)
-- SIWE (Sign-In with Ethereum) auth
-
-**Use When**:
-- Autonomous agents needing keyless blockchain access
-- Pay-per-request with USDC micropayments
-- No human needs to create API keys or manage billing
-- Building agents that sign up and pay independently
-
-**Hanzo Commerce** (`hanzo-commerce.md`)
-**Purpose**: Billing, payments, and e-commerce API
-**Key Topics**:
-- Products, orders, subscriptions, invoices, payments
-- Usage-based metering (per API call, token, or compute unit)
-- Multi-currency: fiat (USD, EUR) and crypto (USDC, ETH, LUX)
-- Webhook events for payment lifecycle
-- PCI-compliant card tokenization
-
-**Use When**:
-- Creating products, plans, or pricing
-- Processing payments or managing subscriptions
-- Usage-based billing for API or compute services
-- Building e-commerce features into applications
-
-**Hanzo Console** (`hanzo-console.md`)
-**Purpose**: AI observability, tracing, and prompt management
-**Key Topics**:
-- Full trace capture for every LLM call, tool use, agent step
-- Per-request cost attribution by model and provider
-- Prompt versioning, testing, and deployment registry
-- Evaluation datasets and automated scoring
-- Langfuse SDK compatible (drop-in replacement)
-
-**Use When**:
-- Tracing and debugging LLM calls
-- Cost analysis across models and providers
-- Managing prompt versions and deployments
-- Building evaluation datasets and scoring pipelines
-- Monitoring AI application performance
-
-### AI Models & Training (2 skills)
-
-**ZenLM** (`zenlm.md`) - NEW
-**Purpose**: Next-generation local AI models (zen-nano, zen-eco, zen-agent)
-**Key Topics**:
-- 4B models achieving 70B-class performance
-- 100% local processing, 95% less energy than cloud
-- Runs on phones, laptops, Raspberry Pi at 50+ tokens/sec
-- Integration with Hanzo Desktop, Python SDK, Zoo Gym
-- Hanzo AI × Zoo Labs Foundation collaboration
-
-**Use When**:
-- Privacy-critical applications
-- Offline AI capabilities
-- Cost-optimized production
-- Edge AI / IoT deployments
-
-**Organizations**:
-- Models: github.com/zenlm, huggingface.co/zenlm
-- Training: github.com/zooai/gym
-- Deployment: github.com/hanzoai
-
-**Zoo Gym** (`hanzo-gym.md`) - NEW
-**Purpose**: Unified training platform for ZenLM AI models (Zoo Labs Foundation)
-**Key Topics**:
-- GRPO (training-free reinforcement learning) innovation
-- LoRA, QLoRA, GSPO, DPO, PPO training methods
-- 2-5x faster with Unsloth, FlashAttention-2
-- GGUF, MLX, AWQ, GPTQ quantization
-- Train 4B models on 8GB GPUs
-- Wildlife conservation AI research (501c3)
-
-**Use When**:
-- Fine-tuning ZenLM models
-- Training-free reinforcement learning
-- Custom domain adaptation
-- Model quantization for deployment
-
-**Organizations**:
-- Zoo Gym: github.com/zooai/gym
-- ZenLM Models: github.com/zenlm, huggingface.co/zenlm
-- Hanzo AI: github.com/hanzoai
-
-### Development Tools (2 skills)
-
-**Hanzo Dev** (`hanzo-dev.md`) - Coming Soon
-**Purpose**: Terminal-based AI coding agent
-**Key Topics**:
-- MCP integration for tool usage
-- Local AI via Hanzo Node
-- Agentic coding workflows
-- Project understanding
-
-**Use When**:
-- Terminal-based development
-- Agentic code generation
-- Privacy-focused coding assistance
-- CI/CD integration
-
-**Hanzo Live** (`hanzo-live.md`) - Coming Soon
-**Purpose**: Real-time generative AI pipelines
-**Key Topics**:
-- Streaming inference
-- Pipeline composition
-- Live updates for UIs
-- WebSocket integration
-
-**Use When**:
-- Real-time AI features
-- Streaming text/image generation
-- Live dashboards
-- Interactive AI applications
-
-### Architecture & Patterns (4 skills)
-
-**Local AI Architecture** (`local-ai-architecture.md`) - Coming Soon
-**Purpose**: Privacy-first AI deployment patterns
-**Key Topics**:
-- Hardware sizing and setup
-- Single node vs cluster deployment
-- Network topology
-- Security and compliance
-
-**Use When**:
-- Deploying local AI infrastructure
-- GDPR/HIPAA compliance needs
-- Cost optimization strategies
-- Enterprise AI deployments
-
-**Agentic Workflows** (`agentic-workflows.md`) - Coming Soon
-**Purpose**: Multi-agent coordination patterns
-**Key Topics**:
-- Orchestrator patterns
-- Swarm patterns (parallel agents)
-- Context sharing strategies
-- Error handling and recovery
-
-**Use When**:
-- Building multi-agent systems
-- Complex AI workflows
-- Parallel task execution
-- Agent collaboration
-
-**MCP Patterns** (`mcp-patterns.md`) - Coming Soon
-**Purpose**: Best practices for MCP integration
-**Key Topics**:
-- Tool design patterns
-- Resource management
-- Prompt templates
-- Security and auth
-
-**Use When**:
-- Designing MCP tools
-- Exposing capabilities to agents
-- Building MCP servers
-- Agent system architecture
-
-**Distributed AI** (`distributed-ai.md`) - Coming Soon
-**Purpose**: Multi-node cluster deployment
-**Key Topics**:
-- Load balancing strategies
-- Failover and recovery
-- Consensus mechanisms
-- Monitoring and observability
-
-**Use When**:
-- High-availability AI services
-- Scaling inference workloads
-- Distributed training
-- Geographic distribution
-
-### Integration Guides (3 skills)
-
-**Hanzo + Next.js** (`hanzo-nextjs-integration.md`) - Coming Soon
-**Purpose**: Full-stack AI apps with Next.js
-**Key Topics**:
-- @hanzo/ui component integration
-- Server actions with Hanzo SDK
-- Streaming with Hanzo Live
-- Deployment patterns
-
-**Use When**:
-- Building Next.js AI applications
-- Full-stack TypeScript projects
-- Server-side rendering with AI
-- Vercel deployments
-
-**Hanzo + Rust** (`hanzo-rust-integration.md`) - Coming Soon
-**Purpose**: Integrating Hanzo in Rust applications
-**Key Topics**:
-- Hanzo Node client library
-- gRPC integration
-- Custom Rust tools for MCP
-- Performance optimization
-
-**Use When**:
-- High-performance Rust services
-- Systems programming with AI
-- Custom Hanzo Node extensions
-- Embedded AI applications
-
-**Hanzo + Blockchain** (`hanzo-blockchain.md`) - Coming Soon
-**Purpose**: AI+Blockchain integration patterns
-**Key Topics**:
-- Smart contract AI features
-- On-chain AI inference verification
-- Wallet integration with @hanzo/ui
-- DeFi + AI use cases
-
-**Use When**:
-- Building DeFi with AI
-- NFT platforms with AI generation
-- DAO governance with AI analysis
-- Blockchain + AI hybrid apps
-
-## Learning Paths
-
-### Path 1: Local AI Setup (Beginner)
-**Goal**: Run AI models locally on your machine
-
-```bash
-1. cat skills/hanzo/hanzo-node.md
-   # Learn Hanzo Node setup and configuration
-   
-2. cat skills/hanzo/python-sdk.md
-   # Connect to local node from Python
-   
-3. cat skills/hanzo/local-ai-architecture.md
-   # Understand architecture and hardware sizing
+```
+What do you need?
+├── Call LLMs → hanzo-chat.md (API) or python-sdk.md (SDK)
+├── Run locally → hanzo-engine.md + hanzo-node.md
+├── Build agents → hanzo-agent.md + hanzo-mcp.md
+├── Deploy apps → hanzo-platform.md (PaaS) or hanzo-stack.md (local)
+├── Auth/Identity → hanzo-id.md
+├── Secrets → hanzo-kms.md (8 Vault subsystems)
+├── Payments → hanzo-commerce-api.md + hanzo-vault.md
+├── Visual AI → hanzo-studio.md (ComfyUI) or hanzo-flow.md (Langflow)
+├── Search → hanzo-search.md (Meilisearch, Rust)
+├── IDE tools → hanzo-extension.md
+├── Blockchain → hanzo-web3.md + hanzo-contracts.md
+├── Monitoring → hanzo-o11y.md + hanzo-console.md
+├── Database → hanzo-database.md + hanzo-orm.md
+├── AI safety → rust-sdk.md (hanzo-guard crate)
+└── Prod infra → hanzo-universe.md (private)
 ```
 
-**Outcome**: Local Llama 3 8B running on your GPU, accessible via Python SDK
+## Related Ecosystems
 
-### Path 2: Building AI Dashboard (Intermediate)
-**Goal**: Create production-ready AI interface
-
-```bash
-1. cat skills/hanzo/hanzo-ui.md
-   # Learn @hanzo/ui components
-   
-2. cat skills/hanzo/hanzo-live.md
-   # Add real-time streaming
-   
-3. cat skills/hanzo/hanzo-nextjs-integration.md
-   # Full Next.js integration
-   
-4. cat skills/frontend/nextjs-app-router.md
-   # Next.js fundamentals
-```
-
-**Outcome**: Real-time AI dashboard with streaming inference and elegant UI
-
-### Path 3: Agentic Development (Advanced)
-**Goal**: Build multi-agent AI workflows
-
-```bash
-1. cat skills/hanzo/hanzo-mcp.md
-   # Understand MCP protocol
-   
-2. cat skills/hanzo/hanzo-dev.md
-   # Terminal AI coding agent
-   
-3. cat skills/hanzo/agentic-workflows.md
-   # Multi-agent patterns
-   
-4. cat skills/workflow/beads-workflow.md
-   # Task management for agents
-```
-
-**Outcome**: Terminal-based coding agent using MCP to orchestrate Hanzo tools
-
-### Path 4: Production Deployment (Expert)
-**Goal**: Deploy distributed AI cluster
-
-```bash
-1. cat skills/hanzo/hanzo-node.md
-   # Node architecture and configuration
-   
-2. cat skills/hanzo/distributed-ai.md
-   # Cluster deployment patterns
-   
-3. cat skills/cloud/kubernetes-deployment.md
-   # Kubernetes fundamentals
-   
-4. cat skills/observability/prometheus-monitoring.md
-   # Monitoring and alerting
-```
-
-**Outcome**: Production Hanzo cluster with 3+ nodes, load balancing, and monitoring
-
-## Common Workflows
-
-### Workflow 1: Setup Local AI (30 minutes)
-
-```bash
-# 1. Install Hanzo Node
-cargo install hanzo-node
-hanzo-node init --network mainnet
-
-# 2. Download model
-hanzo-node models pull llama-3-8b
-
-# 3. Start node
-hanzo-node start --mine --gpu
-
-# 4. Test with Python
-python -c "
-from hanzo import Hanzo
-hanzo = Hanzo(inference_mode='local')
-print(hanzo.chat.completions.create(
-    model='llama-3-8b',
-    messages=[{'role': 'user', 'content': 'Hello!'}]
-))
-"
-```
-
-**Result**: Local AI running, accessible via SDK
-
-### Workflow 2: Build AI Chat Interface (1 hour)
-
-```bash
-# 1. Create Next.js app
-pnpm create next-app my-ai-app
-cd my-ai-app
-
-# 2. Install @hanzo/ui
-pnpm add @hanzo/ui
-
-# 3. Create chat page
-cat > app/chat/page.tsx << 'EOF'
-import { AIChat, useHanzoNode } from '@hanzo/ui'
-
-export default function ChatPage() {
-  const node = useHanzoNode({ url: 'http://localhost:8080' })
-  
-  return <AIChat inference={node.infer} streaming />
-}
-EOF
-
-# 4. Run dev server
-pnpm dev
-```
-
-**Result**: Production-ready AI chat interface
-
-### Workflow 3: Expose MCP Tool (45 minutes)
-
-```typescript
-// mcp-server.ts
-import { MCPServer, Tool } from '@hanzo/mcp'
-import { HanzoNode } from '@hanzo/node-client'
-
-const node = new HanzoNode({ url: 'http://localhost:8080' })
-
-const tools: Tool[] = [
-  {
-    name: 'hanzo_infer',
-    description: 'Run local AI inference',
-    parameters: {
-      model: { type: 'string', required: true },
-      prompt: { type: 'string', required: true }
-    },
-    async execute({ model, prompt }) {
-      return await node.infer({ model, prompt })
-    }
-  }
-]
-
-const server = new MCPServer({
-  name: 'hanzo-node',
-  tools
-})
-
-await server.listen(8081)
-```
-
-**Result**: Hanzo Node capabilities exposed via MCP for agents
-
-### Workflow 4: Agentic Coding with Hanzo Dev (20 minutes)
-
-```bash
-# 1. Configure MCP servers
-hanzo-dev config mcp add hanzo-node http://localhost:8081
-hanzo-dev config mcp add hanzo-ui http://localhost:8082
-
-# 2. Execute workflow
-hanzo-dev workflow "
-  1. Generate React dashboard using @hanzo/ui
-  2. Add AI chat with local inference
-  3. Deploy to Vercel
-  4. Run smoke tests
-"
-```
-
-**Result**: Complete feature implemented by AI agent using MCP tools
-
-## Integration Matrix
-
-| Component | Hanzo Node | Hanzo MCP | @hanzo/ui | Python SDK | Hanzo Dev |
-|-----------|-----------|-----------|-----------|------------|-----------|
-| **Hanzo Node** | - | Expose via MCP | Use in UI | SDK client | Config backend |
-| **Hanzo MCP** | Tool server | - | UI generator | Python tool | Orchestration |
-| **@hanzo/ui** | `useHanzoNode` | MCP tool | - | Backend API | Component gen |
-| **Python SDK** | Node client | Tool wrapper | API backend | - | Python runner |
-| **Hanzo Dev** | Inference | MCP client | Generate UI | Execute code | - |
-
-## Hanzo vs Alternatives
-
-| Need | Traditional | Hanzo Solution |
-|------|------------|----------------|
-| **Local AI** | Docker + CUDA + custom code (200 lines) | `hanzo-node start` (1 command) |
-| **UI Chat** | Custom React component (500 lines) | `<AIChat />` (1 component) |
-| **MCP Integration** | Manual protocol implementation | `@hanzo/mcp` (built-in) |
-| **Model Routing** | Custom logic (100 lines) | Hanzo SDK auto-routing |
-| **Privacy** | Custom encryption, auth, logging | Built-in (local-first) |
-| **Deployment** | K8s manifests, monitoring, scaling | Hanzo cluster mode |
-
-## Related Skill Categories
-
-**Prerequisites**:
-- `frontend/` - React, Next.js fundamentals
-- `containers/` - Docker, Kubernetes basics
-- `workflow/` - Agentic task management
-- `plt/` - Programming language theory (for MCP)
-
-**Integration**:
-- `ml/` - Updated with Hanzo patterns
-- `api/` - REST/GraphQL API design
-- `observability/` - Monitoring and metrics
-- `database/` - Data persistence
-
-**Advanced**:
-- `distributed-systems/` - Consensus and replication
-- `cryptography/` - Security and encryption
-- `formal/` - Verification and correctness
-
-## Gateway Skill
-
-**Start here**: `discover-hanzo/SKILL.md` (auto-activates on Hanzo keywords)
-
-The gateway skill provides:
-- Overview of entire Hanzo ecosystem
-- Quick reference for all products
-- When to use each component
-- Common integration patterns
-
-## Contributing
-
-These skills are maintained to reflect the latest Hanzo ecosystem patterns. As new components are released or patterns emerge, skills are updated or added.
-
-**Skill Template**: `skills/_SKILL_TEMPLATE.md`
+- **Lux Network** (`github.com/luxfi/skills`) — Blockchain infrastructure
+- **Zoo Foundation** — Decentralized AI research
 
 ---
 
-**Last Updated**: 2026-02-26
-**Total Skills**: 15 (12 complete, 3 planned)
-**Estimated Time**: 10-16 hours to master core stack
-**Difficulty**: Beginner to Advanced
+**Last Updated**: 2026-03-13
+**Total Skills**: 49
+**Gateway**: `discover-hanzo/SKILL.md`
