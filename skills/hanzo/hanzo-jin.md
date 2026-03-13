@@ -1,221 +1,203 @@
-# Hanzo Jin - Unified Multimodal AI Framework
+# Hanzo Jin - Visual Self-Supervised Learning Framework
 
 **Category**: Hanzo Ecosystem
 **Related Skills**: `hanzo/hanzo-engine.md`, `hanzo/hanzo-candle.md`, `hanzo/zenlm.md`
 
 ## Overview
 
-Jin is a **unified multimodal AI framework** combining text, vision, audio, and 3D understanding in a single architecture. Rust core with Python bindings for maximum performance and PyTorch interop.
+Jin is a **research-stage visual self-supervised learning framework** implementing Joint Embedding Predictive Architectures (JEPA). Python + PyTorch. Implements I-JEPA, Saccade JEPA (novel variant), and Self-Distillation MAE.
+
+**NOTE**: Jin is vision-only. The "multimodal" roadmap (text + audio + 3D) exists in grant proposals but is not yet implemented in code. Current codebase is image-patch JEPA training only — no inference API, no published weights.
 
 ### Why Jin?
 
-- **True multimodal**: Text + vision + audio + 3D in one model
-- **Cross-modal reasoning**: Understand relationships across modalities
-- **Rust performance**: Core inference in Rust via Candle
-- **Python API**: PyTorch-compatible training and inference
-- **Flexible**: Use any modality combination per request
+- **JEPA architecture**: Self-supervised visual representation learning
+- **Novel Saccade JEPA**: Inspired by mammalian saccadic eye movement
+- **Self-Distillation MAE**: Masked autoencoder with DINO-style centering
+- **Energy I-JEPA**: Alternative using Hopfield-based energy attention
+- **Research tool**: Benchmarking, visualization, attention maps
+
+### OSS Base
+
+Originated from **LumenPallidium/jepa**, adopted under Zen LM org. Repo: `github.com/hanzoai/jin` (redirects to `zenlm/jin`). Package name: `jin-tac`.
 
 ## When to use
 
-- Building multimodal AI applications (text + images + audio)
-- Vision-language model development and inference
-- Audio processing and transcription with visual context
-- 3D scene understanding
-- Cross-modal search and retrieval
+- Research into visual self-supervised learning
+- Training JEPA models on image datasets (ImageNet)
+- Experimenting with novel JEPA variants
+- Benchmarking visual representation quality
+- NOT for production multimodal inference (not yet implemented)
 
 ## Hard requirements
 
-1. **Python 3.11+** with PyTorch 2.x
-2. **CUDA 12+** or **Metal** (Apple Silicon) for GPU acceleration
-3. **16GB+ VRAM** for 7B model, 8GB for smaller variants
+1. **Python 3.8+** with PyTorch
+2. **GPU recommended** for training (ImageNet-scale)
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
-| Language | Rust (core) + Python (API) |
-| Framework | Candle (Rust) + PyTorch (Python) |
-| Repo | `github.com/hanzoai/jin` |
-| Modalities | Text, Vision, Audio, 3D |
-| Model sizes | 1.5B, 7B, 13B |
-| Build | `cargo build --release` (Rust), `uv sync` (Python) |
-| Test | `cargo test` / `uv run pytest` |
+| Language | Python (PyTorch) |
+| Package | `jin-tac` |
+| Repo | `github.com/hanzoai/jin` (→ `zenlm/jin`) |
+| Train | `python jepa/train.py` |
+| Config | `config/training.yml` |
 
-## One-file quickstart
+## Model Variants (Implemented)
 
-### Python API
-
-```python
-from jin import JinModel
-
-# Load model
-model = JinModel.from_pretrained("hanzo/jin-7b")
-
-# Text generation
-response = model.generate(
-    text="Explain quantum computing in simple terms",
-    max_tokens=500,
-)
-print(response.text)
-
-# Text + Image (Vision-Language)
-response = model.generate(
-    text="Describe this image in detail. What objects are present?",
-    image="photo.jpg",            # Path or URL
-    max_tokens=500,
-)
-print(response.text)
-
-# Text + Audio (Speech Understanding)
-response = model.generate(
-    text="Transcribe this audio and summarize the key points",
-    audio="recording.wav",        # Path or URL
-    max_tokens=500,
-)
-print(response.text)
-
-# Multi-modal (Image + Audio + Text)
-response = model.generate(
-    text="What is happening in this scene?",
-    image="video_frame.jpg",
-    audio="ambient_sound.wav",
-    max_tokens=500,
-)
-print(response.text)
-```
-
-### Image Analysis
-
-```python
-from jin import JinModel
-
-model = JinModel.from_pretrained("hanzo/jin-7b")
-
-# Object detection
-objects = model.detect(image="scene.jpg")
-for obj in objects:
-    print(f"{obj.label}: {obj.confidence:.2f} at {obj.bbox}")
-
-# Image captioning
-caption = model.caption(image="photo.jpg")
-print(caption)
-
-# Visual Q&A
-answer = model.vqa(
-    image="chart.png",
-    question="What is the trend shown in this chart?"
-)
-print(answer)
-
-# Image similarity
-score = model.similarity(
-    image_a="photo1.jpg",
-    image_b="photo2.jpg",
-)
-print(f"Similarity: {score:.3f}")
-```
-
-### Audio Processing
-
-```python
-from jin import JinModel
-
-model = JinModel.from_pretrained("hanzo/jin-7b")
-
-# Transcription
-transcript = model.transcribe(audio="speech.wav")
-print(transcript.text)
-print(transcript.segments)  # Timestamped segments
-
-# Audio classification
-labels = model.classify_audio(audio="sound.wav")
-for label in labels:
-    print(f"{label.name}: {label.score:.2f}")
-
-# Audio-visual alignment
-alignment = model.align(
-    audio="narration.wav",
-    image="slide.png",
-)
-print(f"Alignment score: {alignment.score:.3f}")
-```
-
-### Rust Core API
-
-```rust
-use hanzo_jin::{Model, Config, Modality};
-
-let model = Model::load(Config {
-    model_path: "hanzo/jin-7b",
-    device: Device::cuda_if_available(0)?,
-    dtype: DType::BF16,
-})?;
-
-// Text generation
-let output = model.generate(&[
-    Modality::Text("Describe this image".to_string()),
-    Modality::Image(image_tensor),
-], max_tokens: 500)?;
-
-println!("{}", output.text());
-```
-
-## Supported Modalities
-
-| Modality | Input Types | Processing |
-|----------|-------------|------------|
-| Text | String, tokens | Transformer encoder/decoder |
-| Vision | JPEG, PNG, WebP, tensor | Vision Transformer (ViT) |
-| Audio | WAV, MP3, FLAC, tensor | Whisper-style encoder |
-| 3D | Point clouds, meshes | 3D tokenizer |
-
-## Model Variants
-
-| Model | Parameters | VRAM | Modalities | Use Case |
-|-------|-----------|------|------------|----------|
-| jin-1.5b | 1.5B | 4GB | Text + Vision | Edge, mobile |
-| jin-7b | 7B | 16GB | All 4 | General purpose |
-| jin-13b | 13B | 32GB | All 4 | Maximum quality |
+| Model | Class | Backbone | Description |
+|-------|-------|----------|-------------|
+| I-JEPA | `ViTJepa` | ViT (Transformer) | Paper implementation (arXiv:2301.08243) |
+| Energy I-JEPA | `EnergyIJepa` | Energy Transformer | Hopfield-based energy attention |
+| Saccade JEPA | `SaccadeJepa` | ConvNeXT tiny | Novel: mammalian saccadic eye movement |
+| Self-Distillation MAE | `SelfDistillMAE` | ViT + cross-attention | Masked autoencoder with DINO centering |
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────┐
-│              Jin Architecture             │
-├──────────┬───────────┬───────┬───────────┤
-│  Text    │  Vision   │ Audio │    3D     │
-│ Tokenizer│   ViT     │Whisper│ 3D Tokens │
-├──────────┴───────────┴───────┴───────────┤
-│           Modality Alignment              │
-│      (cross-attention, projection)        │
+┌─────────────────────────────────────────┐
+│           Jin JEPA Architecture          │
 ├──────────────────────────────────────────┤
-│           Transformer Core               │
-│      (shared decoder, cross-modal)       │
-├──────────────────────────────────────────┤
-│          Output Heads                    │
-│   Text │ BBox │ Caption │ Transcript    │
+│                                          │
+│  Image ──▶ Patcher ──▶ Patch Embeddings │
+│                    ┌──────────┐          │
+│  Context patches ──│ Context  │          │
+│                    │ Encoder  │── EMA ──▶ Target Encoder
+│                    └────┬─────┘          │
+│                         │                │
+│                    ┌────┴─────┐          │
+│                    │Predictor │          │
+│                    └────┬─────┘          │
+│                         │                │
+│           Predict target embeddings      │
+│           from context embeddings        │
+│                                          │
+│  Loss: MSE(predicted, target_stopped)    │
+│  + VICReg (variance + covariance)        │
+│  + Cycle consistency (Saccade only)      │
 └──────────────────────────────────────────┘
 ```
 
-## Development
+## One-file quickstart
 
-```bash
-# Rust core
-git clone https://github.com/hanzoai/jin.git
-cd jin
-cargo build --release
-cargo test
+```python
+# Training (the only supported mode)
+import yaml
+from jepa.train import train
+from jepa.jepa import ViTJepa
 
-# Python bindings
-cd python
-uv sync --all-extras
-uv run pytest -v
+# Load config
+with open("config/training.yml") as f:
+    config = yaml.safe_load(f)
+
+# Create model
+model = ViTJepa(
+    image_size=224,
+    patch_size=16,
+    embed_dim=768,
+    depth=12,
+    num_heads=12,
+)
+
+# Train on ImageNet
+train(model, config)
 ```
+
+### Training Configuration (config/training.yml)
+
+```yaml
+model:
+  type: "vit_jepa"        # or "saccade_jepa", "energy_ijepa", "self_distill_mae"
+  image_size: 224
+  patch_size: 16
+  embed_dim: 768
+  depth: 12
+  num_heads: 12
+
+training:
+  dataset: "imagenet"
+  batch_size: 128
+  gradient_accumulation: 128
+  learning_rate: 1.5e-4
+  warmup_epochs: 40
+  total_epochs: 300
+  weight_decay: 0.05
+  ema_momentum: 0.996      # Target encoder EMA
+
+  schedule:
+    type: "cosine"
+    min_lr: 1e-6
+```
+
+### Saccade JEPA (Novel Variant)
+
+```python
+from jepa.jepa import SaccadeJepa
+
+model = SaccadeJepa(
+    image_size=224,
+    patch_size=16,
+    embed_dim=768,
+    # Uses ConvNeXT tiny backbone
+    # NeRF-like positional encoding of rotation/translation affine transforms
+    # VICReg loss + cycle consistency
+)
+
+# Cycle consistency: forward-backward saccade prediction must reconstruct original
+# Mimics mammalian visual system's saccadic eye movements
+```
+
+## Evaluation
+
+| Method | Purpose |
+|--------|---------|
+| Linear probes | Evaluate frozen representations |
+| KNN (k-nearest neighbors) | Non-parametric evaluation |
+| Correlation dimension | Representation geometry |
+| UMAP visualization | Embedding space visualization |
+| Attention map dashboard | Interactive Dash visualization |
+
+## Dependencies
+
+- `torch`, `torchvision` — core framework
+- `einops` — tensor operations
+- `pyyaml` — config parsing
+- `tqdm`, `numpy`, `matplotlib` — utilities
+- `sklearn` (optional) — KNN evaluation
+- `umap-learn` (optional) — visualization
+- `energy_transformer` (optional) — for Energy I-JEPA variant
+
+## Project Structure
+
+```
+jin/
+├── jepa/
+│   ├── jepa.py          # Core models (ViTJepa, SaccadeJepa, EnergyIJepa)
+│   ├── masked_autoencoder.py  # Self-Distillation MAE
+│   ├── train.py         # Training loop
+│   ├── patcher.py       # Image patch embedding (Conv, Hybrid, Conv3d)
+│   ├── saccade.py       # Saccade cropper (NeRF positional encoding)
+│   └── vicreg.py        # VICReg loss terms
+├── config/
+│   └── training.yml     # Training configuration
+├── papers/              # Research papers and grant proposals
+├── pyproject.toml
+└── LLM.md
+```
+
+## Roadmap (Aspirational — NOT in code)
+
+Grant proposals describe future multimodal expansion:
+- Text encoder (not implemented)
+- Audio encoder (not implemented)
+- Diffusion Transformer MoE (not implemented)
+- Cross-modal alignment (not implemented)
 
 ## Related Skills
 
-- `hanzo/hanzo-engine.md` - Inference engine (can serve Jin models)
-- `hanzo/hanzo-candle.md` - Rust ML framework (Jin's tensor backend)
+- `hanzo/hanzo-engine.md` - Inference engine (future: serve trained Jin models)
+- `hanzo/hanzo-candle.md` - Rust ML framework
 - `hanzo/zenlm.md` - Text-only Zen models
 - `hanzo/hanzo-gym.md` - Training infrastructure
 
@@ -223,5 +205,5 @@ uv run pytest -v
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: multimodal, vision, audio, 3d, ai
-**Prerequisites**: Python, PyTorch, ML fundamentals
+**Related**: jepa, self-supervised, vision, research
+**Prerequisites**: Python, PyTorch, self-supervised learning concepts
