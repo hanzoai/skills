@@ -5,7 +5,41 @@
 
 ## Overview
 
-Hanzo MCP is the **agentic workflow layer** of the Hanzo ecosystem. It implements the [Model Context Protocol](https://modelcontextprotocol.io/) - a standard for exposing tools, resources, and prompts to AI agents. This enables seamless multi-agent coordination, context sharing, and tool orchestration.
+Hanzo MCP is the **agentic workflow layer** of the Hanzo ecosystem. It implements the [Model Context Protocol](https://modelcontextprotocol.io/) — a standard for exposing tools, resources, and prompts to AI agents. Ships **13 HIP-0300 unified tools** (7 core + 6 optional) with action-based routing, so each tool handles multiple operations.
+
+### Package Details
+
+| Item | Value |
+|------|-------|
+| npm | `@hanzo/mcp` |
+| Version | 2.4.1 |
+| Binary | `hanzo-mcp` |
+| Node | >=18 |
+| Repo | `github.com/hanzoai/mcp` |
+
+### CLI
+
+```bash
+# Install
+npm install -g @hanzo/mcp
+
+# Serve MCP server
+hanzo-mcp serve
+
+# List available tools
+hanzo-mcp list-tools
+
+# Install for desktop (Claude, etc.)
+hanzo-mcp install-desktop
+```
+
+### Optional Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `@lancedb/lancedb` | Vector storage |
+| `@xenova/transformers` | Local embeddings |
+| `playwright` | Browser automation |
 
 ### What is MCP?
 
@@ -737,7 +771,7 @@ const server = new MCPServer({
 
 ---
 
-**Last Updated**: 2025-10-28  
-**Category**: Hanzo Ecosystem  
-**Related**: workflow, ai, infrastructure  
+**Last Updated**: 2026-03-13
+**Category**: Hanzo Ecosystem
+**Related**: mcp, agentic, tools, protocol
 **Prerequisites**: TypeScript, async/await, AI agent concepts
