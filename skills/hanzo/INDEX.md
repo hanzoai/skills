@@ -4,7 +4,7 @@
 
 ## Overview
 
-Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to production infrastructure (PaaS, KMS, IAM) to developer tools (SDKs, CLI, extensions). 49 skills cover every component with progressive disclosure.
+Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to production infrastructure (PaaS, KMS, IAM) to developer tools (SDKs, CLI, extensions). 65 skills cover every component with progressive disclosure.
 
 ### Philosophy
 
@@ -25,32 +25,37 @@ Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to pro
 | `hanzo-llm-gateway.md` | Unified LLM proxy (100+ providers, LiteLLM v1.82.1 fork) | `cat skills/hanzo/hanzo-llm-gateway.md` |
 | `hanzo-mcp.md` | MCP server — 13 HIP-0300 unified tools (`@hanzo/mcp` v2.4.1) | `cat skills/hanzo/hanzo-mcp.md` |
 | `hanzo-agent.md` | Multi-agent SDK (`hanzoai` v0.0.4, OpenAI agents fork) | `cat skills/hanzo/hanzo-agent.md` |
-| `hanzo-desktop.md` | AI desktop app with mining | `cat skills/hanzo/hanzo-desktop.md` |
+| `hanzo-desktop.md` | AI desktop app (Shinkai fork, Tauri + React Native) | `cat skills/hanzo/hanzo-desktop.md` |
 | `hanzo-operative.md` | Computer use agent (Anthropic fork, v0.1.1) | `cat skills/hanzo/hanzo-operative.md` |
 
-### Cloud Services (6 skills)
+### Cloud Services (8 skills)
 
 | Skill | Description | Load |
 |-------|-------------|------|
 | `hanzo-chat.md` | Hanzo Chat (LibreChat v0.8.3-rc1 fork) at chat.hanzo.ai | `cat skills/hanzo/hanzo-chat.md` |
-| `hanzo-cloud.md` | AI provider management (Go/Beego, MySQL, 66+ models) | `cat skills/hanzo/hanzo-cloud.md` |
+| `hanzo-cloud.md` | AI provider management (Go/Beego, PostgreSQL, Casibase fork) | `cat skills/hanzo/hanzo-cloud.md` |
 | `hanzo-console.md` | AI observability, tracing, cost tracking | `cat skills/hanzo/hanzo-console.md` |
 | `hanzo-commerce-api.md` | Billing, payments, subscriptions | `cat skills/hanzo/hanzo-commerce-api.md` |
+| `hanzo-analytics.md` | Analytics & tracking service | `cat skills/hanzo/hanzo-analytics.md` |
+| `hanzo-billing.md` | Billing & subscription management | `cat skills/hanzo/hanzo-billing.md` |
 | `hanzo-web3.md` | Blockchain API (100+ EVM/non-EVM chains) | `cat skills/hanzo/hanzo-web3.md` |
 | `hanzo-web3-gateway.md` | Keyless blockchain via x402 micropayments | `cat skills/hanzo/hanzo-web3-gateway.md` |
 
-### Platform & Deployment (6 skills)
+### Platform & Deployment (9 skills)
 
 | Skill | Description | Load |
 |-------|-------------|------|
 | `hanzo-platform.md` | PaaS (Dokploy fork, Hono.js API + Next.js 16) | `cat skills/hanzo/hanzo-platform.md` |
+| `hanzo-gateway.md` | API gateway (KrakenD/Lura, 147+ endpoints, Go) | `cat skills/hanzo/hanzo-gateway.md` |
+| `hanzo-ingress.md` | Ingress controller & reverse proxy | `cat skills/hanzo/hanzo-ingress.md` |
 | `hanzo-studio.md` | Visual AI engine (ComfyUI fork, port 8188) | `cat skills/hanzo/hanzo-studio.md` |
-| `hanzo-search.md` | Search engine (Meilisearch v1.37.0 fork, Rust, 21 crates) | `cat skills/hanzo/hanzo-search.md` |
+| `hanzo-search.md` | Search engine (Meilisearch v1.37.0 fork, Rust, 22 crates) | `cat skills/hanzo/hanzo-search.md` |
 | `hanzo-flow.md` | Visual workflow builder (Langflow fork, Python, port 7860) | `cat skills/hanzo/hanzo-flow.md` |
 | `hanzo-stack.md` | Full local dev environment | `cat skills/hanzo/hanzo-stack.md` |
+| `hanzo-runtime.md` | Runtime environment for AI workloads | `cat skills/hanzo/hanzo-runtime.md` |
 | `hanzo-universe.md` | Production K8s infrastructure (private) | `cat skills/hanzo/hanzo-universe.md` |
 
-### SDKs & Libraries (6 skills)
+### SDKs & Libraries (8 skills)
 
 | Skill | Description | Load |
 |-------|-------------|------|
@@ -58,16 +63,20 @@ Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to pro
 | `js-sdk.md` | TypeScript SDK (`hanzoai` v0.1.0-alpha.2, Stainless) | `cat skills/hanzo/js-sdk.md` |
 | `go-sdk.md` | Go SDK (`github.com/hanzoai/go-sdk` v0.1.0-alpha.4) | `cat skills/hanzo/go-sdk.md` |
 | `rust-sdk.md` | Rust SDK (v1.1.12, 14 crates: agents, MCP, PQC, guard) | `cat skills/hanzo/rust-sdk.md` |
+| `hanzo-base.md` | Shared base library & utilities | `cat skills/hanzo/hanzo-base.md` |
 | `hanzo-orm.md` | Go generics ORM (`github.com/hanzoai/orm`) | `cat skills/hanzo/hanzo-orm.md` |
 | `hanzo-insights.md` | Multi-language analytics SDKs | `cat skills/hanzo/hanzo-insights.md` |
+| `hanzo-edge.md` | Edge computing & CDN | `cat skills/hanzo/hanzo-edge.md` |
 
-### Identity & Security (3 skills)
+### Identity & Security (5 skills)
 
 | Skill | Description | Load |
 |-------|-------------|------|
-| `hanzo-id.md` | Identity & auth (Casdoor fork, OAuth2/OIDC, RFC 6749) | `cat skills/hanzo/hanzo-id.md` |
-| `hanzo-kms.md` | Secret management (Infisical fork + 8 Vault subsystems) | `cat skills/hanzo/hanzo-kms.md` |
+| `hanzo-iam.md` | IAM server (Casdoor fork, Go/Beego, OAuth2/OIDC/SAML/LDAP) | `cat skills/hanzo/hanzo-iam.md` |
+| `hanzo-id.md` | Custom login UI (Next.js, white-label) | `cat skills/hanzo/hanzo-id.md` |
+| `hanzo-kms.md` | Secret management (Infisical fork + 9 Vault subsystems) | `cat skills/hanzo/hanzo-kms.md` |
 | `hanzo-vault.md` | PCI-compliant card tokenization (Go) | `cat skills/hanzo/hanzo-vault.md` |
+| `hanzo-guard.md` | Security middleware & threat detection | `cat skills/hanzo/hanzo-guard.md` |
 
 ### Developer Tools (4 skills)
 
@@ -75,7 +84,7 @@ Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to pro
 |-------|-------------|------|
 | `hanzo-extension.md` | Browser & IDE extensions v1.8.0 (pnpm monorepo) | `cat skills/hanzo/hanzo-extension.md` |
 | `hanzo-cli.md` | Command-line interface | `cat skills/hanzo/hanzo-cli.md` |
-| `hanzo-dev.md` | Terminal AI coding agent | `cat skills/hanzo/hanzo-dev.md` |
+| `hanzo-dev.md` | Terminal AI agent (Codex CLI fork, Bazel, @hanzo/dev) | `cat skills/hanzo/hanzo-dev.md` |
 | `hanzo-live.md` | Real-time generative AI pipelines | `cat skills/hanzo/hanzo-live.md` |
 
 ### AI Models & Training (3 skills)
@@ -94,20 +103,27 @@ Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to pro
 | `hanzo-ane.md` | Apple Neural Engine training (M1+) | `cat skills/hanzo/hanzo-ane.md` |
 | `hanzo-evm.md` | Rust EVM (reth v1.11.0 fork, Rust 2024, MSRV 1.93) | `cat skills/hanzo/hanzo-evm.md` |
 
-### Data & Observability (4 skills)
+### Data & Observability (7 skills)
 
 | Skill | Description | Load |
 |-------|-------------|------|
 | `hanzo-database.md` | PostgreSQL, Redis, pgvector | `cat skills/hanzo/hanzo-database.md` |
 | `hanzo-datastore.md` | Vector database integration | `cat skills/hanzo/hanzo-datastore.md` |
+| `hanzo-vector.md` | Vector database service | `cat skills/hanzo/hanzo-vector.md` |
+| `hanzo-storage.md` | Object storage (S3-compatible) | `cat skills/hanzo/hanzo-storage.md` |
+| `hanzo-pubsub.md` | Pub/sub messaging service | `cat skills/hanzo/hanzo-pubsub.md` |
 | `hanzo-o11y.md` | OpenTelemetry, Prometheus, Sentry | `cat skills/hanzo/hanzo-o11y.md` |
 | `hanzo-docs.md` | Documentation site (Next.js/MDX) | `cat skills/hanzo/hanzo-docs.md` |
 
-### Blockchain & Contracts (2 skills)
+### Blockchain & Finance (6 skills)
 
 | Skill | Description | Load |
 |-------|-------------|------|
-| `hanzo-contracts.md` | ERC20/721/1155, DeFi, governance | `cat skills/hanzo/hanzo-contracts.md` |
+| `hanzo-contracts.md` | Foundry contracts (AIToken, AIFaucet, HanzoRegistry) | `cat skills/hanzo/hanzo-contracts.md` |
+| `hanzo-ledger.md` | Double-entry financial ledger (Formance fork, Go, Numscript) | `cat skills/hanzo/hanzo-ledger.md` |
+| `hanzo-payments.md` | Payment processing & routing | `cat skills/hanzo/hanzo-payments.md` |
+| `hanzo-sign.md` | Document/crypto signing service | `cat skills/hanzo/hanzo-sign.md` |
+| `hanzo-registry.md` | Container/package registry | `cat skills/hanzo/hanzo-registry.md` |
 | `hanzo-commerce.md` | Commerce platform (legacy Go) | `cat skills/hanzo/hanzo-commerce.md` |
 
 ### Brand & Automation (3 skills)
@@ -115,8 +131,8 @@ Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to pro
 | Skill | Description | Load |
 |-------|-------------|------|
 | `hanzo-brand.md` | Brand guidelines, colors, logo | `cat skills/hanzo/hanzo-brand.md` |
-| `hanzo-bot.md` | Bot framework & skills (739 repos) | `cat skills/hanzo/hanzo-bot.md` |
-| `hanzo-ui.md` | React component library | `cat skills/hanzo/hanzo-ui.md` |
+| `hanzo-bot.md` | Bot framework (~40 extensions, OpenClaw fork) | `cat skills/hanzo/hanzo-bot.md` |
+| `hanzo-ui.md` | React component library (shadcn/ui fork, 161+ components) | `cat skills/hanzo/hanzo-ui.md` |
 
 ### Guides (1 skill)
 
@@ -128,20 +144,24 @@ Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to pro
 
 ```
 What do you need?
-├── Call LLMs → hanzo-chat.md (API) or python-sdk.md (SDK)
+├── Call LLMs → hanzo-chat.md (UI) or python-sdk.md (SDK)
 ├── Run locally → hanzo-engine.md + hanzo-node.md
 ├── Build agents → hanzo-agent.md + hanzo-mcp.md
 ├── Deploy apps → hanzo-platform.md (PaaS) or hanzo-stack.md (local)
-├── Auth/Identity → hanzo-id.md
-├── Secrets → hanzo-kms.md (8 Vault subsystems)
-├── Payments → hanzo-commerce-api.md + hanzo-vault.md
+├── API routing → hanzo-gateway.md (KrakenD) or hanzo-ingress.md
+├── Auth/Identity → hanzo-iam.md (server) + hanzo-id.md (UI)
+├── Secrets → hanzo-kms.md (9 Vault subsystems)
+├── Payments → hanzo-payments.md + hanzo-ledger.md + hanzo-vault.md
+├── Billing → hanzo-billing.md + hanzo-commerce-api.md
 ├── Visual AI → hanzo-studio.md (ComfyUI) or hanzo-flow.md (Langflow)
 ├── Search → hanzo-search.md (Meilisearch, Rust)
+├── Storage → hanzo-storage.md (S3) + hanzo-vector.md + hanzo-pubsub.md
 ├── IDE tools → hanzo-extension.md
-├── Blockchain → hanzo-web3.md + hanzo-contracts.md
-├── Monitoring → hanzo-o11y.md + hanzo-console.md
+├── Blockchain → hanzo-web3.md + hanzo-contracts.md + hanzo-evm.md
+├── Monitoring → hanzo-o11y.md + hanzo-console.md + hanzo-analytics.md
 ├── Database → hanzo-database.md + hanzo-orm.md
-├── AI safety → rust-sdk.md (hanzo-guard crate)
+├── Signing → hanzo-sign.md
+├── Security → hanzo-guard.md + rust-sdk.md (hanzo-guard crate)
 └── Prod infra → hanzo-universe.md (private)
 ```
 
@@ -153,5 +173,5 @@ What do you need?
 ---
 
 **Last Updated**: 2026-03-13
-**Total Skills**: 49
+**Total Skills**: 65
 **Gateway**: `discover-hanzo/SKILL.md`
