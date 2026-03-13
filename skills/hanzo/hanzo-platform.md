@@ -5,7 +5,7 @@
 
 ## Overview
 
-Hanzo Platform is a **Kubernetes-native PaaS** (Platform as a Service) for deploying AI applications, APIs, and services. Hono.js API backend (port 4000) with Next.js 16 frontend (port 3000). Live at `platform.hanzo.ai`.
+Hanzo Platform is a **Kubernetes-native PaaS** (Platform as a Service) for deploying AI applications, APIs, and services. Hono.js + tRPC + Drizzle ORM API backend (port 4000) with Next.js 16 frontend (port 3000). Turborepo monorepo. Live at `platform.hanzo.ai`.
 
 ### Why Hanzo Platform?
 
@@ -18,8 +18,9 @@ Hanzo Platform is a **Kubernetes-native PaaS** (Platform as a Service) for deplo
 
 ### Tech Stack
 
-- **API**: Hono.js on port 4000
-- **Frontend**: Next.js 16.1.6 on port 3000
+- **API**: Hono.js + tRPC + Drizzle ORM on port 4000
+- **Frontend**: Next.js 16 on port 3000
+- **Build**: Turborepo + pnpm workspace
 - **Images**: `ghcr.io/hanzoai/paas-{api,studio,monitor,sync,webhook}:latest`
 
 ### OSS Base
