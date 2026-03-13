@@ -1,20 +1,30 @@
-# Hanzo Commerce API - Billing, Payments & E-Commerce
+# Hanzo Commerce - E-Commerce & Payments Platform
 
 **Category**: Hanzo Ecosystem
 **Related Skills**: `hanzo/hanzo-vault.md`, `hanzo/hanzo-web3.md`, `hanzo/hanzo-cloud.md`
 
 ## Overview
 
-Hanzo Commerce provides a **full e-commerce and billing API** — products, orders, subscriptions, invoices, usage-based metering, and multi-currency support (fiat + crypto). Powers billing for Hanzo Cloud, Console, and third-party integrations.
+Hanzo Commerce is a **Go/Gin e-commerce API** with SQLite storage, providing products, orders, subscriptions, invoices, usage metering, and multi-currency support (fiat + crypto). Powers billing for Hanzo Cloud, Console, and third-party integrations.
+
+**NOTE**: The repo is `hanzoai/commerce` (not `commerce-api`). Built with **Go + Gin + SQLite** with 35+ API handler directories. For payment processing, Hanzo also has `hanzoai/payments` — a **Rust Hyperswitch fork** supporting 50+ payment processors.
+
+### Components
+
+| Component | Repo | Stack | Purpose |
+|-----------|------|-------|---------|
+| **Commerce API** | `hanzoai/commerce` | Go, Gin, SQLite | Products, orders, subscriptions, billing |
+| **Payments** | `hanzoai/payments` | Rust (Hyperswitch fork) | 50+ payment processors, routing |
 
 ### Why Hanzo Commerce?
 
-- **Unified billing**: Products, subscriptions, invoices, metering in one API
+- **Go/Gin backend**: Fast, lightweight, easy to deploy
+- **SQLite storage**: Zero-config embedded database
+- **35+ endpoint groups**: Full e-commerce API surface
 - **Multi-currency**: USD, EUR, USDC, ETH, LUX, BTC
 - **Usage-based**: Metered billing for API calls, compute, storage
-- **Webhook-driven**: Real-time events for payment lifecycle
-- **PCI compliant**: Card handling via Hanzo Vault (zero PCI scope for your app)
-- **Crypto-native**: Native support for on-chain payments
+- **50+ processors**: Via Payments service (Stripe, Adyen, PayPal, crypto, etc.)
+- **PCI compliant**: Card handling via Hanzo Vault
 
 ## When to use
 
@@ -29,45 +39,64 @@ Hanzo Commerce provides a **full e-commerce and billing API** — products, orde
 
 | Item | Value |
 |------|-------|
-| API Base | `https://api.hanzo.ai/v1/commerce` |
-| Repo | `github.com/hanzoai/commerce` |
+| Commerce API | `https://api.hanzo.ai/v1/commerce` |
+| Commerce Repo | `github.com/hanzoai/commerce` |
+| Payments Repo | `github.com/hanzoai/payments` |
+| Commerce Stack | Go, Gin, SQLite |
+| Payments Stack | Rust (Hyperswitch fork) |
 | Auth | Bearer token (Hanzo API key) |
-| Webhooks | `POST` to your endpoint |
 
-## API Reference
+## Commerce API (Go/Gin)
 
-### Products
+### Handler Groups (35+)
+
+The Commerce API organizes handlers by resource type:
+
+| Group | Endpoints | Description |
+|-------|-----------|-------------|
+| products | CRUD | Product catalog management |
+| prices | CRUD | Pricing configurations |
+| customers | CRUD | Customer management |
+| orders | CRUD + status | Order lifecycle |
+| subscriptions | CRUD + cancel | Recurring billing |
+| invoices | CRUD + pay | Billing statements |
+| payments | create + capture | Payment transactions |
+| usage | report + query | Metered usage tracking |
+| webhooks | CRUD | Event notifications |
+| coupons | CRUD | Discount codes |
+| tax_rates | CRUD | Tax configuration |
+| shipping | CRUD | Shipping methods |
+| refunds | create + list | Refund processing |
+| disputes | list + respond | Chargeback handling |
+| payment_methods | CRUD | Stored payment methods |
+| plans | CRUD | Subscription plan templates |
+
+### Running Locally
+
+```bash
+git clone https://github.com/hanzoai/commerce.git
+cd commerce
+go build ./...
+go test ./...
+
+# Start server
+go run main.go --port 4242 --db commerce.db
+```
+
+### API Examples
 
 ```bash
 # Create product
-curl -X POST https://api.hanzo.ai/v1/commerce/products \
+curl -X POST http://localhost:4242/v1/products \
   -H "Authorization: Bearer $HANZO_API_KEY" \
   -d '{
     "name": "AI API Access",
     "type": "service",
-    "description": "Access to Hanzo AI APIs",
-    "metadata": {"tier": "pro"}
+    "description": "Access to Hanzo AI APIs"
   }'
 
-# List products
-curl https://api.hanzo.ai/v1/commerce/products \
-  -H "Authorization: Bearer $HANZO_API_KEY"
-
-# Get product
-curl https://api.hanzo.ai/v1/commerce/products/prod_123 \
-  -H "Authorization: Bearer $HANZO_API_KEY"
-
-# Update product
-curl -X PATCH https://api.hanzo.ai/v1/commerce/products/prod_123 \
-  -H "Authorization: Bearer $HANZO_API_KEY" \
-  -d '{"name": "AI API Pro"}'
-```
-
-### Prices
-
-```bash
 # Create price
-curl -X POST https://api.hanzo.ai/v1/commerce/prices \
+curl -X POST http://localhost:4242/v1/prices \
   -H "Authorization: Bearer $HANZO_API_KEY" \
   -d '{
     "product_id": "prod_123",
@@ -77,26 +106,8 @@ curl -X POST https://api.hanzo.ai/v1/commerce/prices \
     "type": "recurring"
   }'
 
-# Usage-based price
-curl -X POST https://api.hanzo.ai/v1/commerce/prices \
-  -H "Authorization: Bearer $HANZO_API_KEY" \
-  -d '{
-    "product_id": "prod_123",
-    "currency": "usd",
-    "type": "metered",
-    "tiers": [
-      {"up_to": 1000, "unit_amount": 1},
-      {"up_to": 10000, "unit_amount": 0.5},
-      {"up_to": null, "unit_amount": 0.1}
-    ]
-  }'
-```
-
-### Subscriptions
-
-```bash
 # Create subscription
-curl -X POST https://api.hanzo.ai/v1/commerce/subscriptions \
+curl -X POST http://localhost:4242/v1/subscriptions \
   -H "Authorization: Bearer $HANZO_API_KEY" \
   -d '{
     "customer_id": "cus_123",
@@ -104,65 +115,45 @@ curl -X POST https://api.hanzo.ai/v1/commerce/subscriptions \
     "payment_method": "tok_card_789"
   }'
 
-# Cancel subscription
-curl -X POST https://api.hanzo.ai/v1/commerce/subscriptions/sub_123/cancel \
-  -H "Authorization: Bearer $HANZO_API_KEY" \
-  -d '{"at_period_end": true}'
-
-# Update subscription
-curl -X PATCH https://api.hanzo.ai/v1/commerce/subscriptions/sub_123 \
-  -H "Authorization: Bearer $HANZO_API_KEY" \
-  -d '{"price_id": "price_789"}'
-```
-
-### Usage Reporting
-
-```bash
 # Report usage
-curl -X POST https://api.hanzo.ai/v1/commerce/usage \
+curl -X POST http://localhost:4242/v1/usage \
   -H "Authorization: Bearer $HANZO_API_KEY" \
   -d '{
     "subscription_id": "sub_123",
     "metric": "api_calls",
-    "quantity": 1000,
-    "timestamp": "2026-03-13T00:00:00Z"
+    "quantity": 1000
   }'
-
-# Query usage
-curl "https://api.hanzo.ai/v1/commerce/usage?subscription_id=sub_123&metric=api_calls&period=current" \
-  -H "Authorization: Bearer $HANZO_API_KEY"
 ```
 
-### Invoices
+## Payments Service (Rust/Hyperswitch)
 
-```bash
-# List invoices
-curl "https://api.hanzo.ai/v1/commerce/invoices?customer_id=cus_123" \
-  -H "Authorization: Bearer $HANZO_API_KEY"
+The `hanzoai/payments` repo is a **Rust fork of Hyperswitch** providing payment processor routing:
 
-# Get invoice
-curl https://api.hanzo.ai/v1/commerce/invoices/inv_123 \
-  -H "Authorization: Bearer $HANZO_API_KEY"
+### Supported Processors (50+)
 
-# Pay invoice
-curl -X POST https://api.hanzo.ai/v1/commerce/invoices/inv_123/pay \
-  -H "Authorization: Bearer $HANZO_API_KEY"
-```
+| Category | Processors |
+|----------|-----------|
+| **Cards** | Stripe, Adyen, Braintree, Checkout.com, Worldpay, Cybersource |
+| **Digital Wallets** | Apple Pay, Google Pay, PayPal, Venmo |
+| **BNPL** | Klarna, Affirm, Afterpay |
+| **Bank** | ACH, SEPA, iDEAL, Bancontact |
+| **Crypto** | Coinbase Commerce, BitPay, various on-chain |
+| **Regional** | Boleto, PIX, UPI, GrabPay, GCash |
 
-### Orders (One-time)
+### Smart Routing
 
-```bash
-# Create order
-curl -X POST https://api.hanzo.ai/v1/commerce/orders \
-  -H "Authorization: Bearer $HANZO_API_KEY" \
-  -d '{
-    "customer_id": "cus_123",
-    "items": [
-      {"product_id": "prod_123", "quantity": 1, "amount": 9999}
-    ],
-    "currency": "usd",
-    "payment_method": "tok_card_789"
-  }'
+```yaml
+# Payment routing configuration
+routing:
+  rules:
+    - condition: amount > 10000
+      processor: stripe     # High-value → primary processor
+      fallback: adyen
+    - condition: currency == "BTC"
+      processor: coinbase   # Crypto → crypto processor
+    - default:
+      processor: stripe
+      fallback: [adyen, checkout]
 ```
 
 ## SDK Usage
@@ -178,17 +169,12 @@ client = Hanzo()
 product = client.commerce.products.create(
     name="AI API Access",
     type="service",
-    prices=[{
-        "amount": 2999,
-        "currency": "usd",
-        "interval": "month",
-    }],
 )
 
 # Create subscription
 sub = client.commerce.subscriptions.create(
     customer_id="cus_123",
-    price_id=product.prices[0].id,
+    price_id="price_456",
 )
 
 # Report usage
@@ -197,9 +183,6 @@ client.commerce.usage.report(
     metric="api_calls",
     quantity=1000,
 )
-
-# List invoices
-invoices = client.commerce.invoices.list(customer_id="cus_123")
 ```
 
 ### TypeScript
@@ -222,25 +205,6 @@ const sub = await client.commerce.subscriptions.create({
 
 ## Webhooks
 
-```bash
-# Register webhook
-curl -X POST https://api.hanzo.ai/v1/commerce/webhooks \
-  -H "Authorization: Bearer $HANZO_API_KEY" \
-  -d '{
-    "url": "https://your-app.com/webhooks/commerce",
-    "events": [
-      "subscription.created",
-      "subscription.cancelled",
-      "invoice.paid",
-      "invoice.payment_failed",
-      "payment.succeeded",
-      "payment.failed"
-    ]
-  }'
-```
-
-### Webhook Events
-
 | Event | Description |
 |-------|-------------|
 | `subscription.created` | New subscription activated |
@@ -253,29 +217,15 @@ curl -X POST https://api.hanzo.ai/v1/commerce/webhooks \
 | `payment.failed` | Payment attempt failed |
 | `usage.threshold` | Usage crossed configured threshold |
 
-## Resource Types
-
-| Resource | ID Prefix | Description |
-|----------|-----------|-------------|
-| Product | `prod_` | Goods or services |
-| Price | `price_` | Pricing configuration |
-| Customer | `cus_` | Billing entity |
-| Subscription | `sub_` | Recurring billing |
-| Invoice | `inv_` | Billing statement |
-| Order | `ord_` | One-time purchase |
-| Payment | `pay_` | Payment transaction |
-| Token | `tok_` | Payment method (via Vault) |
-
 ## Related Skills
 
 - `hanzo/hanzo-vault.md` - PCI card tokenization
 - `hanzo/hanzo-web3.md` - Crypto payments
 - `hanzo/hanzo-cloud.md` - Billing dashboard
-- `hanzo/hanzo-commerce.md` - Legacy commerce platform
 
 ---
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: billing, payments, subscriptions, commerce, metering
-**Prerequisites**: API concepts, payment processing basics
+**Related**: billing, payments, subscriptions, commerce, go, hyperswitch
+**Prerequisites**: Go or API concepts, payment processing basics

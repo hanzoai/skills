@@ -1,75 +1,86 @@
-# Hanzo Docs - Documentation Site
+# Hanzo Docs - Multi-Brand Documentation Platform
 
 **Category**: Hanzo Ecosystem
 **Related Skills**: `hanzo/hanzo-cloud.md`, `hanzo/python-sdk.md`, `hanzo/hanzo-brand.md`
 
 ## Overview
 
-Hanzo Docs is the **official documentation site** covering API reference, SDK guides, tutorials, and deployment instructions. Built with Next.js and MDX for rich, interactive documentation.
+Hanzo Docs is a **multi-brand documentation platform** — fork of fumadocs with 27 packages and 16 apps. Serves documentation for Hanzo, Lux, Zoo, and Zen brands from a single monorepo with shared components and per-brand theming.
+
+**NOTE**: This is a **fumadocs fork** (not a plain Next.js MDX site). It's a monorepo with **27 packages** and **16 apps**, supporting multi-brand documentation (hanzo.ai/docs, docs.lux.network, docs.zoo.ngo, docs.zenlm.org).
 
 ### Why Hanzo Docs?
 
+- **fumadocs fork**: Full-featured documentation framework
+- **Multi-brand**: 4 brands from one codebase (Hanzo, Lux, Zoo, Zen)
+- **27 packages**: Shared components, MDX plugins, search, themes
+- **16 apps**: Brand-specific documentation sites
 - **MDX-powered**: Markdown with React components (live code, diagrams)
 - **Auto-generated API docs**: From OpenAPI spec
-- **SDK docs**: Python, TypeScript, Go, Rust with runnable examples
-- **Search**: Full-text search across all documentation
+- **Full-text search**: Across all documentation sites
 - **Versioned**: Documentation tied to SDK versions
 
 ## When to use
 
-- Writing or updating Hanzo documentation
+- Writing or updating documentation for any Hanzo brand
 - Adding API reference pages
 - Creating tutorials or guides
-- Modifying the documentation site itself
+- Modifying the documentation platform itself
+- Adding a new brand/product documentation site
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
-| URL | `https://hanzo.ai/docs` |
-| Framework | Next.js 14+ with MDX |
 | Repo | `github.com/hanzoai/docs` |
+| Upstream | fumadocs fork |
+| Framework | Next.js 14+ with MDX |
+| Packages | 27 |
+| Apps | 16 |
 | Dev | `pnpm dev` |
 | Build | `pnpm build` |
 | Port | 3000 (dev) |
 
-## Content Structure
+## Brand Sites
+
+| Brand | URL | App |
+|-------|-----|-----|
+| Hanzo | `hanzo.ai/docs` | `apps/hanzo/` |
+| Lux | `docs.lux.network` | `apps/lux/` |
+| Zoo | `docs.zoo.ngo` | `apps/zoo/` |
+| Zen | `docs.zenlm.org` | `apps/zen/` |
+
+## Project Structure
 
 ```
 docs/
-├── pages/
-│   ├── api/              # API reference (auto-generated from OpenAPI)
-│   │   ├── chat.mdx      # Chat completions
-│   │   ├── embeddings.mdx # Embeddings
-│   │   ├── models.mdx    # Models
-│   │   └── files.mdx     # File management
-│   ├── guides/           # How-to guides
-│   │   ├── getting-started.mdx
-│   │   ├── authentication.mdx
-│   │   ├── streaming.mdx
-│   │   └── function-calling.mdx
-│   ├── sdks/             # SDK documentation
-│   │   ├── python.mdx
-│   │   ├── typescript.mdx
-│   │   ├── go.mdx
-│   │   └── rust.mdx
-│   ├── services/         # Individual service docs
-│   │   ├── chat.mdx
-│   │   ├── platform.mdx
-│   │   ├── kms.mdx
-│   │   └── orm.mdx
-│   └── tutorials/        # Step-by-step tutorials
-│       ├── build-chatbot.mdx
-│       ├── deploy-app.mdx
-│       └── agent-workflow.mdx
-├── components/           # MDX components
-│   ├── CodeBlock.tsx
-│   ├── ApiEndpoint.tsx
-│   ├── Callout.tsx
-│   └── SDKTabs.tsx
-├── public/              # Static assets
-│   └── images/
-├── next.config.mjs
+├── apps/                    # 16 brand-specific apps
+│   ├── hanzo/               # hanzo.ai/docs
+│   ├── lux/                 # docs.lux.network
+│   ├── zoo/                 # docs.zoo.ngo
+│   ├── zen/                 # docs.zenlm.org
+│   └── ...                  # Other product-specific doc sites
+├── packages/                # 27 shared packages
+│   ├── core/                # Core fumadocs engine
+│   ├── mdx/                 # MDX processing and plugins
+│   ├── ui/                  # Shared UI components
+│   ├── search/              # Full-text search
+│   ├── openapi/             # OpenAPI → docs generator
+│   ├── theme-hanzo/         # Hanzo brand theme
+│   ├── theme-lux/           # Lux brand theme
+│   ├── theme-zoo/           # Zoo brand theme
+│   ├── theme-zen/           # Zen brand theme
+│   ├── components/          # Shared MDX components
+│   │   ├── CodeBlock.tsx
+│   │   ├── ApiEndpoint.tsx
+│   │   ├── Callout.tsx
+│   │   └── SDKTabs.tsx
+│   └── ...                  # More packages
+├── content/                 # Shared content
+│   ├── api/                 # API reference (auto-generated from OpenAPI)
+│   ├── guides/              # Cross-brand guides
+│   └── sdks/                # SDK documentation
+├── pnpm-workspace.yaml
 └── package.json
 ```
 
@@ -79,11 +90,15 @@ docs/
 git clone https://github.com/hanzoai/docs.git
 cd docs
 pnpm install
-pnpm dev     # http://localhost:3000
+
+# Dev all brands
+pnpm dev
+
+# Dev specific brand
+pnpm dev --filter @hanzo/docs-hanzo
 
 # Build for production
 pnpm build
-pnpm start
 
 # Lint MDX
 pnpm lint
@@ -102,7 +117,7 @@ title: "Chat Completions"
 description: "Create chat completions with the Hanzo API"
 ---
 
-import { CodeBlock, ApiEndpoint, Callout } from "@/components"
+import { CodeBlock, ApiEndpoint, Callout, SDKTabs } from "@hanzo/docs-components"
 
 # Chat Completions
 
@@ -114,17 +129,41 @@ import { CodeBlock, ApiEndpoint, Callout } from "@/components"
 
 ## Request
 
-<CodeBlock lang="python" title="Python">
-{`from hanzoai import Hanzo
+<SDKTabs>
+  <SDKTabs.Tab lang="python" title="Python">
+    {`from hanzoai import Hanzo
 client = Hanzo()
 response = client.chat.completions.create(
     model="zen-70b",
     messages=[{"role": "user", "content": "Hello"}],
 )`}
-</CodeBlock>
+  </SDKTabs.Tab>
+  <SDKTabs.Tab lang="typescript" title="TypeScript">
+    {`import Hanzo from "hanzoai"
+const client = new Hanzo()
+const response = await client.chat.completions.create({
+    model: "zen-70b",
+    messages: [{ role: "user", content: "Hello" }],
+})`}
+  </SDKTabs.Tab>
+</SDKTabs>
 ```
 
-### Redirects
+### Adding a New Brand
+
+```bash
+# 1. Create new app
+cp -r apps/hanzo apps/new-brand
+
+# 2. Create brand theme package
+cp -r packages/theme-hanzo packages/theme-new-brand
+
+# 3. Configure brand colors, logo, navigation
+# 4. Add to pnpm-workspace.yaml
+# 5. Add to CI/CD
+```
+
+## Redirects
 
 Service-specific docs have vanity URLs:
 - `orm.hanzo.ai` → `hanzo.ai/docs/services/orm`
@@ -142,5 +181,5 @@ Service-specific docs have vanity URLs:
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: documentation, mdx, nextjs, api-reference
+**Related**: documentation, fumadocs, mdx, nextjs, multi-brand
 **Prerequisites**: MDX, Next.js basics
