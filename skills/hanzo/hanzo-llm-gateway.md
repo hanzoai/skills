@@ -40,7 +40,7 @@ Fork of **LiteLLM** proxy. Repo: `github.com/hanzoai/llm`.
 | Public endpoint | `https://api.hanzo.ai/v1` |
 | Internal endpoint | `http://llm.hanzo.svc.cluster.local:4000/v1` |
 | Port | 4000 |
-| Config | `litellm_config.yaml` or env vars |
+| Config | `config.yaml` or env vars |
 | Dashboard | `https://llm.hanzo.ai` (Cloud UI, NOT LLM endpoint) |
 | Repo | `github.com/hanzoai/llm` |
 
@@ -53,26 +53,26 @@ docker run -d --name hanzo-llm \
   -p 4000:4000 \
   -e OPENAI_API_KEY="${OPENAI_API_KEY}" \
   -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
-  hanzoai/llm:latest
+  ghcr.io/hanzoai/llm:latest
 ```
 
 ### Config file
 
 ```yaml
-# litellm_config.yaml
+# config.yaml
 model_list:
   - model_name: zen-70b
-    litellm_params:
+    llm_params:
       model: together_ai/Qwen/Qwen3-235B-A22B
       api_key: os.environ/TOGETHER_API_KEY
 
   - model_name: gpt-4o
-    litellm_params:
+    llm_params:
       model: openai/gpt-4o
       api_key: os.environ/OPENAI_API_KEY
 
   - model_name: claude-sonnet
-    litellm_params:
+    llm_params:
       model: anthropic/claude-sonnet-4-20250514
       api_key: os.environ/ANTHROPIC_API_KEY
 
@@ -172,7 +172,7 @@ spec:
     spec:
       containers:
       - name: llm
-        image: hanzoai/llm:latest
+        image: ghcr.io/hanzoai/llm:latest
         ports:
         - containerPort: 4000
         env:
@@ -195,7 +195,7 @@ spec:
 | 401 on requests | Wrong master key | Check LITELLM_MASTER_KEY |
 | Provider timeout | Upstream provider slow | Increase timeout or add fallback |
 | Cost not tracking | No DATABASE_URL | Add PostgreSQL connection |
-| Model not found | Not in config | Add to litellm_config.yaml |
+| Model not found | Not in config | Add to config.yaml |
 
 ## Related Skills
 
