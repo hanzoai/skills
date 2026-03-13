@@ -9,28 +9,30 @@ Brand assets, color palette, typography, and guidelines for the Hanzo ecosystem.
 
 ## Key Assets
 
-| Asset | Location |
-|-------|----------|
-| Logo (all formats) | `github.com/hanzoai/logo` (`dist/` directory) |
-| Brand guidelines | `github.com/hanzoai/brand` |
-| UI components | `github.com/hanzoai/ui` |
+| Asset | Location | npm Package |
+|-------|----------|-------------|
+| Logo (all formats) | `github.com/hanzoai/logo` (`dist/` directory) | `@hanzo/logo` |
+| Brand guidelines | `github.com/hanzoai/brand` | `@hanzo/brand` |
+| UI components | `github.com/hanzoai/ui` | `@hanzo/ui` |
 
 ## Colors
 
-| Color | Hex | Tailwind | Usage |
-|-------|-----|----------|-------|
-| Hanzo Red | `#fd4444` | `red-500` | Primary brand, CTAs, active states |
-| Dark | `#0a0a0a` | `neutral-950` | Backgrounds |
-| Light | `#fafafa` | `neutral-50` | Text on dark backgrounds |
-| Muted | `#737373` | `neutral-500` | Secondary text |
-| Border | `#262626` | `neutral-800` | Card/container borders |
-| Accent | `#ef4444` | `red-500` | Links, highlights |
+| Color | Hex | Usage |
+|-------|-----|-------|
+| **Hanzo Red** | `#d81c33` | **Primary brand**, CTAs, active states |
+| Dark | `#0a0a0a` | Backgrounds |
+| Light | `#fafafa` | Text on dark backgrounds |
+| Muted | `#737373` | Secondary text |
+| Border | `#262626` | Card/container borders |
+| Chat accent | `#fd4444` | Chat UI accent (rebrand of OpenAI green `#10a37f`) |
+
+**NOTE**: The primary brand color is `#d81c33`, NOT `#fd4444`. The `#fd4444` red is used specifically in Hanzo Chat (LibreChat rebrand) as an accent color.
 
 ### CSS Variables
 
 ```css
 :root {
-  --hanzo-red: #fd4444;
+  --hanzo-red: #d81c33;
   --hanzo-dark: #0a0a0a;
   --hanzo-light: #fafafa;
   --hanzo-muted: #737373;
@@ -47,7 +49,7 @@ export default {
     extend: {
       colors: {
         hanzo: {
-          red: "#fd4444",
+          red: "#d81c33",
           dark: "#0a0a0a",
         },
       },
@@ -66,6 +68,20 @@ Geometric **H** mark (SVG). Available variants:
 | H mark | `hanzo-mark.svg` | Favicons, small spaces |
 | White | `hanzo-logo-white.svg` | Dark backgrounds |
 | Monochrome | `hanzo-logo-mono.svg` | Single-color contexts |
+
+### npm Packages
+
+```bash
+# Install brand assets
+pnpm add @hanzo/brand    # Colors, typography, guidelines
+pnpm add @hanzo/logo     # SVG logos and marks
+```
+
+```typescript
+// Usage in code
+import { colors, typography } from "@hanzo/brand"
+import { HanzoLogo, HanzoMark } from "@hanzo/logo"
+```
 
 ### Logo Usage Rules
 
@@ -98,7 +114,7 @@ When rebranding a fork for the Hanzo ecosystem:
 
 1. **Display text only**: Replace user-visible strings, NOT code identifiers
 2. **Logo swap**: Direct SVG replacement, don't modify JS class names
-3. **Colors**: Update Tailwind config and CSS variables
+3. **Colors**: Update Tailwind config and CSS variables to `#d81c33`
 4. **Translations**: Update i18n/localization files
 5. **URLs**: Update documentation links and API endpoints
 6. **Internal names**: Keep internal package names if they're npm dependencies
@@ -113,6 +129,7 @@ When rebranding a fork for the Hanzo ecosystem:
 | Renaming npm package imports | Build failure | Keep internal package names |
 | Changing CSS class names | Broken styles | Only change Tailwind theme values |
 | sed on i18n keys | Missing translations | Only change i18n values, not keys |
+| Using `#fd4444` as primary | Wrong red | Use `#d81c33` (primary brand) |
 
 ## Product Names
 
@@ -126,6 +143,7 @@ When rebranding a fork for the Hanzo ecosystem:
 | IAM | Hanzo ID (hanzo.id) | Not "Casdoor" |
 | Studio | Hanzo Studio | Not "ComfyUI" |
 | Flow | Hanzo Flow | Not "Langflow" |
+| Insights | Hanzo Insights | Not "PostHog" |
 
 ## Related Skills
 

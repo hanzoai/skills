@@ -1,57 +1,59 @@
-# Hanzo Insights - Multi-Language Analytics SDK
+# Hanzo Insights - Product Analytics Platform
 
 **Category**: Hanzo Ecosystem
 **Related Skills**: `hanzo/hanzo-cloud.md`, `hanzo/hanzo-o11y.md`, `hanzo/hanzo-console.md`
 
 ## Overview
 
-Hanzo Insights provides **privacy-first analytics** across Go, JavaScript, and Rust SDKs. Event tracking, user identification, funnel analysis, and behavioral analytics — self-hostable with cloud dashboard integration.
+Hanzo Insights is a **full product analytics platform** — fork of PostHog with feature flags, session recording, A/B testing, InsightsQL, and ClickHouse-powered analytics. Self-hostable with privacy-first architecture.
+
+**NOTE**: This is a **PostHog fork**, NOT just analytics SDKs. It includes the full PostHog feature set: event analytics, session recording, feature flags, A/B testing, heatmaps, and a custom query language (InsightsQL).
 
 ### Why Hanzo Insights?
 
+- **PostHog fork**: Full product analytics suite, self-hosted
+- **Feature flags**: Gradual rollouts, user targeting, percentage-based
+- **Session recording**: Replay user sessions with DOM snapshots
+- **A/B testing**: Experiment framework with statistical significance
+- **InsightsQL**: Custom query language for complex analytics queries
+- **ClickHouse**: High-performance columnar storage for event data
 - **Privacy-first**: No third-party data sharing, self-hostable
-- **Multi-language**: Go, JavaScript/TypeScript, Rust SDKs
-- **Lightweight**: Minimal bundle size, async batching
-- **Real-time**: Events available immediately in dashboard
-- **Composable**: Works alongside OpenTelemetry (o11y) for full observability
+- **Multi-language SDKs**: Go, JavaScript/TypeScript, Rust
 
 ## When to use
 
-- Tracking user behavior in web/mobile/desktop apps
+- Product analytics beyond basic event tracking
+- Feature flag management and gradual rollouts
+- A/B testing with statistical analysis
+- Session recording and user behavior replay
 - Funnel analysis and conversion tracking
-- Feature usage analytics
-- A/B test measurement
-- Product analytics without third-party dependencies
+- Self-hosted analytics without third-party dependencies
 
 ## Quick reference
 
-| SDK | Package | Repo |
-|-----|---------|------|
-| Go | `github.com/hanzoai/insights-go` | `github.com/hanzoai/insights-go` |
-| JavaScript | `@hanzo/insights` | `github.com/hanzoai/insights-js` |
-| Rust | `hanzo-insights` | `github.com/hanzoai/insights-rs` |
-
 | Item | Value |
 |------|-------|
-| API Endpoint | `https://api.hanzo.ai/v1/insights` |
+| Repo | `github.com/hanzoai/insights` |
+| Upstream | PostHog fork |
+| Storage | ClickHouse (events), PostgreSQL (metadata) |
 | Dashboard | Integrated in Hanzo Cloud |
-| Batch interval | 5 seconds (configurable) |
-| Max batch size | 100 events |
+| API Endpoint | `https://api.hanzo.ai/v1/insights` |
 
-## JavaScript SDK
+| SDK | Package |
+|-----|---------|
+| Go | `github.com/hanzoai/insights-go` |
+| JavaScript | `@hanzo/insights` |
+| Rust | `hanzo-insights` |
 
-```bash
-pnpm add @hanzo/insights
-```
+## Features
+
+### Event Analytics
 
 ```typescript
 import { Insights } from "@hanzo/insights"
 
 const insights = new Insights({
   apiKey: process.env.HANZO_API_KEY,
-  endpoint: "https://api.hanzo.ai/v1/insights",  // default
-  batchSize: 50,           // Events per batch (default: 100)
-  flushInterval: 3000,     // Flush every 3s (default: 5000)
 })
 
 // Track events
@@ -77,30 +79,156 @@ insights.group("org_456", {
   name: "Acme Corp",
   plan: "enterprise",
 })
+```
 
-// Feature flags
-insights.track("feature_used", {
-  feature: "ai_search",
-  variant: "v2",
+### Feature Flags
+
+```typescript
+// Check feature flag
+const showNewUI = await insights.isFeatureEnabled("new-dashboard-ui", "user_123")
+
+if (showNewUI) {
+  renderNewDashboard()
+} else {
+  renderClassicDashboard()
+}
+
+// Get feature flag payload (variant data)
+const variant = await insights.getFeatureFlag("pricing-experiment", "user_123")
+// Returns: { key: "variant-b", payload: { price: 29.99, cta: "Start Free Trial" } }
+
+// Feature flag with properties for targeting
+insights.identify("user_123", {
+  plan: "pro",
+  company_size: 50,
+  country: "US",
+})
+// Flag rules can target based on these properties
+```
+
+### Session Recording
+
+```typescript
+// Enable session recording
+const insights = new Insights({
+  apiKey: process.env.HANZO_API_KEY,
+  sessionRecording: {
+    enabled: true,
+    sampleRate: 0.1,        // Record 10% of sessions
+    maskTextContent: true,   // Mask sensitive text
+    maskInputs: true,        // Mask form inputs
+    blockSelectors: [".pii"], // Block specific elements
+  },
 })
 
-// Revenue
-insights.track("purchase", {
-  amount: 2999,
-  currency: "usd",
-  product: "pro_plan",
-})
+// Recordings available in dashboard for replay
+// Includes DOM snapshots, clicks, scrolls, console logs
+```
 
-// Flush before page unload
-window.addEventListener("beforeunload", () => {
-  insights.flush()
+### A/B Testing
+
+```typescript
+// Run experiment
+const experiment = await insights.getExperiment("checkout-flow", "user_123")
+
+switch (experiment.variant) {
+  case "control":
+    showClassicCheckout()
+    break
+  case "streamlined":
+    showStreamlinedCheckout()
+    break
+  case "one-click":
+    showOneClickCheckout()
+    break
+}
+
+// Track conversion
+insights.track("purchase_completed", {
+  experiment: "checkout-flow",
+  variant: experiment.variant,
+  revenue: 49.99,
 })
 ```
 
-### React Integration
+### InsightsQL
+
+Custom query language for complex analytics:
+
+```sql
+-- Funnel analysis
+SELECT funnel(
+  step("page_view", properties.path = "/pricing"),
+  step("button_click", properties.button = "start_trial"),
+  step("purchase_completed")
+) FROM events
+WHERE timestamp > now() - interval 30 day
+GROUP BY properties.plan
+
+-- Retention cohorts
+SELECT retention(
+  first("signup"),
+  returning("page_view"),
+  period("week")
+) FROM events
+WHERE timestamp > now() - interval 90 day
+
+-- User paths
+SELECT paths(
+  start("page_view"),
+  end("purchase_completed"),
+  max_steps(5)
+) FROM events
+WHERE timestamp > now() - interval 7 day
+```
+
+## Go SDK
+
+```go
+import insights "github.com/hanzoai/insights-go"
+
+client := insights.New(insights.Config{
+    APIKey:   os.Getenv("HANZO_API_KEY"),
+})
+defer client.Close()
+
+// Track
+client.Track("api_call", insights.Properties{
+    "endpoint": "/v1/chat/completions",
+    "model":    "zen-70b",
+    "latency":  142,
+})
+
+// Feature flags
+enabled := client.IsFeatureEnabled("new-api", "user_123")
+
+// Identify
+client.Identify("user_123", insights.Traits{
+    "plan": "enterprise",
+})
+```
+
+## Rust SDK
+
+```rust
+use hanzo_insights::Client;
+
+let client = Client::new(std::env::var("HANZO_API_KEY")?);
+
+client.track("inference", &[
+    ("model", "zen-70b"),
+    ("latency_ms", "142"),
+]).await?;
+
+let enabled = client.is_feature_enabled("new-api", "user_123").await?;
+
+client.flush().await?;
+```
+
+## React Integration
 
 ```typescript
-import { InsightsProvider, useInsights } from "@hanzo/insights/react"
+import { InsightsProvider, useInsights, useFeatureFlag } from "@hanzo/insights/react"
 
 function App() {
   return (
@@ -112,101 +240,54 @@ function App() {
 
 function Dashboard() {
   const { track } = useInsights()
+  const showNewUI = useFeatureFlag("new-dashboard-ui")
 
   return (
-    <button onClick={() => track("cta_click", { variant: "hero" })}>
-      Get Started
-    </button>
+    <div>
+      {showNewUI ? <NewDashboard /> : <ClassicDashboard />}
+      <button onClick={() => track("cta_click", { variant: "hero" })}>
+        Get Started
+      </button>
+    </div>
   )
 }
 ```
 
-## Go SDK
+## Self-Hosting
 
-```bash
-go get github.com/hanzoai/insights-go
-```
+```yaml
+# compose.yml
+services:
+  insights:
+    image: hanzoai/insights:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://...
+      - CLICKHOUSE_URL=clickhouse://...
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      - clickhouse
+      - postgres
 
-```go
-import insights "github.com/hanzoai/insights-go"
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
 
-client := insights.New(insights.Config{
-    APIKey:   os.Getenv("HANZO_API_KEY"),
-    Endpoint: "https://api.hanzo.ai/v1/insights",
-})
-defer client.Close() // Flush remaining events
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: insights
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
-// Track
-client.Track("api_call", insights.Properties{
-    "endpoint": "/v1/chat/completions",
-    "model":    "zen-70b",
-    "latency":  142,
-    "tokens":   1500,
-})
-
-// Identify
-client.Identify("user_123", insights.Traits{
-    "plan":  "enterprise",
-    "email": "user@example.com",
-})
-
-// Group
-client.Group("org_456", insights.Traits{
-    "name": "Acme Corp",
-})
-
-// Batch track
-client.BatchTrack([]insights.Event{
-    {Name: "request", Props: insights.Properties{"path": "/api"}},
-    {Name: "request", Props: insights.Properties{"path": "/dashboard"}},
-})
-```
-
-## Rust SDK
-
-```toml
-# Cargo.toml
-[dependencies]
-hanzo-insights = "0.1"
-```
-
-```rust
-use hanzo_insights::Client;
-
-let client = Client::new(std::env::var("HANZO_API_KEY")?);
-
-client.track("inference", &[
-    ("model", "zen-70b"),
-    ("latency_ms", "142"),
-    ("tokens", "1500"),
-]).await?;
-
-client.identify("user_123", &[
-    ("plan", "pro"),
-]).await?;
-
-// Flush on shutdown
-client.flush().await?;
-```
-
-## Event Schema
-
-```json
-{
-  "event": "page_view",
-  "timestamp": "2026-03-13T12:00:00Z",
-  "user_id": "user_123",
-  "anonymous_id": "anon_abc",
-  "properties": {
-    "path": "/dashboard",
-    "referrer": "https://google.com"
-  },
-  "context": {
-    "ip": "auto",
-    "user_agent": "auto",
-    "locale": "en-US"
-  }
-}
+volumes:
+  clickhouse_data:
+  pg_data:
 ```
 
 ## Privacy
@@ -216,10 +297,11 @@ client.flush().await?;
 - **Data retention** — configurable (default: 90 days)
 - **Self-hostable** — run your own endpoint
 - **GDPR compliant** — delete user data via API
+- **Session recording masking** — auto-mask inputs and PII elements
 
 ## Related Skills
 
-- `hanzo/hanzo-o11y.md` - Technical observability (metrics, traces)
+- `hanzo/hanzo-o11y.md` - Technical observability (metrics, traces — different from product analytics)
 - `hanzo/hanzo-console.md` - LLM-specific observability
 - `hanzo/hanzo-cloud.md` - Dashboard with analytics views
 
@@ -227,5 +309,5 @@ client.flush().await?;
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: analytics, tracking, privacy, events
-**Prerequisites**: JavaScript/Go/Rust basics
+**Related**: analytics, posthog, feature-flags, ab-testing, session-recording, clickhouse
+**Prerequisites**: JavaScript/Go/Rust basics, analytics concepts

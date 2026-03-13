@@ -5,16 +5,19 @@
 
 ## Overview
 
-Hanzo Operative enables **AI agents to control computers** — taking screenshots, moving the mouse, clicking, typing, and automating browser workflows. Fork of Anthropic's computer-use demo with Hanzo ecosystem integration.
+Hanzo Operative enables **AI agents to control computers** via X11 desktop automation — taking screenshots, moving the mouse, clicking, typing, and executing complex desktop workflows. Fork of Anthropic's computer-use demo with Hanzo ecosystem integration.
+
+**NOTE**: Operative uses **X11/xdotool/Xvfb** for desktop automation, NOT Playwright. It controls the full desktop environment (any application), not just browsers. Has a Streamlit UI for interactive sessions and VNC for remote viewing.
 
 ### Why Hanzo Operative?
 
-- **Full computer control**: Screen capture, mouse, keyboard, browser
+- **Full desktop control**: X11-based screen capture, mouse, keyboard
 - **Claude vision**: Uses Claude's multimodal understanding for screen analysis
-- **Browser automation**: Playwright-based web interaction
-- **Reproducible**: Record and replay workflows
+- **Any application**: Controls any desktop app, not just browsers
+- **Streamlit UI**: Interactive web UI for monitoring and controlling sessions (port 8501)
+- **VNC access**: Remote desktop viewing via VNC (5900) and noVNC (6080)
+- **Dockerized**: Runs in container with Xvfb virtual display
 - **MCP compatible**: Expose computer use as MCP tools
-- **Multi-provider**: Works with Claude, Zen, or any vision-capable model
 
 ### OSS Base
 
@@ -22,99 +25,109 @@ Fork of **Anthropic computer-use demo** v0.1.1. Repo: `hanzoai/operative`.
 
 ## When to use
 
-- Automating web-based workflows via AI
-- AI-driven UI testing and QA
+- Automating desktop workflows via AI vision
+- AI-driven UI testing and QA across any application
 - Screen scraping with AI understanding
-- Building computer-use agents for complex tasks
+- Building computer-use agents for complex multi-app tasks
 - RPA (Robotic Process Automation) with AI reasoning
+- Remote desktop automation via VNC
 
 ## Hard requirements
 
-1. **Python 3.11+** with uv (note: `>=3.14` in upstream is overly restrictive)
-2. **Playwright** installed (`playwright install chromium`)
-3. **ANTHROPIC_API_KEY** or **HANZO_API_KEY** for vision model
-4. Display server (X11/Wayland/macOS) for screen capture
+1. **Python 3.11+** with uv
+2. **X11 display server** (Xvfb for headless, native X11 for desktop)
+3. **xdotool** for mouse/keyboard simulation
+4. **ANTHROPIC_API_KEY** or **HANZO_API_KEY** for vision model
+5. Docker recommended (bundles Xvfb + xdotool + VNC)
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
-| Install | `uv add hanzo-operative` |
-| Version | 0.1.1 |
 | Repo | `github.com/hanzoai/operative` |
 | Upstream | Anthropic computer-use demo |
+| UI | Streamlit (port 8501) |
+| VNC | Port 5900 (native), 6080 (noVNC web) |
 | Dev | `make dev` |
+| Docker | `docker compose up` |
 | Test | `uv run pytest -v` |
 | Python | 3.11+ |
 | License | MIT |
 
 ## One-file quickstart
 
-### Basic Computer Use
+### Docker (Recommended)
+
+```bash
+git clone https://github.com/hanzoai/operative.git
+cd operative
+
+# Set API key
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
+
+# Start with Docker (includes Xvfb, xdotool, VNC, Streamlit)
+docker compose up -d
+
+# Access Streamlit UI
+open http://localhost:8501
+
+# Access VNC (view desktop)
+open http://localhost:6080  # noVNC web client
+# or connect VNC client to localhost:5900
+```
+
+### Native (Linux/macOS with X11)
+
+```bash
+git clone https://github.com/hanzoai/operative.git
+cd operative
+uv sync --all-extras
+
+# Install system deps (Ubuntu/Debian)
+sudo apt install xdotool xvfb scrot
+
+# Start Xvfb if headless
+Xvfb :99 -screen 0 1920x1080x24 &
+export DISPLAY=:99
+
+# Run
+uv run streamlit run app.py --server.port 8501
+```
+
+### Programmatic Usage
 
 ```python
 import asyncio
-from hanzo_operative import Operative
+from operative import Operative
 
 async def main():
-    op = Operative()
+    op = Operative(
+        display=":99",  # X11 display
+        model="claude-sonnet-4-20250514",
+    )
 
     # Take screenshot and analyze
     screenshot = await op.screenshot()
     analysis = await op.analyze(screenshot, "What windows are open?")
     print(analysis)
 
-    # Click on element
+    # Mouse operations (via xdotool)
     await op.click(x=500, y=300)
-
-    # Type text
-    await op.type("Hello from Hanzo Operative!")
-
-    # Press keys
-    await op.key("Enter")
-
-    # Key combo
-    await op.key("Control+C")
-
-    # Mouse movement
     await op.move(x=100, y=200)
+    await op.double_click(x=500, y=300)
+    await op.right_click(x=500, y=300)
+
+    # Keyboard operations (via xdotool)
+    await op.type("Hello from Hanzo Operative!")
+    await op.key("Return")
+    await op.key("ctrl+c")
+    await op.key("alt+Tab")
 
     # Scroll
     await op.scroll(direction="down", amount=3)
 
-asyncio.run(main())
-```
-
-### Browser Automation
-
-```python
-from hanzo_operative import Operative, Browser
-
-async def main():
-    op = Operative()
-    browser = Browser()
-
-    # Navigate
-    await browser.navigate("https://example.com")
-    screenshot = await browser.screenshot()
-
-    # AI-driven interaction — analyze what to click
-    action = await op.analyze(screenshot, "Find and click the login button")
-    await browser.click(action.x, action.y)
-
-    # Fill form using CSS selectors
-    await browser.fill("input[name=email]", "user@example.com")
-    await browser.fill("input[name=password]", "secure-password")
-    await browser.click("button[type=submit]")
-
-    # Wait for navigation
-    await browser.wait_for("text=Dashboard")
-
-    # Extract text
-    text = await browser.text("h1")
-    print(f"Page title: {text}")
-
-    await browser.close()
+    # Drag
+    await op.drag(x1=100, y1=100, x2=500, y2=500)
 
 asyncio.run(main())
 ```
@@ -122,130 +135,96 @@ asyncio.run(main())
 ### AI-Driven Task Execution
 
 ```python
-from hanzo_operative import Operative
+from operative import Operative
 
 async def main():
     op = Operative()
 
-    # High-level task — AI decides the steps
+    # High-level task — AI decides the steps using vision
     result = await op.execute_task(
-        "Go to github.com/hanzoai, find the most starred repo, "
+        "Open Firefox, go to github.com/hanzoai, find the most starred repo, "
         "and tell me its name and star count"
     )
-    print(result)  # AI navigates, reads, and reports
+    print(result)  # AI navigates desktop, reads screen, and reports
 
 asyncio.run(main())
 ```
 
-### MCP Tool Exposure
-
-```python
-from hanzo_operative import Operative
-from hanzo_operative.mcp import create_mcp_server
-
-op = Operative()
-server = create_mcp_server(op)
-
-# Exposes tools: screenshot, click, type, navigate, analyze, scroll, key
-await server.serve_stdio()
-```
-
-### Workflow Recording
-
-```python
-from hanzo_operative import Operative, Recorder
-
-async def main():
-    op = Operative()
-    recorder = Recorder()
-
-    # Record human actions
-    await recorder.start()
-    # ... user performs actions (clicks, types, navigates) ...
-    workflow = await recorder.stop()
-
-    # Save workflow
-    workflow.save("my_workflow.json")
-
-    # Replay with AI supervision
-    await op.replay(workflow, supervise=True)
-
-    # Replay without supervision (faster)
-    await op.replay(workflow, supervise=False)
-```
-
-## Core Concepts
-
-### Architecture
+## Architecture
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│  AI Agent   │────▶│  Operative   │────▶│  Computer   │
-│  (Claude)   │     │  (Python)    │     │  (Display)  │
+│  AI Agent   │────▶│  Operative   │────▶│  X11 Display │
+│  (Claude)   │     │  (Python)    │     │  (Xvfb/X11) │
 └─────────────┘     └──────┬───────┘     └─────────────┘
                            │
                     ┌──────┴───────┐
-                    │  Backends    │
+                    │   Backends   │
                     ├──────────────┤
-                    │ Playwright   │──▶ Browser (Chromium/Firefox)
-                    │ PyAutoGUI    │──▶ Desktop (mouse/keyboard)
-                    │ Pillow       │──▶ Screenshots (capture/crop)
-                    │ Claude API   │──▶ Vision (analysis/OCR)
+                    │ xdotool      │──▶ Mouse/Keyboard simulation
+                    │ scrot/import │──▶ Screenshot capture
+                    │ Claude API   │──▶ Vision analysis/OCR
+                    │ Streamlit    │──▶ Web UI (port 8501)
+                    │ VNC/noVNC    │──▶ Remote viewing (5900/6080)
                     └──────────────┘
 ```
 
-### Action Types
+## Action Types
 
-| Action | Method | Description |
-|--------|--------|-------------|
-| Screenshot | `op.screenshot()` | Capture full screen or region |
-| Click | `op.click(x, y)` | Mouse click at coordinates |
-| Double Click | `op.double_click(x, y)` | Double mouse click |
-| Right Click | `op.right_click(x, y)` | Context menu click |
-| Type | `op.type(text)` | Type text string |
-| Key | `op.key(combo)` | Press key or combo |
-| Move | `op.move(x, y)` | Move mouse cursor |
-| Scroll | `op.scroll(dir, amt)` | Scroll up/down/left/right |
-| Drag | `op.drag(x1, y1, x2, y2)` | Click-drag operation |
-| Analyze | `op.analyze(img, prompt)` | AI vision analysis |
-| Wait | `op.wait(seconds)` | Pause between actions |
+| Action | Method | Backend | Description |
+|--------|--------|---------|-------------|
+| Screenshot | `op.screenshot()` | scrot/import | Capture full screen or region |
+| Click | `op.click(x, y)` | xdotool | Left mouse click at coordinates |
+| Double Click | `op.double_click(x, y)` | xdotool | Double mouse click |
+| Right Click | `op.right_click(x, y)` | xdotool | Context menu click |
+| Type | `op.type(text)` | xdotool | Type text string |
+| Key | `op.key(combo)` | xdotool | Press key or combo (e.g., "ctrl+c") |
+| Move | `op.move(x, y)` | xdotool | Move mouse cursor |
+| Scroll | `op.scroll(dir, amt)` | xdotool | Scroll up/down/left/right |
+| Drag | `op.drag(x1,y1,x2,y2)` | xdotool | Click-drag operation |
+| Analyze | `op.analyze(img, prompt)` | Claude API | AI vision analysis |
+| Wait | `op.wait(seconds)` | asyncio | Pause between actions |
 
-### Configuration
+## Docker Compose
 
-```python
-op = Operative(
-    model="claude-sonnet-4-20250514",  # Vision model
-    api_key=os.environ["ANTHROPIC_API_KEY"],
-    screenshot_delay=0.5,        # Delay before screenshots
-    action_delay=0.3,            # Delay between actions
-    max_retries=3,               # Retry failed actions
-    viewport_width=1920,         # Browser viewport
-    viewport_height=1080,
-)
+```yaml
+# compose.yml
+services:
+  operative:
+    build: .
+    ports:
+      - "8501:8501"   # Streamlit UI
+      - "5900:5900"   # VNC
+      - "6080:6080"   # noVNC (web VNC client)
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - DISPLAY=:99
+      - RESOLUTION=1920x1080
+    volumes:
+      - ./recordings:/app/recordings
 ```
 
-## Development
+## Streamlit UI
 
-```bash
-git clone https://github.com/hanzoai/operative.git
-cd operative
-uv sync --all-extras         # Install dependencies
-playwright install chromium  # Install browser
-make dev                     # Start development
-uv run pytest -v             # Run tests
-```
+The Streamlit interface (port 8501) provides:
+- Live screenshot view of the virtual desktop
+- Task input field for natural language commands
+- Action history with screenshots at each step
+- Manual mouse/keyboard controls
+- Session recording and replay
 
 ## Troubleshooting
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| No display | Headless server | Use `DISPLAY=:99 Xvfb :99 &` |
-| Playwright not found | Not installed | `playwright install chromium` |
-| Screenshot blank | Wrong display | Check `DISPLAY` env var |
-| Click misaligned | DPI scaling | Account for display scaling factor |
-| Python version | `>=3.14` too strict | Use Python 3.11+ (upstream bug) |
-| Vision API error | Wrong API key | Check `ANTHROPIC_API_KEY` |
-| Timeout on action | Page still loading | Add `await op.wait(2)` before action |
+| No display | Headless server | Use Docker (includes Xvfb) or `Xvfb :99 &` |
+| xdotool not found | Not installed | `apt install xdotool` or use Docker |
+| Screenshot blank | Wrong DISPLAY | Check `DISPLAY` env var matches Xvfb |
+| Click misaligned | DPI scaling | Set `RESOLUTION` to match expected screen size |
+| Vision API error | Wrong API key | Check `ANTHROPIC_API_KEY` env var |
+| Timeout on action | App still loading | Add `await op.wait(2)` before action |
+| VNC won't connect | Port not exposed | Check Docker port mapping for 5900/6080 |
+| Streamlit error | Wrong Python | Requires Python 3.11+ |
 
 ## Related Skills
 
@@ -257,5 +236,5 @@ uv run pytest -v             # Run tests
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: computer-use, automation, browser, playwright, vision
-**Prerequisites**: Python 3.11+, Playwright, Claude API (or Hanzo API)
+**Related**: computer-use, automation, desktop, x11, xdotool, vision
+**Prerequisites**: Python 3.11+, Docker (recommended), Claude API
