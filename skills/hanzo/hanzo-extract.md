@@ -144,20 +144,6 @@ let config = config
     .with_detect_injection(true);
 ```
 
-## Extractor Trait
-
-All extractors implement the same async trait:
-
-```rust
-#[async_trait]
-pub trait Extractor: Send + Sync {
-    async fn extract(&self, source: &str) -> Result<ExtractResult>;
-
-    #[cfg(feature = "sanitize")]
-    async fn extract_sanitized(&self, source: &str) -> Result<ExtractResult>;
-}
-```
-
 ## Feature Flags
 
 | Feature | Default | Description |
