@@ -1,19 +1,23 @@
-# Hanzo Bot - Automation & Skills Framework
+# Hanzo Bot - Multi-Channel Messaging Gateway
 
 **Category**: Hanzo Ecosystem
 **Related Skills**: `hanzo/hanzo-agent.md`, `hanzo/hanzo-mcp.md`
 
 ## Overview
 
-Hanzo Bot is the **automation framework** powering 739 public skills on `github.com/hanzoskill`. Each skill is a self-contained automation recipe with scripts, metadata, and documentation. The skills monorepo at `hanzobot/skills` contains the full collection with history.
+Hanzo Bot is a **TypeScript ESM multi-channel messaging gateway** supporting 50+ platforms — Discord, Slack, Telegram, WhatsApp, Teams, and more. Features billing, marketplace for skills, and 45 channel extensions. Also hosts the skills framework with 739 public skills on `github.com/hanzoskill`.
+
+**NOTE**: This is NOT just a skills collection — it's a full messaging gateway application with channel adapters, billing, and a skill marketplace.
 
 ### Why Hanzo Bot?
 
-- **739 skills**: Pre-built automations for common tasks
-- **Modular**: Each skill is independent, composable
-- **Multi-language**: Skills in Bash, Python, Node.js, Go
-- **Discoverable**: Auto-matched by keyword, intent, or file pattern
-- **Extensible**: Create custom skills with standard template
+- **50+ platforms**: Discord, Slack, Telegram, WhatsApp, Teams, IRC, Matrix, and more
+- **TypeScript ESM**: Modern ES module architecture
+- **45 channel extensions**: Pre-built adapters for messaging platforms
+- **Billing system**: Usage tracking, subscription management
+- **Skill marketplace**: Discover, install, and publish reusable skills
+- **739 public skills**: Pre-built automations across DevOps, AI/ML, data, security
+- **Extensible**: Create custom channels and skills
 
 ### History
 
@@ -21,30 +25,135 @@ Rebranded from ClawdBot. All references updated:
 - `clawdbot`/`ClawdBot` → `hanzo-bot`/`Hanzo Bot`
 - Config: `~/.bot/`, `bot.json`
 - Env vars: `BOT_*` (not `CLAWDBOT_*`)
+- Dir renames: 25+ directories renamed
 
 ## When to use
 
-- Running pre-built automation recipes
-- Creating reusable automation skills
-- Integrating automations into CI/CD pipelines
-- Building domain-specific bot behaviors
+- Building multi-platform chatbots
+- Deploying AI assistants across messaging channels
+- Running pre-built automation skills
+- Creating reusable automation recipes
+- Integrating AI capabilities into messaging platforms
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
-| Monorepo | `github.com/hanzobot/skills` |
-| Public repos | `github.com/hanzoskill` (739 repos, one per skill) |
-| Skills dir | `skills/skills/<author>/<skill>/` |
+| Repo | `github.com/hanzoai/bot` |
+| Stack | TypeScript ESM |
+| Channels | 50+ platforms (45 channel extensions) |
+| Skills monorepo | `github.com/hanzobot/skills` |
+| Public skill repos | `github.com/hanzoskill` (739 repos) |
 | Config | `~/.bot/config.json` |
 | Env prefix | `BOT_*` |
-| Repo | `github.com/hanzoai/bot` |
 
-## Skill Structure
+## Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│              Hanzo Bot Gateway               │
+├─────────────────────────────────────────────┤
+│                                              │
+│  ┌─────────────────────────────────────┐    │
+│  │        Channel Adapters (45+)       │    │
+│  │  Discord │ Slack │ Telegram │ ...   │    │
+│  └───────────────┬─────────────────────┘    │
+│                  │                           │
+│  ┌───────────────┴─────────────────────┐    │
+│  │         Message Router              │    │
+│  │  Intent → Skill matching            │    │
+│  └───────────────┬─────────────────────┘    │
+│                  │                           │
+│  ┌───────────────┴─────────────────────┐    │
+│  │         Skill Engine                │    │
+│  │  739 skills │ Marketplace │ Custom  │    │
+│  └───────────────┬─────────────────────┘    │
+│                  │                           │
+│  ┌───────────────┴─────────────────────┐    │
+│  │         Billing & Usage             │    │
+│  │  Metering │ Subscriptions │ Limits  │    │
+│  └─────────────────────────────────────┘    │
+└─────────────────────────────────────────────┘
+```
+
+## Channel Extensions
+
+| Category | Channels |
+|----------|----------|
+| **Chat** | Discord, Slack, Telegram, WhatsApp, Signal, Matrix, IRC |
+| **Business** | Microsoft Teams, Google Chat, Webex |
+| **Social** | Twitter/X, Facebook Messenger, Instagram DM |
+| **Support** | Intercom, Zendesk, Freshdesk, LiveChat |
+| **Dev** | GitHub (issues/PRs), GitLab, Jira |
+| **Voice** | Twilio, Vonage |
+| **Web** | WebSocket, HTTP webhook, SSE |
+| **Custom** | Plugin API for any platform |
+
+## Quickstart
+
+```bash
+git clone https://github.com/hanzoai/bot.git
+cd bot
+pnpm install
+
+# Configure
+cp .env.example .env
+# Edit .env with channel tokens (DISCORD_TOKEN, SLACK_TOKEN, etc.)
+
+# Start gateway
+pnpm dev
+
+# Or production
+pnpm build && pnpm start
+```
+
+### Minimal Channel Setup (Discord)
+
+```typescript
+import { Bot, DiscordChannel } from "@hanzo/bot"
+
+const bot = new Bot({
+  channels: [
+    new DiscordChannel({
+      token: process.env.DISCORD_TOKEN,
+      intents: ["Guilds", "GuildMessages", "MessageContent"],
+    }),
+  ],
+  skills: ["weather", "search", "code-review"],
+})
+
+await bot.start()
+```
+
+### Multi-Channel Setup
+
+```typescript
+import { Bot, DiscordChannel, SlackChannel, TelegramChannel } from "@hanzo/bot"
+
+const bot = new Bot({
+  channels: [
+    new DiscordChannel({ token: process.env.DISCORD_TOKEN }),
+    new SlackChannel({ token: process.env.SLACK_BOT_TOKEN }),
+    new TelegramChannel({ token: process.env.TELEGRAM_TOKEN }),
+  ],
+  billing: {
+    enabled: true,
+    provider: "hanzo-commerce",  // Hanzo Commerce API
+  },
+  marketplace: {
+    enabled: true,
+    registry: "https://api.hanzo.ai/v1/bot/skills",
+  },
+})
+```
+
+## Skills System
+
+### Skill Structure
 
 ```
 skills/<author>/<skill>/
-├── SKILL.md          # Skill documentation and instructions
+├── SKILL.md          # Documentation and instructions
 ├── _meta.json        # Metadata (name, description, triggers, version)
 ├── scripts/          # Executable scripts
 │   ├── run.sh        # Main entry point
@@ -54,43 +163,7 @@ skills/<author>/<skill>/
 └── tests/            # Optional tests
 ```
 
-### _meta.json Format
-
-```json
-{
-  "name": "my-skill",
-  "description": "Short description of what this skill does",
-  "version": "1.0.0",
-  "author": "hanzo",
-  "triggers": {
-    "keywords": ["deploy", "release"],
-    "file_patterns": ["*.yaml", "Dockerfile"],
-    "intent": "deployment automation"
-  },
-  "dependencies": ["docker", "kubectl"],
-  "language": "bash"
-}
-```
-
-### SKILL.md Format
-
-```markdown
-# Skill Name
-
-## Description
-What this skill does and when to use it.
-
-## Usage
-How to invoke and configure.
-
-## Examples
-Concrete usage examples.
-
-## Requirements
-Dependencies and prerequisites.
-```
-
-## Skill Categories
+### Skill Categories
 
 | Category | Count | Examples |
 |----------|-------|---------|
@@ -102,67 +175,42 @@ Dependencies and prerequisites.
 | Cloud | ~50 | AWS, GCP, DO provisioning |
 | Misc | ~100 | Formatting, documentation, bots |
 
-## Creating a Skill
+### Marketplace
 
 ```bash
-# Use template
-cp -r skills/_SKILL_TEMPLATE skills/skills/myorg/my-skill/
+# Search skills in marketplace
+hanzo-bot marketplace search "kubernetes deploy"
 
-# Edit metadata
-cat > skills/skills/myorg/my-skill/_meta.json << 'EOF'
-{
-  "name": "my-skill",
-  "description": "Automates widget deployment",
-  "version": "1.0.0",
-  "author": "myorg",
-  "triggers": {"keywords": ["widget", "deploy"]},
-  "language": "bash"
+# Install skill from marketplace
+hanzo-bot marketplace install k8s-deployer
+
+# Publish your skill
+hanzo-bot marketplace publish ./my-skill/
+
+# Rate a skill
+hanzo-bot marketplace rate k8s-deployer 5
+```
+
+## Billing
+
+```typescript
+// Billing configuration
+const billing = {
+  plans: [
+    { name: "free", messages: 100, skills: 5 },
+    { name: "pro", messages: 10000, skills: "unlimited" },
+    { name: "enterprise", messages: "unlimited", skills: "unlimited" },
+  ],
+  metering: {
+    track: ["messages", "skill_runs", "api_calls"],
+    provider: "hanzo-commerce",
+  },
 }
-EOF
-
-# Write the script
-cat > skills/skills/myorg/my-skill/scripts/run.sh << 'EOF'
-#!/bin/bash
-set -euo pipefail
-echo "Deploying widget..."
-# Your automation here
-EOF
-chmod +x skills/skills/myorg/my-skill/scripts/run.sh
-
-# Write documentation
-cat > skills/skills/myorg/my-skill/SKILL.md << 'EOF'
-# Widget Deploy
-Automates widget deployment to production.
-## Usage
-Run `hanzo-bot run my-skill`
-EOF
 ```
 
-## CLI Usage
+## GitHub Organization (hanzoskill)
 
-```bash
-# List available skills
-hanzo-bot skills list
-
-# Search skills
-hanzo-bot skills search "kubernetes deploy"
-
-# Run a skill
-hanzo-bot run <skill-name>
-
-# Run with arguments
-hanzo-bot run <skill-name> --env production --dry-run
-
-# Install a skill from hanzoskill
-hanzo-bot skills install <skill-name>
-
-# Show skill info
-hanzo-bot skills info <skill-name>
-```
-
-## GitHub Organization
-
-The `hanzoskill` org on GitHub has 739 public repos — one per skill. These are published from the monorepo via CI.
+The `hanzoskill` org on GitHub has 739 public repos — one per skill. Published from the monorepo via CI.
 
 **Rate limits**: GitHub secondary rate limit allows ~150 repo creations per burst, ~30-40min cooldown between bursts.
 
@@ -173,10 +221,11 @@ The `hanzoskill` org on GitHub has 739 public repos — one per skill. These are
 - `hanzo/hanzo-agent.md` - AI agent framework (bots can use agents)
 - `hanzo/hanzo-mcp.md` - MCP tools (skills can expose MCP tools)
 - `hanzo/hanzo-dev.md` - AI coding agent (uses skill discovery)
+- `hanzo/hanzo-commerce-api.md` - Billing backend
 
 ---
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: automation, skills, bot, recipes
-**Prerequisites**: Bash/Python basics
+**Related**: bot, messaging, gateway, channels, skills, marketplace
+**Prerequisites**: TypeScript, messaging platform tokens

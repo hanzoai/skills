@@ -154,6 +154,8 @@ const response = await client.chat.completions.create({
 
 ## API Surface
 
+The SDK provides **187 endpoints** across **51 resource namespaces**, generated from the OpenAPI spec via Stainless.
+
 ### Core Resources
 
 | Resource | Method | Description |
@@ -199,6 +201,10 @@ const response = await client.chat.completions.create({
 | `client.audio.translations.create()` | Audio translation |
 | `client.audio.speech.create()` | Text-to-speech |
 
+### Additional Resource Namespaces
+
+The SDK also includes namespaces for: assistants, threads, runs, batches, vector stores, model management, key management, team management, organization, budget, guardrails, credentials, and more (51 total).
+
 ## Configuration
 
 ```typescript
@@ -218,6 +224,22 @@ const client = new Hanzo({
 HANZO_API_KEY=your-api-key          # Required
 HANZO_BASE_URL=https://...          # Override base URL
 HANZO_LOG=debug                     # Enable debug logging
+```
+
+### Auth Header
+
+The gateway accepts the API key via either header:
+- `Authorization: Bearer <key>` (standard)
+- `x-litellm-api-key: <key>` (LiteLLM-native, used internally)
+
+### Sandbox Environment
+
+```typescript
+// Use sandbox for testing
+const client = new Hanzo({
+  apiKey: process.env.HANZO_SANDBOX_KEY,
+  baseURL: "https://sandbox.api.hanzo.ai/v1",
+})
 ```
 
 ## OpenAI Drop-In Replacement

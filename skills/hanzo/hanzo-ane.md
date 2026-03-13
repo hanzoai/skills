@@ -68,7 +68,7 @@ Fork of **maderix/ANE** (8 commits merged). Repo: `hanzoai/ANE`.
 |----------|-------------|-----|---------------|
 | **Static (conv)** | Separate weight files, convolution ops | Conv2D | M1 → M4+ (all chips) |
 | **Static + ANE extras** | 14% faster with ANE-specific optimizations | Conv2D + ANE | M1 → M4+ (all chips) |
-| **Dynamic (matmul)** | Uses matmul + slice_by_size, no recompile | MatMul | M4+ only |
+| **Dynamic (matmul)** | Uses matmul + slice_by_size, no recompile | MatMul | **M4+ only** (fails on M1-M3) |
 
 ### Pipeline Selection
 

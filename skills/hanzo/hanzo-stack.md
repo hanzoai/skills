@@ -7,9 +7,13 @@
 
 Hanzo Stack provides the **complete integrated development environment** for running all Hanzo services locally. One command to start everything: LLM Gateway, Chat, Console, Cloud, IAM, KMS, PostgreSQL, Redis, MongoDB, MinIO.
 
+**NOTE**: The stack uses **three compose files** (production, development, core) and **git submodules** for all services, allowing each service to track its own repo while being orchestrated together.
+
 ### Why Hanzo Stack?
 
 - **One-command setup**: `make dev` starts everything
+- **Three compose profiles**: Production, development (hot-reload), core (minimal)
+- **Git submodules**: Each service tracks its own repo
 - **Full ecosystem**: All Hanzo services running locally
 - **Hot-reload**: Development mode with file watching
 - **Consistent**: Same compose config for all developers
@@ -37,16 +41,69 @@ Hanzo Stack provides the **complete integrated development environment** for run
 | Setup | `make setup` |
 | Start prod | `make up` |
 | Start dev | `make dev` |
+| Start core | `make core` |
 | Status | `make status` |
 | Stop | `make down` |
 | Logs | `make logs` |
+
+## Three Compose Files
+
+| File | Purpose | Services |
+|------|---------|----------|
+| `compose.yml` | **Production** — optimized, no hot-reload | All services, release images |
+| `compose.dev.yml` | **Development** — hot-reload, source mounts | All services, volume mounts |
+| `compose.core.yml` | **Core** — minimal set for quick start | LLM Gateway, Chat, PostgreSQL, Redis |
+
+```bash
+# Production mode
+make up            # Uses compose.yml
+
+# Development mode (hot-reload)
+make dev           # Uses compose.yml + compose.dev.yml override
+
+# Core only (minimal, fast startup)
+make core          # Uses compose.core.yml
+```
+
+## Git Submodules
+
+Each service is a git submodule tracking its own repo:
+
+```
+experiments/stack/
+├── services/
+│   ├── llm/          → github.com/hanzoai/llm (LLM Gateway)
+│   ├── chat/         → github.com/hanzoai/chat (Chat UI)
+│   ├── console/      → github.com/hanzoai/console (Console)
+│   ├── cloud/        → github.com/hanzoai/cloud (Cloud Dashboard)
+│   ├── search/       → github.com/hanzoai/search (Search)
+│   ├── commerce/     → github.com/hanzoai/commerce (Commerce API)
+│   └── ...
+├── compose.yml           # Production compose
+├── compose.dev.yml       # Development overrides
+├── compose.core.yml      # Minimal core services
+├── .env.example          # Environment template
+├── Makefile              # All commands
+└── README.md
+```
+
+```bash
+# Initialize submodules
+git submodule update --init --recursive
+
+# Update all submodules to latest
+git submodule update --remote
+
+# Update specific service
+cd services/chat && git pull origin main
+```
 
 ## Service Ports
 
 | Service | Port | URL | Description |
 |---------|------|-----|-------------|
 | Search UI | 3000 | `http://localhost:3000` | AI-powered search |
-| Chat UI | 3081 | `http://localhost:3081` | Hanzo Chat (LibreChat) |
+| Chat UI | 3081 | `http://localhost:3081` | Hanzo Chat |
 | LLM Gateway | 4000 | `http://localhost:4000` | Unified LLM proxy |
 | Payment API | 4242 | `http://localhost:4242` | Commerce API |
 | Admin UI | 5173 | `http://localhost:5173` | Admin dashboard |
@@ -61,14 +118,16 @@ Hanzo Stack provides the **complete integrated development environment** for run
 
 ```bash
 # Clone and setup
-git clone https://github.com/hanzoai/experiments.git
+git clone --recurse-submodules https://github.com/hanzoai/experiments.git
 cd experiments/stack
 
 # Configure environment
 make setup    # Creates .env from .env.example, prompts for API keys
 
-# Start all services
-make dev      # Development mode (hot-reload)
+# Start all services (pick one)
+make core     # Minimal: LLM + Chat + Postgres + Redis
+make dev      # Full stack with hot-reload
+make up       # Full stack, production mode
 
 # Verify
 make status   # Check all services are healthy
@@ -79,9 +138,10 @@ curl http://localhost:3081            # Open Chat UI
 ## Makefile Commands
 
 ```bash
-make setup        # Initial setup (env, pull images)
+make setup        # Initial setup (env, pull images, init submodules)
 make up           # Start all services (production mode)
 make dev          # Start with hot-reload (development)
+make core         # Start minimal core services only
 make down         # Stop all services
 make restart      # Restart all services
 make status       # Show service status and health
@@ -93,6 +153,7 @@ make pull         # Pull latest images
 make build        # Build local images
 make test         # Run integration tests
 make reset        # Full reset (clean + setup)
+make update       # Update all git submodules
 ```
 
 ## Environment Configuration
@@ -127,7 +188,7 @@ KMS_CLIENT_SECRET=...
 
 ```
 ┌─────────────────────────────────────────┐
-│              compose.yml                │
+│     compose.yml + compose.dev.yml       │
 ├─────────────────────────────────────────┤
 │                                         │
 │  ┌──────────┐  ┌──────────┐  ┌───────┐ │
@@ -155,10 +216,11 @@ KMS_CLIENT_SECRET=...
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | Port conflict | Service already running | `lsof -i :PORT && kill PID` |
-| OOM | Too many services | Start subset: `make up SERVICES="llm chat postgres redis"` |
+| OOM | Too many services | Use `make core` for minimal stack |
 | Slow start | Image pull | `make pull` beforehand |
 | DB connection fail | Postgres not ready | Wait or `make restart` |
 | Chat not loading | Missing OPENAI_API_KEY | Add at least one LLM key to .env |
+| Submodule empty | Not initialized | `git submodule update --init --recursive` |
 
 ```bash
 # Debug specific service
@@ -184,5 +246,5 @@ lsof -i :4000   # Find what's using the port
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: stack, development, local, docker, compose
+**Related**: stack, development, local, docker, compose, submodules
 **Prerequisites**: Docker, make, 16GB+ RAM
