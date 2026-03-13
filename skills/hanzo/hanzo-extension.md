@@ -19,7 +19,7 @@ Hanzo Extensions is a **monorepo of browser and IDE extensions** providing AI-po
 
 ### Repo
 
-`hanzoai/extension`. Local: ``github.com/hanzoai/extension``. Version: **1.8.0**.
+`github.com/hanzoai/extension`. Version: **1.8.0**.
 
 ## When to use
 
