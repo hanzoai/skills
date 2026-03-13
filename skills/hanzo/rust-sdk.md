@@ -17,7 +17,7 @@ Hanzo Rust SDK is a **full Rust infrastructure SDK** — not just an API client.
 | MSRV | 1.85 |
 | License | MIT OR Apache-2.0 |
 | Active crates | 14 |
-| Disabled crates | 30+ (in development) |
+| Disabled crates | ~21 (in development) |
 
 ## Active Crates
 
@@ -62,7 +62,7 @@ Hanzo Rust SDK is a **full Rust infrastructure SDK** — not just an API client.
 
 ## Disabled Crates (In Development)
 
-30+ crates in various stages: `hanzo-kbs`, `hanzo-identity`, `hanzo-libp2p`, `hanzo-compute`, `hanzo-database`, `hanzo-embedding`, `hanzo-llm`, `hanzo-hmm`, `hanzo-wasm`, `hanzo-mining`, `hanzo-marketplace`, `hanzo-baml`, `hanzo-db`, `hanzo-simulation`, `hanzo-sqlite`.
+~21 crates in various stages: `hanzo-kbs`, `hanzo-identity`, `hanzo-libp2p`, `hanzo-compute`, `hanzo-database`, `hanzo-embedding`, `hanzo-llm`, `hanzo-hmm`, `hanzo-wasm`, `hanzo-mining`, `hanzo-marketplace`, `hanzo-baml`, `hanzo-db`, `hanzo-simulation`, `hanzo-sqlite`.
 
 ## Usage Examples
 

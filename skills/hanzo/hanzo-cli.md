@@ -5,33 +5,32 @@
 
 ## Overview
 
-Hanzo CLI is a **Rust binary with polyglot SDK proxying** — a single CLI that provides unified access to all Hanzo services while automatically proxying commands through Python, Go, and TypeScript SDKs as needed. Deploy apps, manage environments, chat with models, and manage API keys.
-
-**NOTE**: The CLI is a **Rust binary** (not an npm package). Config is **TOML** at `~/.config/hanzo/config.toml` (not JSON). It embeds SDK runtimes for polyglot command proxying.
+Hanzo CLI is a **hybrid Rust+Node+Python command-line tool** — a single CLI that provides unified access to all Hanzo services. Handles project scaffolding, local development, deployment, authentication, and proxies to TypeScript tooling (docs, MDX, UI, MCP) when needed.
 
 ### Why Hanzo CLI?
 
-- **Rust binary**: Fast startup, single static binary
-- **Polyglot proxying**: Transparently calls Python/Go/TypeScript SDKs
+- **Polyglot**: Rust binary core with Node.js and Python SDK proxying
 - **Unified interface**: All Hanzo services from one tool
-- **TOML config**: Human-readable configuration
-- **Deploy from terminal**: Git-push and manual deploy workflows
-- **Chat inline**: Talk to AI models without leaving terminal
-- **Scriptable**: All commands return parseable output (JSON with `--json`)
+- **TOML config**: Human-readable configuration at `~/.config/hanzo/config.toml`
+- **Project scaffolding**: Init new projects with templates
+- **Dev server**: Local development with hot reload
+- **Deploy**: Push to Hanzo Platform from terminal
+- **Scriptable**: JSON output with `--json`
 
 ## When to use
 
-- Deploying applications to Hanzo Platform
-- Managing environment variables and secrets
-- Quick AI model interactions from terminal
-- API key lifecycle management
-- CI/CD pipeline integration
+- Scaffolding new Hanzo projects
+- Running local development servers
+- Building and deploying applications
+- Authentication and API key management
+- Running agents and commerce backends
+- Proxying to TypeScript SDK tooling (docs, MCP, etc.)
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
-| Binary | `hanzo` (Rust) |
+| Binary | `hanzo` (Rust + Node + Python) |
 | Repo | `github.com/hanzoai/cli` |
 | Config | `~/.config/hanzo/config.toml` |
 | Auth | OAuth2 via browser |
@@ -72,7 +71,7 @@ project = "my-app"
 environment = "production"
 
 [api]
-base_url = "https://api.hanzo.ai/v1"
+base_url = "https://api.hanzo.ai"
 iam_url = "https://hanzo.id"
 
 [sdk]
@@ -84,6 +83,31 @@ node = "~/.local/bin/node"
 
 ## Commands
 
+### Project Scaffolding
+
+```bash
+hanzo init                        # Interactive project setup
+hanzo init --template next        # From template (next, fastapi, go, rust)
+hanzo init --template commerce    # E-commerce project scaffold
+```
+
+### Local Development
+
+```bash
+hanzo dev                         # Start dev server (auto-detect framework)
+hanzo dev --port 3000             # Custom port
+hanzo run                         # Run project (production mode)
+```
+
+### Build & Deploy
+
+```bash
+hanzo build                       # Build project
+hanzo deploy                      # Deploy to Hanzo Platform
+hanzo deploy --env production     # Deploy to specific environment
+hanzo deploy --branch main        # Deploy specific branch
+```
+
 ### Authentication
 
 ```bash
@@ -94,95 +118,38 @@ hanzo auth token          # Print current access token
 hanzo auth whoami         # Show current user info
 ```
 
-### Deployment
+### Commerce
 
 ```bash
-hanzo deploy                      # Deploy current directory
-hanzo deploy --env production     # Deploy to specific environment
-hanzo deploy --branch main        # Deploy specific branch
-hanzo deploy --image ghcr.io/org/app:latest  # Deploy container image
-hanzo deploy status               # Show deployment status
-hanzo deploy logs                 # Stream deployment logs
-hanzo deploy rollback             # Rollback to previous version
-hanzo deploy list                 # List recent deployments
+hanzo commerce init               # Initialize commerce backend
+hanzo commerce serve              # Start commerce API server
 ```
 
-### Environment Variables
+### Agent
 
 ```bash
-hanzo env list                    # List all env vars
-hanzo env list --env staging      # List for specific environment
-hanzo env set KEY=VALUE           # Set environment variable
-hanzo env set KEY=VALUE --env prod  # Set for specific environment
-hanzo env get KEY                 # Get specific variable
-hanzo env rm KEY                  # Remove variable
-hanzo env pull .env               # Pull remote env to local file
-hanzo env push .env               # Push local .env to remote
-```
-
-### AI Chat
-
-```bash
-hanzo chat "Hello"                           # Quick chat (default model)
-hanzo chat --model zen-70b "Explain consensus"  # Specific model
-hanzo chat --stream "Write a poem"           # Streaming output
-hanzo chat --system "You are a pirate" "Hello"  # Custom system prompt
-hanzo chat --json "List 3 colors"            # JSON output mode
-echo "fix this bug" | hanzo chat --stdin     # Pipe input
-```
-
-### Models
-
-```bash
-hanzo models list                 # List all available models
-hanzo models list --provider zen  # Filter by provider
-hanzo models info zen-70b         # Model details
-hanzo models pricing              # Show pricing table
-```
-
-### API Keys
-
-```bash
-hanzo keys create                 # Create new API key
-hanzo keys create --name "CI/CD"  # Named key
-hanzo keys list                   # List all keys
-hanzo keys revoke KEY_ID          # Revoke specific key
-```
-
-### Projects
-
-```bash
-hanzo projects list               # List all projects
-hanzo projects create my-app      # Create new project
-hanzo projects delete my-app      # Delete project
-hanzo projects link               # Link current directory to project
-hanzo projects info               # Show linked project details
-```
-
-### Secrets (KMS)
-
-```bash
-hanzo secrets list                # List secrets for current project
-hanzo secrets set DB_URL=postgres://...  # Set a secret
-hanzo secrets get DB_URL          # Get secret value
-hanzo secrets rm DB_URL           # Remove secret
-hanzo secrets sync                # Sync secrets to K8s
-```
-
-### SDK Proxying
-
-The CLI transparently proxies to language-specific SDKs when needed:
-
-```bash
-# These commands use the Python SDK under the hood
 hanzo agent run my-agent.py       # Run agent via Python SDK
 hanzo agent list                  # List registered agents
+```
 
-# These use the Go SDK
-hanzo orm migrate                 # Run ORM migrations via Go SDK
+### TypeScript Proxy Commands
 
-# These use the TypeScript SDK
-hanzo mcp serve                   # Start MCP server via TS SDK
+The CLI transparently proxies to TypeScript SDK tooling:
+
+```bash
+# Docs tooling (proxies to @hanzo/docs-cli)
+hanzo docs init                   # Initialize docs project
+hanzo docs dev                    # Docs dev server
+
+# MDX processing (proxies to @hanzo/docs-mdx)
+hanzo mdx build                   # Build MDX content
+
+# UI components (proxies to @hanzo/docs-ui)
+hanzo ui init                     # Initialize UI project
+
+# MCP server (proxies to @hanzo/mcp)
+hanzo mcp serve                   # Start MCP server
+hanzo mcp list                    # List available MCP tools
 ```
 
 ## CI/CD Integration
@@ -210,7 +177,7 @@ jobs:
 
 ```bash
 HANZO_API_KEY=your-api-key          # API authentication
-HANZO_BASE_URL=https://api.hanzo.ai/v1  # Override API base URL
+HANZO_BASE_URL=https://api.hanzo.ai # Override API base URL
 HANZO_CONFIG=~/.config/hanzo/config.toml  # Custom config path
 HANZO_LOG=debug                     # Enable debug logging
 HANZO_JSON=1                        # Always output JSON
@@ -222,21 +189,21 @@ HANZO_JSON=1                        # Always output JSON
 |-------|-------|----------|
 | `hanzo: command not found` | Not in PATH | Add binary to PATH or install via cargo |
 | Auth fails | Token expired | `hanzo auth login` |
-| Deploy fails | No project linked | `hanzo projects link` |
-| Permission denied | Wrong org/role | Check with `hanzo auth whoami` |
-| SDK proxy fails | Missing runtime | Install Python/Go/Node.js as needed |
+| Deploy fails | No project linked | Run `hanzo init` first |
+| TS proxy fails | Missing Node.js | Install Node.js 18+ |
+| Python proxy fails | Missing Python | Install Python 3.12+ |
 | Config not found | Wrong path | Check `~/.config/hanzo/config.toml` |
 
 ## Related Skills
 
 - `hanzo/hanzo-platform.md` - PaaS (CLI deploys here)
 - `hanzo/hanzo-kms.md` - Secret management backend
-- `hanzo/hanzo-chat.md` - Chat API (CLI calls this)
+- `hanzo/hanzo-chat.md` - Chat API
 - `hanzo/hanzo-dev.md` - Terminal AI coding agent (different tool — dev is AI agent, CLI is service management)
 
 ---
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: cli, command-line, deploy, management, rust
-**Prerequisites**: None (single binary)
+**Related**: cli, command-line, deploy, management, rust, polyglot
+**Prerequisites**: None (single binary, auto-detects runtimes)
