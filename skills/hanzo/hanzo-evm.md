@@ -17,7 +17,9 @@ Hanzo EVM is a **Rust-based EVM execution engine** — fork of paradigmxyz/reth 
 
 ### OSS Base
 
-Fork of **paradigmxyz/reth** v1.11.0. Branch: `rebrand/hanzo-evm`. Rust edition 2024, MSRV 1.93.
+Fork of **paradigmxyz/reth** v1.11.0. Rust edition 2024, MSRV 1.93.
+
+**NOTE**: Crate rename is in progress. The binary is `hanzo-evm` and `bin/hanzo-evm/` exists, but most workspace dependency names still reference `reth-*` internally. The naming convention below describes the target state.
 
 ## When to use
 
