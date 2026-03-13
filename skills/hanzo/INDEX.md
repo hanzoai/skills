@@ -4,7 +4,7 @@
 
 ## Overview
 
-Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to production infrastructure (PaaS, KMS, IAM) to developer tools (SDKs, CLI, extensions). 65 skills cover every component with progressive disclosure.
+Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to production infrastructure (PaaS, KMS, IAM) to developer tools (SDKs, CLI, extensions). 66 skills cover every component with progressive disclosure.
 
 ### Philosophy
 
@@ -41,13 +41,14 @@ Hanzo is a comprehensive AI ecosystem — from frontier models (Zen MoDE) to pro
 | `hanzo-web3.md` | Blockchain API (100+ EVM/non-EVM chains) | `cat skills/hanzo/hanzo-web3.md` |
 | `hanzo-web3-gateway.md` | Keyless blockchain via x402 micropayments | `cat skills/hanzo/hanzo-web3-gateway.md` |
 
-### Platform & Deployment (9 skills)
+### Platform & Deployment (10 skills)
 
 | Skill | Description | Load |
 |-------|-------------|------|
 | `hanzo-platform.md` | PaaS (Dokploy fork, Hono.js API + Next.js 16) | `cat skills/hanzo/hanzo-platform.md` |
 | `hanzo-gateway.md` | API gateway (KrakenD/Lura, 147+ endpoints, Go) | `cat skills/hanzo/hanzo-gateway.md` |
-| `hanzo-ingress.md` | Ingress controller & reverse proxy | `cat skills/hanzo/hanzo-ingress.md` |
+| `hanzo-ingress.md` | Ingress controller (Traefik fork, Go) | `cat skills/hanzo/hanzo-ingress.md` |
+| `hanzo-tunnel.md` | WebSocket tunnel & bot agent bridge (Rust + Python) | `cat skills/hanzo/hanzo-tunnel.md` |
 | `hanzo-studio.md` | Visual AI engine (ComfyUI fork, port 8188) | `cat skills/hanzo/hanzo-studio.md` |
 | `hanzo-search.md` | Search engine (Meilisearch v1.37.0 fork, Rust, 22 crates) | `cat skills/hanzo/hanzo-search.md` |
 | `hanzo-flow.md` | Visual workflow builder (Langflow fork, Python, port 7860) | `cat skills/hanzo/hanzo-flow.md` |
@@ -173,5 +174,5 @@ What do you need?
 ---
 
 **Last Updated**: 2026-03-13
-**Total Skills**: 65
+**Total Skills**: 66
 **Gateway**: `discover-hanzo/SKILL.md`
