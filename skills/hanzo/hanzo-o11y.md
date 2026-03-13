@@ -1,282 +1,275 @@
-# Hanzo Observability - Monitoring, Tracing & Error Tracking
+# Hanzo O11y - Full-Stack Observability Platform
 
 **Category**: Hanzo Ecosystem
 **Related Skills**: `hanzo/hanzo-console.md`, `hanzo/hanzo-universe.md`, `hanzo/hanzo-stack.md`
 
 ## Overview
 
-Hanzo Observability covers the full monitoring stack: **OpenTelemetry** for distributed tracing, **Prometheus + Grafana** for metrics and dashboards, and **Sentry** for error tracking. All components run in-cluster on K8s.
+Hanzo O11y is a **full-stack observability platform** for logs, metrics, and traces. Go 1.25 backend (Gin/gorilla-mux) with a React 18 + Vite frontend. Uses **ClickHouse** as the telemetry datastore and **OpenTelemetry** for ingestion. Fork of SigNoz. Live at `o11y.hanzo.ai`.
 
-### Three Pillars
+### Why Hanzo O11y?
 
-| Pillar | Tool | Purpose |
-|--------|------|---------|
-| **Metrics** | Prometheus + Grafana | Time-series metrics, dashboards, alerting |
-| **Traces** | OpenTelemetry | Distributed request tracing across services |
-| **Errors** | Sentry | Error tracking, stack traces, user context |
+- **Single pane of glass**: Logs, metrics, traces, and LLM observability in one UI
+- **OpenTelemetry native**: No vendor lock-in, standard instrumentation
+- **ClickHouse backend**: Columnar storage optimized for observability queries (50% less resources than Elastic)
+- **Self-hostable**: Docker Compose or Helm, community or enterprise edition
+- **LLM Observability**: Track LLM calls, token usage, costs, prompt/response analysis
+- **Built-in alerting**: Alert on any telemetry signal (logs, metrics, traces)
+
+### Tech Stack
+
+- **Backend**: Go 1.25, Gin, gorilla/mux, go-redis, cobra CLI
+- **Frontend**: React 18, TypeScript, Vite (rolldown-vite), Ant Design, `@hanzo/ui`, `@hanzo/insights`
+- **Telemetry Store**: ClickHouse (`ghcr.io/hanzoai/datastore`)
+- **Ingestion**: OpenTelemetry Collector fork (`ghcr.io/hanzoai/otel-collector`)
+- **Metadata Store**: SQLite (community) or PostgreSQL (enterprise)
+- **Auth**: JWT tokens (built-in), OIDC + SAML (enterprise), OpenFGA for authz
+- **Tests**: Go (`go test -race ./...`), Frontend (Jest), Integration (Python/uv/pytest)
+
+### OSS Base
+
+Fork of `signoz/signoz`. Repo: `hanzoai/o11y`.
 
 ## When to use
 
-- Setting up monitoring for Hanzo services
-- Configuring distributed tracing across microservices
-- Error tracking and alerting
-- Performance analysis and dashboards
-- Debugging latency and throughput issues
+- Monitoring applications and infrastructure (APM, errors, latency)
+- Centralized log management with full-text search and aggregation
+- Distributed tracing across microservices
+- LLM observability (token usage, costs, prompt debugging)
+- Custom metrics dashboards and alerting
+- Replacing Datadog, New Relic, or Elastic with a self-hosted solution
+
+## Hard requirements
+
+1. **ClickHouse** (via `ghcr.io/hanzoai/datastore`) for telemetry storage
+2. **ZooKeeper** for ClickHouse coordination (single-node or cluster)
+3. **OpenTelemetry Collector** (`ghcr.io/hanzoai/otel-collector`) for data ingestion
+4. **Docker** or **Kubernetes** for deployment
 
 ## Quick reference
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| Prometheus | 9090 | Metrics collection + queries |
-| Grafana | 3000 | Dashboards + visualization |
-| OTel Collector | 4317 (gRPC), 4318 (HTTP) | Trace/metric ingestion |
-| Alertmanager | 9093 | Alert routing |
-
 | Item | Value |
 |------|-------|
-| O11y config | `github.com/hanzoai/o11y` |
-| OTel Collector | `github.com/hanzoai/otel-collector` |
-| Sentry | `github.com/hanzoai/sentry` |
+| UI | `https://o11y.hanzo.ai` |
+| Docs | `https://o11y.hanzo.ai/docs` |
+| API | Port 8080 (backend serves frontend + API) |
+| OTel gRPC | Port 4317 |
+| OTel HTTP | Port 4318 |
+| Prometheus metrics | Port 9090 (self-instrumentation) |
+| Enterprise image | `ghcr.io/hanzoai/o11y` |
+| Community image | `ghcr.io/hanzoai/o11y-community` |
+| OTel Collector image | `ghcr.io/hanzoai/otel-collector` |
+| Datastore image | `ghcr.io/hanzoai/datastore:25.5.6` |
+| Go module | `github.com/hanzoai/o11y` |
+| Frontend package | `@hanzo/o11y` |
+| License | MIT (community), proprietary (`ee/` directory) |
+| Repo | `github.com/hanzoai/o11y` |
 
-## OpenTelemetry Instrumentation
+## Architecture
 
-### Python (FastAPI)
-
-```python
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
-# Setup
-tracer_provider = TracerProvider()
-tracer_provider.add_span_processor(
-    BatchSpanProcessor(OTLPSpanExporter(endpoint="http://otel-collector:4317"))
-)
-trace.set_tracer_provider(tracer_provider)
-
-# Auto-instrument FastAPI
-FastAPIInstrumentor.instrument_app(app)
-
-# Manual spans
-tracer = trace.get_tracer("hanzo-service")
-
-@app.post("/v1/chat/completions")
-async def chat(request: ChatRequest):
-    with tracer.start_as_current_span("chat_completion") as span:
-        span.set_attribute("model", request.model)
-        span.set_attribute("message_count", len(request.messages))
-
-        result = await inference(request)
-
-        span.set_attribute("tokens", result.usage.total_tokens)
-        span.set_attribute("latency_ms", result.latency_ms)
-        return result
+```
+┌──────────────┐     ┌───────────────────┐     ┌──────────────┐
+│  Your Apps   │────>│  OTel Collector   │────>│  ClickHouse  │
+│  (OTel SDK)  │     │  (gRPC/HTTP)      │     │  (Datastore) │
+└──────────────┘     │  :4317 / :4318    │     └──────┬───────┘
+                     └───────────────────┘            │
+                                                      │
+┌──────────────┐     ┌───────────────────┐            │
+│  Frontend    │────>│  O11y Backend     │────────────┘
+│  (React/Vite)│     │  (Go, :8080)      │────> SQLite/PostgreSQL
+└──────────────┘     └───────────────────┘      (metadata, users, alerts)
 ```
 
-### Go
+### Data Flow
 
-```go
-import (
-    "go.opentelemetry.io/otel"
-    "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-    sdktrace "go.opentelemetry.io/otel/sdk/trace"
-)
+1. Applications instrumented with OpenTelemetry SDKs send traces, metrics, and logs to the OTel Collector
+2. OTel Collector processes and exports to ClickHouse databases: `observe_traces`, `observe_metrics`, `observe_logs`, `observe_meter`, `observe_metadata`
+3. The Go backend queries ClickHouse for telemetry data and serves the React frontend
+4. SQLite (or PostgreSQL in enterprise) stores metadata: users, orgs, dashboards, alerts, saved views
 
-func initTracer() func() {
-    exporter, _ := otlptracegrpc.New(ctx,
-        otlptracegrpc.WithEndpoint("otel-collector:4317"),
-        otlptracegrpc.WithInsecure(),
-    )
-    tp := sdktrace.NewTracerProvider(
-        sdktrace.WithBatcher(exporter),
-        sdktrace.WithResource(resource.NewWithAttributes(
-            semconv.SchemaURL,
-            semconv.ServiceNameKey.String("hanzo-api"),
-        )),
-    )
-    otel.SetTracerProvider(tp)
-    return func() { tp.Shutdown(ctx) }
-}
+### Directory Structure
 
-// Usage
-tracer := otel.Tracer("hanzo-api")
-ctx, span := tracer.Start(ctx, "process_request")
-defer span.End()
-span.SetAttributes(attribute.String("model", "zen-70b"))
+```
+cmd/
+  server/          # Community edition entrypoint
+  enterprise/      # Enterprise edition entrypoint
+pkg/
+  alertmanager/    # Alert rule evaluation + notification
+  apiserver/       # HTTP API server (Gin/gorilla-mux)
+  authn/           # Authentication (JWT)
+  authz/           # Authorization
+  cache/           # In-memory or Redis cache
+  prometheus/      # PromQL query engine
+  querier/         # Query layer over ClickHouse
+  query-service/   # Legacy query service
+  querybuilder/    # Query builder for UI
+  sqlstore/        # SQLite/PostgreSQL metadata store
+  telemetrylogs/   # Log query handlers
+  telemetrymetrics/# Metric query handlers
+  telemetrytraces/ # Trace query handlers
+  telemetrystore/  # ClickHouse connection management
+  web/             # Embedded frontend serving
+ee/
+  anomaly/         # Anomaly detection (enterprise)
+  authn/           # OIDC + SAML SSO (enterprise)
+  authz/           # OpenFGA fine-grained authz (enterprise)
+  gateway/         # Multi-tenant gateway (enterprise)
+  licensing/       # License management
+  zeus/            # Cloud/license API client
+frontend/
+  src/             # React 18 + TypeScript + Vite
+deploy/
+  docker/          # Docker Compose deployment
+  docker-swarm/    # Docker Swarm deployment
+  common/          # Shared ClickHouse configs, dashboards
+conf/
+  example.yaml     # Full configuration reference
+tests/
+  integration/     # Python integration tests (uv/pytest)
 ```
 
-### TypeScript (Node.js)
+## Docker Compose quickstart
 
-```typescript
-import { NodeSDK } from "@opentelemetry/sdk-node"
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-grpc"
-import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node"
-
-const sdk = new NodeSDK({
-  traceExporter: new OTLPTraceExporter({
-    url: "http://otel-collector:4317",
-  }),
-  instrumentations: [getNodeAutoInstrumentations()],
-})
-sdk.start()
+```bash
+git clone https://github.com/hanzoai/o11y.git && cd o11y/deploy/docker
+docker compose -f docker-compose.yaml up -d
 ```
 
-## Prometheus Metrics
+This starts: ZooKeeper, ClickHouse (datastore), O11y backend, OTel Collector, and a schema migrator.
 
-### Instrument Service
+Access the UI at `http://localhost:8080`.
 
-```python
-from prometheus_client import Counter, Histogram, start_http_server
+Send telemetry to `localhost:4317` (gRPC) or `localhost:4318` (HTTP).
 
-# Define metrics
-REQUEST_COUNT = Counter(
-    "hanzo_requests_total",
-    "Total requests",
-    ["method", "endpoint", "status"],
-)
-REQUEST_LATENCY = Histogram(
-    "hanzo_request_duration_seconds",
-    "Request latency",
-    ["method", "endpoint"],
-    buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0],
-)
-TOKENS_PROCESSED = Counter(
-    "hanzo_tokens_total",
-    "Tokens processed",
-    ["model", "type"],  # type: input/output
-)
+## Development
 
-# Expose metrics endpoint
-start_http_server(8000)
+### Backend (Go)
 
-# Use in handlers
-@app.post("/v1/chat/completions")
-async def chat(request):
-    with REQUEST_LATENCY.labels("POST", "/v1/chat/completions").time():
-        result = await process(request)
-        REQUEST_COUNT.labels("POST", "/v1/chat/completions", 200).inc()
-        TOKENS_PROCESSED.labels(request.model, "input").inc(result.usage.prompt_tokens)
-        TOKENS_PROCESSED.labels(request.model, "output").inc(result.usage.completion_tokens)
-        return result
+```bash
+# Start dependencies (ClickHouse + OTel Collector)
+make devenv-up
+
+# Run enterprise server locally
+make go-run-enterprise
+
+# Run community server locally
+make go-run-community
+
+# Run Go tests
+make go-test
 ```
 
-### Prometheus Config
+### Frontend (React)
 
-```yaml
-# prometheus.yml
-global:
-  scrape_interval: 15s
-
-scrape_configs:
-  - job_name: "hanzo-services"
-    kubernetes_sd_configs:
-      - role: pod
-    relabel_configs:
-      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
-        action: keep
-        regex: true
-      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
-        action: replace
-        target_label: __address__
-        regex: (.+)
-        replacement: ${1}:${2}
+```bash
+cd frontend
+yarn install
+yarn dev          # Vite dev server
+yarn build        # Production build
+yarn jest         # Unit tests
 ```
 
-## Grafana Dashboards
+### Integration Tests (Python)
 
-### Key Dashboards
-
-| Dashboard | Metrics | Use |
-|-----------|---------|-----|
-| LLM Gateway | Request rate, latency, tokens/sec, errors | Monitor AI traffic |
-| Service Health | CPU, memory, restarts, ready replicas | Infrastructure |
-| Database | Query latency, connections, cache hit rate | PostgreSQL/Redis |
-| Cost Tracking | Tokens × model price, by customer | Billing |
-
-### Example PromQL
-
-```promql
-# Request rate (5 min window)
-rate(hanzo_requests_total[5m])
-
-# P99 latency
-histogram_quantile(0.99, rate(hanzo_request_duration_seconds_bucket[5m]))
-
-# Error rate
-sum(rate(hanzo_requests_total{status=~"5.."}[5m]))
-/ sum(rate(hanzo_requests_total[5m]))
-
-# Tokens per second by model
-rate(hanzo_tokens_total[1m])
+```bash
+cd tests/integration
+uv run pytest --basetemp=./tmp/ -vv --capture=no src/
 ```
 
-## Local Setup (compose.yml)
+### Build Docker Images
 
-```yaml
-services:
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
-    ports:
-      - "4317:4317"   # gRPC
-      - "4318:4318"   # HTTP
-    volumes:
-      - ./otel-config.yaml:/etc/otel/config.yaml
-    command: ["--config=/etc/otel/config.yaml"]
+```bash
+# Community
+make docker-build-community
 
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD}"
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./dashboards:/etc/grafana/provisioning/dashboards
-
-  alertmanager:
-    image: prom/alertmanager:latest
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
-
-volumes:
-  grafana_data:
+# Enterprise
+make docker-build-enterprise
 ```
 
-## Sentry Integration
+## Key Environment Variables
 
-```python
-import sentry_sdk
-from sentry_sdk.integrations.fastapi import FastApiIntegration
+```bash
+# Telemetry store (ClickHouse)
+HANZO_TELEMETRYSTORE_DATASTORE_DSN=tcp://127.0.0.1:9000
+HANZO_TELEMETRYSTORE_DATASTORE_CLUSTER=cluster
 
-sentry_sdk.init(
-    dsn=os.environ["SENTRY_DSN"],
-    integrations=[FastApiIntegration()],
-    traces_sample_rate=0.1,  # 10% of requests
-    environment="production",
-)
+# Metadata store
+HANZO_SQLSTORE_SQLITE_PATH=o11y.db
+
+# Auth
+HANZO_TOKENIZER_JWT_SECRET=secret
+
+# Alertmanager
+HANZO_ALERTMANAGER_PROVIDER=observe
+
+# Web frontend
+HANZO_WEB_ENABLED=true
+
+# Logging
+HANZO_INSTRUMENTATION_LOGS_LEVEL=info
+
+# OTel Collector (separate process)
+HANZO_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://clickhouse:9000
+HANZO_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER=cluster
 ```
+
+## OTel Collector Pipeline
+
+The bundled OTel Collector config (`deploy/docker/otel-collector-config.yaml`) defines these pipelines:
+
+| Pipeline | Receivers | Exporters |
+|----------|-----------|-----------|
+| traces | OTLP | clickhousetraces, metadataexporter, observemeter |
+| metrics | OTLP | observeclickhousemetrics, metadataexporter, observemeter |
+| metrics/prometheus | prometheus scraper | observeclickhousemetrics, metadataexporter, observemeter |
+| logs | OTLP | clickhouselogsexporter, metadataexporter, observemeter |
+
+ClickHouse databases: `observe_traces`, `observe_metrics`, `observe_logs`, `observe_meter`, `observe_metadata`.
+
+## Instrumenting Your Application
+
+Send telemetry to the OTel Collector using any OpenTelemetry SDK. Point the OTLP exporter at:
+
+- **gRPC**: `otel-collector:4317`
+- **HTTP**: `otel-collector:4318`
+
+All languages supported by OpenTelemetry work: Java, Python, Node.js, Go, .NET, Ruby, Rust, PHP, Elixir, Swift.
+
+## Community vs Enterprise
+
+| Feature | Community | Enterprise |
+|---------|-----------|------------|
+| Logs, Metrics, Traces | Yes | Yes |
+| LLM Observability | Yes | Yes |
+| Alerts | Yes | Yes |
+| Dashboards | Yes | Yes |
+| Exception Monitoring | Yes | Yes |
+| SSO (SAML/OIDC) | No | Yes |
+| Fine-grained RBAC (OpenFGA) | No | Yes |
+| Anomaly Detection | No | Yes |
+| Multi-tenant Gateway | No | Yes |
+| PostgreSQL metadata store | No | Yes |
+
+## Troubleshooting
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| No data in UI | OTel Collector not receiving data | Check `localhost:4317` is reachable, verify SDK config |
+| ClickHouse OOM | High cardinality queries | Tune `max_execution_time` in conf, add resource limits |
+| Slow log queries | Missing indexes | Use the query builder, avoid unbounded time ranges |
+| OTel Collector crash loops | Schema migration incomplete | Run migrator: `/o11y-otel-collector migrate sync up` |
+| Frontend 502 | Backend not ready | Check `localhost:8080/api/v1/health` |
 
 ## Related Skills
 
 - `hanzo/hanzo-console.md` - LLM-specific observability (traces, costs, scores)
-- `hanzo/hanzo-universe.md` - Production infrastructure
-- `hanzo/hanzo-stack.md` - Local dev stack (Prometheus included)
-- `hanzo/hanzo-insights.md` - Product analytics (different from infra o11y)
+- `hanzo/hanzo-universe.md` - Production K8s infrastructure
+- `hanzo/hanzo-stack.md` - Local dev stack
+- `hanzo/hanzo-platform.md` - PaaS deployment platform
 
 ---
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: observability, monitoring, tracing, prometheus, grafana, opentelemetry
-**Prerequisites**: Docker, metrics concepts, distributed systems
+**Related**: observability, monitoring, tracing, logs, metrics, opentelemetry, clickhouse, apm
+**Prerequisites**: Docker, OpenTelemetry concepts, ClickHouse basics

@@ -19,15 +19,20 @@ Hanzo Tunnel is a **Rust library and Python agent bridge** that connects local H
 ### Tech Stack
 
 - **Rust crate**: `hanzo-tunnel` v0.1.1 (library, no binary)
-- **Python agent**: `agent-bridge.py` (standalone bridge process)
-- **Docker image**: `ghcr.io/hanzoai/cloud-agent:latest` (Python agent in Alpine)
+- **Python agent**: `agent-bridge.py` v0.2.0 (standalone bridge process)
+- **Docker image**: `ghcr.io/hanzoai/cloud-agent:latest` (Python 3.12 Alpine)
 - **Protocol**: JSON frames over WebSocket (register/registered/command/response/event/ping/pong)
-- **Dependencies (Rust)**: tokio, tokio-tungstenite, serde, futures, uuid, chrono, tracing, thiserror
+- **Dependencies (Rust)**: tokio 1, tokio-tungstenite 0.23 (native-tls), serde 1, futures 0.3, uuid 1, chrono 0.4, tracing 0.1, thiserror 2, url 2, http 1
 - **Dependencies (Python)**: websockets, boto3
+- **No Go component, no package.json** -- Rust + Python only
 
 ### OSS Base
 
-Repo: `hanzoai/tunnel`.
+Repo: `hanzoai/tunnel`. Single branch (`main`). No README. 5 commits.
+
+### What This Is NOT
+
+This repo does **not** use OpenZiti, zero-trust networking, overlay networks, or service mesh. The transport is plain WebSocket (WSS with native-tls). The only forward-looking reference is a `TunnelConnection::from_channels()` constructor in `lib.rs` whose doc comment mentions "ZT fabric" as a hypothetical custom transport -- this is an extensibility hook, not an implementation. No Ziti SDK, no Ziti dependencies, no Ziti configuration exists in the repo.
 
 ## When to use
 
@@ -51,6 +56,7 @@ Repo: `hanzoai/tunnel`.
 |------|-------|
 | Rust crate | `hanzo-tunnel` v0.1.1 |
 | Relay URL | `wss://api.hanzo.ai/v1/relay` |
+| Tunnel URL | `wss://app.hanzo.bot/v1/tunnel` |
 | Agent bridge | `agent-bridge.py` |
 | Agent image | `ghcr.io/hanzoai/cloud-agent:latest` |
 | Bot gateway | `ws://bot-gateway/v1/tunnel` (in-cluster) |
@@ -138,11 +144,23 @@ enum AppKind {
 }
 ```
 
+### Two Connection Modes
+
+The crate provides two distinct connection paths:
+
+1. **Cloud relay** (`connect()` / `connect_and_register()`): Connects via WebSocket to `api.hanzo.ai/v1/relay` or `app.hanzo.bot/v1/tunnel`. Uses Bearer auth. Sends `Frame::Register`, receives `Frame::Registered` with session URL. Transport runs in background tokio task with auto-reconnect (exponential backoff, 1s to 60s).
+
+2. **Bot gateway** (`connect_gateway()`): Connects to the bot gateway's native protocol. Performs challenge/connect/hello-ok handshake. Registers as a node in the gateway's NodeRegistry. Receives `node.invoke.request` events, sends `node.invoke.result` responses.
+
+### Custom Transport Hook
+
+`TunnelConnection::from_channels()` accepts pre-built `mpsc` channels, allowing custom transports (the doc comment mentions "ZT fabric" as a future possibility) to plug into the same dispatch infrastructure without going through the WebSocket connect path. This is the only extensibility point for alternative transports.
+
 ### Commands (Python Agent)
 
 | Command | Description |
 |---------|-------------|
-| `chat.send` | Send message to Claude CLI, return response |
+| `chat.send` | Send message to Claude CLI, return response (120s timeout) |
 | `exec.run` | Execute shell command (30s timeout) |
 | `status.get` | Return instance status, session stats |
 | `session.checkpoint` | Save session state + git workspace to S3 |
@@ -153,23 +171,26 @@ enum AppKind {
 
 | Command | Description |
 |---------|-------------|
-| `terminal.open` | Spawn interactive PTY session |
+| `terminal.open` | Spawn interactive shell session (piped stdin/stdout/stderr) |
 | `terminal.input` | Send input to terminal session |
 | `terminal.close` | Close terminal session |
-| `terminal.resize` | Resize terminal (cols/rows) |
+| `terminal.resize` | Resize terminal (cols/rows) -- env-only, no true PTY ioctl |
 | `terminal.list` | List active terminal sessions |
 | `system.info` | Return OS, arch, hostname, shell, user |
-| `system.run` | Execute shell command with timeout |
-| `dev.launch` | Launch dev/hanzo-dev/codex session |
-| `dev.status` | Check running dev processes |
+| `system.run` | Execute shell command with configurable timeout (default 30s) |
+| `dev.launch` | Launch dev/hanzo-dev/codex session with model selection |
+| `dev.status` | Check running dev processes via pgrep |
+
+The `CommandDispatcher` also supports registering custom command handlers via `dispatcher.register("my.command", handler_fn)`.
 
 ### Session Checkpoint/Restore
 
 Sessions can be migrated between machines:
 
-1. `session.checkpoint` captures conversation history, command log, scrollback, and git workspace state
-2. Checkpoint uploaded to S3 (`hanzo-sessions` bucket)
-3. `session.restore` downloads checkpoint, restores session state, optionally clones repo + applies diff
+1. `session.checkpoint` captures conversation history, command log, scrollback, and git workspace state (branch, remote URL, log, diff, untracked files)
+2. Checkpoint uploaded as JSON to S3 (`hanzo-sessions` bucket) with key `{instance_id}/{checkpoint_id}.json`
+3. `session.restore` downloads checkpoint, restores session state, optionally clones repo + applies git diff
+4. S3 operations run in a 2-worker ThreadPoolExecutor off the asyncio event loop
 
 ### Service Exposure (ngrok-like)
 
@@ -183,6 +204,8 @@ expose(&tx, &ExposedService {
     subdomain: Some("my-api".into()),
 }).await?;
 ```
+
+Supported protocols: `Http`, `WebSocket`, `Tcp`. The `unexpose()` function stops exposing a service by name.
 
 ### Bot Gateway Integration
 
@@ -205,6 +228,8 @@ while let Some(req) = conn.recv_invoke().await {
     conn.send_invoke_result(&req.id, true, Some(payload), None).await?;
 }
 ```
+
+Gateway supports two auth methods: `"token"` (default) and `"password"`.
 
 ### Architecture
 
@@ -235,26 +260,28 @@ while let Some(req) = conn.recv_invoke().await {
 
 ```
 src/
-  lib.rs          # TunnelConfig, TunnelConnection, connect()
+  lib.rs          # TunnelConfig, TunnelConnection, connect(), connect_and_register()
   protocol.rs     # Wire protocol types (Frame, AppKind, payloads)
-  transport.rs    # WebSocket transport with reconnection
-  gateway.rs      # Bot gateway protocol adapter
-  commands.rs     # Node command dispatcher
-  terminal.rs     # Interactive PTY session management
+  transport.rs    # WebSocket transport with reconnection + heartbeat
+  gateway.rs      # Bot gateway protocol adapter (challenge/connect/hello-ok)
+  commands.rs     # Node command dispatcher (terminal, system, dev commands)
+  terminal.rs     # Interactive terminal session management (piped, not true PTY)
   expose.rs       # Local service exposure (ngrok-like)
-  registry.rs     # Instance registry types
-  discovery.rs    # mDNS discovery (optional feature)
-  auth.rs         # Auth token handling
-agent-bridge.py   # Python standalone agent bridge
+  registry.rs     # Instance registry types (Instance, InvokeParams, InvokeResult)
+  discovery.rs    # mDNS discovery (optional feature, _hanzo._tcp.local.)
+  auth.rs         # Auth token handling (JWT auto-detect vs API key)
+agent-bridge.py   # Python standalone agent bridge (v0.2.0)
 swarm.sh          # Launch N parallel agents
 migrate.py        # Session migration utility
 test-migration.py # Migration tests
 test-swarm.py     # Swarm tests
 k8s/
   cloud-agents.yaml   # K8s Deployment (2 replicas, emptyDir workspace)
-  s3-credentials.yaml # S3 secret template
-Dockerfile        # Python Alpine image for cloud agent
+  s3-credentials.yaml # S3 secret template (DEPRECATED, use hanzo-s3)
+Dockerfile        # Python 3.12 Alpine image for cloud agent
 Cargo.toml        # Rust crate definition
+Cargo.lock        # Pinned dependencies
+.gitignore        # target/, *.swp, .DS_Store
 ```
 
 ### K8s Cloud Agents
@@ -266,16 +293,17 @@ Cloud agents run as K8s pods that accept migrated sessions:
 # Connects to ws://bot-gateway/v1/tunnel
 # S3 credentials from hanzo-s3 secret
 # ANTHROPIC_API_KEY from bot-secrets
-# 250m-1 CPU, 512Mi-2Gi memory, 5Gi workspace
+# Instance ID from pod name (metadata.name)
+# 250m-1 CPU, 512Mi-2Gi memory, 5Gi workspace (emptyDir)
 ```
 
 ### Cargo Features
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `reconnect` | yes | Automatic reconnection with exponential backoff |
-| `mdns` | no | mDNS service discovery |
-| `tls-rustls` | no | TLS via rustls (alternative to native-tls) |
+| `reconnect` | yes | Automatic reconnection with exponential backoff (1s-60s) |
+| `mdns` | no | mDNS service discovery via mdns-sd 0.11 |
+| `tls-rustls` | no | TLS via rustls 0.23 (alternative to native-tls) |
 
 ## Build and Test
 
@@ -303,6 +331,19 @@ S3_SECRET_KEY=                              # Required for session commands
 S3_BUCKET=hanzo-sessions                    # Checkpoint bucket
 ```
 
+## Error Types (Rust)
+
+```rust
+pub enum TunnelError {
+    Connection(String),  // WebSocket or network errors
+    Protocol(String),    // JSON serialization/deserialization
+    Auth(String),        // Authentication failures
+    Discovery(String),   // mDNS errors
+    ChannelClosed,       // Internal mpsc channel dropped
+    Timeout,             // Operation timeout
+}
+```
+
 ## Troubleshooting
 
 | Issue | Cause | Solution |
@@ -312,6 +353,7 @@ S3_BUCKET=hanzo-sessions                    # Checkpoint bucket
 | WebSocket connect timeout | Relay unreachable | Check `TUNNEL_URL`, verify network |
 | Gateway auth error | Invalid token | Check `auth_token` or device password |
 | Session restore git fail | Repo already exists | Clone skipped if `.git/` exists |
+| Terminal resize no-op | Piped stdin/stdout, not true PTY | Resize only updates env vars; real PTY needs portable-pty |
 
 ## Related Skills
 
