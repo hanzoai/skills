@@ -40,7 +40,7 @@ package main
 
 import (
     "github.com/hanzoai/orm"
-    "github.com/hanzoai/orm/db/sqlite"
+    ormdb "github.com/hanzoai/orm/db"
 )
 
 type User struct {
@@ -51,7 +51,10 @@ type User struct {
 }
 
 func main() {
-    db, _ := sqlite.Open("app.db")
+    db, _ := orm.OpenSQLite(&ormdb.SQLiteDBConfig{
+        Path: "app.db",
+        Config: ormdb.SQLiteConfig{BusyTimeout: 5000, JournalMode: "WAL"},
+    })
     repo := orm.NewRepository[User](db)
 
     // Create
@@ -74,22 +77,39 @@ func main() {
 ### ZAP Backend (PostgreSQL)
 
 ```go
-import "github.com/hanzoai/orm/db/zap"
+import (
+    "github.com/hanzoai/orm"
+    ormdb "github.com/hanzoai/orm/db"
+)
 
-db, _ := zap.Open("postgresql://user:pass@localhost:5432/mydb")
+db, _ := orm.OpenZap(&ormdb.ZapConfig{
+    Endpoint: "localhost:5432",
+    Database: "mydb",
+})
 repo := orm.NewRepository[User](db)
 // Same API, production database
 ```
 
+### SQL Backend (PostgreSQL direct)
+
+```go
+db, _ := orm.OpenSQL(&ormdb.SQLConfig{
+    DSN: "postgresql://user:pass@localhost:5432/mydb",
+})
+```
+
 ## Backends
 
-| Backend | Use Case | Module |
-|---------|----------|--------|
-| SQLite | Embedded, testing, small apps | `orm/db/sqlite` |
-| ZAP-PostgreSQL | Production RDBMS | `orm/db/zap` |
-| ZAP-MongoDB | Document store | `orm/db/zap` |
-| ZAP-Redis | KV cache layer | `orm/db/zap` |
-| ZAP-ClickHouse | Analytics/OLAP | `orm/db/zap` |
+All backends live in a single `db` package (`github.com/hanzoai/orm/db`):
+
+| Backend | Use Case | Config Type |
+|---------|----------|-------------|
+| SQLite | Embedded, testing, small apps | `ormdb.SQLiteDBConfig` |
+| SQL (PostgreSQL) | Production RDBMS (direct) | `ormdb.SQLConfig` |
+| ZAP-PostgreSQL | Production RDBMS (via sidecar) | `ormdb.ZapConfig` |
+| ZAP-MongoDB | Document store (via sidecar) | `ormdb.ZapConfig` |
+| ZAP-Redis | KV cache layer (via sidecar) | `ormdb.ZapConfig` |
+| ZAP-ClickHouse | Analytics/OLAP (via sidecar) | `ormdb.ZapConfig` |
 
 ## Related Skills
 
