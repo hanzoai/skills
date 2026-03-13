@@ -7,6 +7,8 @@
 
 Hanzo Agent SDK is a **Python multi-agent framework** — fork of OpenAI's Agents SDK with Hanzo AI integration. Build autonomous agents that plan, use tools, coordinate with other agents, and maintain memory. Designed for production agentic workflows.
 
+**NOTE**: The import path is `from agents import ...` (NOT `from hanzo_agent import ...`). The SDK keeps the upstream `agents` module name.
+
 ### Why Hanzo Agent SDK?
 
 - **Multi-agent**: Orchestrate teams of specialized agents
@@ -16,6 +18,9 @@ Hanzo Agent SDK is a **Python multi-agent framework** — fork of OpenAI's Agent
 - **Guardrails**: Input/output validation and safety checks
 - **Tracing**: Built-in observability for agent runs
 - **Streaming**: Real-time token-by-token output
+- **ZAP Protocol**: Zero-copy Agent Protocol for native hanzo-dev usage (less memory than MCP)
+- **AgentNetwork**: Peer discovery and collaboration between agent instances
+- **Control Plane**: Go-based orchestration service for production deployments
 
 ### OSS Base
 
@@ -30,6 +35,7 @@ Fork of **OpenAI Agents SDK**. Repo: `hanzoai/agent`.
 - Tool-using agents with MCP integration
 - Production agentic workflows with memory
 - Replacing OpenAI Agents SDK with self-hosted option
+- Web3/TEE/Marketplace agent extensions
 
 ## Hard requirements
 
@@ -46,6 +52,7 @@ Fork of **OpenAI Agents SDK**. Repo: `hanzoai/agent`.
 | Version | 0.0.4 |
 | Repo | `github.com/hanzoai/agent` |
 | Upstream | OpenAI Agents SDK |
+| Import | `from agents import Agent, Runner` |
 | Setup | `uv sync --all-extras` |
 | Test | `uv run pytest -v` |
 | Format | `uv run ruff format .` |
@@ -57,7 +64,7 @@ Fork of **OpenAI Agents SDK**. Repo: `hanzoai/agent`.
 ### Simple Agent
 
 ```python
-from hanzo_agent import Agent, Runner
+from agents import Agent, Runner
 
 agent = Agent(
     name="assistant",
@@ -72,7 +79,7 @@ print(result.final_output)  # "Paris"
 ### Agent with Tools
 
 ```python
-from hanzo_agent import Agent, Runner, function_tool
+from agents import Agent, Runner, function_tool
 
 @function_tool
 def get_weather(location: str) -> str:
@@ -102,7 +109,7 @@ result = Runner.run_sync(agent, "What's the weather in Tokyo?")
 ### Multi-Agent (Handoffs)
 
 ```python
-from hanzo_agent import Agent, Runner
+from agents import Agent, Runner
 
 coder = Agent(
     name="coder",
@@ -135,7 +142,7 @@ print(result.final_output)
 
 ```python
 import asyncio
-from hanzo_agent import Agent, Runner
+from agents import Agent, Runner
 
 agent = Agent(name="writer", instructions="Write creatively.", model="zen-70b")
 
@@ -150,7 +157,7 @@ asyncio.run(main())
 ### Guardrails
 
 ```python
-from hanzo_agent import Agent, Runner, InputGuardrail, OutputGuardrail, GuardrailFunctionOutput
+from agents import Agent, Runner, InputGuardrail, OutputGuardrail, GuardrailFunctionOutput
 
 async def check_injection(ctx, agent, input_text: str) -> GuardrailFunctionOutput:
     """Block prompt injection attempts."""
@@ -181,8 +188,8 @@ agent = Agent(
 ### MCP Integration
 
 ```python
-from hanzo_agent import Agent, Runner
-from hanzo_agent.mcp import MCPServerStdio, MCPServerSse
+from agents import Agent, Runner
+from agents.mcp import MCPServerStdio, MCPServerSse
 
 # Stdio transport (local process)
 mcp_local = MCPServerStdio(
@@ -212,8 +219,8 @@ async def main():
 ### Tracing
 
 ```python
-from hanzo_agent import Agent, Runner
-from hanzo_agent.tracing import TracingProcessor, Span
+from agents import Agent, Runner
+from agents.tracing import TracingProcessor, Span
 
 class CustomTracer(TracingProcessor):
     def on_span_start(self, span: Span):
@@ -223,12 +230,75 @@ class CustomTracer(TracingProcessor):
         print(f"End: {span.name} ({span.duration_ms}ms)")
 
 # Register globally
-from hanzo_agent.tracing import set_tracing_processor
+from agents.tracing import set_tracing_processor
 set_tracing_processor(CustomTracer())
 
 # All agent runs now traced automatically
 result = Runner.run_sync(agent, "Hello")
 ```
+
+## Advanced Features
+
+### AgentNetwork (Peer Discovery)
+
+```python
+from agents import Agent
+from agents.network import AgentNetwork
+
+# Register agents on a shared network
+network = AgentNetwork(discovery="mdns")  # or "redis", "consul"
+
+analyst = Agent(name="analyst", instructions="Analyze data.", model="zen-70b")
+writer = Agent(name="writer", instructions="Write reports.", model="zen-70b")
+
+network.register(analyst)
+network.register(writer)
+
+# Agents can discover and delegate to each other
+result = await network.run("analyst", "Analyze Q4 sales and have writer draft a report")
+```
+
+### SemanticRouter
+
+```python
+from agents import Agent
+from agents.routing import SemanticRouter
+
+router = SemanticRouter(
+    routes={
+        "code_help": code_agent,
+        "data_analysis": data_agent,
+        "general": chat_agent,
+    }
+)
+
+# Automatically routes to best agent based on intent
+result = await router.route("Write a Python function to sort a list")
+```
+
+### ZAP Protocol (Zero-copy Agent Protocol)
+
+ZAP is an alternative to MCP optimized for native hanzo-dev usage with lower memory overhead:
+
+```python
+from agents.zap import ZAPServer, ZAPClient
+
+# Server side
+server = ZAPServer(tools=[my_tool])
+await server.serve(port=9999)
+
+# Client side
+client = ZAPClient("localhost:9999")
+result = await client.call("my_tool", {"arg": "value"})
+```
+
+## Extensions
+
+| Extension | Purpose | Package |
+|-----------|---------|---------|
+| **Web3** | On-chain agent actions, wallet management | `hanzo-agent[web3]` |
+| **TEE** | Trusted execution environments for sensitive agent ops | `hanzo-agent[tee]` |
+| **Marketplace** | Publish/discover agent skills | `hanzo-agent[marketplace]` |
 
 ## Core Concepts
 
@@ -243,7 +313,7 @@ result = Runner.run_sync(agent, "Hello")
 │  (tools) │ (tools) │
 ├─────────┴─────────┤
 │    Tool Registry   │
-│  MCP + Functions   │
+│  MCP + ZAP + Fns  │
 ├───────────────────┤
 │    Guardrails      │
 │  Input + Output    │
@@ -265,6 +335,7 @@ result = Runner.run_sync(agent, "Hello")
 | **Supervisor** | Manager coordinates team | Complex multi-step tasks |
 | **Pipeline** | Sequential agent chain | Transform/refine/review flows |
 | **Swarm** | Peer agents collaborate | Exploration, brainstorming |
+| **Network** | Distributed agent discovery | Multi-service, cross-process |
 
 ### Agent Configuration
 
@@ -286,6 +357,21 @@ agent = Agent(
 )
 ```
 
+## Control Plane (Go)
+
+Production orchestration service written in Go for managing agent deployments:
+
+```bash
+# Start control plane
+hanzo-agent-cp serve --port 8080
+
+# Register agent
+hanzo-agent-cp register --name analyst --endpoint http://localhost:9000
+
+# List agents
+hanzo-agent-cp list
+```
+
 ## Development
 
 ```bash
@@ -302,6 +388,7 @@ uv run mypy .           # Type check
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
+| `from hanzo_agent import` fails | Wrong import path | Use `from agents import ...` |
 | Import error | Missing extras | `uv sync --all-extras` |
 | PyPI collision | Wrong `hanzoai` package | Install `hanzo-agent` specifically |
 | LLM timeout | Model too slow | Use faster model or increase timeout |
@@ -320,5 +407,5 @@ uv run mypy .           # Type check
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: agents, multi-agent, orchestration, tools, openai-agents
+**Related**: agents, multi-agent, orchestration, tools, openai-agents, zap
 **Prerequisites**: Python 3.11+, async/await, LLM concepts
