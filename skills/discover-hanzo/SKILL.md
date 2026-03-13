@@ -190,34 +190,79 @@ import { AIChat } from '@hanzo/ui'
 />
 ```
 
-## Loading Related Skills
+## Loading Skills by Category
 
-### Core Infrastructure
+### Core AI Infrastructure
 ```bash
-cat skills/hanzo/hanzo-node.md          # Rust mining node architecture
-cat skills/hanzo/hanzo-mcp.md           # MCP integration patterns
-cat skills/hanzo/hanzo-ui.md            # React component library
-cat skills/hanzo/python-sdk.md          # Python SDK comprehensive guide
-cat skills/hanzo/hanzo-dev.md           # Terminal coding agent
-cat skills/hanzo/hanzo-live.md          # Generative AI pipelines
+cat skills/hanzo/hanzo-engine.md        # Rust inference engine
+cat skills/hanzo/hanzo-node.md          # Distributed AI node
+cat skills/hanzo/hanzo-network.md       # AI agent topology
+cat skills/hanzo/hanzo-llm-gateway.md   # Unified LLM proxy (100+ providers)
+cat skills/hanzo/hanzo-mcp.md           # Model Context Protocol tools
+cat skills/hanzo/hanzo-agent.md         # Multi-agent SDK
 ```
 
-### Architecture & Patterns
+### Cloud Services
 ```bash
-cat skills/hanzo/local-ai-architecture.md    # Privacy-first deployment
-cat skills/hanzo/agentic-workflows.md        # Multi-agent patterns
-cat skills/hanzo/mcp-patterns.md             # MCP best practices
-cat skills/hanzo/distributed-ai.md           # Cluster deployment
+cat skills/hanzo/hanzo-chat.md          # Unified LLM API (86+ models)
+cat skills/hanzo/hanzo-cloud.md         # Cloud dashboard & management
+cat skills/hanzo/hanzo-console.md       # AI observability & tracing
+cat skills/hanzo/hanzo-commerce-api.md  # Billing & payments
+cat skills/hanzo/hanzo-web3.md          # Blockchain API (100+ chains)
 ```
 
-### Integration Guides
+### Platform & Deployment
 ```bash
-cat skills/hanzo/hanzo-nextjs-integration.md # Next.js + Hanzo
-cat skills/hanzo/hanzo-rust-integration.md   # Rust applications
-cat skills/hanzo/hanzo-blockchain.md         # Blockchain + AI
+cat skills/hanzo/hanzo-platform.md      # PaaS (Agnost fork)
+cat skills/hanzo/hanzo-studio.md        # Visual AI workflows (ComfyUI fork)
+cat skills/hanzo/hanzo-search.md        # AI-powered search
+cat skills/hanzo/hanzo-flow.md          # Visual workflow builder
+cat skills/hanzo/hanzo-stack.md         # Local dev environment
+cat skills/hanzo/hanzo-universe.md      # Production K8s infrastructure
 ```
 
-### Browse All Hanzo Skills
+### SDKs & Libraries
+```bash
+cat skills/hanzo/python-sdk.md          # Python SDK
+cat skills/hanzo/js-sdk.md             # TypeScript SDK
+cat skills/hanzo/go-sdk.md             # Go SDK
+cat skills/hanzo/rust-sdk.md           # Rust SDK
+cat skills/hanzo/hanzo-orm.md          # Go generics ORM
+```
+
+### Identity & Security
+```bash
+cat skills/hanzo/hanzo-id.md           # Identity & OAuth2/OIDC
+cat skills/hanzo/hanzo-kms.md          # Secret management (Infisical)
+cat skills/hanzo/hanzo-vault.md        # PCI card tokenization
+```
+
+### Developer Tools
+```bash
+cat skills/hanzo/hanzo-extension.md    # Browser & IDE extensions
+cat skills/hanzo/hanzo-cli.md          # Command-line interface
+cat skills/hanzo/hanzo-operative.md    # Computer use agent
+cat skills/hanzo/hanzo-dev.md          # Terminal coding agent
+```
+
+### AI/ML & Research
+```bash
+cat skills/hanzo/zenlm.md             # Zen frontier models
+cat skills/hanzo/hanzo-jin.md          # Multimodal LLM (text/vision/audio)
+cat skills/hanzo/hanzo-candle.md       # Rust ML framework
+cat skills/hanzo/hanzo-ane.md          # Apple Neural Engine training
+cat skills/hanzo/hanzo-evm.md          # Rust EVM execution engine
+```
+
+### Data & Observability
+```bash
+cat skills/hanzo/hanzo-database.md     # PostgreSQL, Redis, pgvector
+cat skills/hanzo/hanzo-datastore.md    # Vector database
+cat skills/hanzo/hanzo-o11y.md         # Monitoring, tracing, errors
+cat skills/hanzo/hanzo-insights.md     # Analytics SDKs
+```
+
+### Browse All Hanzo Skills (50+)
 ```bash
 cat skills/hanzo/INDEX.md
 ```

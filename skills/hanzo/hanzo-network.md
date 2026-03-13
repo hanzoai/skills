@@ -164,7 +164,7 @@ network = join_network_from_qr(scan_qr())
 pip install hanzo-network
 
 # Or from source
-cd ~/work/hanzo/python-sdk/pkg/hanzo-network
+cd `github.com/hanzoai/python-sdk`pkg/hanzo-network
 pip install -e .
 ```
 
