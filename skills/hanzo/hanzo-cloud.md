@@ -5,7 +5,7 @@
 
 ## Overview
 
-Hanzo Cloud is the **AI provider management platform** — Go 1.26 Beego MVC backend with React frontend, MySQL database, and integrations for 30+ AI providers. Available at `cloud.hanzo.ai`.
+Hanzo Cloud is the **AI provider management platform** — Go 1.26 Beego MVC backend with React frontend (CRA via CRACO, .js + .less), PostgreSQL database, and integrations for 30+ AI providers. Fork of **Casibase** (upstream: casibase/casibase). Available at `cloud.hanzo.ai`.
 
 ### Features
 
@@ -20,8 +20,8 @@ Hanzo Cloud is the **AI provider management platform** — Go 1.26 Beego MVC bac
 ### Tech Stack
 
 - **Backend**: Go 1.26, Beego MVC framework
-- **Frontend**: React
-- **Database**: MySQL
+- **Frontend**: React (CRA via CRACO, .js + .less — older setup)
+- **Database**: PostgreSQL
 - **Auth**: IAM via hanzo.id
 
 ## When to use
@@ -42,7 +42,7 @@ Hanzo Cloud is the **AI provider management platform** — Go 1.26 Beego MVC bac
 | API | `https://api.hanzo.ai` |
 | Backend | Go 1.26 + Beego MVC |
 | Frontend | React |
-| Database | MySQL |
+| Database | PostgreSQL |
 | Repo | `github.com/hanzoai/cloud` |
 
 ## Multi-Org Bootstrap
