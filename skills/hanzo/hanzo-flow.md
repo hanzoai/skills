@@ -14,7 +14,7 @@ Hanzo Flow is a **visual workflow builder** for LLM chains, agent pipelines, and
 | Repo | `github.com/hanzoai/flow` |
 | Language | Python (NOT TypeScript) |
 | Package | `hanzoflow` (PyPI) |
-| Python | 3.10-3.13 |
+| Python | >=3.12 |
 | Port | 7860 |
 | Image | `hanzoai/flow:latest` |
 
