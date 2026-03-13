@@ -5,16 +5,16 @@
 
 ## Overview
 
-Hanzo Docs is a **multi-brand documentation platform** — fork of fumadocs with 27 packages and 16 apps. Serves documentation for Hanzo, Lux, Zoo, and Zen brands from a single monorepo with shared components and per-brand theming.
+Hanzo Docs is a **multi-brand documentation platform** — fork of fumadocs with 27 packages and 15 apps. Serves documentation for Hanzo, Lux, Zoo, and Zen brands from a single monorepo with shared components and per-brand theming.
 
-**NOTE**: This is a **fumadocs fork** (not a plain Next.js MDX site). It's a monorepo with **27 packages** and **16 apps**, supporting multi-brand documentation (hanzo.ai/docs, docs.lux.network, docs.zoo.ngo, docs.zenlm.org).
+**NOTE**: This is a **fumadocs fork** (not a plain Next.js MDX site). It's a monorepo with **27 packages** and **15 apps**, supporting multi-brand documentation (hanzo.ai/docs, docs.lux.network, docs.zoo.ngo, docs.zenlm.org).
 
 ### Why Hanzo Docs?
 
 - **fumadocs fork**: Full-featured documentation framework
 - **Multi-brand**: 4 brands from one codebase (Hanzo, Lux, Zoo, Zen)
 - **27 packages**: Shared components, MDX plugins, search, themes
-- **16 apps**: Brand-specific documentation sites
+- **15 apps**: Brand-specific documentation sites
 - **MDX-powered**: Markdown with React components (live code, diagrams)
 - **Auto-generated API docs**: From OpenAPI spec
 - **Full-text search**: Across all documentation sites
@@ -36,7 +36,7 @@ Hanzo Docs is a **multi-brand documentation platform** — fork of fumadocs with
 | Upstream | fumadocs fork |
 | Framework | Next.js 14+ with MDX |
 | Packages | 27 |
-| Apps | 16 |
+| Apps | 15 |
 | Dev | `pnpm dev` |
 | Build | `pnpm build` |
 | Port | 3000 (dev) |
@@ -54,22 +54,21 @@ Hanzo Docs is a **multi-brand documentation platform** — fork of fumadocs with
 
 ```
 docs/
-├── apps/                    # 16 brand-specific apps
+├── apps/                    # 15 brand-specific apps
 │   ├── hanzo/               # hanzo.ai/docs
 │   ├── lux/                 # docs.lux.network
 │   ├── zoo/                 # docs.zoo.ngo
 │   ├── zen/                 # docs.zenlm.org
 │   └── ...                  # Other product-specific doc sites
+│                            # Apps: base-docs, bootnode-docs, bot-docs, cloud,
+│                            # dev-docs, dns-docs, docs, flow, insights-docs,
+│                            # platform, team, visor, zap-docs, zen-docs, zt-docs
 ├── packages/                # 27 shared packages
 │   ├── core/                # Core fumadocs engine
 │   ├── mdx/                 # MDX processing and plugins
 │   ├── ui/                  # Shared UI components
 │   ├── search/              # Full-text search
 │   ├── openapi/             # OpenAPI → docs generator
-│   ├── theme-hanzo/         # Hanzo brand theme
-│   ├── theme-lux/           # Lux brand theme
-│   ├── theme-zoo/           # Zoo brand theme
-│   ├── theme-zen/           # Zen brand theme
 │   ├── components/          # Shared MDX components
 │   │   ├── CodeBlock.tsx
 │   │   ├── ApiEndpoint.tsx
@@ -155,12 +154,9 @@ const response = await client.chat.completions.create({
 # 1. Create new app
 cp -r apps/hanzo apps/new-brand
 
-# 2. Create brand theme package
-cp -r packages/theme-hanzo packages/theme-new-brand
-
-# 3. Configure brand colors, logo, navigation
-# 4. Add to pnpm-workspace.yaml
-# 5. Add to CI/CD
+# 2. Configure brand colors, logo, navigation in the app
+# 3. Add to pnpm-workspace.yaml
+# 4. Add to CI/CD
 ```
 
 ## Redirects

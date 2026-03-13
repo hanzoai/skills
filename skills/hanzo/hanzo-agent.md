@@ -26,7 +26,7 @@ Hanzo Agent SDK is a **Python multi-agent framework** — fork of OpenAI's Agent
 
 Fork of **OpenAI Agents SDK**. Repo: `hanzoai/agent`.
 
-**NOTE**: PyPI package name collision — `hanzoai/agent` publishes `hanzoai` v0.0.4 on PyPI, while `hanzoai/python-sdk` publishes `hanzoai` v2.2.0. Install as `hanzo-agent` to avoid conflict.
+**NOTE**: PyPI package name collision — `hanzoai/agent` publishes `hanzoai` v0.0.4 on PyPI, while `hanzoai/python-sdk` publishes `hanzoai` v2.2.0. Ensure you install the correct version for agent use.
 
 ## When to use
 
@@ -39,7 +39,7 @@ Fork of **OpenAI Agents SDK**. Repo: `hanzoai/agent`.
 
 ## Hard requirements
 
-1. **Python 3.11+** with uv
+1. **Python 3.9+** with uv
 2. **HANZO_API_KEY** or **OPENAI_API_KEY** for LLM access
 3. `uv sync --all-extras` for full installation
 
@@ -47,8 +47,8 @@ Fork of **OpenAI Agents SDK**. Repo: `hanzoai/agent`.
 
 | Item | Value |
 |------|-------|
-| Install | `uv add hanzo-agent` |
-| PyPI | `hanzo-agent` (NOT `hanzoai` — name collision) |
+| Install | `uv add hanzoai` |
+| PyPI | `hanzoai` |
 | Version | 0.0.4 |
 | Repo | `github.com/hanzoai/agent` |
 | Upstream | OpenAI Agents SDK |
@@ -262,7 +262,7 @@ result = await network.run("analyst", "Analyze Q4 sales and have writer draft a 
 
 ```python
 from agents import Agent
-from agents.routing import SemanticRouter
+from agents.network.router import SemanticRouter
 
 router = SemanticRouter(
     routes={
@@ -296,9 +296,9 @@ result = await client.call("my_tool", {"arg": "value"})
 
 | Extension | Purpose | Package |
 |-----------|---------|---------|
-| **Web3** | On-chain agent actions, wallet management | `hanzo-agent[web3]` |
-| **TEE** | Trusted execution environments for sensitive agent ops | `hanzo-agent[tee]` |
-| **Marketplace** | Publish/discover agent skills | `hanzo-agent[marketplace]` |
+| **Web3** | On-chain agent actions, wallet management | `hanzoai[web3]` |
+| **TEE** | Trusted execution environments for sensitive agent ops | `hanzoai[tee]` |
+| **Marketplace** | Publish/discover agent skills | `hanzoai[marketplace]` |
 
 ## Core Concepts
 
@@ -363,13 +363,13 @@ Production orchestration service written in Go for managing agent deployments:
 
 ```bash
 # Start control plane
-hanzo-agent-cp serve --port 8080
+hanzo-agents-server serve --port 8080
 
-# Register agent
-hanzo-agent-cp register --name analyst --endpoint http://localhost:9000
+# Register agent (via ha CLI)
+ha register --name analyst --endpoint http://localhost:9000
 
 # List agents
-hanzo-agent-cp list
+ha list
 ```
 
 ## Development
@@ -390,7 +390,7 @@ uv run mypy .           # Type check
 |-------|-------|----------|
 | `from hanzo_agent import` fails | Wrong import path | Use `from agents import ...` |
 | Import error | Missing extras | `uv sync --all-extras` |
-| PyPI collision | Wrong `hanzoai` package | Install `hanzo-agent` specifically |
+| PyPI collision | Wrong `hanzoai` version | Ensure `hanzoai` from `hanzoai/agent` not `hanzoai/python-sdk` |
 | LLM timeout | Model too slow | Use faster model or increase timeout |
 | Handoff loop | Circular delegation | Add clear stopping criteria in instructions |
 | Memory overflow | Too much context | Implement context windowing |
@@ -408,4 +408,4 @@ uv run mypy .           # Type check
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
 **Related**: agents, multi-agent, orchestration, tools, openai-agents, zap
-**Prerequisites**: Python 3.11+, async/await, LLM concepts
+**Prerequisites**: Python 3.9+, async/await, LLM concepts

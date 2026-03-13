@@ -1,299 +1,192 @@
-# Hanzo Chat - Unified LLM API for 86+ Models
+# Hanzo Chat - AI Chat Application
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-mcp.md`, `hanzo/python-sdk.md`, `hanzo/hanzo-console.md`
+**Related Skills**: `hanzo/hanzo-llm-gateway.md`, `hanzo/hanzo-mcp.md`
 
 ## Overview
 
-Hanzo Chat provides a **single OpenAI-compatible API** for accessing 86+ models across multiple providers. One API key, one base URL, one SDK -- every model from OpenAI, Anthropic, Google, Meta, Mistral, and Zen available through `api.hanzo.ai/v1`. Streaming, function calling, vision, and tool use all work out of the box.
+Hanzo Chat (`@hanzochat/chat`) is a **full-featured AI chat application** -- a LibreChat v0.8.3-rc1 fork providing a web UI for conversing with AI models, managing conversations, using agents, and integrating with RAG pipelines and MCP tools. It connects to the Hanzo LLM Gateway (`api.hanzo.ai/v1`) as its backend for model access.
 
-### Why Hanzo Chat?
+**This is the chat UI application, NOT the LLM API.** The LLM gateway that provides model access is a separate service (`hanzoai/llm`). Hanzo Chat is the frontend that users interact with at `chat.hanzo.ai`.
 
-- **One API for everything**: 86+ models, 5+ providers, single endpoint
-- **OpenAI SDK compatible**: Drop-in replacement -- change base URL, done
-- **Zen models included**: 14 Zen frontier models (600M - 480B params)
-- **Smart routing**: Automatic fallback and load balancing across providers
-- **Cost tracking**: Per-request cost attribution via Hanzo Console
-- **Streaming**: SSE streaming for all models, all providers
+### What it actually is
+
+- A LibreChat fork (v0.8.3-rc1) rebranded as Hanzo Chat
+- Web UI (React/Next.js client) + Node.js API server
+- pnpm workspace monorepo: `api/`, `client/`, `packages/*`
+- Connects to Hanzo LLM Gateway for model inference
+- Supports agents, RAG, file uploads, code execution, conversation management
+- Full user management: create, invite, ban, delete users; balance management
+- MongoDB for conversation storage, MeiliSearch for search
+- Playwright E2E tests, Jest unit tests
+- Deployed at `chat.hanzo.ai`
+
+### What it is NOT
+
+- Not the LLM Gateway API (that is `hanzoai/llm`, the proxy for 435+ models)
+- Not providing models directly -- it consumes them via the gateway
+- Does not serve `api.hanzo.ai/v1` endpoints
 
 ## When to use
 
-Use this skill when:
-- The user wants to call LLMs programmatically
-- The user needs multi-model access through a single API
-- The user wants to compare models or implement fallback chains
-- The user is building an AI application that needs chat completions
-- The user wants to use Zen models
-
-## Hard requirements
-
-1. **API Key required.** If `HANZO_API_KEY` is not set, tell the user to get one at https://hanzo.ai/dashboard.
-2. **Never expose the API key** in user-visible output, logs, or screenshots.
-3. **Respect rate limits.** Back off on 429 responses.
-
-## Preflight checks
-
-Before making any request, silently verify:
-- `HANZO_API_KEY` environment variable is set and non-empty
-- If unset, suggest: `export HANZO_API_KEY=<your-key>`
+- Running a self-hosted AI chat interface
+- Building a multi-model chat application with conversation history
+- Need a UI for agents, RAG, and MCP tool integration
+- Deploying a team chat with user management and usage tracking
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
-| Base URL | `https://api.hanzo.ai/v1` |
-| Auth header | `Authorization: Bearer ${HANZO_API_KEY}` |
-| Chat endpoint | `POST /v1/chat/completions` |
-| Models endpoint | `GET /v1/models` |
-| Embeddings endpoint | `POST /v1/embeddings` |
-| Docs | https://hanzo.ai/docs/api |
-| Dashboard | https://hanzo.ai/dashboard |
-| Chat UI | https://chat.hanzo.ai |
+| Repo | `github.com/hanzoai/chat` |
+| Package | `@hanzochat/chat` |
+| Version | v0.8.3-rc1 |
+| Upstream | LibreChat v0.8.x |
+| Stack | Node.js, React, pnpm |
+| Live | `chat.hanzo.ai` |
+| API server | `api/server/index.js` (port 3080) |
+| Client | `client/` (React) |
+| Packages | `packages/data-provider`, `packages/data-schemas`, `packages/api`, `packages/client` |
+| Config | `librechat.yaml` (ConfigMap in K8s) |
+| Database | MongoDB |
+| Dev (backend) | `pnpm backend:dev` |
+| Dev (frontend) | `pnpm frontend:dev` |
+| Build | `pnpm build` (turbo) |
+| Test | `pnpm test:all` |
+| E2E | `pnpm e2e` (Playwright) |
+| License | ISC |
 
-## Available models
+## Architecture
 
-### Zen Models (Hanzo frontier models)
+```
+                    chat.hanzo.ai
+                         |
+              +----------+----------+
+              |                     |
+         React Client          Node.js API
+         (port 3080)          (api/server/)
+              |                     |
+              +----------+----------+
+                         |
+              +----------+----------+
+              |          |          |
+           MongoDB   MeiliSearch   LLM Gateway
+           (convos)  (search)    (api.hanzo.ai/v1)
+                                      |
+                                 435+ models
+                                 28 Zen models
+```
 
-| Model | Params | Context | Best for |
-|-------|--------|---------|----------|
-| `zen-480b` | 480B | 128K | Flagship reasoning, code, analysis |
-| `zen-70b` | 70B | 128K | General purpose, fast |
-| `zen-32b` | 32B | 128K | Balanced performance/cost |
-| `zen-14b` | 14B | 128K | Efficient, edge-capable |
-| `zen-7b` | 7B | 128K | Lightweight, fast inference |
-| `zen-4b` | 4B | 32K | Ultra-lightweight, mobile |
-| `zen-coder-32b` | 32B | 128K | Code generation, review |
-| `zen-coder-14b` | 14B | 128K | Code, cost-efficient |
-| `zen-embedding` | 600M | 32K | Embeddings (#1 MTEB) |
+## Workspace structure
 
-### Third-party models
+```
+hanzoai/chat/
+  package.json        # Root workspace (@hanzochat/chat v0.8.3-rc1)
+  api/                # Express API server
+    server/           # Server entry point
+  client/             # React frontend
+  packages/
+    data-provider/    # Data access layer
+    data-schemas/     # Schema definitions
+    api/              # API client package
+    client/           # Client component library
+  config/             # CLI admin tools
+    create-user.js
+    add-balance.js
+    list-balances.js
+    ban-user.js
+    delete-user.js
+    reset-password.js
+    ...
+  e2e/                # Playwright E2E tests
+```
 
-| Provider | Models |
-|----------|--------|
-| OpenAI | gpt-4o, gpt-4o-mini, gpt-4-turbo, o1, o1-mini, o3-mini |
-| Anthropic | claude-opus-4-6, claude-sonnet-4, claude-3.5-haiku |
-| Google | gemini-2.0-flash, gemini-2.0-pro, gemini-1.5-pro |
-| Meta | llama-3.3-70b, llama-3.1-405b |
-| Mistral | mistral-large, mistral-medium, codestral |
-
-## One-file quickstart
-
-### curl
+## Quickstart
 
 ```bash
-curl https://api.hanzo.ai/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ${HANZO_API_KEY}" \
-  -d '{
-    "model": "zen-70b",
-    "messages": [{"role": "user", "content": "Explain x402 micropayments in one paragraph."}],
-    "temperature": 0.7
-  }'
+git clone https://github.com/hanzoai/chat.git
+cd chat
+pnpm install
+
+# Configure
+cp .env.example .env
+# Required: MONGO_URI, JWT_SECRET, CREDS_KEY, CREDS_IV
+# LLM backend: OPENAI_BASE_URL=http://llm.hanzo.svc.cluster.local:4000/v1
+
+# Build packages first
+pnpm build:packages
+
+# Development
+pnpm backend:dev    # API server with nodemon
+pnpm frontend:dev   # React client with hot-reload
+
+# Production
+pnpm build
+pnpm backend
 ```
 
-### curl (streaming)
+## Admin CLI tools
 
 ```bash
-curl https://api.hanzo.ai/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ${HANZO_API_KEY}" \
-  -d '{
-    "model": "zen-70b",
-    "messages": [{"role": "user", "content": "Write a haiku about blockchains."}],
-    "stream": true
-  }'
+# User management
+pnpm create-user
+pnpm invite-user
+pnpm list-users
+pnpm ban-user
+pnpm delete-user
+pnpm reset-password
+
+# Balance management
+pnpm add-balance
+pnpm set-balance
+pnpm list-balances
+
+# Maintenance
+pnpm flush-cache
+pnpm reset-meili-sync
+pnpm update-banner
 ```
 
-### Python (OpenAI SDK)
+## K8s deployment (production)
 
-```python
-from openai import OpenAI
+- Image: `hanzoai/chat:latest` on Docker Hub
+- Config: ConfigMap `chat-config` mounted at `/app/librechat.yaml`
+- Secret: `chat-secrets` (MONGO_URI, JWT_SECRET, CREDS_KEY/IV)
+- Env: `OPENAI_BASE_URL=http://llm.hanzo.svc.cluster.local:4000/v1`
+- Replicas: 2, port 3080
+- Ingress: `chat.hanzo.ai`
+- CI: `docker-publish.yml` builds and pushes to Docker Hub
 
-client = OpenAI(
-    base_url="https://api.hanzo.ai/v1",
-    api_key=os.environ["HANZO_API_KEY"],
-)
+## Environment variables
 
-response = client.chat.completions.create(
-    model="zen-70b",
-    messages=[{"role": "user", "content": "Hello, Hanzo!"}],
-    temperature=0.7,
-)
+| Variable | Purpose |
+|----------|---------|
+| `MONGO_URI` | MongoDB connection string |
+| `JWT_SECRET` | Session JWT secret |
+| `CREDS_KEY` | Credential encryption key |
+| `CREDS_IV` | Credential encryption IV |
+| `OPENAI_BASE_URL` | LLM Gateway URL (e.g., `http://llm.hanzo.svc.cluster.local:4000/v1`) |
+| `APP_TITLE` | UI title (default: `Hanzo Chat`) |
+| `DOMAIN_CLIENT` | Client domain |
+| `DOMAIN_SERVER` | Server domain |
+| `CUSTOM_FOOTER` | Footer text |
 
-print(response.choices[0].message.content)
-```
+## Upstream (LibreChat)
 
-### Python (streaming)
+Internal package names from LibreChat are preserved as-is:
+- `@librechat/agents` -- Agent framework
+- `librechat-data-provider` -- Data access
+- Function names like `extractLibreChatParams`, `importLibreChatConvo` -- kept for compatibility
 
-```python
-stream = client.chat.completions.create(
-    model="zen-70b",
-    messages=[{"role": "user", "content": "Explain consensus algorithms."}],
-    stream=True,
-)
+## Related Skills
 
-for chunk in stream:
-    if chunk.choices[0].delta.content:
-        print(chunk.choices[0].delta.content, end="", flush=True)
-```
-
-### Python (Hanzo SDK)
-
-```python
-from hanzo import Hanzo
-
-client = Hanzo()  # uses HANZO_API_KEY from env
-
-response = client.chat.completions.create(
-    model="zen-70b",
-    messages=[{"role": "user", "content": "Hello!"}],
-)
-```
-
-### TypeScript
-
-```typescript
-import OpenAI from "openai"
-
-const client = new OpenAI({
-  baseURL: "https://api.hanzo.ai/v1",
-  apiKey: process.env.HANZO_API_KEY,
-})
-
-const response = await client.chat.completions.create({
-  model: "zen-70b",
-  messages: [{ role: "user", content: "Hello, Hanzo!" }],
-})
-
-console.log(response.choices[0].message.content)
-```
-
-### Go
-
-```go
-import "github.com/hanzoai/go-sdk"
-
-client := hanzo.NewClient(os.Getenv("HANZO_API_KEY"))
-
-resp, err := client.Chat.Completions.Create(ctx, hanzo.ChatCompletionParams{
-    Model:    "zen-70b",
-    Messages: []hanzo.Message{{Role: "user", Content: "Hello!"}},
-})
-```
-
-## Endpoint selector
-
-| Task | Endpoint | Method |
-|------|----------|--------|
-| Chat completion | `POST /v1/chat/completions` | POST |
-| List models | `GET /v1/models` | GET |
-| Get model info | `GET /v1/models/{id}` | GET |
-| Embeddings | `POST /v1/embeddings` | POST |
-| Moderations | `POST /v1/moderations` | POST |
-
-## Function calling / Tool use
-
-```python
-response = client.chat.completions.create(
-    model="zen-70b",
-    messages=[{"role": "user", "content": "What is the weather in Tokyo?"}],
-    tools=[{
-        "type": "function",
-        "function": {
-            "name": "get_weather",
-            "description": "Get current weather for a location",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "location": {"type": "string"},
-                },
-                "required": ["location"],
-            },
-        },
-    }],
-)
-
-tool_call = response.choices[0].message.tool_calls[0]
-# tool_call.function.name == "get_weather"
-# tool_call.function.arguments == '{"location": "Tokyo"}'
-```
-
-## Vision (multimodal)
-
-```python
-response = client.chat.completions.create(
-    model="zen-70b",
-    messages=[{
-        "role": "user",
-        "content": [
-            {"type": "text", "text": "What is in this image?"},
-            {"type": "image_url", "image_url": {"url": "https://example.com/photo.jpg"}},
-        ],
-    }],
-)
-```
-
-## MCP Integration
-
-Expose chat completions as MCP tools:
-
-```typescript
-import { MCPServer, Tool } from '@hanzo/mcp'
-
-const chatTool: Tool = {
-  name: 'hanzo_chat',
-  description: 'Generate text using Hanzo Chat API (86+ models)',
-  parameters: {
-    model: { type: 'string', default: 'zen-70b' },
-    prompt: { type: 'string', required: true },
-    temperature: { type: 'number', default: 0.7 },
-    max_tokens: { type: 'number', default: 1024 }
-  },
-  async execute({ model, prompt, temperature, max_tokens }) {
-    const res = await fetch('https://api.hanzo.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.HANZO_API_KEY}`
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature,
-        max_tokens
-      })
-    })
-    const data = await res.json()
-    return data.choices[0].message.content
-  }
-}
-```
-
-## Error handling
-
-| Code | Meaning | Action |
-|------|---------|--------|
-| 200 | Success | Process response |
-| 400 | Bad request | Check model name, message format |
-| 401 | Unauthorized | Check API key |
-| 404 | Model not found | Check model ID against /v1/models |
-| 429 | Rate limited | Exponential backoff (1s, 2s, 4s, 8s) |
-| 500 | Server error | Retry up to 3 times |
-| 503 | Provider down | Hanzo auto-retries with fallback provider |
-
-## Official links
-
-- Chat UI: https://chat.hanzo.ai
-- API Docs: https://hanzo.ai/docs/api
-- Dashboard: https://hanzo.ai/dashboard
-- Python SDK: https://github.com/hanzoai/python-sdk
-- Go SDK: https://github.com/hanzoai/go-sdk
-- JS SDK: https://github.com/hanzoai/js-sdk
-- Hanzo AI: https://hanzo.ai
+- `hanzo/hanzo-llm-gateway.md` -- The LLM proxy that Chat connects to (435+ models, 28 Zen)
+- `hanzo/hanzo-mcp.md` -- MCP tools accessible through Chat
+- `hanzo/hanzo-console.md` -- Console for API key management
 
 ---
 
-**Last Updated**: 2026-02-26
+**Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: llm, ai, chat, inference
-**Prerequisites**: HTTP/curl, any OpenAI-compatible SDK
+**Related**: chat, ui, librechat, conversations, agents, rag
+**Prerequisites**: Node.js, pnpm, MongoDB, Hanzo LLM Gateway (or OpenAI-compatible endpoint)
