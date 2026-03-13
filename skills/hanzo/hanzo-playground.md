@@ -65,39 +65,26 @@ Hanzo Playground is a **Kubernetes-style control plane for AI bots**. It provide
 
 ```
 control-plane/
-  cmd/
-    playground/           # Unified CLI (server + dev/init commands)
-    playground-server/    # Standalone server binary
+  cmd/playground/              # Unified CLI (server + dev/init)
+  cmd/playground-server/       # Standalone server binary
   internal/
-    cli/                  # CLI command definitions
-    server/               # HTTP server (Gin), middleware, routing
-    handlers/             # REST/gRPC request handlers
-    services/             # Business logic (workflow, bot registry, DID/VC)
-    storage/              # Data layer (SQLite/BoltDB, PostgreSQL)
-    events/               # Event bus, SSE streaming
-    core/                 # Domain models and interfaces
-    cloud/                # Cloud provisioning (K8s + Visor)
-    mcp/                  # Model Context Protocol integration
-    encryption/           # Cryptographic primitives (DID/VC)
-    config/               # Configuration (Viper)
-    logger/               # Structured logging (zerolog)
-  migrations/             # Goose SQL migrations
-  web/client/             # React/TypeScript admin UI (Vite)
-  go.mod                  # Go module definition
+    server/                    # HTTP server (Gin), middleware, routing
+    handlers/                  # REST/gRPC request handlers
+    services/                  # Business logic (workflow, bot registry, DID/VC)
+    storage/                   # Data layer (SQLite/BoltDB, PostgreSQL)
+    cloud/                     # Cloud provisioning (K8s + Visor)
+    mcp/                       # Model Context Protocol integration
+    encryption/                # Cryptographic primitives (DID/VC)
+  migrations/                  # Goose SQL migrations
+  web/client/                  # React/TypeScript admin UI (Vite)
 sdk/
-  python/                 # Python SDK (FastAPI bot builder)
-  go/                     # Go SDK (bot builder + skills)
-  typescript/             # TypeScript SDK
+  python/                      # Python SDK (FastAPI bot builder)
+  go/                          # Go SDK (bot builder + skills)
+  typescript/                  # TypeScript SDK
 deployments/
-  docker/                 # Docker Compose + Dockerfile
-  helm/                   # Helm chart
-  kubernetes/             # Raw K8s manifests
-  railway/                # Railway deployment config
-tests/                    # Integration tests
-examples/                 # Example bots
-Makefile                  # Build, test, lint targets
-.goreleaser.yml           # Multi-platform release builds
-VERSION                   # Current version
+  docker/                      # Docker Compose + Dockerfile
+  helm/                        # Helm chart
+  kubernetes/                  # Raw K8s manifests
 ```
 
 ## Quick Start
