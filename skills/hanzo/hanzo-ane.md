@@ -46,7 +46,7 @@ Fork of **maderix/ANE** (8 commits merged). Repo: `hanzoai/ANE`.
 | Repo | `github.com/hanzoai/ANE` (fork of maderix/ANE) |
 | Build | `make all && make test` |
 | Data | `bash training/download_data.sh` |
-| Language | C, Objective-C, Metal |
+| Language | Objective-C, Python |
 | Upstream | maderix/ANE (8 commits merged, issue #3 has benchmarks) |
 
 ## Performance Benchmarks
@@ -115,10 +115,11 @@ make test
 # Run training (auto-detects chip and selects best pipeline)
 make train
 
-# Run specific pipeline
-make train-static       # Static conv pipeline
-make train-static-ane   # Static + ANE extras (14% faster)
-make train-dynamic      # Dynamic matmul (M4+ only)
+# Run specific pipeline (targets in training/Makefile)
+cd training
+make train              # Standard training
+make train_large        # Large model training
+make train_large_ane    # Large model + ANE extras
 
 # Benchmark
 make bench
@@ -163,21 +164,14 @@ ane_close(device);
 
 ```
 ANE/
-├── src/
-│   ├── ane_universal.h    # Universal runtime (chip detection)
-│   ├── ane_static.c       # Static conv pipeline
-│   ├── ane_dynamic.c      # Dynamic matmul pipeline (M4+)
-│   ├── ane_weights.c      # Weight blob format (128-byte header)
-│   └── ane_training.c     # Training loop
+├── ane_universal.h        # Universal runtime (chip detection)
+├── Makefile               # Top-level build targets
 ├── training/
+│   ├── Makefile           # Training targets (train, train_large, train_large_ane)
 │   ├── download_data.sh   # Download Stories110M data
-│   ├── train.c            # Training entry point
+│   ├── train.m            # Training entry point (Objective-C)
+│   ├── test_*.m           # Tests (Objective-C)
 │   └── configs/           # Training configs
-├── tests/
-│   ├── test_format.c      # Weight format tests
-│   ├── test_pipeline.c    # Pipeline tests
-│   └── test_training.c    # Training convergence tests
-├── Makefile
 └── README.md
 ```
 

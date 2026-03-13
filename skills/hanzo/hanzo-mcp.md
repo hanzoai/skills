@@ -645,38 +645,6 @@ for (const step of workflow.steps) {
 
 ## Production Deployment
 
-### Docker Compose
-
-```yaml
-# docker-compose.yml
-version: '3.8'
-
-services:
-  hanzo-node-mcp:
-    image: hanzoai/mcp-server:latest
-    ports:
-      - "8081:8081"
-    environment:
-      MCP_NAME: hanzo-node
-      HANZO_NODE_URL: http://hanzo-node:8080
-    depends_on:
-      - hanzo-node
-  
-  hanzo-ui-mcp:
-    image: hanzoai/ui-mcp-server:latest
-    ports:
-      - "8082:8082"
-    environment:
-      MCP_NAME: hanzo-ui
-  
-  hanzo-node:
-    image: hanzoai/node:latest
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./models:/root/.hanzo/models
-```
-
 ### Kubernetes
 
 ```yaml

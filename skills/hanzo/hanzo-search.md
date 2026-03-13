@@ -5,7 +5,9 @@
 
 ## Overview
 
-Hanzo Search is a **high-performance search engine** built as a Rust workspace with 26 crates. Fork of Meilisearch v1.37.0 with AI-powered ranking, vector search, and faceting. Designed for sub-50ms search across millions of documents.
+Hanzo Search is a **high-performance search engine** built as a Rust workspace with 22 crates. Fork of Meilisearch v1.37.0 with AI-powered ranking, vector search, and faceting. Designed for sub-50ms search across millions of documents.
+
+**NOTE**: Crate names are not yet renamed from upstream — the binary is still `meilisearch`, core engine is `milli`, and CLI tool is `meilitool`. Dual licensed: MIT for open-source use, with a separate enterprise license (LICENSE-EE).
 
 ### Features
 
@@ -32,8 +34,8 @@ Fork of **Meilisearch** v1.37.0. Repo: `hanzoai/search`.
 
 | Item | Value |
 |------|-------|
-| Tech | Rust workspace (26 crates) |
-| Binary | `hanzo-search` |
+| Tech | Rust workspace (22 crates) |
+| Binary | `meilisearch` (not yet renamed from upstream) |
 | Port | 7700 (default) |
 | Repo | `github.com/hanzoai/search` |
 
@@ -46,7 +48,7 @@ cd search
 cargo build --release
 
 # Run
-./target/release/hanzo-search --http-addr 0.0.0.0:7700 --master-key YOUR_KEY
+./target/release/meilisearch --http-addr 0.0.0.0:7700 --master-key YOUR_KEY
 
 # Index documents
 curl -X POST http://localhost:7700/indexes/movies/documents \

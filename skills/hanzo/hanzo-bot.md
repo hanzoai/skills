@@ -1,93 +1,109 @@
-# Hanzo Bot - Multi-Channel Messaging Gateway
+# Hanzo Bot - Multi-Channel AI Messaging Gateway
 
 **Category**: Hanzo Ecosystem
 **Related Skills**: `hanzo/hanzo-agent.md`, `hanzo/hanzo-mcp.md`
 
 ## Overview
 
-Hanzo Bot is a **TypeScript ESM multi-channel messaging gateway** supporting 50+ platforms — Discord, Slack, Telegram, WhatsApp, Teams, and more. Features billing, marketplace for skills, and 45 channel extensions. Also hosts the skills framework with 739 public skills on `github.com/hanzoskill`.
+Hanzo Bot (`@hanzo/bot`) is a **TypeScript ESM multi-channel AI messaging gateway** that connects AI agents to messaging platforms through a plugin/extension architecture. It provides first-class integrations for Discord, Telegram, Slack, WhatsApp, Signal, iMessage, Line, MS Teams, IRC, Matrix, and many more via 40+ bundled extensions. It also includes a TUI, web UI, iOS/Android/macOS native apps, and an Agent Client Protocol (ACP) gateway.
 
-**NOTE**: This is NOT just a skills collection — it's a full messaging gateway application with channel adapters, billing, and a skill marketplace.
+Fork of OpenClaw/ClawdBot, fully rebranded. Package: `@hanzo/bot`, binary: `hanzo-bot`.
 
-### Why Hanzo Bot?
+### What it actually is
 
-- **50+ platforms**: Discord, Slack, Telegram, WhatsApp, Teams, IRC, Matrix, and more
-- **TypeScript ESM**: Modern ES module architecture
-- **45 channel extensions**: Pre-built adapters for messaging platforms
-- **Billing system**: Usage tracking, subscription management
-- **Skill marketplace**: Discover, install, and publish reusable skills
-- **739 public skills**: Pre-built automations across DevOps, AI/ML, data, security
-- **Extensible**: Create custom channels and skills
+- A multi-channel AI agent runtime -- receives messages from platforms, routes them through an AI agent, sends responses back
+- Plugin SDK (`@hanzo/bot/plugin-sdk/*`) with per-channel exports for Discord, Telegram, Slack, WhatsApp, Signal, iMessage, Line, MS Teams, IRC, Matrix, Feishu, Google Chat, Mattermost, Twitch, Nostr, Zalo, Nextcloud Talk, Synology Chat, Tlon, Lobster, and more
+- ACP (Agent Client Protocol) gateway for cross-platform agent coordination
+- TUI mode (`pnpm tui`) and web UI (`pnpm ui:dev`)
+- iOS, Android, and macOS native host apps (Swift/Kotlin)
+- Memory system with LanceDB vector store
+- Context engine, media understanding, link understanding, browser automation
+- Commerce module in `src/commerce/`
 
-### History
+### What it is NOT
 
-Rebranded from ClawdBot. All references updated:
-- `clawdbot`/`ClawdBot` → `hanzo-bot`/`Hanzo Bot`
-- Config: `~/.bot/`, `bot.json`
-- Env vars: `BOT_*` (not `CLAWDBOT_*`)
-- Dir renames: 25+ directories renamed
+- Not a billing platform -- no subscription management or metering system
+- Not a skill marketplace -- skills are in separate repos (`github.com/hanzobot/skills`, `github.com/hanzoskill`)
+- Skills are not bundled in the bot runtime
 
 ## When to use
 
-- Building multi-platform chatbots
-- Deploying AI assistants across messaging channels
-- Running pre-built automation skills
-- Creating reusable automation recipes
-- Integrating AI capabilities into messaging platforms
+- Deploying AI agents across multiple messaging platforms
+- Building multi-channel chatbots with a single codebase
+- Running an AI assistant on Discord, Telegram, Slack, or WhatsApp
+- Need an ACP-compatible agent gateway
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
 | Repo | `github.com/hanzoai/bot` |
-| Stack | TypeScript ESM |
-| Channels | 50+ platforms (45 channel extensions) |
-| Skills monorepo | `github.com/hanzobot/skills` |
-| Public skill repos | `github.com/hanzoskill` (739 repos) |
-| Config | `~/.bot/config.json` |
-| Env prefix | `BOT_*` |
+| Package | `@hanzo/bot` (npm) |
+| Version | 2026.3.x (calver) |
+| Stack | TypeScript ESM, pnpm, Node.js >= 22 |
+| Binary | `hanzo-bot` |
+| Dev | `pnpm dev` |
+| Build | `pnpm build` |
+| Test | `pnpm test` |
+| TUI | `pnpm tui` |
+| Web UI | `pnpm ui:dev` |
+| Formatter | oxfmt |
+| Linter | oxlint (type-aware) |
+| License | MIT |
 
-## Architecture
+## Channel Extensions (extensions/)
 
-```
-┌─────────────────────────────────────────────┐
-│              Hanzo Bot Gateway               │
-├─────────────────────────────────────────────┤
-│                                              │
-│  ┌─────────────────────────────────────┐    │
-│  │        Channel Adapters (45+)       │    │
-│  │  Discord │ Slack │ Telegram │ ...   │    │
-│  └───────────────┬─────────────────────┘    │
-│                  │                           │
-│  ┌───────────────┴─────────────────────┐    │
-│  │         Message Router              │    │
-│  │  Intent → Skill matching            │    │
-│  └───────────────┬─────────────────────┘    │
-│                  │                           │
-│  ┌───────────────┴─────────────────────┐    │
-│  │         Skill Engine                │    │
-│  │  739 skills │ Marketplace │ Custom  │    │
-│  └───────────────┬─────────────────────┘    │
-│                  │                           │
-│  ┌───────────────┴─────────────────────┐    │
-│  │         Billing & Usage             │    │
-│  │  Metering │ Subscriptions │ Limits  │    │
-│  └─────────────────────────────────────┘    │
-└─────────────────────────────────────────────┘
-```
+40+ extensions in the `extensions/` directory, each a self-contained plugin:
 
-## Channel Extensions
+| Category | Extensions |
+|----------|-----------|
+| **Chat** | discord, telegram, slack, whatsapp, signal, irc, matrix, mattermost |
+| **Asian** | line, feishu, zalo, zalouser |
+| **Enterprise** | msteams, googlechat, synology-chat, nextcloud-talk |
+| **Social** | twitch, nostr, tlon, lobster |
+| **Apple** | imessage, bluebubbles |
+| **Voice** | voice-call, talk-voice |
+| **Dev** | copilot-proxy, diffs, ci-fix-loop, flow |
+| **AI/Memory** | memory-core, memory-lancedb, llm-task, continuous-learning, self-improvement |
+| **Auth** | google-gemini-cli-auth, minimax-portal-auth, qwen-portal-auth, google-antigravity-auth |
+| **Infra** | diagnostics-otel, device-pair, acpx, thread-ownership, phone-control, open-prose, test-utils, shared |
 
-| Category | Channels |
-|----------|----------|
-| **Chat** | Discord, Slack, Telegram, WhatsApp, Signal, Matrix, IRC |
-| **Business** | Microsoft Teams, Google Chat, Webex |
-| **Social** | Twitter/X, Facebook Messenger, Instagram DM |
-| **Support** | Intercom, Zendesk, Freshdesk, LiveChat |
-| **Dev** | GitHub (issues/PRs), GitLab, Jira |
-| **Voice** | Twilio, Vonage |
-| **Web** | WebSocket, HTTP webhook, SSE |
-| **Custom** | Plugin API for any platform |
+## Source structure (src/)
+
+| Directory | Purpose |
+|-----------|---------|
+| `src/agents/` | AI agent runtime |
+| `src/channels/` | Channel framework (registry, config, session, typing, reactions) |
+| `src/discord/` | Discord-specific channel logic |
+| `src/telegram/` | Telegram-specific channel logic |
+| `src/slack/` | Slack-specific channel logic |
+| `src/whatsapp/` | WhatsApp (Baileys) integration |
+| `src/signal/` | Signal integration |
+| `src/imessage/` | iMessage integration |
+| `src/line/` | LINE integration |
+| `src/web/` | Web channel |
+| `src/gateway/` | ACP gateway |
+| `src/tui/` | Terminal UI |
+| `src/cli/` | CLI commands |
+| `src/memory/` | Conversation memory |
+| `src/context-engine/` | Context management |
+| `src/providers/` | LLM providers |
+| `src/commerce/` | Commerce module |
+| `src/browser/` | Browser automation |
+| `src/media-understanding/` | Media processing |
+| `src/plugin-sdk/` | Plugin SDK exports |
+
+## Key dependencies
+
+- `grammy` -- Telegram Bot API
+- `@discordjs/voice` + `discord-api-types` -- Discord
+- `@slack/bolt` + `@slack/web-api` -- Slack
+- `@whiskeysockets/baileys` -- WhatsApp
+- `@line/bot-sdk` -- LINE
+- `playwright-core` -- Browser automation
+- `sqlite-vec` -- Vector search
+- `@agentclientprotocol/sdk` -- ACP
+- `@mariozechner/pi-agent-core` / `pi-coding-agent` / `pi-tui` -- Upstream agent runtime
 
 ## Quickstart
 
@@ -96,136 +112,43 @@ git clone https://github.com/hanzoai/bot.git
 cd bot
 pnpm install
 
-# Configure
+# Configure channel tokens
 cp .env.example .env
-# Edit .env with channel tokens (DISCORD_TOKEN, SLACK_TOKEN, etc.)
+# Edit .env: DISCORD_TOKEN, TELEGRAM_TOKEN, SLACK_BOT_TOKEN, etc.
 
-# Start gateway
+# Development
 pnpm dev
 
-# Or production
+# Production
 pnpm build && pnpm start
+
+# TUI mode
+pnpm tui
 ```
 
-### Minimal Channel Setup (Discord)
+## Skills (separate repos)
 
-```typescript
-import { Bot, DiscordChannel } from "@hanzo/bot"
+Skills live outside this repo:
+- **Monorepo**: `github.com/hanzobot/skills` -- full collection with history
+- **Per-skill repos**: `github.com/hanzoskill` org (739 public repos, one per skill)
+- Each skill has: `SKILL.md`, `_meta.json`, `scripts/`, `.author`
 
-const bot = new Bot({
-  channels: [
-    new DiscordChannel({
-      token: process.env.DISCORD_TOKEN,
-      intents: ["Guilds", "GuildMessages", "MessageContent"],
-    }),
-  ],
-  skills: ["weather", "search", "code-review"],
-})
+## History
 
-await bot.start()
-```
-
-### Multi-Channel Setup
-
-```typescript
-import { Bot, DiscordChannel, SlackChannel, TelegramChannel } from "@hanzo/bot"
-
-const bot = new Bot({
-  channels: [
-    new DiscordChannel({ token: process.env.DISCORD_TOKEN }),
-    new SlackChannel({ token: process.env.SLACK_BOT_TOKEN }),
-    new TelegramChannel({ token: process.env.TELEGRAM_TOKEN }),
-  ],
-  billing: {
-    enabled: true,
-    provider: "hanzo-commerce",  // Hanzo Commerce API
-  },
-  marketplace: {
-    enabled: true,
-    registry: "https://api.hanzo.ai/v1/bot/skills",
-  },
-})
-```
-
-## Skills System
-
-### Skill Structure
-
-```
-skills/<author>/<skill>/
-├── SKILL.md          # Documentation and instructions
-├── _meta.json        # Metadata (name, description, triggers, version)
-├── scripts/          # Executable scripts
-│   ├── run.sh        # Main entry point
-│   ├── setup.sh      # One-time setup
-│   └── *.py/js/go    # Language-specific scripts
-├── .author           # Author info
-└── tests/            # Optional tests
-```
-
-### Skill Categories
-
-| Category | Count | Examples |
-|----------|-------|---------|
-| DevOps | ~200 | Docker, K8s, CI/CD, monitoring |
-| Development | ~150 | Code generation, linting, testing |
-| AI/ML | ~100 | Model serving, training, inference |
-| Data | ~80 | ETL, databases, migrations |
-| Security | ~60 | Scanning, auditing, secrets |
-| Cloud | ~50 | AWS, GCP, DO provisioning |
-| Misc | ~100 | Formatting, documentation, bots |
-
-### Marketplace
-
-```bash
-# Search skills in marketplace
-hanzo-bot marketplace search "kubernetes deploy"
-
-# Install skill from marketplace
-hanzo-bot marketplace install k8s-deployer
-
-# Publish your skill
-hanzo-bot marketplace publish ./my-skill/
-
-# Rate a skill
-hanzo-bot marketplace rate k8s-deployer 5
-```
-
-## Billing
-
-```typescript
-// Billing configuration
-const billing = {
-  plans: [
-    { name: "free", messages: 100, skills: 5 },
-    { name: "pro", messages: 10000, skills: "unlimited" },
-    { name: "enterprise", messages: "unlimited", skills: "unlimited" },
-  ],
-  metering: {
-    track: ["messages", "skill_runs", "api_calls"],
-    provider: "hanzo-commerce",
-  },
-}
-```
-
-## GitHub Organization (hanzoskill)
-
-The `hanzoskill` org on GitHub has 739 public repos — one per skill. Published from the monorepo via CI.
-
-**Rate limits**: GitHub secondary rate limit allows ~150 repo creations per burst, ~30-40min cooldown between bursts.
-
-**Duplicate handling**: If a skill name exists in multiple authors, the second is suffixed (e.g., `discord-doctor-alt`).
+Rebranded from ClawdBot/OpenClaw. All internal references updated:
+- `clawdbot`/`ClawdBot` -> `hanzo-bot`/`Hanzo Bot`
+- Config: `~/.bot/`, `bot.json`
+- Env vars: `BOT_*` (not `CLAWDBOT_*`)
+- Some internal OpenClaw references remain in scripts and Android package names
 
 ## Related Skills
 
-- `hanzo/hanzo-agent.md` - AI agent framework (bots can use agents)
-- `hanzo/hanzo-mcp.md` - MCP tools (skills can expose MCP tools)
-- `hanzo/hanzo-dev.md` - AI coding agent (uses skill discovery)
-- `hanzo/hanzo-commerce-api.md` - Billing backend
+- `hanzo/hanzo-agent.md` -- AI agent framework
+- `hanzo/hanzo-mcp.md` -- MCP tools (extensions can expose MCP tools)
 
 ---
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: bot, messaging, gateway, channels, skills, marketplace
-**Prerequisites**: TypeScript, messaging platform tokens
+**Related**: bot, messaging, gateway, channels, discord, telegram, slack, whatsapp
+**Prerequisites**: Node.js >= 22, pnpm, messaging platform tokens
