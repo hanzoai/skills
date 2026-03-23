@@ -1,40 +1,17 @@
-# Hanzo Playground - Control Plane for AI Bots
+# Hanzo Playground - Bot Control Plane
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-agent.md`, `hanzo/hanzo-bot.md`, `hanzo/hanzo-operative.md`
+**Related Skills**: `hanzo/hanzo-bot.md`, `hanzo/hanzo-agent.md`, `hanzo/hanzo-operative.md`
 
 ## Overview
 
-Hanzo Playground is a **Kubernetes-style control plane for AI bots**. It provides production infrastructure for deploying, orchestrating, and observing multi-bot systems with cryptographic identity (DID/VC), workflow execution, memory scoping, and an embedded web UI. Three-tier monorepo: Go control plane, Python/Go/TypeScript SDKs, React admin interface.
-
-### Why Hanzo Playground?
-
-- **Bot orchestration**: Register, invoke, and monitor bots through a central control plane
-- **Workflow DAGs**: Compose multi-bot workflows with dependency tracking and observability
-- **Memory scopes**: Global, bot, session, and run-scoped memory synced by control plane
-- **Cryptographic identity**: W3C DID/VC for every bot execution (opt-in audit trails)
-- **Dual storage**: SQLite/BoltDB for local dev, PostgreSQL for production
-- **Cloud provisioning**: Provision agents as K8s pods (Linux) or VMs via Visor (Mac/Windows)
-- **Embedded Web UI**: React/TypeScript admin dashboard served from the Go binary
-- **Multi-SDK**: Python (FastAPI), Go, and TypeScript SDKs for building bots
-
-### Tech Stack
-
-- **Control Plane**: Go 1.24, Gin, GORM, zerolog, Cobra, Viper, Prometheus
-- **Python SDK**: FastAPI/Uvicorn, bot builder pattern
-- **Go SDK**: Native Go bot builder with skills registration
-- **TypeScript SDK**: TypeScript bot client
-- **Web UI**: React 18, TypeScript, Vite, Tailwind CSS, Radix UI
-- **Database**: SQLite/BoltDB (local), PostgreSQL (cloud), Goose migrations
-- **Version**: 0.1.41-rc.197
-- **Image**: `ghcr.io/hanzoai/playground:latest`
-- **Production**: `playground.hanzo.bot` (alias: `app.hanzo.bot`)
+Hanzo Playground is a **Kubernetes-style control plane for AI bots**. Provides production infrastructure for deploying, orchestrating, and observing multi-bot systems with cryptographic identity (DID/VC), workflow execution, memory scoping, and an embedded web UI. Three-tier monorepo: Go control plane, Python/Go/TypeScript SDKs, React admin interface. Live at `app.hanzo.bot`.
 
 ## When to use
 
 - Deploying and orchestrating multi-bot AI systems
-- Building bots with Python or Go that need central coordination
 - Running multi-step workflows across multiple AI agents
+- Central coordination for bots built with Python, Go, or TypeScript SDKs
 - Auditing bot executions with cryptographic proofs (DID/VC)
 - Provisioning cloud agents (K8s pods or VMs)
 - Monitoring bot health, workflow state, and memory via web UI
@@ -44,227 +21,200 @@ Hanzo Playground is a **Kubernetes-style control plane for AI bots**. It provide
 1. **Go 1.23+** for control plane
 2. **Node.js 20+** for web UI development
 3. **Python 3.8+** for Python SDK
-4. **PostgreSQL 15+** for cloud/production mode (SQLite for local dev)
+4. **PostgreSQL 15+** for production (SQLite for local dev)
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
-| Control plane port | 8080 |
-| Web UI | `http://localhost:8080/ui/` |
+| URL | `https://app.hanzo.bot` (alias: `playground.hanzo.bot`) |
 | Version | 0.1.41-rc.197 |
+| Control plane | Go 1.24 (Gin, GORM, zerolog, Cobra, Viper) |
+| Python SDK | FastAPI/Uvicorn, bot builder pattern |
+| Go SDK | Native Go bot builder |
+| TypeScript SDK | TypeScript bot client |
+| Web UI | React 18, TypeScript, Vite, Tailwind, Radix UI |
+| Database | SQLite/BoltDB (local), PostgreSQL (prod) |
 | Image | `ghcr.io/hanzoai/playground:latest` |
-| Production URL | `playground.hanzo.bot` / `app.hanzo.bot` |
-| Go module | `github.com/hanzoai/playground/control-plane` |
-| Python package | `playground` (PyPI) |
+| K8s manifests | in team repo `k8s/` |
 | Repo | `github.com/hanzoai/playground` |
-| Branch | `main` |
-| License | Apache 2.0 |
 
-## Repository Structure
+## Architecture
 
 ```
-control-plane/
-  cmd/playground/              # Unified CLI (server + dev/init)
-  cmd/playground-server/       # Standalone server binary
-  internal/
-    server/                    # HTTP server (Gin), middleware, routing
-    handlers/                  # REST/gRPC request handlers
-    services/                  # Business logic (workflow, bot registry, DID/VC)
-    storage/                   # Data layer (SQLite/BoltDB, PostgreSQL)
-    cloud/                     # Cloud provisioning (K8s + Visor)
-    mcp/                       # Model Context Protocol integration
-    encryption/                # Cryptographic primitives (DID/VC)
-  migrations/                  # Goose SQL migrations
-  web/client/                  # React/TypeScript admin UI (Vite)
-sdk/
-  python/                      # Python SDK (FastAPI bot builder)
-  go/                          # Go SDK (bot builder + skills)
-  typescript/                  # TypeScript SDK
-deployments/
-  docker/                      # Docker Compose + Dockerfile
-  helm/                        # Helm chart
-  kubernetes/                  # Raw K8s manifests
+                 app.hanzo.bot
+                      |
+               +------+------+
+               |             |
+           Web UI        REST API
+           (React)       (Go/Gin)
+               |             |
+               +------+------+
+                      |
+           +----------+----------+
+           |          |          |
+        Bot Nodes  Workflow    Memory
+        (registry) Engine     Scopes
+           |       (DAG)      (4 levels)
+           |          |          |
+      +----+----+    |     +----+----+
+      |    |    |    |     |    |    |
+    Python Go  TS   Job   Global Bot
+    SDK   SDK  SDK  Queue Session Run
 ```
 
-## Quick Start
+## Core concepts
 
-### Local Mode (No External Dependencies)
+### Node registry
 
-```bash
-cd control-plane
-go run ./cmd/playground dev
-# Runs at http://localhost:8080, UI at http://localhost:8080/ui/
-# Uses SQLite + BoltDB (no PostgreSQL needed)
+Bot instances register with the control plane and report:
+- Health status (heartbeat)
+- Available skills/capabilities
+- Current execution state
+- Resource utilization
+
+### Workflow DAGs
+
+Compose multi-bot workflows with dependency tracking:
+
+```json
+{
+  "name": "research-pipeline",
+  "steps": [
+    {"id": "search", "bot": "web-researcher", "skill": "search"},
+    {"id": "analyze", "bot": "analyst", "skill": "summarize", "depends": ["search"]},
+    {"id": "report", "bot": "writer", "skill": "generate", "depends": ["analyze"]}
+  ]
+}
 ```
 
-### Cloud Mode (PostgreSQL)
+### Memory scopes (4 levels)
 
-```bash
-cd control-plane
-export PLAYGROUND_DATABASE_URL="postgres://playground:playground@localhost:5432/playground?sslmode=disable"
+| Scope | Lifetime | Visibility | Use case |
+|-------|----------|------------|----------|
+| **Global** | Permanent | All bots | Shared knowledge base |
+| **Bot** | Permanent | Single bot | Bot-specific context |
+| **Session** | Session | Single user session | Conversation context |
+| **Run** | Single execution | Single workflow run | Execution scratch space |
 
-# Run migrations
-goose -dir ./migrations postgres "$PLAYGROUND_DATABASE_URL" up
+### Cryptographic identity (DID/VC)
 
-# Start server
-PLAYGROUND_STORAGE_MODE=postgresql go run ./cmd/playground-server
-```
+Every bot execution can optionally produce W3C DID/VC audit trails:
+- Bot identity via DID (Decentralized Identifier)
+- Execution proofs via VC (Verifiable Credential)
+- Enables trustworthy audit logs for regulated environments
 
-### Docker Compose
-
-```bash
-cd deployments/docker
-docker compose up
-```
-
-## Building Bots
-
-### Python Bot
-
-```bash
-# Scaffold a new bot
-playground init my-bot
-cd my-bot
-
-# Edit bot code, then run
-playground run
-```
+## Python SDK quickstart
 
 ```python
-# Python SDK: register "reasoners" (decorated functions become REST endpoints)
-from playground import Bot
+from hanzo_playground import Bot, Skill
 
-bot = Bot("my-bot", server="http://localhost:8080")
+@Skill(name="greet", description="Greet a user")
+async def greet(name: str) -> str:
+    return f"Hello, {name}!"
 
-@bot.reasoner("greet")
-async def greet(input):
-    return {"message": f"Hello, {input.get('name', 'world')}!"}
+bot = Bot(
+    name="greeter",
+    control_plane="https://app.hanzo.bot",
+    skills=[greet],
+)
 
-bot.run()
+bot.run()  # Registers with control plane and starts serving
 ```
 
-### Go Bot
+## Go SDK quickstart
 
 ```go
-import playgroundbot "github.com/hanzoai/playground/sdk/go/bot"
+package main
 
-bot, _ := playgroundbot.New(playgroundbot.Config{
-    NodeID:        "my-bot",
-    PlaygroundURL: "http://localhost:8080",
-})
-bot.RegisterSkill("greet", func(ctx context.Context, input map[string]any) (any, error) {
-    return map[string]any{"message": "hello"}, nil
-})
-bot.Run(context.Background())
+import (
+    playground "github.com/hanzoai/playground/sdk/go"
+)
+
+func main() {
+    bot := playground.NewBot("greeter", playground.Config{
+        ControlPlane: "https://app.hanzo.bot",
+    })
+
+    bot.RegisterSkill("greet", func(ctx playground.Context) (string, error) {
+        name := ctx.Param("name")
+        return fmt.Sprintf("Hello, %s!", name), nil
+    })
+
+    bot.Run()
+}
 ```
 
-## Key Concepts
+## Cloud provisioning
 
-### Bot-to-Bot Communication
-
-Bots call each other through the control plane -- never direct HTTP:
-
-```python
-result = await bot.call("other-bot.function", input={"key": "value"})
-# Control plane routes request, tracks workflow DAG, injects metrics
-```
-
-### Memory Scopes
-
-| Scope | Description |
-|-------|-------------|
-| **Global** | Shared across all bots and sessions |
-| **Bot** | Scoped to one bot, all sessions |
-| **Session** | Scoped to one session (multi-turn conversation) |
-| **Run** | Scoped to a single execution/workflow run |
-
-Access via SDK: `bot.memory.get/set(scope, key, value)`
-
-### DID/VC (Cryptographic Identity)
-
-Opt-in per bot. Control plane generates W3C Verifiable Credentials for each execution:
+The control plane can provision agents as:
+- **K8s pods** (Linux): Standard container deployment
+- **VMs via Visor** (Mac/Windows): For desktop automation tasks
 
 ```bash
-# Export audit trail
-GET /api/v1/did/workflow/{workflow_id}/vc-chain
-
-# Verify offline
-playground verify audit.json
+# Provision a new bot instance
+curl -X POST https://app.hanzo.bot/api/v1/bots \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -d '{
+    "name": "web-researcher",
+    "image": "ghcr.io/hanzoai/bot:latest",
+    "provisioner": "kubernetes",
+    "replicas": 1
+  }'
 ```
 
-### Cloud Agent Provisioning
+## K8s deployment
 
-| API | Method | Description |
-|-----|--------|-------------|
-| `/api/v1/cloud/nodes/provision` | POST | Provision new agent |
-| `/api/v1/cloud/nodes/:node_id` | DELETE | Deprovision agent |
-| `/api/v1/cloud/nodes` | GET | List cloud agents |
-| `/api/v1/cloud/nodes/:node_id/logs` | GET | Get agent logs |
-| `/api/v1/cloud/teams/provision` | POST | Batch provision |
-
-Linux agents run as K8s pods (agent + operative sidecar). Mac/Windows agents use Visor for VM management.
-
-### Storage Modes
-
-| Mode | Backend | Use Case |
-|------|---------|----------|
-| `local` | SQLite + BoltDB | Development, testing |
-| `postgresql` | PostgreSQL | Production, cloud |
-| `cloud` | PostgreSQL | Distributed deployments |
-
-## Build and Test
-
-```bash
-make install             # Install all dependencies
-make build               # Build all components
-make test                # Run all tests
-
-# Component-specific
-cd control-plane && go test ./...
-cd sdk/python && pytest
-cd sdk/go && go test ./...
-
-# Lint and format
-make lint
-make fmt
-make tidy
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: playground
+  namespace: hanzo
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: playground
+          image: ghcr.io/hanzoai/playground:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              value: postgresql://playground:pass@postgres.hanzo.svc:5432/playground
+            - name: PLAYGROUND_MODE
+              value: cloud
 ```
 
-## Environment Variables
+## Network policy
 
-```bash
-PLAYGROUND_PORT=8080                    # HTTP server port
-PLAYGROUND_MODE=local                   # local or cloud
-PLAYGROUND_STORAGE_MODE=local           # local, postgresql, or cloud
-PLAYGROUND_DATABASE_URL=postgres://...  # PostgreSQL connection
-PLAYGROUND_UI_ENABLED=true              # Enable web UI
-PLAYGROUND_UI_MODE=embedded             # embedded or development
-PLAYGROUND_CONFIG_FILE=config.yaml      # Config file path
-GIN_MODE=release                        # debug or release
-LOG_LEVEL=info                          # debug, info, warn, error
-```
+The playground pod must be accessible from:
+- Hanzo Ingress (external access via `app.hanzo.bot`)
+- Bot pods within the cluster (registration and heartbeat)
+- Team front pod (for embedded playground views)
+
+Ensure network policies allow ingress to playground pods.
 
 ## Troubleshooting
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| Control plane won't start | Bad DATABASE_URL | Check PostgreSQL connection string |
-| Migrations fail | PostgreSQL not running | Start PostgreSQL, verify connection |
-| Bot can't connect | Wrong server URL | Set `PLAYGROUND_URL=http://localhost:8080` |
-| UI not loading | Dev server not running | Run both Vite dev server and control plane |
-| DB pool exhausted | Too many connections | Increase `PLAYGROUND_STORAGE_POSTGRES_MAX_CONNECTIONS` |
+| Bot not registering | Control plane unreachable | Check `control_plane` URL and network policy |
+| Workflow stuck | Dependency cycle | Validate DAG has no cycles |
+| Memory not persisting | SQLite in ephemeral pod | Use PostgreSQL for production |
+| Web UI 404 | Ingress not configured | Add IngressRoute for `app.hanzo.bot` |
 
 ## Related Skills
 
-- `hanzo/hanzo-agent.md` - Multi-agent SDK (complementary)
-- `hanzo/hanzo-bot.md` - Bot gateway (related infrastructure)
-- `hanzo/hanzo-operative.md` - Computer use agent (sidecar in cloud agents)
-- `hanzo/hanzo-tunnel.md` - Tunnel for remote agent control
+- `hanzo/hanzo-bot.md` -- Bot gateway (registers with Playground)
+- `hanzo/hanzo-agent.md` -- Multi-agent SDK
+- `hanzo/hanzo-operative.md` -- Computer use agent
+- `hanzo/hanzo-k8s.md` -- K8s infrastructure
 
 ---
 
-**Last Updated**: 2026-03-13
+**Last Updated**: 2026-03-23
 **Category**: Hanzo Ecosystem
-**Related**: bots, orchestration, control-plane, workflows, did, go, python, react
-**Prerequisites**: Go 1.23+, Python 3.8+ (for SDK), Node.js 20+ (for UI)
+**Related**: playground, bot-orchestration, control-plane, workflows, did, memory
+**Prerequisites**: Go or Python, PostgreSQL for production

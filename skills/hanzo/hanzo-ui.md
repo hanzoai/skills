@@ -1,26 +1,20 @@
-# Hanzo UI - Component Library (shadcn/ui Fork)
+# Hanzo UI - React Component Library
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `frontend/react-component-patterns.md`, `frontend/nextjs-app-router.md`, `hanzo/hanzo-desktop.md`
+**Related Skills**: `hanzo/hanzo-billing.md`, `hanzo/hanzo-brand.md`, `hanzo/hanzo-chat.md`
 
 ## Overview
 
-Hanzo UI is a **React component library** forked from shadcn/ui, extended with 161+ components (3x more than upstream), two themes, multi-framework support, AI components, 3D components, and a visual page builder. Published as `@hanzo/ui` on npm. The CLI is published as `shadcn` v3.8.4.
-
-Built on **React 19**, **Tailwind CSS 4**, **Radix UI** primitives, and **motion** (Framer Motion successor). Uses **pnpm** workspaces with **Turborepo** for builds.
-
-### OSS Info
-
-Repo: `github.com/hanzoai/ui`. Private workspace name `ui` v0.0.1. Docs: `ui.hanzo.ai`. Dev port: 3003.
+Hanzo UI is a **React component library** forked from shadcn/ui, extended with 161+ components (3x upstream), two themes, multi-framework support, AI components, 3D components, and a visual page builder. Published as `@hanzo/ui` on npm. Used across all Hanzo frontend apps.
 
 ## When to use
 
 - Building UIs for Hanzo ecosystem applications
 - Adding pre-built React components via CLI (`npx @hanzo/ui add button`)
-- Creating white-label applications (Zoo, Lux brand configs)
-- Using AI, 3D, or animation components not available in upstream shadcn/ui
+- Creating white-label applications (Hanzo, Lux, Zoo brand configs)
+- Using AI, 3D, or animation components
 - Visual page building with drag-and-drop block assembly
-- E-commerce / checkout / commerce flows
+- E-commerce, checkout, and commerce flows
 
 ## Hard requirements
 
@@ -35,6 +29,7 @@ Repo: `github.com/hanzoai/ui`. Private workspace name `ui` v0.0.1. Docs: `ui.han
 |------|-------|
 | Repo | `github.com/hanzoai/ui` |
 | npm package | `@hanzo/ui` |
+| Related | `@hanzo/auth`, `@hanzo/commerce`, `@hanzo/agent-ui`, `@hanzo/react` |
 | CLI | `shadcn` v3.8.4 |
 | Components | 161+ (~127 implemented, ~34 stubs) |
 | Themes | 2 (Default, New York) |
@@ -43,162 +38,127 @@ Repo: `github.com/hanzoai/ui`. Private workspace name `ui` v0.0.1. Docs: `ui.han
 | Framework | React 19, Tailwind CSS 4, Radix UI |
 | Build | Turborepo + pnpm |
 | Test | Vitest + Playwright |
-| License | MIT |
+| Dev port | 3003 |
 
-## Project structure
+## Package ecosystem
 
-```
-ui/
-├── package.json          # Workspace root (name: "ui", v0.0.1)
-├── pnpm-workspace.yaml   # Workspace definition
-├── turbo.json            # Turborepo config
-├── brand.config.ts       # Brand configuration
-├── components.json       # shadcn component config
-├── registries.json       # 35+ external registry sources
-├── tailwind.config.cjs
-├── vitest.config.ts
-├── playwright.config.ts
-├── app/                  # Documentation site (Next.js 15.3, React 19)
-│   └── registry/         # Component registry (SOURCE OF TRUTH)
-│       ├── default/ui/   # 150+ components (default theme)
-│       ├── default/example/  # Usage demos
-│       ├── default/blocks/   # 24+ full-page sections
-│       └── new-york/     # Alternative theme
-├── apps/                 # Additional apps
-├── packages/
-│   ├── shadcn/           # CLI tool (published as shadcn v3.8.4)
-│   ├── og/               # OpenGraph image generation
-│   └── tests/            # Shared test utilities
-├── pkg/
-│   ├── ui/               # Core component library (@hanzo/ui on npm)
-│   ├── agent-ui/         # Agent interface components
-│   ├── brand/            # Branding system (white-label support)
-│   ├── checkout/         # Checkout flow components
-│   ├── commerce/         # E-commerce components
-│   ├── react/            # React utilities
-│   └── shop/             # Shop/storefront components
-├── demo/                 # Demo applications
-├── deprecated/           # Deprecated components
-├── docs/                 # Documentation source
-├── template/             # Project templates
-├── templates/            # Additional templates
-└── tests/                # E2E and visual tests
-```
+| Package | Purpose |
+|---------|---------|
+| `@hanzo/ui` | Core component library (161+ components) |
+| `@hanzo/auth` | Authentication components and flows |
+| `@hanzo/commerce` | E-commerce components (cart, checkout, pricing) |
+| `@hanzo/agent-ui` | AI agent interface components |
+| `@hanzo/react` | React hooks and utilities |
+| `@luxfi/ui` | Lux ecosystem UI preset (extends @hanzo/ui) |
 
-## Three-layer architecture
-
-1. **Components** (`app/registry/{style}/ui/`) -- Single primitives (Button, Card, Dialog). CLI-installable via `npx @hanzo/ui add`.
-2. **Examples** (`app/registry/{style}/example/`) -- Usage demos displayed in docs via `<ComponentPreview />`.
-3. **Blocks** (`app/registry/{style}/blocks/`) -- Full-page sections (Dashboard, Login). Docs only, NOT CLI-installable.
-
-## Component categories (from LLM.md)
-
-- 9 3D components
-- 12 AI components
-- 13 animation components
-- 15 navigation variants
-- Standard shadcn/ui primitives (Button, Card, Dialog, Form, Table, etc.)
-- Commerce components (checkout, cart, product)
-- Brand system components
-
-## Package exports
-
-```typescript
-import { Button, Card } from '@hanzo/ui'
-import { Button } from '@hanzo/ui/components'
-import * as Dialog from '@hanzo/ui/primitives/dialog'
-import { cn } from '@hanzo/ui/lib/utils'
-```
-
-## CLI usage
+## Install and use
 
 ```bash
-# Install components into your project
+# Add a component to your project
 npx @hanzo/ui add button
-npx @hanzo/ui add card dialog
+npx @hanzo/ui add dialog
+npx @hanzo/ui add ai-chat
 
-# Install from external registries (35+ sources in registries.json)
-npx @hanzo/ui add @aceternity/spotlight
+# Or install the package
+pnpm add @hanzo/ui
 ```
 
-## Key dependencies
+## Component categories
 
-| Dependency | Version | Purpose |
-|-----------|---------|---------|
-| react | 19.2.0 | UI framework |
-| tailwindcss | 4.1.16 | Styling (OKLCH colors) |
-| motion | 12.12.1 | Animations (Framer Motion successor) |
-| lucide-react | 0.544.0 | Icons |
-| recharts | 3.3.0 | Charts |
-| @tanstack/react-table | 8.21.3 | Data tables |
-| @dnd-kit/core | 6.3.1 | Drag and drop (page builder) |
-| turbo | 2.6.0 | Build orchestration |
-| vitest | 4.0.6 | Unit testing |
-| @playwright/test | 1.56.1 | E2E testing |
+| Category | Count | Examples |
+|----------|-------|---------|
+| **Primitives** | 40+ | Button, Input, Select, Dialog, Popover |
+| **Data Display** | 20+ | Table, DataTable, Card, Badge, Avatar |
+| **Navigation** | 10+ | Tabs, Breadcrumb, Sidebar, Command |
+| **Feedback** | 10+ | Toast, Alert, Progress, Skeleton |
+| **AI** | 8+ | AIChat, AICompletion, AICodeBlock, AIMessage |
+| **3D** | 5+ | Spline, Canvas3D, Scene |
+| **Commerce** | 15+ | Cart, Checkout, PricingCard, ProductCard |
+| **Layout** | 10+ | Page, Section, Grid, Stack |
+| **Animation** | 5+ | Motion, AnimatePresence, Transition |
+
+## Tailwind configuration
+
+Projects using @hanzo/ui configure Tailwind to scan the library:
+
+```typescript
+// tailwind.config.ts
+import { hanzoUIPreset } from '@hanzo/ui/tailwind'
+
+export default {
+  presets: [hanzoUIPreset],
+  content: [
+    'src/**/*.tsx',
+    './node_modules/@hanzo/ui/**/*.{ts,tsx}',
+    './node_modules/@hanzo/auth/**/*.{ts,tsx}',
+    './node_modules/@hanzo/commerce/**/*.{ts,tsx}',
+  ]
+}
+```
 
 ## Development
 
 ```bash
-git clone https://github.com/hanzoai/ui.git
-cd ui
+cd ~/work/hanzo/ui
 pnpm install
-pnpm dev           # Dev server on :3003
+
+# Development server (docs site)
+pnpm dev          # Port 3003
+
+# Build all packages
+pnpm build
+
+# Run tests
+pnpm test
+
+# Add component to registry
+pnpm shadcn add <component-name>
 ```
 
-### Build (critical order)
+## White-label theming
 
-```bash
-pnpm build:registry    # MUST run first -- generates JSON for CLI
-pnpm build             # Then build the app
+```typescript
+// Brand configuration for different orgs
+import { createTheme } from '@hanzo/ui/theme'
+
+const hanzoTheme = createTheme({
+  brand: 'hanzo',
+  colors: { primary: 'oklch(0.7 0.15 250)' }
+})
+
+const luxTheme = createTheme({
+  brand: 'lux',
+  colors: { primary: 'oklch(0.8 0.12 45)' }
+})
 ```
 
-### Commands
+## Pattern: Static-exported Next.js app with @hanzo/ui
 
-```bash
-pnpm dev               # Dev server
-pnpm build             # Build all
-pnpm lint              # Lint all workspaces
-pnpm typecheck         # Type checking
-pnpm test              # Unit tests (Vitest)
-pnpm test:e2e          # E2E tests (Playwright)
-pnpm changeset         # Create changeset for publishing
-pnpm health-check      # Component health check
+Used by billing.hanzo.ai, lux.id, and other sites:
+
+```tsx
+// app/layout.tsx
+import '@hanzo/ui/globals.css'
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en" className="dark">
+      <body className="bg-black text-white">{children}</body>
+    </html>
+  )
+}
 ```
-
-## White-label / branding
-
-The repo supports white-label forks via brand configs in `brand.config.ts`. Zoo and Lux brands are configured. Create a `{BRAND}.brand.ts` file to customize colors, logos, and typography.
-
-## Adding a new component
-
-1. Create in BOTH themes: `app/registry/{default,new-york}/ui/my-component.tsx`
-2. Create example: `app/registry/default/example/my-component-demo.tsx`
-3. Create docs: `app/content/docs/components/my-component.mdx`
-4. Update nav: `app/config/docs.ts`
-5. Build: `pnpm build:registry`
-
-## Import path transformation
-
-Registry files use `@/registry/default/ui/button`. After CLI install into a user project, paths are rewritten to `@/components/ui/button`.
-
-## Known gotchas (from LLM.md)
-
-- Registry index is `Index[style][name]`, NOT `Index[name]` -- caused silent block render failures
-- Shiki `getHighlighter` incompatible with static export -- replaced with basic pre/code
-- Some blocks have Server Component issues with event handlers
-- Firebase auth split to optional `@hanzo/auth-firebase` package
-- `@hanzo/auth` v2.6.0 uses pluggable provider registry
 
 ## Related Skills
 
-- `hanzo/hanzo-desktop.md` - Desktop app (has its own internal hanzo-ui lib, separate from this)
-- `frontend/react-component-patterns.md` - React fundamentals
-- `frontend/nextjs-app-router.md` - Next.js integration
-- `hanzo/hanzo-node.md` - Backend infrastructure
+- `hanzo/hanzo-billing.md` -- Billing portal (uses @hanzo/ui)
+- `hanzo/hanzo-brand.md` -- Brand guidelines and design tokens
+- `hanzo/hanzo-chat.md` -- Chat UI
+- `hanzo/hanzo-id.md` -- Login UI
 
 ---
 
-**Last Updated**: 2026-03-13
+**Last Updated**: 2026-03-23
 **Category**: Hanzo Ecosystem
-**Related**: frontend, react, components, tailwind, shadcn, design-system
-**Prerequisites**: React 19, TypeScript, Tailwind CSS 4, pnpm
+**Related**: ui, react, components, shadcn, tailwind, design-system
+**Prerequisites**: React 19, Tailwind CSS 4, pnpm
