@@ -1,41 +1,24 @@
 # Hanzo ZAP - Protocol Bridge Sidecar
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-orm.md`, `hanzo/hanzo-database.md`, `hanzo/hanzo-kv.md`
+**Related Skills**: `hanzo/hanzo-mcp.md`, `hanzo/hanzo-sql.md`, `hanzo/hanzo-kv.md`
 
 ## Overview
 
-Hanzo ZAP (`hanzoai/zap`) is a **Go sidecar that bridges the ZAP protocol to backend infrastructure services**. It runs as a sidecar container alongside databases and caches, translating ZAP protocol calls from the Hanzo Gateway into native protocol calls against the co-located backend. Supports 4 modes: SQL (PostgreSQL via pgx), KV (Valkey/Redis), Datastore (ClickHouse native TCP), and DocumentDB (MongoDB wire protocol). ZAP's schema maps 1:1 with MCP (Model Context Protocol), so any service implementing the ZAP interface gets MCP tools and resources for free.
-
-### What it actually is
-
-- Single Go binary (`bin/zap`) with mode flag selecting the backend
-- 4 backend proxies, each in `internal/`:
-  - `sql/` -- PostgreSQL proxy (pgx v5 driver)
-  - `kv/` -- Valkey/Redis proxy (hanzoai/kv-go v9)
-  - `datastore/` -- ClickHouse proxy (clickhouse-go v2, native TCP)
-  - `documentdb/` -- MongoDB/FerretDB proxy (mongo-driver v2)
-- MCP tool and resource definitions in `internal/mcp.go`
-- ZAP protocol implementation via `luxfi/zap` v0.2.0 (mDNS service discovery)
-- Docker image: `ghcr.io/hanzoai/zap:latest`
-- Healthcheck on port 9651 (`/health`)
-- Runs as a sidecar in the `sql` StatefulSet (not a standalone Deployment)
-
-### ZAP-MCP mapping
-
-ZAP's schema natively maps 1:1 with MCP:
-- ZAP tools --> MCP tools (listTools, callTool)
-- ZAP resources --> MCP resources (listResources, readResource)
-- ZAP prompts --> MCP prompts (listPrompts, getPrompt)
-
-Any service implementing the ZAP interface gets MCP for free via the ZAP Gateway (`zapd`).
+Hanzo ZAP (`hanzoai/zap`) is a **Go sidecar that bridges the ZAP protocol to backend infrastructure services**. Runs as a sidecar container alongside databases and caches, translating ZAP protocol calls into native protocol calls. Supports 4 modes: SQL (PostgreSQL), KV (Valkey/Redis), Datastore (ClickHouse), and DocumentDB (MongoDB wire protocol). ZAP's schema maps 1:1 with MCP, so any ZAP service gets MCP tools for free.
 
 ## When to use
 
-- Deploying database sidecars in K8s for ZAP/MCP access
 - Adding MCP tool support to PostgreSQL, Redis, ClickHouse, or MongoDB
 - Building AI agents that need direct database access via MCP
+- Deploying database sidecars in K8s for ZAP/MCP access
 - Bridging Hanzo Gateway to backend infrastructure
+
+## Hard requirements
+
+1. **Sidecar pattern**: ZAP runs in the same pod as the database, communicating via localhost
+2. **Port 9651**: Default ZAP listen port (same as Lux staking port by convention)
+3. **Single mode per instance**: Each sidecar runs one mode (`--mode sql|kv|datastore|documentdb`)
 
 ## Quick reference
 
@@ -43,52 +26,28 @@ Any service implementing the ZAP interface gets MCP for free via the ZAP Gateway
 |------|-------|
 | Repo | `github.com/hanzoai/zap` |
 | Module | `github.com/hanzoai/zap-sidecar` |
-| Go | 1.26 |
-| Branch | `main` |
+| Go version | 1.26 |
 | Binary | `bin/zap` |
 | Modes | `sql`, `kv`, `datastore`, `documentdb` |
 | Default port | 9651 |
 | Health | `GET /health` (port 9651) |
-| Docker image | `ghcr.io/hanzoai/zap:latest` |
+| Image | `ghcr.io/hanzoai/zap:latest` |
 | Build | `make build` |
 | Test | `make test` |
-| Docker build | `make docker` |
-| Push | `make push` |
-| CI | GitHub Actions (Build and Deploy, Release) |
-| License | MIT |
+| Service type | mDNS: `_hanzo._tcp` |
+| K8s manifests | `universe/infra/k8s/sql/` (sidecar in sql StatefulSet) |
 
-## Project structure
+## ZAP-MCP mapping
 
-```
-hanzoai/zap/
-  go.mod                    # github.com/hanzoai/zap-sidecar, Go 1.26
-  go.sum
-  Makefile                  # build, test, docker, push, clean
-  Dockerfile                # Multi-stage, multi-arch (BuildKit)
-  .dockerignore
-  cmd/
-    zap-sidecar/
-      main.go               # Entry point, mode switch, signal handling
-  internal/
-    mcp.go                  # MCP tool/resource definitions for all backends
-    sql/
-      proxy.go              # PostgreSQL proxy (pgx v5)
-    kv/
-      proxy.go              # Valkey/Redis proxy (kv-go v9)
-    datastore/
-      proxy.go              # ClickHouse proxy (clickhouse-go v2)
-    documentdb/
-      proxy.go              # MongoDB/FerretDB proxy (mongo-driver v2)
-```
+ZAP's schema natively maps 1:1 with MCP:
 
-## Dependencies
+| ZAP Concept | MCP Equivalent |
+|-------------|----------------|
+| ZAP tools | `listTools`, `callTool` |
+| ZAP resources | `listResources`, `readResource` |
+| ZAP prompts | `listPrompts`, `getPrompt` |
 
-From `go.mod`:
-- `github.com/luxfi/zap` v0.2.0 -- ZAP protocol + mDNS discovery
-- `github.com/jackc/pgx/v5` v5.7.2 -- PostgreSQL driver
-- `github.com/hanzoai/kv-go/v9` v9.17.2-hanzo.1 -- Valkey/Redis client
-- `github.com/ClickHouse/clickhouse-go/v2` v2.43.0 -- ClickHouse native driver
-- `go.mongodb.org/mongo-driver/v2` v2.5.0 -- MongoDB driver
+Any service implementing the ZAP interface gets MCP for free via the ZAP Gateway (`zapd`).
 
 ## MCP tools by mode
 
@@ -121,7 +80,7 @@ Resource: `hanzo://kv/info` -- server info and statistics
 | `datastore_exec` | Execute DDL/non-SELECT statement |
 | `datastore_insert` | Bulk insert rows via native batch protocol |
 | `datastore_tables` | List tables and metadata |
-| `datastore_health` | Check connection health and server version |
+| `datastore_health` | Check connection health |
 
 Resource: `hanzo://datastore/tables` -- table definitions and schemas
 
@@ -137,9 +96,17 @@ Resource: `hanzo://datastore/tables` -- table definitions and schemas
 
 Resource: `hanzo://documentdb/collections` -- collection list and indexes
 
-## Quickstart
+## Dependencies
 
-### Build and run locally
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `github.com/luxfi/zap` | v0.2.0 | ZAP protocol + mDNS discovery |
+| `github.com/jackc/pgx/v5` | v5.7.2 | PostgreSQL driver |
+| `github.com/hanzoai/kv-go/v9` | v9.17.2-hanzo.1 | Valkey/Redis client |
+| `github.com/ClickHouse/clickhouse-go/v2` | v2.43.0 | ClickHouse native driver |
+| `go.mongodb.org/mongo-driver/v2` | v2.5.0 | MongoDB driver |
+
+## Quickstart
 
 ```bash
 git clone https://github.com/hanzoai/zap.git
@@ -161,21 +128,15 @@ ZAP_DATABASE=hanzo \
   ./bin/zap --mode documentdb --backend localhost:27017
 ```
 
-### Docker
+## K8s sidecar deployment
 
-```bash
-make docker
-docker run -e ZAP_MODE=sql -e ZAP_BACKEND="postgres://..." ghcr.io/hanzoai/zap:latest
-```
-
-### K8s sidecar deployment
-
-ZAP runs as a sidecar container in a StatefulSet, not as a standalone Deployment. Example pod spec:
+ZAP runs as a sidecar in a StatefulSet, not a standalone Deployment:
 
 ```yaml
+# In the sql StatefulSet
 containers:
   - name: postgres
-    image: postgres:16
+    image: ghcr.io/hanzoai/sql:latest
   - name: zap
     image: ghcr.io/hanzoai/zap:latest
     args: ["--mode", "sql", "--backend", "localhost:5432"]
@@ -187,15 +148,24 @@ containers:
         port: 9651
 ```
 
+## Wire format
+
+ZAP is a native TCP binary protocol on port 9651. The wire format is designed for zero-copy operation:
+
+- **Header**: 8 bytes (4-byte length + 4-byte type)
+- **Body**: Protobuf-encoded request/response
+- **Streaming**: Bidirectional streaming for large result sets
+- **Service mesh**: mDNS discovery for automatic sidecar registration
+
 ## Environment variables
 
 | Variable | Description | Default |
 |----------|------------|---------|
-| `ZAP_MODE` | Backend mode (sql/kv/datastore/documentdb) | required |
+| `ZAP_MODE` | Backend mode | required |
 | `ZAP_BACKEND` | Backend address (host:port or DSN) | required |
 | `ZAP_PASSWORD` | Backend password | empty |
-| `ZAP_USER` | Backend username (datastore) | empty |
-| `ZAP_DATABASE` | Database name (datastore/documentdb) | empty |
+| `ZAP_USER` | Backend username | empty |
+| `ZAP_DATABASE` | Database name | empty |
 
 ## CLI flags
 
@@ -210,24 +180,24 @@ containers:
 
 ## Troubleshooting
 
-- **"unknown mode" error**: Set `--mode` or `ZAP_MODE` to one of: sql, kv, datastore, documentdb
-- **Connection refused**: Verify backend is reachable from sidecar (same pod in K8s = localhost)
-- **Health check fails**: Sidecar listens on port 9651, check `wget -qO- http://localhost:9651/health`
-- **Auto-deploy disabled**: ZAP is a sidecar in the sql StatefulSet; auto-restarting would bounce the database. Build/push image, deploy manually
-- **Docker build fails**: Use `golang:1.26-alpine` (not pinned alpine version)
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| "unknown mode" error | Invalid mode | Set `--mode` to: sql, kv, datastore, documentdb |
+| Connection refused | Backend unreachable | Same pod = localhost. Check backend container |
+| Health check fails | Wrong port | ZAP listens on 9651: `wget -qO- http://localhost:9651/health` |
+| Auto-deploy disabled | Sidecar in StatefulSet | Build/push image, deploy manually (bouncing would restart DB) |
 
 ## Related Skills
 
-- `hanzo/hanzo-orm.md` -- Go ORM that uses ZAP as a backend
-- `hanzo/hanzo-database.md` -- Database configuration patterns
+- `hanzo/hanzo-mcp.md` -- MCP tools (ZAP provides MCP for free)
 - `hanzo/hanzo-sql.md` -- PostgreSQL (hanzoai/sql)
 - `hanzo/hanzo-kv.md` -- Valkey/Redis (hanzoai/kv)
 - `hanzo/hanzo-datastore.md` -- ClickHouse analytics
-- `hanzo/hanzo-mcp.md` -- MCP tools (ZAP provides MCP for free)
+- `hanzo/hanzo-documentdb.md` -- MongoDB wire protocol
 
 ---
 
-**Last Updated**: 2026-03-13
+**Last Updated**: 2026-03-23
 **Category**: Hanzo Ecosystem
 **Related**: zap, sidecar, protocol-bridge, mcp, postgresql, redis, clickhouse, mongodb
-**Prerequisites**: Go 1.26, Docker (for container builds)
+**Prerequisites**: Go 1.26, Docker
