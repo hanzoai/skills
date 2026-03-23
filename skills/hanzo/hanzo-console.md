@@ -1,56 +1,63 @@
 # Hanzo Console - AI Observability and Prompt Management
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-chat.md`, `hanzo/hanzo-mcp.md`, `hanzo/python-sdk.md`
+**Related Skills**: `hanzo/hanzo-chat.md`, `hanzo/hanzo-cloud.md`, `hanzo/python-sdk.md`
 
 ## Overview
 
-Hanzo Console is the **observability and prompt management layer** for AI applications. It captures traces, scores, datasets, and prompts from any LLM application and provides a dashboard for debugging, evaluation, and cost analysis. Compatible with the Langfuse SDK and OpenTelemetry, it integrates natively with every Hanzo service.
-
-### Why Hanzo Console?
-
-- **Full trace capture**: Every LLM call, tool use, and agent step recorded
-- **Cost attribution**: Per-request, per-user, per-model cost breakdown
-- **Prompt management**: Version, test, and deploy prompts from a central registry
-- **Datasets & evals**: Build evaluation sets and run automated scoring
-- **Langfuse compatible**: Drop-in replacement for Langfuse SDK
-- **Part of Hanzo ecosystem**: Auto-instrumented for Hanzo Chat, Web3, Commerce
+Hanzo Console is the **observability and prompt management layer** for AI applications. Fork of Langfuse. Captures traces, scores, datasets, and prompts from any LLM application. Provides a dashboard for debugging, evaluation, and cost analysis. Compatible with the Langfuse SDK and OpenTelemetry. Live at `console.hanzo.ai`.
 
 ## When to use
 
-Use this skill when:
-- The user wants to trace and debug LLM calls
-- The user needs cost analysis across models and providers
-- The user wants to manage prompt versions and deployments
-- The user needs to build evaluation datasets and run scoring
-- The user wants to monitor AI application performance
+- Tracing and debugging LLM calls, tool use, and agent steps
+- Cost attribution per-request, per-user, per-model
+- Managing prompt versions and deployments
+- Building evaluation datasets and running automated scoring
+- Monitoring AI application performance and latency
 
 ## Hard requirements
 
-1. **API Key required.** Use `HANZO_API_KEY` or the Langfuse-compatible pair `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY`. Get keys at https://console.hanzo.ai.
-2. **Never expose keys** in user-visible output, logs, or screenshots.
-3. **Traces are async.** The SDK batches and sends traces in the background. Call `flush()` before process exit.
-
-## Preflight checks
-
-Before making any request, silently verify:
-- `HANZO_API_KEY` is set, OR both `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set
-- If using Langfuse SDK, set `LANGFUSE_HOST=https://console.hanzo.ai`
+1. **API Key required**: Use `HANZO_API_KEY` or Langfuse pair `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY`
+2. **Never expose keys** in user-visible output, logs, or screenshots
+3. **Traces are async**: SDK batches in background. Call `flush()` before process exit
+4. **PostgreSQL backend**: Console uses `console` database on `postgres.hanzo.svc`
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
 | Dashboard | `https://console.hanzo.ai` |
-| API Base URL | `https://console.hanzo.ai/api` |
+| API Base | `https://console.hanzo.ai/api` |
 | Langfuse host | `https://console.hanzo.ai` |
+| Ingestion API | `https://console.hanzo.ai/api/public/ingestion` |
 | Auth (Hanzo) | `Authorization: Bearer ${HANZO_API_KEY}` |
 | Auth (Langfuse) | Basic auth with public/secret key pair |
-| Docs | https://hanzo.ai/docs/console |
+| Upstream | Langfuse |
+| Repo | `github.com/hanzoai/console` |
+| K8s manifests | `universe/infra/k8s/console/` |
+| Image | `ghcr.io/hanzoai/console:latest` |
+| Port | 3000 |
 
-## One-file quickstart
+## Architecture
 
-### Python (Langfuse SDK)
+```
+Your Application
+      |
+  Langfuse SDK / OTEL
+      |
+console.hanzo.ai/api/public/ingestion
+      |
+Console Backend (Node.js)
+      |
+  +---+---+
+  |       |
+PostgreSQL  ClickHouse
+(metadata)  (traces, optional)
+```
+
+Cloud API (`cloud.hanzo.ai`) POSTs traces to Console's ingestion endpoint for centralized observability.
+
+## Python quickstart (Langfuse SDK)
 
 ```python
 from langfuse import Langfuse
@@ -81,7 +88,7 @@ trace.score(name="quality", value=0.95, comment="Accurate and concise")
 lf.flush()
 ```
 
-### Python (Hanzo SDK decorator)
+## Python quickstart (Hanzo SDK decorator)
 
 ```python
 from hanzo import Hanzo
@@ -97,11 +104,9 @@ def chat(message: str) -> str:
         messages=[{"role": "user", "content": message}],
     )
     return response.choices[0].message.content
-
-result = chat("What is Hanzo?")
 ```
 
-### Python (OpenAI integration)
+## Python quickstart (OpenAI drop-in)
 
 ```python
 from langfuse.openai import openai
@@ -113,89 +118,58 @@ openai.api_key = os.environ["HANZO_API_KEY"]
 response = openai.chat.completions.create(
     model="zen-70b",
     messages=[{"role": "user", "content": "Hello!"}],
-    langfuse_trace_id="trace_abc",  # optional: link to existing trace
 )
 # Trace automatically sent to console.hanzo.ai
 ```
 
-### curl (API direct)
-
-```bash
-# Create trace
-curl -X POST https://console.hanzo.ai/api/public/traces \
-  -H "Content-Type: application/json" \
-  -u "${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}" \
-  -d '{
-    "name": "api-request",
-    "userId": "user_123",
-    "input": {"message": "Hello"},
-    "output": {"response": "Hi there!"}
-  }'
-
-# Get trace
-curl https://console.hanzo.ai/api/public/traces/{trace_id} \
-  -u "${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}"
-```
-
-## Endpoint selector
+## API reference
 
 ### Traces
 
-| Task | Endpoint | Method |
-|------|----------|--------|
-| Create trace | `POST /api/public/traces` | POST |
-| Get trace | `GET /api/public/traces/{id}` | GET |
-| List traces | `GET /api/public/traces` | GET |
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/public/traces` | Create trace |
+| GET | `/api/public/traces/{id}` | Get trace |
+| GET | `/api/public/traces` | List traces |
 
 ### Generations (LLM calls)
 
-| Task | Endpoint | Method |
-|------|----------|--------|
-| Create generation | `POST /api/public/generations` | POST |
-| Update generation | `PATCH /api/public/generations/{id}` | PATCH |
-| List generations | `GET /api/public/generations` | GET |
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/public/generations` | Create generation |
+| PATCH | `/api/public/generations/{id}` | Update generation |
+| GET | `/api/public/generations` | List generations |
 
 ### Scores
 
-| Task | Endpoint | Method |
-|------|----------|--------|
-| Create score | `POST /api/public/scores` | POST |
-| List scores | `GET /api/public/scores` | GET |
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/public/scores` | Create score |
+| GET | `/api/public/scores` | List scores |
 
 ### Prompts
 
-| Task | Endpoint | Method |
-|------|----------|--------|
-| Create prompt | `POST /api/public/prompts` | POST |
-| Get prompt | `GET /api/public/prompts/{name}` | GET |
-| List prompts | `GET /api/public/prompts` | GET |
-| Get prompt version | `GET /api/public/prompts/{name}/{version}` | GET |
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/public/prompts` | Create prompt |
+| GET | `/api/public/prompts/{name}` | Get prompt (latest) |
+| GET | `/api/public/prompts/{name}/{version}` | Get prompt version |
+| GET | `/api/public/prompts` | List prompts |
 
 ### Datasets
 
-| Task | Endpoint | Method |
-|------|----------|--------|
-| Create dataset | `POST /api/public/datasets` | POST |
-| List datasets | `GET /api/public/datasets` | GET |
-| Create dataset item | `POST /api/public/dataset-items` | POST |
-| Create dataset run | `POST /api/public/dataset-run-items` | POST |
-
-### Sessions
-
-| Task | Endpoint | Method |
-|------|----------|--------|
-| Get session | `GET /api/public/sessions/{id}` | GET |
-| List sessions | `GET /api/public/sessions` | GET |
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/public/datasets` | Create dataset |
+| GET | `/api/public/datasets` | List datasets |
+| POST | `/api/public/dataset-items` | Create dataset item |
+| POST | `/api/public/dataset-run-items` | Create dataset run |
 
 ## Prompt management
 
 Version, test, and deploy prompts from a central registry:
 
 ```python
-from langfuse import Langfuse
-
-lf = Langfuse(host="https://console.hanzo.ai")
-
 # Get latest production prompt
 prompt = lf.get_prompt("chat-system-prompt")
 compiled = prompt.compile(user_name="Alice")
@@ -214,92 +188,46 @@ response = client.chat.completions.create(
 ### Prompt lifecycle
 
 1. **Create**: Author prompt in Console dashboard or via API
-2. **Version**: Each edit creates a new version (immutable)
+2. **Version**: Each edit creates a new immutable version
 3. **Label**: Mark versions as `production`, `staging`, `latest`
-4. **Deploy**: SDK fetches by label; no code change needed to update prompts
+4. **Deploy**: SDK fetches by label; no code change needed
 5. **Evaluate**: A/B test prompt versions against datasets
 
-## Evaluation and datasets
+## Multi-org bootstrap
 
-Build evaluation pipelines:
+Console supports multi-org provisioning on startup:
 
-```python
-# Create evaluation dataset
-dataset = lf.create_dataset(name="chat-eval-v1")
-
-# Add items
-lf.create_dataset_item(
-    dataset_name="chat-eval-v1",
-    input={"messages": [{"role": "user", "content": "What is Hanzo?"}]},
-    expected_output="Hanzo is an AI infrastructure company...",
-)
-
-# Run evaluation
-for item in lf.get_dataset("chat-eval-v1").items:
-    response = client.chat.completions.create(
-        model="zen-70b",
-        messages=item.input["messages"],
-    )
-
-    # Score the result
-    item.link(
-        trace_id=response.langfuse_trace_id,
-        run_name="zen-70b-eval-v1",
-    )
+```bash
+HANZO_INIT_ORG_IDS=hanzo,lux,zoo,pars
+HANZO_INIT_ORG_NAMES="Hanzo AI,Lux Network,Zoo Foundation,Pars"
+HANZO_INIT_USER_EMAIL=z@hanzo.ai
+HANZO_INIT_PROJECT_ORG_ID=hanzo
 ```
 
-## MCP Integration
+## K8s deployment
 
-Expose observability as MCP tools:
-
-```typescript
-import { MCPServer, Tool } from '@hanzo/mcp'
-
-const consoleTools: Tool[] = [
-  {
-    name: 'console_get_trace',
-    description: 'Get trace details for debugging an LLM call',
-    parameters: {
-      trace_id: { type: 'string', required: true }
-    },
-    async execute({ trace_id }) {
-      const res = await fetch(
-        `https://console.hanzo.ai/api/public/traces/${trace_id}`,
-        { headers: { 'Authorization': `Bearer ${process.env.HANZO_API_KEY}` } }
-      )
-      return await res.json()
-    }
-  },
-  {
-    name: 'console_get_prompt',
-    description: 'Fetch a managed prompt by name and label',
-    parameters: {
-      name: { type: 'string', required: true },
-      label: { type: 'string', default: 'production' }
-    },
-    async execute({ name, label }) {
-      const res = await fetch(
-        `https://console.hanzo.ai/api/public/prompts/${name}?label=${label}`,
-        { headers: { 'Authorization': `Bearer ${process.env.HANZO_API_KEY}` } }
-      )
-      return await res.json()
-    }
-  },
-  {
-    name: 'console_cost_summary',
-    description: 'Get cost breakdown by model and time period',
-    parameters: {
-      period: { type: 'string', enum: ['day', 'week', 'month'], default: 'week' }
-    },
-    async execute({ period }) {
-      const res = await fetch(
-        `https://console.hanzo.ai/api/public/metrics/cost?period=${period}`,
-        { headers: { 'Authorization': `Bearer ${process.env.HANZO_API_KEY}` } }
-      )
-      return await res.json()
-    }
-  }
-]
+```yaml
+# universe/infra/k8s/console/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: console
+  namespace: hanzo
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: console
+          image: ghcr.io/hanzoai/console:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: console-secrets  # KMS-synced
+          env:
+            - name: DATABASE_URL
+              value: postgresql://console:pass@postgres.hanzo.svc:5432/console
 ```
 
 ## Error handling
@@ -310,20 +238,19 @@ const consoleTools: Tool[] = [
 | 400 | Bad request | Check trace/generation format |
 | 401 | Unauthorized | Check API keys or Langfuse credentials |
 | 404 | Not found | Check trace/prompt/dataset ID |
-| 429 | Rate limited | SDK auto-retries; manual calls should backoff |
+| 429 | Rate limited | SDK auto-retries; manual calls should back off |
 | 500 | Server error | Retry up to 3 times |
 
-## Official links
+## Related Skills
 
-- Dashboard: https://console.hanzo.ai
-- Documentation: https://hanzo.ai/docs/console
-- Langfuse SDK: https://github.com/langfuse/langfuse-python
-- Hanzo Python SDK: https://github.com/hanzoai/python-sdk
-- Hanzo AI: https://hanzo.ai
+- `hanzo/hanzo-cloud.md` -- Cloud API (sends traces to Console)
+- `hanzo/hanzo-chat.md` -- Chat app (auto-instrumented)
+- `hanzo/hanzo-o11y.md` -- Infrastructure observability (SigNoz)
+- `hanzo/python-sdk.md` -- Python SDK with `@observe()` decorator
 
 ---
 
-**Last Updated**: 2026-02-26
+**Last Updated**: 2026-03-23
 **Category**: Hanzo Ecosystem
-**Related**: observability, tracing, prompts, evaluation
-**Prerequisites**: Python, Langfuse SDK or Hanzo SDK
+**Related**: observability, tracing, prompts, evaluation, langfuse, cost-tracking
+**Prerequisites**: Python or Node.js, Langfuse SDK or Hanzo SDK
