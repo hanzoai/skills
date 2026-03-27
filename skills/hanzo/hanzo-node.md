@@ -150,6 +150,12 @@ lm_studio_base_url = "http://localhost:1234"
 
 See the full `hanzo.toml` in the repo for all options including logging, performance tuning, wallet configuration, and development settings.
 
+## Important: Deno binary (2026-03-27)
+- The 112MB deno binary has been removed from git and LFS tracking
+- `hanzo-bin/hanzo-node/shinkai-tools-runner-resources/deno` is in `.gitignore`
+- Deno must be installed separately on the host or in the container at build time
+- Do NOT commit the deno binary back into the repo
+
 ## Building and running
 
 ```bash
@@ -216,7 +222,7 @@ Docker build files are in `docker/` and `docker-build/`. The node is designed to
 
 ---
 
-**Last Updated**: 2026-03-13
+**Last Updated**: 2026-03-27
 **Category**: Hanzo Ecosystem
 **Related**: rust, ai, infrastructure, libp2p, mcp, agents
 **Prerequisites**: Rust >= 1.85, basic understanding of AI agent systems

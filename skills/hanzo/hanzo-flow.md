@@ -9,10 +9,10 @@ Visual workflow builder for AI applications. Fork of Langflow.
 - **Docker Image**: ghcr.io/hanzoai/flow:main
 
 ## Tech Stack
-- **Runtime**: Python 3.12 (bookworm-slim)
+- **Runtime**: Python 3.12 (bookworm-slim builder, trixie-slim runtime)
 - **Framework**: FastAPI + Typer CLI
 - **Package Manager**: uv (workspace with pyproject.toml)
-- **Database**: PostgreSQL (via FLOW_DATABASE_URL)
+- **Database**: PostgreSQL (via FLOW_DATABASE_URL, requires `--extra postgresql` for psycopg driver)
 
 ## Workspace Structure
 - `src/backend/base/` — core flow package (langflow-base on PyPI)
@@ -28,23 +28,23 @@ Visual workflow builder for AI applications. Fork of Langflow.
 
 ## Build & Deploy
 ```bash
-uv sync --frozen --no-dev
-python -m flow run --host 0.0.0.0 --port 3006
+uv sync --frozen --no-dev --extra postgresql
+python -m flow run --host 0.0.0.0 --port 7860 --backend-only
 ```
-- Dockerfile: `python -m flow run` (uv doesn't generate console scripts)
-- K8s: deployment/flow, port 7860 (health check on /health)
+- Dockerfile CMD: `python -m flow run --host 0.0.0.0 --port 7860 --backend-only`
+- Docker build uses `--extra postgresql` (psycopg driver required for production PG)
+- K8s: deployment/flow, service/flow, port 7860
+- Health check: `GET /health` on port 7860
+- Both flow.hanzo.ai and app.flow.hanzo.ai route to the flow service
 
-## CRITICAL: Package Rename Status (2026-03-26)
+## Package Rename Status (2026-03-27)
 - Internal package renamed from `langflow` → `flow` (979 files)
 - PyPI package: `hanzo-flow` (was `hanzoflow`)
 - CLI binary: `flow` (via `[project.scripts] flow = "flow.launcher:main"`)
-- **BROKEN**: The rename has cascading import failures:
-  - Missing v1/v2 router exports (fixed)
-  - Missing frontend static files at flow/frontend
-  - Telemetry attribute renames (_get_langflow_desktop → _get_flow_desktop)
-  - Permission errors on /app/flow directory
-- **Current state**: Scaled to 0 in K8s. Needs proper incremental revert with tests.
+- Dockerfile now uses `python -m flow run` (working as of 2026-03-27)
+- Telemetry renamed: `_get_langflow_desktop` → `_get_flow_desktop`
 - Env vars still use `LANGFLOW_*` prefix (backward compat)
+- LANGFLOW_SSO_ENABLED, LANGFLOW_OIDC_* used for SSO config
 
 ## Upstream
 - Fork of: langflow-ai/langflow
