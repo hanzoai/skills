@@ -4,20 +4,21 @@ API gateway for all Hanzo services. KrakenD-based with Go auth middleware.
 
 ## URLs
 - **Production**: api.hanzo.ai
-- **Health**: api.hanzo.ai/health
+- **Health**: api.hanzo.ai/__health (KrakenD built-in, via gateway.json)
 - **Models**: api.hanzo.ai/v1/models (41 models, 14 Zen)
 - **IAM Client ID**: hanzo-gateway
 - **Docker Image**: ghcr.io/hanzoai/gateway:main
 
 ## Tech Stack
-- **Framework**: KrakenD (Go)
+- **Framework**: KrakenD (Go) with Lura router (luraproject/lura/v2)
+- **HTTP Engine**: Gin
 - **Auth**: Custom Go middleware (auth_middleware.go)
 - **Config**: configs/hanzo/gateway.json (KrakenD endpoints)
 
 ## Key Files
 - `auth_middleware.go` — JWT validation, billing check, X-IAM-* header injection
 - `auth_middleware_security_test.go` — 12+ security regression tests
-- `router_engine.go` — Gin engine setup
+- `router_engine.go` — Gin engine setup, health route dedup, host-based routing
 - `configs/hanzo/gateway.json` — KrakenD endpoint definitions (146 endpoints)
 
 ## Security (2026-03-25)
@@ -31,6 +32,12 @@ API gateway for all Hanzo services. KrakenD-based with Go auth middleware.
 - Gateway sets: X-IAM-Org-Id, X-IAM-User-Id, X-IAM-User-Email
 - KrakenD propagates same headers via propagate_claims
 - Billing check: GET /api/v1/billing/balance on commerce (fail-open)
+
+## Health Endpoint (2026-03-27)
+- `/__health` is defined in gateway.json (KrakenD backend config)
+- `NewEngine()` injects `disable_health: true` into `luragin.Namespace` extra_config
+- This prevents Lura from registering a duplicate `/__health` route (which panics Gin)
+- Do NOT manually register `/__health` in router_engine.go — KrakenD handles it
 
 ## Telemetry (2026-03-25)
 - OpenTelemetry exporter to otel-collector.hanzo.svc:4317
