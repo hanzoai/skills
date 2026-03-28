@@ -1,4 +1,4 @@
-<!-- Updated: 2026-03-26T15:03:36Z -->
+<!-- Updated: 2026-03-28T14:30:00Z -->
 # Hanzo IAM - Identity and Access Management Server
 
 **Category**: Hanzo Ecosystem
@@ -569,7 +569,11 @@ curl -f http://localhost:8000/api/health
 
 ---
 
-**Last Updated**: 2026-03-13
+**Last Updated**: 2026-03-28
+
+### Recent Changes (2026-03-28)
+- **Password grant support**: OAuth2 `password` grant type now works when enabled on the application. Previously the switch statement fell through to a nil token crash.
+- **CI**: Removed lint gate from Docker build workflow (lint was timing out and blocking image pushes).
 **Category**: Hanzo Ecosystem
 **Related**: iam, casdoor, oauth2, oidc, saml, ldap, scim, webauthn, identity, authentication, authorization, sso
 **Prerequisites**: Go, Docker, PostgreSQL, OAuth2/OIDC concepts

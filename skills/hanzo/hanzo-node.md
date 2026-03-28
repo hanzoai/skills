@@ -37,6 +37,7 @@ Repo: `github.com/hanzoai/node`. Companion desktop frontend: `github.com/hanzoai
 | Repo | `github.com/hanzoai/node` |
 | Binary | `hanzo-bin/hanzo-node` |
 | CLI | `hanzo-bin/hanzoai` |
+| Makefile binary | `hanzoai` (renamed from `hanzod` on 2026-03-28) |
 | Build | `cargo build` |
 | Test | `IS_TESTING=1 cargo test -- --test-threads=1` |
 | API port | 3690 |
