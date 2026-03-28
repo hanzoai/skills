@@ -35,8 +35,16 @@ Hanzo Console is the **observability and prompt management layer** for AI applic
 | Upstream | Langfuse |
 | Repo | `github.com/hanzoai/console` |
 | K8s manifests | `universe/infra/k8s/console/` |
-| Image | `ghcr.io/hanzoai/console:latest` |
-| Port | 3000 |
+| Image | `ghcr.io/hanzoai/console:main` |
+| Worker Image | `ghcr.io/hanzoai/console-worker:main` |
+| Port | 3000 (web), 3030 (worker) |
+| IAM Client ID | hanzo-console |
+| Worker health | `/api/health` (NOT `/api/public/health`) |
+
+### Recent Changes (2026-03-28)
+- Tracking embed + product keys section added to console settings
+- Worker readiness/liveness probes fixed: path `/api/public/health` → `/api/health`
+- IAM OAuth provider registered (env: `IAM_CLIENT_ID`, `IAM_CLIENT_SECRET`, `IAM_SERVER_URL`)
 
 ## Architecture
 
