@@ -28,9 +28,10 @@ API gateway for all Hanzo services. KrakenD-based with Go auth middleware.
 - Error messages sanitized ("Invalid token" — no JWT internals leaked)
 - 7 regression tests for header injection vectors
 
-## Headers
-- Gateway sets: X-IAM-Org-Id, X-IAM-User-Id, X-IAM-User-Email
+## Headers (2026-03-28)
+- Gateway sets: X-User-Id, X-Org-Id, X-User-Email (unified, no IAM prefix)
 - KrakenD propagates same headers via propagate_claims
+- JWT claims: extracts `sub` (user ID), `owner` (org), `email`, with fallback to `preferred_username`/`name` when `sub` is empty (Casdoor compatibility)
 - Billing check: GET /api/v1/billing/balance on commerce (fail-open)
 
 ## Health Endpoint (2026-03-27)
