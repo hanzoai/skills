@@ -400,7 +400,7 @@ docker build --platform linux/amd64 -t ghcr.io/hanzoai/commerce:latest .
 | `IAM_CLIENT_ID` | - | IAM client ID |
 | `IAM_CLIENT_SECRET` | - | IAM client secret |
 | `ANALYTICS_ENDPOINT` | - | Analytics collector HTTP URL |
-| `INSIGHTS_ENABLED` | `false` | PostHog product analytics |
+| `INSIGHTS_ENABLED` | `false` | Hanzo Insights product analytics |
 | `ANALYTICS_ENABLED` | `false` | Umami-like web analytics |
 
 ## API Endpoints
