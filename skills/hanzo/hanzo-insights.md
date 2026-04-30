@@ -5,11 +5,11 @@
 
 ## Overview
 
-Hanzo Insights is a **full product analytics platform** -- a PostHog fork with product analytics, feature flags, session recording, A/B testing, heatmaps, LLM analytics, error tracking, surveys, web analytics, and a custom query language (InsightsQL). Polyglot monorepo: Django/Python backend, React/TypeScript frontend, Rust high-performance services, Go livestream server. ClickHouse for event storage, PostgreSQL for metadata, Kafka for event streaming, Redis for caching. Self-hostable with Docker Compose or K8s.
+Hanzo Insights is a **full product analytics platform** with product analytics, feature flags, session recording, A/B testing, heatmaps, LLM analytics, error tracking, surveys, web analytics, and a custom query language (InsightsQL). Polyglot monorepo: Django/Python backend, React/TypeScript frontend, Rust high-performance services, Go livestream server. ClickHouse for event storage, PostgreSQL for metadata, Kafka for event streaming, Redis for caching. Self-hostable with Docker Compose or K8s.
 
 ### Why Hanzo Insights?
 
-- **PostHog fork**: Full product analytics suite, rebranded under `@hanzo/` namespace
+- **Hanzo brand**: Full product analytics suite under `@hanzo/` namespace
 - **40+ product modules**: analytics, feature flags, experiments, session replay, error tracking, LLM analytics, surveys, web analytics, notebooks, workflows, data warehouse, CDP
 - **InsightsQL**: Custom SQL-like query language (ANTLR grammar, Python + C++ parsers)
 - **Multi-language SDKs**: JavaScript (`@hanzo/insights`), Node.js (`@hanzo/insights-node`), Python (`hanzo_insights`), Go (`insights-go`), Rust (`insights-rs`)
@@ -60,7 +60,6 @@ Repo: `hanzoai/insights`. License: MIT.
 | Item | Value |
 |------|-------|
 | Repo | `github.com/hanzoai/insights` |
-| Upstream | PostHog fork |
 | License | MIT |
 | Dashboard | `https://insights.hanzo.ai` |
 | API | `https://insights.hanzo.ai/api/` |
@@ -267,5 +266,5 @@ Environment variables: `INSIGHTS_CLI_HOST`, `INSIGHTS_CLI_API_KEY`, `INSIGHTS_CL
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: analytics, posthog, feature-flags, ab-testing, session-recording, clickhouse, insightsql, llm-analytics, error-tracking
+**Related**: analytics, insights, feature-flags, ab-testing, session-recording, clickhouse, insightsql, llm-analytics, error-tracking
 **Prerequisites**: Python, TypeScript, Docker, analytics concepts
