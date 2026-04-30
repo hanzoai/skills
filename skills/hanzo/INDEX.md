@@ -268,7 +268,7 @@ NATS pub/sub and Kafka event streaming.
 Loki log aggregation and VictoriaMetrics time-series.
 
 **Hanzo Sentry** (`hanzo-sentry.md`) | **Hanzo Insights** (`hanzo-insights.md`)
-Error tracking (Sentry fork) and product analytics (PostHog fork).
+Error tracking (Sentry fork) and product analytics (Hanzo Insights).
 
 ### AI Models & Training (8 skills)
 
