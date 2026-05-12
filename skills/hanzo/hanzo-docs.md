@@ -166,16 +166,44 @@ Service-specific docs have vanity URLs:
 - `hanzo.ai/docs/api` → Full API reference
 - `hanzo.ai/docs/sdks/python` → Python SDK guide
 
+## OnyxPlus consumer
+
+`onyx-plus/internal` (`internal.onyxplus.{env}.satschel.com`) is an
+engineering docs site built on `@hanzo/docs`. Two quirks worth knowing
+for future consumers:
+
+1. **Vendor workaround**: `@hanzo/docs@16.4.2` and sibling 16.7.5
+   packages were published with unresolved `workspace:*` deps including
+   `@hanzo/docs-tailwind` (never published to npm at all). OnyxPlus
+   internal vendors `~/work/hanzo/docs/packages/*` into
+   `vendor/hanzo-docs/packages/` and wires a `pnpm-workspace.yaml` so
+   `workspace:*` resolves locally. A `.pnpmfile.cjs` strips workspace
+   refs to packages not vendored (build-only tooling).
+   **Upstream fix**: add a `prepublishOnly` hook that rewrites
+   `workspace:*` → concrete versions, or publish the missing packages.
+
+2. **API renames** between docs versions:
+   - `app/layout.tsx`: `@hanzo/docs/ui/provider/next` (missing in
+     published umbrella) → use `@hanzo/docs-core/framework/next` ×
+     `@hanzo/docs/ui/provider/base`
+   - `lib/source.ts`: `docs.toFumadocsSource()` → `docs.toSource()`
+
+OnyxPlus internal is satschel.com-gated via NextAuth v5 + Google OAuth
+(not Hanzo IAM -- engineering-only audience).
+
+See: `~/work/onyxplus/internal/` and `onyx-plus/onyx-plus-internal.md`.
+
 ## Related Skills
 
 - `hanzo/python-sdk.md` - Python SDK (documented here)
 - `hanzo/js-sdk.md` - JS SDK (documented here)
 - `hanzo/hanzo-brand.md` - Brand guidelines for docs styling
 - `hanzo/hanzo-cloud.md` - Cloud dashboard (links to docs)
+- `onyx-plus/onyx-plus-internal.md` - OnyxPlus internal docs site
 
 ---
 
-**Last Updated**: 2026-03-13
+**Last Updated**: 2026-05-12
 **Category**: Hanzo Ecosystem
 **Related**: documentation, fumadocs, mdx, nextjs, multi-brand
 **Prerequisites**: MDX, Next.js basics
