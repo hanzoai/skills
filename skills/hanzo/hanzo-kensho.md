@@ -69,38 +69,38 @@ Kensho implements the Zen MoDE (Mixture of Diverse Experts) methodology applied 
 
 ```
 Text Prompt
-    |
-    v
+ |
+ v
 ┌──────────────────────────────┐
-│ Llama 3.1-8B-Instruct        │ (frozen text encoder)
-│ + CLIP/T5 text encoders      │
+│ Llama 3.1-8B-Instruct │ (frozen text encoder)
+│ + CLIP/T5 text encoders │
 └──────────┬───────────────────┘
-           |
-           v
+ |
+ v
 ┌──────────────────────────────┐
-│ Kensho DiT (17B params)      │
-│                              │
-│  PatchEmbed(4ch -> 1024dim)  │
-│  + RoPE positional encoding  │
-│  + Timestep embedding        │
-│                              │
-│  Joint Transformer Blocks:   │
-│    - Cross-attention (img+txt)│
-│    - adaLN modulation        │
-│    - MoE FFN (SwiGLU)        │
-│      4 experts, top-2 routing│
-│      + load balancing loss   │
-│                              │
-│  Single Transformer Blocks:  │
-│    - Self-attention (img)    │
-│    - adaLN modulation        │
-│    - MoE FFN (SwiGLU)        │
-│                              │
-│  Output projection           │
+│ Kensho DiT (17B params) │
+│ │
+│ PatchEmbed(4ch -> 1024dim) │
+│ + RoPE positional encoding │
+│ + Timestep embedding │
+│ │
+│ Joint Transformer Blocks: │
+│ - Cross-attention (img+txt)│
+│ - adaLN modulation │
+│ - MoE FFN (SwiGLU) │
+│ 4 experts, top-2 routing│
+│ + load balancing loss │
+│ │
+│ Single Transformer Blocks: │
+│ - Self-attention (img) │
+│ - adaLN modulation │
+│ - MoE FFN (SwiGLU) │
+│ │
+│ Output projection │
 └──────────────────────────────┘
-           |
-           v
-     Generated Image
+ |
+ v
+ Generated Image
 ```
 
 ### MoE Gate Implementation
@@ -121,41 +121,41 @@ from transformers import LlamaForCausalLM, PreTrainedTokenizerFast
 
 # Load text encoder
 tokenizer = PreTrainedTokenizerFast.from_pretrained(
-    "meta-llama/Meta-Llama-3.1-8B-Instruct", use_fast=False
+ "meta-llama/Meta-Llama-3.1-8B-Instruct", use_fast=False
 )
 text_encoder = LlamaForCausalLM.from_pretrained(
-    "meta-llama/Meta-Llama-3.1-8B-Instruct",
-    output_hidden_states=True,
-    output_attentions=True,
-    torch_dtype=torch.bfloat16,
+ "meta-llama/Meta-Llama-3.1-8B-Instruct",
+ output_hidden_states=True,
+ output_attentions=True,
+ torch_dtype=torch.bfloat16,
 ).to("cuda")
 
 # Load pipeline
 scheduler = FlowUniPCMultistepScheduler(
-    num_train_timesteps=1000, shift=3.0, use_dynamic_shifting=False
+ num_train_timesteps=1000, shift=3.0, use_dynamic_shifting=False
 )
 transformer = HiDreamImageTransformer2DModel.from_pretrained(
-    "HiDream-ai/HiDream-I1-Full",
-    subfolder="transformer",
-    torch_dtype=torch.bfloat16,
+ "HiDream-ai/HiDream-I1-Full",
+ subfolder="transformer",
+ torch_dtype=torch.bfloat16,
 ).to("cuda")
 
 pipe = HiDreamImagePipeline.from_pretrained(
-    "HiDream-ai/HiDream-I1-Full",
-    scheduler=scheduler,
-    tokenizer_4=tokenizer,
-    text_encoder_4=text_encoder,
-    torch_dtype=torch.bfloat16,
+ "HiDream-ai/HiDream-I1-Full",
+ scheduler=scheduler,
+ tokenizer_4=tokenizer,
+ text_encoder_4=text_encoder,
+ torch_dtype=torch.bfloat16,
 ).to("cuda", torch.bfloat16)
 pipe.transformer = transformer
 
 # Generate
 image = pipe(
-    "A landscape painting of mountains at sunset",
-    height=1024, width=1024,
-    guidance_scale=5.0,
-    num_inference_steps=50,
-    generator=torch.Generator("cuda").manual_seed(42),
+ "A landscape painting of mountains at sunset",
+ height=1024, width=1024,
+ guidance_scale=5.0,
+ num_inference_steps=50,
+ generator=torch.Generator("cuda").manual_seed(42),
 ).images[0]
 image.save("output.png")
 ```
@@ -177,23 +177,23 @@ flash-attn (manual install)
 ```
 kensho/
 ├── hi_diffusers/
-│   ├── __init__.py
-│   ├── models/
-│   │   ├── attention.py              # HiDreamAttention + FeedForwardSwiGLU
-│   │   ├── attention_processor.py    # Flash Attention processor
-│   │   ├── embeddings.py             # PatchEmbed, RoPE, TimestepEmbed
-│   │   ├── moe.py                    # MoEGate + MOEFeedForwardSwiGLU
-│   │   └── transformers/
-│   │       └── transformer_hidream_image.py  # Main DiT model
-│   ├── pipelines/
-│   │   └── hidream_image/
-│   │       ├── pipeline_hidream_image.py     # Inference pipeline
-│   │       └── pipeline_output.py
-│   └── schedulers/
-│       ├── flash_flow_match.py       # FlashFlowMatchEulerDiscreteScheduler
-│       └── fm_solvers_unipc.py       # FlowUniPCMultistepScheduler
-├── inference.py                      # CLI inference script
-├── gradio_demo.py                    # Gradio web UI
+│ ├── __init__.py
+│ ├── models/
+│ │ ├── attention.py # HiDreamAttention + FeedForwardSwiGLU
+│ │ ├── attention_processor.py # Flash Attention processor
+│ │ ├── embeddings.py # PatchEmbed, RoPE, TimestepEmbed
+│ │ ├── moe.py # MoEGate + MOEFeedForwardSwiGLU
+│ │ └── transformers/
+│ │ └── transformer_hidream_image.py # Main DiT model
+│ ├── pipelines/
+│ │ └── hidream_image/
+│ │ ├── pipeline_hidream_image.py # Inference pipeline
+│ │ └── pipeline_output.py
+│ └── schedulers/
+│ ├── flash_flow_match.py # FlashFlowMatchEulerDiscreteScheduler
+│ └── fm_solvers_unipc.py # FlowUniPCMultistepScheduler
+├── inference.py # CLI inference script
+├── gradio_demo.py # Gradio web UI
 ├── requirements.txt
 └── assets/
 ```

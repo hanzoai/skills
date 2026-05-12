@@ -84,115 +84,115 @@ Repo: `hanzoai/insights`. License: MIT.
 
 ```
 insights/
-  insights/           # Django app (Python backend)
-    api/              # REST API views (DRF)
-    insightsql/       # Query language (ANTLR grammar + interpreter)
-    models/           # Django models
-    clickhouse/       # ClickHouse query builders
-    session_recordings/
-    heatmaps/
-    batch_exports/
-    cdp/              # Customer Data Platform
-    llm/              # LLM integration helpers
-    warehouse/        # Data warehouse connectors
-    tasks/            # Celery tasks
-    temporal/         # Temporal workflow definitions
-  frontend/           # React + TypeScript (Vite, Kea, Tailwind)
-    src/
-    @hanzo/           # Shared frontend packages
-  products/           # Product modules (each has backend/ + frontend/)
-    product_analytics/
-    feature_flags/
-    experiments/
-    replay/             # Session recording
-    error_tracking/
-    llm_analytics/      # LLM observability (Dockerfile.llm-analytics)
-    web_analytics/
-    surveys/
-    cohorts/
-    dashboards/
-    notebooks/
-    workflows/
-    data_warehouse/
-    marketing_analytics/
-    revenue_analytics/
-    customer_analytics/
-    cdp/
-    ...40+ total
-  rust/               # Rust workspace (30+ crates)
-    capture/          # High-performance event capture (axum)
-    feature-flags/    # Rust feature flag evaluator
-    hook-worker/      # Webhook delivery
-    hook-api/         # Webhook API
-    cymbal/           # Error symbolication
-    cyclotron-core/   # Job scheduler
-    embedding-worker/ # Embedding generation
-    kafka-deduplicator/
-    personinsights-*/  # Person resolution services
-    property-defs-rs/
-    common/           # Shared Rust libs (kafka, redis, metrics, health, etc.)
-  livestream/         # Go service (real-time event streaming)
-  cli/                # Rust CLI (insights-cli)
-  funnel-udf/         # Rust ClickHouse UDF for funnels
-  common/             # Shared packages
-    insights-js/      # Browser SDK wrapper (@hanzo/insights)
-    insights-js-lite/ # Lightweight browser SDK
-    insights-node/    # Node.js SDK wrapper (@hanzo/insights-node)
-    insightsql_parser/  # InsightsQL parser (Python package)
-    insightscli/      # Internal dev CLI tooling
-    design-system/    # Shared UI components
-    tailwind/         # Tailwind config
-    storybook/
-    siphash/          # SipHash implementation
-    scriptvm/         # Script VM (TypeScript + Rust)
-    ingestion/        # Shared ingestion code
-  services/
-    mcp/              # MCP server (Cloudflare Worker, TypeScript)
-    llm-gateway/      # LLM gateway integration
-  nodejs/             # Node.js plugin server
-  docs/               # Internal documentation
-  docker/             # Docker configs (ClickHouse, Caddy, Temporal, etc.)
-  proto/              # Protobuf definitions
-  terraform/          # Infrastructure as code
-  playwright/         # E2E tests
+ insights/ # Django app (Python backend)
+ api/ # REST API views (DRF)
+ insightsql/ # Query language (ANTLR grammar + interpreter)
+ models/ # Django models
+ clickhouse/ # ClickHouse query builders
+ session_recordings/
+ heatmaps/
+ batch_exports/
+ cdp/ # Customer Data Platform
+ llm/ # LLM integration helpers
+ warehouse/ # Data warehouse connectors
+ tasks/ # Celery tasks
+ temporal/ # Temporal workflow definitions
+ frontend/ # React + TypeScript (Vite, Kea, Tailwind)
+ src/
+ @hanzo/ # Shared frontend packages
+ products/ # Product modules (each has backend/ + frontend/)
+ product_analytics/
+ feature_flags/
+ experiments/
+ replay/ # Session recording
+ error_tracking/
+ llm_analytics/ # LLM observability (Dockerfile.llm-analytics)
+ web_analytics/
+ surveys/
+ cohorts/
+ dashboards/
+ notebooks/
+ workflows/
+ data_warehouse/
+ marketing_analytics/
+ revenue_analytics/
+ customer_analytics/
+ cdp/
+ ...40+ total
+ rust/ # Rust workspace (30+ crates)
+ capture/ # High-performance event capture (axum)
+ feature-flags/ # Rust feature flag evaluator
+ hook-worker/ # Webhook delivery
+ hook-api/ # Webhook API
+ cymbal/ # Error symbolication
+ cyclotron-core/ # Job scheduler
+ embedding-worker/ # Embedding generation
+ kafka-deduplicator/
+ personinsights-*/ # Person resolution services
+ property-defs-rs/
+ common/ # Shared Rust libs (kafka, redis, metrics, health, etc.)
+ livestream/ # Go service (real-time event streaming)
+ cli/ # Rust CLI (insights-cli)
+ funnel-udf/ # Rust ClickHouse UDF for funnels
+ common/ # Shared packages
+ insights-js/ # Browser SDK wrapper (@hanzo/insights)
+ insights-js-lite/ # Lightweight browser SDK
+ insights-node/ # Node.js SDK wrapper (@hanzo/insights-node)
+ insightsql_parser/ # InsightsQL parser (Python package)
+ insightscli/ # Internal dev CLI tooling
+ design-system/ # Shared UI components
+ tailwind/ # Tailwind config
+ storybook/
+ siphash/ # SipHash implementation
+ scriptvm/ # Script VM (TypeScript + Rust)
+ ingestion/ # Shared ingestion code
+ services/
+ mcp/ # MCP server (Cloudflare Worker, TypeScript)
+ llm-gateway/ # LLM gateway integration
+ nodejs/ # Node.js plugin server
+ docs/ # Internal documentation
+ docker/ # Docker configs (ClickHouse, Caddy, Temporal, etc.)
+ proto/ # Protobuf definitions
+ terraform/ # Infrastructure as code
+ playwright/ # E2E tests
 ```
 
 ## Development commands
 
 ```bash
 # Python backend
-uv sync --all-extras          # Install Python deps
-pytest                        # Run all backend tests
-pytest path/to/test.py::TestClass::test_method  # Single test
-ruff check . --fix && ruff format .   # Lint + format Python
-python manage.py migrate      # Run Django migrations
+uv sync --all-extras # Install Python deps
+pytest # Run all backend tests
+pytest path/to/test.py::TestClass::test_method # Single test
+ruff check . --fix && ruff format . # Lint + format Python
+python manage.py migrate # Run Django migrations
 
 # Frontend
-pnpm install                  # Install JS deps
-pnpm --filter=@hanzo/frontend build   # Build frontend
-pnpm --filter=@hanzo/frontend test    # Run frontend tests
-pnpm --filter=@hanzo/frontend format  # Format frontend
+pnpm install # Install JS deps
+pnpm --filter=@hanzo/frontend build # Build frontend
+pnpm --filter=@hanzo/frontend test # Run frontend tests
+pnpm --filter=@hanzo/frontend format # Format frontend
 
 # Full stack
-./bin/start                   # Start dev server (backend + frontend)
+./bin/start # Start dev server (backend + frontend)
 
 # InsightsQL grammar
-pnpm grammar:build:python     # Rebuild ANTLR Python parser
-pnpm grammar:build:cpp        # Rebuild ANTLR C++ parser
+pnpm grammar:build:python # Rebuild ANTLR Python parser
+pnpm grammar:build:cpp # Rebuild ANTLR C++ parser
 
 # Schema / OpenAPI
-pnpm schema:build             # Build TypeScript schema from Django serializers
-pnpm openapi:build            # Generate OpenAPI spec + TS types via Orval
+pnpm schema:build # Build TypeScript schema from Django serializers
+pnpm openapi:build # Generate OpenAPI spec + TS types via Orval
 
 # Rust services
-cd rust && cargo build        # Build all Rust services
-cd rust && cargo test         # Test all Rust services
+cd rust && cargo build # Build all Rust services
+cd rust && cargo test # Test all Rust services
 
 # CLI
-cd cli && cargo build         # Build insights-cli
+cd cli && cargo build # Build insights-cli
 
 # Docker (self-host)
-docker compose -f docker-compose.hobby.yml up  # Full self-hosted stack
+docker compose -f docker-compose.hobby.yml up # Full self-hosted stack
 ```
 
 ## Self-hosting
@@ -238,10 +238,10 @@ Security: never interpolate user data into InsightsQL f-strings. Use `ast.Consta
 ## CLI
 
 ```bash
-insights-cli login                    # Authenticate interactively
-insights-cli query "SELECT count() FROM events"  # Run InsightsQL query
-insights-cli sourcemap upload ./dist  # Upload sourcemaps for error tracking
-insights-cli exp endpoints list       # List data endpoints
+insights-cli login # Authenticate interactively
+insights-cli query "SELECT count() FROM events" # Run InsightsQL query
+insights-cli sourcemap upload ./dist # Upload sourcemaps for error tracking
+insights-cli exp endpoints list # List data endpoints
 ```
 
 Environment variables: `INSIGHTS_CLI_HOST`, `INSIGHTS_CLI_API_KEY`, `INSIGHTS_CLI_PROJECT_ID`.

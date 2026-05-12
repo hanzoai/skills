@@ -50,31 +50,31 @@ Fork of **ComfyUI** (`comfyanonymous/ComfyUI`). Repo: `hanzoai/studio`.
 
 ```bash
 docker run -d --name hanzo-studio \
-  -p 8188:8188 \
-  --cpus=1 --memory=2g \
-  ghcr.io/hanzoai/studio:latest \
-  --cpu --listen 0.0.0.0
+ -p 8188:8188 \
+ --cpus=1 --memory=2g \
+ ghcr.io/hanzoai/studio:latest \
+ --cpu --listen 0.0.0.0
 ```
 
 ### API mode (run workflow)
 
 ```bash
 curl -X POST http://localhost:8188/prompt \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": {
-      "1": {
-        "class_type": "KSampler",
-        "inputs": {
-          "seed": 42,
-          "steps": 20,
-          "cfg": 7.0,
-          "sampler_name": "euler",
-          "scheduler": "normal"
-        }
-      }
-    }
-  }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "prompt": {
+ "1": {
+ "class_type": "KSampler",
+ "inputs": {
+ "seed": 42,
+ "steps": 20,
+ "cfg": 7.0,
+ "sampler_name": "euler",
+ "scheduler": "normal"
+ }
+ }
+ }
+ }'
 ```
 
 ## Core Concepts
@@ -93,27 +93,27 @@ Use `branding/patch_frontend.py` (Python, context-aware):
 ```python
 # custom_nodes/hanzo_inference.py
 class HanzoInference:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"multiline": True}),
-                "model": (["zen-70b", "zen-32b", "zen-14b"],),
-                "temperature": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 2.0}),
-            }
-        }
+ @classmethod
+ def INPUT_TYPES(cls):
+ return {
+ "required": {
+ "prompt": ("STRING", {"multiline": True}),
+ "model": (["zen-70b", "zen-32b", "zen-14b"],),
+ "temperature": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 2.0}),
+ }
+ }
 
-    RETURN_TYPES = ("STRING",)
-    FUNCTION = "inference"
-    CATEGORY = "Hanzo AI"
+ RETURN_TYPES = ("STRING",)
+ FUNCTION = "inference"
+ CATEGORY = "Hanzo AI"
 
-    def inference(self, prompt, model, temperature):
-        import requests
-        resp = requests.post("https://api.hanzo.ai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {os.environ['HANZO_API_KEY']}"},
-            json={"model": model, "messages": [{"role": "user", "content": prompt}],
-                  "temperature": temperature})
-        return (resp.json()["choices"][0]["message"]["content"],)
+ def inference(self, prompt, model, temperature):
+ import requests
+ resp = requests.post("https://api.hanzo.ai/v1/chat/completions",
+ headers={"Authorization": f"Bearer {os.environ['HANZO_API_KEY']}"},
+ json={"model": model, "messages": [{"role": "user", "content": prompt}],
+ "temperature": temperature})
+ return (resp.json()["choices"][0]["message"]["content"],)
 
 NODE_CLASS_MAPPINGS = {"HanzoInference": HanzoInference}
 NODE_DISPLAY_NAME_MAPPINGS = {"HanzoInference": "Hanzo AI Inference"}
@@ -125,27 +125,27 @@ NODE_DISPLAY_NAME_MAPPINGS = {"HanzoInference": "Hanzo AI Inference"}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hanzo-studio
+ name: hanzo-studio
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: hanzo-studio
-  template:
-    spec:
-      containers:
-      - name: studio
-        image: ghcr.io/hanzoai/studio:latest
-        args: ["--cpu", "--listen", "0.0.0.0"]
-        ports:
-        - containerPort: 8188
-        resources:
-          requests:
-            cpu: 250m
-            memory: 512Mi
-          limits:
-            cpu: "1"
-            memory: 2Gi
+ replicas: 1
+ selector:
+ matchLabels:
+ app: hanzo-studio
+ template:
+ spec:
+ containers:
+ - name: studio
+ image: ghcr.io/hanzoai/studio:latest
+ args: ["--cpu", "--listen", "0.0.0.0"]
+ ports:
+ - containerPort: 8188
+ resources:
+ requests:
+ cpu: 250m
+ memory: 512Mi
+ limits:
+ cpu: "1"
+ memory: 2Gi
 ```
 
 ## White-Label

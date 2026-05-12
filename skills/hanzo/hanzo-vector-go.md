@@ -36,52 +36,52 @@ go get github.com/hanzoai/vector-go
 package main
 
 import (
-    "context"
-    "fmt"
+ "context"
+ "fmt"
 
-    "github.com/hanzoai/vector-go/qdrant"
+ "github.com/hanzoai/vector-go/qdrant"
 )
 
 func main() {
-    client, err := qdrant.NewClient(&qdrant.Config{
-        Host: "localhost",
-        Port: 6334,
-    })
-    if err != nil {
-        panic(err)
-    }
-    defer client.Close()
+ client, err := qdrant.NewClient(&qdrant.Config{
+ Host: "localhost",
+ Port: 6334,
+ })
+ if err != nil {
+ panic(err)
+ }
+ defer client.Close()
 
-    ctx := context.Background()
+ ctx := context.Background()
 
-    // Create collection
-    client.CreateCollection(ctx, &qdrant.CreateCollection{
-        CollectionName: "docs",
-        VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
-            Size:     384,
-            Distance: qdrant.Distance_Cosine,
-        }),
-    })
+ // Create collection
+ client.CreateCollection(ctx, &qdrant.CreateCollection{
+ CollectionName: "docs",
+ VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
+ Size: 384,
+ Distance: qdrant.Distance_Cosine,
+ }),
+ })
 
-    // Upsert points
-    client.Upsert(ctx, &qdrant.UpsertPoints{
-        CollectionName: "docs",
-        Points: []*qdrant.PointStruct{
-            {
-                Id:      qdrant.NewIDNum(1),
-                Vectors: qdrant.NewVectors(0.1, 0.2, 0.3),
-                Payload: qdrant.NewValueMap(map[string]any{"title": "hello"}),
-            },
-        },
-    })
+ // Upsert points
+ client.Upsert(ctx, &qdrant.UpsertPoints{
+ CollectionName: "docs",
+ Points: []*qdrant.PointStruct{
+ {
+ Id: qdrant.NewIDNum(1),
+ Vectors: qdrant.NewVectors(0.1, 0.2, 0.3),
+ Payload: qdrant.NewValueMap(map[string]any{"title": "hello"}),
+ },
+ },
+ })
 
-    // Search
-    results, _ := client.Query(ctx, &qdrant.QueryPoints{
-        CollectionName: "docs",
-        Query:          qdrant.NewQuery(0.1, 0.2, 0.3),
-        WithPayload:    qdrant.NewWithPayload(true),
-    })
-    fmt.Println(results)
+ // Search
+ results, _ := client.Query(ctx, &qdrant.QueryPoints{
+ CollectionName: "docs",
+ Query: qdrant.NewQuery(0.1, 0.2, 0.3),
+ WithPayload: qdrant.NewWithPayload(true),
+ })
+ fmt.Println(results)
 }
 ```
 
@@ -100,13 +100,13 @@ func main() {
 
 ```go
 client, _ := qdrant.NewClient(&qdrant.Config{
-    Host:   "xyz.cloud.qdrant.io",
-    Port:   6334,
-    APIKey: "<your-api-key>",
-    UseTLS: true,
-    // PoolSize: 3,          // gRPC connection pool size
-    // TLSConfig: &tls.Config{},
-    // GrpcOptions: []grpc.DialOption{},
+ Host: "xyz.cloud.qdrant.io",
+ Port: 6334,
+ APIKey: "<your-api-key>",
+ UseTLS: true,
+ // PoolSize: 3, // gRPC connection pool size
+ // TLSConfig: &tls.Config{},
+ // GrpcOptions: []grpc.DialOption{},
 })
 ```
 
@@ -124,15 +124,15 @@ conn := client.GetConnection() // raw *grpc.ClientConn
 ## Helper functions
 
 ```go
-qdrant.NewIDNum(42)                    // numeric point ID
-qdrant.NewIDUUID("uuid-string")       // UUID point ID
-qdrant.NewVectors(0.1, 0.2, 0.3)     // dense vector
-qdrant.NewVectorsConfig(params)       // collection vector config
-qdrant.NewValueMap(map[string]any{})  // payload from map
-qdrant.NewQuery(0.1, 0.2, 0.3)       // search query from floats
-qdrant.NewWithPayload(true)           // include payload in results
-qdrant.NewMatch("field", "value")     // filter condition
-qdrant.PtrOf(value)                   // generic pointer helper
+qdrant.NewIDNum(42) // numeric point ID
+qdrant.NewIDUUID("uuid-string") // UUID point ID
+qdrant.NewVectors(0.1, 0.2, 0.3) // dense vector
+qdrant.NewVectorsConfig(params) // collection vector config
+qdrant.NewValueMap(map[string]any{}) // payload from map
+qdrant.NewQuery(0.1, 0.2, 0.3) // search query from floats
+qdrant.NewWithPayload(true) // include payload in results
+qdrant.NewMatch("field", "value") // filter condition
+qdrant.PtrOf(value) // generic pointer helper
 ```
 
 ## Build and test

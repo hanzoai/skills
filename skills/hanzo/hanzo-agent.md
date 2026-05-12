@@ -67,13 +67,13 @@ Fork of **OpenAI Agents SDK**. Repo: `hanzoai/agent`.
 from agents import Agent, Runner
 
 agent = Agent(
-    name="assistant",
-    instructions="You are a helpful assistant that answers questions concisely.",
-    model="zen-70b",
+ name="assistant",
+ instructions="You are a helpful assistant that answers questions concisely.",
+ model="zen-70b",
 )
 
 result = Runner.run_sync(agent, "What is the capital of France?")
-print(result.final_output)  # "Paris"
+print(result.final_output) # "Paris"
 ```
 
 ### Agent with Tools
@@ -83,24 +83,24 @@ from agents import Agent, Runner, function_tool
 
 @function_tool
 def get_weather(location: str) -> str:
-    """Get current weather for a location."""
-    return f"72°F and sunny in {location}"
+ """Get current weather for a location."""
+ return f"72°F and sunny in {location}"
 
 @function_tool
 def search_web(query: str) -> str:
-    """Search the web for information."""
-    return f"Top result for '{query}': ..."
+ """Search the web for information."""
+ return f"Top result for '{query}': ..."
 
 @function_tool
 def calculate(expression: str) -> str:
-    """Evaluate a mathematical expression."""
-    return str(eval(expression))  # Use safe eval in production
+ """Evaluate a mathematical expression."""
+ return str(eval(expression)) # Use safe eval in production
 
 agent = Agent(
-    name="research-assistant",
-    instructions="Help users with research. Use tools when needed.",
-    model="zen-70b",
-    tools=[get_weather, search_web, calculate],
+ name="research-assistant",
+ instructions="Help users with research. Use tools when needed.",
+ model="zen-70b",
+ tools=[get_weather, search_web, calculate],
 )
 
 result = Runner.run_sync(agent, "What's the weather in Tokyo?")
@@ -112,26 +112,26 @@ result = Runner.run_sync(agent, "What's the weather in Tokyo?")
 from agents import Agent, Runner
 
 coder = Agent(
-    name="coder",
-    instructions="Write clean, tested Python code. Return only code.",
-    model="zen-70b",
+ name="coder",
+ instructions="Write clean, tested Python code. Return only code.",
+ model="zen-70b",
 )
 
 reviewer = Agent(
-    name="reviewer",
-    instructions="Review code for bugs, security issues, and style. Be thorough.",
-    model="zen-70b",
+ name="reviewer",
+ instructions="Review code for bugs, security issues, and style. Be thorough.",
+ model="zen-70b",
 )
 
 supervisor = Agent(
-    name="supervisor",
-    instructions="""You coordinate a coding team:
-    1. Delegate coding tasks to the coder
-    2. Send code to the reviewer for review
-    3. Iterate until code passes review
-    Return the final approved code.""",
-    model="zen-70b",
-    handoffs=[coder, reviewer],
+ name="supervisor",
+ instructions="""You coordinate a coding team:
+ 1. Delegate coding tasks to the coder
+ 2. Send code to the reviewer for review
+ 3. Iterate until code passes review
+ Return the final approved code.""",
+ model="zen-70b",
+ handoffs=[coder, reviewer],
 )
 
 result = Runner.run_sync(supervisor, "Write a REST API for a todo app with FastAPI")
@@ -147,9 +147,9 @@ from agents import Agent, Runner
 agent = Agent(name="writer", instructions="Write creatively.", model="zen-70b")
 
 async def main():
-    async for event in Runner.run_streamed(agent, "Write a haiku about code"):
-        if hasattr(event, "text"):
-            print(event.text, end="", flush=True)
+ async for event in Runner.run_streamed(agent, "Write a haiku about code"):
+ if hasattr(event, "text"):
+ print(event.text, end="", flush=True)
 
 asyncio.run(main())
 ```
@@ -160,28 +160,28 @@ asyncio.run(main())
 from agents import Agent, Runner, InputGuardrail, OutputGuardrail, GuardrailFunctionOutput
 
 async def check_injection(ctx, agent, input_text: str) -> GuardrailFunctionOutput:
-    """Block prompt injection attempts."""
-    is_safe = "ignore previous instructions" not in input_text.lower()
-    return GuardrailFunctionOutput(
-        output_info={"safe": is_safe},
-        tripwire_triggered=not is_safe,
-    )
+ """Block prompt injection attempts."""
+ is_safe = "ignore previous instructions" not in input_text.lower()
+ return GuardrailFunctionOutput(
+ output_info={"safe": is_safe},
+ tripwire_triggered=not is_safe,
+ )
 
 async def check_pii(ctx, agent, output_text: str) -> GuardrailFunctionOutput:
-    """Block PII in output."""
-    import re
-    has_ssn = bool(re.search(r'\d{3}-\d{2}-\d{4}', output_text))
-    return GuardrailFunctionOutput(
-        output_info={"has_pii": has_ssn},
-        tripwire_triggered=has_ssn,
-    )
+ """Block PII in output."""
+ import re
+ has_ssn = bool(re.search(r'\d{3}-\d{2}-\d{4}', output_text))
+ return GuardrailFunctionOutput(
+ output_info={"has_pii": has_ssn},
+ tripwire_triggered=has_ssn,
+ )
 
 agent = Agent(
-    name="safe-agent",
-    instructions="Answer questions helpfully.",
-    model="zen-70b",
-    input_guardrails=[InputGuardrail(guardrail_function=check_injection)],
-    output_guardrails=[OutputGuardrail(guardrail_function=check_pii)],
+ name="safe-agent",
+ instructions="Answer questions helpfully.",
+ model="zen-70b",
+ input_guardrails=[InputGuardrail(guardrail_function=check_injection)],
+ output_guardrails=[OutputGuardrail(guardrail_function=check_pii)],
 )
 ```
 
@@ -193,27 +193,27 @@ from agents.mcp import MCPServerStdio, MCPServerSse
 
 # Stdio transport (local process)
 mcp_local = MCPServerStdio(
-    command="npx",
-    args=["-y", "@hanzo/mcp"],
+ command="npx",
+ args=["-y", "@hanzo/mcp"],
 )
 
 # SSE transport (remote server)
 mcp_remote = MCPServerSse(
-    url="https://mcp.example.com/sse",
-    headers={"Authorization": "Bearer token"},
+ url="https://mcp.example.com/sse",
+ headers={"Authorization": "Bearer token"},
 )
 
 agent = Agent(
-    name="mcp-agent",
-    instructions="Use available MCP tools to accomplish tasks.",
-    model="zen-70b",
-    mcp_servers=[mcp_local, mcp_remote],
+ name="mcp-agent",
+ instructions="Use available MCP tools to accomplish tasks.",
+ model="zen-70b",
+ mcp_servers=[mcp_local, mcp_remote],
 )
 
 async def main():
-    async with mcp_local, mcp_remote:
-        result = await Runner.run(agent, "Search for recent AI news")
-        print(result.final_output)
+ async with mcp_local, mcp_remote:
+ result = await Runner.run(agent, "Search for recent AI news")
+ print(result.final_output)
 ```
 
 ### Tracing
@@ -223,11 +223,11 @@ from agents import Agent, Runner
 from agents.tracing import TracingProcessor, Span
 
 class CustomTracer(TracingProcessor):
-    def on_span_start(self, span: Span):
-        print(f"Start: {span.name}")
+ def on_span_start(self, span: Span):
+ print(f"Start: {span.name}")
 
-    def on_span_end(self, span: Span):
-        print(f"End: {span.name} ({span.duration_ms}ms)")
+ def on_span_end(self, span: Span):
+ print(f"End: {span.name} ({span.duration_ms}ms)")
 
 # Register globally
 from agents.tracing import set_tracing_processor
@@ -246,7 +246,7 @@ from agents import Agent
 from agents.network import AgentNetwork
 
 # Register agents on a shared network
-network = AgentNetwork(discovery="mdns")  # or "redis", "consul"
+network = AgentNetwork(discovery="mdns") # or "redis", "consul"
 
 analyst = Agent(name="analyst", instructions="Analyze data.", model="zen-70b")
 writer = Agent(name="writer", instructions="Write reports.", model="zen-70b")
@@ -265,11 +265,11 @@ from agents import Agent
 from agents.network.router import SemanticRouter
 
 router = SemanticRouter(
-    routes={
-        "code_help": code_agent,
-        "data_analysis": data_agent,
-        "general": chat_agent,
-    }
+ routes={
+ "code_help": code_agent,
+ "data_analysis": data_agent,
+ "general": chat_agent,
+ }
 )
 
 # Automatically routes to best agent based on intent
@@ -306,23 +306,23 @@ result = await client.call("my_tool", {"arg": "value"})
 
 ```
 ┌───────────────────┐
-│    Supervisor      │
-│  (orchestrates)    │
+│ Supervisor │
+│ (orchestrates) │
 ├─────────┬─────────┤
-│  Agent A │ Agent B │
-│  (tools) │ (tools) │
+│ Agent A │ Agent B │
+│ (tools) │ (tools) │
 ├─────────┴─────────┤
-│    Tool Registry   │
-│  MCP + ZAP + Fns  │
+│ Tool Registry │
+│ MCP + ZAP + Fns │
 ├───────────────────┤
-│    Guardrails      │
-│  Input + Output    │
+│ Guardrails │
+│ Input + Output │
 ├───────────────────┤
-│    Tracing Layer   │
-│  (spans, events)   │
+│ Tracing Layer │
+│ (spans, events) │
 ├───────────────────┤
-│    LLM Backend    │
-│  (api.hanzo.ai)   │
+│ LLM Backend │
+│ (api.hanzo.ai) │
 └───────────────────┘
 ```
 
@@ -341,19 +341,19 @@ result = await client.call("my_tool", {"arg": "value"})
 
 ```python
 agent = Agent(
-    name="my-agent",                    # Required: unique name
-    instructions="...",                  # System prompt
-    model="zen-70b",                     # LLM model
-    tools=[tool1, tool2],               # Function tools
-    mcp_servers=[server1],              # MCP tool servers
-    handoffs=[agent_b, agent_c],        # Agents to delegate to
-    input_guardrails=[guard1],          # Input validation
-    output_guardrails=[guard2],         # Output validation
-    output_type=MyPydanticModel,        # Structured output (Pydantic)
-    model_settings=ModelSettings(       # LLM settings
-        temperature=0.7,
-        max_tokens=4096,
-    ),
+ name="my-agent", # Required: unique name
+ instructions="...", # System prompt
+ model="zen-70b", # LLM model
+ tools=[tool1, tool2], # Function tools
+ mcp_servers=[server1], # MCP tool servers
+ handoffs=[agent_b, agent_c], # Agents to delegate to
+ input_guardrails=[guard1], # Input validation
+ output_guardrails=[guard2], # Output validation
+ output_type=MyPydanticModel, # Structured output (Pydantic)
+ model_settings=ModelSettings( # LLM settings
+ temperature=0.7,
+ max_tokens=4096,
+ ),
 )
 ```
 
@@ -377,11 +377,11 @@ ha list
 ```bash
 git clone https://github.com/hanzoai/agent.git
 cd agent
-uv sync --all-extras    # Install all dependencies
-uv run pytest -v        # Run tests
-uv run ruff format .    # Format code
-uv run ruff check .     # Lint
-uv run mypy .           # Type check
+uv sync --all-extras # Install all dependencies
+uv run pytest -v # Run tests
+uv run ruff format . # Format code
+uv run ruff check . # Lint
+uv run mypy . # Type check
 ```
 
 ## Troubleshooting

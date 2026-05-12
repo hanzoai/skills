@@ -18,7 +18,7 @@ Hanzo Registry is a **private Docker container registry** running Docker Distrib
 ### Tech Stack
 
 - **Image**: `registry:2` (Docker Distribution)
-- **Auth**: JWT token-based via Hanzo IAM (Casdoor)
+- **Auth**: JWT token-based via Hanzo IAM (Hanzo IAM)
 - **Storage**: Filesystem-backed with 50Gi PVC (`do-block-storage`)
 - **Port**: 5000 (ClusterIP service)
 - **CI**: GitHub Actions deploy workflow with KMS-sourced credentials
@@ -101,15 +101,15 @@ make restart
 ### Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Docker Client   │────>│  registry.hanzo.ai│────>│  Hanzo IAM      │
-│  (push/pull)     │     │  (registry:2)     │     │  (token realm)  │
-└─────────────────┘     └────────┬─────────┘     └─────────────────┘
-                                 │
-                          ┌──────┴─────────┐
-                          │  50Gi PVC       │
-                          │  (DO Block)     │
-                          └────────────────┘
+┌─────────────────┐ ┌──────────────────┐ ┌─────────────────┐
+│ Docker Client │────>│ registry.hanzo.ai│────>│ Hanzo IAM │
+│ (push/pull) │ │ (registry:2) │ │ (token realm) │
+└─────────────────┘ └────────┬─────────┘ └─────────────────┘
+ │
+ ┌──────┴─────────┐
+ │ 50Gi PVC │
+ │ (DO Block) │
+ └────────────────┘
 ```
 
 ### Auth Flow
@@ -127,22 +127,22 @@ make restart
 # config.yml
 version: 0.1
 storage:
-  filesystem:
-    rootdirectory: /var/lib/registry
-  delete:
-    enabled: true
+ filesystem:
+ rootdirectory: /var/lib/registry
+ delete:
+ enabled: true
 http:
-  addr: :5000
-  headers:
-    X-Content-Type-Options: [nosniff]
-    Access-Control-Allow-Origin: ['https://registry.hanzo.ai']
-    Access-Control-Allow-Methods: ['HEAD', 'GET', 'OPTIONS', 'DELETE']
+ addr: :5000
+ headers:
+ X-Content-Type-Options: [nosniff]
+ Access-Control-Allow-Origin: ['https://registry.hanzo.ai']
+ Access-Control-Allow-Methods: ['HEAD', 'GET', 'OPTIONS', 'DELETE']
 auth:
-  token:
-    realm: https://iam.hanzo.ai/api/registry/token
-    service: registry.hanzo.ai
-    issuer: hanzo-iam
-    rootcertbundle: /etc/registry-signing/signing.crt
+ token:
+ realm: https://iam.hanzo.ai/api/registry/token
+ service: registry.hanzo.ai
+ issuer: hanzo-iam
+ rootcertbundle: /etc/registry-signing/signing.crt
 ```
 
 ### K8s Resources

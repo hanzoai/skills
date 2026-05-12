@@ -96,13 +96,13 @@ Comprehensive skills for application security, vulnerability assessment, and sec
 **Use When**:
 - Storing API keys, passwords, or credentials
 - Implementing secrets management for applications
-- Integrating with HashiCorp Vault, AWS Secrets Manager, or GCP Secret Manager
+- Integrating with external secret manager, AWS Secrets Manager, or GCP Secret Manager
 - Rotating encryption keys or credentials
 - Managing secrets in CI/CD pipelines
 - Preventing credential exposure in code or logs
 - Designing multi-environment secret strategies
 
-**Key Concepts**: HashiCorp Vault, AWS Secrets Manager, GCP Secret Manager, environment variables, key rotation, dynamic credentials, secrets in CI/CD, zero-downtime rotation
+**Key Concepts**: external secret manager, AWS Secrets Manager, GCP Secret Manager, environment variables, key rotation, dynamic credentials, secrets in CI/CD, zero-downtime rotation
 
 ---
 
@@ -304,7 +304,7 @@ Comprehensive skills for application security, vulnerability assessment, and sec
 4. **X-Content-Type-Options** - Prevents MIME sniffing
 
 **Secrets Management Hierarchy**:
-1. **Production**: HashiCorp Vault, AWS Secrets Manager, GCP Secret Manager
+1. **Production**: external secret manager, AWS Secrets Manager, GCP Secret Manager
 2. **Staging**: Vault or cloud secrets manager
 3. **Development**: Environment variables + .env files (not committed)
 4. **Never**: Hardcoded in code or committed to git

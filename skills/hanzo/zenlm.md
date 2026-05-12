@@ -56,9 +56,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Load zen-nano-instruct
 model = AutoModelForCausalLM.from_pretrained(
-    "zenlm/zen-nano-instruct",
-    torch_dtype="auto",
-    device_map="auto"
+ "zenlm/zen-nano-instruct",
+ torch_dtype="auto",
+ device_map="auto"
 )
 tokenizer = AutoTokenizer.from_pretrained("zenlm/zen-nano-instruct")
 
@@ -83,11 +83,11 @@ model, tokenizer = load("zenlm/zen-nano-instruct")
 
 # Generate at 50+ tokens/sec on M1 Pro
 response = generate(
-    model,
-    tokenizer,
-    prompt="Write a haiku about AI",
-    max_tokens=100,
-    temp=0.7
+ model,
+ tokenizer,
+ prompt="Write a haiku about AI",
+ max_tokens=100,
+ temp=0.7
 )
 print(response)
 ```
@@ -101,15 +101,15 @@ cd llama.cpp && make
 
 # Download GGUF version (1.5GB quantized)
 huggingface-cli download zenlm/zen-nano-instruct-4bit \
-    --include "*.gguf" \
-    --local-dir ./models
+ --include "*.gguf" \
+ --local-dir ./models
 
 # Run inference (50+ tokens/sec on CPU!)
 ./llama-cli \
-    -m ./models/zen-nano-instruct-Q4_K_M.gguf \
-    -p "Your prompt here" \
-    -n 512 \
-    --temp 0.7
+ -m ./models/zen-nano-instruct-Q4_K_M.gguf \
+ -p "Your prompt here" \
+ -n 512 \
+ --temp 0.7
 ```
 
 ## Model Details
@@ -125,8 +125,8 @@ model = AutoModelForCausalLM.from_pretrained("zenlm/zen-nano-instruct")
 tokenizer = AutoTokenizer.from_pretrained("zenlm/zen-nano-instruct")
 
 messages = [
-    {"role": "system", "content": "You are a helpful AI assistant."},
-    {"role": "user", "content": "Write a Python function to reverse a string"}
+ {"role": "system", "content": "You are a helpful AI assistant."},
+ {"role": "user", "content": "Write a Python function to reverse a string"}
 ]
 
 text = tokenizer.apply_chat_template(messages, tokenize=False)
@@ -145,7 +145,7 @@ tokenizer = AutoTokenizer.from_pretrained("zenlm/zen-nano-thinking")
 
 # Enable chain-of-thought
 messages = [
-    {"role": "user", "content": "Solve: If 3 apples cost $5, how much do 7 apples cost?"}
+ {"role": "user", "content": "Solve: If 3 apples cost $5, how much do 7 apples cost?"}
 ]
 
 # Model will show reasoning steps
@@ -175,31 +175,31 @@ tokenizer = AutoTokenizer.from_pretrained("zenlm/zen-agent")
 
 # Define available tools
 tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "get_weather",
-            "description": "Get current weather in a location",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "location": {"type": "string", "description": "City name"}
-                },
-                "required": ["location"]
-            }
-        }
-    }
+ {
+ "type": "function",
+ "function": {
+ "name": "get_weather",
+ "description": "Get current weather in a location",
+ "parameters": {
+ "type": "object",
+ "properties": {
+ "location": {"type": "string", "description": "City name"}
+ },
+ "required": ["location"]
+ }
+ }
+ }
 ]
 
 messages = [
-    {"role": "user", "content": "What's the weather in San Francisco?"}
+ {"role": "user", "content": "What's the weather in San Francisco?"}
 ]
 
 # Model generates function call
 text = tokenizer.apply_chat_template(
-    messages,
-    tools=tools,
-    tokenize=False
+ messages,
+ tools=tools,
+ tokenize=False
 )
 inputs = tokenizer(text, return_tensors="pt")
 outputs = model.generate(**inputs, max_length=200)
@@ -238,10 +238,10 @@ print(generate(model, tokenizer, prompt='Hello!'))
 ```bash
 # llama.cpp for ARM
 ./llama-cli \
-    -m zen-nano-instruct-Q4_K_M.gguf \
-    -p "Hello from Raspberry Pi!" \
-    -n 100 \
-    --threads 4
+ -m zen-nano-instruct-Q4_K_M.gguf \
+ -p "Hello from Raspberry Pi!" \
+ -n 100 \
+ --threads 4
 ```
 
 ### Browser (WebGPU)
@@ -251,13 +251,13 @@ import { pipeline } from '@xenova/transformers';
 
 // Load zen-nano in browser
 const generator = await pipeline(
-  'text-generation',
-  'zenlm/zen-nano-instruct',
-  { device: 'webgpu' }
+ 'text-generation',
+ 'zenlm/zen-nano-instruct',
+ { device: 'webgpu' }
 );
 
 const output = await generator('Explain neural networks', {
-  max_length: 200
+ max_length: 200
 });
 console.log(output[0].generated_text);
 ```
@@ -276,8 +276,8 @@ console.log(output[0].generated_text);
 ```bash
 # Download specific quantization
 huggingface-cli download zenlm/zen-nano-instruct-4bit \
-    --include "*Q4_K_M.gguf" \
-    --local-dir ./models
+ --include "*Q4_K_M.gguf" \
+ --local-dir ./models
 ```
 
 ### MLX Formats (Apple Silicon)
@@ -286,9 +286,9 @@ huggingface-cli download zenlm/zen-nano-instruct-4bit \
 # 4-bit MLX (optimized for M-series)
 pip install mlx-lm
 python -m mlx_lm.convert \
-    --hf-path zenlm/zen-nano-instruct \
-    --mlx-path ./zen-nano-mlx \
-    --quantize
+ --hf-path zenlm/zen-nano-instruct \
+ --mlx-path ./zen-nano-mlx \
+ --quantize
 ```
 
 ### AWQ/GPTQ (NVIDIA GPUs)
@@ -299,8 +299,8 @@ from auto_gptq import AutoGPTQForCausalLM
 
 # 4-bit GPTQ for NVIDIA
 model = AutoGPTQForCausalLM.from_quantized(
-    "zenlm/zen-nano-instruct-gptq",
-    device="cuda:0"
+ "zenlm/zen-nano-instruct-gptq",
+ device="cuda:0"
 )
 ```
 
@@ -313,8 +313,8 @@ from hanzoai import Hanzo
 
 client = Hanzo()
 response = client.chat.completions.create(
-    model="zen-nano-instruct",
-    messages=[{"role": "user", "content": "Hello!"}],
+ model="zen-nano-instruct",
+ messages=[{"role": "user", "content": "Hello!"}],
 )
 print(response.choices[0].message.content)
 ```
@@ -325,12 +325,12 @@ print(response.choices[0].message.content)
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://api.hanzo.ai/v1",
-    api_key=os.environ["HANZO_API_KEY"],
+ base_url="https://api.hanzo.ai/v1",
+ api_key=os.environ["HANZO_API_KEY"],
 )
 response = client.chat.completions.create(
-    model="zen-nano-instruct",
-    messages=[{"role": "user", "content": "Hello!"}],
+ model="zen-nano-instruct",
+ messages=[{"role": "user", "content": "Hello!"}],
 )
 ```
 
@@ -341,20 +341,20 @@ Train custom ZenLM models using LLaMA Factory:
 ```bash
 # Fine-tune zen-nano for your domain
 llamafactory-cli train \
-    --stage sft \
-    --model_name_or_path zenlm/zen-nano-instruct \
-    --dataset your_dataset \
-    --template qwen3 \
-    --finetuning_type lora \
-    --output_dir ./zen-nano-custom \
-    --flash_attn fa2 \
-    --use_unsloth true
+ --stage sft \
+ --model_name_or_path zenlm/zen-nano-instruct \
+ --dataset your_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --output_dir ./zen-nano-custom \
+ --flash_attn fa2 \
+ --use_unsloth true
 
 # Export to GGUF for deployment
 llamafactory-cli export \
-    --model_name_or_path ./zen-nano-custom \
-    --export_dir ./zen-nano-gguf \
-    --export_quantization_bit 4
+ --model_name_or_path ./zen-nano-custom \
+ --export_dir ./zen-nano-gguf \
+ --export_quantization_bit 4
 ```
 
 See **hanzo-gym.md** for comprehensive training guide.
@@ -411,8 +411,8 @@ from hanzoai import Hanzo
 
 client = Hanzo()
 response = client.chat.completions.create(
-    model="zen-nano-instruct",  # Cheapest Zen model
-    messages=[{"role": "user", "content": query}],
+ model="zen-nano-instruct", # Cheapest Zen model
+ messages=[{"role": "user", "content": query}],
 )
 ```
 
@@ -423,9 +423,9 @@ response = client.chat.completions.create(
 
 # Install llama.cpp on ARM
 ./llama-cli \
-    -m zen-nano-instruct-Q4_K_M.gguf \
-    -p "Process sensor data: ..." \
-    --threads 4
+ -m zen-nano-instruct-Q4_K_M.gguf \
+ -p "Process sensor data: ..." \
+ --threads 4
 ```
 
 ### 5. AI Sub-Agents
@@ -465,18 +465,18 @@ CMD ["python", "server.py"]
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: zenlm-inference
+ name: zenlm-inference
 spec:
-  replicas: 3
-  template:
-    spec:
-      containers:
-      - name: zenlm
-        image: zenlm/zen-nano-instruct:latest
-        resources:
-          limits:
-            memory: "4Gi"
-            cpu: "2"
+ replicas: 3
+ template:
+ spec:
+ containers:
+ - name: zenlm
+ image: zenlm/zen-nano-instruct:latest
+ resources:
+ limits:
+ memory: "4Gi"
+ cpu: "2"
 ```
 
 ### Serverless

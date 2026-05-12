@@ -54,31 +54,31 @@ Hanzo Docs is a **multi-brand documentation platform** — fork of fumadocs with
 
 ```
 docs/
-├── apps/                    # 15 brand-specific apps
-│   ├── hanzo/               # hanzo.ai/docs
-│   ├── lux/                 # docs.lux.network
-│   ├── zoo/                 # docs.zoo.ngo
-│   ├── zen/                 # docs.zenlm.org
-│   └── ...                  # Other product-specific doc sites
-│                            # Apps: base-docs, bootnode-docs, bot-docs, cloud,
-│                            # dev-docs, dns-docs, docs, flow, insights-docs,
-│                            # platform, team, visor, zap-docs, zen-docs, zt-docs
-├── packages/                # 27 shared packages
-│   ├── core/                # Core fumadocs engine
-│   ├── mdx/                 # MDX processing and plugins
-│   ├── ui/                  # Shared UI components
-│   ├── search/              # Full-text search
-│   ├── openapi/             # OpenAPI → docs generator
-│   ├── components/          # Shared MDX components
-│   │   ├── CodeBlock.tsx
-│   │   ├── ApiEndpoint.tsx
-│   │   ├── Callout.tsx
-│   │   └── SDKTabs.tsx
-│   └── ...                  # More packages
-├── content/                 # Shared content
-│   ├── api/                 # API reference (auto-generated from OpenAPI)
-│   ├── guides/              # Cross-brand guides
-│   └── sdks/                # SDK documentation
+├── apps/ # 15 brand-specific apps
+│ ├── hanzo/ # hanzo.ai/docs
+│ ├── lux/ # docs.lux.network
+│ ├── zoo/ # docs.zoo.ngo
+│ ├── zen/ # docs.zenlm.org
+│ └── ... # Other product-specific doc sites
+│ # Apps: base-docs, bootnode-docs, bot-docs, cloud,
+│ # dev-docs, dns-docs, docs, flow, insights-docs,
+│ # platform, team, visor, zap-docs, zen-docs, zt-docs
+├── packages/ # 27 shared packages
+│ ├── core/ # Core fumadocs engine
+│ ├── mdx/ # MDX processing and plugins
+│ ├── ui/ # Shared UI components
+│ ├── search/ # Full-text search
+│ ├── openapi/ # OpenAPI → docs generator
+│ ├── components/ # Shared MDX components
+│ │ ├── CodeBlock.tsx
+│ │ ├── ApiEndpoint.tsx
+│ │ ├── Callout.tsx
+│ │ └── SDKTabs.tsx
+│ └── ... # More packages
+├── content/ # Shared content
+│ ├── api/ # API reference (auto-generated from OpenAPI)
+│ ├── guides/ # Cross-brand guides
+│ └── sdks/ # SDK documentation
 ├── pnpm-workspace.yaml
 └── package.json
 ```
@@ -121,7 +121,7 @@ import { CodeBlock, ApiEndpoint, Callout, SDKTabs } from "@hanzo/docs-components
 # Chat Completions
 
 <Callout type="info">
-  This endpoint is OpenAI-compatible.
+ This endpoint is OpenAI-compatible.
 </Callout>
 
 <ApiEndpoint method="POST" path="/v1/chat/completions" />
@@ -129,22 +129,22 @@ import { CodeBlock, ApiEndpoint, Callout, SDKTabs } from "@hanzo/docs-components
 ## Request
 
 <SDKTabs>
-  <SDKTabs.Tab lang="python" title="Python">
-    {`from hanzoai import Hanzo
+ <SDKTabs.Tab lang="python" title="Python">
+ {`from hanzoai import Hanzo
 client = Hanzo()
 response = client.chat.completions.create(
-    model="zen-70b",
-    messages=[{"role": "user", "content": "Hello"}],
+ model="zen-70b",
+ messages=[{"role": "user", "content": "Hello"}],
 )`}
-  </SDKTabs.Tab>
-  <SDKTabs.Tab lang="typescript" title="TypeScript">
-    {`import Hanzo from "hanzoai"
+ </SDKTabs.Tab>
+ <SDKTabs.Tab lang="typescript" title="TypeScript">
+ {`import Hanzo from "hanzoai"
 const client = new Hanzo()
 const response = await client.chat.completions.create({
-    model: "zen-70b",
-    messages: [{ role: "user", content: "Hello" }],
+ model: "zen-70b",
+ messages: [{ role: "user", content: "Hello" }],
 })`}
-  </SDKTabs.Tab>
+ </SDKTabs.Tab>
 </SDKTabs>
 ```
 
@@ -173,20 +173,20 @@ engineering docs site built on `@hanzo/docs`. Two quirks worth knowing
 for future consumers:
 
 1. **Vendor workaround**: `@hanzo/docs@16.4.2` and sibling 16.7.5
-   packages were published with unresolved `workspace:*` deps including
-   `@hanzo/docs-tailwind` (never published to npm at all). 
-   internal vendors `~/work/hanzo/docs/packages/*` into
-   `vendor/hanzo-docs/packages/` and wires a `pnpm-workspace.yaml` so
-   `workspace:*` resolves locally. A `.pnpmfile.cjs` strips workspace
-   refs to packages not vendored (build-only tooling).
-   **Upstream fix**: add a `prepublishOnly` hook that rewrites
-   `workspace:*` → concrete versions, or publish the missing packages.
+ packages were published with unresolved `workspace:*` deps including
+ `@hanzo/docs-tailwind` (never published to npm at all). 
+ internal vendors `~/work/hanzo/docs/packages/*` into
+ `vendor/hanzo-docs/packages/` and wires a `pnpm-workspace.yaml` so
+ `workspace:*` resolves locally. A `.pnpmfile.cjs` strips workspace
+ refs to packages not vendored (build-only tooling).
+ **Upstream fix**: add a `prepublishOnly` hook that rewrites
+ `workspace:*` → concrete versions, or publish the missing packages.
 
 2. **API renames** between docs versions:
-   - `app/layout.tsx`: `@hanzo/docs/ui/provider/next` (missing in
-     published umbrella) → use `@hanzo/docs-core/framework/next` ×
-     `@hanzo/docs/ui/provider/base`
-   - `lib/source.ts`: `docs.toFumadocsSource()` → `docs.toSource()`
+ - `app/layout.tsx`: `@hanzo/docs/ui/provider/next` (missing in
+ published umbrella) → use `@hanzo/docs-core/framework/next` ×
+ `@hanzo/docs/ui/provider/base`
+ - `lib/source.ts`: `docs.toFumadocsSource()` → `docs.toSource()`
 
  internal is -gated via NextAuth v5 + Google OAuth
 (not Hanzo IAM -- engineering-only audience).

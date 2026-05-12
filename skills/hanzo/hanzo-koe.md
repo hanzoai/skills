@@ -49,42 +49,42 @@ The architecture uses an **encoder-decoder transformer** with RoPE positional em
 
 ```
 Text Input: "[S1] Hello. [S2] Hi there. (laughs)"
-    |
-    v
+ |
+ v
 ┌─────────────────────────────┐
-│ Text Tokenizer               │
-│  src_vocab_size: 128         │
-│  text_length: padded to 128 │
+│ Text Tokenizer │
+│ src_vocab_size: 128 │
+│ text_length: padded to 128 │
 └──────────┬──────────────────┘
-           |
-           v
+ |
+ v
 ┌─────────────────────────────┐
-│ Encoder (Transformer)        │
-│  n_layer layers              │
-│  n_head attention heads      │
-│  head_dim per head           │
-│  RoPE positional encoding    │
-│  RMSNorm normalization       │
-│  DenseGeneral (tensordot)    │
+│ Encoder (Transformer) │
+│ n_layer layers │
+│ n_head attention heads │
+│ head_dim per head │
+│ RoPE positional encoding │
+│ RMSNorm normalization │
+│ DenseGeneral (tensordot) │
 └──────────┬──────────────────┘
-           |
-           v
+ |
+ v
 ┌─────────────────────────────┐
-│ Decoder (Transformer)        │
-│  Cross-attention to encoder  │
-│  9-channel audio code output │
-│  tgt_vocab_size: 1028        │
-│  Special tokens:             │
-│    EOS=1024, PAD=1025,       │
-│    BOS=1026                  │
-│  Delay pattern: [0,8..15]    │
+│ Decoder (Transformer) │
+│ Cross-attention to encoder │
+│ 9-channel audio code output │
+│ tgt_vocab_size: 1028 │
+│ Special tokens: │
+│ EOS=1024, PAD=1025, │
+│ BOS=1026 │
+│ Delay pattern: [0,8..15] │
 └──────────┬──────────────────┘
-           |
-           v
+ |
+ v
 ┌─────────────────────────────┐
-│ Descript Audio Codec (DAC)   │
-│  Decode 9 codebook streams   │
-│  Output: 44.1kHz waveform    │
+│ Descript Audio Codec (DAC) │
+│ Decode 9 codebook streams │
+│ Output: 44.1kHz waveform │
 └─────────────────────────────┘
 ```
 
@@ -124,9 +124,9 @@ model = Dia.from_pretrained("nari-labs/Dia-1.6B", compute_dtype="float16")
 text = "[S1] This is the reference speaker talking. [S2] And this is another voice. [S1] Now generate new content in my voice."
 
 output = model.generate(
-    text,
-    audio_prompt="reference_audio.mp3",  # 5-10 seconds
-    use_torch_compile=True,
+ text,
+ audio_prompt="reference_audio.mp3", # 5-10 seconds
+ use_torch_compile=True,
 )
 model.save_audio("cloned.mp3", output)
 ```
@@ -177,25 +177,25 @@ triton==3.2.0 (Linux)
 ```
 koe/
 ├── dia/
-│   ├── __init__.py
-│   ├── audio.py          # Delay pattern indices, audio processing
-│   ├── config.py          # DiaConfig (Pydantic): data, encoder, decoder, model
-│   ├── layers.py          # DiaModel: DenseGeneral, transformer blocks, attention
-│   ├── model.py           # Dia: main model class, generate(), save_audio()
-│   ├── state.py           # Inference state: KV cache, decoder/encoder state
-│   └── static/images/     # Banner assets
+│ ├── __init__.py
+│ ├── audio.py # Delay pattern indices, audio processing
+│ ├── config.py # DiaConfig (Pydantic): data, encoder, decoder, model
+│ ├── layers.py # DiaModel: DenseGeneral, transformer blocks, attention
+│ ├── model.py # Dia: main model class, generate(), save_audio()
+│ ├── state.py # Inference state: KV cache, decoder/encoder state
+│ └── static/images/ # Banner assets
 ├── docker/
-│   ├── Dockerfile.cpu
-│   └── Dockerfile.gpu
+│ ├── Dockerfile.cpu
+│ └── Dockerfile.gpu
 ├── example/
-│   ├── benchmark.py
-│   ├── simple.py
-│   ├── simple-mac.py
-│   ├── simple_batch.py
-│   ├── voice_clone.py
-│   └── voice_clone_batch.py
-├── app.py                 # Gradio web UI
-├── cli.py                 # CLI interface
+│ ├── benchmark.py
+│ ├── simple.py
+│ ├── simple-mac.py
+│ ├── simple_batch.py
+│ ├── voice_clone.py
+│ └── voice_clone_batch.py
+├── app.py # Gradio web UI
+├── cli.py # CLI interface
 ├── pyproject.toml
 └── uv.lock
 ```

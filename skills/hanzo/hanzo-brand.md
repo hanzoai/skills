@@ -32,11 +32,11 @@ Brand assets, color palette, typography, and guidelines for the Hanzo ecosystem.
 
 ```css
 :root {
-  --hanzo-red: #d81c33;
-  --hanzo-dark: #0a0a0a;
-  --hanzo-light: #fafafa;
-  --hanzo-muted: #737373;
-  --hanzo-border: #262626;
+ --hanzo-red: #d81c33;
+ --hanzo-dark: #0a0a0a;
+ --hanzo-light: #fafafa;
+ --hanzo-muted: #737373;
+ --hanzo-border: #262626;
 }
 ```
 
@@ -45,16 +45,16 @@ Brand assets, color palette, typography, and guidelines for the Hanzo ecosystem.
 ```typescript
 // tailwind.config.ts
 export default {
-  theme: {
-    extend: {
-      colors: {
-        hanzo: {
-          red: "#d81c33",
-          dark: "#0a0a0a",
-        },
-      },
-    },
-  },
+ theme: {
+ extend: {
+ colors: {
+ hanzo: {
+ red: "#d81c33",
+ dark: "#0a0a0a",
+ },
+ },
+ },
+ },
 }
 ```
 
@@ -73,8 +73,8 @@ Geometric **H** mark (SVG). Available variants:
 
 ```bash
 # Install brand assets
-pnpm add @hanzo/brand    # Colors, typography, guidelines
-pnpm add @hanzo/logo     # SVG logos and marks
+pnpm add @hanzo/brand # Colors, typography, guidelines
+pnpm add @hanzo/logo # SVG logos and marks
 ```
 
 ```typescript
@@ -139,8 +139,8 @@ When rebranding a fork for the Hanzo ecosystem:
 | Chat app | Hanzo Chat | Not "LibreChat" |
 | Platform | Hanzo Platform | Not "Dokploy" |
 | Search | Hanzo Search | Not "Meilisearch" |
-| KMS | Hanzo KMS | Not "Infisical" |
-| IAM | Hanzo ID (hanzo.id) | Not "Casdoor" |
+| KMS | Hanzo KMS | Not "Hanzo KMS" |
+| IAM | Hanzo ID (hanzo.id) | Not "Hanzo IAM" |
 | Studio | Hanzo Studio | Not "ComfyUI" |
 | Flow | Hanzo Flow | Not "Langflow" |
 | Insights | Hanzo Insights | Not "PostHog" |

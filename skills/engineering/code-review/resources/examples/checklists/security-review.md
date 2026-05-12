@@ -94,7 +94,7 @@ Use this checklist when reviewing code for security concerns. All items should b
 - [ ] No secrets hardcoded in source code
 - [ ] No secrets in configuration files committed to git
 - [ ] Environment variables used for secrets
-- [ ] Secrets manager used (AWS Secrets Manager, HashiCorp Vault)
+- [ ] Secrets manager used (AWS Secrets Manager, external secret manager)
 - [ ] API keys rotated regularly
 - [ ] Database passwords rotated regularly
 - [ ] Secrets are not logged
