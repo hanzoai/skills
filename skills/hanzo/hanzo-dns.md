@@ -40,15 +40,15 @@ Hanzo DNS is a **CoreDNS fork** providing a programmable, plugin-based DNS serve
 
 ```
 External DNS (Cloudflare)
-  |- *.hanzo.ai     -> 165.232.146.176 (hanzo-k8s LB)
-  |- *.hanzo.team   -> 165.232.146.176
-  |- *.lux.network  -> 24.144.69.101 (lux-k8s LB)
+ |- *.hanzo.ai -> 165.232.146.176 (hanzo-k8s LB)
+ |- *.hanzo.team -> 165.232.146.176
+ |- *.lux.network -> 24.144.69.101 (lux-k8s LB)
 
 Internal DNS (Hanzo DNS / CoreDNS)
-  |- *.hanzo.svc    -> cluster-internal IPs
-  |- postgres.hanzo.svc -> PostgreSQL pods
-  |- redis.hanzo.svc    -> Redis/Valkey pods
-  |- llm.hanzo.svc      -> LLM Gateway pods
+ |- *.hanzo.svc -> cluster-internal IPs
+ |- postgres.hanzo.svc -> PostgreSQL pods
+ |- redis.hanzo.svc -> Redis/Valkey pods
+ |- llm.hanzo.svc -> LLM Gateway pods
 ```
 
 ## Cloudflare DNS records (production)
@@ -67,24 +67,24 @@ Internal DNS (Hanzo DNS / CoreDNS)
 
 ```
 hanzo.svc:53 {
-    kubernetes hanzo.svc {
-        endpoint https://kubernetes.default.svc
-        kubeconfig /etc/kubernetes/admin.conf
-    }
-    errors
-    log
-    cache 30
+ kubernetes hanzo.svc {
+ endpoint https://kubernetes.default.svc
+ kubeconfig /etc/kubernetes/admin.conf
+ }
+ errors
+ log
+ cache 30
 }
 
 .:53 {
-    hanzoapi {
-        endpoint https://api.hanzo.ai/dns
-        token {$DNS_API_TOKEN}
-    }
-    forward . 1.1.1.1 8.8.8.8
-    errors
-    log
-    cache 60
+ hanzoapi {
+ endpoint https://api.hanzo.ai/dns
+ token {$DNS_API_TOKEN}
+ }
+ forward . 1.1.1.1 8.8.8.8
+ errors
+ log
+ cache 60
 }
 ```
 
@@ -94,10 +94,10 @@ Custom plugin for API-driven DNS record management:
 
 ```
 hanzoapi {
-    endpoint https://api.hanzo.ai/dns
-    token <api-token>
-    fallthrough
-    ttl 300
+ endpoint https://api.hanzo.ai/dns
+ token <api-token>
+ fallthrough
+ ttl 300
 }
 ```
 
@@ -143,27 +143,27 @@ docker build -t ghcr.io/hanzoai/dns:latest .
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hanzo-dns
-  namespace: hanzo
+ name: hanzo-dns
+ namespace: hanzo
 spec:
-  replicas: 2
-  template:
-    spec:
-      containers:
-        - name: dns
-          image: ghcr.io/hanzoai/dns:latest
-          ports:
-            - containerPort: 53
-              protocol: UDP
-            - containerPort: 53
-              protocol: TCP
-          volumeMounts:
-            - name: config
-              mountPath: /etc/coredns
-      volumes:
-        - name: config
-          configMap:
-            name: hanzo-dns-config
+ replicas: 2
+ template:
+ spec:
+ containers:
+ - name: dns
+ image: ghcr.io/hanzoai/dns:latest
+ ports:
+ - containerPort: 53
+ protocol: UDP
+ - containerPort: 53
+ protocol: TCP
+ volumeMounts:
+ - name: config
+ mountPath: /etc/coredns
+ volumes:
+ - name: config
+ configMap:
+ name: hanzo-dns-config
 ```
 
 ## Troubleshooting

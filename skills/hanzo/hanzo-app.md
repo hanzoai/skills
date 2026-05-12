@@ -91,44 +91,44 @@ bun macos
 
 ```
 hanzoai/app/
-  app/                    Next.js App Router pages
-    (public)/             Public-facing pages
-    actions/              Server actions
-    admin/                Admin dashboard
-    agents/               AI agent management
-    api/                  API routes
-    auth/                 Authentication pages
-    billing/              Subscription / billing
-    chat/                 AI chat interface
-    dashboard/            Main dashboard
-    deployments/          Deployment management
-    dev/                  Developer tools / IDE
-    docs/                 Documentation pages
-    enterprise/           Enterprise features
-    gallery/              Template gallery
-    integrations/         Third-party integrations
-    login/ signup/        Auth flows
-    nodes/                Node management
-    playground/           Code playground
-    pricing/              Pricing pages
-    profile/              User profile
-    settings/             App settings
-    templates/            Project templates
-  components/             React components
-    chat-panel/           AI chat UI
-    editor/               Code editor (Monaco)
-    file-explorer/        VFS file browser
-    deployment-card/      Deployment management
-    model-selector.tsx    Zen model picker
-    monaco-editor/        Monaco wrapper
-    workspace/            IDE workspace
-    ui/                   Shared UI primitives
-  macos/                  Native macOS layer
-    hanzo-macOS/          Swift/ObjC native code
-    hanzo.xcodeproj/      Xcode project
-    Podfile               CocoaPods dependencies
-  lib/                    Shared utilities
-  public/                 Static assets
+ app/ Next.js App Router pages
+ (public)/ Public-facing pages
+ actions/ Server actions
+ admin/ Admin dashboard
+ agents/ AI agent management
+ api/ API routes
+ auth/ Authentication pages
+ billing/ Subscription / billing
+ chat/ AI chat interface
+ dashboard/ Main dashboard
+ deployments/ Deployment management
+ dev/ Developer tools / IDE
+ docs/ Documentation pages
+ enterprise/ Enterprise features
+ gallery/ Template gallery
+ integrations/ Third-party integrations
+ login/ signup/ Auth flows
+ nodes/ Node management
+ playground/ Code playground
+ pricing/ Pricing pages
+ profile/ User profile
+ settings/ App settings
+ templates/ Project templates
+ components/ React components
+ chat-panel/ AI chat UI
+ editor/ Code editor (Monaco)
+ file-explorer/ VFS file browser
+ deployment-card/ Deployment management
+ model-selector.tsx Zen model picker
+ monaco-editor/ Monaco wrapper
+ workspace/ IDE workspace
+ ui/ Shared UI primitives
+ macos/ Native macOS layer
+ hanzo-macOS/ Swift/ObjC native code
+ hanzo.xcodeproj/ Xcode project
+ Podfile CocoaPods dependencies
+ lib/ Shared utilities
+ public/ Static assets
 ```
 
 ### Key Features

@@ -46,24 +46,24 @@ Fork of OpenClaw/ClawdBot, fully rebranded. Package: `@hanzo/bot`, binary: `hanz
 ## Architecture
 
 ```
-                 Messaging Platforms
-          Discord | Telegram | Slack | ...
-                    |
-              Extension Layer (50+)
-                    |
-              +-----+-----+
-              |           |
-         Channel      ACP Gateway
-         Framework    (cross-agent)
-              |           |
-         Agent Runtime    |
-              |           |
-         +----+----+     |
-         |    |    |     |
-       Memory Context LLM
-       (LanceDB) Engine Proxy
-                         |
-                  api.hanzo.ai/v1
+ Messaging Platforms
+ Discord | Telegram | Slack | ...
+ |
+ Extension Layer (50+)
+ |
+ +-----+-----+
+ | |
+ Channel ACP Gateway
+ Framework (cross-agent)
+ | |
+ Agent Runtime |
+ | |
+ +----+----+ |
+ | | | |
+ Memory Context LLM
+ (LanceDB) Engine Proxy
+ |
+ api.hanzo.ai/v1
 ```
 
 ## Channel extensions (extensions/)
@@ -86,32 +86,32 @@ Fork of OpenClaw/ClawdBot, fully rebranded. Package: `@hanzo/bot`, binary: `hanz
 
 ```
 hanzoai/bot/
-  src/
-    agents/           # AI agent runtime
-    channels/         # Channel framework (registry, config, session)
-    discord/          # Discord-specific logic
-    telegram/         # Telegram-specific logic
-    slack/            # Slack-specific logic
-    whatsapp/         # WhatsApp (Baileys) integration
-    signal/           # Signal integration
-    imessage/         # iMessage integration
-    line/             # LINE integration
-    web/              # Web channel
-    gateway/          # ACP gateway
-    tui/              # Terminal UI
-    cli/              # CLI commands
-    memory/           # Conversation memory
-    context-engine/   # Context management
-    providers/        # LLM providers
-    commerce/         # Commerce module
-    browser/          # Browser automation (Playwright)
-    media-understanding/  # Media processing
-    plugin-sdk/       # Plugin SDK exports
-  extensions/         # 50+ extension plugins
-  apps/
-    ios/              # Swift iOS app
-    android/          # Kotlin Android app
-    macos/            # macOS app
+ src/
+ agents/ # AI agent runtime
+ channels/ # Channel framework (registry, config, session)
+ discord/ # Discord-specific logic
+ telegram/ # Telegram-specific logic
+ slack/ # Slack-specific logic
+ whatsapp/ # WhatsApp (Baileys) integration
+ signal/ # Signal integration
+ imessage/ # iMessage integration
+ line/ # LINE integration
+ web/ # Web channel
+ gateway/ # ACP gateway
+ tui/ # Terminal UI
+ cli/ # CLI commands
+ memory/ # Conversation memory
+ context-engine/ # Context management
+ providers/ # LLM providers
+ commerce/ # Commerce module
+ browser/ # Browser automation (Playwright)
+ media-understanding/ # Media processing
+ plugin-sdk/ # Plugin SDK exports
+ extensions/ # 50+ extension plugins
+ apps/
+ ios/ # Swift iOS app
+ android/ # Kotlin Android app
+ macos/ # macOS app
 ```
 
 ## Key dependencies
@@ -166,21 +166,21 @@ Bot instances register with the Hanzo Playground control plane (`app.hanzo.bot`)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hanzo-bot
-  namespace: hanzo
+ name: hanzo-bot
+ namespace: hanzo
 spec:
-  replicas: 2
-  template:
-    spec:
-      containers:
-        - name: bot
-          image: ghcr.io/hanzoai/bot:latest
-          envFrom:
-            - secretRef:
-                name: bot-secrets  # KMS-synced
-          env:
-            - name: LLM_BASE_URL
-              value: http://llm.hanzo.svc:4000/v1
+ replicas: 2
+ template:
+ spec:
+ containers:
+ - name: bot
+ image: ghcr.io/hanzoai/bot:latest
+ envFrom:
+ - secretRef:
+ name: bot-secrets # KMS-synced
+ env:
+ - name: LLM_BASE_URL
+ value: http://llm.hanzo.svc:4000/v1
 ```
 
 ## Skills (separate repos)

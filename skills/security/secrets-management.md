@@ -14,7 +14,7 @@ description: Secrets management patterns including vaults, environment variables
 Activate this skill when:
 - Storing API keys, passwords, or credentials
 - Implementing secrets management for applications
-- Integrating with HashiCorp Vault, AWS Secrets Manager, or similar
+- Integrating with external secret manager, AWS Secrets Manager, or similar
 - Rotating encryption keys or credentials
 - Managing secrets in CI/CD pipelines
 - Preventing credential exposure in code or logs
@@ -108,7 +108,7 @@ credentials.json
 *.key
 ```
 
-## HashiCorp Vault
+## external secret manager
 
 ### Vault Integration (Python)
 
@@ -117,7 +117,7 @@ import hvac
 from typing import Dict, Any
 
 class VaultClient:
-    """HashiCorp Vault client wrapper"""
+    """external secret manager client wrapper"""
 
     def __init__(self, url: str = None, token: str = None):
         self.url = url or os.environ['VAULT_ADDR']

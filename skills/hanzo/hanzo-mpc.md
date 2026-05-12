@@ -91,27 +91,27 @@ docker-compose up -d
 
 ```go
 import (
-    "github.com/hanzoai/mpc/pkg/client"
-    "github.com/nats-io/nats.go"
+ "github.com/hanzoai/mpc/pkg/client"
+ "github.com/nats-io/nats.go"
 )
 
 func main() {
-    natsConn, _ := nats.Connect("nats://localhost:4222")
-    defer natsConn.Close()
+ natsConn, _ := nats.Connect("nats://localhost:4222")
+ defer natsConn.Close()
 
-    mpcClient := client.NewMPCClient(client.Options{
-        NatsConn: natsConn,
-        KeyPath:  "./event_initiator.key",
-    })
+ mpcClient := client.NewMPCClient(client.Options{
+ NatsConn: natsConn,
+ KeyPath: "./event_initiator.key",
+ })
 
-    // Create a wallet (distributed key generation)
-    walletID := "my-wallet-001"
-    mpcClient.CreateWallet(walletID)
+ // Create a wallet (distributed key generation)
+ walletID := "my-wallet-001"
+ mpcClient.CreateWallet(walletID)
 
-    // Listen for results
-    mpcClient.OnWalletCreationResult(func(event event.KeygenSuccessEvent) {
-        fmt.Println("Wallet created:", event)
-    })
+ // Listen for results
+ mpcClient.OnWalletCreationResult(func(event event.KeygenSuccessEvent) {
+ fmt.Println("Wallet created:", event)
+ })
 }
 ```
 
@@ -121,43 +121,43 @@ func main() {
 
 ```
 hanzoai/mpc/
-  cmd/
-    hanzo-mpc/              Main node binary
-    hanzo-mpc-cli/          CLI tools (generate-peers, register, identity)
-  pkg/
-    mpc/                    TSS implementation (CGGMP21, FROST, LSS)
-    kvstore/                BadgerDB storage (AES-256 encrypted)
-    messaging/              NATS JetStream (pub/sub + P2P)
-    identity/               Ed25519 node identity (age encrypted)
-    client/                 Go client library
-    api/                    HTTP API handlers
-    policy/                 Policy engine (signers, limits, whitelist, FHE)
-    threshold/              ThresholdVM (policy enforcement in signing)
-    storage/                BadgerDB store + S3 backup client
-    eventconsumer/          Event processing
-    hsm/                    HSM abstraction (file, AWS, GCP, Azure, Zymbit, KMS)
-    kms/                    Hanzo KMS integration
-    encryption/             Encryption utilities
-    encoding/               Serialization (CBOR for FROST/LSS configs)
-    config/                 Configuration management
-    infra/                  KV backends (ConsensusKV, NATS KV, Consul)
-    keyinfo/                Key metadata management
-    protocol/               Protocol message types
-    types/                  Shared type definitions
-    common/                 Common utilities
-    constant/               Constants
-    logger/                 Structured logging (zerolog)
-    utils/                  Helper functions
-  contracts/
-    ThresholdPolicy.sol     On-chain policy enforcement contract
-  deploy/
-    compose.yml             Full stack Docker deployment
-    Makefile                Deployment automation
-  e2e/                      End-to-end integration tests
-  examples/                 Usage examples
-  docs/                     Documentation
-  identity/                 Identity key templates
-  config.yaml               Default configuration
+ cmd/
+ hanzo-mpc/ Main node binary
+ hanzo-mpc-cli/ CLI tools (generate-peers, register, identity)
+ pkg/
+ mpc/ TSS implementation (CGGMP21, FROST, LSS)
+ kvstore/ BadgerDB storage (AES-256 encrypted)
+ messaging/ NATS JetStream (pub/sub + P2P)
+ identity/ Ed25519 node identity (age encrypted)
+ client/ Go client library
+ api/ HTTP API handlers
+ policy/ Policy engine (signers, limits, whitelist, FHE)
+ threshold/ ThresholdVM (policy enforcement in signing)
+ storage/ BadgerDB store + S3 backup client
+ eventconsumer/ Event processing
+ hsm/ HSM abstraction (file, AWS, GCP, Azure, Zymbit, KMS)
+ kms/ Hanzo KMS integration
+ encryption/ Encryption utilities
+ encoding/ Serialization (CBOR for FROST/LSS configs)
+ config/ Configuration management
+ infra/ KV backends (ConsensusKV, NATS KV, Consul)
+ keyinfo/ Key metadata management
+ protocol/ Protocol message types
+ types/ Shared type definitions
+ common/ Common utilities
+ constant/ Constants
+ logger/ Structured logging (zerolog)
+ utils/ Helper functions
+ contracts/
+ ThresholdPolicy.sol On-chain policy enforcement contract
+ deploy/
+ compose.yml Full stack Docker deployment
+ Makefile Deployment automation
+ e2e/ End-to-end integration tests
+ examples/ Usage examples
+ docs/ Documentation
+ identity/ Identity key templates
+ config.yaml Default configuration
 ```
 
 ### Threshold Signing
@@ -197,22 +197,22 @@ Fireblocks/Utila-style transaction governance:
 
 ```yaml
 hsm:
-  provider: file  # file, aws, gcp, azure, zymbit, kms
-  file:
-    base_path: "."
-    hex_encoded: true
-  # aws:
-  #   region: us-east-1
-  #   key_arn: arn:aws:kms:us-east-1:123456:key/abc-def
-  # gcp:
-  #   project: my-project
-  #   location: us-east1
-  #   key_ring: mpc-keys
-  # kms:
-  #   site_url: https://kms.hanzo.ai
-  #   client_id: ""
-  #   client_secret: ""
-  #   project_id: ""
+ provider: file # file, aws, gcp, azure, zymbit, kms
+ file:
+ base_path: "."
+ hex_encoded: true
+ # aws:
+ # region: us-east-1
+ # key_arn: arn:aws:kms:us-east-1:123456:key/abc-def
+ # gcp:
+ # project: my-project
+ # location: us-east1
+ # key_ring: mpc-keys
+ # kms:
+ # site_url: https://kms.hanzo.ai
+ # client_id: ""
+ # client_secret: ""
+ # project_id: ""
 ```
 
 ### NATS Topics
@@ -241,14 +241,14 @@ hsm:
 
 ```
 K8s Cluster: hanzo-k8s (do-sfo3)
-  Namespace: hanzo
-  StatefulSet: hanzo-mpc (3 replicas)
-  Image: ghcr.io/hanzoai/mpc:v0.4.3
-  NATS: nats://nats.hanzo.svc.cluster.local:4222
-  KV Backend: consensus (M-Chain)
-  Config: ConfigMap hanzo-mpc-config
-  Identity: Secret hanzo-mpc-identity
-  Key shards: BadgerDB on PVC at /data/mpc/db/hanzo-mpc-{N}/
+ Namespace: hanzo
+ StatefulSet: hanzo-mpc (3 replicas)
+ Image: ghcr.io/hanzoai/mpc:v0.4.3
+ NATS: nats://nats.hanzo.svc.cluster.local:4222
+ KV Backend: consensus (M-Chain)
+ Config: ConfigMap hanzo-mpc-config
+ Identity: Secret hanzo-mpc-identity
+ Key shards: BadgerDB on PVC at /data/mpc/db/hanzo-mpc-{N}/
 ```
 
 ### Deploy Stack (compose.yml)
@@ -263,10 +263,10 @@ K8s Cluster: hanzo-k8s (do-sfo3)
 ## Testing
 
 ```bash
-make test            # Unit tests
-make test-coverage   # With coverage report
-make e2e-test        # End-to-end (builds binaries first)
-make test-all        # Unit + E2E
+make test # Unit tests
+make test-coverage # With coverage report
+make e2e-test # End-to-end (builds binaries first)
+make test-all # Unit + E2E
 ```
 
 ## Critical Serialization Notes
@@ -291,10 +291,10 @@ make test-all        # Unit + E2E
 OnyxPlus (`github.com/onyx-plus/*`) uses MPC for:
 
 1. **Per-user default EVM wallets** that become `MANAGEMENT_KEY` on each
-   user's OnchainID contract (option-a, self-sovereign — onyxd holds
-   zero MPC authority).
+ user's OnchainID contract (option-a, self-sovereign — onyxd holds
+ zero MPC authority).
 2. **WebAuthn passkey register/challenge** for biometric+passkey
-   enrollment (direct onyxd → MPC; per-credential, not per-user).
+ enrollment (direct onyxd → MPC; per-credential, not per-user).
 
 **Critical invariant**: MPC resolves `(orgID, userID)` from JWT claims,
 not from `X-Org-Id` / `X-User-Id` headers. The upstream's

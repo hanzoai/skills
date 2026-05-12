@@ -5,7 +5,7 @@
 
 ## Overview
 
-Hanzo ID is the **unified identity platform** for the entire Hanzo/Lux/Zoo/Pars ecosystem. Casdoor-based IAM backend with a custom Next.js login UI and Cloudflare Worker for edge OAuth flows. Serves OAuth2/OIDC for all Hanzo services. White-label-ready with per-org customization. Every authenticated service in the stack uses Hanzo ID.
+Hanzo ID is the **unified identity platform** for the entire Hanzo/Lux/Zoo/Pars ecosystem. Hanzo IAM-based IAM backend with a custom Next.js login UI and Cloudflare Worker for edge OAuth flows. Serves OAuth2/OIDC for all Hanzo services. White-label-ready with per-org customization. Every authenticated service in the stack uses Hanzo ID.
 
 ## When to use
 
@@ -18,11 +18,11 @@ Hanzo ID is the **unified identity platform** for the entire Hanzo/Lux/Zoo/Pars 
 
 ## Hard requirements
 
-1. **Casdoor** IAM backend running (Go/Beego)
-2. **App registered** in Casdoor admin (`owner=admin`, NOT org name)
-3. **Implicit flow preferred** -- code flow has Casdoor bug with empty grant_type
+1. **Hanzo IAM** IAM backend running (Go/Beego)
+2. **App registered** in Hanzo IAM admin (`owner=admin`, NOT org name)
+3. **Implicit flow preferred** -- code flow has Hanzo IAM bug with empty grant_type
 4. **All data queries scoped to org** -- extract org from JWT `owner` claim
-5. **RFC 6749/OIDC endpoints only** for new integrations (never legacy Casdoor paths)
+5. **RFC 6749/OIDC endpoints only** for new integrations (never legacy Hanzo IAM paths)
 
 ## Quick reference
 
@@ -56,16 +56,16 @@ Hanzo ID is the **unified identity platform** for the entire Hanzo/Lux/Zoo/Pars 
 | Device | `/oauth/device` | -- |
 | Logout | `/oauth/logout` | -- |
 
-Legacy Casdoor paths still work for backward compat but NEVER use them for new integrations.
+Legacy Hanzo IAM paths still work for backward compat but NEVER use them for new integrations.
 
 ## Multi-org architecture
 
 ```
 hanzo.id (login UI)
-  +-- org: hanzo  --> app-hanzo, app-console, app-platform, app-kms
-  +-- org: lux    --> app-lux-cloud, app-lux-explorer
-  +-- org: zoo    --> app-zoo-gym
-  +-- org: pars   --> app-pars
+ +-- org: hanzo --> app-hanzo, app-console, app-platform, app-kms
+ +-- org: lux --> app-lux-cloud, app-lux-explorer
+ +-- org: zoo --> app-zoo-gym
+ +-- org: pars --> app-pars
 ```
 
 Each org can have its own domain, branding, and app set. Domains: hanzo.id, lux.id, zoo.id, pars.id.
@@ -75,7 +75,7 @@ Each org can have its own domain, branding, and app set. Domains: hanzo.id, lux.
 ```typescript
 // Start auth flow
 const authUrl = new URL("https://hanzo.id/oauth/authorize")
-authUrl.searchParams.set("response_type", "token")  // implicit flow
+authUrl.searchParams.set("response_type", "token") // implicit flow
 authUrl.searchParams.set("client_id", "app-hanzo")
 authUrl.searchParams.set("redirect_uri", "https://myapp.com/callback")
 authUrl.searchParams.set("scope", "openid profile email")
@@ -92,7 +92,7 @@ const accessToken = hash.get("access_token")
 
 // userinfo only returns sub -- use get-account for full profile
 const profile = await fetch("https://iam.hanzo.ai/api/get-account", {
-  headers: { "Authorization": `Bearer ${accessToken}` }
+ headers: { "Authorization": `Bearer ${accessToken}` }
 }).then(r => r.json())
 ```
 
@@ -101,8 +101,8 @@ const profile = await fetch("https://iam.hanzo.ai/api/get-account", {
 ```typescript
 // ALWAYS use this before login -- source of truth for app/org
 const appLogin = await fetch("https://hanzo.id/api/get-app-login", {
-  method: "POST",
-  body: JSON.stringify({ clientId: "app-hanzo" })
+ method: "POST",
+ body: JSON.stringify({ clientId: "app-hanzo" })
 }).then(r => r.json())
 
 // Use appLogin.application and appLogin.organization
@@ -126,7 +126,7 @@ All authenticated services extract org from JWT:
 ```go
 // Go service pattern
 claims := extractClaims(token)
-orgID := claims["owner"].(string)  // "hanzo", "lux", "zoo", "pars"
+orgID := claims["owner"].(string) // "hanzo", "lux", "zoo", "pars"
 
 // Scope ALL data queries to org
 db.Where("org_id = ?", orgID).Find(&results)
@@ -138,19 +138,19 @@ Gateway (`api.hanzo.ai`) injects identity headers from JWT for downstream servic
 
 | Issue | Detail |
 |-------|--------|
-| **Code flow bug** | `response_type=code` maps to empty grant_type `""` in Casdoor. Even with `""` in DB `grant_types` array, Go xorm drops empty strings. |
+| **Code flow bug** | `response_type=code` maps to empty grant_type `""` in Hanzo IAM. Even with `""` in DB `grant_types` array, Go xorm drops empty strings. |
 | **Solution** | Use `response_type=token` (implicit flow) for all browser-based auth. |
-| **Token expiry** | Casdoor apps default `expireInHours=0` (instant expiry). Always set `expireInHours=168` (7 days). |
-| **API masking** | Casdoor's `/api/get-application` masks fields for unauthed requests. Use `/api/get-app-login` instead. |
+| **Token expiry** | Hanzo IAM apps default `expireInHours=0` (instant expiry). Always set `expireInHours=168` (7 days). |
+| **API masking** | Hanzo IAM's `/api/get-application` masks fields for unauthed requests. Use `/api/get-app-login` instead. |
 
 ## Troubleshooting
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| Login returns empty token | `expireInHours=0` | Set to 168 in Casdoor app config |
+| Login returns empty token | `expireInHours=0` | Set to 168 in Hanzo IAM app config |
 | Code flow rejected | Empty grant_type bug | Use implicit flow (`response_type=token`) |
 | Wrong org after login | Hardcoded `organization: "hanzo"` | Use `/api/get-app-login` lookup |
-| Userinfo only returns `sub` | Normal Casdoor behavior | Use `/api/get-account` for full profile |
+| Userinfo only returns `sub` | Normal Hanzo IAM behavior | Use `/api/get-account` for full profile |
 | App appears to have no config | API masking on unauthed requests | Use authenticated request |
 | Missing cert reference | Wrong client_id for scoped SSO | Use `/api/get-app-login` to resolve |
 | Platform sign-in fails | Provider set to `"github"` | Must be `"hanzo"` in platform code |
@@ -166,5 +166,5 @@ Gateway (`api.hanzo.ai`) injects identity headers from JWT for downstream servic
 
 **Last Updated**: 2026-03-23
 **Category**: Hanzo Ecosystem
-**Related**: auth, oauth, oidc, iam, casdoor, identity, sso, multi-org
+**Related**: auth, oauth, oidc, iam, iam, identity, sso, multi-org
 **Prerequisites**: OAuth2/OIDC concepts, JWT

@@ -67,18 +67,18 @@ After login the SPA holds a JWT and calls onyxd at `https://onyxplus-api.{env}.s
 
 ```yaml
 spec:
-  containers:
-    - name: admin
-      image: us-docker.pkg.dev/onyxplus-registry/onyx-plus/admin:1.0.0
-      ports:
-        - containerPort: 3000
-      securityContext:
-        allowPrivilegeEscalation: false
-        readOnlyRootFilesystem: false    # SPA_* env → /public/config.json on boot
-        capabilities: { drop: ["ALL"] }
-      env: [ ... SPA_* ... ]
-      readinessProbe: { httpGet: { path: /healthz, port: 3000 } }
-      livenessProbe:  { httpGet: { path: /healthz, port: 3000 }, initialDelaySeconds: 10, periodSeconds: 30 }
+ containers:
+ - name: admin
+ image: us-docker.pkg.dev/onyxplus-registry/onyx-plus/admin:1.0.0
+ ports:
+ - containerPort: 3000
+ securityContext:
+ allowPrivilegeEscalation: false
+ readOnlyRootFilesystem: false # SPA_* env → /public/config.json on boot
+ capabilities: { drop: ["ALL"] }
+ env: [ ... SPA_* ... ]
+ readinessProbe: { httpGet: { path: /healthz, port: 3000 } }
+ livenessProbe: { httpGet: { path: /healthz, port: 3000 }, initialDelaySeconds: 10, periodSeconds: 30 }
 ```
 
 `readOnlyRootFilesystem` is intentionally `false` here -- the upstream `hanzoai/spa` runs as root and writes the runtime config file at boot. PR #6 in the admin repo addressed this.
@@ -89,15 +89,15 @@ spec:
 # 1. Bump VERSION (e.g. 1.0.0 → 1.0.1) in ~/work/onyxplus/admin/VERSION
 # 2. Submit Cloud Build
 gcloud builds submit --config=cloudbuild.yaml \
-    --project=onyxplus-registry \
-    --gcs-source-staging-dir=gs://onyxplus-registry_cloudbuild/source
+ --project=onyxplus-registry \
+ --gcs-source-staging-dir=gs://onyxplus-registry_cloudbuild/source
 
 # 3. Bump image tag in admin/universe/k8s/{dev,test,main}/services.yaml
 # 4. Commit + push
 
 # 5. Roll out dev → test → main
 kubectl --context=onyxplus-dev -n onyxplus set image deployment/admin \
-    admin=us-docker.pkg.dev/onyxplus-registry/onyx-plus/admin:1.0.1
+ admin=us-docker.pkg.dev/onyxplus-registry/onyx-plus/admin:1.0.1
 kubectl -n onyxplus rollout status deployment/admin
 ```
 

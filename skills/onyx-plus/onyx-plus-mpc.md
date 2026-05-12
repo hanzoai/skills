@@ -30,24 +30,24 @@ The MPC server resolves `(orgID, userID)` from JWT claims, not from `X-Org-Id` /
 
 ```
 1. onyxd POSTs to BD /v1/identity/ensure {org_id, user_id}
-   with Authorization: Bearer ${BD_INTERNAL_SERVICE_KEY}.
+ with Authorization: Bearer ${BD_INTERNAL_SERVICE_KEY}.
 
 2. BD calls requestMPCWallet(ctx, userID, orgID) — POST to
-   TA /v1/ta/mpc/wallets {for_user_id, label, set_default}.
-   TA holds MPC_SERVICE_KEY and is the sole authority for
-   wallet creation; BD never touches the MPC credential.
+ TA /v1/ta/mpc/wallets {for_user_id, label, set_default}.
+ TA holds MPC_SERVICE_KEY and is the sole authority for
+ wallet creation; BD never touches the MPC credential.
 
 3. TA proxies to MPC with its own MPC_SERVICE_KEY, returns
-   the user's default EVM wallet address.
+ the user's default EVM wallet address.
 
 4. BD calls IdentityFactory.identityOf(wallet); if zero,
-   calls createIdentity(wallet, canonicalSalt), waits for
-   the IdentityCreated event, returns (wallet, onchainID,
-   txHash) to onyxd.
+ calls createIdentity(wallet, canonicalSalt), waits for
+ the IdentityCreated event, returns (wallet, onchainID,
+ txHash) to onyxd.
 
 5. onyxd persists wallet_address + onchain_id_address +
-   identity_factory_tx on the enrollment row, then issues
-   the per-topic ERC-735 claims.
+ identity_factory_tx on the enrollment row, then issues
+ the per-topic ERC-735 claims.
 ```
 
 Single round trip from onyxd's perspective: one POST, four legs of internal routing. Idempotent on `(orgID, userID)`.
@@ -89,21 +89,21 @@ docker compose -f ~/work/liquidity/universe/compose.yml up -d
 
 # 2. Get a TA service JWT
 TA_CID=$(docker exec liquid-iam sqlite3 -readonly /data/iam/iam.db \
-    "SELECT client_id FROM application WHERE name='liquidity-ta';")
+ "SELECT client_id FROM application WHERE name='liquidity-ta';")
 TA_SECRET=$(docker exec liquid-iam sqlite3 -readonly /data/iam/iam.db \
-    "SELECT client_secret FROM application WHERE name='liquidity-ta';")
+ "SELECT client_secret FROM application WHERE name='liquidity-ta';")
 
 JWT=$(curl -sS -X POST \
-    -H "Content-Type: application/x-www-form-urlencoded" \
-    -d "grant_type=client_credentials&client_id=${TA_CID}&client_secret=${TA_SECRET}" \
-    http://localhost:8000/login/oauth/access_token | jq -r .access_token)
+ -H "Content-Type: application/x-www-form-urlencoded" \
+ -d "grant_type=client_credentials&client_id=${TA_CID}&client_secret=${TA_SECRET}" \
+ http://localhost:8000/login/oauth/access_token | jq -r .access_token)
 
 # 3. Provision a wallet via TA (forwards to MPC with TA's MPC_SERVICE_KEY)
 curl -sS -X POST \
-    -H "Authorization: Bearer ${JWT}" \
-    -H "Content-Type: application/json" \
-    -d '{"for_user_id":"u_test_001","label":"smoke","set_default":true}' \
-    http://localhost:8090/v1/ta/mpc/wallets
+ -H "Authorization: Bearer ${JWT}" \
+ -H "Content-Type: application/json" \
+ -d '{"for_user_id":"u_test_001","label":"smoke","set_default":true}' \
+ http://localhost:8090/v1/ta/mpc/wallets
 ```
 
 Successful response: `{"walletId":"...","address":"0x...", ...}`. Same `(orgID, userID)` repeated yields the same `address` (default-wallet idempotence).

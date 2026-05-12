@@ -43,23 +43,23 @@ pip install "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
 
 ```bash
 llamafactory-cli train \
-    --stage sft \
-    --do_train \
-    --model_name_or_path Qwen/Qwen3-0.6B \
-    --dataset your_dataset \
-    --template qwen3 \
-    --finetuning_type lora \
-    --lora_target all \
-    --output_dir ./zen-nano-lora \
-    --per_device_train_batch_size 4 \
-    --gradient_accumulation_steps 4 \
-    --num_train_epochs 3 \
-    --lr_scheduler_type cosine \
-    --learning_rate 5e-5 \
-    --flash_attn fa2 \
-    --use_unsloth true \
-    --save_steps 100 \
-    --logging_steps 10
+ --stage sft \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-0.6B \
+ --dataset your_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --lora_target all \
+ --output_dir ./zen-nano-lora \
+ --per_device_train_batch_size 4 \
+ --gradient_accumulation_steps 4 \
+ --num_train_epochs 3 \
+ --lr_scheduler_type cosine \
+ --learning_rate 5e-5 \
+ --flash_attn fa2 \
+ --use_unsloth true \
+ --save_steps 100 \
+ --logging_steps 10
 ```
 
 ### GUI Training Interface
@@ -82,20 +82,20 @@ Access at http://localhost:7860 for visual training configuration.
 
 ```bash
 llamafactory-cli train \
-    --stage sft \
-    --do_train \
-    --model_name_or_path Qwen/Qwen3-4B \
-    --dataset your_dataset \
-    --template qwen3 \
-    --finetuning_type lora \
-    --lora_rank 64 \
-    --lora_alpha 32 \
-    --lora_dropout 0.1 \
-    --lora_target all \
-    --output_dir ./model-lora \
-    --per_device_train_batch_size 4 \
-    --gradient_accumulation_steps 4 \
-    --learning_rate 5e-5
+ --stage sft \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-4B \
+ --dataset your_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --lora_rank 64 \
+ --lora_alpha 32 \
+ --lora_dropout 0.1 \
+ --lora_target all \
+ --output_dir ./model-lora \
+ --per_device_train_batch_size 4 \
+ --gradient_accumulation_steps 4 \
+ --learning_rate 5e-5
 ```
 
 ### 2. QLoRA (Quantized LoRA)
@@ -107,19 +107,19 @@ llamafactory-cli train \
 
 ```bash
 llamafactory-cli train \
-    --stage sft \
-    --do_train \
-    --model_name_or_path Qwen/Qwen3-4B \
-    --dataset your_dataset \
-    --template qwen3 \
-    --finetuning_type lora \
-    --quantization_bit 4 \
-    --lora_rank 64 \
-    --lora_alpha 32 \
-    --output_dir ./model-qlora \
-    --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 16 \
-    --learning_rate 2e-4
+ --stage sft \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-4B \
+ --dataset your_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --quantization_bit 4 \
+ --lora_rank 64 \
+ --lora_alpha 32 \
+ --output_dir ./model-qlora \
+ --per_device_train_batch_size 1 \
+ --gradient_accumulation_steps 16 \
+ --learning_rate 2e-4
 ```
 
 ### 3. GRPO (Group Relative Policy Optimization)
@@ -134,17 +134,17 @@ llamafactory-cli train \
 
 ```bash
 llamafactory-cli train \
-    --stage grpo \
-    --do_train \
-    --model_name_or_path Qwen/Qwen3-4B \
-    --dataset your_preference_dataset \
-    --template qwen3 \
-    --finetuning_type lora \
-    --output_dir ./model-grpo \
-    --per_device_train_batch_size 2 \
-    --gradient_accumulation_steps 8 \
-    --num_train_epochs 1 \
-    --learning_rate 1e-5
+ --stage grpo \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-4B \
+ --dataset your_preference_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --output_dir ./model-grpo \
+ --per_device_train_batch_size 2 \
+ --gradient_accumulation_steps 8 \
+ --num_train_epochs 1 \
+ --learning_rate 1e-5
 ```
 
 ### 4. GSPO (Group Sampled Policy Optimization)
@@ -155,14 +155,14 @@ llamafactory-cli train \
 
 ```bash
 llamafactory-cli train \
-    --stage gspo \
-    --do_train \
-    --model_name_or_path Qwen/Qwen3-4B-MoE \
-    --dataset your_preference_dataset \
-    --template qwen3 \
-    --finetuning_type lora \
-    --output_dir ./model-gspo \
-    --learning_rate 1e-5
+ --stage gspo \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-4B-MoE \
+ --dataset your_preference_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --output_dir ./model-gspo \
+ --learning_rate 1e-5
 ```
 
 **Note on Training-Free GRPO**: Training-free GRPO is the **default approach** used in Zoo Gym for local LLMs and production deployments. It provides the best balance of memory efficiency and quality without requiring value networks. For specialized use cases like per-user personalization, see BitDelta/DeltaSoup below.
@@ -186,16 +186,16 @@ llamafactory-cli train \
 ```bash
 # Train personalized variant for user
 llamafactory-cli train \
-    --stage sft \
-    --model_name_or_path Qwen/Qwen3-4B \
-    --dataset user_123_preferences \
-    --template qwen3 \
-    --finetuning_type bitdelta \
-    --output_dir ./variants/user_123 \
-    --quantization_method bitdelta \
-    --bits 1 \
-    --group_size 128 \
-    --safety_threshold 0.6
+ --stage sft \
+ --model_name_or_path Qwen/Qwen3-4B \
+ --dataset user_123_preferences \
+ --template qwen3 \
+ --finetuning_type bitdelta \
+ --output_dir ./variants/user_123 \
+ --quantization_method bitdelta \
+ --bits 1 \
+ --group_size 128 \
+ --safety_threshold 0.6
 ```
 
 **Python SDK Integration**:
@@ -205,29 +205,29 @@ from zoo.gym import PersonalizedTrainer, BitDeltaConfig
 
 # Configure BitDelta for per-user personalization
 config = BitDeltaConfig(
-    bits=1,                    # 1-bit quantization
-    group_size=128,            # Group size for quantization
-    safety_threshold=0.6,      # 60% jailbreak reduction
-    enable_deltasoup=True      # Enable community aggregation
+ bits=1, # 1-bit quantization
+ group_size=128, # Group size for quantization
+ safety_threshold=0.6, # 60% jailbreak reduction
+ enable_deltasoup=True # Enable community aggregation
 )
 
 # Create personalized trainer
 trainer = PersonalizedTrainer(
-    base_model="Qwen/Qwen3-4B",
-    config=config
+ base_model="Qwen/Qwen3-4B",
+ config=config
 )
 
 # Train personalized variants
 trainer.create_variant(
-    user_id="user_123",
-    preferences=user_preferences,
-    dataset=user_dataset
+ user_id="user_123",
+ preferences=user_preferences,
+ dataset=user_dataset
 )
 
 # Serve variant (10× memory efficient)
 response = trainer.serve_variant(
-    user_id="user_123",
-    prompt="Hello, what do you remember about me?"
+ user_id="user_123",
+ prompt="Hello, what do you remember about me?"
 )
 ```
 
@@ -249,11 +249,11 @@ from zoo.gym import DeltaSoup, AggregationMethod, DeltaSoupConfig
 
 # Configure DeltaSoup
 config = DeltaSoupConfig(
-    method=AggregationMethod.BYZANTINE_ROBUST,
-    differential_privacy=True,
-    enable_rewards=True,
-    min_contributors=3,
-    quality_threshold=0.8
+ method=AggregationMethod.BYZANTINE_ROBUST,
+ differential_privacy=True,
+ enable_rewards=True,
+ min_contributors=3,
+ quality_threshold=0.8
 )
 
 # Create soup
@@ -377,28 +377,28 @@ from zoo.gym import TrainingFreeGRPO, GRPOConfig
 
 # Configure Training-Free GRPO
 config = GRPOConfig(
-    group_size=5,              # 5 rollouts per query
-    max_epochs=3,              # 3 training steps
-    temperature_train=0.7,     # Training temperature
-    temperature_eval=0.3       # Evaluation temperature
+ group_size=5, # 5 rollouts per query
+ max_epochs=3, # 3 training steps
+ temperature_train=0.7, # Training temperature
+ temperature_eval=0.3 # Evaluation temperature
 )
 
 # Create trainer
 trainer = TrainingFreeGRPO(
-    base_model="deepseek/v3.1-terminus",
-    config=config
+ base_model="deepseek/v3.1-terminus",
+ config=config
 )
 
 # Train with minimal samples
 experiences = trainer.train(
-    dataset=math_problems[:100],  # Only 100 samples!
-    reward_model=reward_fn
+ dataset=math_problems[:100], # Only 100 samples!
+ reward_model=reward_fn
 )
 
 # Deploy instantly - no parameter updates needed
 response = trainer.infer(
-    query="Solve this geometry problem...",
-    experiences=experiences  # Plug in learned experiences
+ query="Solve this geometry problem...",
+ experiences=experiences # Plug in learned experiences
 )
 ```
 
@@ -407,10 +407,10 @@ response = trainer.infer(
 use zoo_gym::{TrainingFreeGRPO, GRPOConfig};
 
 let config = GRPOConfig {
-    group_size: 5,
-    max_epochs: 3,
-    temperature_train: 0.7,
-    temperature_eval: 0.3,
+ group_size: 5,
+ max_epochs: 3,
+ temperature_train: 0.7,
+ temperature_eval: 0.3,
 };
 
 let trainer = TrainingFreeGRPO::new("deepseek/v3.1-terminus", config);
@@ -531,25 +531,25 @@ max_length: 4096
 ```bash
 # Q4_K_M (recommended for most use cases)
 llamafactory-cli export \
-    --model_name_or_path ./zen-eco-lora \
-    --adapter_name_or_path ./zen-eco-lora \
-    --template qwen3 \
-    --export_dir ./zen-eco-gguf \
-    --export_size 4 \
-    --export_quantization_bit 4 \
-    --export_legacy_format false
+ --model_name_or_path ./zen-eco-lora \
+ --adapter_name_or_path ./zen-eco-lora \
+ --template qwen3 \
+ --export_dir ./zen-eco-gguf \
+ --export_size 4 \
+ --export_quantization_bit 4 \
+ --export_legacy_format false
 
 # Q8_0 (higher quality)
 llamafactory-cli export \
-    --model_name_or_path ./model \
-    --export_dir ./gguf \
-    --export_quantization_bit 8
+ --model_name_or_path ./model \
+ --export_dir ./gguf \
+ --export_quantization_bit 8
 
 # Q2_K (maximum compression for mobile)
 llamafactory-cli export \
-    --model_name_or_path ./model \
-    --export_dir ./gguf \
-    --export_quantization_bit 2
+ --model_name_or_path ./model \
+ --export_dir ./gguf \
+ --export_quantization_bit 2
 ```
 
 ### MLX Conversion (Apple Silicon)
@@ -557,9 +557,9 @@ llamafactory-cli export \
 ```bash
 # Convert to MLX format for Mac
 python -m mlx_lm.convert \
-    --hf-path ./zen-eco-lora \
-    --mlx-path ./zen-eco-mlx \
-    --quantize
+ --hf-path ./zen-eco-lora \
+ --mlx-path ./zen-eco-mlx \
+ --quantize
 ```
 
 ## Performance Optimizations
@@ -603,12 +603,12 @@ python -m mlx_lm.convert \
 
 ```bash
 llamafactory-cli train \
-    --model_name_or_path Qwen/Qwen3-4B \
-    --flash_attn fa2 \
-    --use_unsloth true \
-    --enable_liger_kernel true \
-    --gradient_checkpointing true \
-    --quantization_bit 4
+ --model_name_or_path Qwen/Qwen3-4B \
+ --flash_attn fa2 \
+ --use_unsloth true \
+ --enable_liger_kernel true \
+ --gradient_checkpointing true \
+ --quantization_bit 4
 ```
 
 **Result**: Train zen-eco-4B on 8GB GPU at 3x baseline speed!
@@ -636,8 +636,8 @@ export WANDB_PROJECT=zen-models
 export WANDB_API_KEY=your_key
 
 llamafactory-cli train \
-    --report_to wandb \
-    --config your_config.yaml
+ --report_to wandb \
+ --config your_config.yaml
 ```
 
 ### TensorBoard (Built-in)
@@ -651,8 +651,8 @@ tensorboard --logdir ./output
 
 ```bash
 llamafactory-cli train \
-    --report_to mlflow \
-    --config your_config.yaml
+ --report_to mlflow \
+ --config your_config.yaml
 ```
 
 ## Deployment
@@ -661,18 +661,18 @@ llamafactory-cli train \
 
 ```bash
 llamafactory-cli api \
-    --model_name_or_path ./zen-eco-lora \
-    --template qwen3 \
-    --infer_backend vllm \
-    --port 8000
+ --model_name_or_path ./zen-eco-lora \
+ --template qwen3 \
+ --infer_backend vllm \
+ --port 8000
 ```
 
 ### Gradio Chat Interface
 
 ```bash
 llamafactory-cli chat \
-    --model_name_or_path ./zen-eco-lora \
-    --template qwen3
+ --model_name_or_path ./zen-eco-lora \
+ --template qwen3
 ```
 
 Access at http://localhost:7860
@@ -743,38 +743,38 @@ tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-4B")
 
 # Configure LoRA
 lora_config = LoraConfig(
-    r=64,
-    lora_alpha=32,
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-    lora_dropout=0.1,
-    bias="none",
-    task_type="CAUSAL_LM"
+ r=64,
+ lora_alpha=32,
+ target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+ lora_dropout=0.1,
+ bias="none",
+ task_type="CAUSAL_LM"
 )
 model = get_peft_model(model, lora_config)
 
 # Load and preprocess dataset
 dataset = load_dataset("your_dataset")
 def preprocess_function(examples):
-    # Complex tokenization logic...
-    pass
+ # Complex tokenization logic...
+ pass
 tokenized_dataset = dataset.map(preprocess_function, batched=True)
 
 # Configure trainer with custom settings
 training_args = TrainingArguments(
-    output_dir="./output",
-    per_device_train_batch_size=4,
-    gradient_accumulation_steps=4,
-    learning_rate=5e-5,
-    num_train_epochs=3,
-    lr_scheduler_type="cosine",
-    # Many more parameters...
+ output_dir="./output",
+ per_device_train_batch_size=4,
+ gradient_accumulation_steps=4,
+ learning_rate=5e-5,
+ num_train_epochs=3,
+ lr_scheduler_type="cosine",
+ # Many more parameters...
 )
 
 trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=tokenized_dataset,
-    tokenizer=tokenizer
+ model=model,
+ args=training_args,
+ train_dataset=tokenized_dataset,
+ tokenizer=tokenizer
 )
 
 # Train and export
@@ -789,20 +789,20 @@ model.save_pretrained("./output")
 
 ```bash
 llamafactory-cli train \
-    --stage sft \
-    --do_train \
-    --model_name_or_path Qwen/Qwen3-4B \
-    --dataset your_dataset \
-    --template qwen3 \
-    --finetuning_type lora \
-    --lora_target all \
-    --output_dir ./zen-eco-lora \
-    --per_device_train_batch_size 4 \
-    --gradient_accumulation_steps 4 \
-    --num_train_epochs 3 \
-    --learning_rate 5e-5 \
-    --flash_attn fa2 \
-    --use_unsloth true
+ --stage sft \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-4B \
+ --dataset your_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --lora_target all \
+ --output_dir ./zen-eco-lora \
+ --per_device_train_batch_size 4 \
+ --gradient_accumulation_steps 4 \
+ --num_train_epochs 3 \
+ --learning_rate 5e-5 \
+ --flash_attn fa2 \
+ --use_unsloth true
 ```
 
 **Result**: 50-100 lines → 1 command, **10-50x faster development**
@@ -816,21 +816,21 @@ from hanzo import Hanzo
 
 # Initialize Hanzo with local training mode
 hanzo = Hanzo(
-    inference_mode='local',
-    node_url='http://localhost:8080'
+ inference_mode='local',
+ node_url='http://localhost:8080'
 )
 
 # Deploy trained model to Hanzo Node
 hanzo.deploy_model(
-    model_path='./zen-eco-lora',
-    model_name='zen-eco-custom',
-    quantization='4bit'
+ model_path='./zen-eco-lora',
+ model_name='zen-eco-custom',
+ quantization='4bit'
 )
 
 # Use trained model immediately
 response = hanzo.chat.completions.create(
-    model='zen-eco-custom',
-    messages=[{'role': 'user', 'content': 'Test my fine-tuned model'}]
+ model='zen-eco-custom',
+ messages=[{'role': 'user', 'content': 'Test my fine-tuned model'}]
 )
 ```
 

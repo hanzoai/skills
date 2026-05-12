@@ -1,6 +1,6 @@
 ---
 name: onyx-plus-iam
-description: OnyxPlus IAM tenant -- Casdoor fork shared with Liquidity; onyxplus org + onyxplus-{admin,verify,onyxd} apps
+description: OnyxPlus IAM tenant -- Hanzo IAM fork shared with Liquidity; onyxplus org + onyxplus-{admin,verify,onyxd} apps
 ---
 
 # OnyxPlus IAM Tenant
@@ -10,7 +10,7 @@ description: OnyxPlus IAM tenant -- Casdoor fork shared with Liquidity; onyxplus
 
 ## Overview
 
-OnyxPlus does not run its own IAM. It is a tenant in the shared Liquidity IAM (`liquid-iam`, Casdoor fork at `v1.14.16+`) that already gates BD, ATS, TA, AML, the gateway, and the SPAs. The same JWKS that lets BD read KMS lets `onyxd` read KMS -- there is no separate trust anchor.
+OnyxPlus does not run its own IAM. It is a tenant in the shared Liquidity IAM (`liquid-iam` at `v1.14.16+`) that already gates BD, ATS, TA, AML, the gateway, and the SPAs. The same JWKS that lets BD read KMS lets `onyxd` read KMS -- there is no separate trust anchor.
 
 Hosts:
 - local (compose): `http://iam:8000`
@@ -55,7 +55,7 @@ JWKS at `${IAM_URL}/.well-known/jwks`. Every JWT-validating consumer (KMS, MPC, 
 
 | Invariant | Symptom on miss | Fix |
 |---|---|---|
-| `iss` byte-for-byte = `KMS_EXPECTED_ISSUER` | `401 token has invalid issuer` (silent logout on refresh) | Set IAM `ORIGIN` env to the public URL the JWT will carry. Without `ORIGIN`, Casdoor mints `iss` from the inbound `Host` header -- yields a token KMS rejects |
+| `iss` byte-for-byte = `KMS_EXPECTED_ISSUER` | `401 token has invalid issuer` (silent logout on refresh) | Set IAM `ORIGIN` env to the public URL the JWT will carry. Without `ORIGIN`, Hanzo IAM mints `iss` from the inbound `Host` header -- yields a token KMS rejects |
 | `aud` ∈ `KMS_EXPECTED_AUDIENCE` (comma-separated) | `403 audience not allowed` | Service IAM app must list every audience it needs. Per-tenant audiences coexist on one KMS instance |
 | JWKS cached with strong ETag (`v1.14.15+`) | JWT validation slow | IAM serves `/.well-known/jwks` from a pre-marshalled bytes cache. `If-None-Match` returns `304`. Throughput went from ~565 RPS to >50 000 RPS |
 | Init data run with `initDataNewOnly=true` | First boot wipes existing rows on PVC re-mount | Container env must include `INIT_DATA_NEW_ONLY=true` |
@@ -65,7 +65,7 @@ JWKS at `${IAM_URL}/.well-known/jwks`. Every JWT-validating consumer (KMS, MPC, 
 ```
 1. User clicks Login on verify.{env}.satschel.com or onyxplus.{env}.satschel.com
 2. SPA → iam.{env}.satschel.com/login/oauth/authorize?
-       client_id=onyxplus-{verify|admin}&redirect_uri=...&scope=openid&state=...
+ client_id=onyxplus-{verify|admin}&redirect_uri=...&scope=openid&state=...
 3. IAM authenticates (password / Google / phone+OTP; compose sandbox: OTP 999999 always succeeds)
 4. IAM → redirect back with ?code=...
 5. SPA exchanges code at /login/oauth/access_token for a JWT
@@ -78,8 +78,8 @@ JWKS at `${IAM_URL}/.well-known/jwks`. Every JWT-validating consumer (KMS, MPC, 
 ```
 1. onyxd holds (clientId, clientSecret) in env (substituted by operator from K8s Secret)
 2. onyxd POSTs grant_type=client_credentials to IAM /login/oauth/access_token
-   → IAM signs JWT with cert-superuser key; returns access token carrying
-     iss=https://iam.{env}.satschel.com/, aud=onyxplus-onyxd,liquidity-kms, exp=now+24h
+ → IAM signs JWT with cert-superuser key; returns access token carrying
+ iss=https://iam.{env}.satschel.com/, aud=onyxplus-onyxd,liquidity-kms, exp=now+24h
 3. onyxd → GET /v1/kms/secrets/onyxplus/{env}/onyx_signing_key on KMS with Bearer JWT
 4. KMS verifies signature, asserts iss/aud, returns {value}
 5. onyxd loads value into ONYX_SIGNING_KEY in process memory
@@ -90,19 +90,19 @@ JWKS at `${IAM_URL}/.well-known/jwks`. Every JWT-validating consumer (KMS, MPC, 
 ```bash
 # Read live credentials for the onyxd service account
 ONYX_CID=$(docker exec liquid-iam sqlite3 -readonly /data/iam/iam.db \
-    "SELECT client_id FROM application WHERE name='onyxplus-onyxd';")
+ "SELECT client_id FROM application WHERE name='onyxplus-onyxd';")
 ONYX_SECRET=$(docker exec liquid-iam sqlite3 -readonly /data/iam/iam.db \
-    "SELECT client_secret FROM application WHERE name='onyxplus-onyxd';")
+ "SELECT client_secret FROM application WHERE name='onyxplus-onyxd';")
 
 # Get a JWT
 JWT=$(curl -sS -X POST \
-    -H "Content-Type: application/x-www-form-urlencoded" \
-    -d "grant_type=client_credentials&client_id=${ONYX_CID}&client_secret=${ONYX_SECRET}" \
-    http://localhost:8000/login/oauth/access_token | jq -r .access_token)
+ -H "Content-Type: application/x-www-form-urlencoded" \
+ -d "grant_type=client_credentials&client_id=${ONYX_CID}&client_secret=${ONYX_SECRET}" \
+ http://localhost:8000/login/oauth/access_token | jq -r .access_token)
 
 # Read OnyxPlus signing key from KMS
 curl -sS -H "Authorization: Bearer ${JWT}" \
-    https://localhost:8443/v1/kms/secrets/onyxplus/local/onyx_signing_key
+ https://localhost:8443/v1/kms/secrets/onyxplus/local/onyx_signing_key
 ```
 
 `200` (or `404` if the path is not seeded yet) confirms the chain is healthy. `401` means IAM and KMS disagree on `iss`/`aud`/JWKS.
@@ -121,7 +121,7 @@ curl -sS -H "Authorization: Bearer ${JWT}" \
 
 ## Related skills
 
-- `hanzo/hanzo-iam.md` - IAM upstream (full Casdoor surface)
+- `hanzo/hanzo-iam.md` - IAM upstream (full Hanzo IAM surface)
 - `onyx-plus/onyx-plus-kms.md` - KMS consumer
 - `onyx-plus/onyx-plus-mpc.md` - MPC consumer
 - `liquidity/liquidity-app.md` - sibling tenant
@@ -130,4 +130,4 @@ curl -sS -H "Authorization: Bearer ${JWT}" \
 
 **Last Updated**: 2026-05-12
 **Category**: OnyxPlus
-**Related**: iam, oauth, casdoor, jwks, jwt, audiences
+**Related**: iam, oauth, iam, jwks, jwt, audiences

@@ -80,9 +80,9 @@ sandbox = runtime.create(CreateSandboxParams(language="python"))
 # Run code securely inside the sandbox
 response = sandbox.process.code_run('print("Sum of 3 and 4 is " + str(3 + 4))')
 if response.exit_code != 0:
-    print(f"Error: {response.exit_code} {response.result}")
+ print(f"Error: {response.exit_code} {response.result}")
 else:
-    print(response.result)
+ print(response.result)
 
 # Clean up
 runtime.remove(sandbox)
@@ -107,16 +107,16 @@ await runtime.remove(sandbox)
 ### Architecture
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌──────────────┐
-│  Hanzo IAM  │----+│  Dashboard  │----+│ Runtime API  │
-│  (Casdoor)  │     │   (React)   │     │  (NestJS)    │
-└─────────────┘     └─────────────┘     └──────────────┘
-       │                                         │
-       │                                         v
-       │                                 ┌──────────────┐
-       └--------------------------------+│   Sandbox    │
-                                         │  Execution   │
-                                         └──────────────┘
+┌─────────────┐ ┌─────────────┐ ┌──────────────┐
+│ Hanzo IAM │----+│ Dashboard │----+│ Runtime API │
+│ (Hanzo IAM) │ │ (React) │ │ (NestJS) │
+└─────────────┘ └─────────────┘ └──────────────┘
+ │ │
+ │ v
+ │ ┌──────────────┐
+ └--------------------------------+│ Sandbox │
+ │ Execution │
+ └──────────────┘
 ```
 
 ### Monorepo Structure
@@ -124,29 +124,29 @@ await runtime.remove(sandbox)
 ```
 hanzoai/runtime
 +-- apps/
-|   +-- api/            # NestJS API server (TypeScript, port 8000)
-|   +-- cli/            # CLI tool (Go)
-|   +-- daemon/         # Background daemon (Go)
-|   +-- proxy/          # Network proxy (Go)
-|   +-- runner/         # Sandbox runner (Go)
-|   +-- dashboard/      # Web dashboard (React + Vite)
-|   +-- docs/           # Documentation site (Astro + Starlight)
-|   +-- daytona-e2e/    # End-to-end tests
+| +-- api/ # NestJS API server (TypeScript, port 8000)
+| +-- cli/ # CLI tool (Go)
+| +-- daemon/ # Background daemon (Go)
+| +-- proxy/ # Network proxy (Go)
+| +-- runner/ # Sandbox runner (Go)
+| +-- dashboard/ # Web dashboard (React + Vite)
+| +-- docs/ # Documentation site (Astro + Starlight)
+| +-- daytona-e2e/ # End-to-end tests
 +-- libs/
-|   +-- sdk-python/     # Python SDK (hanzo-runtime on PyPI)
-|   +-- sdk-typescript/ # TypeScript SDK (@hanzo/runtime on npm)
-|   +-- api-client/     # TypeScript API client (@hanzo/api-client)
-|   +-- api-client-go/  # Go API client
-|   +-- api-client-python/       # Generated Python API client
-|   +-- api-client-python-async/ # Async Python API client
-|   +-- runner-api-client/       # Runner API client
-|   +-- common-go/      # Shared Go utilities
-|   +-- computer-use/   # Computer-use library (Go, browser/desktop automation)
-+-- functions/          # Serverless functions
-+-- examples/           # Usage examples
+| +-- sdk-python/ # Python SDK (hanzo-runtime on PyPI)
+| +-- sdk-typescript/ # TypeScript SDK (@hanzo/runtime on npm)
+| +-- api-client/ # TypeScript API client (@hanzo/api-client)
+| +-- api-client-go/ # Go API client
+| +-- api-client-python/ # Generated Python API client
+| +-- api-client-python-async/ # Async Python API client
+| +-- runner-api-client/ # Runner API client
+| +-- common-go/ # Shared Go utilities
+| +-- computer-use/ # Computer-use library (Go, browser/desktop automation)
++-- functions/ # Serverless functions
++-- examples/ # Usage examples
 +-- images/
-|   +-- sandbox/        # Sandbox container images
-+-- hack/              # Development scripts
+| +-- sandbox/ # Sandbox container images
++-- hack/ # Development scripts
 ```
 
 ### Go Workspace (go.work)
@@ -186,13 +186,13 @@ VITE_API_URL=https://api.runtime.hanzo.ai
 IAM app configuration:
 ```json
 {
-  "name": "runtime-dashboard",
-  "client_id": "runtime-dashboard",
-  "redirect_uris": [
-    "https://runtime.hanzo.ai",
-    "https://runtime.hanzo.ai/callback"
-  ],
-  "grant_types": ["authorization_code", "client_credentials"]
+ "name": "runtime-dashboard",
+ "client_id": "runtime-dashboard",
+ "redirect_uris": [
+ "https://runtime.hanzo.ai",
+ "https://runtime.hanzo.ai/callback"
+ ],
+ "grant_types": ["authorization_code", "client_credentials"]
 }
 ```
 

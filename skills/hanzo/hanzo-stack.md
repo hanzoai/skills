@@ -56,13 +56,13 @@ Hanzo Stack provides the **complete integrated development environment** for run
 
 ```bash
 # Production mode
-make up            # Uses compose.yml
+make up # Uses compose.yml
 
 # Development mode (hot-reload)
-make dev           # Uses compose.yml + compose.dev.yml override
+make dev # Uses compose.yml + compose.dev.yml override
 
 # Core only (minimal, fast startup)
-make core          # Uses compose.core.yml
+make core # Uses compose.core.yml
 ```
 
 ## Git Submodules
@@ -72,18 +72,18 @@ Each service is a git submodule tracking its own repo:
 ```
 experiments/stack/
 ├── services/
-│   ├── llm/          → github.com/hanzoai/llm (LLM Gateway)
-│   ├── chat/         → github.com/hanzoai/chat (Chat UI)
-│   ├── console/      → github.com/hanzoai/console (Console)
-│   ├── cloud/        → github.com/hanzoai/cloud (Cloud Dashboard)
-│   ├── search/       → github.com/hanzoai/search (Search)
-│   ├── commerce/     → github.com/hanzoai/commerce (Commerce API)
-│   └── ...
-├── compose.yml           # Production compose
-├── compose.dev.yml       # Development overrides
-├── compose.core.yml      # Minimal core services
-├── .env.example          # Environment template
-├── Makefile              # All commands
+│ ├── llm/ → github.com/hanzoai/llm (LLM Gateway)
+│ ├── chat/ → github.com/hanzoai/chat (Chat UI)
+│ ├── console/ → github.com/hanzoai/console (Console)
+│ ├── cloud/ → github.com/hanzoai/cloud (Cloud Dashboard)
+│ ├── search/ → github.com/hanzoai/search (Search)
+│ ├── commerce/ → github.com/hanzoai/commerce (Commerce API)
+│ └── ...
+├── compose.yml # Production compose
+├── compose.dev.yml # Development overrides
+├── compose.core.yml # Minimal core services
+├── .env.example # Environment template
+├── Makefile # All commands
 └── README.md
 ```
 
@@ -122,38 +122,38 @@ git clone --recurse-submodules https://github.com/hanzoai/experiments.git
 cd experiments/stack
 
 # Configure environment
-make setup    # Creates .env from .env.example, prompts for API keys
+make setup # Creates .env from .env.example, prompts for API keys
 
 # Start all services (pick one)
-make core     # Minimal: LLM + Chat + Postgres + Redis
-make dev      # Full stack with hot-reload
-make up       # Full stack, production mode
+make core # Minimal: LLM + Chat + Postgres + Redis
+make dev # Full stack with hot-reload
+make up # Full stack, production mode
 
 # Verify
-make status   # Check all services are healthy
-curl http://localhost:4000/v1/models  # List available models
-curl http://localhost:3081            # Open Chat UI
+make status # Check all services are healthy
+curl http://localhost:4000/v1/models # List available models
+curl http://localhost:3081 # Open Chat UI
 ```
 
 ## Makefile Commands
 
 ```bash
-make setup        # Initial setup (env, pull images, init submodules)
-make up           # Start all services (production mode)
-make dev          # Start with hot-reload (development)
-make core         # Start minimal core services only
-make down         # Stop all services
-make restart      # Restart all services
-make status       # Show service status and health
-make logs         # Stream all logs
-make logs-llm     # Stream LLM Gateway logs only
-make logs-chat    # Stream Chat logs only
-make clean        # Remove volumes and data
-make pull         # Pull latest images
-make build        # Build local images
-make test         # Run integration tests
-make reset        # Full reset (clean + setup)
-make update       # Update all git submodules
+make setup # Initial setup (env, pull images, init submodules)
+make up # Start all services (production mode)
+make dev # Start with hot-reload (development)
+make core # Start minimal core services only
+make down # Stop all services
+make restart # Restart all services
+make status # Show service status and health
+make logs # Stream all logs
+make logs-llm # Stream LLM Gateway logs only
+make logs-chat # Stream Chat logs only
+make clean # Remove volumes and data
+make pull # Pull latest images
+make build # Build local images
+make test # Run integration tests
+make reset # Full reset (clean + setup)
+make update # Update all git submodules
 ```
 
 ## Environment Configuration
@@ -188,26 +188,26 @@ KMS_CLIENT_SECRET=...
 
 ```
 ┌─────────────────────────────────────────┐
-│     compose.yml + compose.dev.yml       │
+│ compose.yml + compose.dev.yml │
 ├─────────────────────────────────────────┤
-│                                         │
-│  ┌──────────┐  ┌──────────┐  ┌───────┐ │
-│  │ Chat UI  │  │ Search   │  │ Admin │ │
-│  │  :3081   │  │  :3000   │  │ :5173 │ │
-│  └────┬─────┘  └────┬─────┘  └───┬───┘ │
-│       │              │            │     │
-│  ┌────┴──────────────┴────────────┴───┐ │
-│  │        LLM Gateway :4000          │ │
-│  └────────────────┬───────────────────┘ │
-│                   │                     │
-│  ┌────────────────┴───────────────────┐ │
-│  │          Core API :8000            │ │
-│  └──┬─────────┬──────────┬───────────┘ │
-│     │         │          │             │
-│  ┌──┴───┐ ┌──┴───┐ ┌───┴────┐ ┌─────┐│
-│  │Postgres│ │Redis │ │MongoDB │ │MinIO││
-│  │ :5432 │ │:6379 │ │ :27017 │ │:9000││
-│  └───────┘ └──────┘ └────────┘ └─────┘│
+│ │
+│ ┌──────────┐ ┌──────────┐ ┌───────┐ │
+│ │ Chat UI │ │ Search │ │ Admin │ │
+│ │ :3081 │ │ :3000 │ │ :5173 │ │
+│ └────┬─────┘ └────┬─────┘ └───┬───┘ │
+│ │ │ │ │
+│ ┌────┴──────────────┴────────────┴───┐ │
+│ │ LLM Gateway :4000 │ │
+│ └────────────────┬───────────────────┘ │
+│ │ │
+│ ┌────────────────┴───────────────────┐ │
+│ │ Core API :8000 │ │
+│ └──┬─────────┬──────────┬───────────┘ │
+│ │ │ │ │
+│ ┌──┴───┐ ┌──┴───┐ ┌───┴────┐ ┌─────┐│
+│ │Postgres│ │Redis │ │MongoDB │ │MinIO││
+│ │ :5432 │ │:6379 │ │ :27017 │ │:9000││
+│ └───────┘ └──────┘ └────────┘ └─────┘│
 └─────────────────────────────────────────┘
 ```
 
@@ -231,7 +231,7 @@ docker compose exec postgres psql -U hanzo
 make clean && make setup && make dev
 
 # Port conflicts
-lsof -i :4000   # Find what's using the port
+lsof -i :4000 # Find what's using the port
 ```
 
 ## Related Skills

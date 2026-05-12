@@ -36,32 +36,32 @@ go get github.com/hanzoai/search-go
 package main
 
 import (
-    "fmt"
+ "fmt"
 
-    search "github.com/hanzoai/search-go"
+ search "github.com/hanzoai/search-go"
 )
 
 func main() {
-    client := search.New("http://localhost:7700", search.WithAPIKey("your-api-key"))
+ client := search.New("http://localhost:7700", search.WithAPIKey("your-api-key"))
 
-    // Create index
-    task, _ := client.CreateIndex(&search.IndexConfig{
-        Uid:        "movies",
-        PrimaryKey: "id",
-    })
-    fmt.Println("Task:", task.TaskUID)
+ // Create index
+ task, _ := client.CreateIndex(&search.IndexConfig{
+ Uid: "movies",
+ PrimaryKey: "id",
+ })
+ fmt.Println("Task:", task.TaskUID)
 
-    // Add documents
-    index := client.Index("movies")
-    docs := []map[string]interface{}{
-        {"id": 1, "title": "Carol", "genres": []string{"Romance", "Drama"}},
-        {"id": 2, "title": "Wonder Woman", "genres": []string{"Action"}},
-    }
-    task, _ = index.AddDocuments(docs, nil)
+ // Add documents
+ index := client.Index("movies")
+ docs := []map[string]interface{}{
+ {"id": 1, "title": "Carol", "genres": []string{"Romance", "Drama"}},
+ {"id": 2, "title": "Wonder Woman", "genres": []string{"Action"}},
+ }
+ task, _ = index.AddDocuments(docs, nil)
 
-    // Search
-    res, _ := index.Search("wonder", &search.SearchRequest{Limit: 10})
-    fmt.Println(res.Hits)
+ // Search
+ res, _ := index.Search("wonder", &search.SearchRequest{Limit: 10})
+ fmt.Println(res.Hits)
 }
 ```
 
@@ -84,10 +84,10 @@ func main() {
 
 ```go
 client := search.New("http://localhost:7700",
-    search.WithAPIKey("your-api-key"),
-    search.WithCustomClient(http.DefaultClient),
-    search.WithContentEncoding(search.GzipEncoding, search.BestCompression),
-    search.WithCustomRetries([]int{502, 503, 504}, 3),
+ search.WithAPIKey("your-api-key"),
+ search.WithCustomClient(http.DefaultClient),
+ search.WithContentEncoding(search.GzipEncoding, search.BestCompression),
+ search.WithCustomRetries([]int{502, 503, 504}, 3),
 )
 ```
 

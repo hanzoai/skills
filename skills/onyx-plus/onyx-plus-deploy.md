@@ -16,8 +16,8 @@ OnyxPlus images are built via GCP Cloud Build, NOT GitHub Actions. Per the works
 # Submit a build for the daemon
 cd ~/work/onyxplus/onyxd
 gcloud builds submit --config=cloudbuild.yaml \
-    --project=onyxplus-registry \
-    --gcs-source-staging-dir=gs://onyxplus-registry_cloudbuild/source
+ --project=onyxplus-registry \
+ --gcs-source-staging-dir=gs://onyxplus-registry_cloudbuild/source
 ```
 
 Output: `us-docker.pkg.dev/onyxplus-registry/onyx-plus/{name}:{semver}`.
@@ -38,24 +38,24 @@ The `VERSION` file is the immutable tag. Cloud Build refuses to push when the ta
 
 1. **Bump `VERSION`** in the repo, e.g. `0.2.1` → `0.2.2` (patch-only by default; major bumps prohibited per CLAUDE.md without explicit instruction).
 2. **Commit + tag**:
-   ```bash
-   git commit VERSION -m "release: v0.2.2"
-   git tag v0.2.2
-   git push origin main v0.2.2
-   ```
+ ```bash
+ git commit VERSION -m "release: v0.2.2"
+ git tag v0.2.2
+ git push origin main v0.2.2
+ ```
 3. **Submit Cloud Build**:
-   ```bash
-   gcloud builds submit --config=cloudbuild.yaml \
-       --project=onyxplus-registry \
-       --gcs-source-staging-dir=gs://onyxplus-registry_cloudbuild/source
-   ```
-   Build takes ~3 min for the Go daemon, ~5-7 min for Next.js (internal) due to vendor/pnpm.
+ ```bash
+ gcloud builds submit --config=cloudbuild.yaml \
+ --project=onyxplus-registry \
+ --gcs-source-staging-dir=gs://onyxplus-registry_cloudbuild/source
+ ```
+ Build takes ~3 min for the Go daemon, ~5-7 min for Next.js (internal) due to vendor/pnpm.
 4. **Verify image landed**:
-   ```bash
-   gcloud artifacts docker images list \
-       us-docker.pkg.dev/onyxplus-registry/onyx-plus/onyxd \
-       --include-tags --filter='tags~0.2.2'
-   ```
+ ```bash
+ gcloud artifacts docker images list \
+ us-docker.pkg.dev/onyxplus-registry/onyx-plus/onyxd \
+ --include-tags --filter='tags~0.2.2'
+ ```
 5. **Bump K8s manifest tag** in `~/work/onyxplus/admin/universe/k8s/{dev,test,main}/services.yaml`, commit, push.
 6. **Roll out dev**, smoke, **promote test**, smoke, **promote main**, smoke -- in that order. Strict per CLAUDE.md ("Do NOT bump all 3 envs in parallel").
 
@@ -64,9 +64,9 @@ The `VERSION` file is the immutable tag. Cloud Build refuses to push when the ta
 ```bash
 # Dev
 gcloud container clusters get-credentials dev \
-    --region=us-central1 --project=onyxplus-devnet
+ --region=us-central1 --project=onyxplus-devnet
 kubectl -n onyxplus set image statefulset/onyxd \
-    onyxd=us-docker.pkg.dev/onyxplus-registry/onyx-plus/onyxd:0.2.2
+ onyxd=us-docker.pkg.dev/onyxplus-registry/onyx-plus/onyxd:0.2.2
 kubectl -n onyxplus rollout status statefulset/onyxd --timeout=180s
 
 # Smoke
@@ -75,17 +75,17 @@ kubectl -n onyxplus exec onyxd-0 -- wget -qO- localhost:8090/v1/onyxplus/healthz
 
 # Promote test
 gcloud container clusters get-credentials test \
-    --region=us-central1 --project=onyxplus-testnet
+ --region=us-central1 --project=onyxplus-testnet
 kubectl -n onyxplus set image statefulset/onyxd \
-    onyxd=us-docker.pkg.dev/onyxplus-registry/onyx-plus/onyxd:0.2.2
+ onyxd=us-docker.pkg.dev/onyxplus-registry/onyx-plus/onyxd:0.2.2
 kubectl -n onyxplus rollout status statefulset/onyxd --timeout=180s
 # Smoke
 
 # Promote main
 gcloud container clusters get-credentials main \
-    --region=us-central1 --project=onyxplus-mainnet
+ --region=us-central1 --project=onyxplus-mainnet
 kubectl -n onyxplus set image statefulset/onyxd \
-    onyxd=us-docker.pkg.dev/onyxplus-registry/onyx-plus/onyxd:0.2.2
+ onyxd=us-docker.pkg.dev/onyxplus-registry/onyx-plus/onyxd:0.2.2
 kubectl -n onyxplus rollout status statefulset/onyxd --timeout=180s
 # Smoke
 ```

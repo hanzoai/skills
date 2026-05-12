@@ -61,17 +61,17 @@ description: OnyxPlus daemon (Go + Hanzo Base) -- enrollment, attestation, ERC-7
 ## Boot order
 
 ```
-1. enforceProdSafety()           — refuse boot if ONYX_DEMO_MODE set in prod-like env
+1. enforceProdSafety() — refuse boot if ONYX_DEMO_MODE set in prod-like env
 2. mkdir DATA_DIR /data/onyxd
-3. loadSecrets(ctx) over ZAP     — pull ONYX_SIGNING_KEY, IAM_CLIENT_SECRET, MPC_WEBHOOK_SECRET from KMS
-4. base.NewWithConfig(...)       — Hanzo Base bootstrap
-5. platform.MustRegister(...)    — IAM + KMS plugin
+3. loadSecrets(ctx) over ZAP — pull ONYX_SIGNING_KEY, IAM_CLIENT_SECRET, MPC_WEBHOOK_SECRET from KMS
+4. base.NewWithConfig(...) — Hanzo Base bootstrap
+5. platform.MustRegister(...) — IAM + KMS plugin
 6. registerEnrollmentRoutes
 7. registerAttestationRoutes
 8. registerWebhookRoutes
 9. registerAuditExportRoutes
 10. registerAdminActionRoutes
-11. app.Execute()                 — serve on :8090
+11. app.Execute() — serve on :8090
 ```
 
 ## Build + deploy
@@ -83,11 +83,11 @@ go test -race ./...
 
 # Image (NEVER on a laptop — always Cloud Build)
 gcloud builds submit --config=cloudbuild.yaml --project=onyxplus-registry \
-    --gcs-source-staging-dir=gs://onyxplus-registry_cloudbuild/source
+ --gcs-source-staging-dir=gs://onyxplus-registry_cloudbuild/source
 
 # Deploy (dev → test → main)
 kubectl --context=onyxplus-dev -n onyxplus set image statefulset/onyxd \
-    onyxd=us-docker.pkg.dev/onyxplus-registry/onyx-plus/onyxd:0.2.2
+ onyxd=us-docker.pkg.dev/onyxplus-registry/onyx-plus/onyxd:0.2.2
 kubectl --context=onyxplus-dev -n onyxplus rollout status statefulset/onyxd
 ```
 

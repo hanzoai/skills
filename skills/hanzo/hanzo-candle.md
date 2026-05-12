@@ -87,25 +87,25 @@ The upstream `huggingface/candle` provides:
 use candle_core::{Device, Tensor, DType};
 
 fn main() -> candle_core::Result<()> {
-    let device = Device::cuda_if_available(0)?;
+ let device = Device::cuda_if_available(0)?;
 
-    // Create tensors
-    let a = Tensor::randn(0f32, 1., (2, 3), &device)?;
-    let b = Tensor::randn(0f32, 1., (3, 4), &device)?;
+ // Create tensors
+ let a = Tensor::randn(0f32, 1., (2, 3), &device)?;
+ let b = Tensor::randn(0f32, 1., (3, 4), &device)?;
 
-    // Matrix multiply
-    let c = a.matmul(&b)?;
-    println!("Shape: {:?}", c.shape()); // [2, 4]
+ // Matrix multiply
+ let c = a.matmul(&b)?;
+ println!("Shape: {:?}", c.shape()); // [2, 4]
 
-    // Element-wise operations
-    let d = (&a + &a)? * 2.0;
-    let e = a.relu()?;
-    let f = a.softmax(1)?;
+ // Element-wise operations
+ let d = (&a + &a)? * 2.0;
+ let e = a.relu()?;
+ let f = a.softmax(1)?;
 
-    // Type conversion
-    let a_bf16 = a.to_dtype(DType::BF16)?;
+ // Type conversion
+ let a_bf16 = a.to_dtype(DType::BF16)?;
 
-    Ok(())
+ Ok(())
 }
 ```
 
@@ -116,26 +116,26 @@ use candle_core::{Device, Tensor, DType, Module};
 use candle_nn::{VarBuilder, VarMap, Linear, linear, AdamW};
 
 fn main() -> candle_core::Result<()> {
-    let device = Device::cuda_if_available(0)?;
-    let varmap = VarMap::new();
-    let vb = VarBuilder::from_varmap(&varmap, DType::F32, &device);
+ let device = Device::cuda_if_available(0)?;
+ let varmap = VarMap::new();
+ let vb = VarBuilder::from_varmap(&varmap, DType::F32, &device);
 
-    let layer1 = linear(784, 256, vb.pp("layer1"))?;
-    let layer2 = linear(256, 10, vb.pp("layer2"))?;
+ let layer1 = linear(784, 256, vb.pp("layer1"))?;
+ let layer2 = linear(256, 10, vb.pp("layer2"))?;
 
-    // Forward pass
-    let input = Tensor::randn(0f32, 1., (32, 784), &device)?;
-    let h = layer1.forward(&input)?.relu()?;
-    let output = layer2.forward(&h)?;
+ // Forward pass
+ let input = Tensor::randn(0f32, 1., (32, 784), &device)?;
+ let h = layer1.forward(&input)?.relu()?;
+ let output = layer2.forward(&h)?;
 
-    // Training
-    let mut opt = AdamW::new(varmap.all_vars(), Default::default())?;
-    let target = Tensor::zeros((32, 10), DType::F32, &device)?;
-    let loss = candle_nn::loss::mse(&output, &target)?;
-    opt.backward_step(&loss)?;
+ // Training
+ let mut opt = AdamW::new(varmap.all_vars(), Default::default())?;
+ let target = Tensor::zeros((32, 10), DType::F32, &device)?;
+ let loss = candle_nn::loss::mse(&output, &target)?;
+ opt.backward_step(&loss)?;
 
-    println!("Loss: {}", loss.to_scalar::<f32>()?);
-    Ok(())
+ println!("Loss: {}", loss.to_scalar::<f32>()?);
+ Ok(())
 }
 ```
 
@@ -146,16 +146,16 @@ use candle_core::quantized::gguf_file;
 use std::fs::File;
 
 fn main() -> anyhow::Result<()> {
-    let mut file = File::open("model.gguf")?;
-    let model = gguf_file::Content::read(&mut file)?;
+ let mut file = File::open("model.gguf")?;
+ let model = gguf_file::Content::read(&mut file)?;
 
-    for (name, info) in model.tensor_infos.iter() {
-        println!("{}: {:?}", name, info.shape);
-    }
+ for (name, info) in model.tensor_infos.iter() {
+ println!("{}: {:?}", name, info.shape);
+ }
 
-    let weights = model.tensor(&mut file, "model.layers.0.self_attn.q_proj.weight")?;
-    println!("Weight shape: {:?}", weights.shape());
-    Ok(())
+ let weights = model.tensor(&mut file, "model.layers.0.self_attn.q_proj.weight")?;
+ println!("Weight shape: {:?}", weights.shape());
+ Ok(())
 }
 ```
 
@@ -167,11 +167,11 @@ use candle_nn::VarBuilder;
 
 let device = Device::cuda_if_available(0)?;
 let vb = unsafe {
-    VarBuilder::from_mmaped_safetensors(
-        &["model.safetensors"],
-        DType::F32,
-        &device,
-    )?
+ VarBuilder::from_mmaped_safetensors(
+ &["model.safetensors"],
+ DType::F32,
+ &device,
+ )?
 };
 let weight = vb.get((768, 768), "transformer.h.0.attn.c_attn.weight")?;
 ```
@@ -200,11 +200,11 @@ let weight = vb.get((768, 768), "transformer.h.0.attn.c_attn.weight")?;
 
 ```toml
 [dependencies]
-candle-core = { version = "0.9", features = ["cuda"] }  # NVIDIA GPU
+candle-core = { version = "0.9", features = ["cuda"] } # NVIDIA GPU
 # or
-candle-core = { version = "0.9", features = ["metal"] }  # Apple GPU
+candle-core = { version = "0.9", features = ["metal"] } # Apple GPU
 # or
-candle-core = { version = "0.9", features = ["mkl"] }    # Intel MKL
+candle-core = { version = "0.9", features = ["mkl"] } # Intel MKL
 
 candle-nn = "0.9"
 candle-transformers = "0.9"

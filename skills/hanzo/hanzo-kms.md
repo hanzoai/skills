@@ -6,7 +6,7 @@
 
 ## Overview
 
-Hanzo KMS is a **centralized secret management platform** for the Hanzo ecosystem. Fork of Infisical with Hanzo branding, 9 ported Vault subsystems, Universal Auth, and K8s-native secret sync via KMSSecret CRD. Live at `kms.hanzo.ai`. Every secret in the Hanzo stack flows through KMS -- no plaintext credentials in manifests, ever.
+Hanzo KMS is a **centralized secret management platform** for the Hanzo ecosystem. Fork of Hanzo KMS with Hanzo branding, 9 ported Vault subsystems, Universal Auth, and K8s-native secret sync via KMSSecret CRD. Live at `kms.hanzo.ai`. Every secret in the Hanzo stack flows through KMS -- no plaintext credentials in manifests, ever.
 
 ## When to use
 
@@ -37,7 +37,7 @@ Hanzo KMS is a **centralized secret management platform** for the Hanzo ecosyste
 | Go SDK | `github.com/hanzoai/kms-go-sdk` |
 | Node SDK | `@hanzo/kms-node-sdk` |
 | Python SDK | `hanzo-kms` (pip) |
-| Upstream | Infisical |
+| Upstream | Hanzo KMS |
 | Repo | `github.com/hanzoai/kms` |
 | K8s manifests | `universe/infra/k8s/kms/` |
 | Image | `ghcr.io/hanzoai/kms:latest` |
@@ -63,14 +63,14 @@ Hanzo KMS is a **centralized secret management platform** for the Hanzo ecosyste
 ```bash
 # Login via Universal Auth
 export KMS_TOKEN=$(curl -s -X POST https://kms.hanzo.ai/api/v1/auth/universal-auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"clientId": "'$KMS_CLIENT_ID'", "clientSecret": "'$KMS_CLIENT_SECRET'"}' \
-  | jq -r '.accessToken')
+ -H "Content-Type: application/json" \
+ -d '{"clientId": "'$KMS_CLIENT_ID'", "clientSecret": "'$KMS_CLIENT_SECRET'"}' \
+ | jq -r '.accessToken')
 
 # Fetch secrets
 curl -s https://kms.hanzo.ai/api/v1/secrets \
-  -H "Authorization: Bearer ${KMS_TOKEN}" \
-  -G -d "workspaceId=${PROJECT_ID}&environment=production"
+ -H "Authorization: Bearer ${KMS_TOKEN}" \
+ -G -d "workspaceId=${PROJECT_ID}&environment=production"
 ```
 
 ## SDK quickstart
@@ -81,15 +81,15 @@ curl -s https://kms.hanzo.ai/api/v1/secrets \
 import kms "github.com/hanzoai/kms-go-sdk"
 
 client := kms.NewClient(kms.Config{
-    SiteURL:      "https://kms.hanzo.ai",
-    ClientID:     os.Getenv("KMS_CLIENT_ID"),
-    ClientSecret: os.Getenv("KMS_CLIENT_SECRET"),
+ SiteURL: "https://kms.hanzo.ai",
+ ClientID: os.Getenv("KMS_CLIENT_ID"),
+ ClientSecret: os.Getenv("KMS_CLIENT_SECRET"),
 })
 
 secret, err := client.GetSecret(kms.GetSecretOptions{
-    ProjectID:   "hanzo-paas",
-    Environment: "production",
-    SecretName:  "DATABASE_URL",
+ ProjectID: "hanzo-paas",
+ Environment: "production",
+ SecretName: "DATABASE_URL",
 })
 ```
 
@@ -99,15 +99,15 @@ secret, err := client.GetSecret(kms.GetSecretOptions{
 import { KMSClient } from "@hanzo/kms-node-sdk"
 
 const client = new KMSClient({
-  siteUrl: "https://kms.hanzo.ai",
-  clientId: process.env.KMS_CLIENT_ID!,
-  clientSecret: process.env.KMS_CLIENT_SECRET!,
+ siteUrl: "https://kms.hanzo.ai",
+ clientId: process.env.KMS_CLIENT_ID!,
+ clientSecret: process.env.KMS_CLIENT_SECRET!,
 })
 
 const secret = await client.getSecret({
-  projectId: "hanzo-paas",
-  environment: "production",
-  secretName: "DATABASE_URL",
+ projectId: "hanzo-paas",
+ environment: "production",
+ secretName: "DATABASE_URL",
 })
 ```
 
@@ -117,15 +117,15 @@ const secret = await client.getSecret({
 from hanzo_kms import KMSClient
 
 client = KMSClient(
-    site_url="https://kms.hanzo.ai",
-    client_id=os.environ["KMS_CLIENT_ID"],
-    client_secret=os.environ["KMS_CLIENT_SECRET"],
+ site_url="https://kms.hanzo.ai",
+ client_id=os.environ["KMS_CLIENT_ID"],
+ client_secret=os.environ["KMS_CLIENT_SECRET"],
 )
 
 secret = client.get_secret(
-    project_id="hanzo-paas",
-    environment="production",
-    secret_name="DATABASE_URL",
+ project_id="hanzo-paas",
+ environment="production",
+ secret_name="DATABASE_URL",
 )
 ```
 
@@ -137,29 +137,29 @@ The KMS operator watches KMSSecret resources and auto-syncs to K8s Secrets:
 apiVersion: kms.hanzo.ai/v1
 kind: KMSSecret
 metadata:
-  name: my-app-secrets
-  namespace: hanzo
+ name: my-app-secrets
+ namespace: hanzo
 spec:
-  project: hanzo-paas
-  environment: production
-  syncInterval: 5m
-  secretRef:
-    name: my-app-secrets  # K8s Secret created/updated
-  secrets:
-    - DATABASE_URL
-    - REDIS_URL
-    - HANZO_API_KEY
+ project: hanzo-paas
+ environment: production
+ syncInterval: 5m
+ secretRef:
+ name: my-app-secrets # K8s Secret created/updated
+ secrets:
+ - DATABASE_URL
+ - REDIS_URL
+ - HANZO_API_KEY
 ```
 
 Deployments reference the synced secret:
 
 ```yaml
 spec:
-  containers:
-    - name: my-app
-      envFrom:
-        - secretRef:
-            name: my-app-secrets
+ containers:
+ - name: my-app
+ envFrom:
+ - secretRef:
+ name: my-app-secrets
 ```
 
 ## Helm chart: auto-bootstrap
@@ -167,14 +167,14 @@ spec:
 ```yaml
 # values.yaml for kms-standalone chart
 kms:
-  autoBootstrap:
-    additionalOrganizations:
-      - hanzo
-      - lux
-      - zoo
-    additionalOrganizationAdminEmails:
-      - z@hanzo.ai
-    additionalOrganizationsTokenSecretKey: token
+ autoBootstrap:
+ additionalOrganizations:
+ - hanzo
+ - lux
+ - zoo
+ additionalOrganizationAdminEmails:
+ - z@hanzo.ai
+ additionalOrganizationsTokenSecretKey: token
 ```
 
 ## CI/CD integration
@@ -182,19 +182,19 @@ kms:
 ```yaml
 # .github/workflows/deploy.yml
 jobs:
-  deploy:
-    steps:
-      - name: Login to KMS
-        run: |
-          export KMS_TOKEN=$(curl -s -X POST $KMS_URL/api/v1/auth/universal-auth/login \
-            -d '{"clientId":"${{ secrets.KMS_CLIENT_ID }}","clientSecret":"${{ secrets.KMS_CLIENT_SECRET }}"}' \
-            | jq -r '.accessToken')
-          echo "KMS_TOKEN=$KMS_TOKEN" >> $GITHUB_ENV
+ deploy:
+ steps:
+ - name: Login to KMS
+ run: |
+ export KMS_TOKEN=$(curl -s -X POST $KMS_URL/api/v1/auth/universal-auth/login \
+ -d '{"clientId":"${{ secrets.KMS_CLIENT_ID }}","clientSecret":"${{ secrets.KMS_CLIENT_SECRET }}"}' \
+ | jq -r '.accessToken')
+ echo "KMS_TOKEN=$KMS_TOKEN" >> $GITHUB_ENV
 
-      - name: Fetch deploy secrets
-        run: |
-          DOCKERHUB_TOKEN=$(curl -s "$KMS_URL/api/v1/secrets/raw/DOCKERHUB_TOKEN?workspaceId=$PROJECT_ID&environment=production" \
-            -H "Authorization: Bearer $KMS_TOKEN" | jq -r '.secret.secretValue')
+ - name: Fetch deploy secrets
+ run: |
+ DOCKERHUB_TOKEN=$(curl -s "$KMS_URL/api/v1/secrets/raw/DOCKERHUB_TOKEN?workspaceId=$PROJECT_ID&environment=production" \
+ -H "Authorization: Bearer $KMS_TOKEN" | jq -r '.secret.secretValue')
 ```
 
 ## Authentication methods
@@ -234,8 +234,8 @@ shared `liquid-kms` instance over ZAP (binary protocol, TCP 9999).
 
 **Secret paths**:
 ```
-secret/data/onyxplus/{env}/onyx_signing_key   # secp256k1 ECDSA, ERC-735 signer
-secret/data/onyxplus/{env}/iam_client_secret  # onyxplus-onyxd OAuth2 secret
+secret/data/onyxplus/{env}/onyx_signing_key # secp256k1 ECDSA, ERC-735 signer
+secret/data/onyxplus/{env}/iam_client_secret # onyxplus-onyxd OAuth2 secret
 secret/data/onyxplus/{env}/mpc_webhook_secret # HMAC for inbound MPC callbacks
 ```
 
@@ -263,5 +263,5 @@ Companion docs: `~/work/onyxplus/internal/content/docs/kms.mdx`,
 
 **Last Updated**: 2026-05-12
 **Category**: Hanzo Ecosystem
-**Related**: secrets, kms, infisical, encryption, security, vault
+**Related**: secrets, kms, kms, encryption, security, vault
 **Prerequisites**: API key concepts, K8s basics

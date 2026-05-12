@@ -89,62 +89,62 @@ Repo: `hanzoai/vllm` (90MB). Fork of `EricLBuehler/candle-vllm`. MIT License (Co
 
 ```
 vllm/
-  Cargo.toml              # candle-vllm v0.2.1, feature flags
-  build.rs
-  LICENSE                 # MIT
-  README.md
-  README-CN.md
-  src/
-    main.rs               # CLI entry, Axum server setup
-    lib.rs                 # Core library exports
-    openai/                # OpenAI-compatible API layer
-      openai_server.rs     # Axum routes (/v1/chat/completions, /v1/models)
-      communicator.rs      # Request/response coordination
-      distributed.rs       # Multi-GPU/multi-node communication
-      streaming.rs         # SSE streaming responses
-      requests.rs          # Request types
-      responses.rs         # Response types
-      sampling_params.rs   # Temperature, top-k, top-p, penalties
-      logits_processor.rs  # Token sampling logic
-      utils.rs
-      conversation/        # Chat template handling
-      models/              # Model implementations (17 files)
-        llama.rs, mistral.rs, phi2.rs, phi3.rs
-        qwen.rs, yi.rs, stable_lm.rs, gemma.rs, gemma3.rs
-        glm4.rs, deepseek.rs
-        quantized_llama.rs, quantized_phi3.rs
-        quantized_qwen.rs, quantized_glm4.rs
-        linear.rs          # Shared linear layer (Marlin/GPTQ)
-        mod.rs             # Model registry and loading
-      pipelines/           # Inference pipeline
-        pipeline.rs        # Model loading, weight management
-        llm_engine.rs      # Continuous batching engine
-        mod.rs
-    backend/               # Low-level inference backend
-      paged_attention.rs   # PagedAttention implementation
-      cache.rs             # KV cache management
-      gguf.rs              # GGUF format loader
-      gptq.rs              # GPTQ format loader
-      heartbeat.rs         # Health monitoring
-      progress.rs          # Loading progress bars
-      custom_ops/          # Custom operations
-      mod.rs
-    paged_attention/       # PagedAttention core algorithms
-    scheduler/             # Request scheduling (continuous batching)
-  kernels/                 # CUDA kernels
-    Cargo.toml
-    build.rs               # CUDA kernel compilation
-    src/
-  metal-kernels/           # Metal kernels (Apple Silicon)
-    Cargo.toml
-    src/
-  examples/
-    chat.py                # Python chat client
-    benchmark.py           # Batch throughput benchmark
-    convert_marlin.py      # GPTQ to Marlin conversion
-    convert_awq_marlin.py  # AWQ to Marlin conversion
-    llama.py               # Simple LLAMA example
-  tests/
+ Cargo.toml # candle-vllm v0.2.1, feature flags
+ build.rs
+ LICENSE # MIT
+ README.md
+ README-CN.md
+ src/
+ main.rs # CLI entry, Axum server setup
+ lib.rs # Core library exports
+ openai/ # OpenAI-compatible API layer
+ openai_server.rs # Axum routes (/v1/chat/completions, /v1/models)
+ communicator.rs # Request/response coordination
+ distributed.rs # Multi-GPU/multi-node communication
+ streaming.rs # SSE streaming responses
+ requests.rs # Request types
+ responses.rs # Response types
+ sampling_params.rs # Temperature, top-k, top-p, penalties
+ logits_processor.rs # Token sampling logic
+ utils.rs
+ conversation/ # Chat template handling
+ models/ # Model implementations (17 files)
+ llama.rs, mistral.rs, phi2.rs, phi3.rs
+ qwen.rs, yi.rs, stable_lm.rs, gemma.rs, gemma3.rs
+ glm4.rs, deepseek.rs
+ quantized_llama.rs, quantized_phi3.rs
+ quantized_qwen.rs, quantized_glm4.rs
+ linear.rs # Shared linear layer (Marlin/GPTQ)
+ mod.rs # Model registry and loading
+ pipelines/ # Inference pipeline
+ pipeline.rs # Model loading, weight management
+ llm_engine.rs # Continuous batching engine
+ mod.rs
+ backend/ # Low-level inference backend
+ paged_attention.rs # PagedAttention implementation
+ cache.rs # KV cache management
+ gguf.rs # GGUF format loader
+ gptq.rs # GPTQ format loader
+ heartbeat.rs # Health monitoring
+ progress.rs # Loading progress bars
+ custom_ops/ # Custom operations
+ mod.rs
+ paged_attention/ # PagedAttention core algorithms
+ scheduler/ # Request scheduling (continuous batching)
+ kernels/ # CUDA kernels
+ Cargo.toml
+ build.rs # CUDA kernel compilation
+ src/
+ metal-kernels/ # Metal kernels (Apple Silicon)
+ Cargo.toml
+ src/
+ examples/
+ chat.py # Python chat client
+ benchmark.py # Batch throughput benchmark
+ convert_marlin.py # GPTQ to Marlin conversion
+ convert_awq_marlin.py # AWQ to Marlin conversion
+ llama.py # Simple LLAMA example
+ tests/
 ```
 
 ## Build
@@ -189,12 +189,12 @@ cargo build --release --features cuda,nccl,mpi
 ```bash
 # From local path
 target/release/candle-vllm --port 2000 \
-  --weight-path /home/DeepSeek-R1-Distill-Llama-8B/ llama3 \
-  --temperature 0. --penalty 1.0
+ --weight-path /home/DeepSeek-R1-Distill-Llama-8B/ llama3 \
+ --temperature 0. --penalty 1.0
 
 # From HuggingFace
 target/release/candle-vllm \
-  --model-id deepseek-ai/DeepSeek-R1-0528-Qwen3-8B qwen3
+ --model-id deepseek-ai/DeepSeek-R1-0528-Qwen3-8B qwen3
 ```
 
 ### GGUF Quantized
@@ -202,13 +202,13 @@ target/release/candle-vllm \
 ```bash
 # Apple Silicon
 cargo run --release --features metal -- --port 2000 --dtype bf16 \
-  --weight-file /home/qwq-32b-q4_k_m.gguf qwen2 \
-  --quant gguf --temperature 0. --penalty 1.0
+ --weight-file /home/qwq-32b-q4_k_m.gguf qwen2 \
+ --quant gguf --temperature 0. --penalty 1.0
 
 # From HuggingFace
 target/release/candle-vllm \
-  --model-id unsloth/DeepSeek-R1-0528-Qwen3-8B-GGUF \
-  --weight-file DeepSeek-R1-0528-Qwen3-8B-Q2_K.gguf qwen3 --quant gguf
+ --model-id unsloth/DeepSeek-R1-0528-Qwen3-8B-GGUF \
+ --weight-file DeepSeek-R1-0528-Qwen3-8B-Q2_K.gguf qwen3 --quant gguf
 ```
 
 ### In-Situ Quantization
@@ -216,7 +216,7 @@ target/release/candle-vllm \
 ```bash
 # Load unquantized model as quantized
 target/release/candle-vllm --port 2000 \
-  --weight-path /home/Meta-Llama-3.1-8B-Instruct/ llama3 --quant q4k
+ --weight-path /home/Meta-Llama-3.1-8B-Instruct/ llama3 --quant q4k
 ```
 
 Quantization options: `q4_0`, `q4_1`, `q5_0`, `q5_1`, `q8_0`, `q2k`, `q3k`, `q4k`, `q5k`, `q6k`
@@ -225,8 +225,8 @@ Quantization options: `q4_0`, `q4_1`, `q5_0`, `q5_1`, `q8_0`, `q2k`, `q3k`, `q4k
 
 ```bash
 target/release/candle-vllm --dtype bf16 --port 2000 \
-  --weight-path /home/model-GPTQ-4bit qwen2 \
-  --quant gptq --temperature 0. --penalty 1.0
+ --weight-path /home/model-GPTQ-4bit qwen2 \
+ --quant gptq --temperature 0. --penalty 1.0
 ```
 
 ### Multi-GPU
@@ -234,9 +234,9 @@ target/release/candle-vllm --dtype bf16 --port 2000 \
 ```bash
 # Multi-process mode (recommended)
 cargo run --release --features cuda,nccl -- \
-  --multi-process --dtype bf16 --port 2000 \
-  --device-ids "0,1" --weight-path /home/QwQ-32B/ qwen2 \
-  --penalty 1.0 --temperature 0.
+ --multi-process --dtype bf16 --port 2000 \
+ --device-ids "0,1" --weight-path /home/QwQ-32B/ qwen2 \
+ --penalty 1.0 --temperature 0.
 
 # GPU count must be power of 2 (2, 4, 8)
 ```
@@ -246,15 +246,15 @@ cargo run --release --features cuda,nccl -- \
 ```bash
 # Convert AWQ to Marlin format
 python3 examples/convert_awq_marlin.py \
-  --src /data/DeepSeek-R1-AWQ/ --dst /data/DeepSeek-R1-AWQ-Marlin/
+ --src /data/DeepSeek-R1-AWQ/ --dst /data/DeepSeek-R1-AWQ-Marlin/
 
 # Run on 8x A100 with 120/256 experts offloaded to CPU
 cargo run --release --features cuda,nccl -- \
-  --log --multi-process --dtype bf16 --port 2000 \
-  --device-ids "0,1,2,3,4,5,6,7" \
-  --weight-path /data/DeepSeek-R1-AWQ-Marlin/ deep-seek \
-  --quant awq --temperature 0. --penalty 1.0 \
-  --num-experts-offload-per-rank 15
+ --log --multi-process --dtype bf16 --port 2000 \
+ --device-ids "0,1,2,3,4,5,6,7" \
+ --weight-path /data/DeepSeek-R1-AWQ-Marlin/ deep-seek \
+ --quant awq --temperature 0. --penalty 1.0 \
+ --num-experts-offload-per-rank 15
 ```
 
 ## Sending Requests
@@ -263,14 +263,14 @@ cargo run --release --features cuda,nccl -- \
 
 ```bash
 curl -X POST "http://127.0.0.1:2000/v1/chat/completions" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -d '{
-    "model": "llama",
-    "messages": [{"role": "user", "content": "Hello"}],
-    "temperature": 0.7,
-    "max_tokens": 128
-  }'
+ -H "Content-Type: application/json" \
+ -H "Authorization: Bearer YOUR_API_KEY" \
+ -d '{
+ "model": "llama",
+ "messages": [{"role": "user", "content": "Hello"}],
+ "temperature": 0.7,
+ "max_tokens": 128
+ }'
 ```
 
 ### Python (OpenAI SDK)
@@ -281,9 +281,9 @@ openai.api_key = "EMPTY"
 openai.base_url = "http://localhost:2000/v1/"
 
 completion = openai.chat.completions.create(
-    model="llama",
-    messages=[{"role": "user", "content": "Explain Rust."}],
-    max_tokens=64,
+ model="llama",
+ messages=[{"role": "user", "content": "Explain Rust."}],
+ max_tokens=64,
 )
 print(completion.choices[0].message.content)
 ```
@@ -292,9 +292,9 @@ print(completion.choices[0].message.content)
 
 ```bash
 pip install openai rich click
-python3 examples/chat.py                           # Plain text
-python3 examples/chat.py --thinking True            # Reasoning models
-python3 examples/chat.py --live                     # Markdown rendering
+python3 examples/chat.py # Plain text
+python3 examples/chat.py --thinking True # Reasoning models
+python3 examples/chat.py --live # Markdown rendering
 ```
 
 ### Benchmark

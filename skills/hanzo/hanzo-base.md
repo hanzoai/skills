@@ -69,27 +69,27 @@ Repo: `hanzoai/base`. License: MIT.
 package main
 
 import (
-    "log"
+ "log"
 
-    "github.com/hanzoai/base"
-    "github.com/hanzoai/base/core"
+ "github.com/hanzoai/base"
+ "github.com/hanzoai/base/core"
 )
 
 func main() {
-    app := base.New()
+ app := base.New()
 
-    app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-        // registers new "GET /hello" route
-        se.Router.GET("/hello", func(re *core.RequestEvent) error {
-            return re.String(200, "Hello world!")
-        })
+ app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+ // registers new "GET /hello" route
+ se.Router.GET("/hello", func(re *core.RequestEvent) error {
+ return re.String(200, "Hello world!")
+ })
 
-        return se.Next()
-    })
+ return se.Next()
+ })
 
-    if err := app.Start(); err != nil {
-        log.Fatal(err)
-    }
+ if err := app.Start(); err != nil {
+ log.Fatal(err)
+ }
 }
 ```
 
@@ -112,11 +112,11 @@ CGO_ENABLED=0 go build -o base ./examples/base
 
 ```bash
 docker run -d \
-  --name base \
-  -p 8080:8080 \
-  -v ./hz_data:/pb_data \
-  ghcr.io/hanzoai/base \
-  serve --http=0.0.0.0:8080 --dir=/pb_data
+ --name base \
+ -p 8080:8080 \
+ -v ./hz_data:/pb_data \
+ ghcr.io/hanzoai/base \
+ serve --http=0.0.0.0:8080 --dir=/pb_data
 ```
 
 ## Core Concepts
@@ -125,18 +125,18 @@ docker run -d \
 
 ```
 ┌──────────────────────────────────────────────┐
-│              Hanzo Base Binary                │
+│ Hanzo Base Binary │
 ├──────────────┬───────────────┬───────────────┤
-│   REST API   │  Realtime WS  │  Admin UI     │
-│   /api/*     │  /api/realtime│  /_/          │
+│ REST API │ Realtime WS │ Admin UI │
+│ /api/* │ /api/realtime│ /_/ │
 ├──────────────┴───────────────┴───────────────┤
-│                  core.App                     │
-│  ┌─────────┐ ┌──────────┐ ┌───────────────┐ │
-│  │ Records │ │ Auth     │ │ File Storage  │ │
-│  │ (CRUD)  │ │ (OAuth2) │ │ (S3/local)    │ │
-│  └─────────┘ └──────────┘ └───────────────┘ │
+│ core.App │
+│ ┌─────────┐ ┌──────────┐ ┌───────────────┐ │
+│ │ Records │ │ Auth │ │ File Storage │ │
+│ │ (CRUD) │ │ (OAuth2) │ │ (S3/local) │ │
+│ └─────────┘ └──────────┘ └───────────────┘ │
 ├──────────────────────────────────────────────┤
-│  SQLite (default) │ PostgreSQL (cloudsql)    │
+│ SQLite (default) │ PostgreSQL (cloudsql) │
 └──────────────────────────────────────────────┘
 ```
 
@@ -144,52 +144,52 @@ docker run -d \
 
 ```
 base/
-  base.go              # Main Base struct, implements core.App
-  core/                # Core app logic, records, collections, events, router
-  apis/                # HTTP API handlers (records, auth, collections, realtime, batch, etc.)
-  cmd/                 # CLI commands (serve, superuser)
-  crdt/                # CRDT types (document, text, sync)
-  forms/               # Form validation (record upsert, email, S3 test)
-  migrations/          # Database migration scripts
-  mails/               # Email templates
-  plugins/
-    jsvm/              # JavaScript VM (Goja) for hooks and migrations
-    migratecmd/        # Migration CLI command
-    cloudsql/          # Serverless PostgreSQL (per-tenant)
-    functions/         # OpenFaaS serverless functions
-    platform/          # Multi-tenant IAM + KMS integration
-    scheduler/         # Cron/scheduled tasks
-    ghupdate/          # GitHub self-update
-    zap/               # ZAP binary protocol transport (port 9652)
-  sdk/
-    base-js/           # @hanzoai/base TypeScript SDK
-    base-react/        # @hanzoai/base-react React hooks
-  tools/               # Internal utility packages
-    archive/           # Archive utilities
-    auth/              # Auth helpers
-    cron/              # Cron scheduler
-    dbutils/           # Database utilities
-    filesystem/        # File system abstraction
-    hook/              # Event hook system
-    inflector/         # String inflection
-    list/              # List utilities
-    logger/            # Structured logging
-    mailer/            # Email sending
-    osutils/           # OS utilities
-    picker/            # Data picker
-    router/            # HTTP router
-    routine/           # Goroutine helpers
-    search/            # Search utilities
-    security/          # Security helpers
-    store/             # In-memory store
-    subscriptions/     # Realtime subscriptions
-    template/          # Template engine
-    tokenizer/         # Token utilities
-    types/             # Custom types
-  ui/                  # Admin dashboard (Svelte 4 + Vite 5)
-  examples/base/       # Standalone example with all plugins
-  tests/               # Integration tests
-  docs/                # Documentation
+ base.go # Main Base struct, implements core.App
+ core/ # Core app logic, records, collections, events, router
+ apis/ # HTTP API handlers (records, auth, collections, realtime, batch, etc.)
+ cmd/ # CLI commands (serve, superuser)
+ crdt/ # CRDT types (document, text, sync)
+ forms/ # Form validation (record upsert, email, S3 test)
+ migrations/ # Database migration scripts
+ mails/ # Email templates
+ plugins/
+ jsvm/ # JavaScript VM (Goja) for hooks and migrations
+ migratecmd/ # Migration CLI command
+ cloudsql/ # Serverless PostgreSQL (per-tenant)
+ functions/ # OpenFaaS serverless functions
+ platform/ # Multi-tenant IAM + KMS integration
+ scheduler/ # Cron/scheduled tasks
+ ghupdate/ # GitHub self-update
+ zap/ # ZAP binary protocol transport (port 9652)
+ sdk/
+ base-js/ # @hanzoai/base TypeScript SDK
+ base-react/ # @hanzoai/base-react React hooks
+ tools/ # Internal utility packages
+ archive/ # Archive utilities
+ auth/ # Auth helpers
+ cron/ # Cron scheduler
+ dbutils/ # Database utilities
+ filesystem/ # File system abstraction
+ hook/ # Event hook system
+ inflector/ # String inflection
+ list/ # List utilities
+ logger/ # Structured logging
+ mailer/ # Email sending
+ osutils/ # OS utilities
+ picker/ # Data picker
+ router/ # HTTP router
+ routine/ # Goroutine helpers
+ search/ # Search utilities
+ security/ # Security helpers
+ store/ # In-memory store
+ subscriptions/ # Realtime subscriptions
+ template/ # Template engine
+ tokenizer/ # Token utilities
+ types/ # Custom types
+ ui/ # Admin dashboard (Svelte 4 + Vite 5)
+ examples/base/ # Standalone example with all plugins
+ tests/ # Integration tests
+ docs/ # Documentation
 ```
 
 ### Plugin System
@@ -210,21 +210,21 @@ Plugins extend Base via hooks on the `core.App` interface:
 ### CLI Commands
 
 ```bash
-./base serve              # Start the HTTP server
-./base serve --dev        # Dev mode (verbose logging, SQL output)
+./base serve # Start the HTTP server
+./base serve --dev # Dev mode (verbose logging, SQL output)
 ./base serve --http=0.0.0.0:8080
 ./base serve --dir=./hz_data
-./base superuser create   # Create a superuser
-./base superuser upsert   # Create or update a superuser
+./base superuser create # Create a superuser
+./base superuser upsert # Create or update a superuser
 ```
 
 ### Global Flags
 
 ```
---dir              Data directory (default: ./hz_data)
---dev              Enable dev mode
---encryptionEnv    Env var name for 32-char encryption key
---queryTimeout     Default SELECT query timeout in seconds
+--dir Data directory (default: ./hz_data)
+--dev Enable dev mode
+--encryptionEnv Env var name for 32-char encryption key
+--queryTimeout Default SELECT query timeout in seconds
 ```
 
 ### Auth Methods
@@ -283,8 +283,8 @@ make test-report
 ```bash
 cd ui
 npm install
-npm run dev     # Dev server at localhost:3000
-npm run build   # Production build to ui/dist/
+npm run dev # Dev server at localhost:3000
+npm run build # Production build to ui/dist/
 ```
 
 The Admin UI expects the backend at `http://localhost:8090` by default. Override with `HZ_BACKEND_URL` in `ui/.env.development.local`.
@@ -297,8 +297,8 @@ FROM golang:1.26-alpine AS builder
 WORKDIR /build
 COPY . .
 CGO_ENABLED=0 go build \
-  -ldflags="-s -w -X github.com/hanzoai/base.Version=$(git describe --tags)" \
-  -o /build/base ./examples/base/main.go
+ -ldflags="-s -w -X github.com/hanzoai/base.Version=$(git describe --tags)" \
+ -o /build/base ./examples/base/main.go
 
 FROM alpine:3.21
 COPY --from=builder /build/base /app/base
@@ -355,10 +355,10 @@ framework. The daemon uses:
 
 - `base.NewWithConfig({DefaultDataDir: "/data/onyxd"})` to bootstrap
 - `migratecmd` plugin for auto-migration on `enrollments` /
-  `attestations` collections
+ `attestations` collections
 - `platform` plugin to wire IAM + KMS endpoints
 - Custom routes mounted on `app.OnServe().BindFunc(...)` for
-  `/v1/onyxplus/*` and `/v1/onyx/claims/{enrollmentId}`
+ `/v1/onyxplus/*` and `/v1/onyx/claims/{enrollmentId}`
 - Superuser command + custom CLI subcommands via `basecmd`
 
 Base's embedded SQLite is the production store (Postgres retired per
