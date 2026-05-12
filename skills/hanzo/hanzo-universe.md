@@ -45,141 +45,141 @@ DO App Platform is **decommissioned** (Feb 2026). All infrastructure is K8s-nati
 
 ```
 universe/
-  infra/
-    k8s/                        # Production Kustomize manifests (main entry point)
-      kustomization.yaml         # Root -- includes all services below
-      Makefile                   # diff, apply, validate, build, deploy-%
-      namespace.yaml             # hanzo namespace
-      cluster-issuer.yaml        # Let's Encrypt ClusterIssuer (cert-manager)
-      platform-ingress.yaml      # Platform-level ingress rules
-      base/                      # Shared deployment/ingress templates
-      rbac/                      # Cluster-wide RBAC (readonly, operator, ci roles)
-      ci/                        # CI deployer ServiceAccount
-      ingress/                   # Hanzo Ingress (Traefik-based L7 proxy, 4 replicas)
-      # --- Operators ---
-      hanzo-operator/            # HanzoService/Datastore/Gateway/MPC/Network/Ingress/Platform CRDs
-      kms-operator/              # KMSSecret/KMSDynamicSecret/KMSPushSecret CRDs
-      nchain/                    # Blockchain node operator (nchain-system namespace)
-      # --- Data ---
-      sql/                       # PostgreSQL 16 + ZAP (StatefulSet, 20Gi PVC)
-      kv/                        # Valkey + ZAP (StatefulSet, 2Gi PVC)
-      docdb/                     # DocDB -- FerretDB (MongoDB wire protocol over PostgreSQL)
-      storage/                   # Hanzo S3 (MinIO, s3.hanzo.ai)
-      search/                    # Meilisearch (search.hanzo.ai, backup CronJob)
-      vector/                    # Qdrant (vector.hanzo.ai, backup CronJob)
-      nats/                      # NATS core messaging
-      stream/                    # Kafka wire protocol gateway over PubSub
-      cloud-sql/                 # Serverless PostgreSQL (Neon-based: pageserver, safekeeper, compute)
-      # --- Identity & Security ---
-      iam/                       # Casdoor IAM (hanzo.id, lux.id, zoo.id, pars.id)
-      kms/                       # KMS / Infisical (kms.hanzo.ai)
-      login/                     # White-label login UI
-      mpc/                       # Multi-party computation (threshold signing, StatefulSet)
-      cloudflare/                # Cloudflare API credentials
-      # --- Zero Trust ---
-      zt/                        # ZeroTier overlay mesh (controller, routers, MCP gateway)
-      # --- AI & Models ---
-      zen/                       # Zen LM Gateway (identity injection + Console tracking)
-      models/                    # Model registry API (models.hanzo.ai)
-      pricing/                   # Pricing API + CronJob (pricing.hanzo.ai)
-      rag-api/                   # RAG API for chat
-      crawl/                     # crawl4ai web crawler
-      # --- Applications ---
-      chat/                      # Hanzo Chat (LibreChat + DocDB + search)
-      bot/                       # Hanzo Bot (gateway, hub, docs, agents control plane, playground)
-      cloud/                     # Cloud API + agent + site
-      commerce/                  # Commerce API (HPA, PDB, service)
-      console/                   # Developer console + worker
-      billing/                   # Billing center
-      gateway/                   # API gateway (api.hanzo.ai)
-      flow/                      # Visual AI workflow builder + site
-      auto/                      # Visual workflow automation
-      visor/                     # Agent orchestration
-      vm/                        # Virtual machine management
-      vmd/                       # VM daemon
-      # --- Serverless ---
-      openfaas/                  # OpenFaaS function control plane (controller, gateway, queue-worker)
-      # --- Platform ---
-      paas/                      # PaaS v2 (platform.hanzo.ai, RBAC, PDB)
-      gitops/                    # GitOps sync engine
-      registry/                  # Container registry + PVC
-      argocd/                    # ArgoCD bootstrap (applications, RBAC, ingress)
-      # --- Observability ---
-      analytics/                 # Event analytics
-      insights/                  # Product analytics
-      monitoring/                # Prometheus ServiceMonitors, alerts, Grafana dashboards, OTel collector
-      logging/                   # Loki + Promtail log pipeline
-      o11y/                      # OTel collector config
-      status/                    # Status pages (hanzo, lux, zoo, pars, adnexus)
-      sentry/                    # Sentry error tracking
-      # --- Sites & Misc ---
-      app/                       # hanzo.ai main app
-      base/                      # Database admin UI
-      bootnode/                  # bootnode.hanzo.ai (API + web)
-      bootnode-whitelabel/       # White-label bootnode deployments
-      captable/                  # Cap table management
-      dataroom/                  # Data room
-      dns/                       # DNS service (ConfigMap, PDB)
-      lux-build/                 # Lux build service
-      preview/                   # PR preview environments (namespace, certs, pull secrets)
-      sign/                      # Document signing
-      team/                      # Project management (own namespace: team)
-      # --- External Stacks (separate clusters) ---
-      lux/                       # Lux blockchain (lux-k8s cluster)
-        operator/                # Lux operator
-        validators/              # 15 validators across 3 networks (mainnet/testnet/devnet)
-        gateway/                 # KrakenD API gateway
-        explorer/                # Blockscout explorer + frontend
-        bridge/                  # Cross-chain bridge
-        exchange/                # DEX
-        bootnode-lux/            # Lux bootnode
-        agnost/                  # Agnost deployments
-      adnexus/                   # AdNexus advertising (adnexus-k8s cluster)
-  terraform/
-    main.tf                      # DigitalOcean VPC, Droplets, LB, Firewall, DNS
-    autoscaler.tf                # Docker Swarm autoscaler config
-    terraform.tfvars.example     # Variable template
-  do/
-    autoscaler.py                # DigitalOcean autoscaler script
-    compose.autoscaler.yml       # Autoscaler compose
-  scripts/
-    manager-init.sh              # Swarm manager bootstrap
-    worker-init.sh               # Swarm worker bootstrap
-  deploy.sh                      # One-shot infra deploy (Terraform + Swarm + Universe)
-  k8s-deploy.sh                  # K8s-only deploy script
-  README.md                      # Infra documentation
-  helm/
-    identity/                    # IAM Helm chart (Casdoor)
-      Chart.yaml
-      values.yaml
-      values-production.yaml
-      templates/                 # deployment, service, ingress, configmap, secrets, pdb
-    hanzo-stack/
-      values.production.yaml     # Production values for full stack chart
-  deploy/                        # Docker Compose production deployment
-    compose.production.yml
-    deploy.sh                    # Production deploy script
-    kms.sh                       # KMS bootstrap
-    dns-setup.sh                 # DNS configuration
-    staging/                     # Staging environment
-  services/                      # Docker Compose service definitions
-    compose.yml                  # Main services compose
-    compose-hanzo-*.yml          # Hanzo service variants (complete, dev, minimal, services)
-    compose-infra.yml            # Infrastructure compose (postgres, redis)
-    compose-lux.yml              # Lux services compose
-    compose-nodes.yml            # Node compose
-    config/                      # Router configs, IAM configs, MCP servers
-  .github/
-    workflows/                   # 17 CI/CD workflows
-    actions/                     # Reusable actions (KMS auth, KMS action)
-  compose.yml                    # Root development compose (29k lines)
-  compose.production.yml         # Production compose
-  compose.single-node.yml        # Single-node compose
-  Makefile                       # Root Makefile (up, down, status, logs, health, db-backup)
-  Cargo.toml                     # Rust workspace root
-  e2e/                           # End-to-end tests
-  docs/                          # Documentation
-  scripts/                       # Utility scripts
+ infra/
+ k8s/ # Production Kustomize manifests (main entry point)
+ kustomization.yaml # Root -- includes all services below
+ Makefile # diff, apply, validate, build, deploy-%
+ namespace.yaml # hanzo namespace
+ cluster-issuer.yaml # Let's Encrypt ClusterIssuer (cert-manager)
+ platform-ingress.yaml # Platform-level ingress rules
+ base/ # Shared deployment/ingress templates
+ rbac/ # Cluster-wide RBAC (readonly, operator, ci roles)
+ ci/ # CI deployer ServiceAccount
+ ingress/ # Hanzo Ingress (Traefik-based L7 proxy, 4 replicas)
+ # --- Operators ---
+ hanzo-operator/ # HanzoService/Datastore/Gateway/MPC/Network/Ingress/Platform CRDs
+ kms-operator/ # KMSSecret/KMSDynamicSecret/KMSPushSecret CRDs
+ nchain/ # Blockchain node operator (nchain-system namespace)
+ # --- Data ---
+ sql/ # PostgreSQL 16 + ZAP (StatefulSet, 20Gi PVC)
+ kv/ # Valkey + ZAP (StatefulSet, 2Gi PVC)
+ docdb/ # DocDB -- FerretDB (MongoDB wire protocol over PostgreSQL)
+ storage/ # Hanzo S3 (MinIO, s3.hanzo.ai)
+ search/ # Meilisearch (search.hanzo.ai, backup CronJob)
+ vector/ # Qdrant (vector.hanzo.ai, backup CronJob)
+ nats/ # NATS core messaging
+ stream/ # Kafka wire protocol gateway over PubSub
+ cloud-sql/ # Serverless PostgreSQL (Neon-based: pageserver, safekeeper, compute)
+ # --- Identity & Security ---
+ iam/ # Hanzo IAM IAM (hanzo.id, lux.id, zoo.id, pars.id)
+ kms/ # KMS / Hanzo KMS (kms.hanzo.ai)
+ login/ # White-label login UI
+ mpc/ # Multi-party computation (threshold signing, StatefulSet)
+ cloudflare/ # Cloudflare API credentials
+ # --- Zero Trust ---
+ zt/ # ZeroTier overlay mesh (controller, routers, MCP gateway)
+ # --- AI & Models ---
+ zen/ # Zen LM Gateway (identity injection + Console tracking)
+ models/ # Model registry API (models.hanzo.ai)
+ pricing/ # Pricing API + CronJob (pricing.hanzo.ai)
+ rag-api/ # RAG API for chat
+ crawl/ # crawl4ai web crawler
+ # --- Applications ---
+ chat/ # Hanzo Chat (LibreChat + DocDB + search)
+ bot/ # Hanzo Bot (gateway, hub, docs, agents control plane, playground)
+ cloud/ # Cloud API + agent + site
+ commerce/ # Commerce API (HPA, PDB, service)
+ console/ # Developer console + worker
+ billing/ # Billing center
+ gateway/ # API gateway (api.hanzo.ai)
+ flow/ # Visual AI workflow builder + site
+ auto/ # Visual workflow automation
+ visor/ # Agent orchestration
+ vm/ # Virtual machine management
+ vmd/ # VM daemon
+ # --- Serverless ---
+ openfaas/ # OpenFaaS function control plane (controller, gateway, queue-worker)
+ # --- Platform ---
+ paas/ # PaaS v2 (platform.hanzo.ai, RBAC, PDB)
+ gitops/ # GitOps sync engine
+ registry/ # Container registry + PVC
+ argocd/ # ArgoCD bootstrap (applications, RBAC, ingress)
+ # --- Observability ---
+ analytics/ # Event analytics
+ insights/ # Product analytics
+ monitoring/ # Prometheus ServiceMonitors, alerts, Grafana dashboards, OTel collector
+ logging/ # Loki + Promtail log pipeline
+ o11y/ # OTel collector config
+ status/ # Status pages (hanzo, lux, zoo, pars, adnexus)
+ sentry/ # Sentry error tracking
+ # --- Sites & Misc ---
+ app/ # hanzo.ai main app
+ base/ # Database admin UI
+ bootnode/ # bootnode.hanzo.ai (API + web)
+ bootnode-whitelabel/ # White-label bootnode deployments
+ captable/ # Cap table management
+ dataroom/ # Data room
+ dns/ # DNS service (ConfigMap, PDB)
+ lux-build/ # Lux build service
+ preview/ # PR preview environments (namespace, certs, pull secrets)
+ sign/ # Document signing
+ team/ # Project management (own namespace: team)
+ # --- External Stacks (separate clusters) ---
+ lux/ # Lux blockchain (lux-k8s cluster)
+ operator/ # Lux operator
+ validators/ # 15 validators across 3 networks (mainnet/testnet/devnet)
+ gateway/ # KrakenD API gateway
+ explorer/ # Blockscout explorer + frontend
+ bridge/ # Cross-chain bridge
+ exchange/ # DEX
+ bootnode-lux/ # Lux bootnode
+ agnost/ # Agnost deployments
+ adnexus/ # AdNexus advertising (adnexus-k8s cluster)
+ terraform/
+ main.tf # DigitalOcean VPC, Droplets, LB, Firewall, DNS
+ autoscaler.tf # Docker Swarm autoscaler config
+ terraform.tfvars.example # Variable template
+ do/
+ autoscaler.py # DigitalOcean autoscaler script
+ compose.autoscaler.yml # Autoscaler compose
+ scripts/
+ manager-init.sh # Swarm manager bootstrap
+ worker-init.sh # Swarm worker bootstrap
+ deploy.sh # One-shot infra deploy (Terraform + Swarm + Universe)
+ k8s-deploy.sh # K8s-only deploy script
+ README.md # Infra documentation
+ helm/
+ identity/ # IAM Helm chart (Hanzo IAM)
+ Chart.yaml
+ values.yaml
+ values-production.yaml
+ templates/ # deployment, service, ingress, configmap, secrets, pdb
+ hanzo-stack/
+ values.production.yaml # Production values for full stack chart
+ deploy/ # Docker Compose production deployment
+ compose.production.yml
+ deploy.sh # Production deploy script
+ kms.sh # KMS bootstrap
+ dns-setup.sh # DNS configuration
+ staging/ # Staging environment
+ services/ # Docker Compose service definitions
+ compose.yml # Main services compose
+ compose-hanzo-*.yml # Hanzo service variants (complete, dev, minimal, services)
+ compose-infra.yml # Infrastructure compose (postgres, redis)
+ compose-lux.yml # Lux services compose
+ compose-nodes.yml # Node compose
+ config/ # Router configs, IAM configs, MCP servers
+ .github/
+ workflows/ # 17 CI/CD workflows
+ actions/ # Reusable actions (KMS auth, KMS action)
+ compose.yml # Root development compose (29k lines)
+ compose.production.yml # Production compose
+ compose.single-node.yml # Single-node compose
+ Makefile # Root Makefile (up, down, status, logs, health, db-backup)
+ Cargo.toml # Rust workspace root
+ e2e/ # End-to-end tests
+ docs/ # Documentation
+ scripts/ # Utility scripts
 ```
 
 ## K8s Deployment Commands
@@ -242,24 +242,24 @@ All secrets flow through KMS (kms.hanzo.ai) via the **KMS Operator**.
 apiVersion: secrets.lux.network/v1alpha1
 kind: KMSSecret
 metadata:
-  name: bot-kms-sync
-  namespace: hanzo
+ name: bot-kms-sync
+ namespace: hanzo
 spec:
-  hostAPI: http://kms.hanzo.svc.cluster.local/api
-  resyncInterval: 60
-  authentication:
-    universalAuth:
-      credentialsRef:
-        secretName: universal-auth-credentials
-        secretNamespace: hanzo
-      secretsScope:
-        projectSlug: secrets-639-c
-        envSlug: prod
-        secretsPath: /bot
-  managedSecretReference:
-    secretName: bot-secrets
-    secretNamespace: hanzo
-    secretType: Opaque
+ hostAPI: http://kms.hanzo.svc.cluster.local/api
+ resyncInterval: 60
+ authentication:
+ universalAuth:
+ credentialsRef:
+ secretName: universal-auth-credentials
+ secretNamespace: hanzo
+ secretsScope:
+ projectSlug: secrets-639-c
+ envSlug: prod
+ secretsPath: /bot
+ managedSecretReference:
+ secretName: bot-secrets
+ secretNamespace: hanzo
+ secretType: Opaque
 ```
 
 Authentication methods: Universal Auth (credentialsRef), Kubernetes Auth (serviceAccountRef + identityId), Service Token (legacy).
@@ -389,11 +389,11 @@ Custom GitHub Actions in `.github/actions/`: `kms-action` (fetch secrets), `kms-
 Root `Makefile` orchestrates three compose files:
 
 ```bash
-make setup    # Create network, start postgres + redis + ClickHouse
-make up       # Start all services (services + datastore + IAM)
-make down     # Stop everything
-make status   # Show service status across all compose files
-make health   # Health check all services
+make setup # Create network, start postgres + redis + ClickHouse
+make up # Start all services (services + datastore + IAM)
+make down # Stop everything
+make status # Show service status across all compose files
+make health # Health check all services
 make db-backup # Backup PostgreSQL + ClickHouse
 ```
 
@@ -403,8 +403,8 @@ Individual service targets: `make traefik`, `make iam`, `make cloud`, `make anal
 
 | Domain | Service | Cluster |
 |--------|---------|---------|
-| hanzo.id, lux.id, zoo.id, pars.id, id.ad.nexus, id.bootno.de | IAM (Casdoor) | hanzo-k8s |
-| kms.hanzo.ai | KMS (Infisical) | hanzo-k8s |
+| hanzo.id, lux.id, zoo.id, pars.id, id.ad.nexus, id.bootno.de | IAM (Hanzo IAM) | hanzo-k8s |
+| kms.hanzo.ai | KMS (Hanzo KMS) | hanzo-k8s |
 | api.hanzo.ai | API Gateway | hanzo-k8s |
 | console.hanzo.ai | Developer Console | hanzo-k8s |
 | cloud.hanzo.ai | Cloud Dashboard | hanzo-k8s |
@@ -456,7 +456,7 @@ kubectl apply -k ~/work/hanzo/universe/infra/k8s/lux/ --context do-sfo3-lux-k8s
 ## Related Skills
 
 - `hanzo/hanzo-operator.md` -- Hanzo K8s operator (7 CRDs, reconciliation)
-- `hanzo/hanzo-kms.md` -- Secret management (KMS/Infisical)
+- `hanzo/hanzo-kms.md` -- Secret management (KMS/Hanzo KMS)
 - `hanzo/hanzo-platform.md` -- PaaS deployments (platform.hanzo.ai)
 - `hanzo/hanzo-stack.md` -- Local dev environment (vs production)
 - `hanzo/hanzo-ingress.md` -- Traefik ingress layer

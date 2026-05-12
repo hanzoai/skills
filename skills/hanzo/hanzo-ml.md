@@ -103,18 +103,18 @@ The repository maintains **dual crate namespaces**: original `candle-*` crates f
 use hanzo_ml::{Device, Tensor, DType};
 
 fn main() -> hanzo_ml::Result<()> {
-    let device = Device::cuda_if_available(0)?;
+ let device = Device::cuda_if_available(0)?;
 
-    let a = Tensor::randn(0f32, 1., (2, 3), &device)?;
-    let b = Tensor::randn(0f32, 1., (3, 4), &device)?;
-    let c = a.matmul(&b)?;
-    println!("Shape: {:?}", c.shape()); // [2, 4]
+ let a = Tensor::randn(0f32, 1., (2, 3), &device)?;
+ let b = Tensor::randn(0f32, 1., (3, 4), &device)?;
+ let c = a.matmul(&b)?;
+ println!("Shape: {:?}", c.shape()); // [2, 4]
 
-    let d = a.relu()?;
-    let e = a.softmax(1)?;
-    let f = a.to_dtype(DType::BF16)?;
+ let d = a.relu()?;
+ let e = a.softmax(1)?;
+ let f = a.to_dtype(DType::BF16)?;
 
-    Ok(())
+ Ok(())
 }
 ```
 
@@ -125,24 +125,24 @@ use hanzo_ml::{Device, Tensor, DType, Module};
 use hanzo_nn::{VarBuilder, VarMap, Linear, linear, AdamW};
 
 fn main() -> hanzo_ml::Result<()> {
-    let device = Device::cuda_if_available(0)?;
-    let varmap = VarMap::new();
-    let vb = VarBuilder::from_varmap(&varmap, DType::F32, &device);
+ let device = Device::cuda_if_available(0)?;
+ let varmap = VarMap::new();
+ let vb = VarBuilder::from_varmap(&varmap, DType::F32, &device);
 
-    let layer1 = linear(784, 256, vb.pp("layer1"))?;
-    let layer2 = linear(256, 10, vb.pp("layer2"))?;
+ let layer1 = linear(784, 256, vb.pp("layer1"))?;
+ let layer2 = linear(256, 10, vb.pp("layer2"))?;
 
-    let input = Tensor::randn(0f32, 1., (32, 784), &device)?;
-    let h = layer1.forward(&input)?.relu()?;
-    let output = layer2.forward(&h)?;
+ let input = Tensor::randn(0f32, 1., (32, 784), &device)?;
+ let h = layer1.forward(&input)?.relu()?;
+ let output = layer2.forward(&h)?;
 
-    let mut opt = AdamW::new(varmap.all_vars(), Default::default())?;
-    let target = Tensor::zeros((32, 10), DType::F32, &device)?;
-    let loss = hanzo_nn::loss::mse(&output, &target)?;
-    opt.backward_step(&loss)?;
+ let mut opt = AdamW::new(varmap.all_vars(), Default::default())?;
+ let target = Tensor::zeros((32, 10), DType::F32, &device)?;
+ let loss = hanzo_nn::loss::mse(&output, &target)?;
+ opt.backward_step(&loss)?;
 
-    println!("Loss: {}", loss.to_scalar::<f32>()?);
-    Ok(())
+ println!("Loss: {}", loss.to_scalar::<f32>()?);
+ Ok(())
 }
 ```
 
@@ -153,13 +153,13 @@ use hanzo_ml::quantized::gguf_file;
 use std::fs::File;
 
 fn main() -> anyhow::Result<()> {
-    let mut file = File::open("model.gguf")?;
-    let model = gguf_file::Content::read(&mut file)?;
+ let mut file = File::open("model.gguf")?;
+ let model = gguf_file::Content::read(&mut file)?;
 
-    for (name, info) in model.tensor_infos.iter() {
-        println!("{}: {:?}", name, info.shape);
-    }
-    Ok(())
+ for (name, info) in model.tensor_infos.iter() {
+ println!("{}: {:?}", name, info.shape);
+ }
+ Ok(())
 }
 ```
 
@@ -171,9 +171,9 @@ use hanzo_nn::VarBuilder;
 
 let device = Device::cuda_if_available(0)?;
 let vb = unsafe {
-    VarBuilder::from_mmaped_safetensors(
-        &["model.safetensors"], DType::F32, &device,
-    )?
+ VarBuilder::from_mmaped_safetensors(
+ &["model.safetensors"], DType::F32, &device,
+ )?
 };
 let weight = vb.get((768, 768), "transformer.h.0.attn.c_attn.weight")?;
 ```
@@ -243,41 +243,41 @@ cuda = ["hanzo-ml/cuda"]
 
 ```
 ml/
-├── hanzo-ml/                 # Core tensor ops (hanzo-branded)
-│   ├── src/
-│   │   ├── lib.rs
-│   │   ├── tensor.rs         # Tensor type
-│   │   ├── device.rs         # CPU/CUDA/Metal device
-│   │   ├── dtype.rs          # Data types (F16, BF16, F32, etc.)
-│   │   ├── backend.rs        # Backend trait
-│   │   ├── cuda_backend/     # CUDA implementation
-│   │   ├── metal_backend/    # Metal implementation
-│   │   ├── cpu_backend/      # CPU implementation
-│   │   ├── quantized/        # GGUF/GGML quantization
-│   │   └── safetensors.rs    # safetensors loading
-│   ├── benches/              # Performance benchmarks
-│   └── tests/                # Unit tests
-├── hanzo-nn/                 # Neural network layers
-├── hanzo-transformers/       # 90+ transformer model implementations
-├── hanzo-datasets/           # Dataset loading utilities
-├── hanzo-ml-pyo3/            # Python bindings
-├── hanzo-flash-attn/         # Flash Attention CUDA kernels
-│   └── kernels/              # CUDA kernel source files
-├── hanzo-metal-kernels/      # Metal GPU kernels
-├── hanzo-kernels/            # Generic CUDA kernels
-├── hanzo-onnx/               # ONNX evaluation
-├── hanzo-ml-examples/        # Example binaries
-├── hanzo-ml-wasm-examples/   # WASM browser examples
-├── candle-core/              # Upstream-compatible core (v0.9.2)
-├── candle-nn/                # Upstream-compatible NN
-├── candle-transformers/      # Upstream-compatible transformers
-├── candle-datasets/          # Upstream-compatible datasets
-├── candle-examples/          # Upstream-compatible examples
-├── candle-book/              # Documentation book
-├── tensor-tools/             # CLI tensor manipulation
-├── Cargo.toml                # Workspace root
+├── hanzo-ml/ # Core tensor ops (hanzo-branded)
+│ ├── src/
+│ │ ├── lib.rs
+│ │ ├── tensor.rs # Tensor type
+│ │ ├── device.rs # CPU/CUDA/Metal device
+│ │ ├── dtype.rs # Data types (F16, BF16, F32, etc.)
+│ │ ├── backend.rs # Backend trait
+│ │ ├── cuda_backend/ # CUDA implementation
+│ │ ├── metal_backend/ # Metal implementation
+│ │ ├── cpu_backend/ # CPU implementation
+│ │ ├── quantized/ # GGUF/GGML quantization
+│ │ └── safetensors.rs # safetensors loading
+│ ├── benches/ # Performance benchmarks
+│ └── tests/ # Unit tests
+├── hanzo-nn/ # Neural network layers
+├── hanzo-transformers/ # 90+ transformer model implementations
+├── hanzo-datasets/ # Dataset loading utilities
+├── hanzo-ml-pyo3/ # Python bindings
+├── hanzo-flash-attn/ # Flash Attention CUDA kernels
+│ └── kernels/ # CUDA kernel source files
+├── hanzo-metal-kernels/ # Metal GPU kernels
+├── hanzo-kernels/ # Generic CUDA kernels
+├── hanzo-onnx/ # ONNX evaluation
+├── hanzo-ml-examples/ # Example binaries
+├── hanzo-ml-wasm-examples/ # WASM browser examples
+├── candle-core/ # Upstream-compatible core (v0.9.2)
+├── candle-nn/ # Upstream-compatible NN
+├── candle-transformers/ # Upstream-compatible transformers
+├── candle-datasets/ # Upstream-compatible datasets
+├── candle-examples/ # Upstream-compatible examples
+├── candle-book/ # Documentation book
+├── tensor-tools/ # CLI tensor manipulation
+├── Cargo.toml # Workspace root
 ├── Makefile
-├── HANZO_INTEGRATION.md      # Engine integration guide
+├── HANZO_INTEGRATION.md # Engine integration guide
 └── LLM.md
 ```
 

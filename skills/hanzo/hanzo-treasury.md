@@ -69,15 +69,15 @@ docker compose up -d
 
 ```bash
 curl -X POST http://localhost:3068/v2/ledger/demo/transactions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "postings": [{
-      "source": "world",
-      "destination": "users:001",
-      "amount": 10000,
-      "asset": "USD/2"
-    }]
-  }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "postings": [{
+ "source": "world",
+ "destination": "users:001",
+ "amount": 10000,
+ "asset": "USD/2"
+ }]
+ }'
 ```
 
 ### Numscript example
@@ -85,14 +85,14 @@ curl -X POST http://localhost:3068/v2/ledger/demo/transactions \
 ```numscript
 // Transfer with multi-party fee split
 send [USD/2 10000] (
-  source = @users:001
-  destination = {
-    90% to @merchants:042
-    10% to {
-      50% to @platform:fees
-      50% to @platform:reserve
-    }
-  }
+ source = @users:001
+ destination = {
+ 90% to @merchants:042
+ 10% to {
+ 50% to @platform:fees
+ 50% to @platform:reserve
+ }
+ }
 )
 ```
 
@@ -101,13 +101,13 @@ send [USD/2 10000] (
 ### Architecture
 
 ```
-hanzo/commerce    Storefront, catalog, orders
-       |
-hanzo/payments    Payment routing (50+ processors)
-       |
-hanzo/treasury    Ledger, reconciliation, wallets, flows   <-- this repo
-       |
-lux/treasury      On-chain treasury, MPC/KMS wallets
+hanzo/commerce Storefront, catalog, orders
+ |
+hanzo/payments Payment routing (50+ processors)
+ |
+hanzo/treasury Ledger, reconciliation, wallets, flows <-- this repo
+ |
+lux/treasury On-chain treasury, MPC/KMS wallets
 ```
 
 ### Components
@@ -175,27 +175,27 @@ Authentication: OAuth2 client credentials (`/api/auth/oauth/token`).
 
 ```
 treasury/
-  README.md              # Project overview
-  LLM.md                 # AI agent documentation
-  LICENSE                # MIT
-  go.mod                 # Root Go module (github.com/formancehq/stack)
-  Earthfile              # Earthly build (downloads + merges OpenAPI specs)
-  base.Dockerfile        # Base Docker image
-  events/
-    base.yaml            # Common event envelope schema
-    events.go            # Go event validation library
-    services/
-      ledger/            # Ledger event schemas
-      payments/          # Payment event schemas
-      orchestration/     # Orchestration event schemas
-    generated/           # Auto-generated event code
-  libs/
-    events/
-      generated/         # Generated event library
-  releases/
-    base.yaml            # OpenAPI 3.0.3 base spec
-    openapi-merge.json   # Config for merging all service specs
-    openapi-overlay.json # Spec overlays
+ README.md # Project overview
+ LLM.md # AI agent documentation
+ LICENSE # MIT
+ go.mod # Root Go module (github.com/formancehq/stack)
+ Earthfile # Earthly build (downloads + merges OpenAPI specs)
+ base.Dockerfile # Base Docker image
+ events/
+ base.yaml # Common event envelope schema
+ events.go # Go event validation library
+ services/
+ ledger/ # Ledger event schemas
+ payments/ # Payment event schemas
+ orchestration/ # Orchestration event schemas
+ generated/ # Auto-generated event code
+ libs/
+ events/
+ generated/ # Generated event library
+ releases/
+ base.yaml # OpenAPI 3.0.3 base spec
+ openapi-merge.json # Config for merging all service specs
+ openapi-overlay.json # Spec overlays
 ```
 
 ### Integration with Hanzo Stack

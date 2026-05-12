@@ -6,7 +6,7 @@
 
 ## Overview
 
-Hanzo IAM is the **server-side identity and access management service** for the Hanzo ecosystem. A Casdoor fork written in Go (Beego framework) with a React admin UI, providing OAuth 2.0/OIDC/SAML/CAS/LDAP/SCIM/WebAuthn/TOTP/RADIUS authentication and authorization. Serves SSO across hanzo.id, lux.id, zoo.id, and pars.id. Includes built-in MCP (Model Context Protocol) server for AI agent identity management.
+Hanzo IAM is the **server-side identity and access management service** for the Hanzo ecosystem. A Hanzo IAM fork written in Go (Beego framework) with a React admin UI, providing OAuth 2.0/OIDC/SAML/CAS/LDAP/SCIM/WebAuthn/TOTP/RADIUS authentication and authorization. Serves SSO across hanzo.id, lux.id, zoo.id, and pars.id. Includes built-in MCP (Model Context Protocol) server for AI agent identity management.
 
 ### Why Hanzo IAM?
 
@@ -31,7 +31,7 @@ Hanzo IAM is the **server-side identity and access management service** for the 
 
 ### OSS Base
 
-Fork of [Casdoor](https://github.com/casdoor/casdoor) by the Casbin community. Apache-2.0 licensed.
+Fork of [Hanzo IAM](https://github.com/iam/iam) by the Casbin community. Apache-2.0 licensed.
 
 Repo: `github.com/hanzoai/iam`
 
@@ -98,45 +98,45 @@ docker run -d --name hanzo-iam -p 8000:8000 ghcr.io/hanzoai/iam:latest
 ```yaml
 # compose.yml
 services:
-  iam:
-    image: ghcr.io/hanzoai/iam:latest
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgres://hanzo:hanzo@postgres:5432/iam?sslmode=disable
-      - REDIS_URL=redis://redis:6379
-      - IAM_ORIGIN=https://hanzo.id
-      - ENABLE_MULTI_TENANT=true
-      - ALLOWED_ORIGINS=hanzo.id,zoo.id,lux.id,pars.id,iam.hanzo.ai
-    volumes:
-      - ./init_data.json:/app/init_data.json:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
+ iam:
+ image: ghcr.io/hanzoai/iam:latest
+ ports:
+ - "8000:8000"
+ environment:
+ - DATABASE_URL=postgres://hanzo:hanzo@postgres:5432/iam?sslmode=disable
+ - REDIS_URL=redis://redis:6379
+ - IAM_ORIGIN=https://hanzo.id
+ - ENABLE_MULTI_TENANT=true
+ - ALLOWED_ORIGINS=hanzo.id,zoo.id,lux.id,pars.id,iam.hanzo.ai
+ volumes:
+ - ./init_data.json:/app/init_data.json:ro
+ depends_on:
+ postgres:
+ condition: service_healthy
 
-  postgres:
-    image: ghcr.io/hanzoai/sql:latest
-    environment:
-      POSTGRES_USER: hanzo
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
-      POSTGRES_DB: iam
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hanzo -d iam"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+ postgres:
+ image: ghcr.io/hanzoai/sql:latest
+ environment:
+ POSTGRES_USER: hanzo
+ POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+ POSTGRES_DB: iam
+ volumes:
+ - postgres_data:/var/lib/postgresql/data
+ healthcheck:
+ test: ["CMD-SHELL", "pg_isready -U hanzo -d iam"]
+ interval: 10s
+ timeout: 5s
+ retries: 5
 
-  redis:
-    image: ghcr.io/hanzoai/kv:latest
-    command: kv-server --appendonly yes
-    volumes:
-      - redis_data:/data
+ redis:
+ image: ghcr.io/hanzoai/kv:latest
+ command: kv-server --appendonly yes
+ volumes:
+ - redis_data:/data
 
 volumes:
-  postgres_data:
-  redis_data:
+ postgres_data:
+ redis_data:
 ```
 
 ### From source
@@ -164,32 +164,32 @@ cp conf/app.dev.conf conf/app.conf
 ```bash
 # Get all users in an organization
 curl -s "https://iam.hanzo.ai/api/get-users?owner=hanzo" \
-  -H "Authorization: Bearer ${ADMIN_TOKEN}"
+ -H "Authorization: Bearer ${ADMIN_TOKEN}"
 
 # Create a new application
 curl -X POST "https://iam.hanzo.ai/api/add-application" \
-  -H "Authorization: Bearer ${ADMIN_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "owner": "admin",
-    "name": "app-myservice",
-    "organization": "hanzo",
-    "clientId": "my-client-id",
-    "clientSecret": "my-client-secret",
-    "redirectUris": ["https://myservice.hanzo.ai/callback"],
-    "expireInHours": 168,
-    "grantTypes": ["authorization_code", "implicit"]
-  }'
+ -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "owner": "admin",
+ "name": "app-myservice",
+ "organization": "hanzo",
+ "clientId": "my-client-id",
+ "clientSecret": "my-client-secret",
+ "redirectUris": ["https://myservice.hanzo.ai/callback"],
+ "expireInHours": 168,
+ "grantTypes": ["authorization_code", "implicit"]
+ }'
 
 # Update user balance (billing integration)
 curl -X POST "https://iam.hanzo.ai/api/update-user" \
-  -H "Authorization: Bearer ${ADMIN_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "owner": "hanzo",
-    "name": "username",
-    "balance": 10000
-  }'
+ -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "owner": "hanzo",
+ "name": "username",
+ "balance": 10000
+ }'
 ```
 
 ## Core Concepts
@@ -198,91 +198,91 @@ curl -X POST "https://iam.hanzo.ai/api/update-user" \
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                    Hanzo IAM Server (Go)                      │
+│ Hanzo IAM Server (Go) │
 ├──────────────┬──────────────┬──────────────┬─────────────────┤
-│  OAuth2/OIDC │  SAML/CAS    │  LDAP/SCIM   │  WebAuthn/MFA  │
+│ OAuth2/OIDC │ SAML/CAS │ LDAP/SCIM │ WebAuthn/MFA │
 ├──────────────┴──────────────┴──────────────┴─────────────────┤
-│  Beego Router → Controllers → Object (business logic)        │
+│ Beego Router → Controllers → Object (business logic) │
 ├──────────────┬──────────────┬──────────────┬─────────────────┤
-│  40+ IdPs    │  Casbin RBAC │  MCP Server  │  WAF (Coraza)  │
+│ 40+ IdPs │ Casbin RBAC │ MCP Server │ WAF (Coraza) │
 ├──────────────┴──────────────┴──────────────┴─────────────────┤
-│  PostgreSQL/MySQL/SQLite  │  Redis/Valkey  │  File Storage   │
+│ PostgreSQL/MySQL/SQLite │ Redis/Valkey │ File Storage │
 └───────────────────────────┴────────────────┴─────────────────┘
-         ↑                        ↑                    ↑
-  ┌──────┴──────┐          ┌──────┴──────┐     ┌──────┴──────┐
-  │  hanzo.id   │          │  cloud.     │     │  platform.  │
-  │  (login UI) │          │  hanzo.ai   │     │  hanzo.ai   │
-  └─────────────┘          └─────────────┘     └─────────────┘
+ ↑ ↑ ↑
+ ┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐
+ │ hanzo.id │ │ cloud. │ │ platform. │
+ │ (login UI) │ │ hanzo.ai │ │ hanzo.ai │
+ └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
 ### Directory Structure
 
 ```
 iam/
-├── main.go              # Entry point (Beego bootstrap, filter chain)
-├── conf/                # Configuration files (INI format)
-│   ├── app.conf         # Active config (gitignored in prod)
-│   ├── app.dev.conf     # Docker dev (PostgreSQL)
-│   ├── app.prod.conf    # Production (hanzo.id)
-│   ├── app.staging.conf # Staging (stg.hanzo.id)
-│   └── waf.conf         # Coraza WAF rules
-├── controllers/         # HTTP handlers (Beego controllers)
-│   ├── auth.go          # OAuth2 authorization flows
-│   ├── token.go         # Token issuance and validation
-│   ├── account.go       # User account management
-│   ├── user.go          # User CRUD
-│   ├── application.go   # Application management
-│   ├── organization.go  # Organization management
-│   ├── permission.go    # Permission management
-│   ├── role.go          # Role management
-│   ├── mfa.go           # Multi-factor authentication
-│   ├── webauthn.go      # WebAuthn/Passkeys
-│   ├── saml.go          # SAML SSO
-│   ├── cas.go           # CAS protocol
-│   ├── ldap.go          # LDAP management
-│   ├── scim.go          # SCIM provisioning
-│   ├── webhook.go       # Webhook management
-│   ├── wellknown_oidc_discovery.go  # .well-known endpoints
-│   └── wellknown_oauth_prm.go      # OAuth metadata
-├── object/              # Core business logic (models + ORM)
-│   ├── adapter.go       # Database adapter
-│   ├── ormer.go         # xorm ORM setup
-│   └── transaction.go   # Billing transactions
-├── routers/             # Beego filters and route definitions
-│   ├── router.go        # All API route registrations
-│   ├── authz_filter.go  # Authorization filter
-│   ├── cors_filter.go   # CORS handling
-│   ├── secure_cookie_filter.go  # Secure cookie enforcement
-│   ├── static_filter.go # SPA static file serving
-│   └── mcp_util.go      # MCP protocol utilities
-├── idp/                 # Identity provider implementations
-│   ├── github.go, google.go, facebook.go, ...  # 30+ providers
-│   ├── metamask.go, web3onboard.go              # Web3 providers
-│   ├── goth.go          # Goth library integration (40+ providers)
-│   └── provider.go      # Provider interface
-├── mcp/                 # MCP (Model Context Protocol) server
-│   ├── base.go          # MCP server setup and tool registry
-│   ├── auth.go          # MCP auth tools
-│   ├── application.go   # MCP app management tools
-│   └── permission.go    # MCP permission tools
-├── authz/               # Casbin authorization engine
-├── ldap/                # LDAP server implementation
-├── radius/              # RADIUS server implementation
-├── scim/                # SCIM protocol implementation
-├── captcha/             # CAPTCHA generation
-├── certificate/         # X.509 certificate management
-├── email/               # Email templates and sending
-├── notification/        # Push notifications
-├── proxy/               # HTTP client proxy
-├── storage/             # File storage backends
-├── web/                 # React admin UI (Ant Design)
-│   ├── src/             # React source
-│   └── package.json     # pnpm, React 18, Ant Design 5
-├── init_data.json       # Bootstrap data (orgs, apps, users)
-├── compose.yml          # Production Docker Compose
-├── Dockerfile           # Multi-stage (frontend + backend + alpine)
-├── Makefile             # Build, test, deploy commands
-└── k8s.yaml             # Kubernetes deployment manifest
+├── main.go # Entry point (Beego bootstrap, filter chain)
+├── conf/ # Configuration files (INI format)
+│ ├── app.conf # Active config (gitignored in prod)
+│ ├── app.dev.conf # Docker dev (PostgreSQL)
+│ ├── app.prod.conf # Production (hanzo.id)
+│ ├── app.staging.conf # Staging (stg.hanzo.id)
+│ └── waf.conf # Coraza WAF rules
+├── controllers/ # HTTP handlers (Beego controllers)
+│ ├── auth.go # OAuth2 authorization flows
+│ ├── token.go # Token issuance and validation
+│ ├── account.go # User account management
+│ ├── user.go # User CRUD
+│ ├── application.go # Application management
+│ ├── organization.go # Organization management
+│ ├── permission.go # Permission management
+│ ├── role.go # Role management
+│ ├── mfa.go # Multi-factor authentication
+│ ├── webauthn.go # WebAuthn/Passkeys
+│ ├── saml.go # SAML SSO
+│ ├── cas.go # CAS protocol
+│ ├── ldap.go # LDAP management
+│ ├── scim.go # SCIM provisioning
+│ ├── webhook.go # Webhook management
+│ ├── wellknown_oidc_discovery.go # .well-known endpoints
+│ └── wellknown_oauth_prm.go # OAuth metadata
+├── object/ # Core business logic (models + ORM)
+│ ├── adapter.go # Database adapter
+│ ├── ormer.go # xorm ORM setup
+│ └── transaction.go # Billing transactions
+├── routers/ # Beego filters and route definitions
+│ ├── router.go # All API route registrations
+│ ├── authz_filter.go # Authorization filter
+│ ├── cors_filter.go # CORS handling
+│ ├── secure_cookie_filter.go # Secure cookie enforcement
+│ ├── static_filter.go # SPA static file serving
+│ └── mcp_util.go # MCP protocol utilities
+├── idp/ # Identity provider implementations
+│ ├── github.go, google.go, facebook.go, ... # 30+ providers
+│ ├── metamask.go, web3onboard.go # Web3 providers
+│ ├── goth.go # Goth library integration (40+ providers)
+│ └── provider.go # Provider interface
+├── mcp/ # MCP (Model Context Protocol) server
+│ ├── base.go # MCP server setup and tool registry
+│ ├── auth.go # MCP auth tools
+│ ├── application.go # MCP app management tools
+│ └── permission.go # MCP permission tools
+├── authz/ # Casbin authorization engine
+├── ldap/ # LDAP server implementation
+├── radius/ # RADIUS server implementation
+├── scim/ # SCIM protocol implementation
+├── captcha/ # CAPTCHA generation
+├── certificate/ # X.509 certificate management
+├── email/ # Email templates and sending
+├── notification/ # Push notifications
+├── proxy/ # HTTP client proxy
+├── storage/ # File storage backends
+├── web/ # React admin UI (Ant Design)
+│ ├── src/ # React source
+│ └── package.json # pnpm, React 18, Ant Design 5
+├── init_data.json # Bootstrap data (orgs, apps, users)
+├── compose.yml # Production Docker Compose
+├── Dockerfile # Multi-stage (frontend + backend + alpine)
+├── Makefile # Build, test, deploy commands
+└── k8s.yaml # Kubernetes deployment manifest
 ```
 
 ### Filter Chain (request lifecycle)
@@ -415,18 +415,18 @@ dbName = hanzo_iam
 ## Makefile Commands
 
 ```bash
-make dev          # Start local dev with Docker Compose (PostgreSQL)
-make dev-down     # Stop local dev
-make run          # Run Go server locally (go run)
-make backend      # Build Go binary to bin/manager
-make frontend     # Build React admin UI (pnpm)
-make ut           # Run Go unit tests with coverage
+make dev # Start local dev with Docker Compose (PostgreSQL)
+make dev-down # Stop local dev
+make run # Run Go server locally (go run)
+make backend # Build Go binary to bin/manager
+make frontend # Build React admin UI (pnpm)
+make ut # Run Go unit tests with coverage
 make docker-build # Build Docker image
-make docker-push  # Push to ghcr.io/hanzoai/iam
-make deploy       # Helm deploy to K8s
-make staging      # Start staging compose
-make prod         # Start production compose
-make build-prod   # Build and push production image
+make docker-push # Push to ghcr.io/hanzoai/iam
+make deploy # Helm deploy to K8s
+make staging # Start staging compose
+make prod # Start production compose
+make build-prod # Build and push production image
 ```
 
 ## API Endpoints
@@ -487,12 +487,12 @@ Prometheus metrics exposed at `/api/metrics`.
 import "github.com/hanzoid/go-sdk/iamsdk"
 
 iamsdk.InitConfig(
-    "https://hanzo.id",
-    "hanzo-app-client-id",
-    "hanzo-app-client-secret",
-    "cert-hanzo",
-    "hanzo",
-    "app-hanzo",
+ "https://hanzo.id",
+ "hanzo-app-client-id",
+ "hanzo-app-client-secret",
+ "cert-hanzo",
+ "hanzo",
+ "app-hanzo",
 )
 
 // Validate a token
@@ -508,10 +508,10 @@ user, err := iamsdk.GetUser("admin/username")
 import { SDK } from 'iam-js-sdk'
 
 const sdk = new SDK({
-  serverUrl: 'https://hanzo.id',
-  clientId: 'hanzo-app-client-id',
-  appName: 'app-hanzo',
-  organizationName: 'hanzo',
+ serverUrl: 'https://hanzo.id',
+ clientId: 'hanzo-app-client-id',
+ appName: 'app-hanzo',
+ organizationName: 'hanzo',
 })
 
 // Start auth
@@ -549,7 +549,7 @@ curl -f http://localhost:8000/api/health
 |-------|-------|----------|
 | "Access denied to database hanzo_iamhanzo_iam" | MySQL dataSourceName includes dbname | End with `/` not `/dbname` |
 | "could not open pg_filenode.map" | PostgreSQL volume corruption | `docker compose down -v && docker volume prune` |
-| Tokens expire instantly | `expireInHours=0` on app | Set `expireInHours=168` in Casdoor app config |
+| Tokens expire instantly | `expireInHours=0` on app | Set `expireInHours=168` in Hanzo IAM app config |
 | Code flow rejected | Empty grant_type xorm bug | Use implicit flow (`response_type=token`) |
 | initData overwrites on restart | `initDataNewOnly=false` | Set `initDataNewOnly=true` in conf |
 | App owner queries fail | Apps under `owner=admin` not org | WHERE `owner='admin'` not org name |
@@ -570,7 +570,7 @@ tenant in the same `liquid-iam` instance that gates BD/ATS/TA/AML.
 
 **Service app** (`client_credentials`):
 - `onyxplus-onyxd` with `aud=onyxplus-onyxd,liquidity-kms` (needs both:
-  the daemon scope for inbound calls + `liquidity-kms` to read secrets)
+ the daemon scope for inbound calls + `liquidity-kms` to read secrets)
 
 **Internal docs site** (`internal.onyxplus.{env}.satschel.com`) uses
 NextAuth v5 + Google OAuth restricted to `@satschel.com`, separate from
@@ -598,5 +598,5 @@ Companion docs: `~/work/onyxplus/internal/content/docs/iam.mdx`,
 - **Password grant support**: OAuth2 `password` grant type now works when enabled on the application. Previously the switch statement fell through to a nil token crash.
 - **CI**: Removed lint gate from Docker build workflow (lint was timing out and blocking image pushes).
 **Category**: Hanzo Ecosystem
-**Related**: iam, casdoor, oauth2, oidc, saml, ldap, scim, webauthn, identity, authentication, authorization, sso
+**Related**: iam, iam, oauth2, oidc, saml, ldap, scim, webauthn, identity, authentication, authorization, sso
 **Prerequisites**: Go, Docker, PostgreSQL, OAuth2/OIDC concepts

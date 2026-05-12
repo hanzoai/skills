@@ -5,13 +5,13 @@
 
 ## Overview
 
-Hanzo VM is an **open-source cloud operating system and virtual machine management platform** built with Go (Beego framework) and React. Go module `github.com/hanzoai/vm`, ships as a single `server` binary with a bundled web frontend. Manages VMs across multiple cloud providers (AWS, Azure, GCP, Alibaba, Tencent, DigitalOcean) and local hypervisors (libvirt, Proxmox). Authenticates via Hanzo IAM (Casdoor). License: Apache-2.0.
+Hanzo VM is an **open-source cloud operating system and virtual machine management platform** built with Go (Beego framework) and React. Go module `github.com/hanzoai/vm`, ships as a single `server` binary with a bundled web frontend. Manages VMs across multiple cloud providers (AWS, Azure, GCP, Alibaba, Tencent, DigitalOcean) and local hypervisors (libvirt, Proxmox). Authenticates via Hanzo IAM (Hanzo IAM). License: Apache-2.0.
 
 ### Why Hanzo VM?
 
 - **Multi-cloud**: AWS EC2, Azure, GCP, Alibaba, Tencent Cloud in one dashboard
 - **Local hypervisors**: libvirt (KVM/QEMU) and Proxmox VE support
-- **Hanzo IAM integration**: SSO via Casdoor, Casbin RBAC authorization
+- **Hanzo IAM integration**: SSO via Hanzo IAM, Casbin RBAC authorization
 - **RDP/SSH tunneling**: WebSocket-based remote desktop via vmd (Guacamole daemon)
 - **Blockchain records**: On-chain VM operation audit trail (`chain/` package)
 - **React frontend**: Full web UI for VM lifecycle management
@@ -21,7 +21,7 @@ Hanzo VM is an **open-source cloud operating system and virtual machine manageme
 - **Backend**: Go 1.26, Beego web framework, XORM (ORM)
 - **Frontend**: React, Node.js 18, Yarn
 - **Database**: PostgreSQL (default), MySQL, or any XORM-supported DB
-- **Auth**: Hanzo IAM (Casdoor Go SDK), Casbin RBAC
+- **Auth**: Hanzo IAM (Hanzo IAM Go SDK), Casbin RBAC
 - **RDP**: vmd (Guacamole daemon, `ghcr.io/hanzovm/vmd`)
 - **Image**: Multi-stage Docker (standard + all-in-one with MariaDB)
 
@@ -40,7 +40,7 @@ Repo: `hanzoai/vm` (Casvisor fork). Default branch: `master`.
 ## Hard requirements
 
 1. **PostgreSQL** (or MySQL) database accessible
-2. **Hanzo IAM** (Casdoor) instance for authentication
+2. **Hanzo IAM** (Hanzo IAM) instance for authentication
 3. **Go 1.21+** for building from source (or Docker)
 4. **Node.js 18** + Yarn for frontend build
 
@@ -109,22 +109,22 @@ docker run --name vmd -d -p 4822:4822 ghcr.io/hanzovm/vmd
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│                        Hanzo VM                             │
-│                                                             │
-│  ┌──────────────┐    ┌──────────────┐   ┌──────────────┐  │
-│  │ React UI     │───>│ Beego API    │──>│ Cloud APIs   │  │
-│  │ (port 19000) │    │ Controllers  │   │ AWS/Azure/   │  │
-│  └──────────────┘    └──────┬───────┘   │ GCP/libvirt  │  │
-│                             │           └──────────────┘  │
-│                      ┌──────┴───────┐                      │
-│                      │ PostgreSQL   │                      │
-│                      │ (hanzo_vm)   │                      │
-│                      └──────────────┘                      │
-│                                                             │
-│  ┌──────────────┐    ┌──────────────┐                      │
-│  │ Hanzo IAM    │    │ vmd (RDP)    │                      │
-│  │ (auth/RBAC)  │    │ (port 4822)  │                      │
-│  └──────────────┘    └──────────────┘                      │
+│ Hanzo VM │
+│ │
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ │
+│ │ React UI │───>│ Beego API │──>│ Cloud APIs │ │
+│ │ (port 19000) │ │ Controllers │ │ AWS/Azure/ │ │
+│ └──────────────┘ └──────┬───────┘ │ GCP/libvirt │ │
+│ │ └──────────────┘ │
+│ ┌──────┴───────┐ │
+│ │ PostgreSQL │ │
+│ │ (hanzo_vm) │ │
+│ └──────────────┘ │
+│ │
+│ ┌──────────────┐ ┌──────────────┐ │
+│ │ Hanzo IAM │ │ vmd (RDP) │ │
+│ │ (auth/RBAC) │ │ (port 4822) │ │
+│ └──────────────┘ └──────────────┘ │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -160,67 +160,67 @@ docker run --name vmd -d -p 4822:4822 ghcr.io/hanzovm/vmd
 
 ```
 vm/
-  main.go                  # Entry point (Beego app)
-  Dockerfile               # Multi-stage: vmd + Node frontend + Go backend
-  docker-compose.yml       # VM + PostgreSQL stack
-  build.sh                 # Build script
-  go.mod                   # github.com/hanzoai/vm, Go 1.26
-  conf/
-    app.conf               # Beego configuration
-  controllers/
-    account.go             # User account management
-    asset.go               # Asset CRUD
-    machine.go             # VM lifecycle (create/start/stop/delete)
-    provider.go            # Cloud provider CRUD
-    record.go              # Operation records
-    record_chain.go        # Blockchain audit records
-    session.go             # Remote desktop sessions (RDP/SSH)
-    tunnel.go              # WebSocket tunnel for RDP
-    tunnel_handler.go      # Tunnel message handling
-    base.go                # Base controller
-    util.go                # Controller utilities
-  object/
-    adapter.go             # XORM database adapter
-    asset.go               # Asset model
-    machine.go             # Machine model + cloud operations
-    machine_cloud.go       # Cloud-specific machine operations
-    provider.go            # Provider model
-    record.go              # Record model
-    record_chain.go        # Blockchain record model
-    session.go             # Session model (Guacamole integration)
-  authz/
-    authz.go               # Casbin RBAC authorization
-  chain/
-    ...                    # Blockchain audit trail
-  routers/
-    ...                    # Beego route definitions
-  service/
-    ...                    # Background services
-  task/
-    ...                    # Scheduled tasks
-  util/
-    ...                    # IP geolocation, user-agent parsing
-  data/
-    ...                    # Static data files
-  i18n/
-    ...                    # Internationalization
-  web/
-    ...                    # React frontend (yarn build -> web/build)
-  swagger/
-    ...                    # API documentation
-  k8s/
-    ...                    # Kubernetes manifests
-  .github/
-    ...                    # CI workflows
+ main.go # Entry point (Beego app)
+ Dockerfile # Multi-stage: vmd + Node frontend + Go backend
+ docker-compose.yml # VM + PostgreSQL stack
+ build.sh # Build script
+ go.mod # github.com/hanzoai/vm, Go 1.26
+ conf/
+ app.conf # Beego configuration
+ controllers/
+ account.go # User account management
+ asset.go # Asset CRUD
+ machine.go # VM lifecycle (create/start/stop/delete)
+ provider.go # Cloud provider CRUD
+ record.go # Operation records
+ record_chain.go # Blockchain audit records
+ session.go # Remote desktop sessions (RDP/SSH)
+ tunnel.go # WebSocket tunnel for RDP
+ tunnel_handler.go # Tunnel message handling
+ base.go # Base controller
+ util.go # Controller utilities
+ object/
+ adapter.go # XORM database adapter
+ asset.go # Asset model
+ machine.go # Machine model + cloud operations
+ machine_cloud.go # Cloud-specific machine operations
+ provider.go # Provider model
+ record.go # Record model
+ record_chain.go # Blockchain record model
+ session.go # Session model (Guacamole integration)
+ authz/
+ authz.go # Casbin RBAC authorization
+ chain/
+ ... # Blockchain audit trail
+ routers/
+ ... # Beego route definitions
+ service/
+ ... # Background services
+ task/
+ ... # Scheduled tasks
+ util/
+ ... # IP geolocation, user-agent parsing
+ data/
+ ... # Static data files
+ i18n/
+ ... # Internationalization
+ web/
+ ... # React frontend (yarn build -> web/build)
+ swagger/
+ ... # API documentation
+ k8s/
+ ... # Kubernetes manifests
+ .github/
+ ... # CI workflows
 ```
 
 ### Module Replacement
 
 The go.mod includes a notable replacement:
 ```
-replace github.com/casdoor/casdoor-go-sdk => github.com/hanzoid/go-sdk v1.44.0
+replace github.com/iam/iam-go-sdk => github.com/hanzoid/go-sdk v1.44.0
 ```
-This uses Hanzo's fork of the Casdoor SDK for IAM integration.
+This uses Hanzo's fork of the Hanzo IAM SDK for IAM integration.
 
 ## Troubleshooting
 

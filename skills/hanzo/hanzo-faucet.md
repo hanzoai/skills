@@ -78,20 +78,20 @@ pnpm start
 ## Architecture
 
 ```
-  Browser (port 3000)          Express API (port 8000)
-  ┌──────────────────┐         ┌───────────────────────┐
-  │  Next.js 16 App  │────────>│  /api/sendToken       │
-  │  RainbowKit      │         │  /api/faucetAddress    │
-  │  wagmi/viem      │         │  /api/getBalance       │
-  └──────────────────┘         │  /api/getChainConfigs  │
-                               │  /health               │
-                               └──────────┬────────────┘
-                                          │
-                               ┌──────────▼────────────┐
-                               │  EVM Instance (luxfi)  │
-                               │  Signs & sends tx      │
-                               │  Per-chain private keys│
-                               └───────────────────────┘
+ Browser (port 3000) Express API (port 8000)
+ ┌──────────────────┐ ┌───────────────────────┐
+ │ Next.js 16 App │────────>│ /api/sendToken │
+ │ RainbowKit │ │ /api/faucetAddress │
+ │ wagmi/viem │ │ /api/getBalance │
+ └──────────────────┘ │ /api/getChainConfigs │
+ │ /health │
+ └──────────┬────────────┘
+ │
+ ┌──────────▼────────────┐
+ │ EVM Instance (luxfi) │
+ │ Signs & sends tx │
+ │ Per-chain private keys│
+ └───────────────────────┘
 ```
 
 ## API endpoints
@@ -109,26 +109,26 @@ pnpm start
 
 ```
 hanzoai/faucet/
-  package.json         # @hanzo/faucet v1.0.0 (root workspace)
-  server.ts            # Express backend entry point
-  config.json          # Chain configs (testnet/mainnet), rate limits
-  types.ts             # TypeScript type definitions
-  middlewares/         # Rate limiter, captcha, URI parser
-  vms/
-    evm.ts             # EVM chain instance (luxfi SDK)
-  client/              # Legacy frontend (being replaced by app/)
-  app/                 # Next.js 16 frontend (pnpm workspace)
-    src/               # React components
-    e2e/               # Playwright tests
-    package.json       # @hanzo/faucet-app
-  contracts/           # Solidity smart contracts
-    src/               # Contract source
-    test/              # Foundry tests
-    script/            # Deploy scripts
-    foundry.toml       # Foundry config
-  scripts/
-    generateKey.ts     # Wallet key generation
-  Dockerfile           # Container build
+ package.json # @hanzo/faucet v1.0.0 (root workspace)
+ server.ts # Express backend entry point
+ config.json # Chain configs (testnet/mainnet), rate limits
+ types.ts # TypeScript type definitions
+ middlewares/ # Rate limiter, captcha, URI parser
+ vms/
+ evm.ts # EVM chain instance (luxfi SDK)
+ client/ # Legacy frontend (being replaced by app/)
+ app/ # Next.js 16 frontend (pnpm workspace)
+ src/ # React components
+ e2e/ # Playwright tests
+ package.json # @hanzo/faucet-app
+ contracts/ # Solidity smart contracts
+ src/ # Contract source
+ test/ # Foundry tests
+ script/ # Deploy scripts
+ foundry.toml # Foundry config
+ scripts/
+ generateKey.ts # Wallet key generation
+ Dockerfile # Container build
 ```
 
 ## Environment variables
@@ -154,8 +154,8 @@ hanzoai/faucet/
 
 ```bash
 cd contracts
-forge build           # Compile
-forge test            # Run tests
+forge build # Compile
+forge test # Run tests
 forge test --gas-report
 ```
 

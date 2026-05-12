@@ -70,37 +70,37 @@ Before making any request, silently verify:
 
 ```bash
 curl -X POST https://api.web3.hanzo.ai/v1/eth/mainnet \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: ${HANZO_WEB3_API_KEY}" \
-  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+ -H "Content-Type: application/json" \
+ -H "X-API-Key: ${HANZO_WEB3_API_KEY}" \
+ -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```
 
 ### Get token balances
 
 ```bash
 curl "https://api.web3.hanzo.ai/v1/data/tokens/balances?address=0x...&network=eth/mainnet" \
-  -H "X-API-Key: ${HANZO_WEB3_API_KEY}"
+ -H "X-API-Key: ${HANZO_WEB3_API_KEY}"
 ```
 
 ### Get NFT metadata
 
 ```bash
 curl "https://api.web3.hanzo.ai/v1/data/nfts?owner=0x...&network=eth/mainnet" \
-  -H "X-API-Key: ${HANZO_WEB3_API_KEY}"
+ -H "X-API-Key: ${HANZO_WEB3_API_KEY}"
 ```
 
 ### Create webhook
 
 ```bash
 curl -X POST https://api.web3.hanzo.ai/v1/webhooks \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: ${HANZO_WEB3_API_KEY}" \
-  -d '{
-    "url": "https://your-server.com/webhook",
-    "network": "eth/mainnet",
-    "event_type": "address_activity",
-    "addresses": ["0x..."]
-  }'
+ -H "Content-Type: application/json" \
+ -H "X-API-Key: ${HANZO_WEB3_API_KEY}" \
+ -d '{
+ "url": "https://your-server.com/webhook",
+ "network": "eth/mainnet",
+ "event_type": "address_activity",
+ "addresses": ["0x..."]
+ }'
 ```
 
 ### Python (with Hanzo SDK)
@@ -108,23 +108,23 @@ curl -X POST https://api.web3.hanzo.ai/v1/webhooks \
 ```python
 from hanzo import Hanzo
 
-client = Hanzo()  # uses HANZO_WEB3_API_KEY from env
+client = Hanzo() # uses HANZO_WEB3_API_KEY from env
 
 # JSON-RPC
 block = client.web3.rpc("eth/mainnet", method="eth_blockNumber")
 
 # Structured data
 balances = client.web3.tokens.balances(
-    address="0x...",
-    network="eth/mainnet"
+ address="0x...",
+ network="eth/mainnet"
 )
 
 # Webhooks
 hook = client.web3.webhooks.create(
-    url="https://your-server.com/webhook",
-    network="eth/mainnet",
-    event_type="address_activity",
-    addresses=["0x..."]
+ url="https://your-server.com/webhook",
+ network="eth/mainnet",
+ event_type="address_activity",
+ addresses=["0x..."]
 )
 ```
 
@@ -229,41 +229,41 @@ Expose Hanzo Web3 as MCP tools for agentic workflows:
 import { MCPServer, Tool } from '@hanzo/mcp'
 
 const web3Tools: Tool[] = [
-  {
-    name: 'web3_rpc',
-    description: 'Execute JSON-RPC call on any supported chain',
-    parameters: {
-      network: { type: 'string', required: true },
-      method: { type: 'string', required: true },
-      params: { type: 'array', default: [] }
-    },
-    async execute({ network, method, params }) {
-      const res = await fetch(`https://api.web3.hanzo.ai/v1/${network}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': process.env.HANZO_WEB3_API_KEY
-        },
-        body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 })
-      })
-      return await res.json()
-    }
-  },
-  {
-    name: 'web3_token_balances',
-    description: 'Get token balances for an address',
-    parameters: {
-      address: { type: 'string', required: true },
-      network: { type: 'string', default: 'eth/mainnet' }
-    },
-    async execute({ address, network }) {
-      const res = await fetch(
-        `https://api.web3.hanzo.ai/v1/data/tokens/balances?address=${address}&network=${network}`,
-        { headers: { 'X-API-Key': process.env.HANZO_WEB3_API_KEY } }
-      )
-      return await res.json()
-    }
-  }
+ {
+ name: 'web3_rpc',
+ description: 'Execute JSON-RPC call on any supported chain',
+ parameters: {
+ network: { type: 'string', required: true },
+ method: { type: 'string', required: true },
+ params: { type: 'array', default: [] }
+ },
+ async execute({ network, method, params }) {
+ const res = await fetch(`https://api.web3.hanzo.ai/v1/${network}`, {
+ method: 'POST',
+ headers: {
+ 'Content-Type': 'application/json',
+ 'X-API-Key': process.env.HANZO_WEB3_API_KEY
+ },
+ body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 })
+ })
+ return await res.json()
+ }
+ },
+ {
+ name: 'web3_token_balances',
+ description: 'Get token balances for an address',
+ parameters: {
+ address: { type: 'string', required: true },
+ network: { type: 'string', default: 'eth/mainnet' }
+ },
+ async execute({ address, network }) {
+ const res = await fetch(
+ `https://api.web3.hanzo.ai/v1/data/tokens/balances?address=${address}&network=${network}`,
+ { headers: { 'X-API-Key': process.env.HANZO_WEB3_API_KEY } }
+ )
+ return await res.json()
+ }
+ }
 ]
 ```
 

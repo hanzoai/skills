@@ -74,7 +74,7 @@ cp .env.example .env
 npm run dev:prisma
 
 # Development
-npm run dev     # http://localhost:3000
+npm run dev # http://localhost:3000
 
 # Production
 npm run build
@@ -85,50 +85,50 @@ npm start
 
 ```
 dataroom.hanzo.ai
-       |
-  Next.js 15 App
-       |
-  ┌────┼────────┬──────────┬──────────┐
-  │    │        │          │          │
-PostgreSQL  S3/Blob   Tinybird    Stripe
-(Prisma)   (docs)   (analytics) (billing)
-  │
-  ├── Hanzo IAM (OAuth)
-  ├── Resend (email)
-  ├── Trigger.dev (jobs)
-  └── Hanko (passkeys)
+ |
+ Next.js 15 App
+ |
+ ┌────┼────────┬──────────┬──────────┐
+ │ │ │ │ │
+PostgreSQL S3/Blob Tinybird Stripe
+(Prisma) (docs) (analytics) (billing)
+ │
+ ├── Hanzo IAM (OAuth)
+ ├── Resend (email)
+ ├── Trigger.dev (jobs)
+ └── Hanko (passkeys)
 ```
 
 ## Directory structure
 
 ```
 hanzoai/dataroom/
-  package.json          # hanzo-dataroom v0.1.0
-  Dockerfile            # Container build
-  middleware.ts         # Auth + custom domain routing
-  next.config.mjs       # Image domains, rewrites, redirects
-  app/                  # Next.js app router pages
-  pages/                # Next.js pages router (API routes)
-  components/           # React UI (shadcn/ui based)
-    emails/             # react-email templates
-  lib/                  # Shared utilities
-    tinybird/           # Analytics datasources and endpoints
-  prisma/
-    schema/             # Multi-file Prisma schema
-    migrations/         # Database migrations
-    add-migration.sh    # Migration helper script
-  ee/                   # Enterprise features
-    features/           # Datarooms, SAML SSO, advanced analytics
-    emails/             # Enterprise email templates
-    stripe/             # Billing integration
-    limits/             # Plan-based feature gates
-    LICENSE.md          # Enterprise license
-  context/              # React context providers
-  styles/               # Global CSS
-  public/               # Static assets
-  components.json       # shadcn/ui config
-  trigger.config.ts     # Trigger.dev v3 config
-  vercel.json           # Vercel deployment config
+ package.json # hanzo-dataroom v0.1.0
+ Dockerfile # Container build
+ middleware.ts # Auth + custom domain routing
+ next.config.mjs # Image domains, rewrites, redirects
+ app/ # Next.js app router pages
+ pages/ # Next.js pages router (API routes)
+ components/ # React UI (shadcn/ui based)
+ emails/ # react-email templates
+ lib/ # Shared utilities
+ tinybird/ # Analytics datasources and endpoints
+ prisma/
+ schema/ # Multi-file Prisma schema
+ migrations/ # Database migrations
+ add-migration.sh # Migration helper script
+ ee/ # Enterprise features
+ features/ # Datarooms, SAML SSO, advanced analytics
+ emails/ # Enterprise email templates
+ stripe/ # Billing integration
+ limits/ # Plan-based feature gates
+ LICENSE.md # Enterprise license
+ context/ # React context providers
+ styles/ # Global CSS
+ public/ # Static assets
+ components.json # shadcn/ui config
+ trigger.config.ts # Trigger.dev v3 config
+ vercel.json # Vercel deployment config
 ```
 
 ## Key environment variables
@@ -154,9 +154,9 @@ hanzoai/dataroom/
 Prisma multi-schema setup in `prisma/schema/`. Run migrations:
 
 ```bash
-npm run dev:prisma              # Generate client + deploy migrations
-npx prisma migrate dev          # Create new migration
-bash prisma/add-migration.sh    # Helper for adding migrations
+npm run dev:prisma # Generate client + deploy migrations
+npx prisma migrate dev # Create new migration
+bash prisma/add-migration.sh # Helper for adding migrations
 ```
 
 ## Tinybird analytics

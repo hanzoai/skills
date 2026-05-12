@@ -161,7 +161,7 @@ cat skills/security/vulnerability-assessment.md
 
 **Choose Secrets Management when:**
 - Storing API keys or credentials
-- Integrating with HashiCorp Vault
+- Integrating with external secret manager
 - Using AWS Secrets Manager or GCP Secret Manager
 - Rotating encryption keys
 - Managing CI/CD secrets
@@ -244,7 +244,7 @@ cat skills/security/security-headers.md
 cat skills/security/vulnerability-assessment.md
 ```
 
-**"Integrate HashiCorp Vault"**:
+**"Integrate external secret manager"**:
 ```bash
 cat skills/security/secrets-management.md
 ```

@@ -1434,7 +1434,7 @@ resource "aws_db_instance" "main" {
   password = data.aws_ssm_parameter.db_password.value
 }
 
-# Method 3: HashiCorp Vault
+# Method 3: external secret manager
 data "vault_generic_secret" "db_password" {
   path = "secret/database"
 }

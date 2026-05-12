@@ -59,33 +59,33 @@ go get github.com/hanzoai/go-sdk
 package main
 
 import (
-    "context"
-    "fmt"
-    "os"
+ "context"
+ "fmt"
+ "os"
 
-    "github.com/hanzoai/go-sdk"
-    "github.com/hanzoai/go-sdk/option"
+ "github.com/hanzoai/go-sdk"
+ "github.com/hanzoai/go-sdk/option"
 )
 
 func main() {
-    client := hanzoai.NewClient(
-        option.WithAPIKey(os.Getenv("HANZO_API_KEY")), // defaults to HANZO_API_KEY env var
-    )
+ client := hanzoai.NewClient(
+ option.WithAPIKey(os.Getenv("HANZO_API_KEY")), // defaults to HANZO_API_KEY env var
+ )
 
-    response, err := client.Chat.Completions.New(
-        context.Background(),
-        hanzoai.ChatCompletionNewParams{
-            Model: hanzoai.String("zen-70b"),
-            Messages: []hanzoai.ChatCompletionMessageParamUnion{
-                hanzoai.UserMessage("Hello, Hanzo!"),
-            },
-        },
-    )
-    if err != nil {
-        panic(err)
-    }
+ response, err := client.Chat.Completions.New(
+ context.Background(),
+ hanzoai.ChatCompletionNewParams{
+ Model: hanzoai.String("zen-70b"),
+ Messages: []hanzoai.ChatCompletionMessageParamUnion{
+ hanzoai.UserMessage("Hello, Hanzo!"),
+ },
+ },
+ )
+ if err != nil {
+ panic(err)
+ }
 
-    fmt.Println(response.Choices[0].Message.Content)
+ fmt.Println(response.Choices[0].Message.Content)
 }
 ```
 
@@ -93,24 +93,24 @@ func main() {
 
 ```go
 stream := client.Chat.Completions.NewStreaming(
-    context.Background(),
-    hanzoai.ChatCompletionNewParams{
-        Model: hanzoai.String("zen-70b"),
-        Messages: []hanzoai.ChatCompletionMessageParamUnion{
-            hanzoai.UserMessage("Write a poem about code"),
-        },
-    },
+ context.Background(),
+ hanzoai.ChatCompletionNewParams{
+ Model: hanzoai.String("zen-70b"),
+ Messages: []hanzoai.ChatCompletionMessageParamUnion{
+ hanzoai.UserMessage("Write a poem about code"),
+ },
+ },
 )
 
 for stream.Next() {
-    chunk := stream.Current()
-    if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
-        fmt.Print(chunk.Choices[0].Delta.Content)
-    }
+ chunk := stream.Current()
+ if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
+ fmt.Print(chunk.Choices[0].Delta.Content)
+ }
 }
 
 if err := stream.Err(); err != nil {
-    panic(err)
+ panic(err)
 }
 ```
 
@@ -118,13 +118,13 @@ if err := stream.Err(); err != nil {
 
 ```go
 embedding, err := client.Embeddings.New(
-    context.Background(),
-    hanzoai.EmbeddingNewParams{
-        Model: hanzoai.String("zen-embedding"),
-        Input: hanzoai.EmbeddingNewParamsInputUnion{
-            OfString: hanzoai.String("Hello world"),
-        },
-    },
+ context.Background(),
+ hanzoai.EmbeddingNewParams{
+ Model: hanzoai.String("zen-embedding"),
+ Input: hanzoai.EmbeddingNewParamsInputUnion{
+ OfString: hanzoai.String("Hello world"),
+ },
+ },
 )
 fmt.Println(len(embedding.Data[0].Embedding)) // dimension count
 ```
@@ -133,36 +133,36 @@ fmt.Println(len(embedding.Data[0].Embedding)) // dimension count
 
 ```go
 response, err := client.Chat.Completions.New(
-    context.Background(),
-    hanzoai.ChatCompletionNewParams{
-        Model: hanzoai.String("zen-70b"),
-        Messages: []hanzoai.ChatCompletionMessageParamUnion{
-            hanzoai.UserMessage("What's the weather in Tokyo?"),
-        },
-        Tools: []hanzoai.ChatCompletionToolParam{
-            {
-                Type: hanzoai.ChatCompletionToolTypeFunction,
-                Function: hanzoai.FunctionDefinitionParam{
-                    Name:        "get_weather",
-                    Description: hanzoai.String("Get current weather for a location"),
-                    Parameters: hanzoai.FunctionParameters{
-                        "type": "object",
-                        "properties": map[string]any{
-                            "location": map[string]any{
-                                "type":        "string",
-                                "description": "City name",
-                            },
-                        },
-                        "required": []string{"location"},
-                    },
-                },
-            },
-        },
-    },
+ context.Background(),
+ hanzoai.ChatCompletionNewParams{
+ Model: hanzoai.String("zen-70b"),
+ Messages: []hanzoai.ChatCompletionMessageParamUnion{
+ hanzoai.UserMessage("What's the weather in Tokyo?"),
+ },
+ Tools: []hanzoai.ChatCompletionToolParam{
+ {
+ Type: hanzoai.ChatCompletionToolTypeFunction,
+ Function: hanzoai.FunctionDefinitionParam{
+ Name: "get_weather",
+ Description: hanzoai.String("Get current weather for a location"),
+ Parameters: hanzoai.FunctionParameters{
+ "type": "object",
+ "properties": map[string]any{
+ "location": map[string]any{
+ "type": "string",
+ "description": "City name",
+ },
+ },
+ "required": []string{"location"},
+ },
+ },
+ },
+ },
+ },
 )
 
 toolCall := response.Choices[0].Message.ToolCalls[0]
-fmt.Println(toolCall.Function.Name)      // "get_weather"
+fmt.Println(toolCall.Function.Name) // "get_weather"
 fmt.Println(toolCall.Function.Arguments) // '{"location":"Tokyo"}'
 ```
 
@@ -223,13 +223,13 @@ The SDK also includes namespaces for: assistants, threads, runs, batches, vector
 
 ```go
 client := hanzoai.NewClient(
-    option.WithAPIKey("your-key"),                    // Required (or HANZO_API_KEY env)
-    option.WithBaseURL("https://api.hanzo.ai"),       // Default
-    option.WithHTTPClient(&http.Client{               // Custom HTTP client
-        Timeout: 60 * time.Second,
-    }),
-    option.WithMaxRetries(2),                         // Auto-retry count
-    option.WithHeader("X-Custom", "val"),             // Extra headers
+ option.WithAPIKey("your-key"), // Required (or HANZO_API_KEY env)
+ option.WithBaseURL("https://api.hanzo.ai"), // Default
+ option.WithHTTPClient(&http.Client{ // Custom HTTP client
+ Timeout: 60 * time.Second,
+ }),
+ option.WithMaxRetries(2), // Auto-retry count
+ option.WithHeader("X-Custom", "val"), // Extra headers
 )
 ```
 
@@ -248,8 +248,8 @@ client := hanzoai.NewClient(
 ### Environment Variables
 
 ```bash
-HANZO_API_KEY=your-api-key          # Required
-HANZO_BASE_URL=https://...          # Override base URL
+HANZO_API_KEY=your-api-key # Required
+HANZO_BASE_URL=https://... # Override base URL
 ```
 
 ## OpenAI Drop-In Replacement
@@ -264,7 +264,7 @@ client := openai.NewClient(option.WithAPIKey("sk-..."))
 // After (Hanzo)
 import "github.com/hanzoai/go-sdk"
 client := hanzoai.NewClient(
-    option.WithAPIKey(os.Getenv("HANZO_API_KEY")),
+ option.WithAPIKey(os.Getenv("HANZO_API_KEY")),
 )
 // Same API shape — just change the import and client
 ```
@@ -274,23 +274,23 @@ client := hanzoai.NewClient(
 ```go
 response, err := client.Chat.Completions.New(ctx, params)
 if err != nil {
-    var apierr *hanzoai.Error
-    if errors.As(err, &apierr) {
-        fmt.Println("Status:", apierr.StatusCode)
-        fmt.Println("Message:", apierr.Message)
-        fmt.Println("Type:", apierr.Type)
+ var apierr *hanzoai.Error
+ if errors.As(err, &apierr) {
+ fmt.Println("Status:", apierr.StatusCode)
+ fmt.Println("Message:", apierr.Message)
+ fmt.Println("Type:", apierr.Type)
 
-        // Handle specific errors
-        switch apierr.StatusCode {
-        case 401:
-            log.Fatal("Invalid API key")
-        case 429:
-            log.Println("Rate limited, backing off")
-        case 500:
-            log.Println("Server error, retrying")
-        }
-    }
-    return err
+ // Handle specific errors
+ switch apierr.StatusCode {
+ case 401:
+ log.Fatal("Invalid API key")
+ case 429:
+ log.Println("Rate limited, backing off")
+ case 500:
+ log.Println("Server error, retrying")
+ }
+ }
+ return err
 }
 ```
 
@@ -300,11 +300,11 @@ if err != nil {
 // Auto-pagination
 iter := client.Models.List(context.Background(), hanzoai.ModelListParams{})
 for iter.Next() {
-    model := iter.Current()
-    fmt.Println(model.ID)
+ model := iter.Current()
+ fmt.Println(model.ID)
 }
 if err := iter.Err(); err != nil {
-    panic(err)
+ panic(err)
 }
 ```
 
@@ -317,17 +317,17 @@ defer cancel()
 
 response, err := client.Chat.Completions.New(ctx, params)
 if err != nil {
-    if ctx.Err() == context.DeadlineExceeded {
-        log.Println("Request timed out")
-    }
-    return err
+ if ctx.Err() == context.DeadlineExceeded {
+ log.Println("Request timed out")
+ }
+ return err
 }
 
 // With cancellation
 ctx, cancel := context.WithCancel(context.Background())
 go func() {
-    <-shutdownCh
-    cancel()
+ <-shutdownCh
+ cancel()
 }()
 response, err := client.Chat.Completions.New(ctx, params)
 ```
@@ -336,41 +336,41 @@ response, err := client.Chat.Completions.New(ctx, params)
 
 ```go
 func processBatch(client *hanzoai.Client, prompts []string) []string {
-    var (
-        mu      sync.Mutex
-        results = make([]string, len(prompts))
-        wg      sync.WaitGroup
-    )
+ var (
+ mu sync.Mutex
+ results = make([]string, len(prompts))
+ wg sync.WaitGroup
+ )
 
-    for i, prompt := range prompts {
-        wg.Add(1)
-        go func(idx int, p string) {
-            defer wg.Done()
+ for i, prompt := range prompts {
+ wg.Add(1)
+ go func(idx int, p string) {
+ defer wg.Done()
 
-            resp, err := client.Chat.Completions.New(
-                context.Background(),
-                hanzoai.ChatCompletionNewParams{
-                    Model: hanzoai.String("zen-70b"),
-                    Messages: []hanzoai.ChatCompletionMessageParamUnion{
-                        hanzoai.UserMessage(p),
-                    },
-                },
-            )
-            if err != nil {
-                mu.Lock()
-                results[idx] = fmt.Sprintf("error: %v", err)
-                mu.Unlock()
-                return
-            }
+ resp, err := client.Chat.Completions.New(
+ context.Background(),
+ hanzoai.ChatCompletionNewParams{
+ Model: hanzoai.String("zen-70b"),
+ Messages: []hanzoai.ChatCompletionMessageParamUnion{
+ hanzoai.UserMessage(p),
+ },
+ },
+ )
+ if err != nil {
+ mu.Lock()
+ results[idx] = fmt.Sprintf("error: %v", err)
+ mu.Unlock()
+ return
+ }
 
-            mu.Lock()
-            results[idx] = resp.Choices[0].Message.Content
-            mu.Unlock()
-        }(i, prompt)
-    }
+ mu.Lock()
+ results[idx] = resp.Choices[0].Message.Content
+ mu.Unlock()
+ }(i, prompt)
+ }
 
-    wg.Wait()
-    return results
+ wg.Wait()
+ return results
 }
 ```
 

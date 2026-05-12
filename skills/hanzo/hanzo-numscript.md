@@ -80,53 +80,53 @@ numscript fmt script.num
 package main
 
 import (
-    "context"
-    "fmt"
-    "math/big"
+ "context"
+ "fmt"
+ "math/big"
 
-    "github.com/formancehq/numscript"
+ "github.com/formancehq/numscript"
 )
 
 func main() {
-    program := numscript.Parse(`
-        send [USD/2 5000] (
-            source = @users:alice
-            destination = {
-                85% to @merchants:shop
-                10% to @platform:fees
-                5%  to @platform:reserve
-            }
-        )
-    `)
+ program := numscript.Parse(`
+ send [USD/2 5000] (
+ source = @users:alice
+ destination = {
+ 85% to @merchants:shop
+ 10% to @platform:fees
+ 5% to @platform:reserve
+ }
+ )
+ `)
 
-    if errs := program.GetParsingErrors(); len(errs) > 0 {
-        fmt.Println("Parse errors:", numscript.ParseErrorsToString(errs))
-        return
-    }
+ if errs := program.GetParsingErrors(); len(errs) > 0 {
+ fmt.Println("Parse errors:", numscript.ParseErrorsToString(errs))
+ return
+ }
 
-    // Get needed variables (for parameterized scripts)
-    vars := program.GetNeededVariables()
-    fmt.Println("Variables:", vars)
+ // Get needed variables (for parameterized scripts)
+ vars := program.GetNeededVariables()
+ fmt.Println("Variables:", vars)
 
-    // Execute against a store
-    result, err := program.Run(context.Background(),
-        numscript.VariablesMap{},
-        &numscript.StaticStore{
-            Balances: numscript.Balances{
-                "users:alice": {"USD/2": big.NewInt(10000)},
-            },
-        },
-    )
-    if err != nil {
-        fmt.Println("Error:", err)
-        return
-    }
+ // Execute against a store
+ result, err := program.Run(context.Background(),
+ numscript.VariablesMap{},
+ &numscript.StaticStore{
+ Balances: numscript.Balances{
+ "users:alice": {"USD/2": big.NewInt(10000)},
+ },
+ },
+ )
+ if err != nil {
+ fmt.Println("Error:", err)
+ return
+ }
 
-    for _, posting := range result.Postings {
-        fmt.Printf("%s -> %s: %s %s\n",
-            posting.Source, posting.Destination,
-            posting.Amount, posting.Asset)
-    }
+ for _, posting := range result.Postings {
+ fmt.Printf("%s -> %s: %s %s\n",
+ posting.Source, posting.Destination,
+ posting.Amount, posting.Asset)
+ }
 }
 ```
 
@@ -137,44 +137,44 @@ func main() {
 ```numscript
 // Variables with types
 vars {
-    monetary $amount
-    account  $sender
-    account  $receiver
+ monetary $amount
+ account $sender
+ account $receiver
 }
 
 // Simple transfer
 send $amount (
-    source = $sender
-    destination = $receiver
+ source = $sender
+ destination = $receiver
 )
 
 // Multi-source with fallback (ordered, first with funds wins)
 send [USD/2 10000] (
-    source = {
-        @users:alice
-        @users:alice:savings
-        @world                    // infinite source (minting)
-    }
-    destination = @merchants:shop
+ source = {
+ @users:alice
+ @users:alice:savings
+ @world // infinite source (minting)
+ }
+ destination = @merchants:shop
 )
 
 // Percentage split destination
 send [USD/2 10000] (
-    source = @users:alice
-    destination = {
-        85%       to @merchants:shop
-        10%       to @platform:fees
-        remaining to @platform:reserve
-    }
+ source = @users:alice
+ destination = {
+ 85% to @merchants:shop
+ 10% to @platform:fees
+ remaining to @platform:reserve
+ }
 )
 
 // Overdraft controls
 send [USD/2 100] (
-    source = {
-        @a allowing overdraft up to [USD/2 10]
-        @b allowing unbounded overdraft
-    }
-    destination = @dest
+ source = {
+ @a allowing overdraft up to [USD/2 10]
+ @b allowing unbounded overdraft
+ }
+ destination = @dest
 )
 
 // Save (earmark funds)
@@ -182,7 +182,7 @@ save [USD/2 10] from @alice
 
 // Metadata-driven accounts
 vars {
-    account $dest = meta(@config, "payout_account")
+ account $dest = meta(@config, "payout_account")
 }
 
 // Function calls
@@ -192,18 +192,18 @@ set_tx_meta("key", "value")
 ### Architecture
 
 ```
-                Parse                  Run
+ Parse Run
 numscript.go ──────────► ParseResult ──────► ExecutionResult
-                  |                      |
-                  |   ANTLR4 parser      |   interpreter
-                  |   (Lexer.g4 +        |   (balance queries,
-                  |    Numscript.g4)      |    metadata queries,
-                  |                      |    posting generation)
-                  |                      |
-                  v                      v
-             ParserError[]          Posting[]
-                                    Metadata{}
-                                    AccountsMetadata{}
+ | |
+ | ANTLR4 parser | interpreter
+ | (Lexer.g4 + | (balance queries,
+ | Numscript.g4) | metadata queries,
+ | | posting generation)
+ | |
+ v v
+ ParserError[] Posting[]
+ Metadata{}
+ AccountsMetadata{}
 ```
 
 ### Public API
@@ -223,57 +223,57 @@ ParseResult.RunWithFeatureFlags(ctx, vars, store, flags) (ExecutionResult, Inter
 
 // Types
 type Posting struct {
-    Source, Destination string
-    Amount              *big.Int
-    Asset               string
+ Source, Destination string
+ Amount *big.Int
+ Asset string
 }
 
 type ExecutionResult struct {
-    Postings         []Posting
-    Metadata         Metadata           // set_tx_meta() results
-    AccountsMetadata AccountsMetadata   // set_account_meta() results
+ Postings []Posting
+ Metadata Metadata // set_tx_meta() results
+ AccountsMetadata AccountsMetadata // set_account_meta() results
 }
 
 // Store interface (implement for your ledger)
 type Store interface {
-    GetBalances(ctx, BalanceQuery) (Balances, error)
-    GetAccountsMetadata(ctx, MetadataQuery) (AccountsMetadata, error)
+ GetBalances(ctx, BalanceQuery) (Balances, error)
+ GetAccountsMetadata(ctx, MetadataQuery) (AccountsMetadata, error)
 }
 ```
 
 ### Feature Flags
 
 ```go
-flags.ExperimentalOneofFeatureFlag       // oneof {} source selection
-flags.ExperimentalMidScriptFunctionCall  // balance() calls mid-script
+flags.ExperimentalOneofFeatureFlag // oneof {} source selection
+flags.ExperimentalMidScriptFunctionCall // balance() calls mid-script
 ```
 
 ## Directory structure
 
 ```
 github.com/hanzoai/numscript/
-    numscript.go                    # Public API: Parse, Run, types
-    numscript_test.go               # Integration tests (20+ test cases)
-    Numscript.g4                    # ANTLR4 grammar (parser rules)
-    Lexer.g4                        # ANTLR4 grammar (lexer rules)
-    Justfile                        # Build commands (generate, test, lint, release)
-    .goreleaser.yaml                # Cross-platform binary releases
-    inputs.schema.json              # JSON schema for script inputs
-    specs.schema.json               # JSON schema for specs
-    cmd/numscript/
-        main.go                     # CLI entrypoint (check, fmt subcommands)
-    internal/
-        parser/                     # ANTLR4-generated parser + parse tree
-        interpreter/                # Script execution engine
-        analysis/                   # Static analysis and validation
-        lsp/                        # Language Server Protocol implementation
-        mcp_impl/                   # Model Context Protocol server
-        jsonrpc2/                   # JSON-RPC 2.0 transport
-        cmd/                        # CLI command implementations
-        flags/                      # Feature flag definitions
-        ansi/                       # Terminal color output
-        specs_format/               # Spec formatting utilities
-        utils/                      # Shared utilities
+ numscript.go # Public API: Parse, Run, types
+ numscript_test.go # Integration tests (20+ test cases)
+ Numscript.g4 # ANTLR4 grammar (parser rules)
+ Lexer.g4 # ANTLR4 grammar (lexer rules)
+ Justfile # Build commands (generate, test, lint, release)
+ .goreleaser.yaml # Cross-platform binary releases
+ inputs.schema.json # JSON schema for script inputs
+ specs.schema.json # JSON schema for specs
+ cmd/numscript/
+ main.go # CLI entrypoint (check, fmt subcommands)
+ internal/
+ parser/ # ANTLR4-generated parser + parse tree
+ interpreter/ # Script execution engine
+ analysis/ # Static analysis and validation
+ lsp/ # Language Server Protocol implementation
+ mcp_impl/ # Model Context Protocol server
+ jsonrpc2/ # JSON-RPC 2.0 transport
+ cmd/ # CLI command implementations
+ flags/ # Feature flag definitions
+ ansi/ # Terminal color output
+ specs_format/ # Spec formatting utilities
+ utils/ # Shared utilities
 ```
 
 ## Troubleshooting

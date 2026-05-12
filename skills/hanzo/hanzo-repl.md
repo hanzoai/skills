@@ -55,7 +55,7 @@ Repo: `github.com/hanzoai/repl`
 # Clone and setup
 git clone https://github.com/hanzoai/repl
 cd repl
-make setup    # Creates venv via uv, installs deps
+make setup # Creates venv via uv, installs deps
 
 # Or manually
 uv venv && uv pip install -e .
@@ -72,16 +72,16 @@ export OPENAI_API_KEY=sk-...
 ### Start the REPL
 
 ```bash
-make dev              # Textual TUI (default, recommended)
-make dev-ipython      # IPython with magic commands
-make chat             # Basic prompt-toolkit REPL
+make dev # Textual TUI (default, recommended)
+make dev-ipython # IPython with magic commands
+make chat # Basic prompt-toolkit REPL
 ```
 
 Or directly:
 ```bash
-uv run hanzo-repl               # Textual TUI
-uv run hanzo-repl-ipython       # IPython
-uv run hanzo-repl-basic         # Basic CLI
+uv run hanzo-repl # Textual TUI
+uv run hanzo-repl-ipython # IPython
+uv run hanzo-repl-basic # Basic CLI
 ```
 
 ### Direct Tool Access
@@ -115,39 +115,39 @@ uv run hanzo-repl-basic         # Basic CLI
 Can you help me create a web scraper?
 I need it to extract titles from a list of URLs.
 
-%tools                                # List available MCP tools
-%tool read_file {"file_path": "README.md"}  # Execute specific tool
-%model claude-3-opus-20240229         # Change model
-%edit_self ipython_repl.py            # Edit REPL source code
+%tools # List available MCP tools
+%tool read_file {"file_path": "README.md"} # Execute specific tool
+%model claude-3-opus-20240229 # Change model
+%edit_self ipython_repl.py # Edit REPL source code
 ```
 
 ### REPL Commands (all interfaces)
 
 ```
-/help        Show help
-/tools       List available MCP tools
-/providers   List detected LLM providers
-/model       Show or set current model
-/context     Show conversation context
-/reset       Reset conversation context
-/clear       Clear screen
-/exit        Exit REPL
+/help Show help
+/tools List available MCP tools
+/providers List detected LLM providers
+/model Show or set current model
+/context Show conversation context
+/reset Reset conversation context
+/clear Clear screen
+/exit Exit REPL
 ```
 
 ## Makefile Targets
 
 ```bash
-make dev              # Start Textual TUI
-make dev-ipython      # Start IPython REPL
-make chat             # Start basic chat
-make test             # Run pytest
+make dev # Start Textual TUI
+make dev-ipython # Start IPython REPL
+make chat # Start basic chat
+make test # Run pytest
 make test-integration # Run integration tests (needs API keys)
-make lint             # Lint with ruff
-make format           # Format with black + ruff
-make type-check       # mypy
-make clean            # Remove build artifacts
-make build            # Build distribution (swaps pyproject.toml for PyPI)
-make publish          # Publish to PyPI
+make lint # Lint with ruff
+make format # Format with black + ruff
+make type-check # mypy
+make clean # Remove build artifacts
+make build # Build distribution (swaps pyproject.toml for PyPI)
+make publish # Publish to PyPI
 ```
 
 ## Key Files

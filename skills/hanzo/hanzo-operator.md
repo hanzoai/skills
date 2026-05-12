@@ -71,40 +71,40 @@ Hanzo Operator is a **unified Kubernetes operator** that manages all Hanzo produ
 
 ```
 api/v1alpha1/
-  common_types.go              # Shared types (ContainerSpec, IngressSpec, etc.)
-  hanzoservice_types.go        # HanzoService CRD spec
-  hanzodatastore_types.go      # HanzoDatastore CRD spec
-  hanzogateway_types.go        # HanzoGateway CRD spec
-  hanzompc_types.go            # HanzoMPC CRD spec
-  hanzonetwork_types.go        # HanzoNetwork CRD spec
-  hanzoingress_types.go        # HanzoIngress CRD spec
-  hanzoplatform_types.go       # HanzoPlatform CRD spec
-  types.go                     # Additional shared types
-  zz_generated.deepcopy.go     # Generated DeepCopy methods
+ common_types.go # Shared types (ContainerSpec, IngressSpec, etc.)
+ hanzoservice_types.go # HanzoService CRD spec
+ hanzodatastore_types.go # HanzoDatastore CRD spec
+ hanzogateway_types.go # HanzoGateway CRD spec
+ hanzompc_types.go # HanzoMPC CRD spec
+ hanzonetwork_types.go # HanzoNetwork CRD spec
+ hanzoingress_types.go # HanzoIngress CRD spec
+ hanzoplatform_types.go # HanzoPlatform CRD spec
+ types.go # Additional shared types
+ zz_generated.deepcopy.go # Generated DeepCopy methods
 cmd/
-  main.go                      # Manager entry point
+ main.go # Manager entry point
 internal/
-  controller/
-    hanzoservice_controller.go   # HanzoService reconciler
-    hanzodatastore_controller.go # HanzoDatastore reconciler
-    hanzogateway_controller.go   # HanzoGateway reconciler
-    hanzompc_controller.go       # HanzoMPC reconciler
-    hanzonetwork_controller.go   # HanzoNetwork reconciler
-    hanzoingress_controller.go   # HanzoIngress reconciler
-    hanzoplatform_controller.go  # HanzoPlatform reconciler
-    predicates.go                # Event filters (createOrUpdatePred, etc.)
-    helpers.go                   # Shared controller utilities
-  manifests/                     # K8s object builders (builder, labels, mutate)
-  status/                        # Condition management
-  metrics/                       # Prometheus metrics
-  config/                        # Feature gates
+ controller/
+ hanzoservice_controller.go # HanzoService reconciler
+ hanzodatastore_controller.go # HanzoDatastore reconciler
+ hanzogateway_controller.go # HanzoGateway reconciler
+ hanzompc_controller.go # HanzoMPC reconciler
+ hanzonetwork_controller.go # HanzoNetwork reconciler
+ hanzoingress_controller.go # HanzoIngress reconciler
+ hanzoplatform_controller.go # HanzoPlatform reconciler
+ predicates.go # Event filters (createOrUpdatePred, etc.)
+ helpers.go # Shared controller utilities
+ manifests/ # K8s object builders (builder, labels, mutate)
+ status/ # Condition management
+ metrics/ # Prometheus metrics
+ config/ # Feature gates
 config/
-  crd/bases/                     # Generated CRD YAML (13k lines)
-  rbac/                          # ClusterRole, bindings
-  manager/                       # Deployment template
-  samples/                       # Sample CRs for all 7 CRDs
-Dockerfile                       # Multi-stage Go build (Alpine)
-Makefile                         # Build, test, deploy targets
+ crd/bases/ # Generated CRD YAML (13k lines)
+ rbac/ # ClusterRole, bindings
+ manager/ # Deployment template
+ samples/ # Sample CRs for all 7 CRDs
+Dockerfile # Multi-stage Go build (Alpine)
+Makefile # Build, test, deploy targets
 ```
 
 ## Build and Deploy

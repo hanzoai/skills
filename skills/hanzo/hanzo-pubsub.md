@@ -67,9 +67,9 @@ Fork of [NATS Server](https://github.com/nats-io/nats-server). Repo: `hanzoai/pu
 
 ```bash
 docker run -d --name hanzo-pubsub \
-  -p 4222:4222 \
-  -p 8222:8222 \
-  hanzoai/pubsub:latest
+ -p 4222:4222 \
+ -p 8222:8222 \
+ hanzoai/pubsub:latest
 ```
 
 ### Docker Compose
@@ -77,27 +77,27 @@ docker run -d --name hanzo-pubsub \
 ```yaml
 # compose.yml
 services:
-  pubsub:
-    image: hanzoai/pubsub:latest
-    ports:
-      - "4222:4222"   # Client connections
-      - "8222:8222"   # HTTP monitoring
-      - "6222:6222"   # Cluster routing
-    volumes:
-      - pubsub-data:/data
-    command: ["--jetstream", "--store_dir=/data"]
+ pubsub:
+ image: hanzoai/pubsub:latest
+ ports:
+ - "4222:4222" # Client connections
+ - "8222:8222" # HTTP monitoring
+ - "6222:6222" # Cluster routing
+ volumes:
+ - pubsub-data:/data
+ command: ["--jetstream", "--store_dir=/data"]
 
-  # Optional: Kafka-compatible sidecar
-  kafka:
-    build: kafka/
-    ports:
-      - "9092:9092"   # Kafka protocol
-      - "8081:8081"   # Schema registry
-      - "8082:8082"   # HTTP proxy
-      - "9644:9644"   # Admin API
+ # Optional: Kafka-compatible sidecar
+ kafka:
+ build: kafka/
+ ports:
+ - "9092:9092" # Kafka protocol
+ - "8081:8081" # Schema registry
+ - "8082:8082" # HTTP proxy
+ - "9644:9644" # Admin API
 
 volumes:
-  pubsub-data:
+ pubsub-data:
 ```
 
 ### Build from source
@@ -115,26 +115,26 @@ go build -o pubsub .
 
 ```
 ┌──────────────────────────────────────────────────┐
-│                    Cluster                        │
-│  ┌─────────┐    ┌─────────┐    ┌─────────┐      │
-│  │ Node 1  │<-->│ Node 2  │<-->│ Node 3  │      │
-│  │ :4222   │    │ :4222   │    │ :4222   │      │
-│  └─────────┘    └─────────┘    └─────────┘      │
-│       │              │              │            │
-│       └──────────────┼──────────────┘            │
-│                      │                           │
-│              ┌───────┴───────┐                   │
-│              │  JetStream    │                   │
-│              │  (Streams,    │                   │
-│              │   KV, ObjStore)│                  │
-│              └───────────────┘                   │
+│ Cluster │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐ │
+│ │ Node 1 │<-->│ Node 2 │<-->│ Node 3 │ │
+│ │ :4222 │ │ :4222 │ │ :4222 │ │
+│ └─────────┘ └─────────┘ └─────────┘ │
+│ │ │ │ │
+│ └──────────────┼──────────────┘ │
+│ │ │
+│ ┌───────┴───────┐ │
+│ │ JetStream │ │
+│ │ (Streams, │ │
+│ │ KV, ObjStore)│ │
+│ └───────────────┘ │
 └──────────────────────────────────────────────────┘
 
-       ┌───────────────────────┐
-       │  Redpanda Sidecar     │
-       │  (Kafka :9092)        │
-       │  (Schema Reg :8081)   │
-       └───────────────────────┘
+ ┌───────────────────────┐
+ │ Redpanda Sidecar │
+ │ (Kafka :9092) │
+ │ (Schema Reg :8081) │
+ └───────────────────────┘
 ```
 
 ### Server Configuration
@@ -150,13 +150,13 @@ monitor_port: 8222
 
 # Clustering
 cluster {
-  port: 6222
-  authorization {
-    user: ruser
-    password: T0pS3cr3t
-    timeout: 2
-  }
-  routes = []
+ port: 6222
+ authorization {
+ user: ruser
+ password: T0pS3cr3t
+ timeout: 2
+ }
+ routes = []
 }
 ```
 
@@ -177,23 +177,23 @@ cluster {
 
 ```
 pubsub/
-  main.go              # Entry point (configures and runs server)
-  server/              # Core server implementation
-  conf/                # Configuration parser (lexer, parser)
-  internal/
-    antithesis/        # Deterministic testing
-    fastrand/          # Fast random number generation
-    ldap/              # LDAP authentication
-    ocsp/              # OCSP stapling
-    testhelper/        # Test utilities
-  kafka/
-    Dockerfile         # Redpanda (Kafka-compatible) sidecar
-  logger/              # Logging
-  docker/
-    nats-server.conf   # Default server configuration
-    Dockerfile.nightly # Nightly build
-  test/                # Integration tests
-  scripts/             # Build and CI scripts
+ main.go # Entry point (configures and runs server)
+ server/ # Core server implementation
+ conf/ # Configuration parser (lexer, parser)
+ internal/
+ antithesis/ # Deterministic testing
+ fastrand/ # Fast random number generation
+ ldap/ # LDAP authentication
+ ocsp/ # OCSP stapling
+ testhelper/ # Test utilities
+ kafka/
+ Dockerfile # Redpanda (Kafka-compatible) sidecar
+ logger/ # Logging
+ docker/
+ nats-server.conf # Default server configuration
+ Dockerfile.nightly # Nightly build
+ test/ # Integration tests
+ scripts/ # Build and CI scripts
 ```
 
 ### Client SDKs
@@ -217,7 +217,7 @@ defer nc.Close()
 
 // Subscribe
 nc.Subscribe("events.>", func(msg *nats.Msg) {
-    fmt.Printf("Received: %s\n", string(msg.Data))
+ fmt.Printf("Received: %s\n", string(msg.Data))
 })
 
 // Publish
@@ -232,8 +232,8 @@ js, _ := nc.JetStream()
 
 // Create stream
 js.AddStream(&nats.StreamConfig{
-    Name:     "ORDERS",
-    Subjects: []string{"orders.*"},
+ Name: "ORDERS",
+ Subjects: []string{"orders.*"},
 })
 
 // Publish
@@ -243,7 +243,7 @@ js.Publish("orders.new", []byte(`{"order_id":"abc123"}`))
 sub, _ := js.PullSubscribe("orders.*", "processor")
 msgs, _ := sub.Fetch(10)
 for _, msg := range msgs {
-    msg.Ack()
+ msg.Ack()
 }
 ```
 

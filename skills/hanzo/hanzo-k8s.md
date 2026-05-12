@@ -61,8 +61,8 @@ Hanzo runs all production services on **DOKS (DigitalOcean Kubernetes Service)**
 | `hanzo.ai` | hanzo-app | 3000 |
 | `api.hanzo.ai` | hanzo-gateway (KrakenD) | 8000 |
 | `llm.hanzo.ai` | hanzo-gateway | 8000 |
-| `hanzo.id`, `lux.id`, `zoo.id`, `pars.id` | IAM (Casdoor) | 8000 |
-| `kms.hanzo.ai` | KMS (Infisical) | 8080 |
+| `hanzo.id`, `lux.id`, `zoo.id`, `pars.id` | IAM (Hanzo IAM) | 8000 |
+| `kms.hanzo.ai` | KMS (Hanzo KMS) | 8080 |
 | `platform.hanzo.ai` | Platform (Dokploy) | 3000 |
 | `console.hanzo.ai` | Console (Langfuse) | 3000 |
 | `cloud.hanzo.ai` | Cloud (Casibase) | 8000 |
@@ -85,24 +85,24 @@ Hanzo runs all production services on **DOKS (DigitalOcean Kubernetes Service)**
 
 ```
 postgres.hanzo.svc:5432
-  |- iam          (Casdoor)
-  |- cloud        (Casibase)
-  |- console      (Langfuse)
-  |- hanzo_cloud  (Cloud API)
-  |- kms          (Infisical)
-  |- platform     (Dokploy)
+ |- iam (Hanzo IAM)
+ |- cloud (Casibase)
+ |- console (Langfuse)
+ |- hanzo_cloud (Cloud API)
+ |- kms (Hanzo KMS)
+ |- platform (Dokploy)
 ```
 
 ### lux-k8s databases
 
 ```
 postgres.hanzo.svc:5432
-  |- cloud
-  |- commerce
-  |- console
-  |- gateway
-  |- hanzo
-  |- kms
+ |- cloud
+ |- commerce
+ |- console
+ |- gateway
+ |- hanzo
+ |- kms
 ```
 
 ## Common operations
@@ -154,41 +154,41 @@ kubectl --context do-sfo3-hanzo-k8s -n hanzo scale deployment/<service> --replic
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-service
-  namespace: hanzo
+ name: my-service
+ namespace: hanzo
 spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: my-service
-  template:
-    metadata:
-      labels:
-        app: my-service
-    spec:
-      containers:
-        - name: my-service
-          image: ghcr.io/hanzoai/my-service:latest
-          ports:
-            - containerPort: 8080
-          envFrom:
-            - secretRef:
-                name: my-service-secrets  # Synced from KMS
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 512Mi
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: 8080
+ replicas: 2
+ selector:
+ matchLabels:
+ app: my-service
+ template:
+ metadata:
+ labels:
+ app: my-service
+ spec:
+ containers:
+ - name: my-service
+ image: ghcr.io/hanzoai/my-service:latest
+ ports:
+ - containerPort: 8080
+ envFrom:
+ - secretRef:
+ name: my-service-secrets # Synced from KMS
+ resources:
+ requests:
+ cpu: 100m
+ memory: 128Mi
+ limits:
+ cpu: 500m
+ memory: 512Mi
+ livenessProbe:
+ httpGet:
+ path: /health
+ port: 8080
+ readinessProbe:
+ httpGet:
+ path: /ready
+ port: 8080
 ```
 
 ### Standard ingress
@@ -197,27 +197,27 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: my-service
-  namespace: hanzo
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt
+ name: my-service
+ namespace: hanzo
+ annotations:
+ cert-manager.io/cluster-issuer: letsencrypt
 spec:
-  ingressClassName: hanzo
-  tls:
-    - hosts:
-        - my-service.hanzo.ai
-      secretName: my-service-tls
-  rules:
-    - host: my-service.hanzo.ai
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: my-service
-                port:
-                  number: 8080
+ ingressClassName: hanzo
+ tls:
+ - hosts:
+ - my-service.hanzo.ai
+ secretName: my-service-tls
+ rules:
+ - host: my-service.hanzo.ai
+ http:
+ paths:
+ - path: /
+ pathType: Prefix
+ backend:
+ service:
+ name: my-service
+ port:
+ number: 8080
 ```
 
 ### KMSSecret for secret sync
@@ -226,17 +226,17 @@ spec:
 apiVersion: kms.hanzo.ai/v1
 kind: KMSSecret
 metadata:
-  name: my-service-secrets
-  namespace: hanzo
+ name: my-service-secrets
+ namespace: hanzo
 spec:
-  project: my-service
-  environment: production
-  syncInterval: 5m
-  secretRef:
-    name: my-service-secrets
-  secrets:
-    - DATABASE_URL
-    - API_KEY
+ project: my-service
+ environment: production
+ syncInterval: 5m
+ secretRef:
+ name: my-service-secrets
+ secrets:
+ - DATABASE_URL
+ - API_KEY
 ```
 
 ## Node pools

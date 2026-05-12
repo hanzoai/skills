@@ -81,8 +81,8 @@ npm run buildreact
 npm run watch
 
 # In another terminal, launch the editor
-./scripts/code.sh          # macOS/Linux
-# ./scripts/code.bat       # Windows
+./scripts/code.sh # macOS/Linux
+# ./scripts/code.bat # Windows
 
 # Optional: isolate test data
 ./scripts/code.sh --user-data-dir ./.tmp/user-data --extensions-dir ./.tmp/extensions
@@ -114,26 +114,26 @@ Code is an Electron app with two processes:
 
 ```
 ┌───────────────────────────────┐
-│       Browser Process         │
-│  (HTML/CSS/React UI)          │
-│                               │
-│  src/.../code/browser/        │
-│  ├── react/          (React)  │
-│  ├── chatThreadService        │
-│  ├── autocompleteService      │
-│  ├── editCodeService          │
-│  ├── toolsService             │
-│  ├── inlineDiffsService       │
-│  └── sidebarPane              │
+│ Browser Process │
+│ (HTML/CSS/React UI) │
+│ │
+│ src/.../code/browser/ │
+│ ├── react/ (React) │
+│ ├── chatThreadService │
+│ ├── autocompleteService │
+│ ├── editCodeService │
+│ ├── toolsService │
+│ ├── inlineDiffsService │
+│ └── sidebarPane │
 └──────────┬────────────────────┘
-           │ IPC channels
+ │ IPC channels
 ┌──────────▼────────────────────┐
-│       Main Process            │
-│  (Node.js, node_modules)      │
-│                               │
-│  sendLLMMessage (all providers│
-│  Anthropic, OpenAI, Gemini,   │
-│  Mistral, Groq, Ollama)       │
+│ Main Process │
+│ (Node.js, node_modules) │
+│ │
+│ sendLLMMessage (all providers│
+│ Anthropic, OpenAI, Gemini, │
+│ Mistral, Groq, Ollama) │
 └───────────────────────────────┘
 ```
 
@@ -180,27 +180,27 @@ Key types:
 
 ```
 code/
-├── src/vs/workbench/contrib/code/browser/   # ALL custom Hanzo Code AI features
-│   ├── react/                    # React UI (chat sidebar, settings)
-│   ├── helpers/                  # Shared utility functions
-│   ├── helperServices/           # Small helper singleton services
-│   ├── prompt/                   # LLM prompt templates
-│   ├── media/                    # CSS and assets
-│   ├── chatThreadService.ts      # Chat + agent orchestration
-│   ├── editCodeService.ts        # Apply, Cmd+K, Edit tool
-│   ├── autocompleteService.ts    # Inline completions
-│   ├── inlineDiffsService.ts     # Diff visualization
-│   ├── toolsService.ts           # Agent tool system
-│   └── ...                       # 35+ service files
-├── src/vs/                       # VS Code core (mostly untouched)
-├── extensions/                   # Built-in VS Code extensions
-├── build/                        # Build scripts (Gulp tasks)
-├── cli/                          # CLI tool
-├── remote/                       # Remote development server
-├── test/                         # Test infrastructure
-├── product.json                  # Editor identity and branding
-├── package.json                  # npm deps (v1.94.0)
-└── .nvmrc                        # Node 20.18.2
+├── src/vs/workbench/contrib/code/browser/ # ALL custom Hanzo Code AI features
+│ ├── react/ # React UI (chat sidebar, settings)
+│ ├── helpers/ # Shared utility functions
+│ ├── helperServices/ # Small helper singleton services
+│ ├── prompt/ # LLM prompt templates
+│ ├── media/ # CSS and assets
+│ ├── chatThreadService.ts # Chat + agent orchestration
+│ ├── editCodeService.ts # Apply, Cmd+K, Edit tool
+│ ├── autocompleteService.ts # Inline completions
+│ ├── inlineDiffsService.ts # Diff visualization
+│ ├── toolsService.ts # Agent tool system
+│ └── ... # 35+ service files
+├── src/vs/ # VS Code core (mostly untouched)
+├── extensions/ # Built-in VS Code extensions
+├── build/ # Build scripts (Gulp tasks)
+├── cli/ # CLI tool
+├── remote/ # Remote development server
+├── test/ # Test infrastructure
+├── product.json # Editor identity and branding
+├── package.json # npm deps (v1.94.0)
+└── .nvmrc # Node 20.18.2
 ```
 
 ## Troubleshooting

@@ -74,22 +74,22 @@ use hanzo_tunnel::{connect, TunnelConfig, AppKind};
 
 #[tokio::main]
 async fn main() -> Result<(), hanzo_tunnel::TunnelError> {
-    let conn = connect(TunnelConfig {
-        relay_url: "wss://api.hanzo.ai/v1/relay".into(),
-        auth_token: "hk-abc123".into(),
-        app_kind: AppKind::Dev,
-        display_name: "z-macbook".into(),
-        capabilities: vec!["chat".into(), "exec".into()],
-        ..Default::default()
-    }).await?;
+ let conn = connect(TunnelConfig {
+ relay_url: "wss://api.hanzo.ai/v1/relay".into(),
+ auth_token: "hk-abc123".into(),
+ app_kind: AppKind::Dev,
+ display_name: "z-macbook".into(),
+ capabilities: vec!["chat".into(), "exec".into()],
+ ..Default::default()
+ }).await?;
 
-    println!("instance_id = {}", conn.instance_id);
+ println!("instance_id = {}", conn.instance_id);
 
-    // Receive commands from cloud
-    while let Some(frame) = conn.recv_command().await {
-        // Handle commands...
-    }
-    Ok(())
+ // Receive commands from cloud
+ while let Some(frame) = conn.recv_command().await {
+ // Handle commands...
+ }
+ Ok(())
 }
 ```
 
@@ -104,9 +104,9 @@ S3_ACCESS_KEY=xxx S3_SECRET_KEY=yyy python3 agent-bridge.py
 
 # Docker
 docker run -d \
-  -e TUNNEL_URL=wss://app.hanzo.bot/v1/tunnel \
-  -e APP_KIND=cloud \
-  ghcr.io/hanzoai/cloud-agent:latest
+ -e TUNNEL_URL=wss://app.hanzo.bot/v1/tunnel \
+ -e APP_KIND=cloud \
+ ghcr.io/hanzoai/cloud-agent:latest
 ```
 
 ### Swarm Mode
@@ -124,23 +124,23 @@ All communication is via JSON frames over WebSocket:
 
 ```
 Frame types:
-  register      -> Instance to Cloud: register this instance
-  registered    <- Cloud to Instance: registration confirmed (includes session_url)
-  command       <- Cloud to Instance: execute a command
-  response      -> Instance to Cloud: command result
-  event         -> Instance to Cloud: streaming output, state changes
-  ping/pong     <- Bidirectional heartbeat
+ register -> Instance to Cloud: register this instance
+ registered <- Cloud to Instance: registration confirmed (includes session_url)
+ command <- Cloud to Instance: execute a command
+ response -> Instance to Cloud: command result
+ event -> Instance to Cloud: streaming output, state changes
+ ping/pong <- Bidirectional heartbeat
 ```
 
 ### App Kinds
 
 ```rust
 enum AppKind {
-    Dev,        // Local dev machine
-    Node,       // Server/infrastructure node
-    Desktop,    // Desktop app
-    Bot,        // Bot instance
-    Extension,  // Browser/IDE extension
+ Dev, // Local dev machine
+ Node, // Server/infrastructure node
+ Desktop, // Desktop app
+ Bot, // Bot instance
+ Extension, // Browser/IDE extension
 }
 ```
 
@@ -198,10 +198,10 @@ Sessions can be migrated between machines:
 use hanzo_tunnel::expose::{expose, ExposedService, ExposedProtocol};
 
 expose(&tx, &ExposedService {
-    name: "api".into(),
-    local_addr: "127.0.0.1:8080".into(),
-    protocol: ExposedProtocol::Http,
-    subdomain: Some("my-api".into()),
+ name: "api".into(),
+ local_addr: "127.0.0.1:8080".into(),
+ protocol: ExposedProtocol::Http,
+ subdomain: Some("my-api".into()),
 }).await?;
 ```
 
@@ -215,17 +215,17 @@ The `gateway` module implements the Hanzo bot gateway's native protocol (challen
 use hanzo_tunnel::gateway::{connect_gateway, GatewayConfig};
 
 let conn = connect_gateway(GatewayConfig {
-    url: "ws://127.0.0.1:18789".into(),
-    auth_token: "device-token".into(),
-    client_id: "my-node".into(),
-    display_name: "Dev Machine".into(),
-    ..Default::default()
+ url: "ws://127.0.0.1:18789".into(),
+ auth_token: "device-token".into(),
+ client_id: "my-node".into(),
+ display_name: "Dev Machine".into(),
+ ..Default::default()
 }).await?;
 
 // Handle node.invoke requests
 while let Some(req) = conn.recv_invoke().await {
-    // Process command, send result back
-    conn.send_invoke_result(&req.id, true, Some(payload), None).await?;
+ // Process command, send result back
+ conn.send_invoke_result(&req.id, true, Some(payload), None).await?;
 }
 ```
 
@@ -234,54 +234,54 @@ Gateway supports two auth methods: `"token"` (default) and `"password"`.
 ### Architecture
 
 ```
-+-------------------+          +---------------------+
-|  Local Machine    |          |  Cloud              |
-|                   |          |                     |
-|  agent-bridge.py  |--WSS--->|  app.hanzo.bot      |
-|  or Rust client   |         |  /v1/tunnel         |
-|                   |         |                     |
-|  Terminal PTY     |         |  Web UI             |
-|  Claude CLI       |         |  (command dispatch) |
-|  Local services   |         |                     |
-+-------------------+          +---------------------+
-                                        |
-                               +--------+--------+
-                               |  Bot Gateway    |
-                               |  NodeRegistry   |
-                               +--------+--------+
-                                        |
-                               +--------+--------+
-                               |  Cloud Agents   |
-                               |  (K8s pods)     |
-                               +-----------------+
++-------------------+ +---------------------+
+| Local Machine | | Cloud |
+| | | |
+| agent-bridge.py |--WSS--->| app.hanzo.bot |
+| or Rust client | | /v1/tunnel |
+| | | |
+| Terminal PTY | | Web UI |
+| Claude CLI | | (command dispatch) |
+| Local services | | |
++-------------------+ +---------------------+
+ |
+ +--------+--------+
+ | Bot Gateway |
+ | NodeRegistry |
+ +--------+--------+
+ |
+ +--------+--------+
+ | Cloud Agents |
+ | (K8s pods) |
+ +-----------------+
 ```
 
 ### Repository Structure
 
 ```
 src/
-  lib.rs          # TunnelConfig, TunnelConnection, connect(), connect_and_register()
-  protocol.rs     # Wire protocol types (Frame, AppKind, payloads)
-  transport.rs    # WebSocket transport with reconnection + heartbeat
-  gateway.rs      # Bot gateway protocol adapter (challenge/connect/hello-ok)
-  commands.rs     # Node command dispatcher (terminal, system, dev commands)
-  terminal.rs     # Interactive terminal session management (piped, not true PTY)
-  expose.rs       # Local service exposure (ngrok-like)
-  registry.rs     # Instance registry types (Instance, InvokeParams, InvokeResult)
-  discovery.rs    # mDNS discovery (optional feature, _hanzo._tcp.local.)
-  auth.rs         # Auth token handling (JWT auto-detect vs API key)
-agent-bridge.py   # Python standalone agent bridge (v0.2.0)
-swarm.sh          # Launch N parallel agents
-migrate.py        # Session migration utility
+ lib.rs # TunnelConfig, TunnelConnection, connect(), connect_and_register()
+ protocol.rs # Wire protocol types (Frame, AppKind, payloads)
+ transport.rs # WebSocket transport with reconnection + heartbeat
+ gateway.rs # Bot gateway protocol adapter (challenge/connect/hello-ok)
+ commands.rs # Node command dispatcher (terminal, system, dev commands)
+ terminal.rs # Interactive terminal session management (piped, not true PTY)
+ expose.rs # Local service exposure (ngrok-like)
+ registry.rs # Instance registry types (Instance, InvokeParams, InvokeResult)
+ discovery.rs # mDNS discovery (optional feature, _hanzo._tcp.local.)
+ auth.rs # Auth token handling (JWT auto-detect vs API key)
+agent-bridge.py # Python standalone agent bridge (v0.2.0)
+swarm.sh # Launch N parallel agents
+migrate.py # Session migration utility
 test-migration.py # Migration tests
-test-swarm.py     # Swarm tests
+test-swarm.py # Swarm tests
 k8s/
-  cloud-agents.yaml   # K8s Deployment (2 replicas, emptyDir workspace)
-  s3-credentials.yaml # S3 secret template (DEPRECATED, use hanzo-s3)
-Dockerfile        # Python 3.12 Alpine image for cloud agent
-Cargo.toml        # Rust crate definition
-Cargo.lock        # Pinned dependencies
-.gitignore        # target/, *.swp, .DS_Store
+ cloud-agents.yaml # K8s Deployment (2 replicas, emptyDir workspace)
+ s3-credentials.yaml # S3 secret template (DEPRECATED, use hanzo-s3)
+Dockerfile # Python 3.12 Alpine image for cloud agent
+Cargo.toml # Rust crate definition
+Cargo.lock # Pinned dependencies
+.gitignore # target/, *.swp, .DS_Store
 ```
 
 ### K8s Cloud Agents
@@ -321,26 +321,26 @@ docker build -t ghcr.io/hanzoai/cloud-agent:latest .
 ## Environment Variables (Python Agent)
 
 ```bash
-TUNNEL_URL=wss://app.hanzo.bot/v1/tunnel   # Cloud relay endpoint
-INSTANCE_ID=hostname-pid                    # Auto-generated if not set
-APP_KIND=dev                                # dev, cloud, node, bot
-WORKSPACE_DIR=/workspace                    # Working directory
-S3_ENDPOINT_URL=https://s3.hanzo.ai         # S3 endpoint
-S3_ACCESS_KEY=                              # Required for session commands
-S3_SECRET_KEY=                              # Required for session commands
-S3_BUCKET=hanzo-sessions                    # Checkpoint bucket
+TUNNEL_URL=wss://app.hanzo.bot/v1/tunnel # Cloud relay endpoint
+INSTANCE_ID=hostname-pid # Auto-generated if not set
+APP_KIND=dev # dev, cloud, node, bot
+WORKSPACE_DIR=/workspace # Working directory
+S3_ENDPOINT_URL=https://s3.hanzo.ai # S3 endpoint
+S3_ACCESS_KEY= # Required for session commands
+S3_SECRET_KEY= # Required for session commands
+S3_BUCKET=hanzo-sessions # Checkpoint bucket
 ```
 
 ## Error Types (Rust)
 
 ```rust
 pub enum TunnelError {
-    Connection(String),  // WebSocket or network errors
-    Protocol(String),    // JSON serialization/deserialization
-    Auth(String),        // Authentication failures
-    Discovery(String),   // mDNS errors
-    ChannelClosed,       // Internal mpsc channel dropped
-    Timeout,             // Operation timeout
+ Connection(String), // WebSocket or network errors
+ Protocol(String), // JSON serialization/deserialization
+ Auth(String), // Authentication failures
+ Discovery(String), // mDNS errors
+ ChannelClosed, // Internal mpsc channel dropped
+ Timeout, // Operation timeout
 }
 ```
 

@@ -75,7 +75,7 @@ Fork of **maderix/ANE** (8 commits merged). Repo: `hanzoai/ANE`.
 ```
 Which chip?
 ├── M1, M2, M3 → Static (conv) or Static + ANE extras
-└── M4+        → Any pipeline (Dynamic recommended)
+└── M4+ → Any pipeline (Dynamic recommended)
 ```
 
 ## Weight Blob Format
@@ -84,7 +84,7 @@ Which chip?
 
 ### Correct Format (128-byte header)
 ```
-Offset  0: [general header, 64 bytes]
+Offset 0: [general header, 64 bytes]
 Offset 64: Magic 0xEFBEADDE (4 bytes)
 Offset 72: Data size (8 bytes)
 Offset 80: Data offset = 128 (8 bytes)
@@ -117,9 +117,9 @@ make train
 
 # Run specific pipeline (targets in training/Makefile)
 cd training
-make train              # Standard training
-make train_large        # Large model training
-make train_large_ane    # Large model + ANE extras
+make train # Standard training
+make train_large # Large model training
+make train_large_ane # Large model + ANE extras
 
 # Benchmark
 make bench
@@ -134,15 +134,15 @@ make bench
 ane_device_t device = ane_open();
 
 // Check capabilities
-bool has_inmem = ane_supports_inmem(device);  // true on all chips now
-bool has_dynamic = ane_supports_dynamic(device);  // true on M4+ only
+bool has_inmem = ane_supports_inmem(device); // true on all chips now
+bool has_dynamic = ane_supports_dynamic(device); // true on M4+ only
 
 // Select best pipeline
 ane_pipeline_t pipeline;
 if (has_dynamic) {
-    pipeline = ane_create_dynamic_pipeline(device);
+ pipeline = ane_create_dynamic_pipeline(device);
 } else {
-    pipeline = ane_create_static_pipeline(device);
+ pipeline = ane_create_static_pipeline(device);
 }
 
 // Load weights (128-byte header format)
@@ -164,14 +164,14 @@ ane_close(device);
 
 ```
 ANE/
-├── ane_universal.h        # Universal runtime (chip detection)
-├── Makefile               # Top-level build targets
+├── ane_universal.h # Universal runtime (chip detection)
+├── Makefile # Top-level build targets
 ├── training/
-│   ├── Makefile           # Training targets (train, train_large, train_large_ane)
-│   ├── download_data.sh   # Download Stories110M data
-│   ├── train.m            # Training entry point (Objective-C)
-│   ├── test_*.m           # Tests (Objective-C)
-│   └── configs/           # Training configs
+│ ├── Makefile # Training targets (train, train_large, train_large_ane)
+│ ├── download_data.sh # Download Stories110M data
+│ ├── train.m # Training entry point (Objective-C)
+│ ├── test_*.m # Tests (Objective-C)
+│ └── configs/ # Training configs
 └── README.md
 ```
 

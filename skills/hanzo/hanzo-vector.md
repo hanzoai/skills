@@ -82,18 +82,18 @@ docker run -p 6333:6333 -p 6334:6334 ghcr.io/hanzoai/vector:latest
 
 ```bash
 docker run -p 6333:6333 -p 6334:6334 \
-  -v $(pwd)/data:/qdrant/storage \
-  -v $(pwd)/snapshots:/qdrant/snapshots \
-  ghcr.io/hanzoai/vector:latest
+ -v $(pwd)/data:/qdrant/storage \
+ -v $(pwd)/snapshots:/qdrant/snapshots \
+ ghcr.io/hanzoai/vector:latest
 ```
 
 ### Docker with custom config
 
 ```bash
 docker run -p 6333:6333 -p 6334:6334 \
-  -v $(pwd)/config.yaml:/qdrant/config/production.yaml \
-  -v $(pwd)/data:/qdrant/storage \
-  ghcr.io/hanzoai/vector:latest
+ -v $(pwd)/config.yaml:/qdrant/config/production.yaml \
+ -v $(pwd)/data:/qdrant/storage \
+ ghcr.io/hanzoai/vector:latest
 ```
 
 ### Build from source
@@ -115,28 +115,28 @@ cargo build --release --bin qdrant --features gpu
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    Hanzo Vector Node                      │
+│ Hanzo Vector Node │
 ├──────────────┬───────────────┬───────────────────────────┤
-│  REST API    │  gRPC API     │  Web UI                   │
-│  (actix-web) │  (tonic)      │  (static files)           │
-│  :6333       │  :6334        │  :6333/dashboard          │
+│ REST API │ gRPC API │ Web UI │
+│ (actix-web) │ (tonic) │ (static files) │
+│ :6333 │ :6334 │ :6333/dashboard │
 ├──────────────┴───────────────┴───────────────────────────┤
-│                    Storage Layer                          │
-│  ┌─────────────────────────────────────────────────────┐ │
-│  │  Collection                                         │ │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐           │ │
-│  │  │ Shard 0  │ │ Shard 1  │ │ Shard N  │           │ │
-│  │  │┌────────┐│ │┌────────┐│ │┌────────┐│           │ │
-│  │  ││Segment ││ ││Segment ││ ││Segment ││           │ │
-│  │  ││ HNSW   ││ ││ HNSW   ││ ││ HNSW   ││           │ │
-│  │  ││ Index   ││ ││ Index   ││ ││ Index   ││           │ │
-│  │  │└────────┘│ │└────────┘│ │└────────┘│           │ │
-│  │  └──────────┘ └──────────┘ └──────────┘           │ │
-│  └─────────────────────────────────────────────────────┘ │
+│ Storage Layer │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Collection │ │
+│ │ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │
+│ │ │ Shard 0 │ │ Shard 1 │ │ Shard N │ │ │
+│ │ │┌────────┐│ │┌────────┐│ │┌────────┐│ │ │
+│ │ ││Segment ││ ││Segment ││ ││Segment ││ │ │
+│ │ ││ HNSW ││ ││ HNSW ││ ││ HNSW ││ │ │
+│ │ ││ Index ││ ││ Index ││ ││ Index ││ │ │
+│ │ │└────────┘│ │└────────┘│ │└────────┘│ │ │
+│ │ └──────────┘ └──────────┘ └──────────┘ │ │
+│ └─────────────────────────────────────────────────────┘ │
 ├──────────────────────────────────────────────────────────┤
-│  WAL (Write-Ahead Log)  │  Snapshots  │  Gridstore      │
+│ WAL (Write-Ahead Log) │ Snapshots │ Gridstore │
 ├──────────────────────────────────────────────────────────┤
-│  Raft Consensus (P2P :6335) -- cluster mode only         │
+│ Raft Consensus (P2P :6335) -- cluster mode only │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -165,104 +165,104 @@ cargo build --release --bin qdrant --features gpu
 
 ```
 hanzoai/vector (master branch)
-├── Cargo.toml              # Root workspace, package: hanzo-vector v1.17.0
+├── Cargo.toml # Root workspace, package: hanzo-vector v1.17.0
 ├── Cargo.lock
-├── Dockerfile              # Multi-stage: chef → planner → builder → runtime
+├── Dockerfile # Multi-stage: chef → planner → builder → runtime
 ├── config/
-│   ├── config.yaml         # Full reference config with all options
-│   ├── production.yaml     # Production overrides
-│   └── development.yaml    # Dev overrides
-├── src/                    # Main binary source
-│   ├── main.rs             # Entry point, CLI args, server startup
-│   ├── consensus.rs        # Raft consensus implementation
-│   ├── settings.rs         # Config loading and validation
-│   ├── snapshots.rs        # Snapshot management
-│   ├── startup.rs          # Server initialization
-│   ├── greeting.rs         # Startup banner
-│   ├── actix/              # REST API handlers (actix-web)
-│   │   ├── api/            # Route handlers per resource
-│   │   │   ├── collections_api.rs
-│   │   │   ├── search_api.rs
-│   │   │   ├── query_api.rs
-│   │   │   ├── recommend_api.rs
-│   │   │   ├── retrieve_api.rs
-│   │   │   ├── update_api.rs
-│   │   │   ├── count_api.rs
-│   │   │   ├── cluster_api.rs
-│   │   │   ├── snapshot_api.rs
-│   │   │   ├── shards_api.rs
-│   │   │   ├── local_shard_api.rs
-│   │   │   ├── discovery_api.rs
-│   │   │   ├── facet_api.rs
-│   │   │   └── service_api.rs
-│   │   ├── auth.rs         # API key + JWT RBAC auth
-│   │   └── mod.rs          # Actix server config
-│   ├── tonic/              # gRPC service implementations
-│   ├── tracing/            # Tracing/logging setup
-│   └── migrations/         # Storage format migrations
-├── lib/                    # Workspace crates
-│   ├── api/                # API types (REST + gRPC)
-│   │   ├── src/grpc/proto/ # Protobuf definitions
-│   │   │   ├── qdrant.proto
-│   │   │   ├── collections.proto
-│   │   │   ├── points.proto
-│   │   │   ├── collections_service.proto
-│   │   │   ├── points_service.proto
-│   │   │   ├── snapshots_service.proto
-│   │   │   ├── shard_snapshots_service.proto
-│   │   │   ├── raft_service.proto
-│   │   │   └── health_check.proto
-│   │   └── src/rest/       # REST API types
-│   ├── collection/         # Collection management (CRUD, optimization)
-│   ├── segment/            # Core storage engine
-│   │   └── src/
-│   │       ├── index/          # HNSW index implementation
-│   │       ├── vector_storage/ # Vector data storage
-│   │       ├── payload_storage/# Payload storage + indexing
-│   │       ├── id_tracker/     # Point ID mapping
-│   │       ├── spaces/         # Distance metric implementations
-│   │       ├── data_types/     # Vector type definitions
-│   │       └── types.rs        # Core type definitions (170KB)
-│   ├── storage/            # Storage orchestration layer
-│   ├── shard/              # Shard management and transfer
-│   ├── sparse/             # Sparse vector support
-│   ├── quantization/       # Quantization (scalar/product/binary, C++ FFI)
-│   ├── posting_list/       # Inverted index for sparse vectors
-│   ├── gridstore/          # Column-oriented storage for payloads
-│   ├── gpu/                # GPU acceleration (Vulkan, NVIDIA/AMD)
-│   ├── edge/               # Embedded mode (no server, direct API)
-│   │   └── python/         # Python bindings for edge mode
-│   ├── trififo/            # Lock-free triple-buffer FIFO
-│   ├── macros/             # Proc macros
-│   └── common/             # Shared utilities
-│       ├── common/         # Core common types
-│       ├── cancel/         # Cancellation tokens
-│       ├── dataset/        # Dataset loading utilities
-│       └── issues/         # Issue tracking/reporting
-├── openapi/                # OpenAPI 3.0 schema (ytt templates)
-│   ├── openapi-main.ytt.yaml
-│   ├── openapi-collections.ytt.yaml
-│   ├── openapi-points.ytt.yaml
-│   ├── openapi-service.ytt.yaml
-│   ├── openapi-snapshots.ytt.yaml
-│   ├── openapi-shard-snapshots.ytt.yaml
-│   ├── openapi-shards.ytt.yaml
-│   ├── openapi-cluster.ytt.yaml
-│   └── schemas/
-├── tests/                  # Integration tests
-│   ├── basic_api_test.sh
-│   ├── basic_grpc_test.sh
-│   ├── basic_sparse_test.sh
-│   ├── consensus_tests/
-│   ├── e2e_tests/
-│   └── openapi/
-├── tools/                  # Build and dev scripts
-│   ├── entrypoint.sh       # Docker entrypoint
-│   ├── sync-web-ui.sh      # Download web dashboard
-│   ├── compose/            # Docker compose files for cluster
-│   └── schema2openapi/     # Schema generation tooling
+│ ├── config.yaml # Full reference config with all options
+│ ├── production.yaml # Production overrides
+│ └── development.yaml # Dev overrides
+├── src/ # Main binary source
+│ ├── main.rs # Entry point, CLI args, server startup
+│ ├── consensus.rs # Raft consensus implementation
+│ ├── settings.rs # Config loading and validation
+│ ├── snapshots.rs # Snapshot management
+│ ├── startup.rs # Server initialization
+│ ├── greeting.rs # Startup banner
+│ ├── actix/ # REST API handlers (actix-web)
+│ │ ├── api/ # Route handlers per resource
+│ │ │ ├── collections_api.rs
+│ │ │ ├── search_api.rs
+│ │ │ ├── query_api.rs
+│ │ │ ├── recommend_api.rs
+│ │ │ ├── retrieve_api.rs
+│ │ │ ├── update_api.rs
+│ │ │ ├── count_api.rs
+│ │ │ ├── cluster_api.rs
+│ │ │ ├── snapshot_api.rs
+│ │ │ ├── shards_api.rs
+│ │ │ ├── local_shard_api.rs
+│ │ │ ├── discovery_api.rs
+│ │ │ ├── facet_api.rs
+│ │ │ └── service_api.rs
+│ │ ├── auth.rs # API key + JWT RBAC auth
+│ │ └── mod.rs # Actix server config
+│ ├── tonic/ # gRPC service implementations
+│ ├── tracing/ # Tracing/logging setup
+│ └── migrations/ # Storage format migrations
+├── lib/ # Workspace crates
+│ ├── api/ # API types (REST + gRPC)
+│ │ ├── src/grpc/proto/ # Protobuf definitions
+│ │ │ ├── qdrant.proto
+│ │ │ ├── collections.proto
+│ │ │ ├── points.proto
+│ │ │ ├── collections_service.proto
+│ │ │ ├── points_service.proto
+│ │ │ ├── snapshots_service.proto
+│ │ │ ├── shard_snapshots_service.proto
+│ │ │ ├── raft_service.proto
+│ │ │ └── health_check.proto
+│ │ └── src/rest/ # REST API types
+│ ├── collection/ # Collection management (CRUD, optimization)
+│ ├── segment/ # Core storage engine
+│ │ └── src/
+│ │ ├── index/ # HNSW index implementation
+│ │ ├── vector_storage/ # Vector data storage
+│ │ ├── payload_storage/# Payload storage + indexing
+│ │ ├── id_tracker/ # Point ID mapping
+│ │ ├── spaces/ # Distance metric implementations
+│ │ ├── data_types/ # Vector type definitions
+│ │ └── types.rs # Core type definitions (170KB)
+│ ├── storage/ # Storage orchestration layer
+│ ├── shard/ # Shard management and transfer
+│ ├── sparse/ # Sparse vector support
+│ ├── quantization/ # Quantization (scalar/product/binary, C++ FFI)
+│ ├── posting_list/ # Inverted index for sparse vectors
+│ ├── gridstore/ # Column-oriented storage for payloads
+│ ├── gpu/ # GPU acceleration (Vulkan, NVIDIA/AMD)
+│ ├── edge/ # Embedded mode (no server, direct API)
+│ │ └── python/ # Python bindings for edge mode
+│ ├── trififo/ # Lock-free triple-buffer FIFO
+│ ├── macros/ # Proc macros
+│ └── common/ # Shared utilities
+│ ├── common/ # Core common types
+│ ├── cancel/ # Cancellation tokens
+│ ├── dataset/ # Dataset loading utilities
+│ └── issues/ # Issue tracking/reporting
+├── openapi/ # OpenAPI 3.0 schema (ytt templates)
+│ ├── openapi-main.ytt.yaml
+│ ├── openapi-collections.ytt.yaml
+│ ├── openapi-points.ytt.yaml
+│ ├── openapi-service.ytt.yaml
+│ ├── openapi-snapshots.ytt.yaml
+│ ├── openapi-shard-snapshots.ytt.yaml
+│ ├── openapi-shards.ytt.yaml
+│ ├── openapi-cluster.ytt.yaml
+│ └── schemas/
+├── tests/ # Integration tests
+│ ├── basic_api_test.sh
+│ ├── basic_grpc_test.sh
+│ ├── basic_sparse_test.sh
+│ ├── consensus_tests/
+│ ├── e2e_tests/
+│ └── openapi/
+├── tools/ # Build and dev scripts
+│ ├── entrypoint.sh # Docker entrypoint
+│ ├── sync-web-ui.sh # Download web dashboard
+│ ├── compose/ # Docker compose files for cluster
+│ └── schema2openapi/ # Schema generation tooling
 └── pkg/
-    └── appimage/           # AppImage packaging
+ └── appimage/ # AppImage packaging
 ```
 
 ## REST API Endpoints
@@ -278,9 +278,9 @@ GET /collections
 # Create collection
 PUT /collections/{name}
 {
-  "vectors": { "size": 1536, "distance": "Cosine" },
-  "optimizers_config": { "indexing_threshold": 10000 },
-  "replication_factor": 2
+ "vectors": { "size": 1536, "distance": "Cosine" },
+ "optimizers_config": { "indexing_threshold": 10000 },
+ "replication_factor": 2
 }
 
 # Get collection info
@@ -299,13 +299,13 @@ PATCH /collections/{name}
 # Upsert points
 PUT /collections/{name}/points
 {
-  "points": [
-    {
-      "id": 1,
-      "vector": [0.1, 0.2, ...],
-      "payload": { "city": "Berlin", "category": "tech" }
-    }
-  ]
+ "points": [
+ {
+ "id": 1,
+ "vector": [0.1, 0.2, ...],
+ "payload": { "city": "Berlin", "category": "tech" }
+ }
+ ]
 }
 
 # Get points by ID
@@ -327,12 +327,12 @@ POST /collections/{name}/points/count
 # Vector search
 POST /collections/{name}/points/search
 {
-  "vector": [0.1, 0.2, ...],
-  "limit": 10,
-  "filter": {
-    "must": [{ "key": "city", "match": { "value": "Berlin" } }]
-  },
-  "with_payload": true
+ "vector": [0.1, 0.2, ...],
+ "limit": 10,
+ "filter": {
+ "must": [{ "key": "city", "match": { "value": "Berlin" } }]
+ },
+ "with_payload": true
 }
 
 # Batch search
@@ -342,17 +342,17 @@ POST /collections/{name}/points/search/batch
 # Query (universal search endpoint)
 POST /collections/{name}/points/query
 {
-  "query": [0.1, 0.2, ...],
-  "limit": 10,
-  "filter": { ... }
+ "query": [0.1, 0.2, ...],
+ "limit": 10,
+ "filter": { ... }
 }
 
 # Recommend
 POST /collections/{name}/points/recommend
 {
-  "positive": [1, 2],
-  "negative": [3],
-  "limit": 10
+ "positive": [1, 2],
+ "negative": [3],
+ "limit": 10
 }
 
 # Discover (context-based search)
@@ -429,39 +429,39 @@ The config file (`config/config.yaml`) supports YAML with environment variable o
 
 ```yaml
 storage:
-  storage_path: ./storage       # Data directory
-  snapshots_path: ./snapshots   # Snapshot directory
-  on_disk_payload: true         # Keep payloads on disk (saves RAM)
-  wal:
-    wal_capacity_mb: 32         # WAL segment size
-  hnsw_index:
-    m: 16                       # HNSW edges per node
-    ef_construct: 100           # Build-time neighbors
-    full_scan_threshold_kb: 10000
-    on_disk: false              # HNSW in RAM or disk
-  optimizers:
-    indexing_threshold_kb: 10000
-    flush_interval_sec: 5
-  collection:
-    replication_factor: 1
-    write_consistency_factor: 1
+ storage_path: ./storage # Data directory
+ snapshots_path: ./snapshots # Snapshot directory
+ on_disk_payload: true # Keep payloads on disk (saves RAM)
+ wal:
+ wal_capacity_mb: 32 # WAL segment size
+ hnsw_index:
+ m: 16 # HNSW edges per node
+ ef_construct: 100 # Build-time neighbors
+ full_scan_threshold_kb: 10000
+ on_disk: false # HNSW in RAM or disk
+ optimizers:
+ indexing_threshold_kb: 10000
+ flush_interval_sec: 5
+ collection:
+ replication_factor: 1
+ write_consistency_factor: 1
 
 service:
-  http_port: 6333
-  grpc_port: 6334
-  host: 0.0.0.0
-  max_request_size_mb: 32
-  enable_cors: true
-  enable_tls: false
-  # api_key: your_secret_key
-  # jwt_rbac: true
+ http_port: 6333
+ grpc_port: 6334
+ host: 0.0.0.0
+ max_request_size_mb: 32
+ enable_cors: true
+ enable_tls: false
+ # api_key: your_secret_key
+ # jwt_rbac: true
 
 cluster:
-  enabled: false
-  p2p:
-    port: 6335
-  consensus:
-    tick_period_ms: 100
+ enabled: false
+ p2p:
+ port: 6335
+ consensus:
+ tick_period_ms: 100
 
 telemetry_disabled: false
 ```

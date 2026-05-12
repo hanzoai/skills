@@ -88,41 +88,41 @@ go run main.go --port 4242 --db commerce.db
 ```bash
 # Create product
 curl -X POST http://localhost:4242/v1/products \
-  -H "Authorization: Bearer $HANZO_API_KEY" \
-  -d '{
-    "name": "AI API Access",
-    "type": "service",
-    "description": "Access to Hanzo AI APIs"
-  }'
+ -H "Authorization: Bearer $HANZO_API_KEY" \
+ -d '{
+ "name": "AI API Access",
+ "type": "service",
+ "description": "Access to Hanzo AI APIs"
+ }'
 
 # Create price
 curl -X POST http://localhost:4242/v1/prices \
-  -H "Authorization: Bearer $HANZO_API_KEY" \
-  -d '{
-    "product_id": "prod_123",
-    "amount": 2999,
-    "currency": "usd",
-    "interval": "month",
-    "type": "recurring"
-  }'
+ -H "Authorization: Bearer $HANZO_API_KEY" \
+ -d '{
+ "product_id": "prod_123",
+ "amount": 2999,
+ "currency": "usd",
+ "interval": "month",
+ "type": "recurring"
+ }'
 
 # Create subscription
 curl -X POST http://localhost:4242/v1/subscriptions \
-  -H "Authorization: Bearer $HANZO_API_KEY" \
-  -d '{
-    "customer_id": "cus_123",
-    "price_id": "price_456",
-    "payment_method": "tok_card_789"
-  }'
+ -H "Authorization: Bearer $HANZO_API_KEY" \
+ -d '{
+ "customer_id": "cus_123",
+ "price_id": "price_456",
+ "payment_method": "tok_card_789"
+ }'
 
 # Report usage
 curl -X POST http://localhost:4242/v1/usage \
-  -H "Authorization: Bearer $HANZO_API_KEY" \
-  -d '{
-    "subscription_id": "sub_123",
-    "metric": "api_calls",
-    "quantity": 1000
-  }'
+ -H "Authorization: Bearer $HANZO_API_KEY" \
+ -d '{
+ "subscription_id": "sub_123",
+ "metric": "api_calls",
+ "quantity": 1000
+ }'
 ```
 
 ## Payments Service (Rust/Hyperswitch)
@@ -145,15 +145,15 @@ The `hanzoai/payments` repo is a **Rust fork of Hyperswitch** providing payment 
 ```yaml
 # Payment routing configuration
 routing:
-  rules:
-    - condition: amount > 10000
-      processor: stripe     # High-value → primary processor
-      fallback: adyen
-    - condition: currency == "BTC"
-      processor: coinbase   # Crypto → crypto processor
-    - default:
-      processor: stripe
-      fallback: [adyen, checkout]
+ rules:
+ - condition: amount > 10000
+ processor: stripe # High-value → primary processor
+ fallback: adyen
+ - condition: currency == "BTC"
+ processor: coinbase # Crypto → crypto processor
+ - default:
+ processor: stripe
+ fallback: [adyen, checkout]
 ```
 
 ## SDK Usage
@@ -167,21 +167,21 @@ client = Hanzo()
 
 # Create a product
 product = client.commerce.products.create(
-    name="AI API Access",
-    type="service",
+ name="AI API Access",
+ type="service",
 )
 
 # Create subscription
 sub = client.commerce.subscriptions.create(
-    customer_id="cus_123",
-    price_id="price_456",
+ customer_id="cus_123",
+ price_id="price_456",
 )
 
 # Report usage
 client.commerce.usage.report(
-    subscription_id=sub.id,
-    metric="api_calls",
-    quantity=1000,
+ subscription_id=sub.id,
+ metric="api_calls",
+ quantity=1000,
 )
 ```
 
@@ -193,13 +193,13 @@ import Hanzo from "hanzoai"
 const client = new Hanzo()
 
 const product = await client.commerce.products.create({
-  name: "AI API Access",
-  type: "service",
+ name: "AI API Access",
+ type: "service",
 })
 
 const sub = await client.commerce.subscriptions.create({
-  customerId: "cus_123",
-  priceId: "price_456",
+ customerId: "cus_123",
+ priceId: "price_456",
 })
 ```
 

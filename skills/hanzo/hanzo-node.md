@@ -49,55 +49,55 @@ Repo: `github.com/hanzoai/node`. Companion desktop frontend: `github.com/hanzoai
 
 ```
 node/
-├── Cargo.toml              # Workspace root
+├── Cargo.toml # Workspace root
 ├── Cargo.lock
 ├── Makefile
-├── hanzo.toml              # Node configuration
+├── hanzo.toml # Node configuration
 ├── hanzo-bin/
-│   ├── hanzo-node/         # Main node binary
-│   ├── hanzoai/            # CLI binary
-│   └── hanzo-migrate/      # Database migration tool
-├── hanzo-libs/             # Library crates (~40 crates)
-│   ├── hanzo-api/          # HTTP API layer
-│   ├── hanzo-config/       # Configuration management
-│   ├── hanzo-database/     # Database abstraction
-│   ├── hanzo-db-sqlite/    # SQLite backend
-│   ├── hanzo-did/          # Decentralized identity
-│   ├── hanzo-embed/        # Embedding generation
-│   ├── hanzo-fs/           # File system operations
-│   ├── hanzo-http-api/     # HTTP API endpoints
-│   ├── hanzo-identity/     # Identity management
-│   ├── hanzo-jobs/         # Job execution
-│   ├── hanzo-job-queue-manager/ # Job queue
-│   ├── hanzo-libp2p/       # P2P networking (libp2p 0.55)
-│   ├── hanzo-libp2p-relayer/ # P2P relay node
-│   ├── hanzo-llm/          # LLM provider integrations
-│   ├── hanzo-mcp/          # Model Context Protocol
-│   ├── hanzo-messages/     # Message protocol definitions
-│   ├── hanzo-mining/       # Compute mining
-│   ├── hanzo-models/       # Model management
-│   ├── hanzo-model-discovery/ # Model discovery
-│   ├── hanzo-pqc/          # Post-quantum cryptography
-│   ├── hanzo-vm/           # Virtual machine
-│   ├── hanzo-compute/      # Compute orchestration
-│   ├── hanzo-ai-format/    # AI data formats
-│   ├── hanzo-runner/       # Task runner
-│   ├── hanzo-runtime/      # Runtime environment
-│   ├── hanzo-tools/        # Tool definitions
-│   ├── hanzo-tools-runner/ # Tool execution engine
-│   ├── hanzo-wasm/         # WebAssembly support
-│   └── hanzo-wasm-runtime/ # WASM runtime
-├── hanzo-test-framework/   # Testing framework
-├── hanzo-test-macro/       # Test macros
-├── cloud-node/             # Cloud node variant
-├── contracts/              # Associated smart contracts
-├── docker/                 # Docker configurations
-├── docker-build/           # Docker build scripts
-├── docs/                   # Documentation
-├── examples/               # Usage examples
-├── knowledge/              # Knowledge base files
-├── scripts/                # Build and run scripts
-└── HIPs/                   # Hanzo Improvement Proposals
+│ ├── hanzo-node/ # Main node binary
+│ ├── hanzoai/ # CLI binary
+│ └── hanzo-migrate/ # Database migration tool
+├── hanzo-libs/ # Library crates (~40 crates)
+│ ├── hanzo-api/ # HTTP API layer
+│ ├── hanzo-config/ # Configuration management
+│ ├── hanzo-database/ # Database abstraction
+│ ├── hanzo-db-sqlite/ # SQLite backend
+│ ├── hanzo-did/ # Decentralized identity
+│ ├── hanzo-embed/ # Embedding generation
+│ ├── hanzo-fs/ # File system operations
+│ ├── hanzo-http-api/ # HTTP API endpoints
+│ ├── hanzo-identity/ # Identity management
+│ ├── hanzo-jobs/ # Job execution
+│ ├── hanzo-job-queue-manager/ # Job queue
+│ ├── hanzo-libp2p/ # P2P networking (libp2p 0.55)
+│ ├── hanzo-libp2p-relayer/ # P2P relay node
+│ ├── hanzo-llm/ # LLM provider integrations
+│ ├── hanzo-mcp/ # Model Context Protocol
+│ ├── hanzo-messages/ # Message protocol definitions
+│ ├── hanzo-mining/ # Compute mining
+│ ├── hanzo-models/ # Model management
+│ ├── hanzo-model-discovery/ # Model discovery
+│ ├── hanzo-pqc/ # Post-quantum cryptography
+│ ├── hanzo-vm/ # Virtual machine
+│ ├── hanzo-compute/ # Compute orchestration
+│ ├── hanzo-ai-format/ # AI data formats
+│ ├── hanzo-runner/ # Task runner
+│ ├── hanzo-runtime/ # Runtime environment
+│ ├── hanzo-tools/ # Tool definitions
+│ ├── hanzo-tools-runner/ # Tool execution engine
+│ ├── hanzo-wasm/ # WebAssembly support
+│ └── hanzo-wasm-runtime/ # WASM runtime
+├── hanzo-test-framework/ # Testing framework
+├── hanzo-test-macro/ # Test macros
+├── cloud-node/ # Cloud node variant
+├── contracts/ # Associated smart contracts
+├── docker/ # Docker configurations
+├── docker-build/ # Docker build scripts
+├── docs/ # Documentation
+├── examples/ # Usage examples
+├── knowledge/ # Knowledge base files
+├── scripts/ # Build and run scripts
+└── HIPs/ # Hanzo Improvement Proposals
 ```
 
 ## Workspace crates
@@ -123,9 +123,9 @@ The node is configured via `hanzo.toml` at the repo root:
 ```toml
 [node]
 ip = "0.0.0.0"
-port = 3691               # P2P port
+port = 3691 # P2P port
 api_ip = "0.0.0.0"
-api_port = 3690            # HTTP API port
+api_port = 3690 # HTTP API port
 
 [embeddings]
 use_native_embeddings = true
@@ -137,7 +137,7 @@ path = "./storage/db.sqlite"
 
 [security]
 pqc_enabled = false
-privacy_tier = 0           # 0-4: Open to TEE-I/O
+privacy_tier = 0 # 0-4: Open to TEE-I/O
 
 [tools]
 mcp_enabled = true

@@ -1075,7 +1075,7 @@ Required SCTs based on certificate lifetime:
 **Examples**:
 - OpenSSL CA
 - Microsoft Active Directory Certificate Services (AD CS)
-- HashiCorp Vault PKI
+- external secret manager PKI
 - AWS Private CA
 
 **Use Cases**:
@@ -1756,7 +1756,7 @@ step ca certificate www.example.com www.example.com.crt www.example.com.key
 step ca provisioner add acme --type=ACME
 ```
 
-### HashiCorp Vault PKI
+### external secret manager PKI
 
 **Features**:
 - Dynamic secrets
@@ -2106,7 +2106,7 @@ kubectl create secret tls example-com-tls \
     --cert=cert.pem \
     --key=key.pem
 
-# HashiCorp Vault
+# external secret manager
 vault kv put secret/certs/example.com \
     cert=@cert.pem \
     key=@key.pem

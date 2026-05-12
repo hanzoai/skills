@@ -57,25 +57,25 @@ Originated from **LumenPallidium/jepa**, adopted under Zen LM org. Repo: `github
 
 ```
 ┌─────────────────────────────────────────┐
-│           Jin JEPA Architecture          │
+│ Jin JEPA Architecture │
 ├──────────────────────────────────────────┤
-│                                          │
-│  Image ──▶ Patcher ──▶ Patch Embeddings │
-│                    ┌──────────┐          │
-│  Context patches ──│ Context  │          │
-│                    │ Encoder  │── EMA ──▶ Target Encoder
-│                    └────┬─────┘          │
-│                         │                │
-│                    ┌────┴─────┐          │
-│                    │Predictor │          │
-│                    └────┬─────┘          │
-│                         │                │
-│           Predict target embeddings      │
-│           from context embeddings        │
-│                                          │
-│  Loss: MSE(predicted, target_stopped)    │
-│  + VICReg (variance + covariance)        │
-│  + Cycle consistency (Saccade only)      │
+│ │
+│ Image ──▶ Patcher ──▶ Patch Embeddings │
+│ ┌──────────┐ │
+│ Context patches ──│ Context │ │
+│ │ Encoder │── EMA ──▶ Target Encoder
+│ └────┬─────┘ │
+│ │ │
+│ ┌────┴─────┐ │
+│ │Predictor │ │
+│ └────┬─────┘ │
+│ │ │
+│ Predict target embeddings │
+│ from context embeddings │
+│ │
+│ Loss: MSE(predicted, target_stopped) │
+│ + VICReg (variance + covariance) │
+│ + Cycle consistency (Saccade only) │
 └──────────────────────────────────────────┘
 ```
 
@@ -89,15 +89,15 @@ from jepa.jepa import ViTJepa
 
 # Load config
 with open("config/training.yml") as f:
-    config = yaml.safe_load(f)
+ config = yaml.safe_load(f)
 
 # Create model
 model = ViTJepa(
-    image_size=224,
-    patch_size=16,
-    embed_dim=768,
-    depth=12,
-    num_heads=12,
+ image_size=224,
+ patch_size=16,
+ embed_dim=768,
+ depth=12,
+ num_heads=12,
 )
 
 # Train on ImageNet
@@ -108,26 +108,26 @@ train(model, config)
 
 ```yaml
 model:
-  type: "vit_jepa"        # or "saccade_jepa", "energy_ijepa", "self_distill_mae"
-  image_size: 224
-  patch_size: 16
-  embed_dim: 768
-  depth: 12
-  num_heads: 12
+ type: "vit_jepa" # or "saccade_jepa", "energy_ijepa", "self_distill_mae"
+ image_size: 224
+ patch_size: 16
+ embed_dim: 768
+ depth: 12
+ num_heads: 12
 
 training:
-  dataset: "imagenet"
-  batch_size: 128
-  gradient_accumulation: 128
-  learning_rate: 1.5e-4
-  warmup_epochs: 40
-  total_epochs: 300
-  weight_decay: 0.05
-  ema_momentum: 0.996      # Target encoder EMA
+ dataset: "imagenet"
+ batch_size: 128
+ gradient_accumulation: 128
+ learning_rate: 1.5e-4
+ warmup_epochs: 40
+ total_epochs: 300
+ weight_decay: 0.05
+ ema_momentum: 0.996 # Target encoder EMA
 
-  schedule:
-    type: "cosine"
-    min_lr: 1e-6
+ schedule:
+ type: "cosine"
+ min_lr: 1e-6
 ```
 
 ### Saccade JEPA (Novel Variant)
@@ -136,12 +136,12 @@ training:
 from jepa.jepa import SaccadeJepa
 
 model = SaccadeJepa(
-    image_size=224,
-    patch_size=16,
-    embed_dim=768,
-    # Uses ConvNeXT tiny backbone
-    # NeRF-like positional encoding of rotation/translation affine transforms
-    # VICReg loss + cycle consistency
+ image_size=224,
+ patch_size=16,
+ embed_dim=768,
+ # Uses ConvNeXT tiny backbone
+ # NeRF-like positional encoding of rotation/translation affine transforms
+ # VICReg loss + cycle consistency
 )
 
 # Cycle consistency: forward-backward saccade prediction must reconstruct original
@@ -173,15 +173,15 @@ model = SaccadeJepa(
 ```
 jin/
 ├── jepa/
-│   ├── jepa.py          # Core models (ViTJepa, SaccadeJepa, EnergyIJepa)
-│   ├── masked_autoencoder.py  # Self-Distillation MAE
-│   ├── train.py         # Training loop
-│   ├── patcher.py       # Image patch embedding (Conv, Hybrid, Conv3d)
-│   ├── saccade.py       # Saccade cropper (NeRF positional encoding)
-│   └── vicreg.py        # VICReg loss terms
+│ ├── jepa.py # Core models (ViTJepa, SaccadeJepa, EnergyIJepa)
+│ ├── masked_autoencoder.py # Self-Distillation MAE
+│ ├── train.py # Training loop
+│ ├── patcher.py # Image patch embedding (Conv, Hybrid, Conv3d)
+│ ├── saccade.py # Saccade cropper (NeRF positional encoding)
+│ └── vicreg.py # VICReg loss terms
 ├── config/
-│   └── training.yml     # Training configuration
-├── papers/              # Research papers and grant proposals
+│ └── training.yml # Training configuration
+├── papers/ # Research papers and grant proposals
 ├── pyproject.toml
 └── LLM.md
 ```

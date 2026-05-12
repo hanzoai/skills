@@ -59,42 +59,42 @@ The core generative model is an autoregressive transformer operating on EnCodec 
 
 ```
 Text Prompt: "epic orchestral music with drums"
-    |
-    v
+ |
+ v
 ┌────────────────────────────────┐
-│ Conditioning                    │
-│  T5 / CLAP text embeddings     │
-│  + optional: chroma, chords,   │
-│    drums, melody, style        │
-│  ConditionFuser (cross-attn    │
-│    or prepend or input_interp) │
+│ Conditioning │
+│ T5 / CLAP text embeddings │
+│ + optional: chroma, chords, │
+│ drums, melody, style │
+│ ConditionFuser (cross-attn │
+│ or prepend or input_interp) │
 └──────────┬─────────────────────┘
-           |
-           v
+ |
+ v
 ┌────────────────────────────────┐
-│ Streaming Transformer LM       │
-│  Codebook pattern: parallel    │
-│  n_q codebook streams (8)      │
-│  card: 1024 (codebook size)    │
-│                                │
-│  Configurable scale:           │
-│    small:  dim=512,  8 layers  │
-│    base:   dim=1024, 24 layers │
-│    medium: dim=1536, 32 layers │
-│    large:  dim=2048, 48 layers │
-│                                │
-│  Positional: sin/rope/sin_rope │
-│  Attention: causal, streaming  │
-│  Optional: xformers flash attn │
-│  CFG: classifier-free guidance │
+│ Streaming Transformer LM │
+│ Codebook pattern: parallel │
+│ n_q codebook streams (8) │
+│ card: 1024 (codebook size) │
+│ │
+│ Configurable scale: │
+│ small: dim=512, 8 layers │
+│ base: dim=1024, 24 layers │
+│ medium: dim=1536, 32 layers │
+│ large: dim=2048, 48 layers │
+│ │
+│ Positional: sin/rope/sin_rope │
+│ Attention: causal, streaming │
+│ Optional: xformers flash attn │
+│ CFG: classifier-free guidance │
 └──────────┬─────────────────────┘
-           |
-           v
+ |
+ v
 ┌────────────────────────────────┐
-│ EnCodec Decoder                │
-│  (or Multi-Band Diffusion)     │
-│  Audio tokens -> waveform      │
-│  16kHz (sound) / 32kHz (music) │
+│ EnCodec Decoder │
+│ (or Multi-Band Diffusion) │
+│ Audio tokens -> waveform │
+│ 16kHz (sound) / 32kHz (music) │
 └────────────────────────────────┘
 ```
 
@@ -132,9 +132,9 @@ wav = model.generate(["epic cinematic orchestral soundtrack"])
 # Melody-conditioned
 melody, sr = torchaudio.load("melody.wav")
 wav = model.generate_with_chroma(
-    ["epic cinematic version"],
-    melody[None].expand(1, -1, -1),
-    sr,
+ ["epic cinematic version"],
+ melody[None].expand(1, -1, -1),
+ sr,
 )
 
 # Save output
@@ -160,7 +160,7 @@ from audiocraft.models import EncodecModel
 model = EncodecModel.encodec_model_24khz()
 model.set_target_bandwidth(6.0)
 
-wav = torch.randn(1, 1, 24000)  # 1 second at 24kHz
+wav = torch.randn(1, 1, 24000) # 1 second at 24kHz
 encoded = model.encode(wav)
 decoded = model.decode(encoded)
 ```
@@ -178,10 +178,10 @@ dora run solver=musicgen/musicgen_base_32khz
 
 # Custom training config
 dora run solver=musicgen/musicgen_base_32khz \
-    dataset.batch_size=8 \
-    optim.epochs=100 \
-    transformer_lm.dim=1024 \
-    transformer_lm.num_layers=24
+ dataset.batch_size=8 \
+ optim.epochs=100 \
+ transformer_lm.dim=1024 \
+ transformer_lm.num_layers=24
 ```
 
 ### Hydra Config Structure
@@ -190,20 +190,20 @@ dora run solver=musicgen/musicgen_base_32khz \
 config/
 ├── augmentations/default.yaml
 ├── conditioner/
-│   ├── text2music.yaml       # T5 text conditioning
-│   ├── text2sound.yaml       # Text for sound generation
-│   ├── chroma2music.yaml     # Chromagram conditioning
-│   ├── chords2music.yaml     # Chord conditioning
-│   ├── drums2music.yaml      # Drum track conditioning
-│   ├── style2music.yaml      # Style embedding conditioning
-│   └── jasco_chords_drums.yaml
-├── dset/audio/               # Dataset configs
+│ ├── text2music.yaml # T5 text conditioning
+│ ├── text2sound.yaml # Text for sound generation
+│ ├── chroma2music.yaml # Chromagram conditioning
+│ ├── chords2music.yaml # Chord conditioning
+│ ├── drums2music.yaml # Drum track conditioning
+│ ├── style2music.yaml # Style embedding conditioning
+│ └── jasco_chords_drums.yaml
+├── dset/audio/ # Dataset configs
 ├── model/
-│   ├── encodec/              # Codec model configs
-│   └── lm/
-│       ├── default.yaml      # Base LM config
-│       └── model_scale/      # small/base/medium/large
-└── config.yaml               # Root config
+│ ├── encodec/ # Codec model configs
+│ └── lm/
+│ ├── default.yaml # Base LM config
+│ └── model_scale/ # small/base/medium/large
+└── config.yaml # Root config
 ```
 
 ## Dependencies
@@ -231,47 +231,47 @@ torchdiffeq
 ```
 mugen/
 ├── audiocraft/
-│   ├── __init__.py               # v1.4.0a2
-│   ├── models/
-│   │   ├── musicgen.py           # MusicGen model
-│   │   ├── audiogen.py           # AudioGen model
-│   │   ├── encodec.py            # EnCodec codec
-│   │   ├── multibanddiffusion.py # Multi-band diffusion decoder
-│   │   ├── magnet.py             # MAGNeT model
-│   │   ├── jasco.py              # JASCO multi-conditioned
-│   │   ├── watermark.py          # AudioSeal watermarking
-│   │   ├── lm.py                 # Core transformer LM
-│   │   ├── lm_magnet.py          # MAGNeT LM variant
-│   │   ├── flow_matching.py      # Flow matching model
-│   │   ├── builders.py           # Model factory
-│   │   └── loaders.py            # Checkpoint loading
-│   ├── modules/
-│   │   ├── transformer.py        # StreamingTransformer
-│   │   ├── conditioners.py       # Text/audio/chroma conditioners
-│   │   ├── codebooks_patterns.py # Parallel/delay codebook patterns
-│   │   ├── seanet.py             # SEANet encoder/decoder
-│   │   ├── conv.py               # Causal/streaming convolutions
-│   │   ├── rope.py               # Rotary positional embeddings
-│   │   └── streaming.py          # Streaming inference support
-│   ├── solvers/
-│   │   ├── musicgen.py           # MusicGen training solver
-│   │   ├── audiogen.py           # AudioGen training solver
-│   │   ├── compression.py        # EnCodec training solver
-│   │   ├── diffusion.py          # Diffusion training solver
-│   │   ├── magnet.py             # MAGNeT training solver
-│   │   ├── jasco.py              # JASCO training solver
-│   │   └── watermark.py          # Watermark training solver
-│   ├── data/                     # Dataset loading and processing
-│   ├── losses/                   # Training losses (balancer, STFT, loudness)
-│   ├── metrics/                  # FAD, KLD, CLAP, PESQ, ViSQOL
-│   ├── adversarial/              # GAN discriminators (MPD, MSD, MSSTFTD)
-│   ├── optim/                    # Optimizers, schedulers, EMA, FSDP
-│   ├── quantization/             # RVQ implementation
-│   ├── grids/                    # Dora experiment grids
-│   ├── utils/                    # Utilities, caching, checkpoints
-│   └── train.py                  # Training entry point
-├── config/                       # Hydra configs
-├── assets/                       # Example audio files
+│ ├── __init__.py # v1.4.0a2
+│ ├── models/
+│ │ ├── musicgen.py # MusicGen model
+│ │ ├── audiogen.py # AudioGen model
+│ │ ├── encodec.py # EnCodec codec
+│ │ ├── multibanddiffusion.py # Multi-band diffusion decoder
+│ │ ├── magnet.py # MAGNeT model
+│ │ ├── jasco.py # JASCO multi-conditioned
+│ │ ├── watermark.py # AudioSeal watermarking
+│ │ ├── lm.py # Core transformer LM
+│ │ ├── lm_magnet.py # MAGNeT LM variant
+│ │ ├── flow_matching.py # Flow matching model
+│ │ ├── builders.py # Model factory
+│ │ └── loaders.py # Checkpoint loading
+│ ├── modules/
+│ │ ├── transformer.py # StreamingTransformer
+│ │ ├── conditioners.py # Text/audio/chroma conditioners
+│ │ ├── codebooks_patterns.py # Parallel/delay codebook patterns
+│ │ ├── seanet.py # SEANet encoder/decoder
+│ │ ├── conv.py # Causal/streaming convolutions
+│ │ ├── rope.py # Rotary positional embeddings
+│ │ └── streaming.py # Streaming inference support
+│ ├── solvers/
+│ │ ├── musicgen.py # MusicGen training solver
+│ │ ├── audiogen.py # AudioGen training solver
+│ │ ├── compression.py # EnCodec training solver
+│ │ ├── diffusion.py # Diffusion training solver
+│ │ ├── magnet.py # MAGNeT training solver
+│ │ ├── jasco.py # JASCO training solver
+│ │ └── watermark.py # Watermark training solver
+│ ├── data/ # Dataset loading and processing
+│ ├── losses/ # Training losses (balancer, STFT, loudness)
+│ ├── metrics/ # FAD, KLD, CLAP, PESQ, ViSQOL
+│ ├── adversarial/ # GAN discriminators (MPD, MSD, MSSTFTD)
+│ ├── optim/ # Optimizers, schedulers, EMA, FSDP
+│ ├── quantization/ # RVQ implementation
+│ ├── grids/ # Dora experiment grids
+│ ├── utils/ # Utilities, caching, checkpoints
+│ └── train.py # Training entry point
+├── config/ # Hydra configs
+├── assets/ # Example audio files
 ├── setup.py
 ├── Makefile
 └── requirements.txt

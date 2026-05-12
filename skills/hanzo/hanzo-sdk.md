@@ -43,10 +43,10 @@ Repo: `hanzoai/sdk` (298MB -- large due to committed `node_modules` and `dist`).
 ## When NOT to use
 
 - **Application code imports**: Use the individual SDKs instead:
-  - Python: `pip install hanzo` (from `hanzoai/python-sdk`)
-  - TypeScript: `npm install @hanzo/sdk` (from `hanzoai/js-sdk`)
-  - Go: `go get github.com/hanzoai/go-sdk` (from `hanzoai/go-sdk`)
-  - Rust: `cargo add hanzo` (from `hanzoai/rust-sdk`)
+ - Python: `pip install hanzo` (from `hanzoai/python-sdk`)
+ - TypeScript: `npm install @hanzo/sdk` (from `hanzoai/js-sdk`)
+ - Go: `go get github.com/hanzoai/go-sdk` (from `hanzoai/go-sdk`)
+ - Rust: `cargo add hanzo` (from `hanzoai/rust-sdk`)
 
 ## Hard requirements
 
@@ -69,42 +69,42 @@ Repo: `hanzoai/sdk` (298MB -- large due to committed `node_modules` and `dist`).
 
 ```
 sdk/
-  package.json            # @hanzo/cli, commander, axios, chalk
-  Makefile                # Build/test all languages
-  tsconfig.json
-  jest.config.js
-  bin/
-    hanzo.js              # CLI entry point
-  dist/                   # Compiled JS output
-  src/
-    js/                   # TypeScript implementation
-      index.ts            # Exports: HanzoClient, HanzoAgent, HanzoMCP, HanzoNode
-      client.ts           # Base HTTP client (axios)
-      cli.ts              # CLI setup (commander)
-      agent.ts            # Agent operations
-      mcp.ts              # MCP server operations
-      node.ts             # Node operations
-      commands/
-        agent.ts          # hanzo agent {run,list,stop,logs}
-        auth.ts           # hanzo auth {login,logout,status,token}
-        config.ts         # hanzo config {get,set,list,reset}
-        dev.ts            # hanzo dev {start,stop,status}
-        mcp.ts            # hanzo mcp {serve,list,install}
-        net.ts            # hanzo net {status,peers,connect}
-        node.ts           # hanzo node {start,stop,status,logs}
-    py/
-      pyproject.toml      # hanzo PyPI package
-      hanzo/              # Python package
-      src/                # Additional source
-    rs/
-      Cargo.toml          # hanzo-sdk crate
-      src/                # Rust implementation
-      build.rs            # napi-rs build script
-    go/
-      (scaffolded, minimal)
-  tests/                  # Cross-language integration tests
-  scripts/
-    postinstall.js        # Optional native binding setup
+ package.json # @hanzo/cli, commander, axios, chalk
+ Makefile # Build/test all languages
+ tsconfig.json
+ jest.config.js
+ bin/
+ hanzo.js # CLI entry point
+ dist/ # Compiled JS output
+ src/
+ js/ # TypeScript implementation
+ index.ts # Exports: HanzoClient, HanzoAgent, HanzoMCP, HanzoNode
+ client.ts # Base HTTP client (axios)
+ cli.ts # CLI setup (commander)
+ agent.ts # Agent operations
+ mcp.ts # MCP server operations
+ node.ts # Node operations
+ commands/
+ agent.ts # hanzo agent {run,list,stop,logs}
+ auth.ts # hanzo auth {login,logout,status,token}
+ config.ts # hanzo config {get,set,list,reset}
+ dev.ts # hanzo dev {start,stop,status}
+ mcp.ts # hanzo mcp {serve,list,install}
+ net.ts # hanzo net {status,peers,connect}
+ node.ts # hanzo node {start,stop,status,logs}
+ py/
+ pyproject.toml # hanzo PyPI package
+ hanzo/ # Python package
+ src/ # Additional source
+ rs/
+ Cargo.toml # hanzo-sdk crate
+ src/ # Rust implementation
+ build.rs # napi-rs build script
+ go/
+ (scaffolded, minimal)
+ tests/ # Cross-language integration tests
+ scripts/
+ postinstall.js # Optional native binding setup
 ```
 
 ## CLI Commands
@@ -113,42 +113,42 @@ All commands work identically across all language implementations:
 
 ```bash
 # Node management
-hanzo node start          # Start local AI node
-hanzo node stop           # Stop node
-hanzo node status         # Node status
-hanzo node logs           # View node logs
+hanzo node start # Start local AI node
+hanzo node stop # Stop node
+hanzo node status # Node status
+hanzo node logs # View node logs
 
 # Agent operations
-hanzo agent run           # Run AI agents
-hanzo agent list          # List running agents
-hanzo agent stop          # Stop an agent
-hanzo agent logs          # Agent logs
+hanzo agent run # Run AI agents
+hanzo agent list # List running agents
+hanzo agent stop # Stop an agent
+hanzo agent logs # Agent logs
 
 # MCP server
-hanzo mcp serve           # Start MCP server
-hanzo mcp list            # List available tools
-hanzo mcp install         # Install MCP tools
+hanzo mcp serve # Start MCP server
+hanzo mcp list # List available tools
+hanzo mcp install # Install MCP tools
 
 # Network
-hanzo net status          # Network status
-hanzo net peers           # List peers
-hanzo net connect         # Connect to peer
+hanzo net status # Network status
+hanzo net peers # List peers
+hanzo net connect # Connect to peer
 
 # Development
-hanzo dev start           # Start dev environment
-hanzo dev stop            # Stop dev environment
+hanzo dev start # Start dev environment
+hanzo dev stop # Stop dev environment
 
 # Auth
-hanzo auth login          # Authenticate with Hanzo
-hanzo auth logout         # Log out
-hanzo auth status         # Check auth status
-hanzo auth token          # Show current token
+hanzo auth login # Authenticate with Hanzo
+hanzo auth logout # Log out
+hanzo auth status # Check auth status
+hanzo auth token # Show current token
 
 # Config
-hanzo config get <key>    # Get config value
-hanzo config set <k> <v>  # Set config value
-hanzo config list         # List all config
-hanzo config reset        # Reset to defaults
+hanzo config get <key> # Get config value
+hanzo config set <k> <v> # Set config value
+hanzo config list # List all config
+hanzo config reset # Reset to defaults
 ```
 
 ## Development
@@ -156,43 +156,43 @@ hanzo config reset        # Reset to defaults
 ### Build All Languages
 
 ```bash
-make build                # Build py + js + rs + go
-make build-js             # TypeScript only
-make build-py             # Python only
-make build-rs             # Rust only (native bindings)
-make build-go             # Go only
+make build # Build py + js + rs + go
+make build-js # TypeScript only
+make build-py # Python only
+make build-rs # Rust only (native bindings)
+make build-go # Go only
 ```
 
 ### Test All Languages
 
 ```bash
-make test                 # All tests + integration
-make test-js              # Jest tests
-make test-py              # pytest tests
-make test-rs              # cargo test
-make test-go              # go test
-make test-matrix          # Full version matrix
+make test # All tests + integration
+make test-js # Jest tests
+make test-py # pytest tests
+make test-rs # cargo test
+make test-go # go test
+make test-matrix # Full version matrix
 ```
 
 ### Other Targets
 
 ```bash
-make lint                 # Lint all languages
-make format               # Format all languages
-make check                # lint + format + test
-make clean                # Remove all build artifacts
-make install              # Install all packages locally
-make dev                  # Watch mode (tsc + cargo watch)
+make lint # Lint all languages
+make format # Format all languages
+make check # lint + format + test
+make clean # Remove all build artifacts
+make install # Install all packages locally
+make dev # Watch mode (tsc + cargo watch)
 ```
 
 ### Publishing
 
 ```bash
-make cd-publish           # Publish all packages
-make cd-publish-js        # npm publish
-make cd-publish-py        # twine upload to PyPI
-make cd-publish-rs        # cargo publish to crates.io
-make cd-publish-go        # go mod tidy + git tag
+make cd-publish # Publish all packages
+make cd-publish-js # npm publish
+make cd-publish-py # twine upload to PyPI
+make cd-publish-rs # cargo publish to crates.io
+make cd-publish-go # go mod tidy + git tag
 ```
 
 ## Maturity Note

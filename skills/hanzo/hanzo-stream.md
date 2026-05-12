@@ -77,9 +77,9 @@ kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic test --from-
 
 ```bash
 docker run -d --name hanzo-stream \
-  -p 9092:9092 -p 9093:9093 \
-  ghcr.io/hanzoai/stream:latest \
-  --pubsub-url nats://pubsub:4222 --host 0.0.0.0
+ -p 9092:9092 -p 9093:9093 \
+ ghcr.io/hanzoai/stream:latest \
+ --pubsub-url nats://pubsub:4222 --host 0.0.0.0
 ```
 
 ## Core Concepts
@@ -106,10 +106,10 @@ Kafka Client ──TCP :9092──> Hanzo Stream (protocol translation) ──> 
 ### Offset Translation (Critical)
 
 ```
-Kafka offset 0  <->  PubSub sequence 1
-Kafka offset N  <->  PubSub sequence N+1
+Kafka offset 0 <-> PubSub sequence 1
+Kafka offset N <-> PubSub sequence N+1
 Produce: seq = Publish(); return seq - 1
-Fetch:   msg = GetMsg(offset + 1)
+Fetch: msg = GetMsg(offset + 1)
 ```
 
 ### Supported Kafka API Keys
@@ -144,35 +144,35 @@ Fetch:   msg = GetMsg(offset + 1)
 
 ```
 stream/
-  main.go              # CLI entry point (cobra)
-  Dockerfile           # Multi-stage build (golang:1.26-alpine -> alpine:3.20)
-  go.mod               # github.com/hanzoai/stream
-  pubsub/              # NATS JetStream client wrapper
-    client.go          # Connection + stream context
-    streams.go         # Stream CRUD, publish, get message, list topics
-    consumer.go        # KV-based consumer offset management
-  protocol/            # Kafka wire protocol handlers
-    broker.go          # TCP server, connection handling
-    dispatcher.go      # API key -> handler routing
-    produce.go         # Produce (API key 0)
-    fetch.go           # Fetch (API key 1)
-    metadata.go        # Metadata (API key 3)
-    create_topic.go    # CreateTopics (API key 19)
-    responses.go       # ListOffsets, OffsetCommit/Fetch, JoinGroup, etc.
-    find_coordinator.go
-    describe_configs.go
-    api_versions.go
-    admin.go           # Admin HTTP endpoints
-    types.go           # Request/response struct definitions
-    recordbatch.go     # Kafka record batch parsing
-    error.go           # Kafka error codes
-  serde/               # Kafka protocol serialization (reflection-based)
-  compress/            # GZIP, Snappy, LZ4, ZSTD codecs
-  logging/             # Simple log levels
-  utils/               # Time utilities
-  types/               # Shared types (Config, Request, Record, RecordBatch)
-  test/                # E2E and cluster tests
-  .github/workflows/   # CI (GHCR push)
+ main.go # CLI entry point (cobra)
+ Dockerfile # Multi-stage build (golang:1.26-alpine -> alpine:3.20)
+ go.mod # github.com/hanzoai/stream
+ pubsub/ # NATS JetStream client wrapper
+ client.go # Connection + stream context
+ streams.go # Stream CRUD, publish, get message, list topics
+ consumer.go # KV-based consumer offset management
+ protocol/ # Kafka wire protocol handlers
+ broker.go # TCP server, connection handling
+ dispatcher.go # API key -> handler routing
+ produce.go # Produce (API key 0)
+ fetch.go # Fetch (API key 1)
+ metadata.go # Metadata (API key 3)
+ create_topic.go # CreateTopics (API key 19)
+ responses.go # ListOffsets, OffsetCommit/Fetch, JoinGroup, etc.
+ find_coordinator.go
+ describe_configs.go
+ api_versions.go
+ admin.go # Admin HTTP endpoints
+ types.go # Request/response struct definitions
+ recordbatch.go # Kafka record batch parsing
+ error.go # Kafka error codes
+ serde/ # Kafka protocol serialization (reflection-based)
+ compress/ # GZIP, Snappy, LZ4, ZSTD codecs
+ logging/ # Simple log levels
+ utils/ # Time utilities
+ types/ # Shared types (Config, Request, Record, RecordBatch)
+ test/ # E2E and cluster tests
+ .github/workflows/ # CI (GHCR push)
 ```
 
 ### Deployment (hanzo-k8s)

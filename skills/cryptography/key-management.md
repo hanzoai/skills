@@ -5,7 +5,7 @@ description: Comprehensive cryptographic key lifecycle management, KMS integrati
 
 # Cryptographic Key Management
 
-**Scope**: Key lifecycle (generation, distribution, storage, rotation, destruction), KMS platforms (AWS KMS, GCP KMS, Azure Key Vault, HashiCorp Vault), HSM integration, compliance (FIPS 140-2, PCI-DSS, HIPAA, GDPR)
+**Scope**: Key lifecycle (generation, distribution, storage, rotation, destruction), KMS platforms (AWS KMS, GCP KMS, Azure Key Vault, external secret manager), HSM integration, compliance (FIPS 140-2, PCI-DSS, HIPAA, GDPR)
 **Lines**: ~500
 **Last Updated**: 2025-10-27
 
@@ -192,7 +192,7 @@ ciphertext = kms.encrypt(KeyId=key_id, Plaintext=b'Secret data')
 plaintext = kms.decrypt(CiphertextBlob=ciphertext['CiphertextBlob'])
 ```
 
-**HashiCorp Vault**:
+**external secret manager**:
 ```bash
 # Enable transit engine
 vault secrets enable transit
@@ -393,7 +393,7 @@ aws kms get-key-rotation-status --key-id <key-id>
 **Comprehensive Documentation**:
 - [`resources/REFERENCE.md`](resources/REFERENCE.md) - 2,000+ line technical reference covering:
   - Complete key lifecycle (generation, distribution, storage, rotation, destruction)
-  - KMS platforms (AWS KMS, GCP KMS, Azure Key Vault, HashiCorp Vault)
+  - KMS platforms (AWS KMS, GCP KMS, Azure Key Vault, external secret manager)
   - HSM integration (FIPS 140-2 levels, PKCS#11, vendor comparison)
   - Compliance standards (PCI-DSS, HIPAA, GDPR, SOC 2, FIPS 140-2)
   - Secrets management patterns
@@ -410,7 +410,7 @@ aws kms get-key-rotation-status --key-id <key-id>
    - Checks key age, rotation status, compliance violations
    - Detects unused keys, overly permissive policies
    - Security score calculation
-   - Multi-platform support (AWS KMS, GCP KMS, Azure Key Vault, HashiCorp Vault)
+   - Multi-platform support (AWS KMS, GCP KMS, Azure Key Vault, external secret manager)
 
 2. **`scripts/rotate_master_keys.py`** (821 lines)
    - Automated master key rotation with zero-downtime
@@ -510,7 +510,7 @@ aws kms encrypt --key-id alias/my-key --plaintext fileb://secret.txt
 aws kms decrypt --ciphertext-blob fileb://encrypted.bin
 ```
 
-**HashiCorp Vault**:
+**external secret manager**:
 ```bash
 # Enable transit
 vault secrets enable transit
@@ -570,5 +570,5 @@ gcloud kms encrypt --location global --keyring my-keyring --key my-key --plainte
 - **AWS KMS**: https://aws.amazon.com/kms/
 - **Google Cloud KMS**: https://cloud.google.com/kms
 - **Azure Key Vault**: https://azure.microsoft.com/en-us/services/key-vault/
-- **HashiCorp Vault**: https://www.vaultproject.io/
+- **external secret manager**: https://www.vaultproject.io/
 - **Python cryptography**: https://cryptography.io/

@@ -50,17 +50,17 @@ Hanzo Console is the **observability and prompt management layer** for AI applic
 
 ```
 Your Application
-      |
-  Langfuse SDK / OTEL
-      |
+ |
+ Langfuse SDK / OTEL
+ |
 console.hanzo.ai/api/public/ingestion
-      |
+ |
 Console Backend (Node.js)
-      |
-  +---+---+
-  |       |
-PostgreSQL  ClickHouse
-(metadata)  (traces, optional)
+ |
+ +---+---+
+ | |
+PostgreSQL ClickHouse
+(metadata) (traces, optional)
 ```
 
 Cloud API (`cloud.hanzo.ai`) POSTs traces to Console's ingestion endpoint for centralized observability.
@@ -71,9 +71,9 @@ Cloud API (`cloud.hanzo.ai`) POSTs traces to Console's ingestion endpoint for ce
 from langfuse import Langfuse
 
 lf = Langfuse(
-    host="https://console.hanzo.ai",
-    public_key=os.environ["LANGFUSE_PUBLIC_KEY"],
-    secret_key=os.environ["LANGFUSE_SECRET_KEY"],
+ host="https://console.hanzo.ai",
+ public_key=os.environ["LANGFUSE_PUBLIC_KEY"],
+ secret_key=os.environ["LANGFUSE_SECRET_KEY"],
 )
 
 # Create a trace
@@ -81,12 +81,12 @@ trace = lf.trace(name="chat-request", user_id="user_123")
 
 # Log a generation (LLM call)
 generation = trace.generation(
-    name="chat-completion",
-    model="zen-70b",
-    input=[{"role": "user", "content": "Hello!"}],
-    output="Hi there! How can I help?",
-    usage={"input": 5, "output": 8, "unit": "TOKENS"},
-    metadata={"temperature": 0.7},
+ name="chat-completion",
+ model="zen-70b",
+ input=[{"role": "user", "content": "Hello!"}],
+ output="Hi there! How can I help?",
+ usage={"input": 5, "output": 8, "unit": "TOKENS"},
+ metadata={"temperature": 0.7},
 )
 
 # Score the trace
@@ -102,16 +102,16 @@ lf.flush()
 from hanzo import Hanzo
 from hanzo.console import observe
 
-client = Hanzo()  # uses HANZO_API_KEY from env
+client = Hanzo() # uses HANZO_API_KEY from env
 
 @observe()
 def chat(message: str) -> str:
-    """Automatically traced: input, output, latency, cost."""
-    response = client.chat.completions.create(
-        model="zen-70b",
-        messages=[{"role": "user", "content": message}],
-    )
-    return response.choices[0].message.content
+ """Automatically traced: input, output, latency, cost."""
+ response = client.chat.completions.create(
+ model="zen-70b",
+ messages=[{"role": "user", "content": message}],
+ )
+ return response.choices[0].message.content
 ```
 
 ## Python quickstart (OpenAI drop-in)
@@ -124,8 +124,8 @@ openai.base_url = "https://api.hanzo.ai/v1"
 openai.api_key = os.environ["HANZO_API_KEY"]
 
 response = openai.chat.completions.create(
-    model="zen-70b",
-    messages=[{"role": "user", "content": "Hello!"}],
+ model="zen-70b",
+ messages=[{"role": "user", "content": "Hello!"}],
 )
 # Trace automatically sent to console.hanzo.ai
 ```
@@ -184,12 +184,12 @@ compiled = prompt.compile(user_name="Alice")
 
 # Use in chat completion
 response = client.chat.completions.create(
-    model="zen-70b",
-    messages=[
-        {"role": "system", "content": compiled},
-        {"role": "user", "content": "Hello!"},
-    ],
-    langfuse_prompt=prompt,  # links trace to prompt version
+ model="zen-70b",
+ messages=[
+ {"role": "system", "content": compiled},
+ {"role": "user", "content": "Hello!"},
+ ],
+ langfuse_prompt=prompt, # links trace to prompt version
 )
 ```
 
@@ -219,23 +219,23 @@ HANZO_INIT_PROJECT_ORG_ID=hanzo
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: console
-  namespace: hanzo
+ name: console
+ namespace: hanzo
 spec:
-  replicas: 2
-  template:
-    spec:
-      containers:
-        - name: console
-          image: ghcr.io/hanzoai/console:latest
-          ports:
-            - containerPort: 3000
-          envFrom:
-            - secretRef:
-                name: console-secrets  # KMS-synced
-          env:
-            - name: DATABASE_URL
-              value: postgresql://console:pass@postgres.hanzo.svc:5432/console
+ replicas: 2
+ template:
+ spec:
+ containers:
+ - name: console
+ image: ghcr.io/hanzoai/console:latest
+ ports:
+ - containerPort: 3000
+ envFrom:
+ - secretRef:
+ name: console-secrets # KMS-synced
+ env:
+ - name: DATABASE_URL
+ value: postgresql://console:pass@postgres.hanzo.svc:5432/console
 ```
 
 ## Error handling

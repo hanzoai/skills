@@ -82,12 +82,12 @@ hanzo-edge serve --model zenlm/zen4-mini --port 8080
 
 # Then use from any OpenAI client
 curl http://localhost:8080/v1/chat/completions \
-    -H "Content-Type: application/json" \
-    -d '{
-        "model": "zen4-mini",
-        "messages": [{"role": "user", "content": "Hello!"}],
-        "stream": true
-    }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "model": "zen4-mini",
+ "messages": [{"role": "user", "content": "Hello!"}],
+ "stream": true
+ }'
 ```
 
 ### Docker
@@ -95,11 +95,11 @@ curl http://localhost:8080/v1/chat/completions \
 ```bash
 # CPU inference
 docker run --rm -it ghcr.io/hanzoai/edge:latest \
-    run --model zenlm/zen3-nano --prompt "Hello!"
+ run --model zenlm/zen3-nano --prompt "Hello!"
 
 # Serve as API
 docker run --rm -p 8080:8080 ghcr.io/hanzoai/edge:latest \
-    serve --model zenlm/zen3-nano --port 8080
+ serve --model zenlm/zen3-nano --port 8080
 ```
 
 ## Core Concepts
@@ -108,25 +108,25 @@ docker run --rm -p 8080:8080 ghcr.io/hanzoai/edge:latest \
 
 ```
 hanzo-edge (workspace)
-+-- edge-core/              # Core inference runtime (library)
-|   +-- src/
-|       +-- lib.rs           # Public API: Model, InferenceSession, SamplingParams
-|       +-- model.rs         # Model trait, GGUF loading, HF Hub download
-|       +-- session.rs       # Autoregressive generation + streaming iterator
-|       +-- sampling.rs      # Temperature, top-k, top-p, repeat penalty
-|       +-- tokenizer.rs     # HF tokenizer wrapper with EOS detection
-+-- edge-cli/               # CLI binary
-|   +-- src/
-|       +-- main.rs          # Clap-based CLI with 4 subcommands
-|       +-- loader.rs        # HF Hub download with progress bars
-|       +-- cmd/
-|           +-- run.rs       # Streaming inference to stdout
-|           +-- serve.rs     # OpenAI-compatible HTTP server (Axum)
-|           +-- bench.rs     # TTFT, throughput, memory benchmarking
-|           +-- info.rs      # Model metadata inspection
-+-- edge-wasm/              # WebAssembly module
-    +-- src/lib.rs           # WASM bindings: EdgeModel, generate, generate_stream
-    +-- index.html           # Demo page
++-- edge-core/ # Core inference runtime (library)
+| +-- src/
+| +-- lib.rs # Public API: Model, InferenceSession, SamplingParams
+| +-- model.rs # Model trait, GGUF loading, HF Hub download
+| +-- session.rs # Autoregressive generation + streaming iterator
+| +-- sampling.rs # Temperature, top-k, top-p, repeat penalty
+| +-- tokenizer.rs # HF tokenizer wrapper with EOS detection
++-- edge-cli/ # CLI binary
+| +-- src/
+| +-- main.rs # Clap-based CLI with 4 subcommands
+| +-- loader.rs # HF Hub download with progress bars
+| +-- cmd/
+| +-- run.rs # Streaming inference to stdout
+| +-- serve.rs # OpenAI-compatible HTTP server (Axum)
+| +-- bench.rs # TTFT, throughput, memory benchmarking
+| +-- info.rs # Model metadata inspection
++-- edge-wasm/ # WebAssembly module
+ +-- src/lib.rs # WASM bindings: EdgeModel, generate, generate_stream
+ +-- index.html # Demo page
 ```
 
 ### Crates
@@ -150,14 +150,14 @@ hanzo-edge (workspace)
 ```bash
 # Streaming inference
 hanzo-edge run --model zenlm/zen-eco --prompt "Write a haiku" \
-    --max-tokens 128 --temperature 0.7 --top-p 0.9
+ --max-tokens 128 --temperature 0.7 --top-p 0.9
 
 # Model metadata
 hanzo-edge info --model zenlm/zen4-mini
 
 # Benchmarking (TTFT, tok/s, memory)
 hanzo-edge bench --model zenlm/zen3-nano --prompt "Hello" \
-    --max-tokens 128 -n 5
+ --max-tokens 128 -n 5
 
 # OpenAI-compatible API server
 hanzo-edge serve --model zenlm/zen4-mini --port 8080
@@ -178,19 +178,19 @@ hanzo-edge serve --model zenlm/zen4-mini --port 8080
 use hanzo_edge_core::{load_model, InferenceSession, SamplingParams, ModelConfig};
 
 let config = ModelConfig {
-    model_id: "zenlm/zen4-mini".to_string(),
-    model_file: Some("zen4-mini.Q4_K_M.gguf".to_string()),
-    ..Default::default()
+ model_id: "zenlm/zen4-mini".to_string(),
+ model_file: Some("zen4-mini.Q4_K_M.gguf".to_string()),
+ ..Default::default()
 };
 let (mut model, tokenizer) = load_model(&config)?;
 
 let params = SamplingParams {
-    temperature: 0.7,
-    top_p: 0.9,
-    top_k: 40,
-    max_tokens: 256,
-    repeat_penalty: 1.1,
-    repeat_last_n: 64,
+ temperature: 0.7,
+ top_p: 0.9,
+ top_k: 40,
+ max_tokens: 256,
+ repeat_penalty: 1.1,
+ repeat_last_n: 64,
 };
 let mut session = InferenceSession::new(&mut *model, &tokenizer, params);
 let output = session.generate("Explain quantum computing")?;
@@ -212,7 +212,7 @@ const output = model.generate("Hello!", 256, 0.7);
 
 // Streaming
 model.generate_stream("Write a poem", 256, 0.7, (token) => {
-    document.getElementById('output').textContent += token;
+ document.getElementById('output').textContent += token;
 });
 ```
 

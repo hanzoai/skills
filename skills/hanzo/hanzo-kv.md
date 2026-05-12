@@ -87,15 +87,15 @@ make install
 ### Architecture
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Application │────>│   Hanzo KV   │────>│  Persistence  │
-│  (any Redis  │     │  (port 6379) │     │  (RDB / AOF)  │
-│   client)    │     └──────┬───────┘     └──────────────┘
-└──────────────┘            │
-                     ┌──────┴───────┐
-                     │  ZAP Module  │
-                     │ (port 9653)  │
-                     └──────────────┘
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ Application │────>│ Hanzo KV │────>│ Persistence │
+│ (any Redis │ │ (port 6379) │ │ (RDB / AOF) │
+│ client) │ └──────┬───────┘ └──────────────┘
+└──────────────┘ │
+ ┌──────┴───────┐
+ │ ZAP Module │
+ │ (port 9653) │
+ └──────────────┘
 ```
 
 ### CLI Tools
@@ -136,10 +136,10 @@ Custom modules use the KV Module API:
 #include "kvmodule.h"
 
 int KVModule_OnLoad(KVModuleCtx *ctx, KVModuleString **argv, int argc) {
-    if (KVModule_Init(ctx, "mymod", 1, KVMODULE_APIVER_1) == KVMODULE_ERR)
-        return KVMODULE_ERR;
-    // register commands...
-    return KVMODULE_OK;
+ if (KVModule_Init(ctx, "mymod", 1, KVMODULE_APIVER_1) == KVMODULE_ERR)
+ return KVMODULE_ERR;
+ // register commands...
+ return KVMODULE_OK;
 }
 ```
 
@@ -169,21 +169,21 @@ Any Redis-compatible client library also works.
 
 ```
 kv/
-  CMakeLists.txt         # CMake build
-  Makefile               # Top-level make (delegates to src/)
-  Dockerfile             # Container build (kv/kv:9-alpine base)
-  kv.conf                # Default server configuration
-  sentinel.conf          # Sentinel configuration
-  src/                   # C source code
-  modules/
-    zap/                 # ZAP binary protocol module
-      zap_module.c       # Module implementation
-      zap_protocol.h     # Protocol header
-      Makefile           # Module build
-  deps/                  # Vendored dependencies
-  tests/                 # Integration tests
-  utils/                 # Utility scripts
-  cmake/                 # CMake modules
+ CMakeLists.txt # CMake build
+ Makefile # Top-level make (delegates to src/)
+ Dockerfile # Container build (kv/kv:9-alpine base)
+ kv.conf # Default server configuration
+ sentinel.conf # Sentinel configuration
+ src/ # C source code
+ modules/
+ zap/ # ZAP binary protocol module
+ zap_module.c # Module implementation
+ zap_protocol.h # Protocol header
+ Makefile # Module build
+ deps/ # Vendored dependencies
+ tests/ # Integration tests
+ utils/ # Utility scripts
+ cmake/ # CMake modules
 ```
 
 ### Development Guidelines

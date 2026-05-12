@@ -44,25 +44,25 @@ Hanzo Platform is a **Kubernetes-native PaaS** (Platform as a Service) for deplo
 ## Architecture
 
 ```
-                  platform.hanzo.ai
-                        |
-             +----------+----------+
-             |                     |
-        Studio UI            PaaS API
-        (Next.js 16)       (Hono.js + tRPC)
-        port 3000            port 4000
-             |                     |
-             +----------+----------+
-                        |
-                 +------+------+
-                 |      |      |
-              Monitor  Sync  Webhook
-              (health) (git) (deploy)
-                        |
-                 +------+------+
-                 |             |
-              PostgreSQL    K8s Cluster
-              (Drizzle)    (workloads)
+ platform.hanzo.ai
+ |
+ +----------+----------+
+ | |
+ Studio UI PaaS API
+ (Next.js 16) (Hono.js + tRPC)
+ port 3000 port 4000
+ | |
+ +----------+----------+
+ |
+ +------+------+
+ | | |
+ Monitor Sync Webhook
+ (health) (git) (deploy)
+ |
+ +------+------+
+ | |
+ PostgreSQL K8s Cluster
+ (Drizzle) (workloads)
 ```
 
 ## Auth flow
@@ -103,14 +103,14 @@ All secrets are KMS-first. No plaintext in manifests.
 apiVersion: kms.hanzo.ai/v1
 kind: KMSSecret
 metadata:
-  name: hanzo-paas
+ name: hanzo-paas
 spec:
-  project: hanzo-paas
-  environment: production
-  secrets:
-    - DOCKERHUB_USERNAME
-    - DOCKERHUB_TOKEN
-    - DIGITALOCEAN_ACCESS_TOKEN
+ project: hanzo-paas
+ environment: production
+ secrets:
+ - DOCKERHUB_USERNAME
+ - DOCKERHUB_TOKEN
+ - DIGITALOCEAN_ACCESS_TOKEN
 ```
 
 CI/CD also pulls from KMS at runtime:
@@ -118,31 +118,31 @@ CI/CD also pulls from KMS at runtime:
 ```yaml
 # paas/.github/workflows/deploy.yml
 jobs:
-  deploy:
-    steps:
-      - name: Login to KMS
-        run: |
-          export KMS_TOKEN=$(curl -s -X POST $KMS_URL/api/v1/auth/universal-auth/login \
-            -d '{"clientId":"...","clientSecret":"..."}' | jq -r '.accessToken')
-      - name: Fetch deploy secrets
-        run: |
-          DOCKERHUB_TOKEN=$(curl -s "$KMS_URL/api/v1/secrets/raw/DOCKERHUB_TOKEN?..." \
-            -H "Authorization: Bearer $KMS_TOKEN" | jq -r '.secret.secretValue')
+ deploy:
+ steps:
+ - name: Login to KMS
+ run: |
+ export KMS_TOKEN=$(curl -s -X POST $KMS_URL/api/v1/auth/universal-auth/login \
+ -d '{"clientId":"...","clientSecret":"..."}' | jq -r '.accessToken')
+ - name: Fetch deploy secrets
+ run: |
+ DOCKERHUB_TOKEN=$(curl -s "$KMS_URL/api/v1/secrets/raw/DOCKERHUB_TOKEN?..." \
+ -H "Authorization: Bearer $KMS_TOKEN" | jq -r '.secret.secretValue')
 ```
 
 ## Deploy an app via API
 
 ```bash
 curl -X POST https://platform.hanzo.ai/v1/projects \
-  -H "Authorization: Bearer ${HANZO_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "my-ai-app",
-    "environment": "production",
-    "image": "ghcr.io/myorg/my-app:latest",
-    "port": 3000,
-    "replicas": 2
-  }'
+ -H "Authorization: Bearer ${HANZO_TOKEN}" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "name": "my-ai-app",
+ "environment": "production",
+ "image": "ghcr.io/myorg/my-app:latest",
+ "port": 3000,
+ "replicas": 2
+ }'
 ```
 
 ## Self-host via Docker Compose
@@ -150,38 +150,38 @@ curl -X POST https://platform.hanzo.ai/v1/projects \
 ```yaml
 # compose.yml
 services:
-  paas-api:
-    image: ghcr.io/hanzoai/paas-api:latest
-    ports:
-      - "4000:4000"
-    environment:
-      IAM_ENDPOINT: https://hanzo.id
-      KMS_ENDPOINT: https://kms.hanzo.ai
-      DATABASE_URL: postgresql://user:pass@postgres:5432/paas
-      REDIS_URL: redis://redis:6379
+ paas-api:
+ image: ghcr.io/hanzoai/paas-api:latest
+ ports:
+ - "4000:4000"
+ environment:
+ IAM_ENDPOINT: https://hanzo.id
+ KMS_ENDPOINT: https://kms.hanzo.ai
+ DATABASE_URL: postgresql://user:pass@postgres:5432/paas
+ REDIS_URL: redis://redis:6379
 
-  paas-studio:
-    image: ghcr.io/hanzoai/paas-studio:latest
-    ports:
-      - "5173:5173"
-    environment:
-      API_URL: http://paas-api:4000
+ paas-studio:
+ image: ghcr.io/hanzoai/paas-studio:latest
+ ports:
+ - "5173:5173"
+ environment:
+ API_URL: http://paas-api:4000
 
-  postgres:
-    image: ghcr.io/hanzoai/sql:latest
-    environment:
-      POSTGRES_DB: paas
-      POSTGRES_USER: paas
+ postgres:
+ image: ghcr.io/hanzoai/sql:latest
+ environment:
+ POSTGRES_DB: paas
+ POSTGRES_USER: paas
 
-  redis:
-    image: ghcr.io/hanzoai/kv:latest
+ redis:
+ image: ghcr.io/hanzoai/kv:latest
 ```
 
 ## White-label / self-host
 
 1. Fork `hanzoai/paas`
 2. Update branding in `paas-studio/`
-3. Configure IAM provider (any Casdoor/OIDC)
+3. Configure IAM provider (any Hanzo IAM/OIDC)
 4. Deploy to your K8s cluster
 5. Set custom domain via Ingress
 
@@ -191,7 +191,7 @@ services:
 |-------|-------|----------|
 | "Sign in with Hanzo" fails | Provider set to `"github"` | Change to `"hanzo"` in index.tsx |
 | KMS slug error | Slug < 5 chars | Use `hanzo-paas` not `paas` |
-| Token expired | `expireInHours=0` on Casdoor app | Set `expireInHours=168` |
+| Token expired | `expireInHours=0` on Hanzo IAM app | Set `expireInHours=168` |
 | Duplicate users on IAM login | Email match not attempted | Auth falls back to email match for existing users |
 | Studio login fails for non-git | `addGitProvider` called for IAM | Studio loader treats `hanzo` as first-class, skips `addGitProvider` |
 

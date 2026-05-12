@@ -36,18 +36,18 @@ Hanzo Static is a **Traefik plugin** that serves static files (SPAs, assets) dir
 
 ```
 Client Request
-      |
+ |
 Hanzo Ingress (Traefik)
-      |
+ |
 Static Middleware Plugin
-      |
-  +---+---+
-  |       |
-Asset   SPA
-match   fallback
-  |       |
-Serve   index.html
-file    (+ gzip)
+ |
+ +---+---+
+ | |
+Asset SPA
+match fallback
+ | |
+Serve index.html
+file (+ gzip)
 ```
 
 ## Configuration
@@ -58,19 +58,19 @@ file    (+ gzip)
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: static-serve
-  namespace: hanzo
+ name: static-serve
+ namespace: hanzo
 spec:
-  plugin:
-    static:
-      root: /srv/www
-      index: index.html
-      spa: true
-      gzip: true
-      headers:
-        Cache-Control: "public, max-age=31536000, immutable"
-      htmlHeaders:
-        Cache-Control: "no-cache"
+ plugin:
+ static:
+ root: /srv/www
+ index: index.html
+ spa: true
+ gzip: true
+ headers:
+ Cache-Control: "public, max-age=31536000, immutable"
+ htmlHeaders:
+ Cache-Control: "no-cache"
 ```
 
 ### IngressRoute with static middleware
@@ -79,21 +79,21 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: billing-static
-  namespace: hanzo
+ name: billing-static
+ namespace: hanzo
 spec:
-  entryPoints:
-    - websecure
-  routes:
-    - match: Host(`billing.hanzo.ai`)
-      kind: Rule
-      middlewares:
-        - name: static-serve
-      services:
-        - name: billing
-          port: 80
-  tls:
-    certResolver: letsencrypt
+ entryPoints:
+ - websecure
+ routes:
+ - match: Host(`billing.hanzo.ai`)
+ kind: Rule
+ middlewares:
+ - name: static-serve
+ services:
+ - name: billing
+ port: 80
+ tls:
+ certResolver: letsencrypt
 ```
 
 ### Static site deployment pattern
@@ -104,22 +104,22 @@ For static-exported apps (Next.js with `output: 'export'`), the typical pattern 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: billing
-  namespace: hanzo
+ name: billing
+ namespace: hanzo
 spec:
-  replicas: 2
-  template:
-    spec:
-      containers:
-        - name: billing
-          image: ghcr.io/hanzoai/billing:latest
-          # Image contains built static files + minimal HTTP server
-          ports:
-            - containerPort: 80
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 80
+ replicas: 2
+ template:
+ spec:
+ containers:
+ - name: billing
+ image: ghcr.io/hanzoai/billing:latest
+ # Image contains built static files + minimal HTTP server
+ ports:
+ - containerPort: 80
+ livenessProbe:
+ httpGet:
+ path: /health
+ port: 80
 ```
 
 The container image typically uses a minimal Alpine-based HTTP server or the Traefik static plugin directly.
@@ -130,9 +130,9 @@ For single-page applications, the plugin intercepts 404s and serves `index.html`
 
 ```
 GET /dashboard/settings
-  -> No file at /dashboard/settings
-  -> SPA mode: serve /index.html
-  -> Client-side router handles /dashboard/settings
+ -> No file at /dashboard/settings
+ -> SPA mode: serve /index.html
+ -> Client-side router handles /dashboard/settings
 ```
 
 ## Gzip handling

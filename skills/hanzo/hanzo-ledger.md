@@ -21,13 +21,13 @@ Hanzo Ledger is a **programmable double-entry financial ledger** written in Go. 
 ### Architecture
 
 ```
-hanzo/commerce    Storefront, catalog, orders
-       |
-hanzo/payments    Payment routing (50+ processors)
-       |
-hanzo/treasury    Ledger, reconciliation, wallets   <-- this
-       |
-lux/treasury      On-chain treasury, MPC/KMS wallets
+hanzo/commerce Storefront, catalog, orders
+ |
+hanzo/payments Payment routing (50+ processors)
+ |
+hanzo/treasury Ledger, reconciliation, wallets <-- this
+ |
+lux/treasury On-chain treasury, MPC/KMS wallets
 ```
 
 ## When to use
@@ -70,12 +70,12 @@ POST /v2/ledger/{name}/transactions
 Content-Type: application/json
 
 {
-  "postings": [{
-    "source": "world",
-    "destination": "users:001",
-    "amount": 10000,
-    "asset": "USD/2"
-  }]
+ "postings": [{
+ "source": "world",
+ "destination": "users:001",
+ "amount": 10000,
+ "asset": "USD/2"
+ }]
 }
 ```
 
@@ -86,9 +86,9 @@ POST /v2/ledger/{name}/transactions
 Content-Type: application/json
 
 {
-  "script": {
-    "plain": "send [USD/2 10000] (\n  source = @users:001\n  destination = {\n    90% to @merchants:042\n    10% to @platform:fees\n  }\n)"
-  }
+ "script": {
+ "plain": "send [USD/2 10000] (\n source = @users:001\n destination = {\n 90% to @merchants:042\n 10% to @platform:fees\n }\n)"
+ }
 }
 ```
 
@@ -111,8 +111,8 @@ POST /v2/ledger/{name}/accounts/{address}/metadata
 Content-Type: application/json
 
 {
-  "role": "merchant",
-  "tier": "gold"
+ "role": "merchant",
+ "tier": "gold"
 }
 ```
 
@@ -129,8 +129,8 @@ POST /v2/ledger/{name}/bulk
 Content-Type: application/json
 
 [
-  {"action": "CREATE_TRANSACTION", "data": {"postings": [...]}},
-  {"action": "ADD_METADATA", "data": {"targetType": "ACCOUNT", "targetID": "users:001", "metadata": {...}}}
+ {"action": "CREATE_TRANSACTION", "data": {"postings": [...]}},
+ {"action": "ADD_METADATA", "data": {"targetType": "ACCOUNT", "targetID": "users:001", "metadata": {...}}}
 ]
 ```
 
@@ -149,20 +149,20 @@ Numscript is a purpose-built language for expressing money movements.
 ```numscript
 // Simple transfer
 send [USD/2 10000] (
-  source = @users:001
-  destination = @merchants:042
+ source = @users:001
+ destination = @merchants:042
 )
 
 // Multi-party fee split
 send [USD/2 10000] (
-  source = @users:001
-  destination = {
-    90% to @merchants:042
-    10% to {
-      50% to @platform:fees
-      50% to @platform:reserve
-    }
-  }
+ source = @users:001
+ destination = {
+ 90% to @merchants:042
+ 10% to {
+ 50% to @platform:fees
+ 50% to @platform:reserve
+ }
+ }
 )
 ```
 
@@ -182,10 +182,10 @@ Each posting moves an amount of an asset from source to destination:
 
 ```go
 type Posting struct {
-    Source      string   // source account address
-    Destination string   // destination account address
-    Amount      *big.Int // amount (arbitrary precision)
-    Asset       string   // asset identifier (e.g., "USD/2")
+ Source string // source account address
+ Destination string // destination account address
+ Amount *big.Int // amount (arbitrary precision)
+ Asset string // asset identifier (e.g., "USD/2")
 }
 ```
 
@@ -240,41 +240,41 @@ Docker compose includes: PostgreSQL 16, Prometheus, Jaeger, OTEL collector, ledg
 ### Task Runner (Justfile)
 
 ```bash
-just              # list available commands
-just lint         # golangci-lint
-just tidy         # go mod tidy
-just generate     # go generate
-just tests        # full test suite with coverage
-just openapi      # regenerate OpenAPI spec
-just generate-client  # regenerate Go client SDK (requires SPEAKEASY_API_KEY)
-just pre-commit   # tidy + generate + lint + openapi (run before commits)
+just # list available commands
+just lint # golangci-lint
+just tidy # go mod tidy
+just generate # go generate
+just tests # full test suite with coverage
+just openapi # regenerate OpenAPI spec
+just generate-client # regenerate Go client SDK (requires SPEAKEASY_API_KEY)
+just pre-commit # tidy + generate + lint + openapi (run before commits)
 ```
 
 ### Project Structure
 
 ```
 ledger/
-  cmd/              CLI commands (serve, worker, buckets, docs, version)
-  internal/
-    api/            HTTP API (v1, v2 routers, bulking)
-    bus/            Event publishing (Watermill)
-    controller/     Business logic (ledger + system controllers)
-    machine/        Numscript execution engine
-    queries/        Query building
-    replication/    Data export pipelines (gRPC, drivers)
-    storage/        PostgreSQL storage layer (bun ORM)
-    tracing/        OpenTelemetry instrumentation
-  pkg/
-    accounts/       Account address validation
-    assets/         Asset format validation
-    client/         Generated Go client SDK (Speakeasy)
-    events/         Event type definitions
-    features/       Feature flag definitions
-  openapi/          OpenAPI specs (v1, v2, v3)
-  deployments/      Docker Compose + Pulumi configs
-  examples/         Example setups (standalone, publisher-http, publisher-kafka)
-  docs/             Generated documentation
-  tools/            Build tooling
+ cmd/ CLI commands (serve, worker, buckets, docs, version)
+ internal/
+ api/ HTTP API (v1, v2 routers, bulking)
+ bus/ Event publishing (Watermill)
+ controller/ Business logic (ledger + system controllers)
+ machine/ Numscript execution engine
+ queries/ Query building
+ replication/ Data export pipelines (gRPC, drivers)
+ storage/ PostgreSQL storage layer (bun ORM)
+ tracing/ OpenTelemetry instrumentation
+ pkg/
+ accounts/ Account address validation
+ assets/ Asset format validation
+ client/ Generated Go client SDK (Speakeasy)
+ events/ Event type definitions
+ features/ Feature flag definitions
+ openapi/ OpenAPI specs (v1, v2, v3)
+ deployments/ Docker Compose + Pulumi configs
+ examples/ Example setups (standalone, publisher-http, publisher-kafka)
+ docs/ Generated documentation
+ tools/ Build tooling
 ```
 
 ## Configuration

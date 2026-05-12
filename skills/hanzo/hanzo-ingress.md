@@ -47,28 +47,28 @@ Hanzo Ingress is a **Kubernetes-native L7 reverse proxy and load balancer** that
 ## Architecture
 
 ```
-            Internet
-               |
-      +--------+--------+
-      | Cloudflare CDN   |
-      | DNS, WAF, DDoS   |
-      +--------+--------+
-               |
-      +--------+--------+
-      | Hanzo Ingress    |   L7 reverse proxy
-      | (ports 80/443)   |   TLS termination
-      | IngressClass:    |   Route matching
-      |   "hanzo"        |   Load balancing
-      +--+-+-+-+-+--+---+
-         | | | | |  |
-   +-----+ | | | |  +--------+
-   |   +---+ | | +-----+     |
-   v   v     v v       v     v
+ Internet
+ |
+ +--------+--------+
+ | Cloudflare CDN |
+ | DNS, WAF, DDoS |
+ +--------+--------+
+ |
+ +--------+--------+
+ | Hanzo Ingress | L7 reverse proxy
+ | (ports 80/443) | TLS termination
+ | IngressClass: | Route matching
+ | "hanzo" | Load balancing
+ +--+-+-+-+-+--+---+
+ | | | | | |
+ +-----+ | | | | +--------+
+ | +---+ | | +-----+ |
+ v v v v v v
  +---+----+ +---+ +------+ +------+
- |Gateway | |IAM| | KMS  | |Cloud |
- |(API)   | +---+ +------+ +------+
+ |Gateway | |IAM| | KMS | |Cloud |
+ |(API) | +---+ +------+ +------+
  +---+----+
-     |
+ |
  Backend services
 ```
 
@@ -86,8 +86,8 @@ Hanzo Ingress is a **Kubernetes-native L7 reverse proxy and load balancer** that
 |--------|-----------------|------|
 | `hanzo.ai` | hanzo-app | 3000 |
 | `api.hanzo.ai`, `llm.hanzo.ai` | Hanzo Gateway | 8000 |
-| `hanzo.id`, `lux.id`, `zoo.id`, `pars.id` | IAM (Casdoor) | 8000 |
-| `kms.hanzo.ai` | KMS (Infisical) | 8080 |
+| `hanzo.id`, `lux.id`, `zoo.id`, `pars.id` | IAM (Hanzo IAM) | 8000 |
+| `kms.hanzo.ai` | KMS (Hanzo KMS) | 8080 |
 | `platform.hanzo.ai` | Platform (Dokploy) | 3000 |
 | `console.hanzo.ai` | Console (Langfuse) | 3000 |
 | `cloud.hanzo.ai` | Cloud (Casibase) | 8000 |
@@ -102,27 +102,27 @@ Hanzo Ingress is a **Kubernetes-native L7 reverse proxy and load balancer** that
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: my-service
-  namespace: hanzo
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt
+ name: my-service
+ namespace: hanzo
+ annotations:
+ cert-manager.io/cluster-issuer: letsencrypt
 spec:
-  ingressClassName: hanzo
-  tls:
-    - hosts:
-        - my-service.hanzo.ai
-      secretName: my-service-tls
-  rules:
-    - host: my-service.hanzo.ai
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: my-service
-                port:
-                  number: 8080
+ ingressClassName: hanzo
+ tls:
+ - hosts:
+ - my-service.hanzo.ai
+ secretName: my-service-tls
+ rules:
+ - host: my-service.hanzo.ai
+ http:
+ paths:
+ - path: /
+ pathType: Prefix
+ backend:
+ service:
+ name: my-service
+ port:
+ number: 8080
 ```
 
 ## Middleware
@@ -131,9 +131,9 @@ Apply via Kubernetes Ingress annotations or IngressRoute CRDs:
 
 ```yaml
 metadata:
-  annotations:
-    hanzo.ai/ingress-ratelimit-average: "100"
-    hanzo.ai/ingress-ratelimit-burst: "200"
+ annotations:
+ hanzo.ai/ingress-ratelimit-average: "100"
+ hanzo.ai/ingress-ratelimit-burst: "200"
 ```
 
 Built-in middleware: auth, ratelimiter, circuitbreaker, retry, compress, headers, ipallowlist, buffering, inflightreq, redirect, stripprefix, grpcweb, observability (OTEL), metrics (Prometheus), accesslog.
@@ -142,28 +142,28 @@ Built-in middleware: auth, ratelimiter, circuitbreaker, retry, compress, headers
 
 ```
 k8s/hanzo/
-  rbac.yaml           # ServiceAccount + ClusterRole
-  ingressclass.yaml   # IngressClass "hanzo" (default)
-  deployment.yaml     # 2-replica Deployment, hostNetwork
-  service.yaml        # LoadBalancer Service
-  middlewares.yaml    # Default middleware configurations
+ rbac.yaml # ServiceAccount + ClusterRole
+ ingressclass.yaml # IngressClass "hanzo" (default)
+ deployment.yaml # 2-replica Deployment, hostNetwork
+ service.yaml # LoadBalancer Service
+ middlewares.yaml # Default middleware configurations
 ```
 
 ## Production CLI flags
 
 ```bash
 ./hanzo-ingress \
-  --providers.kubernetesingress=true \
-  --providers.kubernetesingress.ingressendpoint.publishedservice=hanzo/hanzo-ingress \
-  --providers.kubernetesingress.allowemptyservices=true \
-  --entrypoints.web.address=:80 \
-  --entrypoints.websecure.address=:443 \
-  --entrypoints.websecure.http.tls=true \
-  --ping=true \
-  --ping.entryPoint=web \
-  --api.dashboard=false \
-  --log.level=INFO \
-  --accesslog=true
+ --providers.kubernetesingress=true \
+ --providers.kubernetesingress.ingressendpoint.publishedservice=hanzo/hanzo-ingress \
+ --providers.kubernetesingress.allowemptyservices=true \
+ --entrypoints.web.address=:80 \
+ --entrypoints.websecure.address=:443 \
+ --entrypoints.websecure.http.tls=true \
+ --ping=true \
+ --ping.entryPoint=web \
+ --api.dashboard=false \
+ --log.level=INFO \
+ --accesslog=true
 ```
 
 ## Build and deploy

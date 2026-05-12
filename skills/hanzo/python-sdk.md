@@ -66,12 +66,12 @@ poetry add hanzoai
 from hanzoai import Hanzo
 
 client = Hanzo(
-    api_key="your-api-key",  # defaults to HANZO_API_KEY env var
+ api_key="your-api-key", # defaults to HANZO_API_KEY env var
 )
 
 response = client.chat.completions.create(
-    model="zen-70b",
-    messages=[{"role": "user", "content": "Hello, Hanzo!"}],
+ model="zen-70b",
+ messages=[{"role": "user", "content": "Hello, Hanzo!"}],
 )
 print(response.choices[0].message.content)
 ```
@@ -80,15 +80,15 @@ print(response.choices[0].message.content)
 
 ```python
 stream = client.chat.completions.create(
-    model="zen-70b",
-    messages=[{"role": "user", "content": "Write a poem about code"}],
-    stream=True,
+ model="zen-70b",
+ messages=[{"role": "user", "content": "Write a poem about code"}],
+ stream=True,
 )
 
 for chunk in stream:
-    content = chunk.choices[0].delta.content
-    if content:
-        print(content, end="")
+ content = chunk.choices[0].delta.content
+ if content:
+ print(content, end="")
 ```
 
 ### Async Client
@@ -100,11 +100,11 @@ from hanzoai import AsyncHanzo
 client = AsyncHanzo()
 
 async def main():
-    response = await client.chat.completions.create(
-        model="zen-70b",
-        messages=[{"role": "user", "content": "Hello!"}],
-    )
-    print(response.choices[0].message.content)
+ response = await client.chat.completions.create(
+ model="zen-70b",
+ messages=[{"role": "user", "content": "Hello!"}],
+ )
+ print(response.choices[0].message.content)
 
 asyncio.run(main())
 ```
@@ -113,68 +113,68 @@ asyncio.run(main())
 
 ```python
 async def stream_response():
-    stream = await client.chat.completions.create(
-        model="zen-70b",
-        messages=[{"role": "user", "content": "Write a story"}],
-        stream=True,
-    )
+ stream = await client.chat.completions.create(
+ model="zen-70b",
+ messages=[{"role": "user", "content": "Write a story"}],
+ stream=True,
+ )
 
-    async for chunk in stream:
-        content = chunk.choices[0].delta.content
-        if content:
-            print(content, end="")
+ async for chunk in stream:
+ content = chunk.choices[0].delta.content
+ if content:
+ print(content, end="")
 ```
 
 ### Embeddings
 
 ```python
 embedding = client.embeddings.create(
-    model="zen-embedding",
-    input="Hello world",
+ model="zen-embedding",
+ input="Hello world",
 )
-print(len(embedding.data[0].embedding))  # dimension count
+print(len(embedding.data[0].embedding)) # dimension count
 ```
 
 ### Function Calling / Tools
 
 ```python
 response = client.chat.completions.create(
-    model="zen-70b",
-    messages=[{"role": "user", "content": "What's the weather in Tokyo?"}],
-    tools=[{
-        "type": "function",
-        "function": {
-            "name": "get_weather",
-            "description": "Get current weather for a location",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "location": {"type": "string", "description": "City name"},
-                },
-                "required": ["location"],
-            },
-        },
-    }],
+ model="zen-70b",
+ messages=[{"role": "user", "content": "What's the weather in Tokyo?"}],
+ tools=[{
+ "type": "function",
+ "function": {
+ "name": "get_weather",
+ "description": "Get current weather for a location",
+ "parameters": {
+ "type": "object",
+ "properties": {
+ "location": {"type": "string", "description": "City name"},
+ },
+ "required": ["location"],
+ },
+ },
+ }],
 )
 
 tool_call = response.choices[0].message.tool_calls[0]
 if tool_call:
-    print(tool_call.function.name)       # "get_weather"
-    print(tool_call.function.arguments)  # '{"location":"Tokyo"}'
+ print(tool_call.function.name) # "get_weather"
+ print(tool_call.function.arguments) # '{"location":"Tokyo"}'
 ```
 
 ### Vision (Multimodal)
 
 ```python
 response = client.chat.completions.create(
-    model="zen-vision",
-    messages=[{
-        "role": "user",
-        "content": [
-            {"type": "text", "text": "What's in this image?"},
-            {"type": "image_url", "image_url": {"url": "https://example.com/photo.jpg"}},
-        ],
-    }],
+ model="zen-vision",
+ messages=[{
+ "role": "user",
+ "content": [
+ {"type": "text", "text": "What's in this image?"},
+ {"type": "image_url", "image_url": {"url": "https://example.com/photo.jpg"}},
+ ],
+ }],
 )
 ```
 
@@ -235,21 +235,21 @@ The SDK also includes namespaces for: assistants, threads, runs, batches, vector
 
 ```python
 client = Hanzo(
-    api_key="your-key",                    # Required (or HANZO_API_KEY env)
-    base_url="https://api.hanzo.ai",       # Default
-    timeout=60.0,                          # Request timeout (seconds)
-    max_retries=2,                         # Auto-retry count
-    default_headers={"X-Custom": "val"},   # Extra headers
-    default_query={"version": "2"},        # Extra query params
+ api_key="your-key", # Required (or HANZO_API_KEY env)
+ base_url="https://api.hanzo.ai", # Default
+ timeout=60.0, # Request timeout (seconds)
+ max_retries=2, # Auto-retry count
+ default_headers={"X-Custom": "val"}, # Extra headers
+ default_query={"version": "2"}, # Extra query params
 )
 ```
 
 ### Environment Variables
 
 ```bash
-HANZO_API_KEY=your-api-key          # Required
-HANZO_BASE_URL=https://...          # Override base URL
-HANZO_LOG=debug                     # Enable debug logging
+HANZO_API_KEY=your-api-key # Required
+HANZO_BASE_URL=https://... # Override base URL
+HANZO_LOG=debug # Enable debug logging
 ```
 
 ## OpenAI Drop-In Replacement
@@ -258,13 +258,13 @@ HANZO_LOG=debug                     # Enable debug logging
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://api.hanzo.ai/v1",
-    api_key=os.environ["HANZO_API_KEY"],
+ base_url="https://api.hanzo.ai/v1",
+ api_key=os.environ["HANZO_API_KEY"],
 )
 # Everything works — same API shape
 response = client.chat.completions.create(
-    model="zen-70b",
-    messages=[{"role": "user", "content": "Hello"}],
+ model="zen-70b",
+ messages=[{"role": "user", "content": "Hello"}],
 )
 ```
 
@@ -282,19 +282,19 @@ client = Hanzo()
 
 @app.post("/api/chat")
 async def chat(messages: list[dict]):
-    stream = client.chat.completions.create(
-        model="zen-70b",
-        messages=messages,
-        stream=True,
-    )
+ stream = client.chat.completions.create(
+ model="zen-70b",
+ messages=messages,
+ stream=True,
+ )
 
-    async def generate():
-        for chunk in stream:
-            content = chunk.choices[0].delta.content
-            if content:
-                yield f"data: {content}\n\n"
+ async def generate():
+ for chunk in stream:
+ content = chunk.choices[0].delta.content
+ if content:
+ yield f"data: {content}\n\n"
 
-    return StreamingResponse(generate(), media_type="text/event-stream")
+ return StreamingResponse(generate(), media_type="text/event-stream")
 ```
 
 ### LangChain
@@ -303,9 +303,9 @@ async def chat(messages: list[dict]):
 from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
-    base_url="https://api.hanzo.ai/v1",
-    api_key=os.environ["HANZO_API_KEY"],
-    model="zen-70b",
+ base_url="https://api.hanzo.ai/v1",
+ api_key=os.environ["HANZO_API_KEY"],
+ model="zen-70b",
 )
 
 response = llm.invoke("Hello, Hanzo!")
@@ -317,13 +317,13 @@ response = llm.invoke("Hello, Hanzo!")
 from hanzoai import Hanzo, APIError, RateLimitError, APIConnectionError
 
 try:
-    response = client.chat.completions.create(...)
+ response = client.chat.completions.create(...)
 except RateLimitError as e:
-    print(f"Rate limited, retry after: {e.response.headers.get('retry-after')}")
+ print(f"Rate limited, retry after: {e.response.headers.get('retry-after')}")
 except APIError as e:
-    print(f"API error: {e.status_code} {e.message}")
+ print(f"API error: {e.status_code} {e.message}")
 except APIConnectionError as e:
-    print(f"Connection error: {e}")
+ print(f"Connection error: {e}")
 ```
 
 ## Pagination
@@ -331,13 +331,13 @@ except APIConnectionError as e:
 ```python
 # Auto-pagination
 for model in client.models.list():
-    print(model.id)
+ print(model.id)
 
 # Manual pagination
 page = client.models.list()
 print(page.data)
 if page.has_next_page():
-    next_page = page.get_next_page()
+ next_page = page.get_next_page()
 ```
 
 ## Package Structure
@@ -346,23 +346,23 @@ The SDK contains **55 packages** in the `pkg/` directory, organized by resource 
 
 ```
 hanzoai/
-├── __init__.py           # Main client export
-├── _client.py            # Hanzo and AsyncHanzo clients
-├── _streaming.py         # Stream and AsyncStream
-├── _response.py          # Response types
-├── types/                # All Pydantic response models
-│   ├── chat/
-│   ├── fine_tuning/
-│   ├── audio/
-│   └── ...
-├── resources/            # Resource namespace implementations
-│   ├── chat/
-│   │   └── completions.py
-│   ├── embeddings.py
-│   ├── models.py
-│   ├── files.py
-│   └── ...
-└── pkg/                  # 55 sub-packages
+├── __init__.py # Main client export
+├── _client.py # Hanzo and AsyncHanzo clients
+├── _streaming.py # Stream and AsyncStream
+├── _response.py # Response types
+├── types/ # All Pydantic response models
+│ ├── chat/
+│ ├── fine_tuning/
+│ ├── audio/
+│ └── ...
+├── resources/ # Resource namespace implementations
+│ ├── chat/
+│ │ └── completions.py
+│ ├── embeddings.py
+│ ├── models.py
+│ ├── files.py
+│ └── ...
+└── pkg/ # 55 sub-packages
 ```
 
 ## Runtime Support

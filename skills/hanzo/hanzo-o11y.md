@@ -49,19 +49,19 @@ Hanzo O11y is a **full-stack observability platform** for logs, metrics, and tra
 
 ```
 Applications (OTEL SDK instrumented)
-        |
-   OTEL Collector (ghcr.io/hanzoai/otel-collector)
-   port 4317 (gRPC) / 4318 (HTTP)
-        |
-   +----+----+
-   |         |
-ClickHouse  O11y Backend
+ |
+ OTEL Collector (ghcr.io/hanzoai/otel-collector)
+ port 4317 (gRPC) / 4318 (HTTP)
+ |
+ +----+----+
+ | |
+ClickHouse O11y Backend
 (datastore) (Go, port 8080)
-   |              |
-   +---------+----+
-             |
-        O11y Frontend
-        (React, port 3301)
+ | |
+ +---------+----+
+ |
+ O11y Frontend
+ (React, port 3301)
 ```
 
 ## Components
@@ -93,22 +93,22 @@ trace.set_tracer_provider(provider)
 # Use tracer
 tracer = trace.get_tracer("my-service")
 with tracer.start_as_current_span("my-operation"):
-    # your code
-    pass
+ # your code
+ pass
 ```
 
 ### Go (OpenTelemetry)
 
 ```go
 import (
-    "go.opentelemetry.io/otel"
-    "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-    "go.opentelemetry.io/otel/sdk/trace"
+ "go.opentelemetry.io/otel"
+ "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+ "go.opentelemetry.io/otel/sdk/trace"
 )
 
 exporter, _ := otlptracegrpc.New(ctx,
-    otlptracegrpc.WithEndpoint("otel-collector.hanzo.svc:4317"),
-    otlptracegrpc.WithInsecure(),
+ otlptracegrpc.WithEndpoint("otel-collector.hanzo.svc:4317"),
+ otlptracegrpc.WithInsecure(),
 )
 tp := trace.NewTracerProvider(trace.WithBatcher(exporter))
 otel.SetTracerProvider(tp)
@@ -121,9 +121,9 @@ import { NodeSDK } from '@opentelemetry/sdk-node'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc'
 
 const sdk = new NodeSDK({
-  traceExporter: new OTLPTraceExporter({
-    url: 'http://otel-collector.hanzo.svc:4317'
-  })
+ traceExporter: new OTLPTraceExporter({
+ url: 'http://otel-collector.hanzo.svc:4317'
+ })
 })
 sdk.start()
 ```
@@ -167,14 +167,14 @@ kubectl --context do-sfo3-hanzo-k8s kustomize . | kubectl apply -f -
 ```yaml
 # Example alert rule
 - alert: HighErrorRate
-  expr: |
-    sum(rate(signoz_calls_total{status_code="STATUS_CODE_ERROR"}[5m]))
-    / sum(rate(signoz_calls_total[5m])) > 0.05
-  for: 5m
-  labels:
-    severity: warning
-  annotations:
-    summary: "Error rate above 5%"
+ expr: |
+ sum(rate(signoz_calls_total{status_code="STATUS_CODE_ERROR"}[5m]))
+ / sum(rate(signoz_calls_total[5m])) > 0.05
+ for: 5m
+ labels:
+ severity: warning
+ annotations:
+ summary: "Error rate above 5%"
 ```
 
 ## O11y vs Console

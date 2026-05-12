@@ -79,8 +79,8 @@ Transfer USDC to your wallet address on Base network. Even $1 covers thousands o
 ```bash
 # First request gets 402 with payment details
 curl -X POST https://gateway.web3.hanzo.ai/v1/eth/mainnet \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+ -H "Content-Type: application/json" \
+ -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 
 # Response: 402 Payment Required with X-Payment-Details header
 # Agent SDK handles payment signing automatically
@@ -92,13 +92,13 @@ curl -X POST https://gateway.web3.hanzo.ai/v1/eth/mainnet \
 import { HanzoWeb3Agent } from "@hanzo/web3-agent"
 
 const agent = new HanzoWeb3Agent({
-  privateKey: process.env.HANZO_WALLET_PRIVATE_KEY,
+ privateKey: process.env.HANZO_WALLET_PRIVATE_KEY,
 })
 
 // Automatically handles x402 payment flow
 const blockNumber = await agent.rpc("eth/mainnet", {
-  method: "eth_blockNumber",
-  params: [],
+ method: "eth_blockNumber",
+ params: [],
 })
 ```
 
@@ -107,7 +107,7 @@ const blockNumber = await agent.rpc("eth/mainnet", {
 ```python
 from hanzo.web3 import Web3Agent
 
-agent = Web3Agent()  # uses HANZO_WALLET_PRIVATE_KEY from env
+agent = Web3Agent() # uses HANZO_WALLET_PRIVATE_KEY from env
 
 # Automatic x402 payment handling
 block = agent.rpc("eth/mainnet", method="eth_blockNumber")
@@ -150,30 +150,30 @@ import { MCPServer, Tool } from '@hanzo/mcp'
 import { HanzoWeb3Agent } from '@hanzo/web3-agent'
 
 const agent = new HanzoWeb3Agent({
-  privateKey: process.env.HANZO_WALLET_PRIVATE_KEY,
+ privateKey: process.env.HANZO_WALLET_PRIVATE_KEY,
 })
 
 const gatewayTools: Tool[] = [
-  {
-    name: 'web3_gateway_rpc',
-    description: 'Keyless JSON-RPC call via x402 micropayment',
-    parameters: {
-      network: { type: 'string', required: true },
-      method: { type: 'string', required: true },
-      params: { type: 'array', default: [] }
-    },
-    async execute({ network, method, params }) {
-      return await agent.rpc(network, { method, params })
-    }
-  },
-  {
-    name: 'web3_gateway_balance',
-    description: 'Check USDC balance available for gateway payments',
-    parameters: {},
-    async execute() {
-      return await agent.getBalance()
-    }
-  }
+ {
+ name: 'web3_gateway_rpc',
+ description: 'Keyless JSON-RPC call via x402 micropayment',
+ parameters: {
+ network: { type: 'string', required: true },
+ method: { type: 'string', required: true },
+ params: { type: 'array', default: [] }
+ },
+ async execute({ network, method, params }) {
+ return await agent.rpc(network, { method, params })
+ }
+ },
+ {
+ name: 'web3_gateway_balance',
+ description: 'Check USDC balance available for gateway payments',
+ parameters: {},
+ async execute() {
+ return await agent.getBalance()
+ }
+ }
 ]
 ```
 

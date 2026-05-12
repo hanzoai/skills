@@ -64,37 +64,37 @@ npm run buildreact
 npm run watch
 
 # Launch editor (separate terminal)
-./scripts/code.sh         # macOS/Linux
-./scripts/code.bat        # Windows
+./scripts/code.sh # macOS/Linux
+./scripts/code.bat # Windows
 
 # Package for distribution
-npm run gulp vscode-darwin-arm64   # macOS ARM
-npm run gulp vscode-darwin-x64     # macOS Intel
-npm run gulp vscode-win32-x64     # Windows
-npm run gulp vscode-linux-x64     # Linux
+npm run gulp vscode-darwin-arm64 # macOS ARM
+npm run gulp vscode-darwin-x64 # macOS Intel
+npm run gulp vscode-win32-x64 # Windows
+npm run gulp vscode-linux-x64 # Linux
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────┐
-│     Browser Process         │
-│  (React UI, Monaco editor)  │
-│                             │
-│  src/.../void/browser/      │
-│  chatThreadService          │
-│  autocompleteService        │
-│  editCodeService            │
-│  toolsService               │
+│ Browser Process │
+│ (React UI, Monaco editor) │
+│ │
+│ src/.../void/browser/ │
+│ chatThreadService │
+│ autocompleteService │
+│ editCodeService │
+│ toolsService │
 └────────────┬────────────────┘
-             │ IPC channels
+ │ IPC channels
 ┌────────────▼────────────────┐
-│     Main Process            │
-│  (Node.js, LLM SDKs)       │
-│                             │
-│  sendLLMMessage             │
-│  Anthropic, OpenAI, Gemini  │
-│  Mistral, Groq, Ollama      │
+│ Main Process │
+│ (Node.js, LLM SDKs) │
+│ │
+│ sendLLMMessage │
+│ Anthropic, OpenAI, Gemini │
+│ Mistral, Groq, Ollama │
 └─────────────────────────────┘
 ```
 
@@ -102,22 +102,22 @@ npm run gulp vscode-linux-x64     # Linux
 
 ```
 hanzoai/code/
-  src/vs/workbench/contrib/void/browser/   # All custom AI features
-    react/              # React UI (chat sidebar, settings)
-    chatThreadService   # Chat + agent orchestration
-    editCodeService     # Apply, Cmd+K, Edit tool
-    autocompleteService # Inline completions
-    inlineDiffsService  # Diff visualization
-    toolsService        # Agent tool system
-  extensions/           # Built-in VS Code extensions
-  build/                # Gulp build scripts
-  cli/                  # CLI tool
-  remote/               # Remote dev server
-  test/                 # Test infrastructure
-  void_icons/           # Editor icons
-  product.json          # Editor identity/branding
-  package.json          # Dependencies
-  .voidrules            # AI assistant rules for this codebase
+ src/vs/workbench/contrib/void/browser/ # All custom AI features
+ react/ # React UI (chat sidebar, settings)
+ chatThreadService # Chat + agent orchestration
+ editCodeService # Apply, Cmd+K, Edit tool
+ autocompleteService # Inline completions
+ inlineDiffsService # Diff visualization
+ toolsService # Agent tool system
+ extensions/ # Built-in VS Code extensions
+ build/ # Gulp build scripts
+ cli/ # CLI tool
+ remote/ # Remote dev server
+ test/ # Test infrastructure
+ void_icons/ # Editor icons
+ product.json # Editor identity/branding
+ package.json # Dependencies
+ .voidrules # AI assistant rules for this codebase
 ```
 
 ## Development rules

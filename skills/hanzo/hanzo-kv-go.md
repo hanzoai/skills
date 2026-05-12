@@ -36,32 +36,32 @@ go get github.com/hanzoai/kv-go/v9
 package main
 
 import (
-    "context"
-    "fmt"
+ "context"
+ "fmt"
 
-    "github.com/hanzoai/kv-go/v9"
+ "github.com/hanzoai/kv-go/v9"
 )
 
 func main() {
-    rdb := redis.NewClient(&redis.Options{
-        Addr:     "localhost:6379",
-        Password: "",
-        DB:       0,
-    })
-    defer rdb.Close()
+ rdb := redis.NewClient(&redis.Options{
+ Addr: "localhost:6379",
+ Password: "",
+ DB: 0,
+ })
+ defer rdb.Close()
 
-    ctx := context.Background()
+ ctx := context.Background()
 
-    err := rdb.Set(ctx, "key", "value", 0).Err()
-    if err != nil {
-        panic(err)
-    }
+ err := rdb.Set(ctx, "key", "value", 0).Err()
+ if err != nil {
+ panic(err)
+ }
 
-    val, err := rdb.Get(ctx, "key").Result()
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println("key", val)
+ val, err := rdb.Get(ctx, "key").Result()
+ if err != nil {
+ panic(err)
+ }
+ fmt.Println("key", val)
 }
 ```
 
@@ -86,18 +86,18 @@ rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
 
 // Sentinel (HA)
 rdb := redis.NewFailoverClient(&redis.FailoverOptions{
-    MasterName:    "mymaster",
-    SentinelAddrs: []string{"localhost:26379"},
+ MasterName: "mymaster",
+ SentinelAddrs: []string{"localhost:26379"},
 })
 
 // Cluster
 rdb := redis.NewClusterClient(&redis.ClusterOptions{
-    Addrs: []string{"localhost:7000", "localhost:7001", "localhost:7002"},
+ Addrs: []string{"localhost:7000", "localhost:7001", "localhost:7002"},
 })
 
 // Universal (auto-detects standalone/sentinel/cluster)
 rdb := redis.NewUniversalClient(&redis.UniversalOptions{
-    Addrs: []string{"localhost:6379"},
+ Addrs: []string{"localhost:6379"},
 })
 ```
 
@@ -114,7 +114,7 @@ rdb := redis.NewUniversalClient(&redis.UniversalOptions{
 ```bash
 go build ./...
 go test ./...
-make test  # runs via Docker
+make test # runs via Docker
 ```
 
 ## Related Skills

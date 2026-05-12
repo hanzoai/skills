@@ -60,7 +60,7 @@ cp .env.example .env
 npm run generate-store
 
 # Development
-npm run dev    # http://localhost:3200
+npm run dev # http://localhost:3200
 
 # Production build (static export to out/)
 npm run build
@@ -70,12 +70,12 @@ npm run build
 
 ```
 store.hanzo.ai
-      |
-  Next.js SSG
-      |
-  store.json (generated)
-      |
-  data/agents/*.json + data/tools/*.json
+ |
+ Next.js SSG
+ |
+ store.json (generated)
+ |
+ data/agents/*.json + data/tools/*.json
 ```
 
 Hanzo Desktop fetches `https://store.hanzo.ai/store.json` for the catalog.
@@ -84,31 +84,31 @@ Hanzo Desktop fetches `https://store.hanzo.ai/store.json` for the catalog.
 
 ```
 hanzoai/store/
-  package.json           # hanzo-store v0.1.0
-  next.config.js         # Static export, ignores TS/ESLint errors
-  app/
-    layout.tsx           # Root layout
-    page.tsx             # Main store page
-    apps/[id]/
-      page.tsx           # Server component (app detail)
-      page-client.tsx    # Client component (app detail)
-    providers.tsx        # QueryClient + Web3 providers
-  data/
-    agents/              # AI agents (one JSON per agent)
-    tools/               # Automation tools (one JSON per tool)
-  scripts/
-    generate-store.js    # Reads data/ and writes public/store.json
-  lib/
-    wagmi.ts             # Web3 config (WalletConnect, chain definitions)
-  types/
-    index.ts             # App/store TypeScript types
-    hanzo-ui.d.ts        # @hanzo/ui type shim
-  components/            # React UI components
-  public/
-    store.json           # Generated catalog (gitignored)
-  e2e/
-    store.spec.ts        # Playwright E2E tests
-  playwright.config.ts
+ package.json # hanzo-store v0.1.0
+ next.config.js # Static export, ignores TS/ESLint errors
+ app/
+ layout.tsx # Root layout
+ page.tsx # Main store page
+ apps/[id]/
+ page.tsx # Server component (app detail)
+ page-client.tsx # Client component (app detail)
+ providers.tsx # QueryClient + Web3 providers
+ data/
+ agents/ # AI agents (one JSON per agent)
+ tools/ # Automation tools (one JSON per tool)
+ scripts/
+ generate-store.js # Reads data/ and writes public/store.json
+ lib/
+ wagmi.ts # Web3 config (WalletConnect, chain definitions)
+ types/
+ index.ts # App/store TypeScript types
+ hanzo-ui.d.ts # @hanzo/ui type shim
+ components/ # React UI components
+ public/
+ store.json # Generated catalog (gitignored)
+ e2e/
+ store.spec.ts # Playwright E2E tests
+ playwright.config.ts
 ```
 
 ## Adding an app
@@ -117,20 +117,20 @@ Create a JSON file in `data/agents/` or `data/tools/`:
 
 ```json
 {
-  "id": "my-server",
-  "name": "My Server",
-  "description": "What it does",
-  "version": "1.0.0",
-  "author": "Your Name",
-  "category": "Development Tools",
-  "tags": ["mcp", "tools"],
-  "installCommand": "npx -y @you/my-server",
-  "mcpConfig": {
-    "command": "npx",
-    "args": ["-y", "@you/my-server"]
-  },
-  "createdAt": "2026-01-01T00:00:00Z",
-  "updatedAt": "2026-01-01T00:00:00Z"
+ "id": "my-server",
+ "name": "My Server",
+ "description": "What it does",
+ "version": "1.0.0",
+ "author": "Your Name",
+ "category": "Development Tools",
+ "tags": ["mcp", "tools"],
+ "installCommand": "npx -y @you/my-server",
+ "mcpConfig": {
+ "command": "npx",
+ "args": ["-y", "@you/my-server"]
+ },
+ "createdAt": "2026-01-01T00:00:00Z",
+ "updatedAt": "2026-01-01T00:00:00Z"
 }
 ```
 

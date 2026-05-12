@@ -62,7 +62,7 @@ Fork of [MinIO](https://github.com/minio/minio). Repo: `hanzoai/s3` (GitHub name
 ```bash
 docker build -f Dockerfile.hanzo -t hanzo-storage .
 docker run -p 9000:9000 -p 9001:9001 \
-  hanzo-storage server /data --console-address :9001
+ hanzo-storage server /data --console-address :9001
 ```
 
 ### Build from source
@@ -89,20 +89,20 @@ mc ls hanzo/my-bucket/
 ```yaml
 # compose.yml
 services:
-  storage:
-    image: ghcr.io/hanzoai/s3:latest
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    command: server /data --console-address :9001
-    environment:
-      MINIO_ROOT_USER: "${S3_ROOT_USER}"
-      MINIO_ROOT_PASSWORD: "${S3_ROOT_PASSWORD}"
-    volumes:
-      - storage-data:/data
+ storage:
+ image: ghcr.io/hanzoai/s3:latest
+ ports:
+ - "9000:9000"
+ - "9001:9001"
+ command: server /data --console-address :9001
+ environment:
+ MINIO_ROOT_USER: "${S3_ROOT_USER}"
+ MINIO_ROOT_PASSWORD: "${S3_ROOT_PASSWORD}"
+ volumes:
+ - storage-data:/data
 
 volumes:
-  storage-data:
+ storage-data:
 ```
 
 ## Core Concepts
@@ -110,15 +110,15 @@ volumes:
 ### Architecture
 
 ```
-┌──────────────┐     ┌──────────────────┐
-│  S3 Clients  │────>│  Hanzo Storage   │
-│  (any SDK)   │     │  (port 9000)     │
-└──────────────┘     └────────┬─────────┘
-                              │
-┌──────────────┐     ┌────────┴─────────┐
-│  Console UI  │────>│  Console Server  │
-│  (browser)   │     │  (port 9001)     │
-└──────────────┘     └──────────────────┘
+┌──────────────┐ ┌──────────────────┐
+│ S3 Clients │────>│ Hanzo Storage │
+│ (any SDK) │ │ (port 9000) │
+└──────────────┘ └────────┬─────────┘
+ │
+┌──────────────┐ ┌────────┴─────────┐
+│ Console UI │────>│ Console Server │
+│ (browser) │ │ (port 9001) │
+└──────────────┘ └──────────────────┘
 ```
 
 ### SDK Compatibility
@@ -137,25 +137,25 @@ Standard AWS SDKs (`aws-sdk-go`, `boto3`, `@aws-sdk/client-s3`) also work withou
 
 ```
 s3/
-  main.go                  # Entry point (calls cmd.Main)
-  cmd/                     # CLI commands and server logic
-  internal/
-    auth/                  # Authentication
-    bucket/                # Bucket management
-    config/                # Configuration
-    crypto/                # Encryption (SSE-S3, SSE-KMS)
-    event/                 # Event notification
-    grid/                  # Internal RPC grid
-    hash/                  # Content hashing
-    http/                  # HTTP server
-    jwt/                   # JWT handling
-    kms/                   # KMS integration
-    s3select/              # S3 Select queries
-    store/                 # Object store backend
-  helm/                    # Helm charts
-  workers/                 # Background workers
-  buildscripts/            # Build automation
-  dockerscripts/           # Docker entry scripts
+ main.go # Entry point (calls cmd.Main)
+ cmd/ # CLI commands and server logic
+ internal/
+ auth/ # Authentication
+ bucket/ # Bucket management
+ config/ # Configuration
+ crypto/ # Encryption (SSE-S3, SSE-KMS)
+ event/ # Event notification
+ grid/ # Internal RPC grid
+ hash/ # Content hashing
+ http/ # HTTP server
+ jwt/ # JWT handling
+ kms/ # KMS integration
+ s3select/ # S3 Select queries
+ store/ # Object store backend
+ helm/ # Helm charts
+ workers/ # Background workers
+ buildscripts/ # Build automation
+ dockerscripts/ # Docker entry scripts
 ```
 
 ### Environment Variables

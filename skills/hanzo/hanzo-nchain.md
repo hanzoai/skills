@@ -69,34 +69,34 @@ make deploy
 apiVersion: nchain.hanzo.ai/v1alpha1
 kind: NodeCluster
 metadata:
-  name: lux-devnet-validators
-  namespace: lux-devnet
+ name: lux-devnet-validators
+ namespace: lux-devnet
 spec:
-  protocol: lux
-  networkID: "3"
-  replicas: 5
-  role: validator
-  image:
-    repository: ghcr.io/luxfi/node
-    tag: v1.23.23
-  ports:
-    rpc: 9650
-    p2p: 9651
-  storage:
-    storageClassName: do-block-storage
-    size: 50Gi
-  resources:
-    requests:
-      cpu: "1"
-      memory: 2Gi
-    limits:
-      cpu: "2"
-      memory: 4Gi
-  consensus:
-    algorithm: snow
-    params:
-      sybilProtectionEnabled: false
-      allowPrivateIPs: true
+ protocol: lux
+ networkID: "3"
+ replicas: 5
+ role: validator
+ image:
+ repository: ghcr.io/luxfi/node
+ tag: v1.23.23
+ ports:
+ rpc: 9650
+ p2p: 9651
+ storage:
+ storageClassName: do-block-storage
+ size: 50Gi
+ resources:
+ requests:
+ cpu: "1"
+ memory: 2Gi
+ limits:
+ cpu: "2"
+ memory: 4Gi
+ consensus:
+ algorithm: snow
+ params:
+ sybilProtectionEnabled: false
+ allowPrivateIPs: true
 ```
 
 ### Create a full Network (composer)
@@ -105,29 +105,29 @@ spec:
 apiVersion: nchain.hanzo.ai/v1alpha1
 kind: Network
 metadata:
-  name: lux-mainnet
+ name: lux-mainnet
 spec:
-  protocol: lux
-  networkID: "1"
-  clusters:
-    - name: validators
-      spec:
-        replicas: 5
-        role: validator
-        image:
-          repository: ghcr.io/luxfi/node
-          tag: v1.23.23
-  gateways:
-    - name: api
-      spec:
-        replicas: 2
-        nodeClusterRef: lux-mainnet-validators
-        autoRoutes: true
-        ingress:
-          enabled: true
-          hosts:
-            - api.lux.network
-          tls: true
+ protocol: lux
+ networkID: "1"
+ clusters:
+ - name: validators
+ spec:
+ replicas: 5
+ role: validator
+ image:
+ repository: ghcr.io/luxfi/node
+ tag: v1.23.23
+ gateways:
+ - name: api
+ spec:
+ replicas: 2
+ nodeClusterRef: lux-mainnet-validators
+ autoRoutes: true
+ ingress:
+ enabled: true
+ hosts:
+ - api.lux.network
+ tls: true
 ```
 
 ## Core Concepts
@@ -136,13 +136,13 @@ spec:
 
 ```
 Network (top-level composer)
-  |-- NodeCluster    Stateful node pods (validator, fullnode, archive, bootnode, sentry)
-  |-- Chain          Blockchain/subnet/L2 definitions (genesis, chainID, VMID)
-  |-- Indexer        Block indexing services
-  |-- Explorer       Block explorer UIs (Blockscout, etc.)
-  |-- Bridge         Cross-chain bridge relayers
-  |-- Gateway        API gateway / RPC load balancer with rate limits
-  |-- Cloud          Cloud management platform (bootnode API + web UI)
+ |-- NodeCluster Stateful node pods (validator, fullnode, archive, bootnode, sentry)
+ |-- Chain Blockchain/subnet/L2 definitions (genesis, chainID, VMID)
+ |-- Indexer Block indexing services
+ |-- Explorer Block explorer UIs (Blockscout, etc.)
+ |-- Bridge Cross-chain bridge relayers
+ |-- Gateway API gateway / RPC load balancer with rate limits
+ |-- Cloud Cloud management platform (bootnode API + web UI)
 ```
 
 ### Controllers (8 reconcilers)
@@ -164,14 +164,14 @@ Each protocol implements the `Driver` interface:
 
 ```go
 type Driver interface {
-    Name() string
-    DefaultImage() string
-    BuildCommand(spec *NodeClusterSpec) (command, args []string)
-    BuildEnv(spec *NodeClusterSpec) []corev1.EnvVar
-    HealthEndpoint(spec *NodeClusterSpec) (path string, port int32)
-    DefaultPorts() PortConfig
-    RecommendedResources(role string) (requests, limits corev1.ResourceList)
-    // ... plus volumes, init containers, config maps
+ Name() string
+ DefaultImage() string
+ BuildCommand(spec *NodeClusterSpec) (command, args []string)
+ BuildEnv(spec *NodeClusterSpec) []corev1.EnvVar
+ HealthEndpoint(spec *NodeClusterSpec) (path string, port int32)
+ DefaultPorts() PortConfig
+ RecommendedResources(role string) (requests, limits corev1.ResourceList)
+ // ... plus volumes, init containers, config maps
 }
 ```
 
@@ -198,55 +198,55 @@ type Driver interface {
 
 ```
 github.com/hanzoai/nchain/
-    Dockerfile                          # Multi-stage build (distroless)
-    Makefile                            # build, test, manifests, docker-build, deploy
-    api/v1alpha1/
-        chain_types.go                  # Chain CRD (blockchain/subnet/L2)
-        nodecluster_types.go            # NodeCluster CRD (node pod management)
-        network_types.go                # Network CRD (top-level composer)
-        bridge_types.go                 # Bridge CRD (cross-chain relayer)
-        explorer_types.go               # Explorer CRD (block explorer)
-        gateway_types.go                # Gateway CRD (API gateway)
-        indexer_types.go                # Indexer CRD (block indexing)
-        cloud_types.go                  # Cloud CRD (management platform)
-        common_types.go                 # Shared types (ports, storage, consensus, etc.)
-        groupversion_info.go            # API group registration
-        zz_generated_deepcopy.go        # Auto-generated DeepCopy methods
-    cmd/
-        main.go                         # Operator entrypoint (registers all 8 controllers)
-    config/
-        crd/                            # Generated CRD YAML manifests
-        samples/
-            lux-mainnet.yaml            # Full Lux mainnet Network example
-            nodecluster-standalone.yaml # Standalone NodeCluster + Gateway
-            ethereum-node.yaml          # Ethereum node example
-            cloud-multi-brand.yaml      # Multi-brand Cloud deployment
-    internal/
-        controller/
-            nodecluster_controller.go   # NodeCluster reconciler
-            chain_controller.go         # Chain reconciler
-            network_controller.go       # Network reconciler
-            bridge_controller.go        # Bridge reconciler
-            explorer_controller.go      # Explorer reconciler
-            gateway_controller.go       # Gateway reconciler
-            indexer_controller.go       # Indexer reconciler
-            cloud_controller.go         # Cloud reconciler
-            helpers.go                  # Shared controller utilities
-            predicates.go               # Event filter predicates
-        manifests/
-            builder.go                  # K8s manifest builder (StatefulSet, Service, etc.)
-            labels.go                   # Label helpers
-            mutate.go                   # CreateOrUpdate mutation helpers
-        protocol/
-            driver.go                   # Driver interface definition
-            registry.go                 # Protocol driver registry
-            lux.go                      # Lux protocol driver
-            ethereum.go                 # Ethereum protocol driver
-            bitcoin.go                  # Bitcoin protocol driver
-            cosmos.go                   # Cosmos protocol driver
-            solana.go                   # Solana protocol driver
-            generic.go                  # Generic fallback driver
-        status/                         # Status tracking utilities
+ Dockerfile # Multi-stage build (distroless)
+ Makefile # build, test, manifests, docker-build, deploy
+ api/v1alpha1/
+ chain_types.go # Chain CRD (blockchain/subnet/L2)
+ nodecluster_types.go # NodeCluster CRD (node pod management)
+ network_types.go # Network CRD (top-level composer)
+ bridge_types.go # Bridge CRD (cross-chain relayer)
+ explorer_types.go # Explorer CRD (block explorer)
+ gateway_types.go # Gateway CRD (API gateway)
+ indexer_types.go # Indexer CRD (block indexing)
+ cloud_types.go # Cloud CRD (management platform)
+ common_types.go # Shared types (ports, storage, consensus, etc.)
+ groupversion_info.go # API group registration
+ zz_generated_deepcopy.go # Auto-generated DeepCopy methods
+ cmd/
+ main.go # Operator entrypoint (registers all 8 controllers)
+ config/
+ crd/ # Generated CRD YAML manifests
+ samples/
+ lux-mainnet.yaml # Full Lux mainnet Network example
+ nodecluster-standalone.yaml # Standalone NodeCluster + Gateway
+ ethereum-node.yaml # Ethereum node example
+ cloud-multi-brand.yaml # Multi-brand Cloud deployment
+ internal/
+ controller/
+ nodecluster_controller.go # NodeCluster reconciler
+ chain_controller.go # Chain reconciler
+ network_controller.go # Network reconciler
+ bridge_controller.go # Bridge reconciler
+ explorer_controller.go # Explorer reconciler
+ gateway_controller.go # Gateway reconciler
+ indexer_controller.go # Indexer reconciler
+ cloud_controller.go # Cloud reconciler
+ helpers.go # Shared controller utilities
+ predicates.go # Event filter predicates
+ manifests/
+ builder.go # K8s manifest builder (StatefulSet, Service, etc.)
+ labels.go # Label helpers
+ mutate.go # CreateOrUpdate mutation helpers
+ protocol/
+ driver.go # Driver interface definition
+ registry.go # Protocol driver registry
+ lux.go # Lux protocol driver
+ ethereum.go # Ethereum protocol driver
+ bitcoin.go # Bitcoin protocol driver
+ cosmos.go # Cosmos protocol driver
+ solana.go # Solana protocol driver
+ generic.go # Generic fallback driver
+ status/ # Status tracking utilities
 ```
 
 ## Troubleshooting

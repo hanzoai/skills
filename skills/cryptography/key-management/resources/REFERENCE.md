@@ -63,7 +63,7 @@ Comprehensive technical reference for cryptographic key management, including ke
 | **Access** | Programmatic (encrypt/decrypt) | Read/write credentials |
 | **Rotation** | Months/years | Days/weeks |
 
-**Note**: Modern platforms (e.g., HashiCorp Vault) handle both key management and secret management.
+**Note**: Modern platforms (e.g., external secret manager) handle both key management and secret management.
 
 ---
 
@@ -1875,7 +1875,7 @@ key_client.update_key_rotation_policy(
 )
 ```
 
-### HashiCorp Vault
+### external secret manager
 
 **Features**:
 - Open source and Enterprise

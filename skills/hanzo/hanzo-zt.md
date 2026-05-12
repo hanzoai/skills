@@ -41,18 +41,18 @@ Hanzo ZT is the **zero-trust network overlay fabric** for Hanzo's secure network
 ## Architecture
 
 ```
-                 ZT Controller
-                 (management API)
-                      |
-             +--------+--------+
-             |                 |
-         ZT Router         ZT Router
-         (edge)            (fabric)
-             |                 |
-      +------+------+   +-----+-----+
-      |      |      |   |           |
-   Tunnel  Tunnel  SDK  Dark      Dark
-   (client)(client)     Service   Service
+ ZT Controller
+ (management API)
+ |
+ +--------+--------+
+ | |
+ ZT Router ZT Router
+ (edge) (fabric)
+ | |
+ +------+------+ +-----+-----+
+ | | | | |
+ Tunnel Tunnel SDK Dark Dark
+ (client)(client) Service Service
 ```
 
 ### Key concepts
@@ -103,8 +103,8 @@ hanzozt edge create terminator my-api --router fabric-router --binding sdk
 
 # Create service policy (who can access)
 hanzozt edge create service-policy my-api-access Dial \
-  --identity-roles "#my-team" \
-  --service-roles "@my-api"
+ --identity-roles "#my-team" \
+ --service-roles "@my-api"
 ```
 
 ## K8s deployment
@@ -114,18 +114,18 @@ hanzozt edge create service-policy my-api-access Dial \
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: zt-controller
-  namespace: hanzo
+ name: zt-controller
+ namespace: hanzo
 spec:
-  replicas: 1
-  template:
-    spec:
-      containers:
-        - name: controller
-          image: ghcr.io/hanzoai/zt-controller:latest
-          ports:
-            - containerPort: 1280  # Management API
-            - containerPort: 6262  # Control plane
+ replicas: 1
+ template:
+ spec:
+ containers:
+ - name: controller
+ image: ghcr.io/hanzoai/zt-controller:latest
+ ports:
+ - containerPort: 1280 # Management API
+ - containerPort: 6262 # Control plane
 ```
 
 ## Integration with zrok

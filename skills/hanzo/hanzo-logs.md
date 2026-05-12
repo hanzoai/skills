@@ -100,38 +100,38 @@ make format
 ## Architecture
 
 ```
-Write path:   distributor -> ingester -> storage
-Read path:    query-frontend -> querier -> storage
+Write path: distributor -> ingester -> storage
+Read path: query-frontend -> querier -> storage
 ```
 
 ### Key directories
 
 ```
-cmd/                # Binary entry points
-pkg/                # All library code
-  logql/            # LogQL query engine
-  ingester/         # Log ingestion
-  distributor/      # Write path distribution
-  compactor/        # Index compaction
-  querier/          # Read path
-  storage/          # Storage backends
-  chunkenc/         # Chunk encoding
-  kafka/            # Kafka integration
-  bloomgateway/     # Bloom filter gateway
-  engine/           # Query engine
-  ui/frontend/      # Vite-based UI (TypeScript)
-clients/            # Log shipping clients (Promtail)
-  cmd/              # Client binaries
-  pkg/              # Client libraries
-operator/           # Kubernetes operator (separate Go module)
-production/         # Deployment configs
-  docker/           # Docker configs
-  helm/             # Helm charts
-  ksonnet/          # Ksonnet/jsonnet manifests
-  nomad/            # Nomad jobs
-  terraform/        # Terraform configs
-docs/               # Documentation source
-integration/        # Integration tests
+cmd/ # Binary entry points
+pkg/ # All library code
+ logql/ # LogQL query engine
+ ingester/ # Log ingestion
+ distributor/ # Write path distribution
+ compactor/ # Index compaction
+ querier/ # Read path
+ storage/ # Storage backends
+ chunkenc/ # Chunk encoding
+ kafka/ # Kafka integration
+ bloomgateway/ # Bloom filter gateway
+ engine/ # Query engine
+ ui/frontend/ # Vite-based UI (TypeScript)
+clients/ # Log shipping clients (Promtail)
+ cmd/ # Client binaries
+ pkg/ # Client libraries
+operator/ # Kubernetes operator (separate Go module)
+production/ # Deployment configs
+ docker/ # Docker configs
+ helm/ # Helm charts
+ ksonnet/ # Ksonnet/jsonnet manifests
+ nomad/ # Nomad jobs
+ terraform/ # Terraform configs
+docs/ # Documentation source
+integration/ # Integration tests
 ```
 
 ### Kubernetes Operator
@@ -144,10 +144,10 @@ Vite-based TypeScript UI in `pkg/ui/frontend/`:
 
 ```bash
 cd pkg/ui/frontend
-make build   # Build
-make dev     # Dev server
-make lint    # Lint
-make test    # Tests
+make build # Build
+make dev # Dev server
+make lint # Lint
+make test # Tests
 ```
 
 ## Deployment
@@ -172,7 +172,7 @@ go build ./cmd/loki
 ```bash
 make loki
 ./loki -config.file=./cmd/loki/loki-local-multi-tenant-config.yaml \
-       -runtime-config.file=./cmd/loki/loki-overrides.yaml
+ -runtime-config.file=./cmd/loki/loki-overrides.yaml
 ```
 
 ## Code style

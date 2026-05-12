@@ -54,7 +54,7 @@ Hanzo Extensions is a **monorepo of browser and IDE extensions** providing AI-po
 
 ```
 1. Extension opens tab → hanzo.id/login/oauth/authorize?response_type=token&...
-2. User logs in on Casdoor form
+2. User logs in on Hanzo IAM form
 3. Redirect to hanzo.ai/callback?access_token=JWT&state=...
 4. Extension catches redirect via chrome.tabs.onUpdated
 5. Extracts token, closes tab
@@ -67,32 +67,32 @@ Hanzo Extensions is a **monorepo of browser and IDE extensions** providing AI-po
 ```typescript
 // packages/browser/src/auth.ts
 async function startAuth(): Promise<string> {
-  const state = crypto.randomUUID()
+ const state = crypto.randomUUID()
 
-  const authUrl = new URL("https://hanzo.id/login/oauth/authorize")
-  authUrl.searchParams.set("response_type", "token")
-  authUrl.searchParams.set("client_id", "app-hanzo")
-  authUrl.searchParams.set("redirect_uri", "https://hanzo.ai/callback")
-  authUrl.searchParams.set("scope", "openid profile email")
-  authUrl.searchParams.set("state", state)
+ const authUrl = new URL("https://hanzo.id/login/oauth/authorize")
+ authUrl.searchParams.set("response_type", "token")
+ authUrl.searchParams.set("client_id", "app-hanzo")
+ authUrl.searchParams.set("redirect_uri", "https://hanzo.ai/callback")
+ authUrl.searchParams.set("scope", "openid profile email")
+ authUrl.searchParams.set("state", state)
 
-  // Open auth tab
-  const tab = await chrome.tabs.create({ url: authUrl.toString() })
+ // Open auth tab
+ const tab = await chrome.tabs.create({ url: authUrl.toString() })
 
-  // Listen for redirect
-  return new Promise((resolve) => {
-    chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-      if (tabId !== tab.id || !info.url?.includes("callback")) return
+ // Listen for redirect
+ return new Promise((resolve) => {
+ chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+ if (tabId !== tab.id || !info.url?.includes("callback")) return
 
-      const hash = new URL(info.url).hash.substring(1)
-      const params = new URLSearchParams(hash)
-      const token = params.get("access_token")
+ const hash = new URL(info.url).hash.substring(1)
+ const params = new URLSearchParams(hash)
+ const token = params.get("access_token")
 
-      chrome.tabs.onUpdated.removeListener(listener)
-      chrome.tabs.remove(tabId)
-      resolve(token!)
-    })
-  })
+ chrome.tabs.onUpdated.removeListener(listener)
+ chrome.tabs.remove(tabId)
+ resolve(token!)
+ })
+ })
 }
 ```
 
@@ -101,10 +101,10 @@ async function startAuth(): Promise<string> {
 ```typescript
 // /api/userinfo only returns `sub` — use /api/get-account
 async function getProfile(token: string) {
-  const res = await fetch("https://iam.hanzo.ai/api/get-account", {
-    headers: { "Authorization": `Bearer ${token}` }
-  })
-  return res.json()  // { name, email, avatar, ... }
+ const res = await fetch("https://iam.hanzo.ai/api/get-account", {
+ headers: { "Authorization": `Bearer ${token}` }
+ })
+ return res.json() // { name, email, avatar, ... }
 }
 ```
 
@@ -116,17 +116,17 @@ pnpm install
 
 # Browser extension
 cd packages/browser
-pnpm dev           # Watch mode for Chrome
-pnpm build         # Production build
+pnpm dev # Watch mode for Chrome
+pnpm build # Production build
 
 # VS Code extension
 cd packages/vscode
-pnpm dev           # Watch mode
-pnpm package       # Create .vsix
+pnpm dev # Watch mode
+pnpm package # Create .vsix
 
 # JetBrains plugin
 cd packages/jetbrains
-./gradlew buildPlugin  # Create .zip
+./gradlew buildPlugin # Create .zip
 ```
 
 ## CI/CD
@@ -140,7 +140,7 @@ cd packages/jetbrains
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| Code flow fails | Casdoor empty grant_type bug | Use implicit flow (response_type=token) |
+| Code flow fails | Hanzo IAM empty grant_type bug | Use implicit flow (response_type=token) |
 | LLM returns 404 | Using llm.hanzo.ai | Use api.hanzo.ai/v1/chat/completions |
 | Safari build fails | Missing Xcode | Build on macOS with Xcode installed |
 | JetBrains build fails | Missing gradle wrapper | Commit gradle-wrapper.jar |

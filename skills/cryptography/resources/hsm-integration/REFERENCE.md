@@ -1922,7 +1922,7 @@ key = kms.create_key(
 )
 ```
 
-**HashiCorp Vault with PKCS#11**:
+**external secret manager with PKCS#11**:
 
 ```hcl
 # /etc/vault.d/vault.hcl

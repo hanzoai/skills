@@ -58,20 +58,20 @@ Based on the repository description and the broader Hanzo infrastructure archite
 
 ```
 User Request
-    |
-    v
-HKE API (future)        -- Cluster provisioning & lifecycle
-    |
-    v
-Cloud Provider API       -- DOKS, EKS, GKE
-    |
-    v
-K8s Clusters             -- Managed by HKE
-    |
-    +-- Universe Manifests   -- Service deployments (infra/k8s/)
-    +-- PaaS Platform        -- Application deployments
-    +-- KMS                  -- Secrets via KMSSecret CRDs
-    +-- IAM                  -- Identity via OIDC JWT
+ |
+ v
+HKE API (future) -- Cluster provisioning & lifecycle
+ |
+ v
+Cloud Provider API -- DOKS, EKS, GKE
+ |
+ v
+K8s Clusters -- Managed by HKE
+ |
+ +-- Universe Manifests -- Service deployments (infra/k8s/)
+ +-- PaaS Platform -- Application deployments
+ +-- KMS -- Secrets via KMSSecret CRDs
+ +-- IAM -- Identity via OIDC JWT
 ```
 
 ### Current Production Infrastructure (without HKE)
@@ -117,8 +117,8 @@ Based on Hanzo conventions and the existing infrastructure patterns:
 | Universe | `github.com/hanzoai/universe` | Production K8s manifests, Helm charts, Terraform, compose files |
 | PaaS | `github.com/hanzoai/paas` | Application deployment platform (Agnost fork) |
 | Platform | `github.com/hanzoai/platform` | PaaS UI (Dokploy fork) |
-| KMS | `github.com/hanzoai/kms` | Secrets management (Infisical fork) |
-| IAM | `github.com/hanzoai/iam` | Identity and access management (Casdoor fork) |
+| KMS | `github.com/hanzoai/kms` | Secrets management |
+| IAM | `github.com/hanzoai/iam` | Identity and access management (Go/Beego) |
 | Cloud | `github.com/hanzoai/cloud` | Cloud API backend |
 
 ## Related Skills

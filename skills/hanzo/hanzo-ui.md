@@ -86,13 +86,13 @@ Projects using @hanzo/ui configure Tailwind to scan the library:
 import { hanzoUIPreset } from '@hanzo/ui/tailwind'
 
 export default {
-  presets: [hanzoUIPreset],
-  content: [
-    'src/**/*.tsx',
-    './node_modules/@hanzo/ui/**/*.{ts,tsx}',
-    './node_modules/@hanzo/auth/**/*.{ts,tsx}',
-    './node_modules/@hanzo/commerce/**/*.{ts,tsx}',
-  ]
+ presets: [hanzoUIPreset],
+ content: [
+ 'src/**/*.tsx',
+ './node_modules/@hanzo/ui/**/*.{ts,tsx}',
+ './node_modules/@hanzo/auth/**/*.{ts,tsx}',
+ './node_modules/@hanzo/commerce/**/*.{ts,tsx}',
+ ]
 }
 ```
 
@@ -103,7 +103,7 @@ cd ~/work/hanzo/ui
 pnpm install
 
 # Development server (docs site)
-pnpm dev          # Port 3003
+pnpm dev # Port 3003
 
 # Build all packages
 pnpm build
@@ -122,13 +122,13 @@ pnpm shadcn add <component-name>
 import { createTheme } from '@hanzo/ui/theme'
 
 const hanzoTheme = createTheme({
-  brand: 'hanzo',
-  colors: { primary: 'oklch(0.7 0.15 250)' }
+ brand: 'hanzo',
+ colors: { primary: 'oklch(0.7 0.15 250)' }
 })
 
 const luxTheme = createTheme({
-  brand: 'lux',
-  colors: { primary: 'oklch(0.8 0.12 45)' }
+ brand: 'lux',
+ colors: { primary: 'oklch(0.8 0.12 45)' }
 })
 ```
 
@@ -141,11 +141,11 @@ Used by billing.hanzo.ai, lux.id, and other sites:
 import '@hanzo/ui/globals.css'
 
 export default function RootLayout({ children }) {
-  return (
-    <html lang="en" className="dark">
-      <body className="bg-black text-white">{children}</body>
-    </html>
-  )
+ return (
+ <html lang="en" className="dark">
+ <body className="bg-black text-white">{children}</body>
+ </html>
+ )
 }
 ```
 

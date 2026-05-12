@@ -13,19 +13,19 @@ Hanzo Operative (`hanzo-operative`) is an **autonomous computer use agent** that
 - **Requires Python >= 3.14**
 - Streamlit UI (`operative/operative.py`) as the primary entry point
 - Tool-based architecture in `operative/tools/`:
-  - `computer.py` -- Screenshot, mouse, keyboard via xdotool/scrot
-  - `bash.py` -- Shell command execution
-  - `edit.py` -- File editing
-  - `base.py` -- Base tool class
-  - `collection.py` -- Tool collection registry
-  - `groups.py` -- Tool grouping
-  - `run.py` -- Tool execution runner
+ - `computer.py` -- Screenshot, mouse, keyboard via xdotool/scrot
+ - `bash.py` -- Shell command execution
+ - `edit.py` -- File editing
+ - `base.py` -- Base tool class
+ - `collection.py` -- Tool collection registry
+ - `groups.py` -- Tool grouping
+ - `run.py` -- Tool execution runner
 - Agent loop (`operative/loop.py`) -- orchestrates Claude API calls with tool results
 - System prompt (`operative/prompt.py`)
 - Three Dockerfiles in `docker/`:
-  - `Dockerfile` -- Main image (builds on xvfb image)
-  - `Dockerfile.desktop` -- Desktop environment image
-  - `Dockerfile.xvfb` -- Xvfb virtual display image
+ - `Dockerfile` -- Main image (builds on xvfb image)
+ - `Dockerfile.desktop` -- Desktop environment image
+ - `Dockerfile.xvfb` -- Xvfb virtual display image
 - Docker images: `ghcr.io/hanzoai/operative:latest`, `ghcr.io/hanzoai/xvfb:latest`, `ghcr.io/hanzoai/desktop:latest`
 - No compose.yml in the repo
 
@@ -69,31 +69,31 @@ Hanzo Operative (`hanzo-operative`) is an **autonomous computer use agent** that
 
 ```
 hanzoai/operative/
-  pyproject.toml          # Package config (hanzo-operative 0.1.1, python >= 3.14)
-  requirements.txt        # Pinned deps
-  Makefile                # Build, run, test, Docker targets
-  operative/
-    __init__.py
-    operative.py          # Streamlit UI entry point
-    loop.py               # Agent loop (Claude API + tool orchestration)
-    prompt.py             # System prompt
-    requirements.txt      # Operative-specific deps
-    tools/
-      __init__.py         # Tool exports
-      base.py             # Base tool class
-      computer.py         # Computer use (screenshot, mouse, keyboard)
-      bash.py             # Bash command execution
-      edit.py             # File editing tool
-      collection.py       # Tool collection registry
-      groups.py           # Tool grouping definitions
-      run.py              # Tool execution runner
-  docker/
-    Dockerfile            # Main operative image
-    Dockerfile.desktop    # Desktop environment image
-    Dockerfile.xvfb       # Xvfb virtual display base image
-    image/                # Docker image assets
-  tests/                  # Test suite
-  docs/                   # Documentation
+ pyproject.toml # Package config (hanzo-operative 0.1.1, python >= 3.14)
+ requirements.txt # Pinned deps
+ Makefile # Build, run, test, Docker targets
+ operative/
+ __init__.py
+ operative.py # Streamlit UI entry point
+ loop.py # Agent loop (Claude API + tool orchestration)
+ prompt.py # System prompt
+ requirements.txt # Operative-specific deps
+ tools/
+ __init__.py # Tool exports
+ base.py # Base tool class
+ computer.py # Computer use (screenshot, mouse, keyboard)
+ bash.py # Bash command execution
+ edit.py # File editing tool
+ collection.py # Tool collection registry
+ groups.py # Tool grouping definitions
+ run.py # Tool execution runner
+ docker/
+ Dockerfile # Main operative image
+ Dockerfile.desktop # Desktop environment image
+ Dockerfile.xvfb # Xvfb virtual display base image
+ image/ # Docker image assets
+ tests/ # Test suite
+ docs/ # Documentation
 ```
 
 ## Dependencies
@@ -123,7 +123,7 @@ make dev
 open http://localhost:8501
 
 # Access VNC (view desktop)
-open http://localhost:6080    # noVNC web client
+open http://localhost:6080 # noVNC web client
 # or connect VNC client to localhost:5900
 ```
 

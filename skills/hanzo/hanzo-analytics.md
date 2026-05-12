@@ -75,40 +75,40 @@ Repo: `hanzoai/analytics` (Umami fork, v3.0.3).
 ```yaml
 # compose.yml
 services:
-  analytics:
-    image: ghcr.io/hanzoai/analytics:latest
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL: postgresql://analytics:analytics@db:5432/analytics
-      APP_SECRET: replace-me-with-a-random-string
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "curl http://localhost:3000/api/heartbeat"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+ analytics:
+ image: ghcr.io/hanzoai/analytics:latest
+ ports:
+ - "3000:3000"
+ environment:
+ DATABASE_URL: postgresql://analytics:analytics@db:5432/analytics
+ APP_SECRET: replace-me-with-a-random-string
+ depends_on:
+ db:
+ condition: service_healthy
+ restart: always
+ healthcheck:
+ test: ["CMD-SHELL", "curl http://localhost:3000/api/heartbeat"]
+ interval: 5s
+ timeout: 5s
+ retries: 5
 
-  db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: analytics
-      POSTGRES_USER: analytics
-      POSTGRES_PASSWORD: analytics
-    volumes:
-      - analytics-db-data:/var/lib/postgresql/data
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+ db:
+ image: postgres:15-alpine
+ environment:
+ POSTGRES_DB: analytics
+ POSTGRES_USER: analytics
+ POSTGRES_PASSWORD: analytics
+ volumes:
+ - analytics-db-data:/var/lib/postgresql/data
+ restart: always
+ healthcheck:
+ test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+ interval: 5s
+ timeout: 5s
+ retries: 5
 
 volumes:
-  analytics-db-data:
+ analytics-db-data:
 ```
 
 ### From source
@@ -116,17 +116,17 @@ volumes:
 ```bash
 git clone https://github.com/hanzoai/analytics.git
 cd analytics
-cp .env.example .env  # Set DATABASE_URL
+cp .env.example .env # Set DATABASE_URL
 pnpm install
-pnpm build            # Creates tables on first run, default: admin/analytics
-pnpm start            # http://localhost:3000
+pnpm build # Creates tables on first run, default: admin/analytics
+pnpm start # http://localhost:3000
 ```
 
 ### Add tracking to a website
 
 ```html
 <script defer src="https://analytics.hanzo.ai/script.js"
-        data-website-id="YOUR-WEBSITE-ID"></script>
+ data-website-id="YOUR-WEBSITE-ID"></script>
 ```
 
 ## Core Concepts
@@ -134,27 +134,27 @@ pnpm start            # http://localhost:3000
 ### Architecture
 
 ```
-                   ┌──────────────────────┐
-                   │   analytics.hanzo.ai │
-                   │   (Next.js 15)       │
-                   │                      │
-                   │  ┌────────────────┐  │
- Browser ─────────▶│  │ /api/send      │  │──── PostgreSQL
- (tracker.js)      │  │ /api/batch     │  │     (sessions, events,
-                   │  │ /api/realtime  │  │      users, teams, etc.)
-                   │  │ /api/websites  │  │
-                   │  │ /api/reports   │  │
-                   │  │ /api/auth      │  │
-                   │  └────────────────┘  │
-                   └──────────────────────┘
+ ┌──────────────────────┐
+ │ analytics.hanzo.ai │
+ │ (Next.js 15) │
+ │ │
+ │ ┌────────────────┐ │
+ Browser ─────────▶│ │ /api/send │ │──── PostgreSQL
+ (tracker.js) │ │ /api/batch │ │ (sessions, events,
+ │ │ /api/realtime │ │ users, teams, etc.)
+ │ │ /api/websites │ │
+ │ │ /api/reports │ │
+ │ │ /api/auth │ │
+ │ └────────────────┘ │
+ └──────────────────────┘
 
-                   ┌──────────────────────┐
-                   │   collector (Go)     │
- High-volume ─────▶│   Gin HTTP server    │──── ClickHouse
- events            │   event.go           │     (event_data,
-                   │   forward/           │      session_data)
-                   │   writer/            │
-                   └──────────────────────┘
+ ┌──────────────────────┐
+ │ collector (Go) │
+ High-volume ─────▶│ Gin HTTP server │──── ClickHouse
+ events │ event.go │ (event_data,
+ │ forward/ │ session_data)
+ │ writer/ │
+ └──────────────────────┘
 ```
 
 ### Data Models (Prisma)
@@ -198,9 +198,9 @@ pnpm start            # http://localhost:3000
 ### Environment Variables
 
 ```bash
-DATABASE_URL=postgresql://user:pass@localhost:5432/analytics   # Required
-APP_SECRET=random-secret-string                                # Required
-CLICKHOUSE_URL=http://localhost:8123                            # Optional
+DATABASE_URL=postgresql://user:pass@localhost:5432/analytics # Required
+APP_SECRET=random-secret-string # Required
+CLICKHOUSE_URL=http://localhost:8123 # Optional
 ```
 
 ## Troubleshooting

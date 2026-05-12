@@ -81,12 +81,12 @@ import { MyProductHero } from '@/components/my-product/Hero'
 import { MyProductFeatures } from '@/components/my-product/Features'
 
 export default function MyProductPage() {
-  return (
-    <>
-      <MyProductHero />
-      <MyProductFeatures />
-    </>
-  )
+ return (
+ <>
+ <MyProductHero />
+ <MyProductFeatures />
+ </>
+ )
 }
 EOF
 
@@ -101,32 +101,32 @@ mkdir -p components/my-product
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Next.js 16 App Router (Static Export)                   │
-│                                                          │
-│  app/                                                    │
-│    layout.tsx          Root layout (Geist font, theme)   │
-│    (marketing)/                                          │
-│      layout.tsx        Marketing layout (Navbar+Footer)  │
-│      page.tsx          Homepage                          │
-│      ai/page.tsx       /ai                               │
-│      cloud/page.tsx    /cloud                            │
-│      chat/page.tsx     /chat                             │
-│      zen/page.tsx      /zen                              │
-│      pricing/page.tsx  /pricing                          │
-│      ... 60+ pages                                       │
-│                                                          │
-│  components/                                             │
-│    Hero.tsx, Navbar.tsx, Footer.tsx, Features.tsx  (shared) │
-│    ui/              shadcn/ui components                  │
-│    ai/              AI product components                 │
-│    cloud/           Cloud product components              │
-│    zen/             Zen models components                 │
-│    ... 40+ component directories                         │
-│                                                          │
-│  data/              Static data (JSON, TS)               │
-│  contexts/          React contexts                       │
-│  hooks/             Custom hooks                         │
-│  lib/               Utility functions                    │
+│ Next.js 16 App Router (Static Export) │
+│ │
+│ app/ │
+│ layout.tsx Root layout (Geist font, theme) │
+│ (marketing)/ │
+│ layout.tsx Marketing layout (Navbar+Footer) │
+│ page.tsx Homepage │
+│ ai/page.tsx /ai │
+│ cloud/page.tsx /cloud │
+│ chat/page.tsx /chat │
+│ zen/page.tsx /zen │
+│ pricing/page.tsx /pricing │
+│ ... 60+ pages │
+│ │
+│ components/ │
+│ Hero.tsx, Navbar.tsx, Footer.tsx, Features.tsx (shared) │
+│ ui/ shadcn/ui components │
+│ ai/ AI product components │
+│ cloud/ Cloud product components │
+│ zen/ Zen models components │
+│ ... 40+ component directories │
+│ │
+│ data/ Static data (JSON, TS) │
+│ contexts/ React contexts │
+│ hooks/ Custom hooks │
+│ lib/ Utility functions │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -212,61 +212,61 @@ Hanzo Insights is embedded in the root layout via a script tag:
 
 ```
 hanzo.ai/
-  package.json            # @hanzo/site v0.0.1 (private)
-  next.config.ts          # Static export, unoptimized images
-  tailwind.config.ts      # Golden ratio design system
-  tsconfig.json           # TypeScript config
-  postcss.config.js       # PostCSS with Tailwind
-  components.json         # shadcn/ui config
-  eslint.config.js        # ESLint config
-  playwright.config.ts    # E2E test config
-  .nvmrc                  # Node v20
-  .env.example            # Environment variables template
-  LLM.md                  # Agent documentation
-  CLAUDE.md               # Agent instructions
-  app/
-    layout.tsx            # Root layout (fonts, theme, analytics)
-    globals.css           # Global styles + CSS variables
-    icon.svg              # Favicon
-    not-found.tsx         # 404 page
-    (marketing)/
-      layout.tsx          # Marketing layout (Navbar + Footer)
-      page.tsx            # Homepage
-      about/              # About page
-      ai/                 # AI product
-      cloud/              # Cloud product
-      chat/               # Chat product
-      zen/                # Zen models
-      mcp/                # MCP tools
-      pricing/            # Pricing
-      ... (60+ routes)
-  components/
-    Hero.tsx              # Homepage hero
-    Navbar.tsx            # Site navigation
-    Footer.tsx            # Site footer
-    Features.tsx          # Feature grid
-    Products.tsx          # Product cards
-    CommandPalette.tsx    # Command palette (Cmd+K)
-    GlobalChatWidget.tsx  # Embedded chat widget
-    ui/                   # shadcn/ui components
-    shadcn-v4/            # shadcn v4 components
-    shared/               # Shared components
-    navigation/           # Nav components
-    animations/           # Animation components
-    ai/                   # AI section components
-    cloud/                # Cloud section components
-    zen/                  # Zen section components
-    ... (40+ directories)
-  data/                   # Static data files
-  contexts/               # React context providers
-  hooks/                  # Custom React hooks
-  lib/                    # Utility functions
-  public/                 # Static assets
-  scripts/                # Build/utility scripts
-  e2e/                    # Playwright e2e tests
-  test-results/           # Test output
-  .github/
-    workflows/            # GitHub Actions CI
+ package.json # @hanzo/site v0.0.1 (private)
+ next.config.ts # Static export, unoptimized images
+ tailwind.config.ts # Golden ratio design system
+ tsconfig.json # TypeScript config
+ postcss.config.js # PostCSS with Tailwind
+ components.json # shadcn/ui config
+ eslint.config.js # ESLint config
+ playwright.config.ts # E2E test config
+ .nvmrc # Node v20
+ .env.example # Environment variables template
+ LLM.md # Agent documentation
+ CLAUDE.md # Agent instructions
+ app/
+ layout.tsx # Root layout (fonts, theme, analytics)
+ globals.css # Global styles + CSS variables
+ icon.svg # Favicon
+ not-found.tsx # 404 page
+ (marketing)/
+ layout.tsx # Marketing layout (Navbar + Footer)
+ page.tsx # Homepage
+ about/ # About page
+ ai/ # AI product
+ cloud/ # Cloud product
+ chat/ # Chat product
+ zen/ # Zen models
+ mcp/ # MCP tools
+ pricing/ # Pricing
+ ... (60+ routes)
+ components/
+ Hero.tsx # Homepage hero
+ Navbar.tsx # Site navigation
+ Footer.tsx # Site footer
+ Features.tsx # Feature grid
+ Products.tsx # Product cards
+ CommandPalette.tsx # Command palette (Cmd+K)
+ GlobalChatWidget.tsx # Embedded chat widget
+ ui/ # shadcn/ui components
+ shadcn-v4/ # shadcn v4 components
+ shared/ # Shared components
+ navigation/ # Nav components
+ animations/ # Animation components
+ ai/ # AI section components
+ cloud/ # Cloud section components
+ zen/ # Zen section components
+ ... (40+ directories)
+ data/ # Static data files
+ contexts/ # React context providers
+ hooks/ # Custom React hooks
+ lib/ # Utility functions
+ public/ # Static assets
+ scripts/ # Build/utility scripts
+ e2e/ # Playwright e2e tests
+ test-results/ # Test output
+ .github/
+ workflows/ # GitHub Actions CI
 ```
 
 ## Troubleshooting

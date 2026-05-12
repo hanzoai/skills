@@ -69,29 +69,29 @@ Repo: `hanzoai/suite`. Default branch: `main`. Fork of Odoo 18.0 Community Editi
 ```yaml
 # compose.yaml
 services:
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: odoo
-      POSTGRES_PASSWORD: "${DB_PASSWORD}"
-      POSTGRES_DB: postgres
-    volumes:
-      - ./postgresql:/var/lib/postgresql/data
+ db:
+ image: postgres:16
+ environment:
+ POSTGRES_USER: odoo
+ POSTGRES_PASSWORD: "${DB_PASSWORD}"
+ POSTGRES_DB: postgres
+ volumes:
+ - ./postgresql:/var/lib/postgresql/data
 
-  odoo:
-    image: odoo:18
-    depends_on:
-      - db
-    ports:
-      - "8069:8069"
-      - "8072:8072"
-    environment:
-      HOST: db
-      USER: odoo
-      PASSWORD: "${DB_PASSWORD}"
-    volumes:
-      - ./addons:/mnt/extra-addons
-      - ./etc:/etc/odoo
+ odoo:
+ image: odoo:18
+ depends_on:
+ - db
+ ports:
+ - "8069:8069"
+ - "8072:8072"
+ environment:
+ HOST: db
+ USER: odoo
+ PASSWORD: "${DB_PASSWORD}"
+ volumes:
+ - ./addons:/mnt/extra-addons
+ - ./etc:/etc/odoo
 ```
 
 ```bash
@@ -122,28 +122,28 @@ uv pip install -r requirements.txt
 ### Architecture
 
 ```
-                    Traefik (HTTPS)
-                         |
-              team.hanzo.ai / hanzo.team
-                         |
-                  +--------------+
-                  |  Odoo 18.0   |  :8069 (web)
-                  |  (Python)    |  :8072 (longpolling/livechat)
-                  +--------------+
-                         |
-                  +--------------+
-                  | PostgreSQL 16|
-                  +--------------+
+ Traefik (HTTPS)
+ |
+ team.hanzo.ai / hanzo.team
+ |
+ +--------------+
+ | Odoo 18.0 | :8069 (web)
+ | (Python) | :8072 (longpolling/livechat)
+ +--------------+
+ |
+ +--------------+
+ | PostgreSQL 16|
+ +--------------+
 
 Odoo internals:
-    odoo-bin (entrypoint)
-        -> odoo.cli.main()
-        -> odoo.http (Werkzeug-based HTTP server)
-        -> odoo.models (ORM layer)
-        -> odoo.fields (field definitions)
-        -> odoo.api (environment, decorators)
-        -> odoo/addons/* (built-in modules)
-        -> /mnt/extra-addons/* (custom modules)
+ odoo-bin (entrypoint)
+ -> odoo.cli.main()
+ -> odoo.http (Werkzeug-based HTTP server)
+ -> odoo.models (ORM layer)
+ -> odoo.fields (field definitions)
+ -> odoo.api (environment, decorators)
+ -> odoo/addons/* (built-in modules)
+ -> /mnt/extra-addons/* (custom modules)
 ```
 
 ### Module System
@@ -166,24 +166,24 @@ The ORM maps Python classes to PostgreSQL tables:
 from odoo import models, fields, api
 
 class SaleOrder(models.Model):
-    _name = 'sale.order'
-    _description = 'Sales Order'
+ _name = 'sale.order'
+ _description = 'Sales Order'
 
-    name = fields.Char(string='Order Reference', required=True)
-    partner_id = fields.Many2one('res.partner', string='Customer')
-    order_line = fields.One2many('sale.order.line', 'order_id')
-    amount_total = fields.Monetary(compute='_compute_total')
-    state = fields.Selection([
-        ('draft', 'Quotation'),
-        ('sale', 'Sales Order'),
-        ('done', 'Done'),
-        ('cancel', 'Cancelled'),
-    ], default='draft')
+ name = fields.Char(string='Order Reference', required=True)
+ partner_id = fields.Many2one('res.partner', string='Customer')
+ order_line = fields.One2many('sale.order.line', 'order_id')
+ amount_total = fields.Monetary(compute='_compute_total')
+ state = fields.Selection([
+ ('draft', 'Quotation'),
+ ('sale', 'Sales Order'),
+ ('done', 'Done'),
+ ('cancel', 'Cancelled'),
+ ], default='draft')
 
-    @api.depends('order_line.price_subtotal')
-    def _compute_total(self):
-        for order in self:
-            order.amount_total = sum(order.order_line.mapped('price_subtotal'))
+ @api.depends('order_line.price_subtotal')
+ def _compute_total(self):
+ for order in self:
+ order.amount_total = sum(order.order_line.mapped('price_subtotal'))
 ```
 
 ### Key Built-in Modules
@@ -219,37 +219,37 @@ The production compose (`compose.prod.yaml`) uses:
 
 ```
 github.com/hanzoai/suite/
-    odoo-bin                # Entrypoint script (Python)
-    setup.py                # Package definition (pip installable as 'odoo')
-    setup.cfg               # Setup configuration
-    requirements.txt        # Pinned Python dependencies (per Python version)
-    MANIFEST.in             # Package manifest
-    compose.yaml            # Development Docker Compose
-    compose.prod.yaml       # Production Docker Compose (Traefik + TLS)
-    odoo/                   # Core framework
-        __init__.py         # Framework initialization
-        release.py          # Version info (18.0.0 final)
-        api.py              # Environment, decorators (@api.depends, @api.model, etc.)
-        fields.py           # Field type definitions (Char, Integer, Many2one, etc.)
-        models.py           # Base Model, TransientModel, AbstractModel
-        http.py             # HTTP layer (Werkzeug-based)
-        sql_db.py           # Database connection pool
-        exceptions.py       # UserError, ValidationError, AccessError, etc.
-        netsvc.py           # Logging and network services
-        addons/             # Built-in addon modules (100+)
-        cli/                # Command-line interface (server, scaffold, shell, etc.)
-        conf/               # Configuration handling
-        modules/            # Module loader and registry
-        service/            # RPC and WSGI services
-        tests/              # Core framework tests
-        tools/              # Utility functions (mail, image, misc, etc.)
-        upgrade/            # Database upgrade scripts
-        osv/                # Legacy ORM compatibility
-    addons/                 # Custom/extra addons directory (mounted in Docker)
-    debian/                 # Debian packaging files
-    doc/                    # Documentation
-    setup/                  # Setup scripts
-    .github/                # Issue/PR templates
+ odoo-bin # Entrypoint script (Python)
+ setup.py # Package definition (pip installable as 'odoo')
+ setup.cfg # Setup configuration
+ requirements.txt # Pinned Python dependencies (per Python version)
+ MANIFEST.in # Package manifest
+ compose.yaml # Development Docker Compose
+ compose.prod.yaml # Production Docker Compose (Traefik + TLS)
+ odoo/ # Core framework
+ __init__.py # Framework initialization
+ release.py # Version info (18.0.0 final)
+ api.py # Environment, decorators (@api.depends, @api.model, etc.)
+ fields.py # Field type definitions (Char, Integer, Many2one, etc.)
+ models.py # Base Model, TransientModel, AbstractModel
+ http.py # HTTP layer (Werkzeug-based)
+ sql_db.py # Database connection pool
+ exceptions.py # UserError, ValidationError, AccessError, etc.
+ netsvc.py # Logging and network services
+ addons/ # Built-in addon modules (100+)
+ cli/ # Command-line interface (server, scaffold, shell, etc.)
+ conf/ # Configuration handling
+ modules/ # Module loader and registry
+ service/ # RPC and WSGI services
+ tests/ # Core framework tests
+ tools/ # Utility functions (mail, image, misc, etc.)
+ upgrade/ # Database upgrade scripts
+ osv/ # Legacy ORM compatibility
+ addons/ # Custom/extra addons directory (mounted in Docker)
+ debian/ # Debian packaging files
+ doc/ # Documentation
+ setup/ # Setup scripts
+ .github/ # Issue/PR templates
 ```
 
 ## Key Python Dependencies
@@ -284,9 +284,9 @@ github.com/hanzoai/suite/
 
 ```bash
 # Database connection
-HOST=db              # PostgreSQL host
-USER=odoo            # PostgreSQL user
-PASSWORD=changeme    # PostgreSQL password
+HOST=db # PostgreSQL host
+USER=odoo # PostgreSQL user
+PASSWORD=changeme # PostgreSQL password
 
 # Odoo config file (alternative to env vars)
 # /etc/odoo/odoo.conf

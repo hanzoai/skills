@@ -15,16 +15,16 @@ OnyxPlus replaces the third-party Simplici KYC SaaS with an in-house, EVM-native
 ### Architecture
 
 ```
-liquidity/id (BD onboarding)        verify/ (standalone IDV)
-        │                                    │
-        └────────► onyxd ◄───────────────────┘
-                     │
-                     ├─ secp256k1 ECDSA root key (in KMS, ERC-735 signer)
-                     ├─ WebAuthn passkeys (UV) registered via the MPC mesh
-                     ├─ MPC default wallet per user (provisioned via BD → TA → MPC, option-a)
-                     ├─ OnchainID contract per user (deployed via BD relay)
-                     ├─ on-chain IdentityRegistry binding (wallet → OnchainID, country)
-                     └─ admin/ UI (org isolation, audit, overrides)
+liquidity/id (BD onboarding) verify/ (standalone IDV)
+ │ │
+ └────────► onyxd ◄───────────────────┘
+ │
+ ├─ secp256k1 ECDSA root key (in KMS, ERC-735 signer)
+ ├─ WebAuthn passkeys (UV) registered via the MPC mesh
+ ├─ MPC default wallet per user (provisioned via BD → TA → MPC, option-a)
+ ├─ OnchainID contract per user (deployed via BD relay)
+ ├─ on-chain IdentityRegistry binding (wallet → OnchainID, country)
+ └─ admin/ UI (org isolation, audit, overrides)
 ```
 
 ## When to use

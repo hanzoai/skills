@@ -109,22 +109,22 @@ use hanzo_guard::{Guard, GuardConfig, SanitizeResult};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let guard = Guard::new(GuardConfig::default());
+ let guard = Guard::new(GuardConfig::default());
 
-    let result = guard.sanitize_input("My SSN is 123-45-6789").await?;
+ let result = guard.sanitize_input("My SSN is 123-45-6789").await?;
 
-    match result {
-        SanitizeResult::Clean(text) => println!("Clean: {text}"),
-        SanitizeResult::Redacted { text, redactions } => {
-            println!("Sanitized: {text}");
-            println!("Removed {} sensitive items", redactions.len());
-        }
-        SanitizeResult::Blocked { reason, .. } => {
-            println!("Blocked: {reason}");
-        }
-    }
+ match result {
+ SanitizeResult::Clean(text) => println!("Clean: {text}"),
+ SanitizeResult::Redacted { text, redactions } => {
+ println!("Sanitized: {text}");
+ println!("Removed {} sensitive items", redactions.len());
+ }
+ SanitizeResult::Blocked { reason, .. } => {
+ println!("Blocked: {reason}");
+ }
+ }
 
-    Ok(())
+ Ok(())
 }
 ```
 
@@ -145,30 +145,30 @@ hanzo-guard --text "My API key is sk-abc123xyz" --json
 ### Architecture
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│ Application │ --> │ Hanzo Guard  │ --> │ LLM Provider│
-└─────────────┘     │              │     └─────────────┘
-                    │ ┌──────────┐ │
-                    │ │ PII      │ │  src/pii.rs
-                    │ │ Detector │ │
-                    │ └──────────┘ │
-                    │ ┌──────────┐ │
-                    │ │ Injection│ │  src/injection.rs
-                    │ │ Detector │ │
-                    │ └──────────┘ │
-                    │ ┌──────────┐ │
-                    │ │ Content  │ │  src/content.rs
-                    │ │ Filter   │ │
-                    │ └──────────┘ │
-                    │ ┌──────────┐ │
-                    │ │ Rate     │ │  src/rate_limit.rs
-                    │ │ Limiter  │ │
-                    │ └──────────┘ │
-                    │ ┌──────────┐ │
-                    │ │ Audit    │ │  src/audit.rs
-                    │ │ Logger   │ │
-                    │ └──────────┘ │
-                    └──────────────┘
+┌─────────────┐ ┌──────────────┐ ┌─────────────┐
+│ Application │ --> │ Hanzo Guard │ --> │ LLM Provider│
+└─────────────┘ │ │ └─────────────┘
+ │ ┌──────────┐ │
+ │ │ PII │ │ src/pii.rs
+ │ │ Detector │ │
+ │ └──────────┘ │
+ │ ┌──────────┐ │
+ │ │ Injection│ │ src/injection.rs
+ │ │ Detector │ │
+ │ └──────────┘ │
+ │ ┌──────────┐ │
+ │ │ Content │ │ src/content.rs
+ │ │ Filter │ │
+ │ └──────────┘ │
+ │ ┌──────────┐ │
+ │ │ Rate │ │ src/rate_limit.rs
+ │ │ Limiter │ │
+ │ └──────────┘ │
+ │ ┌──────────┐ │
+ │ │ Audit │ │ src/audit.rs
+ │ │ Logger │ │
+ │ └──────────┘ │
+ └──────────────┘
 ```
 
 ### Source Modules
@@ -230,37 +230,37 @@ hanzo-guard --text "My API key is sk-abc123xyz" --json
 use hanzo_guard::config::*;
 
 let config = GuardConfig {
-    pii: PiiConfig {
-        enabled: true,
-        detect_ssn: true,
-        detect_credit_card: true,    // Luhn-validated
-        detect_email: true,
-        detect_phone: true,
-        detect_ip: true,
-        detect_api_keys: true,       // OpenAI, Anthropic, AWS, etc.
-        redaction_format: "[REDACTED:{TYPE}]".into(),
-    },
-    injection: InjectionConfig {
-        enabled: true,
-        block_on_detection: true,
-        sensitivity: 0.7,           // 0.0-1.0
-        custom_patterns: vec![
-            r"ignore.*instructions".into(),
-            r"reveal.*prompt".into(),
-        ],
-    },
-    rate_limit: RateLimitConfig {
-        enabled: true,
-        requests_per_minute: 60,
-        burst_size: 10,
-    },
-    audit: AuditConfig {
-        enabled: true,
-        log_file: Some("/var/log/guard.jsonl".into()),
-        log_content: false,          // Privacy: only log hashes
-        ..Default::default()
-    },
-    ..Default::default()
+ pii: PiiConfig {
+ enabled: true,
+ detect_ssn: true,
+ detect_credit_card: true, // Luhn-validated
+ detect_email: true,
+ detect_phone: true,
+ detect_ip: true,
+ detect_api_keys: true, // OpenAI, Anthropic, AWS, etc.
+ redaction_format: "[REDACTED:{TYPE}]".into(),
+ },
+ injection: InjectionConfig {
+ enabled: true,
+ block_on_detection: true,
+ sensitivity: 0.7, // 0.0-1.0
+ custom_patterns: vec![
+ r"ignore.*instructions".into(),
+ r"reveal.*prompt".into(),
+ ],
+ },
+ rate_limit: RateLimitConfig {
+ enabled: true,
+ requests_per_minute: 60,
+ burst_size: 10,
+ },
+ audit: AuditConfig {
+ enabled: true,
+ log_file: Some("/var/log/guard.jsonl".into()),
+ log_content: false, // Privacy: only log hashes
+ ..Default::default()
+ },
+ ..Default::default()
 };
 
 let guard = Guard::new(config);

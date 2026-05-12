@@ -35,35 +35,35 @@ go get github.com/hanzoai/pubsub-go@latest
 package main
 
 import (
-    "fmt"
-    "time"
+ "fmt"
+ "time"
 
-    "github.com/hanzoai/pubsub-go"
+ "github.com/hanzoai/pubsub-go"
 )
 
 func main() {
-    nc, err := nats.Connect(nats.DefaultURL)
-    if err != nil {
-        panic(err)
-    }
-    defer nc.Close()
+ nc, err := nats.Connect(nats.DefaultURL)
+ if err != nil {
+ panic(err)
+ }
+ defer nc.Close()
 
-    // Subscribe
-    nc.Subscribe("greet", func(m *nats.Msg) {
-        fmt.Printf("Received: %s\n", string(m.Data))
-    })
+ // Subscribe
+ nc.Subscribe("greet", func(m *nats.Msg) {
+ fmt.Printf("Received: %s\n", string(m.Data))
+ })
 
-    // Publish
-    nc.Publish("greet", []byte("Hello World"))
+ // Publish
+ nc.Publish("greet", []byte("Hello World"))
 
-    // Request/Reply
-    nc.Subscribe("help", func(m *nats.Msg) {
-        m.Respond([]byte("I can help"))
-    })
-    msg, _ := nc.Request("help", []byte("need help"), time.Second)
-    fmt.Println(string(msg.Data))
+ // Request/Reply
+ nc.Subscribe("help", func(m *nats.Msg) {
+ m.Respond([]byte("I can help"))
+ })
+ msg, _ := nc.Request("help", []byte("need help"), time.Second)
+ fmt.Println(string(msg.Data))
 
-    nc.Drain()
+ nc.Drain()
 }
 ```
 
@@ -71,10 +71,10 @@ func main() {
 
 ```go
 import (
-    "context"
+ "context"
 
-    "github.com/hanzoai/pubsub-go"
-    "github.com/hanzoai/pubsub-go/jetstream"
+ "github.com/hanzoai/pubsub-go"
+ "github.com/hanzoai/pubsub-go/jetstream"
 )
 
 nc, _ := nats.Connect(nats.DefaultURL)
@@ -84,8 +84,8 @@ ctx := context.Background()
 
 // Create stream
 stream, _ := js.CreateStream(ctx, jetstream.StreamConfig{
-    Name:     "orders",
-    Subjects: []string{"orders.>"},
+ Name: "orders",
+ Subjects: []string{"orders.>"},
 })
 
 // Publish
@@ -93,11 +93,11 @@ js.Publish(ctx, "orders.new", []byte(`{"id": 1}`))
 
 // Consume
 cons, _ := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-    Durable: "processor",
+ Durable: "processor",
 })
 cc, _ := cons.Consume(func(msg jetstream.Msg) {
-    fmt.Println(string(msg.Data()))
-    msg.Ack()
+ fmt.Println(string(msg.Data()))
+ msg.Ack()
 })
 defer cc.Stop()
 ```

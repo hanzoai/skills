@@ -106,47 +106,47 @@ Repo: `hanzoai/openapi` (1.8MB, 3 stars).
 
 ```
 openapi/
-  hanzo.yaml                # Master unified spec (all 26 services)
-  LLM.md
-  README.md
-  shared/
-    auth.yaml               # Auth security schemes (API key, OAuth2, JWT)
-    errors.yaml             # Shared error response schemas
-    pagination.yaml         # Cursor/offset pagination schemas
-  analytics/openapi.yaml
-  auto/openapi.yaml
-  bot/openapi.yaml
-  chat/openapi.yaml
-  cloud/openapi.yaml        # Largest spec (116KB) -- LLM inference API
-  commerce/openapi.yaml
-  console/openapi.yaml
-  db/openapi.yaml
-  did/openapi.yaml
-  dns/openapi.yaml
-  edge/openapi.yaml
-  engine/openapi.yaml
-  flow/openapi.yaml
-  gateway/openapi.yaml
-  guard/openapi.yaml
-  iam/openapi.yaml
-  kms/openapi.yaml
-  kv/openapi.yaml
-  ml/openapi.yaml
-  mq/openapi.yaml
-  nexus/openapi.yaml
-  o11y/openapi.yaml
-  operative/openapi.yaml
-  paas/openapi.yaml
-  platform/openapi.yaml
-  pricing/openapi.yaml
-  pubsub/openapi.yaml
-  registry/openapi.yaml
-  s3/openapi.yaml
-  search/openapi.yaml
-  stream/openapi.yaml
-  vector/openapi.yaml
-  visor/openapi.yaml
-  zt/openapi.yaml
+ hanzo.yaml # Master unified spec (all 26 services)
+ LLM.md
+ README.md
+ shared/
+ auth.yaml # Auth security schemes (API key, OAuth2, JWT)
+ errors.yaml # Shared error response schemas
+ pagination.yaml # Cursor/offset pagination schemas
+ analytics/openapi.yaml
+ auto/openapi.yaml
+ bot/openapi.yaml
+ chat/openapi.yaml
+ cloud/openapi.yaml # Largest spec (116KB) -- LLM inference API
+ commerce/openapi.yaml
+ console/openapi.yaml
+ db/openapi.yaml
+ did/openapi.yaml
+ dns/openapi.yaml
+ edge/openapi.yaml
+ engine/openapi.yaml
+ flow/openapi.yaml
+ gateway/openapi.yaml
+ guard/openapi.yaml
+ iam/openapi.yaml
+ kms/openapi.yaml
+ kv/openapi.yaml
+ ml/openapi.yaml
+ mq/openapi.yaml
+ nexus/openapi.yaml
+ o11y/openapi.yaml
+ operative/openapi.yaml
+ paas/openapi.yaml
+ platform/openapi.yaml
+ pricing/openapi.yaml
+ pubsub/openapi.yaml
+ registry/openapi.yaml
+ s3/openapi.yaml
+ search/openapi.yaml
+ stream/openapi.yaml
+ vector/openapi.yaml
+ visor/openapi.yaml
+ zt/openapi.yaml
 ```
 
 ## Gateway Routes
@@ -154,32 +154,32 @@ openapi/
 All services accessible through `api.hanzo.ai`:
 
 ```
-api.hanzo.ai/v1/chat/completions   -> Cloud (LLM inference)
-api.hanzo.ai/v1/models             -> Cloud (model listing)
-api.hanzo.ai/v1/chat/*             -> Chat
-api.hanzo.ai/v1/search/*           -> Search
-api.hanzo.ai/v1/bot/*              -> Bot
-api.hanzo.ai/v1/nexus/*            -> Nexus
-api.hanzo.ai/v1/vector/*           -> Vector DB
-api.hanzo.ai/v1/flow/*             -> Flow
-api.hanzo.ai/v1/operative/*        -> Operative
-api.hanzo.ai/v1/auth/*             -> IAM
-api.hanzo.ai/v1/billing/*          -> Commerce
-api.hanzo.ai/v1/kms/*              -> KMS
-api.hanzo.ai/v1/console/*          -> Console
-api.hanzo.ai/v1/analytics/*        -> Analytics
-api.hanzo.ai/v1/paas/*             -> PaaS
-api.hanzo.ai/v1/platform/*         -> Platform
-api.hanzo.ai/v1/db/*               -> DB
-api.hanzo.ai/v1/kv/*               -> KV
-api.hanzo.ai/v1/mq/*               -> MQ
-api.hanzo.ai/v1/edge/*             -> Edge
-api.hanzo.ai/v1/registry/*         -> Registry
-api.hanzo.ai/v1/vm/*               -> Visor
-api.hanzo.ai/v1/engine/*           -> Engine
-api.hanzo.ai/v1/o11y/*             -> O11y
-api.hanzo.ai/v1/dns/*              -> DNS
-api.hanzo.ai/v1/zt/*               -> ZT
+api.hanzo.ai/v1/chat/completions -> Cloud (LLM inference)
+api.hanzo.ai/v1/models -> Cloud (model listing)
+api.hanzo.ai/v1/chat/* -> Chat
+api.hanzo.ai/v1/search/* -> Search
+api.hanzo.ai/v1/bot/* -> Bot
+api.hanzo.ai/v1/nexus/* -> Nexus
+api.hanzo.ai/v1/vector/* -> Vector DB
+api.hanzo.ai/v1/flow/* -> Flow
+api.hanzo.ai/v1/operative/* -> Operative
+api.hanzo.ai/v1/auth/* -> IAM
+api.hanzo.ai/v1/billing/* -> Commerce
+api.hanzo.ai/v1/kms/* -> KMS
+api.hanzo.ai/v1/console/* -> Console
+api.hanzo.ai/v1/analytics/* -> Analytics
+api.hanzo.ai/v1/paas/* -> PaaS
+api.hanzo.ai/v1/platform/* -> Platform
+api.hanzo.ai/v1/db/* -> DB
+api.hanzo.ai/v1/kv/* -> KV
+api.hanzo.ai/v1/mq/* -> MQ
+api.hanzo.ai/v1/edge/* -> Edge
+api.hanzo.ai/v1/registry/* -> Registry
+api.hanzo.ai/v1/vm/* -> Visor
+api.hanzo.ai/v1/engine/* -> Engine
+api.hanzo.ai/v1/o11y/* -> O11y
+api.hanzo.ai/v1/dns/* -> DNS
+api.hanzo.ai/v1/zt/* -> ZT
 ```
 
 ## Authentication
@@ -203,8 +203,8 @@ curl -H "Authorization: Bearer hk-your-api-key" https://api.hanzo.ai/v1/models
 
 ```bash
 for spec in */openapi.yaml; do
-  echo "Validating $spec..."
-  openapi-generator validate -i "$spec"
+ echo "Validating $spec..."
+ openapi-generator validate -i "$spec"
 done
 
 # Master spec
@@ -230,10 +230,10 @@ openapi-generator generate -i hanzo.yaml -g rust -o clients/rust
 ### Serve Docs Locally
 
 ```bash
-npx @redocly/cli preview-docs hanzo.yaml           # Redoc
-npx @scalar/cli serve hanzo.yaml                    # Scalar
+npx @redocly/cli preview-docs hanzo.yaml # Redoc
+npx @scalar/cli serve hanzo.yaml # Scalar
 docker run -p 8080:8080 -e SWAGGER_JSON=/specs/hanzo.yaml \
-  -v $(pwd):/specs swaggerapi/swagger-ui             # Swagger UI
+ -v $(pwd):/specs swaggerapi/swagger-ui # Swagger UI
 ```
 
 ## Open Source Orgs

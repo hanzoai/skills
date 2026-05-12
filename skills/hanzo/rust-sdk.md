@@ -104,10 +104,10 @@ use hanzo_agent_proxy::Proxy;
 
 // Multi-backend proxy (OpenAI-compatible)
 let proxy = Proxy::builder()
-    .backend("openai", openai_config)
-    .backend("anthropic", anthropic_config)
-    .backend("local", ollama_config)
-    .build();
+ .backend("openai", openai_config)
+ .backend("anthropic", anthropic_config)
+ .backend("local", ollama_config)
+ .build();
 
 proxy.serve("0.0.0.0:8080").await?;
 ```
@@ -118,10 +118,10 @@ proxy.serve("0.0.0.0:8080").await?;
 use hanzo_mcp::{Server, Tool};
 
 let server = Server::builder()
-    .name("my-tools")
-    .tool(Tool::new("search", search_handler))
-    .tool(Tool::new("compute", compute_handler))
-    .build();
+ .name("my-tools")
+ .tool(Tool::new("search", search_handler))
+ .tool(Tool::new("compute", compute_handler))
+ .build();
 
 server.serve_stdio().await?;
 ```

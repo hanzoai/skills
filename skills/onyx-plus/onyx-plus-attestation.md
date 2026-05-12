@@ -35,12 +35,12 @@ inner := crypto.Keccak256(addrBuf, topicBuf, data)
 
 // EIP-191 prefix
 prefixed := crypto.Keccak256(
-    []byte("\x19Ethereum Signed Message:\n32"),
-    inner,
+ []byte("\x19Ethereum Signed Message:\n32"),
+ inner,
 )
 
 sig, _ := crypto.Sign(prefixed, signingKey)
-sig[64] += 27  // secp256k1 Sign returns v as 0/1; ecrecover wants 27/28
+sig[64] += 27 // secp256k1 Sign returns v as 0/1; ecrecover wants 27/28
 ```
 
 The signature is 65 bytes: r (32) || s (32) || v (1, 27 or 28) -- the value `ecrecover` expects in Solidity.
@@ -64,23 +64,23 @@ The signature is 65 bytes: r (32) || s (32) || v (1, 27 or 28) -- the value `ecr
 GET /v1/onyx/claims/{enrollmentId}?onchain_id=0x...
 
 {
-  "enrollment_id": "abc123",
-  "user_id": "u_001",
-  "org_id": "onyxplus",
-  "onchain_id_address": "0x...",
-  "issuer_address": "0x...",       // ClaimIssuer contract
-  "signer_address": "0x...",       // EOA recovered from sig
-  "claims": [
-    {
-      "topic": 10,
-      "scheme": 1,
-      "issuer": "0x...",           // ClaimIssuer contract
-      "signature": "0x...",        // 65-byte hex
-      "data": "0x...",             // ABI-encoded payload
-      "uri": "https://onyxplus-api.{env}.satschel.com/v1/onyxplus/enrollments/{id}/verify/{topic}"
-    },
-    // ... topics 11, 12, 13
-  ]
+ "enrollment_id": "abc123",
+ "user_id": "u_001",
+ "org_id": "onyxplus",
+ "onchain_id_address": "0x...",
+ "issuer_address": "0x...", // ClaimIssuer contract
+ "signer_address": "0x...", // EOA recovered from sig
+ "claims": [
+ {
+ "topic": 10,
+ "scheme": 1,
+ "issuer": "0x...", // ClaimIssuer contract
+ "signature": "0x...", // 65-byte hex
+ "data": "0x...", // ABI-encoded payload
+ "uri": "https://onyxplus-api.{env}.satschel.com/v1/onyxplus/enrollments/{id}/verify/{topic}"
+ },
+ // ... topics 11, 12, 13
+ ]
 }
 ```
 

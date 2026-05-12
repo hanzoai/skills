@@ -55,61 +55,61 @@ Hanzo Computer (`hanzoai/computer`) is an **ecommerce web application for purcha
 
 ```
 hanzoai/computer/
-  package.json              # hanzo-computer, React 19, Vite 6
-  App.tsx                   # Main app with React Router
-  index.html                # SPA entry point
-  index.tsx                 # React DOM render
-  vite.config.ts            # Vite config
-  vercel.json               # Vercel serverless function config
-  tailwind.config.js        # Tailwind CSS v4
-  .env.example              # IAM, Commerce API, Upstash Redis config
-  api/
-    _middleware.ts           # Rate limiting middleware (Upstash Redis)
-    generate-invoice.ts     # PDF invoice generation
-    send-email.ts           # Generic email sending
-    send-order-confirmation.ts
-    send-quote-email.ts
-    send-rfq-confirmation.ts
-    send-subscription-confirmation.ts
-    send-cluster-notification.ts
-    admin/                  # Admin API endpoints
-  components/
-    Header.tsx              # Navigation with cart icon + search
-    Hero.tsx                # Landing page hero section
-    Pricing.tsx             # Product cards (DGX Spark, GPU, Enterprise)
-    CloudPricing.tsx        # Cloud compute pricing
-    DGXSparkHighlight.tsx   # Featured product section
-    Features.tsx            # Feature highlights
-    HardwareSpec.tsx        # Hardware specifications table
-    WhyBuyHardware.tsx      # Marketing content
-    UseCases.tsx            # Use case showcases
-    IndustrySolutions.tsx   # Industry vertical solutions
-    FAQ.tsx                 # Frequently asked questions
-    SearchModal.tsx         # Product search
-    Testimonials.tsx        # Customer testimonials
-    TrustSecurity.tsx       # Security badges and info
-    Partners.tsx            # Partner logos
-    ImageGallery.tsx        # Product images
-    CallToAction.tsx        # CTA section
-    Footer.tsx              # Site footer
-  src/
-    context/
-      CartContext.tsx        # Shopping cart state (React Context)
-    pages/
-      Cart.tsx              # Cart page with quantity controls
-      Checkout.tsx          # Checkout → Hanzo Billing redirect
-      Account.tsx           # Order history dashboard
-    components/             # Additional UI components
-    lib/                    # Utility libraries
-  supabase/
-    schema.sql              # Production DB schema (orders, customers, products)
-    schema_analytics.sql    # Analytics tables
-    storage-buckets.sql     # File storage config
-    migrations/             # DB migrations
-  e2e/                      # Playwright end-to-end tests
-  tests/                    # Test suite
-  docs/                     # Documentation
-  public/                   # Static assets
+ package.json # hanzo-computer, React 19, Vite 6
+ App.tsx # Main app with React Router
+ index.html # SPA entry point
+ index.tsx # React DOM render
+ vite.config.ts # Vite config
+ vercel.json # Vercel serverless function config
+ tailwind.config.js # Tailwind CSS v4
+ .env.example # IAM, Commerce API, Upstash Redis config
+ api/
+ _middleware.ts # Rate limiting middleware (Upstash Redis)
+ generate-invoice.ts # PDF invoice generation
+ send-email.ts # Generic email sending
+ send-order-confirmation.ts
+ send-quote-email.ts
+ send-rfq-confirmation.ts
+ send-subscription-confirmation.ts
+ send-cluster-notification.ts
+ admin/ # Admin API endpoints
+ components/
+ Header.tsx # Navigation with cart icon + search
+ Hero.tsx # Landing page hero section
+ Pricing.tsx # Product cards (DGX Spark, GPU, Enterprise)
+ CloudPricing.tsx # Cloud compute pricing
+ DGXSparkHighlight.tsx # Featured product section
+ Features.tsx # Feature highlights
+ HardwareSpec.tsx # Hardware specifications table
+ WhyBuyHardware.tsx # Marketing content
+ UseCases.tsx # Use case showcases
+ IndustrySolutions.tsx # Industry vertical solutions
+ FAQ.tsx # Frequently asked questions
+ SearchModal.tsx # Product search
+ Testimonials.tsx # Customer testimonials
+ TrustSecurity.tsx # Security badges and info
+ Partners.tsx # Partner logos
+ ImageGallery.tsx # Product images
+ CallToAction.tsx # CTA section
+ Footer.tsx # Site footer
+ src/
+ context/
+ CartContext.tsx # Shopping cart state (React Context)
+ pages/
+ Cart.tsx # Cart page with quantity controls
+ Checkout.tsx # Checkout → Hanzo Billing redirect
+ Account.tsx # Order history dashboard
+ components/ # Additional UI components
+ lib/ # Utility libraries
+ supabase/
+ schema.sql # Production DB schema (orders, customers, products)
+ schema_analytics.sql # Analytics tables
+ storage-buckets.sql # File storage config
+ migrations/ # DB migrations
+ e2e/ # Playwright end-to-end tests
+ tests/ # Test suite
+ docs/ # Documentation
+ public/ # Static assets
 ```
 
 ## Dependencies

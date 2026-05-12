@@ -53,8 +53,8 @@ Hanzo Charts is the **official Helm chart repository** for all Hanzo services an
 
 | Chart | Path | Description |
 |-------|------|-------------|
-| `iam` | `charts/iam/` | Identity and Access Management (Casdoor-based) |
-| `kms` | `charts/kms/` | Key Management Service (Infisical-based) |
+| `iam` | `charts/iam/` | Identity and Access Management (Hanzo IAM-based) |
+| `kms` | `charts/kms/` | Key Management Service (Hanzo KMS-based) |
 | `gateway` | `charts/gateway/` | API Gateway (KrakenD-based) |
 
 ### AI Services
@@ -94,27 +94,27 @@ Hanzo Charts is the **official Helm chart repository** for all Hanzo services an
 
 ```
 charts/
-  agents/        # Chart.yaml, templates/, values.yaml
-  analytics/
-  bootnode/
-  cloud/
-  commerce/
-  console/
-  edge/
-  gateway/
-  gitops/
-  iam/
-  kms/
-  llm/
-  mpc/
-  net/
-  platform/
-  storage/
+ agents/ # Chart.yaml, templates/, values.yaml
+ analytics/
+ bootnode/
+ cloud/
+ commerce/
+ console/
+ edge/
+ gateway/
+ gitops/
+ iam/
+ kms/
+ llm/
+ mpc/
+ net/
+ platform/
+ storage/
 .github/
-  workflows/     # CI for lint, test, publish
-ct.yaml          # Chart Testing configuration
+ workflows/ # CI for lint, test, publish
+ct.yaml # Chart Testing configuration
 README.md
-LICENSE          # Apache 2.0
+LICENSE # Apache 2.0
 ```
 
 Each chart directory contains:
@@ -136,23 +136,23 @@ helm install hanzo-cloud hanzo/cloud -n hanzo
 
 # Install full stack (umbrella)
 helm install hanzo hanzo/stack -n hanzo --create-namespace \
-  --set global.domain=yourdomain.com \
-  --set iam.enabled=true \
-  --set gateway.enabled=true \
-  --set cloud.enabled=true \
-  --set console.enabled=true
+ --set global.domain=yourdomain.com \
+ --set iam.enabled=true \
+ --set gateway.enabled=true \
+ --set cloud.enabled=true \
+ --set console.enabled=true
 ```
 
 ## Global Values
 
 ```yaml
 global:
-  domain: hanzo.ai
-  imageRegistry: ghcr.io/hanzoai
-  storageClass: do-block-storage
-  tls:
-    enabled: true
-    issuer: letsencrypt-prod
+ domain: hanzo.ai
+ imageRegistry: ghcr.io/hanzoai
+ storageClass: do-block-storage
+ tls:
+ enabled: true
+ issuer: letsencrypt-prod
 ```
 
 ## Development
@@ -175,24 +175,24 @@ ct install --config ct.yaml
 ## Architecture
 
 ```
-                +-----------------+
-                | hanzo-gateway   | (KrakenD)
-                |  LoadBalancer   |
-                +--------+--------+
-                         |
-     +-------------------+-------------------+
-     |                   |                   |
-+----v----+        +-----v-----+       +-----v-----+
-|hanzo-iam|        |hanzo-cloud|       |hanzo-api  |
-| (Auth)  |        | (AI/MCP)  |       | (Services)|
-+----+----+        +-----+-----+       +-----+-----+
-     |                   |                   |
-     +-------------------+-------------------+
-                         |
-                +--------v--------+
-                |hanzo-datastore  | (Shared)
-                |PostgreSQL/Redis |
-                +-----------------+
+ +-----------------+
+ | hanzo-gateway | (KrakenD)
+ | LoadBalancer |
+ +--------+--------+
+ |
+ +-------------------+-------------------+
+ | | |
++----v----+ +-----v-----+ +-----v-----+
+|hanzo-iam| |hanzo-cloud| |hanzo-api |
+| (Auth) | | (AI/MCP) | | (Services)|
++----+----+ +-----+-----+ +-----+-----+
+ | | |
+ +-------------------+-------------------+
+ |
+ +--------v--------+
+ |hanzo-datastore | (Shared)
+ |PostgreSQL/Redis |
+ +-----------------+
 ```
 
 ## Observability

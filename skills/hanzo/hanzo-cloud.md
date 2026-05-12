@@ -45,13 +45,13 @@ Hanzo Cloud is the **AI provider management platform** -- Go 1.26 Beego MVC back
 
 ```
 cloud.hanzo.ai (dashboard)
-        |
-   Cloud Backend (Go/Beego, port 8000)
-        |
-   +----+----+----+
-   |    |    |    |
-  IAM  PostgreSQL  LLM Gateway   Console
-  (hanzo.id)      (llm.hanzo.svc) (console.hanzo.ai)
+ |
+ Cloud Backend (Go/Beego, port 8000)
+ |
+ +----+----+----+
+ | | | |
+ IAM PostgreSQL LLM Gateway Console
+ (hanzo.id) (llm.hanzo.svc) (console.hanzo.ai)
 ```
 
 ### Integration with LLM Gateway
@@ -70,14 +70,14 @@ Cloud supports multiple organizations: hanzo, lux, zoo, pars.
 
 ```
 Organization (hanzo)
-  +-- Project (my-ai-app)
-  |     +-- API Key (sk-hanzo-...)
-  |     +-- Environment (production)
-  |     +-- Environment (staging)
-  +-- Project (chatbot)
-  +-- Members
-        +-- admin@hanzo.ai (OWNER)
-        +-- dev@hanzo.ai (DEVELOPER)
+ +-- Project (my-ai-app)
+ | +-- API Key (sk-hanzo-...)
+ | +-- Environment (production)
+ | +-- Environment (staging)
+ +-- Project (chatbot)
+ +-- Members
+ +-- admin@hanzo.ai (OWNER)
+ +-- dev@hanzo.ai (DEVELOPER)
 ```
 
 ### Multi-org bootstrap
@@ -99,16 +99,16 @@ export HANZO_API_KEY=sk-hanzo-...
 
 # OpenAI-compatible chat completions
 curl https://api.hanzo.ai/v1/chat/completions \
-  -H "Authorization: Bearer ${HANZO_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "zen-70b",
-    "messages": [{"role": "user", "content": "Hello"}]
-  }'
+ -H "Authorization: Bearer ${HANZO_API_KEY}" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "model": "zen-70b",
+ "messages": [{"role": "user", "content": "Hello"}]
+ }'
 
 # List available models
 curl https://api.hanzo.ai/v1/models \
-  -H "Authorization: Bearer ${HANZO_API_KEY}"
+ -H "Authorization: Bearer ${HANZO_API_KEY}"
 ```
 
 ## Supported providers (100+)
@@ -124,20 +124,20 @@ The Cloud API runs as `cloud-api` service in the hanzo namespace:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cloud-api
-  namespace: hanzo
+ name: cloud-api
+ namespace: hanzo
 spec:
-  replicas: 2
-  template:
-    spec:
-      containers:
-        - name: cloud
-          image: ghcr.io/hanzoai/cloud:latest
-          ports:
-            - containerPort: 8000
-          env:
-            - name: iamEndpoint
-              value: "https://hanzo.id"  # MUST be public URL
+ replicas: 2
+ template:
+ spec:
+ containers:
+ - name: cloud
+ image: ghcr.io/hanzoai/cloud:latest
+ ports:
+ - containerPort: 8000
+ env:
+ - name: iamEndpoint
+ value: "https://hanzo.id" # MUST be public URL
 ```
 
 ## Troubleshooting

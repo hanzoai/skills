@@ -58,40 +58,40 @@ Repo: `hanzoai/gochimp3` (68 stars). Default branch: `master`.
 package main
 
 import (
-    "fmt"
-    "os"
-    "time"
+ "fmt"
+ "os"
+ "time"
 
-    "github.com/hanzoai/gochimp3"
+ "github.com/hanzoai/gochimp3"
 )
 
 func main() {
-    client := gochimp3.New(os.Getenv("MAILCHIMP_API_KEY"))
-    client.Timeout = 5 * time.Second
+ client := gochimp3.New(os.Getenv("MAILCHIMP_API_KEY"))
+ client.Timeout = 5 * time.Second
 
-    // Get a list by ID
-    list, err := client.GetList("YOUR_LIST_ID", nil)
-    if err != nil {
-        fmt.Println("Error:", err)
-        os.Exit(1)
-    }
+ // Get a list by ID
+ list, err := client.GetList("YOUR_LIST_ID", nil)
+ if err != nil {
+ fmt.Println("Error:", err)
+ os.Exit(1)
+ }
 
-    // Subscribe a member
-    req := &gochimp3.MemberRequest{
-        EmailAddress: "user@example.com",
-        Status:       "subscribed",
-        MergeFields: map[string]interface{}{
-            "FNAME": "Jane",
-            "LNAME": "Doe",
-        },
-    }
+ // Subscribe a member
+ req := &gochimp3.MemberRequest{
+ EmailAddress: "user@example.com",
+ Status: "subscribed",
+ MergeFields: map[string]interface{}{
+ "FNAME": "Jane",
+ "LNAME": "Doe",
+ },
+ }
 
-    member, err := list.CreateMember(req)
-    if err != nil {
-        fmt.Println("Subscribe failed:", err)
-        os.Exit(1)
-    }
-    fmt.Println("Subscribed:", member.EmailAddress)
+ member, err := list.CreateMember(req)
+ if err != nil {
+ fmt.Println("Subscribe failed:", err)
+ os.Exit(1)
+ }
+ fmt.Println("Subscribed:", member.EmailAddress)
 }
 ```
 
@@ -101,30 +101,30 @@ func main() {
 
 ```
 gochimp3.New(apiKey) -> *API
-    |
-    |-- API.GetLists()     -> *ListOfLists     (paginated)
-    |-- API.GetList(id)    -> *ListResponse     (has sub-methods)
-    |-- API.GetCampaigns() -> *ListOfCampaigns
-    |-- API.CreateCampaign()
-    |-- API.SendCampaign()
-    |
-    ListResponse (fluent sub-API)
-    |-- list.GetMembers()
-    |-- list.CreateMember()
-    |-- list.UpdateMember()
-    |-- list.AddOrUpdateMember()  (PUT - upsert)
-    |-- list.DeleteMember()
-    |-- list.DeleteMemberPermanent()
-    |-- list.BatchSubscribeMembers()
-    |-- list.GetInterestCategories()
-    |-- list.GetMergeFields()
-    |-- list.CreateMergeField()
-    |
-    Member (fluent sub-API)
-    |-- member.GetActivity()
-    |-- member.GetGoals()
-    |-- member.GetNotes() / CreateNote() / UpdateNote()
-    |-- member.GetTags() / UpdateTags()
+ |
+ |-- API.GetLists() -> *ListOfLists (paginated)
+ |-- API.GetList(id) -> *ListResponse (has sub-methods)
+ |-- API.GetCampaigns() -> *ListOfCampaigns
+ |-- API.CreateCampaign()
+ |-- API.SendCampaign()
+ |
+ ListResponse (fluent sub-API)
+ |-- list.GetMembers()
+ |-- list.CreateMember()
+ |-- list.UpdateMember()
+ |-- list.AddOrUpdateMember() (PUT - upsert)
+ |-- list.DeleteMember()
+ |-- list.DeleteMemberPermanent()
+ |-- list.BatchSubscribeMembers()
+ |-- list.GetInterestCategories()
+ |-- list.GetMergeFields()
+ |-- list.CreateMergeField()
+ |
+ Member (fluent sub-API)
+ |-- member.GetActivity()
+ |-- member.GetGoals()
+ |-- member.GetNotes() / CreateNote() / UpdateNote()
+ |-- member.GetTags() / UpdateTags()
 ```
 
 ### API Client
@@ -133,9 +133,9 @@ The `API` struct is the entry point. It extracts the datacenter from the API key
 
 ```go
 client := gochimp3.New("your-api-key-us6")
-client.Timeout = 10 * time.Second    // optional
-client.Debug = true                   // dumps request/response
-client.Transport = customTransport    // optional custom transport
+client.Timeout = 10 * time.Second // optional
+client.Debug = true // dumps request/response
+client.Transport = customTransport // optional custom transport
 ```
 
 ### Query Parameters
@@ -154,13 +154,13 @@ API errors are returned as `*APIError` implementing the `error` interface:
 ```go
 member, err := list.CreateMember(req)
 if err != nil {
-    if apiErr, ok := err.(*gochimp3.APIError); ok {
-        fmt.Println("Status:", apiErr.Status)
-        fmt.Println("Detail:", apiErr.Detail)
-        for _, e := range apiErr.Errors {
-            fmt.Println("Field:", e.Field, "Message:", e.Message)
-        }
-    }
+ if apiErr, ok := err.(*gochimp3.APIError); ok {
+ fmt.Println("Status:", apiErr.Status)
+ fmt.Println("Detail:", apiErr.Detail)
+ for _, e := range apiErr.Errors {
+ fmt.Println("Field:", e.Field, "Message:", e.Message)
+ }
+ }
 }
 ```
 
@@ -177,29 +177,29 @@ member := api.MemberForApiCalls("list-id", "user@example.com")
 
 ```
 github.com/hanzoai/gochimp3/
-    api.go                  # API client, HTTP transport, request/response handling
-    api_test.go             # Client tests
-    common_types.go         # APIError, QueryParams, Link, Address, Contact, etc.
-    lists.go                # Lists CRUD, abuse reports, activity, clients, growth history,
-                            #   interest categories, interests, batch subscribe, merge fields
-    members.go              # Members CRUD, activity, goals, notes, tags
-    campaigns.go            # Campaigns CRUD, send test, send, content updates
-    automations.go          # Automation workflows, emails, queues
-    automation_workflows.go # Workflow-level operations
-    ecommerce.go            # Stores, products, variants, orders, carts, customers
-    segments.go             # List segments CRUD, batch modify
-    templates.go            # Templates CRUD
-    template_folders.go     # Template folder CRUD
-    campaign_folders.go     # Campaign folder CRUD
-    batches.go              # Batch operations
-    webhooks.go             # Webhook CRUD on lists
-    search.go               # Search members
-    events.go               # Member events
-    events_test.go          # Events tests
-    root.go                 # API root info
-    json.go                 # JSON helper (custom time parsing)
-    go.mod                  # Module definition
-    go.sum                  # Dependency checksums
+ api.go # API client, HTTP transport, request/response handling
+ api_test.go # Client tests
+ common_types.go # APIError, QueryParams, Link, Address, Contact, etc.
+ lists.go # Lists CRUD, abuse reports, activity, clients, growth history,
+ # interest categories, interests, batch subscribe, merge fields
+ members.go # Members CRUD, activity, goals, notes, tags
+ campaigns.go # Campaigns CRUD, send test, send, content updates
+ automations.go # Automation workflows, emails, queues
+ automation_workflows.go # Workflow-level operations
+ ecommerce.go # Stores, products, variants, orders, carts, customers
+ segments.go # List segments CRUD, batch modify
+ templates.go # Templates CRUD
+ template_folders.go # Template folder CRUD
+ campaign_folders.go # Campaign folder CRUD
+ batches.go # Batch operations
+ webhooks.go # Webhook CRUD on lists
+ search.go # Search members
+ events.go # Member events
+ events_test.go # Events tests
+ root.go # API root info
+ json.go # JSON helper (custom time parsing)
+ go.mod # Module definition
+ go.sum # Dependency checksums
 ```
 
 ## API Coverage

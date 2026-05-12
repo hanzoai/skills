@@ -86,50 +86,50 @@ node = "~/.local/bin/node"
 ### Project Scaffolding
 
 ```bash
-hanzo init                        # Interactive project setup
-hanzo init --template next        # From template (next, fastapi, go, rust)
-hanzo init --template commerce    # E-commerce project scaffold
+hanzo init # Interactive project setup
+hanzo init --template next # From template (next, fastapi, go, rust)
+hanzo init --template commerce # E-commerce project scaffold
 ```
 
 ### Local Development
 
 ```bash
-hanzo dev                         # Start dev server (auto-detect framework)
-hanzo dev --port 3000             # Custom port
-hanzo run                         # Run project (production mode)
+hanzo dev # Start dev server (auto-detect framework)
+hanzo dev --port 3000 # Custom port
+hanzo run # Run project (production mode)
 ```
 
 ### Build & Deploy
 
 ```bash
-hanzo build                       # Build project
-hanzo deploy                      # Deploy to Hanzo Platform
-hanzo deploy --env production     # Deploy to specific environment
-hanzo deploy --branch main        # Deploy specific branch
+hanzo build # Build project
+hanzo deploy # Deploy to Hanzo Platform
+hanzo deploy --env production # Deploy to specific environment
+hanzo deploy --branch main # Deploy specific branch
 ```
 
 ### Authentication
 
 ```bash
-hanzo auth login          # Open browser for OAuth2 login
-hanzo auth logout         # Clear local credentials
-hanzo auth status         # Show current auth state
-hanzo auth token          # Print current access token
-hanzo auth whoami         # Show current user info
+hanzo auth login # Open browser for OAuth2 login
+hanzo auth logout # Clear local credentials
+hanzo auth status # Show current auth state
+hanzo auth token # Print current access token
+hanzo auth whoami # Show current user info
 ```
 
 ### Commerce
 
 ```bash
-hanzo commerce init               # Initialize commerce backend
-hanzo commerce serve              # Start commerce API server
+hanzo commerce init # Initialize commerce backend
+hanzo commerce serve # Start commerce API server
 ```
 
 ### Agent
 
 ```bash
-hanzo agent run my-agent.py       # Run agent via Python SDK
-hanzo agent list                  # List registered agents
+hanzo agent run my-agent.py # Run agent via Python SDK
+hanzo agent list # List registered agents
 ```
 
 ### TypeScript Proxy Commands
@@ -138,18 +138,18 @@ The CLI transparently proxies to TypeScript SDK tooling:
 
 ```bash
 # Docs tooling (proxies to @hanzo/docs-cli)
-hanzo docs init                   # Initialize docs project
-hanzo docs dev                    # Docs dev server
+hanzo docs init # Initialize docs project
+hanzo docs dev # Docs dev server
 
 # MDX processing (proxies to @hanzo/docs-mdx)
-hanzo mdx build                   # Build MDX content
+hanzo mdx build # Build MDX content
 
 # UI components (proxies to @hanzo/docs-ui)
-hanzo ui init                     # Initialize UI project
+hanzo ui init # Initialize UI project
 
 # MCP server (proxies to @hanzo/mcp)
-hanzo mcp serve                   # Start MCP server
-hanzo mcp list                    # List available MCP tools
+hanzo mcp serve # Start MCP server
+hanzo mcp list # List available MCP tools
 ```
 
 ## CI/CD Integration
@@ -157,30 +157,30 @@ hanzo mcp list                    # List available MCP tools
 ```yaml
 # .github/workflows/deploy.yml
 jobs:
-  deploy:
-    steps:
-      - uses: actions/checkout@v4
+ deploy:
+ steps:
+ - uses: actions/checkout@v4
 
-      - name: Install Hanzo CLI
-        run: |
-          curl -L https://github.com/hanzoai/cli/releases/latest/download/hanzo-linux-amd64 -o /usr/local/bin/hanzo
-          chmod +x /usr/local/bin/hanzo
+ - name: Install Hanzo CLI
+ run: |
+ curl -L https://github.com/hanzoai/cli/releases/latest/download/hanzo-linux-amd64 -o /usr/local/bin/hanzo
+ chmod +x /usr/local/bin/hanzo
 
-      - name: Deploy
-        env:
-          HANZO_API_KEY: ${{ secrets.HANZO_API_KEY }}
-        run: |
-          hanzo deploy --env production --yes
+ - name: Deploy
+ env:
+ HANZO_API_KEY: ${{ secrets.HANZO_API_KEY }}
+ run: |
+ hanzo deploy --env production --yes
 ```
 
 ## Environment Variables
 
 ```bash
-HANZO_API_KEY=your-api-key          # API authentication
+HANZO_API_KEY=your-api-key # API authentication
 HANZO_BASE_URL=https://api.hanzo.ai # Override API base URL
-HANZO_CONFIG=~/.config/hanzo/config.toml  # Custom config path
-HANZO_LOG=debug                     # Enable debug logging
-HANZO_JSON=1                        # Always output JSON
+HANZO_CONFIG=~/.config/hanzo/config.toml # Custom config path
+HANZO_LOG=debug # Enable debug logging
+HANZO_JSON=1 # Always output JSON
 ```
 
 ## Troubleshooting

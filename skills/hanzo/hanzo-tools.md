@@ -115,7 +115,7 @@ let tools = registry.list_tools();
 
 // Execute a tool
 let result = registry.execute("read", json!({
-    "path": "/path/to/file.txt"
+ "path": "/path/to/file.txt"
 })).await?;
 ```
 
@@ -128,7 +128,7 @@ registry = ToolRegistry()
 tools = registry.list_tools()
 
 result = await registry.execute("read", {
-    "path": "/path/to/file.txt"
+ "path": "/path/to/file.txt"
 })
 ```
 
@@ -145,60 +145,60 @@ const tools = registry.listTools();
 
 ```
 hanzo-tools (Rust)
-  ToolRegistry (88 tools, 20 categories)
-  JSON Schema validation
-  Async execution
-       |
-       +-- Python bindings (PyO3) --> Hanzo Agent (Python)
-       +-- Node.js bindings (NAPI-RS)
-       +-- Direct Rust dependency --> Hanzo Node, Zoo Node
+ ToolRegistry (88 tools, 20 categories)
+ JSON Schema validation
+ Async execution
+ |
+ +-- Python bindings (PyO3) --> Hanzo Agent (Python)
+ +-- Node.js bindings (NAPI-RS)
+ +-- Direct Rust dependency --> Hanzo Node, Zoo Node
 ```
 
 ## Key directories
 
 ```
-rust/                       # Rust core implementation
-  Makefile                  # Build automation
-  build.py                  # Build script
-  test_integration.py       # Integration tests
-  README.md                 # Rust-specific docs
-tools/                      # Tool definitions (large, 100+ entries)
-agents/                     # Pre-built agent definitions
-  audio-insight/
-  bitcoin-chart-analyst/
-  bitcoin-market-analyst/
-  bitcoiner/
-  code-directory-and-git-repository-analyzer/
-  corporate-treasury-analyzer/
-  e-librarian/
-  enhanced-image-generator/
-  finance_bro/
-  image-analyzer/
-  learning_tutor/
-  linear_agent/
-  markdown-content-writer/
-  math_problem_solver/
-  mind-map-creator/
-  poster-creator/
-  prompt_writer/
-  youtube_expert/
-  ... (35 total)
-scripts/                    # TypeScript utility scripts
-  download_agents.ts        # Agent download/sync
-  download_tools.ts         # Tool download/sync
-  build_tools.ts            # Tool build script
-  launch.ts                 # Launch script
-  generate_images.ts        # Image generation
-  run_node.sh               # Node runner
-  tests/                    # Script tests
-crons/                      # Scheduled tasks
-  fetch_usa_news.json       # News fetching cron config
-CATALOG.json                # Machine-readable tool catalog (43KB)
-AGENTS_CATALOG.json         # Machine-readable agent catalog (10KB)
-tools-manifest.json         # Registry manifest with stats and integration info
-package_agents.sh           # Agent packaging script
-run_zoo_with_agents.sh      # Zoo integration runner
-verify_agents.py            # Agent verification script
+rust/ # Rust core implementation
+ Makefile # Build automation
+ build.py # Build script
+ test_integration.py # Integration tests
+ README.md # Rust-specific docs
+tools/ # Tool definitions (large, 100+ entries)
+agents/ # Pre-built agent definitions
+ audio-insight/
+ bitcoin-chart-analyst/
+ bitcoin-market-analyst/
+ bitcoiner/
+ code-directory-and-git-repository-analyzer/
+ corporate-treasury-analyzer/
+ e-librarian/
+ enhanced-image-generator/
+ finance_bro/
+ image-analyzer/
+ learning_tutor/
+ linear_agent/
+ markdown-content-writer/
+ math_problem_solver/
+ mind-map-creator/
+ poster-creator/
+ prompt_writer/
+ youtube_expert/
+ ... (35 total)
+scripts/ # TypeScript utility scripts
+ download_agents.ts # Agent download/sync
+ download_tools.ts # Tool download/sync
+ build_tools.ts # Tool build script
+ launch.ts # Launch script
+ generate_images.ts # Image generation
+ run_node.sh # Node runner
+ tests/ # Script tests
+crons/ # Scheduled tasks
+ fetch_usa_news.json # News fetching cron config
+CATALOG.json # Machine-readable tool catalog (43KB)
+AGENTS_CATALOG.json # Machine-readable agent catalog (10KB)
+tools-manifest.json # Registry manifest with stats and integration info
+package_agents.sh # Agent packaging script
+run_zoo_with_agents.sh # Zoo integration runner
+verify_agents.py # Agent verification script
 ```
 
 ## Adding a new tool

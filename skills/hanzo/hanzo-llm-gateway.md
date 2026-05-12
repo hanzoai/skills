@@ -50,10 +50,10 @@ Fork of **LiteLLM** proxy. Repo: `github.com/hanzoai/llm`.
 
 ```bash
 docker run -d --name hanzo-llm \
-  -p 4000:4000 \
-  -e OPENAI_API_KEY="${OPENAI_API_KEY}" \
-  -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
-  ghcr.io/hanzoai/llm:latest
+ -p 4000:4000 \
+ -e OPENAI_API_KEY="${OPENAI_API_KEY}" \
+ -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
+ ghcr.io/hanzoai/llm:latest
 ```
 
 ### Config file
@@ -61,30 +61,30 @@ docker run -d --name hanzo-llm \
 ```yaml
 # config.yaml
 model_list:
-  - model_name: zen-70b
-    llm_params:
-      model: together_ai/Qwen/Qwen3-235B-A22B
-      api_key: os.environ/TOGETHER_API_KEY
+ - model_name: zen-70b
+ llm_params:
+ model: together_ai/Qwen/Qwen3-235B-A22B
+ api_key: os.environ/TOGETHER_API_KEY
 
-  - model_name: gpt-4o
-    llm_params:
-      model: openai/gpt-4o
-      api_key: os.environ/OPENAI_API_KEY
+ - model_name: gpt-4o
+ llm_params:
+ model: openai/gpt-4o
+ api_key: os.environ/OPENAI_API_KEY
 
-  - model_name: claude-sonnet
-    llm_params:
-      model: anthropic/claude-sonnet-4-20250514
-      api_key: os.environ/ANTHROPIC_API_KEY
+ - model_name: claude-sonnet
+ llm_params:
+ model: anthropic/claude-sonnet-4-20250514
+ api_key: os.environ/ANTHROPIC_API_KEY
 
 router_settings:
-  routing_strategy: least-busy
-  num_retries: 3
-  fallbacks:
-    - zen-70b: [gpt-4o, claude-sonnet]
+ routing_strategy: least-busy
+ num_retries: 3
+ fallbacks:
+ - zen-70b: [gpt-4o, claude-sonnet]
 
 general_settings:
-  master_key: os.environ/LITELLM_MASTER_KEY
-  database_url: os.environ/DATABASE_URL
+ master_key: os.environ/LITELLM_MASTER_KEY
+ database_url: os.environ/DATABASE_URL
 ```
 
 ### Make commands
@@ -92,21 +92,21 @@ general_settings:
 ```bash
 # Clone from github.com/hanzoai first
 cd <project>
-make dev              # Start dev server (port 4000)
-make up               # Docker compose up
-docker compose up -d  # Alternative
+make dev # Start dev server (port 4000)
+make up # Docker compose up
+docker compose up -d # Alternative
 ```
 
 ### Test request
 
 ```bash
 curl http://localhost:4000/v1/chat/completions \
-  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "zen-70b",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'
+ -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "model": "zen-70b",
+ "messages": [{"role": "user", "content": "Hello!"}]
+ }'
 ```
 
 ## Core Concepts
@@ -115,20 +115,20 @@ curl http://localhost:4000/v1/chat/completions \
 
 ```
 Client Request
-    │
-    ▼
+ │
+ ▼
 ┌──────────────────┐
-│  LLM Gateway     │
-│  (port 4000)     │
+│ LLM Gateway │
+│ (port 4000) │
 ├──────────────────┤
-│ Router:          │
-│ ├─ least-busy    │──▶ OpenAI
-│ ├─ fallback      │──▶ Anthropic
-│ └─ cost-based    │──▶ Together AI
-├──────────────────┤    ▲
-│ Logging:         │    │
-│ └─ PostgreSQL    │    │
-│ └─ Console       │────┘ (cost tracking)
+│ Router: │
+│ ├─ least-busy │──▶ OpenAI
+│ ├─ fallback │──▶ Anthropic
+│ └─ cost-based │──▶ Together AI
+├──────────────────┤ ▲
+│ Logging: │ │
+│ └─ PostgreSQL │ │
+│ └─ Console │────┘ (cost tracking)
 └──────────────────┘
 ```
 
@@ -138,17 +138,17 @@ When primary provider fails (429, 500, timeout), gateway automatically routes to
 
 ```yaml
 fallbacks:
-  - zen-70b: [gpt-4o, claude-sonnet]  # Try zen → GPT-4o → Claude
-  - gpt-4o: [claude-sonnet]            # Try GPT-4o → Claude
+ - zen-70b: [gpt-4o, claude-sonnet] # Try zen → GPT-4o → Claude
+ - gpt-4o: [claude-sonnet] # Try GPT-4o → Claude
 ```
 
 ### Budget & Rate Limits
 
 ```yaml
 general_settings:
-  max_budget: 100.00           # USD per month
-  budget_duration: 1m          # Reset monthly
-  max_parallel_requests: 100   # Concurrent limit
+ max_budget: 100.00 # USD per month
+ budget_duration: 1m # Reset monthly
+ max_parallel_requests: 100 # Concurrent limit
 ```
 
 ### Zen Model Mapping
@@ -165,27 +165,27 @@ Zen models map to upstream providers (private config in ``github.com/hanzoai/zen
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hanzo-llm
+ name: hanzo-llm
 spec:
-  replicas: 3
-  template:
-    spec:
-      containers:
-      - name: llm
-        image: ghcr.io/hanzoai/llm:latest
-        ports:
-        - containerPort: 4000
-        env:
-        - name: LITELLM_MASTER_KEY
-          valueFrom:
-            secretKeyRef:
-              name: llm-secrets
-              key: master-key
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: llm-secrets
-              key: database-url
+ replicas: 3
+ template:
+ spec:
+ containers:
+ - name: llm
+ image: ghcr.io/hanzoai/llm:latest
+ ports:
+ - containerPort: 4000
+ env:
+ - name: LITELLM_MASTER_KEY
+ valueFrom:
+ secretKeyRef:
+ name: llm-secrets
+ key: master-key
+ - name: DATABASE_URL
+ valueFrom:
+ secretKeyRef:
+ name: llm-secrets
+ key: database-url
 ```
 
 ## Troubleshooting

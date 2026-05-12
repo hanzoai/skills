@@ -54,9 +54,9 @@ Hanzo Skill (`@hanzo/skill`) is a **TypeScript CLI tool** for installing, managi
 
 ```bash
 # Install skills from a GitHub repo
-npx @hanzo/skill add hanzoai/skills       # Hanzo ecosystem skills
-npx @hanzo/skill add bootnode/skills      # Bootnode blockchain APIs
-npx @hanzo/skill add luxfi/skills         # Lux Cloud APIs
+npx @hanzo/skill add hanzoai/skills # Hanzo ecosystem skills
+npx @hanzo/skill add bootnode/skills # Bootnode blockchain APIs
+npx @hanzo/skill add luxfi/skills # Lux Cloud APIs
 
 # Force reinstall (delete and re-clone)
 npx @hanzo/skill add hanzoai/skills --force
@@ -83,11 +83,11 @@ npx @hanzo/skill --help
 
 ```
 src/
-  cli.ts          # CLI entry point (add, remove, list, help)
-  index.ts        # Core library (addSkills, removeSkills, listSkills, symlinkToAgents)
-  index.test.ts   # Tests (Node.js built-in test runner)
-package.json      # @hanzo/skill v1.0.1, type: module, bin: hanzo-skill/skill
-tsconfig.json     # TypeScript config (ESM output)
+ cli.ts # CLI entry point (add, remove, list, help)
+ index.ts # Core library (addSkills, removeSkills, listSkills, symlinkToAgents)
+ index.test.ts # Tests (Node.js built-in test runner)
+package.json # @hanzo/skill v1.0.1, type: module, bin: hanzo-skill/skill
+tsconfig.json # TypeScript config (ESM output)
 ```
 
 ## Library API

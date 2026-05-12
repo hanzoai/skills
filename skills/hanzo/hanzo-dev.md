@@ -60,47 +60,47 @@ Hanzo Dev is an **AI-powered development platform** -- a monorepo containing a R
 
 ```
 hanzoai/dev/
-  MODULE.bazel          # Bazel module definition
-  BUILD.bazel           # Root build file
-  defs.bzl              # Bazel macros
-  .bazelrc              # Bazel config
-  package.json          # pnpm monorepo root
-  pnpm-workspace.yaml   # Workspace members
-  hanzo.sh              # Install script
-  build-fast.sh         # Fast build script
-  justfile              # Just task runner
-  hanzo-dev/            # PRIMARY: Rust workspace (40+ crates)
-    Cargo.toml          # Workspace manifest (v0.6.74)
-    cli/                # CLI binary crate
-    tui/                # TUI binary crate
-    exec/               # Exec binary crate
-    core/               # Core agent logic
-    mcp-client/         # MCP client
-    mcp-server/         # MCP server
-    protocol/           # Wire protocol
-    browser/            # Browser integration
-    ollama/             # Ollama provider
-    login/              # Auth/login
-    linux-sandbox/      # Sandboxing
-    file-search/        # File search
-    git-tooling/        # Git operations
-    ...                 # 25+ more crates
-  dev-cli/              # npm wrapper (@hanzo/dev v0.6.61)
-    bin/dev.js          # Entry point
-    package.json        # Publishes `dev` and `hanzo` binaries
-  codex-cli/            # Legacy TS CLI (upstream fork)
-  codex-rs/             # Upstream Rust (preserved)
-  code-rs/              # Code editor integration
-  hanzo-cli/            # Additional CLI
-  hanzo-node/           # Node.js integration
-  sdk/                  # SDKs (Python, etc.)
-  console/              # Console UI
-  contracts/            # Smart contracts
-  platform/             # Platform integration
-  shell-tool-mcp/       # Shell MCP server
-  npm-binaries/         # Platform-specific npm binary packages
-  standalone-hanzo-dev/ # Standalone build
-  published-hanzo-dev/  # Published crate
+ MODULE.bazel # Bazel module definition
+ BUILD.bazel # Root build file
+ defs.bzl # Bazel macros
+ .bazelrc # Bazel config
+ package.json # pnpm monorepo root
+ pnpm-workspace.yaml # Workspace members
+ hanzo.sh # Install script
+ build-fast.sh # Fast build script
+ justfile # Just task runner
+ hanzo-dev/ # PRIMARY: Rust workspace (40+ crates)
+ Cargo.toml # Workspace manifest (v0.6.74)
+ cli/ # CLI binary crate
+ tui/ # TUI binary crate
+ exec/ # Exec binary crate
+ core/ # Core agent logic
+ mcp-client/ # MCP client
+ mcp-server/ # MCP server
+ protocol/ # Wire protocol
+ browser/ # Browser integration
+ ollama/ # Ollama provider
+ login/ # Auth/login
+ linux-sandbox/ # Sandboxing
+ file-search/ # File search
+ git-tooling/ # Git operations
+ ... # 25+ more crates
+ dev-cli/ # npm wrapper (@hanzo/dev v0.6.61)
+ bin/dev.js # Entry point
+ package.json # Publishes `dev` and `hanzo` binaries
+ codex-cli/ # Legacy TS CLI (upstream fork)
+ codex-rs/ # Upstream Rust (preserved)
+ code-rs/ # Code editor integration
+ hanzo-cli/ # Additional CLI
+ hanzo-node/ # Node.js integration
+ sdk/ # SDKs (Python, etc.)
+ console/ # Console UI
+ contracts/ # Smart contracts
+ platform/ # Platform integration
+ shell-tool-mcp/ # Shell MCP server
+ npm-binaries/ # Platform-specific npm binary packages
+ standalone-hanzo-dev/ # Standalone build
+ published-hanzo-dev/ # Published crate
 ```
 
 ## Rust workspace crates (hanzo-dev/)

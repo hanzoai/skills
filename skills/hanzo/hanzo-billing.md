@@ -82,10 +82,10 @@ cd ~/work/hanzo/billing
 pnpm install
 
 # Development
-pnpm dev  # Port 3005
+pnpm dev # Port 3005
 
 # Build (static export)
-pnpm build  # Output: out/
+pnpm build # Output: out/
 
 # Docker build
 docker build -t ghcr.io/hanzoai/billing:latest .
@@ -98,21 +98,21 @@ docker build -t ghcr.io/hanzoai/billing:latest .
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: billing
-  namespace: hanzo
+ name: billing
+ namespace: hanzo
 spec:
-  replicas: 2
-  template:
-    spec:
-      containers:
-        - name: billing
-          image: ghcr.io/hanzoai/billing:latest
-          ports:
-            - containerPort: 80
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 80
+ replicas: 2
+ template:
+ spec:
+ containers:
+ - name: billing
+ image: ghcr.io/hanzoai/billing:latest
+ ports:
+ - containerPort: 80
+ livenessProbe:
+ httpGet:
+ path: /health
+ port: 80
 ```
 
 ## Troubleshooting

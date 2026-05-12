@@ -513,7 +513,7 @@ key = kdf.derive(password)
 - AWS KMS
 - Google Cloud KMS
 - Azure Key Vault
-- HashiCorp Vault
+- external secret manager
 
 #### Option 3: Software-Based Key Management
 
@@ -1423,7 +1423,7 @@ az keyvault set-policy \
   --key-permissions encrypt decrypt get list
 ```
 
-### HashiCorp Vault
+### external secret manager
 
 **What**: Open-source secrets management and encryption service.
 
@@ -2871,7 +2871,7 @@ rotator.re_encrypt_deks(db)
 3. **AWS KMS**: https://aws.amazon.com/kms/
 4. **Google Cloud KMS**: https://cloud.google.com/kms
 5. **Azure Key Vault**: https://azure.microsoft.com/en-us/services/key-vault/
-6. **HashiCorp Vault**: https://www.vaultproject.io/
+6. **external secret manager**: https://www.vaultproject.io/
 7. **SQLCipher**: https://www.zetetic.net/sqlcipher/
 
 ### Further Reading

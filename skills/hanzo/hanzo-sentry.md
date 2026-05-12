@@ -73,10 +73,10 @@ Fork of `getsentry/sentry`. Local clone at `~/work/hanzo/sentry/`. The GitHub re
 import sentry_sdk
 
 sentry_sdk.init(
-    dsn="https://<key>@sentry.hanzo.ai/<project-id>",
-    traces_sample_rate=0.1,
-    environment="production",
-    release="my-service@1.0.0",
+ dsn="https://<key>@sentry.hanzo.ai/<project-id>",
+ traces_sample_rate=0.1,
+ environment="production",
+ release="my-service@1.0.0",
 )
 ```
 
@@ -86,10 +86,10 @@ sentry_sdk.init(
 const Sentry = require("@sentry/node");
 
 Sentry.init({
-  dsn: "https://<key>@sentry.hanzo.ai/<project-id>",
-  tracesSampleRate: 0.1,
-  environment: "production",
-  release: "my-service@1.0.0",
+ dsn: "https://<key>@sentry.hanzo.ai/<project-id>",
+ tracesSampleRate: 0.1,
+ environment: "production",
+ release: "my-service@1.0.0",
 });
 ```
 
@@ -99,13 +99,13 @@ Sentry.init({
 import "github.com/getsentry/sentry-go"
 
 func main() {
-    sentry.Init(sentry.ClientOptions{
-        Dsn:              "https://<key>@sentry.hanzo.ai/<project-id>",
-        TracesSampleRate: 0.1,
-        Environment:      "production",
-        Release:          "my-service@1.0.0",
-    })
-    defer sentry.Flush(2 * time.Second)
+ sentry.Init(sentry.ClientOptions{
+ Dsn: "https://<key>@sentry.hanzo.ai/<project-id>",
+ TracesSampleRate: 0.1,
+ Environment: "production",
+ Release: "my-service@1.0.0",
+ })
+ defer sentry.Flush(2 * time.Second)
 }
 ```
 
@@ -114,50 +114,50 @@ func main() {
 ```yaml
 # compose.yml
 services:
-  sentry-web:
-    image: ghcr.io/hanzoai/sentry:latest
-    command: ["sentry", "run", "web"]
-    ports:
-      - "9000:9000"
-    environment:
-      SENTRY_SECRET_KEY: "${SENTRY_SECRET_KEY}"
-      SENTRY_POSTGRES_HOST: postgres
-      SENTRY_DB_NAME: sentry
-      SENTRY_DB_USER: sentry
-      SENTRY_DB_PASSWORD: "${SENTRY_DB_PASSWORD}"
-      SENTRY_REDIS_HOST: redis
+ sentry-web:
+ image: ghcr.io/hanzoai/sentry:latest
+ command: ["sentry", "run", "web"]
+ ports:
+ - "9000:9000"
+ environment:
+ SENTRY_SECRET_KEY: "${SENTRY_SECRET_KEY}"
+ SENTRY_POSTGRES_HOST: postgres
+ SENTRY_DB_NAME: sentry
+ SENTRY_DB_USER: sentry
+ SENTRY_DB_PASSWORD: "${SENTRY_DB_PASSWORD}"
+ SENTRY_REDIS_HOST: redis
 
-  sentry-worker:
-    image: ghcr.io/hanzoai/sentry:latest
-    command: ["sentry", "run", "worker"]
-    environment:
-      SENTRY_SECRET_KEY: "${SENTRY_SECRET_KEY}"
-      SENTRY_POSTGRES_HOST: postgres
-      SENTRY_DB_NAME: sentry
-      SENTRY_DB_USER: sentry
-      SENTRY_DB_PASSWORD: "${SENTRY_DB_PASSWORD}"
-      SENTRY_REDIS_HOST: redis
+ sentry-worker:
+ image: ghcr.io/hanzoai/sentry:latest
+ command: ["sentry", "run", "worker"]
+ environment:
+ SENTRY_SECRET_KEY: "${SENTRY_SECRET_KEY}"
+ SENTRY_POSTGRES_HOST: postgres
+ SENTRY_DB_NAME: sentry
+ SENTRY_DB_USER: sentry
+ SENTRY_DB_PASSWORD: "${SENTRY_DB_PASSWORD}"
+ SENTRY_REDIS_HOST: redis
 
-  sentry-cron:
-    image: ghcr.io/hanzoai/sentry:latest
-    command: ["sentry", "run", "cron"]
-    environment:
-      SENTRY_SECRET_KEY: "${SENTRY_SECRET_KEY}"
-      SENTRY_POSTGRES_HOST: postgres
-      SENTRY_DB_NAME: sentry
-      SENTRY_DB_USER: sentry
-      SENTRY_DB_PASSWORD: "${SENTRY_DB_PASSWORD}"
-      SENTRY_REDIS_HOST: redis
+ sentry-cron:
+ image: ghcr.io/hanzoai/sentry:latest
+ command: ["sentry", "run", "cron"]
+ environment:
+ SENTRY_SECRET_KEY: "${SENTRY_SECRET_KEY}"
+ SENTRY_POSTGRES_HOST: postgres
+ SENTRY_DB_NAME: sentry
+ SENTRY_DB_USER: sentry
+ SENTRY_DB_PASSWORD: "${SENTRY_DB_PASSWORD}"
+ SENTRY_REDIS_HOST: redis
 
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: sentry
-      POSTGRES_USER: sentry
-      POSTGRES_PASSWORD: "${SENTRY_DB_PASSWORD}"
+ postgres:
+ image: postgres:16
+ environment:
+ POSTGRES_DB: sentry
+ POSTGRES_USER: sentry
+ POSTGRES_PASSWORD: "${SENTRY_DB_PASSWORD}"
 
-  redis:
-    image: redis:7-alpine
+ redis:
+ image: redis:7-alpine
 ```
 
 ## Core Concepts
@@ -165,28 +165,28 @@ services:
 ### Architecture
 
 ```
-                  ┌──────────────────────────────────┐
-                  │         K8s Ingress               │
-                  │  sentry.hanzo.ai                  │
-                  │  sentry.lux.network               │
-                  │  sentry.pars.network              │
-                  │  sentry.zoo.network               │
-                  └───────────────┬──────────────────┘
-                                  │
-                  ┌───────────────▼──────────────────┐
-                  │   sentry-web (2 replicas)        │
-                  │   Django + uWSGI on port 9000    │
-                  └──┬────────────┬─────────────┬────┘
-                     │            │             │
-              ┌──────▼──┐  ┌─────▼─────┐  ┌───▼────────┐
-              │ Postgres │  │   Redis   │  │ OTEL       │
-              │ hanzo-sql│  │  (shared) │  │ Collector  │
-              └─────────┘  └───────────┘  └────────────┘
-                     │            │
-              ┌──────▼──┐  ┌─────▼──────────────┐
-              │ sentry- │  │ sentry-worker       │
-              │ cron    │  │ (2 replicas, Celery) │
-              └─────────┘  └─────────────────────┘
+ ┌──────────────────────────────────┐
+ │ K8s Ingress │
+ │ sentry.hanzo.ai │
+ │ sentry.lux.network │
+ │ sentry.pars.network │
+ │ sentry.zoo.network │
+ └───────────────┬──────────────────┘
+ │
+ ┌───────────────▼──────────────────┐
+ │ sentry-web (2 replicas) │
+ │ Django + uWSGI on port 9000 │
+ └──┬────────────┬─────────────┬────┘
+ │ │ │
+ ┌──────▼──┐ ┌─────▼─────┐ ┌───▼────────┐
+ │ Postgres │ │ Redis │ │ OTEL │
+ │ hanzo-sql│ │ (shared) │ │ Collector │
+ └─────────┘ └───────────┘ └────────────┘
+ │ │
+ ┌──────▼──┐ ┌─────▼──────────────┐
+ │ sentry- │ │ sentry-worker │
+ │ cron │ │ (2 replicas, Celery) │
+ └─────────┘ └─────────────────────┘
 ```
 
 ### Three Deployments
@@ -229,16 +229,16 @@ Secrets are managed via the `KMSSecret` CRD that syncs from `kms.hanzo.ai`:
 ```yaml
 # kms-secrets.yaml
 spec:
-  hostAPI: https://kms.hanzo.ai/api
-  managedSecretReference:
-    secretName: sentry-secrets
-    secretNamespace: hanzo
-  authentication:
-    universalAuth:
-      secretsScope:
-        projectSlug: hanzo-k8s-epiq
-        envSlug: prod
-        secretsPath: /sentry
+ hostAPI: https://kms.hanzo.ai/api
+ managedSecretReference:
+ secretName: sentry-secrets
+ secretNamespace: hanzo
+ authentication:
+ universalAuth:
+ secretsScope:
+ projectSlug: hanzo-k8s-epiq
+ envSlug: prod
+ secretsPath: /sentry
 ```
 
 Required secrets: `secret-key`, `db-password`, `oidc-client-secret`, `commerce-api-key` (optional).

@@ -64,9 +64,9 @@ log.Info().Msg("hello world")
 
 // With fields
 log.Info().
-    Str("user", "alice").
-    Int("attempt", 3).
-    Msg("login successful")
+ Str("user", "alice").
+ Int("attempt", 3).
+ Msg("login successful")
 
 // With timestamp
 l := log.NewWriter(os.Stdout).With().Timestamp().Logger()
@@ -84,8 +84,8 @@ logger.Info("hello world")
 
 // With fields
 logger.Info("login successful",
-    log.String("user", "alice"),
-    log.Int("attempt", 3),
+ log.String("user", "alice"),
+ log.Int("attempt", 3),
 )
 
 // Error with key
@@ -98,17 +98,17 @@ All logging goes through the `Logger` interface:
 
 ```go
 type Logger interface {
-    Trace(msg string, ctx ...interface{})
-    Debug(msg string, ctx ...interface{})
-    Info(msg string, ctx ...interface{})
-    Warn(msg string, ctx ...interface{})
-    Error(msg string, ctx ...interface{})
-    Fatal(msg string, ctx ...interface{})
-    Panic(msg string, ctx ...interface{})
-    With() Context
-    New(ctx ...interface{}) Logger
-    Level(lvl Level) Logger
-    // ... plus chaining methods (TraceEvent, DebugEvent, etc.)
+ Trace(msg string, ctx ...interface{})
+ Debug(msg string, ctx ...interface{})
+ Info(msg string, ctx ...interface{})
+ Warn(msg string, ctx ...interface{})
+ Error(msg string, ctx ...interface{})
+ Fatal(msg string, ctx ...interface{})
+ Panic(msg string, ctx ...interface{})
+ With() Context
+ New(ctx ...interface{}) Logger
+ Level(lvl Level) Logger
+ // ... plus chaining methods (TraceEvent, DebugEvent, etc.)
 }
 
 // Disabled logger for optional params
@@ -130,7 +130,7 @@ l.Info().Str("foo", "bar").Msg("Hello World")
 log.SetGlobalLevel(log.WarnLevel)
 
 // Levels: TraceLevel(-1), DebugLevel(0), InfoLevel(1),
-//         WarnLevel(2), ErrorLevel(3), FatalLevel(4), PanicLevel(5)
+// WarnLevel(2), ErrorLevel(3), FatalLevel(4), PanicLevel(5)
 ```
 
 ### EVM/VM Initialization
@@ -158,9 +158,9 @@ logger, err := log.InitLogger("C-chain", "info", false, writer)
 ## Performance
 
 ```
-BenchmarkLogEmpty-10       161M ops     8.4 ns/op    0 B/op   0 allocs/op
-BenchmarkLogFields-10       32M ops    40.2 ns/op    0 B/op   0 allocs/op
-BenchmarkLogFieldType/Str   95M ops    11.7 ns/op    0 B/op   0 allocs/op
+BenchmarkLogEmpty-10 161M ops 8.4 ns/op 0 B/op 0 allocs/op
+BenchmarkLogFields-10 32M ops 40.2 ns/op 0 B/op 0 allocs/op
+BenchmarkLogFieldType/Str 95M ops 11.7 ns/op 0 B/op 0 allocs/op
 ```
 
 Compared to: zerolog (19 ns), zap (236 ns), logrus (1244 ns, 27 allocs).
@@ -168,10 +168,10 @@ Compared to: zerolog (19 ns), zap (236 ns), logrus (1244 ns, 27 allocs).
 ## Field Constructors (geth-style)
 
 ```go
-log.String(key, val)    log.Int(key, val)       log.Bool(key, val)
-log.Float64(key, val)   log.Duration(key, val)  log.Time(key, val)
-log.Err(err)            log.Any(key, val)       log.Binary(key, val)
-log.Strings(key, vals)  log.Ints(key, vals)     log.Uint64(key, val)
+log.String(key, val) log.Int(key, val) log.Bool(key, val)
+log.Float64(key, val) log.Duration(key, val) log.Time(key, val)
+log.Err(err) log.Any(key, val) log.Binary(key, val)
+log.Strings(key, vals) log.Ints(key, vals) log.Uint64(key, val)
 ```
 
 ## Related Skills

@@ -99,10 +99,10 @@ npm run dev
 
 ```bash
 docker run -d --restart=unless-stopped \
-  -p 3000:3000 \
-  -v hanzo-sign:/app/data \
-  --name hanzo-sign \
-  hanzo-sign:latest
+ -p 3000:3000 \
+ -v hanzo-sign:/app/data \
+ --name hanzo-sign \
+ hanzo-sign:latest
 ```
 
 ## Core Concepts
@@ -110,19 +110,19 @@ docker run -d --restart=unless-stopped \
 ### Architecture
 
 ```
-                         Remix App (Hono Server)
-                            apps/remix
-  /api/v1/*    /api/v2/*    /api/trpc/*    /api/jobs/*    React Router UI
-  (ts-rest)     (tRPC)       (tRPC)       (Jobs API)
-       |            |            |             |
-  @hanzo/sign-api  @hanzo/sign-trpc  @hanzo/sign-lib  @hanzo/sign-email
-                              |
-               +--------------+--------------+
-               |              |              |
-          Storage         Jobs           PDF Signing
-          Provider       Provider         Provider
-               |              |              |
-         DB or S3      Inngest/Local   Local P12 or GCloud HSM
+ Remix App (Hono Server)
+ apps/remix
+ /api/v1/* /api/v2/* /api/trpc/* /api/jobs/* React Router UI
+ (ts-rest) (tRPC) (tRPC) (Jobs API)
+ | | | |
+ @hanzo/sign-api @hanzo/sign-trpc @hanzo/sign-lib @hanzo/sign-email
+ |
+ +--------------+--------------+
+ | | |
+ Storage Jobs PDF Signing
+ Provider Provider Provider
+ | | |
+ DB or S3 Inngest/Local Local P12 or GCloud HSM
 ```
 
 ### Monorepo Packages
@@ -202,7 +202,7 @@ openssl genrsa -out private.key 2048
 openssl req -new -x509 -key private.key -out certificate.crt -days 365
 read -s -p "Enter certificate password: " CERT_PASS
 openssl pkcs12 -export -out certificate.p12 -inkey private.key -in certificate.crt \
-    -password env:CERT_PASS -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1
+ -password env:CERT_PASS -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1
 ```
 
 Place at `apps/remix/resources/certificate.p12`.

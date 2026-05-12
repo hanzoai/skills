@@ -149,12 +149,12 @@ cargo build --release
 
 # Run with HTTP + WS RPC
 ./target/release/hanzo-evm node \
-  --chain mainnet \
-  --http \
-  --http.port 8545 \
-  --http.api eth,net,web3,debug,trace \
-  --ws \
-  --ws.port 8546
+ --chain mainnet \
+ --http \
+ --http.port 8545 \
+ --http.api eth,net,web3,debug,trace \
+ --ws \
+ --ws.port 8546
 
 # Run dev mode (auto-sealing)
 ./target/release/hanzo-evm node --dev
@@ -166,16 +166,16 @@ EVM_DATA_DIR=/data/evm ./target/release/hanzo-evm node --chain mainnet
 ### CLI Commands
 
 ```bash
-hanzo-evm node                    # Run full node
-hanzo-evm node --dev              # Development mode
-hanzo-evm init                    # Initialize database
-hanzo-evm import <file>           # Import blocks from file
-hanzo-evm db stats                # Database statistics
-hanzo-evm db diff                 # Compare DB states
-hanzo-evm p2p header <hash>       # Fetch header via P2P
-hanzo-evm p2p body <hash>         # Fetch body via P2P
-hanzo-evm stage run --stage <n>   # Run specific sync stage
-hanzo-evm recover storage-tries   # Recover storage tries
+hanzo-evm node # Run full node
+hanzo-evm node --dev # Development mode
+hanzo-evm init # Initialize database
+hanzo-evm import <file> # Import blocks from file
+hanzo-evm db stats # Database statistics
+hanzo-evm db diff # Compare DB states
+hanzo-evm p2p header <hash> # Fetch header via P2P
+hanzo-evm p2p body <hash> # Fetch body via P2P
+hanzo-evm stage run --stage <n> # Run specific sync stage
+hanzo-evm recover storage-tries # Recover storage tries
 ```
 
 ### Configuration (evm.toml)

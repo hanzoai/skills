@@ -33,26 +33,26 @@ Hanzo Network enables **distributed AI agent execution** across heterogeneous de
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│         Heterogeneous Device Network                     │
+│ Heterogeneous Device Network │
 ├──────────────────────────────────────────────────────────┤
-│                                                          │
-│   ┌────────────┐   ┌────────────┐   ┌────────────┐    │
-│   │ MacBook M3 │   │ RTX 4090   │   │ Raspberry  │    │
-│   │ 16GB RAM   │   │ 24GB VRAM  │   │ Pi 4 8GB   │    │
-│   │ 14.2 TFLOPS│   │ 82.6 TFLOPS│   │ 0.1 TFLOPS │    │
-│   └─────┬──────┘   └─────┬──────┘   └─────┬──────┘    │
-│         │                 │                 │           │
-│         └────────┬────────┴────────┬────────┘           │
-│                  │  UDP Discovery  │                    │
-│                  │  gRPC Comms     │                    │
-│                  │  State Sync     │                    │
-│         ┌────────┴────────┬────────┴────────┐           │
-│         │                 │                 │           │
-│   ┌─────▼──────┐   ┌─────▼──────┐   ┌─────▼──────┐    │
-│   │ Agent A    │   │ Agent B    │   │ Agent C    │    │
-│   │ (Research) │   │ (Code Gen) │   │ (Monitor)  │    │
-│   └────────────┘   └────────────┘   └────────────┘    │
-│                                                          │
+│ │
+│ ┌────────────┐ ┌────────────┐ ┌────────────┐ │
+│ │ MacBook M3 │ │ RTX 4090 │ │ Raspberry │ │
+│ │ 16GB RAM │ │ 24GB VRAM │ │ Pi 4 8GB │ │
+│ │ 14.2 TFLOPS│ │ 82.6 TFLOPS│ │ 0.1 TFLOPS │ │
+│ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ │
+│ │ │ │ │
+│ └────────┬────────┴────────┬────────┘ │
+│ │ UDP Discovery │ │
+│ │ gRPC Comms │ │
+│ │ State Sync │ │
+│ ┌────────┴────────┬────────┴────────┐ │
+│ │ │ │ │
+│ ┌─────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐ │
+│ │ Agent A │ │ Agent B │ │ Agent C │ │
+│ │ (Research) │ │ (Code Gen) │ │ (Monitor) │ │
+│ └────────────┘ └────────────┘ └────────────┘ │
+│ │
 └──────────────────────────────────────────────────────────┘
 
 Routing Logic:
@@ -112,7 +112,7 @@ Routing Logic:
 # Device 1: Generate QR code
 network = create_distributed_network(name="my-network")
 qr_code = network.generate_join_qr()
-print_qr(qr_code)  # Display QR code
+print_qr(qr_code) # Display QR code
 
 # Device 2: Scan and join
 network = join_network_from_qr(scan_qr())
@@ -122,36 +122,36 @@ network = join_network_from_qr(scan_qr())
 **JSON Config** (Current):
 ```json
 {
-  "peers": {
-    "macbook-m3": {
-      "address": "192.168.1.10",
-      "port": 5681,
-      "device_capabilities": {
-        "model": "MacBook Pro",
-        "chip": "Apple M3 Max",
-        "memory": 65536,
-        "flops": {
-          "fp32": 14.20,
-          "fp16": 28.40,
-          "int8": 56.80
-        }
-      }
-    },
-    "gpu-server": {
-      "address": "192.168.1.20",
-      "port": 5682,
-      "device_capabilities": {
-        "model": "GPU Server",
-        "chip": "NVIDIA GEFORCE RTX 4090",
-        "memory": 131072,
-        "flops": {
-          "fp32": 82.58,
-          "fp16": 165.16,
-          "int8": 330.32
-        }
-      }
-    }
-  }
+ "peers": {
+ "macbook-m3": {
+ "address": "192.168.1.10",
+ "port": 5681,
+ "device_capabilities": {
+ "model": "MacBook Pro",
+ "chip": "Apple M3 Max",
+ "memory": 65536,
+ "flops": {
+ "fp32": 14.20,
+ "fp16": 28.40,
+ "int8": 56.80
+ }
+ }
+ },
+ "gpu-server": {
+ "address": "192.168.1.20",
+ "port": 5682,
+ "device_capabilities": {
+ "model": "GPU Server",
+ "chip": "NVIDIA GEFORCE RTX 4090",
+ "memory": 131072,
+ "flops": {
+ "fp32": 82.58,
+ "fp16": 165.16,
+ "int8": 330.32
+ }
+ }
+ }
+ }
 }
 ```
 
@@ -191,24 +191,24 @@ from hanzo_network import create_distributed_network, create_agent
 
 # Create agents
 weather_agent = create_agent(
-    name="weather",
-    description="Get weather information",
-    tools=["web_search", "api_call"]
+ name="weather",
+ description="Get weather information",
+ tools=["web_search", "api_call"]
 )
 
 math_agent = create_agent(
-    name="math",
-    description="Solve math problems",
-    tools=["calculator", "wolfram_alpha"]
+ name="math",
+ description="Solve math problems",
+ tools=["calculator", "wolfram_alpha"]
 )
 
 # Create distributed network with UDP discovery
 network = create_distributed_network(
-    agents=[weather_agent, math_agent],
-    name="my-network",
-    node_id="node-1",
-    listen_port=5681,
-    broadcast_port=5678  # All nodes use same broadcast port
+ agents=[weather_agent, math_agent],
+ name="my-network",
+ node_id="node-1",
+ listen_port=5681,
+ broadcast_port=5678 # All nodes use same broadcast port
 )
 
 # Start network (discovers peers automatically)
@@ -230,11 +230,11 @@ from hanzo_network import create_distributed_network, create_agent
 
 # Create network with manual discovery
 network = create_distributed_network(
-    agents=[agent1, agent2],
-    name="my-network",
-    node_id="macbook-m3",  # Must match config file
-    discovery_mode="manual",
-    config_path="./network_topology.json"
+ agents=[agent1, agent2],
+ name="my-network",
+ node_id="macbook-m3", # Must match config file
+ discovery_mode="manual",
+ config_path="./network_topology.json"
 )
 
 # Start network (reads config file)
@@ -249,16 +249,16 @@ await network.start()
 **Node 1 (MacBook M3)**:
 ```python
 network1 = create_distributed_network(
-    agents=[weather_agent],
-    node_id="node-1",
-    listen_port=5681,
-    broadcast_port=5678,
-    device_capabilities={
-        "model": "MacBook Pro",
-        "chip": "Apple M3",
-        "memory": 16384,
-        "flops": {"fp32": 3.55, "fp16": 7.10, "int8": 14.20}
-    }
+ agents=[weather_agent],
+ node_id="node-1",
+ listen_port=5681,
+ broadcast_port=5678,
+ device_capabilities={
+ "model": "MacBook Pro",
+ "chip": "Apple M3",
+ "memory": 16384,
+ "flops": {"fp32": 3.55, "fp16": 7.10, "int8": 14.20}
+ }
 )
 await network1.start()
 ```
@@ -266,16 +266,16 @@ await network1.start()
 **Node 2 (RTX 4090 Server)**:
 ```python
 network2 = create_distributed_network(
-    agents=[llm_agent],
-    node_id="node-2",
-    listen_port=5682,
-    broadcast_port=5678,  # Same broadcast port
-    device_capabilities={
-        "model": "GPU Server",
-        "chip": "NVIDIA GEFORCE RTX 4090",
-        "memory": 131072,
-        "flops": {"fp32": 82.58, "fp16": 165.16, "int8": 330.32}
-    }
+ agents=[llm_agent],
+ node_id="node-2",
+ listen_port=5682,
+ broadcast_port=5678, # Same broadcast port
+ device_capabilities={
+ "model": "GPU Server",
+ "chip": "NVIDIA GEFORCE RTX 4090",
+ "memory": 131072,
+ "flops": {"fp32": 82.58, "fp16": 165.16, "int8": 330.32}
+ }
 )
 await network2.start()
 ```
@@ -288,41 +288,41 @@ Nodes automatically discover each other and share agent capabilities.
 package main
 
 import (
-    "context"
-    "github.com/luxfi/node/network"
-    "github.com/luxfi/node/network/peer"
+ "context"
+ "github.com/luxfi/node/network"
+ "github.com/luxfi/node/network/peer"
 )
 
 func main() {
-    // Create network config
-    config := network.Config{
-        ListenAddr:    "0.0.0.0:5681",
-        BroadcastPort: 5678,
-        HealthCheckInterval: time.Second * 5,
-    }
+ // Create network config
+ config := network.Config{
+ ListenAddr: "0.0.0.0:5681",
+ BroadcastPort: 5678,
+ HealthCheckInterval: time.Second * 5,
+ }
 
-    // Create network
-    net, err := network.NewNetwork(config)
-    if err != nil {
-        panic(err)
-    }
+ // Create network
+ net, err := network.NewNetwork(config)
+ if err != nil {
+ panic(err)
+ }
 
-    // Start peer discovery
-    net.Start(context.Background())
+ // Start peer discovery
+ net.Start(context.Background())
 
-    // Get discovered peers
-    peers := net.GetPeers()
-    for _, peer := range peers {
-        fmt.Printf("Peer: %s (%s)\n", peer.ID(), peer.IP())
-    }
+ // Get discovered peers
+ peers := net.GetPeers()
+ for _, peer := range peers {
+ fmt.Printf("Peer: %s (%s)\n", peer.ID(), peer.IP())
+ }
 
-    // Execute agent on optimal peer
-    result, err := net.ExecuteAgent(ctx, "weather", query)
-    if err != nil {
-        panic(err)
-    }
+ // Execute agent on optimal peer
+ result, err := net.ExecuteAgent(ctx, "weather", query)
+ if err != nil {
+ panic(err)
+ }
 
-    fmt.Println(result)
+ fmt.Println(result)
 }
 ```
 
@@ -354,18 +354,18 @@ print(f"FLOPS: {caps.flops}")
 package main
 
 import (
-    "fmt"
-    "github.com/luxfi/node/network/peer"
+ "fmt"
+ "github.com/luxfi/node/network/peer"
 )
 
 func main() {
-    // Auto-detect device capabilities
-    caps := peer.DetectDeviceCapabilities()
+ // Auto-detect device capabilities
+ caps := peer.DetectDeviceCapabilities()
 
-    fmt.Printf("Model: %s\n", caps.Model)
-    fmt.Printf("Chip: %s\n", caps.Chip)
-    fmt.Printf("Memory: %dMB\n", caps.Memory)
-    fmt.Printf("FP32: %.2f TFLOPS\n", caps.Flops.FP32)
+ fmt.Printf("Model: %s\n", caps.Model)
+ fmt.Printf("Chip: %s\n", caps.Chip)
+ fmt.Printf("Memory: %dMB\n", caps.Memory)
+ fmt.Printf("FP32: %.2f TFLOPS\n", caps.Flops.FP32)
 }
 ```
 
@@ -395,8 +395,8 @@ from hanzo_network import create_distributed_network, RoutingStrategy
 
 # Create network with intelligent routing
 network = create_distributed_network(
-    agents=[light_agent, heavy_agent],
-    routing_strategy=RoutingStrategy.CAPABILITY_BASED
+ agents=[light_agent, heavy_agent],
+ routing_strategy=RoutingStrategy.CAPABILITY_BASED
 )
 
 # Light agent routed to M3 MacBook (3.55 TFLOPS)
@@ -411,44 +411,44 @@ result2 = await network.run("Generate image from prompt", initial_agent=heavy_ag
 ```python
 # Create network with load balancing
 network = create_distributed_network(
-    agents=[agent1, agent2, agent3],
-    routing_strategy=RoutingStrategy.LEAST_LOADED
+ agents=[agent1, agent2, agent3],
+ routing_strategy=RoutingStrategy.LEAST_LOADED
 )
 
 # Requests automatically distributed across devices
 # based on current load
 for i in range(100):
-    result = await network.run(f"Query {i}", initial_agent=agent1)
+ result = await network.run(f"Query {i}", initial_agent=agent1)
 ```
 
 ### Custom Routing Logic
 
 ```python
 def custom_router(agents, state, peers):
-    """Route based on device capabilities and task type"""
+ """Route based on device capabilities and task type"""
 
-    # Get task requirements
-    requires_gpu = "image" in state.query.lower()
-    requires_memory = len(state.context) > 10000
+ # Get task requirements
+ requires_gpu = "image" in state.query.lower()
+ requires_memory = len(state.context) > 10000
 
-    # Find optimal peer
-    if requires_gpu:
-        # Route to peer with highest TFLOPS
-        best_peer = max(peers, key=lambda p: p.capabilities.flops.fp16)
-        return best_peer
-    elif requires_memory:
-        # Route to peer with most RAM
-        best_peer = max(peers, key=lambda p: p.capabilities.memory)
-        return best_peer
-    else:
-        # Use least loaded peer
-        best_peer = min(peers, key=lambda p: p.current_load)
-        return best_peer
+ # Find optimal peer
+ if requires_gpu:
+ # Route to peer with highest TFLOPS
+ best_peer = max(peers, key=lambda p: p.capabilities.flops.fp16)
+ return best_peer
+ elif requires_memory:
+ # Route to peer with most RAM
+ best_peer = max(peers, key=lambda p: p.capabilities.memory)
+ return best_peer
+ else:
+ # Use least loaded peer
+ best_peer = min(peers, key=lambda p: p.current_load)
+ return best_peer
 
 # Use custom router
 network = create_distributed_network(
-    agents=[agent1, agent2],
-    custom_router=custom_router
+ agents=[agent1, agent2],
+ custom_router=custom_router
 )
 ```
 
@@ -501,7 +501,7 @@ network = create_distributed_network(name="hanzo-home")
 qr_data = network.generate_join_qr()
 # QR contains: network_id, listen_addr, encryption_key, capabilities
 
-print_qr(qr_data)  # Display QR code on screen
+print_qr(qr_data) # Display QR code on screen
 ```
 
 **Device 2 (Join - Raspberry Pi)**:
@@ -526,13 +526,13 @@ import json
 
 # Generate config
 config = {
-    "peers": {
-        "macbook": {
-            "address": "192.168.1.10",
-            "port": 5681,
-            "device_capabilities": {...}
-        }
-    }
+ "peers": {
+ "macbook": {
+ "address": "192.168.1.10",
+ "port": 5681,
+ "device_capabilities": {...}
+ }
+ }
 }
 
 # Generate QR code
@@ -549,51 +549,51 @@ qr.save("network_join.png")
 **1. Home Office Setup** (3 devices):
 ```
 ┌─────────────────────────────────────────────────┐
-│         Home Office Network                      │
+│ Home Office Network │
 ├─────────────────────────────────────────────────┤
-│  MacBook M3 (16GB) → Light tasks + UI           │
-│  GPU Server RTX 4090 (24GB) → Heavy LLM         │
-│  Raspberry Pi 4 (8GB) → Background monitoring   │
+│ MacBook M3 (16GB) → Light tasks + UI │
+│ GPU Server RTX 4090 (24GB) → Heavy LLM │
+│ Raspberry Pi 4 (8GB) → Background monitoring │
 └─────────────────────────────────────────────────┘
 
 # MacBook (coordinator)
 network = create_distributed_network(
-    node_id="macbook",
-    agents=[ui_agent, light_agent],
-    listen_port=5681
+ node_id="macbook",
+ agents=[ui_agent, light_agent],
+ listen_port=5681
 )
 
 # GPU Server (compute)
 network = create_distributed_network(
-    node_id="gpu-server",
-    agents=[llm_agent, image_agent],
-    listen_port=5682
+ node_id="gpu-server",
+ agents=[llm_agent, image_agent],
+ listen_port=5682
 )
 
 # Raspberry Pi (monitor)
 network = create_distributed_network(
-    node_id="rpi",
-    agents=[health_monitor, log_agent],
-    listen_port=5683
+ node_id="rpi",
+ agents=[health_monitor, log_agent],
+ listen_port=5683
 )
 ```
 
 **2. Startup Setup** (5+ devices):
 ```
 ┌─────────────────────────────────────────────────┐
-│      Startup Distributed AI Network             │
+│ Startup Distributed AI Network │
 ├─────────────────────────────────────────────────┤
-│  2× MacBook Pro M3 Max → Development            │
-│  3× GPU Server RTX 4090 → Production inference  │
-│  1× Monitor Server → Metrics + logs             │
+│ 2× MacBook Pro M3 Max → Development │
+│ 3× GPU Server RTX 4090 → Production inference │
+│ 1× Monitor Server → Metrics + logs │
 └─────────────────────────────────────────────────┘
 
 # Use manual discovery (JSON config) for reliability
 # config.json contains all 6 devices
 network = create_distributed_network(
-    discovery_mode="manual",
-    config_path="./production_network.json",
-    routing_strategy=RoutingStrategy.LEAST_LOADED
+ discovery_mode="manual",
+ config_path="./production_network.json",
+ routing_strategy=RoutingStrategy.LEAST_LOADED
 )
 ```
 
@@ -606,10 +606,10 @@ network = create_distributed_network(
 # Access from anywhere securely
 
 network = create_distributed_network(
-    node_id="mobile-macbook",
-    tailscale=True,  # Use Tailscale IPs
-    discovery_mode="manual",
-    config_path="./tailscale_network.json"
+ node_id="mobile-macbook",
+ tailscale=True, # Use Tailscale IPs
+ discovery_mode="manual",
+ config_path="./tailscale_network.json"
 )
 
 # Peers use Tailscale IPs (100.x.x.x)
@@ -619,11 +619,11 @@ network = create_distributed_network(
 **Manual TLS** (Advanced):
 ```python
 network = create_distributed_network(
-    node_id="secure-node",
-    tls_cert="/path/to/cert.pem",
-    tls_key="/path/to/key.pem",
-    tls_ca="/path/to/ca.pem",
-    verify_peers=True
+ node_id="secure-node",
+ tls_cert="/path/to/cert.pem",
+ tls_key="/path/to/key.pem",
+ tls_ca="/path/to/ca.pem",
+ verify_peers=True
 )
 ```
 
@@ -641,11 +641,11 @@ print(f"Agents: {status['agent_count']}")
 print(f"Active tasks: {status['active_tasks']}")
 
 for peer_id, peer in status['peers'].items():
-    print(f"\nPeer: {peer_id}")
-    print(f"  Address: {peer['address']}")
-    print(f"  Healthy: {peer['healthy']}")
-    print(f"  Capabilities: {peer['capabilities']}")
-    print(f"  Load: {peer['current_load']:.1%}")
+ print(f"\nPeer: {peer_id}")
+ print(f" Address: {peer['address']}")
+ print(f" Healthy: {peer['healthy']}")
+ print(f" Capabilities: {peer['capabilities']}")
+ print(f" Load: {peer['current_load']:.1%}")
 ```
 
 ### Health Checks
@@ -683,8 +683,8 @@ logging.basicConfig(level=logging.DEBUG)
 ```python
 # Same local network → UDP discovery (zero config)
 network = create_distributed_network(
-    broadcast_port=5678,  # All devices use same port
-    listen_port=5681      # Unique per device
+ broadcast_port=5678, # All devices use same port
+ listen_port=5681 # Unique per device
 )
 ```
 
@@ -693,8 +693,8 @@ network = create_distributed_network(
 ```python
 # Production/VPN → Manual discovery (reliable)
 network = create_distributed_network(
-    discovery_mode="manual",
-    config_path="./production_network.json"
+ discovery_mode="manual",
+ config_path="./production_network.json"
 )
 ```
 
@@ -704,7 +704,7 @@ network = create_distributed_network(
 # Let Hanzo Network choose optimal device
 # Based on TFLOPS, memory, current load
 network = create_distributed_network(
-    routing_strategy=RoutingStrategy.CAPABILITY_BASED
+ routing_strategy=RoutingStrategy.CAPABILITY_BASED
 )
 ```
 
@@ -713,12 +713,12 @@ network = create_distributed_network(
 ```python
 # Production: longer intervals (less overhead)
 network = create_distributed_network(
-    health_check_interval=30  # 30 seconds
+ health_check_interval=30 # 30 seconds
 )
 
 # Development: shorter intervals (faster detection)
 network = create_distributed_network(
-    health_check_interval=5  # 5 seconds
+ health_check_interval=5 # 5 seconds
 )
 ```
 

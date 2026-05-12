@@ -319,9 +319,9 @@ Token utility: 0.01 HANZO per interaction, 0.001-0.1 per 1K tokens, 10+ to mint 
 ## Validation
 
 ```bash
-make validate-hip HIP=hip-X   # Format check
-make check-links               # Reference check
-act -j validate                # Local CI
+make validate-hip HIP=hip-X # Format check
+make check-links # Reference check
+act -j validate # Local CI
 ```
 
 ---

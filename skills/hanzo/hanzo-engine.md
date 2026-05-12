@@ -51,30 +51,30 @@
 
 ```
 ┌─────────────────────────────────────────────────┐
-│           ZenLM Models (zen-nano, zen-eco)      │
-│  zen-agent, zen-musician, zen-thinking, etc.    │
+│ ZenLM Models (zen-nano, zen-eco) │
+│ zen-agent, zen-musician, zen-thinking, etc. │
 └─────────────────────────────────────────────────┘
-                    ↓
+ ↓
 ┌─────────────────────────────────────────────────┐
-│         Hanzo Engine (Rust - port 36900)        │
-│  ├─ Native inference & embeddings               │
-│  ├─ Optimized for Qwen3 models (#1 MTEB)       │
-│  ├─ Multimodal: text, vision, audio            │
-│  ├─ PagedAttention, FlashAttention, ISQ, MLX   │
-│  └─ MCP support built-in                        │
+│ Hanzo Engine (Rust - port 36900) │
+│ ├─ Native inference & embeddings │
+│ ├─ Optimized for Qwen3 models (#1 MTEB) │
+│ ├─ Multimodal: text, vision, audio │
+│ ├─ PagedAttention, FlashAttention, ISQ, MLX │
+│ └─ MCP support built-in │
 └─────────────────────────────────────────────────┘
-                    ↓
+ ↓
 ┌─────────────────────────────────────────────────┐
-│           Embedded in:                          │
-│  ├─ Hanzo Node (local inference)                │
-│  └─ Cloud Nodes (distributed inference)         │
+│ Embedded in: │
+│ ├─ Hanzo Node (local inference) │
+│ └─ Cloud Nodes (distributed inference) │
 └─────────────────────────────────────────────────┘
-                    ↓
+ ↓
 ┌─────────────────────────────────────────────────┐
-│           SDKs connect to Node/Cloud:           │
-│  ├─ Python SDK (hanzoai package)                │
-│  ├─ Go SDK (github.com/hanzoai/go-sdk)          │
-│  └─ JavaScript/TypeScript SDK (@hanzo/sdk)      │
+│ SDKs connect to Node/Cloud: │
+│ ├─ Python SDK (hanzoai package) │
+│ ├─ Go SDK (github.com/hanzoai/go-sdk) │
+│ └─ JavaScript/TypeScript SDK (@hanzo/sdk) │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -164,20 +164,20 @@ hanzo-engine serve --model-dir ~/.hanzo/models
 ```bash
 # Chat completions (OpenAI-compatible)
 curl -X POST http://localhost:36900/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "qwen3-4b",
-    "messages": [{"role": "user", "content": "Explain Rust ownership"}],
-    "temperature": 0.7
-  }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "model": "qwen3-4b",
+ "messages": [{"role": "user", "content": "Explain Rust ownership"}],
+ "temperature": 0.7
+ }'
 
 # Embeddings
 curl -X POST http://localhost:36900/v1/embeddings \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "qwen3-embedding-8b",
-    "input": "Hello, Hanzo Engine!"
-  }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "model": "qwen3-embedding-8b",
+ "input": "Hello, Hanzo Engine!"
+ }'
 ```
 
 ## ZenLM Native Support
@@ -223,7 +223,7 @@ Hanzo Engine is the **core inference backend** for Hanzo Node:
 
 ```bash
 # In Hanzo Node configuration (.env or environment)
-export EMBEDDINGS_SERVER_URL="http://localhost:36900"  # Engine port
+export EMBEDDINGS_SERVER_URL="http://localhost:36900" # Engine port
 export EMBEDDING_MODEL_TYPE="qwen3-embedding-8b"
 export USE_NATIVE_EMBEDDINGS="true"
 export HANZO_ENGINE_ENABLED="true"
@@ -254,29 +254,29 @@ from hanzo import Hanzo
 
 # Connect to local Hanzo Engine (via Hanzo Node or directly)
 hanzo = Hanzo(
-    inference_mode='local',
-    node_url='http://localhost:8080'  # Hanzo Node (which uses Engine)
+ inference_mode='local',
+ node_url='http://localhost:8080' # Hanzo Node (which uses Engine)
 )
 
 # Or connect directly to Engine
 hanzo_engine = Hanzo(
-    base_url='http://localhost:36900',
-    api_key='not-needed-for-local'
+ base_url='http://localhost:36900',
+ api_key='not-needed-for-local'
 )
 
 # Chat completion (uses zen-eco via Engine)
 response = hanzo_engine.chat.completions.create(
-    model='qwen3-4b',
-    messages=[{'role': 'user', 'content': 'Explain Rust'}]
+ model='qwen3-4b',
+ messages=[{'role': 'user', 'content': 'Explain Rust'}]
 )
 
 # Embeddings (uses Qwen3-Embedding via Engine)
 embedding = hanzo_engine.embeddings.create(
-    model='qwen3-embedding-8b',
-    input='Hello, Hanzo Engine!'
+ model='qwen3-embedding-8b',
+ input='Hello, Hanzo Engine!'
 )
 
-print(f"Embedding dimensions: {len(embedding.data[0].embedding)}")  # 4096
+print(f"Embedding dimensions: {len(embedding.data[0].embedding)}") # 4096
 ```
 
 ## Go SDK Integration
@@ -285,35 +285,35 @@ print(f"Embedding dimensions: {len(embedding.data[0].embedding)}")  # 4096
 package main
 
 import (
-    "context"
-    "fmt"
-    "github.com/hanzoai/go-sdk"
-    "github.com/hanzoai/go-sdk/option"
+ "context"
+ "fmt"
+ "github.com/hanzoai/go-sdk"
+ "github.com/hanzoai/go-sdk/option"
 )
 
 func main() {
-    // Connect to Hanzo Engine via Hanzo Node
-    client := hanzoai.NewClient(
-        option.WithInferenceMode("local"),
-        option.WithNodeURL("http://localhost:8080"),
-    )
+ // Connect to Hanzo Engine via Hanzo Node
+ client := hanzoai.NewClient(
+ option.WithInferenceMode("local"),
+ option.WithNodeURL("http://localhost:8080"),
+ )
 
-    // Chat completion
-    response, err := client.Chat.Completions.Create(
-        context.Background(),
-        hanzoai.ChatCompletionCreateParams{
-            Model: hanzoai.F("qwen3-4b"),
-            Messages: hanzoai.F([]hanzoai.ChatCompletionMessageParam{
-                hanzoai.UserMessage("Explain Rust ownership"),
-            }),
-        },
-    )
+ // Chat completion
+ response, err := client.Chat.Completions.Create(
+ context.Background(),
+ hanzoai.ChatCompletionCreateParams{
+ Model: hanzoai.F("qwen3-4b"),
+ Messages: hanzoai.F([]hanzoai.ChatCompletionMessageParam{
+ hanzoai.UserMessage("Explain Rust ownership"),
+ }),
+ },
+ )
 
-    if err != nil {
-        panic(err)
-    }
+ if err != nil {
+ panic(err)
+ }
 
-    fmt.Println(response.Choices[0].Message.Content)
+ fmt.Println(response.Choices[0].Message.Content)
 }
 ```
 
@@ -323,50 +323,50 @@ For maximum performance, use the native Rust API:
 
 ```rust
 use mistralrs::{
-    ChatCompletionRequest, IsqType, Loader, MistralRs, ModelDType,
-    NormalLoaderBuilder, NormalRequest, Request, RequestMessage, Response,
-    SamplingParams, SchedulerConfig, TokenSource
+ ChatCompletionRequest, IsqType, Loader, MistralRs, ModelDType,
+ NormalLoaderBuilder, NormalRequest, Request, RequestMessage, Response,
+ SamplingParams, SchedulerConfig, TokenSource
 };
 use tokio::sync::mpsc::channel;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Load ZenLM model (zen-eco-4B)
-    let loader = NormalLoaderBuilder::new(
-        "qwen/qwen3-4b",
-        None,
-        None,
-        Some(ModelDType::Auto),
-    )
-    .build();
+ // Load ZenLM model (zen-eco-4B)
+ let loader = NormalLoaderBuilder::new(
+ "qwen/qwen3-4b",
+ None,
+ None,
+ Some(ModelDType::Auto),
+ )
+ .build();
 
-    let model = loader.load_model().await?;
-    let pipeline = model.build_pipeline(SchedulerConfig::default_config())?;
+ let model = loader.load_model().await?;
+ let pipeline = model.build_pipeline(SchedulerConfig::default_config())?;
 
-    let mistralrs = MistralRs::new(pipeline)?;
+ let mistralrs = MistralRs::new(pipeline)?;
 
-    // Create request
-    let (tx, mut rx) = channel(10_000);
-    let request = Request::Normal(NormalRequest {
-        messages: RequestMessage::Chat(vec![
-            ChatCompletionRequest {
-                role: "user".to_string(),
-                content: "Explain Rust ownership".to_string(),
-            }
-        ]),
-        sampling_params: SamplingParams::default(),
-        response: tx,
-        ..Default::default()
-    });
+ // Create request
+ let (tx, mut rx) = channel(10_000);
+ let request = Request::Normal(NormalRequest {
+ messages: RequestMessage::Chat(vec![
+ ChatCompletionRequest {
+ role: "user".to_string(),
+ content: "Explain Rust ownership".to_string(),
+ }
+ ]),
+ sampling_params: SamplingParams::default(),
+ response: tx,
+ ..Default::default()
+ });
 
-    // Send request
-    mistralrs.get_sender().send(request).await?;
+ // Send request
+ mistralrs.get_sender().send(request).await?;
 
-    // Receive response
-    let response = rx.recv().await.unwrap();
-    println!("{}", response.choices[0].text);
+ // Receive response
+ let response = rx.recv().await.unwrap();
+ println!("{}", response.choices[0].text);
 
-    Ok(())
+ Ok(())
 }
 ```
 
@@ -504,15 +504,15 @@ hanzo-engine serve --mcp-enabled --mcp-port 3691
 import { MCPClient } from '@hanzo/mcp'
 
 const client = new MCPClient({
-  host: 'localhost',
-  port: 3691
+ host: 'localhost',
+ port: 3691
 })
 
 // Use Hanzo Engine tools via MCP
 const result = await client.callTool('hanzo_infer', {
-  model: 'qwen3-4b',
-  prompt: 'Explain MCP',
-  temperature: 0.7
+ model: 'qwen3-4b',
+ prompt: 'Explain MCP',
+ temperature: 0.7
 })
 
 console.log(result.response)

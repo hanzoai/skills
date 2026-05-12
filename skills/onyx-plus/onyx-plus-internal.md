@@ -24,7 +24,7 @@ description: OnyxPlus internal docs site -- Next.js 16 + @hanzo/docs + NextAuth 
 | `/docs` | Index |
 | `/docs/architecture` | Identity model, 1:1 invariant, IAM-KMS-MPC handshake, env vars, deploy order |
 | `/docs/platform-stack` | Old (Simplici) vs new (in-house) stack comparison |
-| `/docs/iam` | IAM tenant detail (full Casdoor flow) |
+| `/docs/iam` | IAM tenant detail (full Hanzo IAM flow) |
 | `/docs/kms` | KMS consumer detail (ZAP transport, secret paths) |
 | `/docs/mpc` | MPC consumer detail (BD → TA → MPC; JWT-claims invariant) |
 | `/docs/product-comparison` | Refutation of misleading slide claims |
@@ -38,13 +38,13 @@ NextAuth v5 with Google OAuth provider. Two callback guards in `auth.ts`:
 
 ```ts
 async signIn({ profile }) {
-  return emailDomainAllowed(profile?.email as string | undefined);
+ return emailDomainAllowed(profile?.email as string | undefined);
 },
 async session({ session }) {
-  if (!emailDomainAllowed(session.user?.email)) {
-    return { ...session, user: undefined } as typeof session;
-  }
-  return session;
+ if (!emailDomainAllowed(session.user?.email)) {
+ return { ...session, user: undefined } as typeof session;
+ }
+ return session;
 },
 ```
 
@@ -123,21 +123,21 @@ CMD ["node", "server.js"]
 
 ```yaml
 spec:
-  containers:
-    - name: internal
-      image: us-docker.pkg.dev/onyxplus-registry/onyx-plus/internal:0.1.1
-      ports:
-        - containerPort: 3000
-      env:
-        - name: AUTH_URL
-          value: https://internal.onyxplus.{env}.satschel.com
-        - name: AUTH_TRUST_HOST
-          value: "true"
-      envFrom:
-        - secretRef:
-            name: internal-secrets
-      readinessProbe:
-        httpGet: { path: /signin, port: 3000 }
+ containers:
+ - name: internal
+ image: us-docker.pkg.dev/onyxplus-registry/onyx-plus/internal:0.1.1
+ ports:
+ - containerPort: 3000
+ env:
+ - name: AUTH_URL
+ value: https://internal.onyxplus.{env}.satschel.com
+ - name: AUTH_TRUST_HOST
+ value: "true"
+ envFrom:
+ - secretRef:
+ name: internal-secrets
+ readinessProbe:
+ httpGet: { path: /signin, port: 3000 }
 ```
 
 Main runs 2 replicas; dev/test run 1.
@@ -151,7 +151,7 @@ kubectl -n onyxplus exec $POD -- wget -qO- http://127.0.0.1:3000/signin | grep -
 
 kubectl -n onyxplus exec $POD -- wget -qO- -S http://127.0.0.1:3000/docs/iam 2>&1 | head -3
 # Expect: HTTP/1.1 307 Temporary Redirect
-#         location: https://internal.onyxplus.{env}.satschel.com/signin?callbackUrl=%2Fdocs%2Fiam
+# location: https://internal.onyxplus.{env}.satschel.com/signin?callbackUrl=%2Fdocs%2Fiam
 ```
 
 The 307 confirms the auth gate is correctly intercepting unauthenticated `/docs/*` traffic.
