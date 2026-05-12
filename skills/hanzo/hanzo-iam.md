@@ -557,6 +557,28 @@ curl -f http://localhost:8000/api/health
 | LDAP not starting | Port 389 in use | Check `ldapServerPort` in conf |
 | WAF blocking requests | Coraza rules too strict | Adjust `conf/waf.conf` |
 
+## OnyxPlus tenant
+
+OnyxPlus (Satschel biometric identity, `github.com/onyx-plus/*`) is a
+tenant in the same `liquid-iam` instance that gates BD/ATS/TA/AML.
+
+**Organisations**: `liquidity` (canonical) + `onyxplus` (multi-tenant peer).
+
+**SPA apps** (`authorization_code`):
+- `onyxplus-admin` — operator dashboard at `onyxplus.{env}.satschel.com`
+- `onyxplus-verify` — standalone IDV flow at `verify.{env}.satschel.com`
+
+**Service app** (`client_credentials`):
+- `onyxplus-onyxd` with `aud=onyxplus-onyxd,liquidity-kms` (needs both:
+  the daemon scope for inbound calls + `liquidity-kms` to read secrets)
+
+**Internal docs site** (`internal.onyxplus.{env}.satschel.com`) uses
+NextAuth v5 + Google OAuth restricted to `@satschel.com`, separate from
+IAM (engineering-only surface).
+
+Companion docs: `~/work/onyxplus/internal/content/docs/iam.mdx`,
+`~/work/onyxplus/papers/onyx-plus-iam/onyx-plus-iam.pdf`.
+
 ## Related Skills
 
 - `hanzo/hanzo-id.md` - Client-side login UI and OAuth flows (Next.js)
@@ -566,10 +588,11 @@ curl -f http://localhost:8000/api/health
 - `hanzo/hanzo-console.md` - Admin console (uses IAM for auth)
 - `hanzo/hanzo-commerce.md` - Commerce (writes user balances to IAM)
 - `hanzo/hanzo-universe.md` - K8s infrastructure manifests
+- `liquidity/liquidity-app.md` - Liquidity tenant (BD/ATS/TA/AML)
 
 ---
 
-**Last Updated**: 2026-03-28
+**Last Updated**: 2026-05-12
 
 ### Recent Changes (2026-03-28)
 - **Password grant support**: OAuth2 `password` grant type now works when enabled on the application. Previously the switch statement fell through to a nil token crash.

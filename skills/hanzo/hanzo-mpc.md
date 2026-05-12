@@ -286,16 +286,52 @@ make test-all        # Unit + E2E
 | E2E test failures | Stale binary | Run `go install ./cmd/hanzo-mpc && go install ./cmd/hanzo-mpc-cli` |
 | Signing fails | Insufficient threshold | Ensure at least t nodes are healthy |
 
+## OnyxPlus consumer — wallet provision via BD → TA → MPC
+
+OnyxPlus (`github.com/onyx-plus/*`) uses MPC for:
+
+1. **Per-user default EVM wallets** that become `MANAGEMENT_KEY` on each
+   user's OnchainID contract (option-a, self-sovereign — onyxd holds
+   zero MPC authority).
+2. **WebAuthn passkey register/challenge** for biometric+passkey
+   enrollment (direct onyxd → MPC; per-credential, not per-user).
+
+**Critical invariant**: MPC resolves `(orgID, userID)` from JWT claims,
+not from `X-Org-Id` / `X-User-Id` headers. The upstream's
+`pkg/api/middleware.go::authMiddleware` pins this; a test in
+`handlers_kms_test.go` asserts a client-supplied `X-Org-ID` header must
+NOT influence the result.
+
+**Implication**: onyxd cannot provision a user's wallet by calling MPC
+directly — its JWT carries the daemon's service identity, not the
+user's. Wallet provisioning goes through TA, which holds
+`MPC_SERVICE_KEY` (per CTO directive 2026-04-22) and is the sole
+authority for wallet creation:
+
+```
+onyxd → BD /v1/identity/ensure → BD calls requestMPCWallet → TA → MPC
+```
+
+Single round trip from onyxd; idempotent on `(orgID, userID)` (default-
+wallet semantic).
+
+**Mesh**: `liquid-mpc-{0,1,2}` (3-of-3 quorum, threshold `t=2`).
+
+Companion docs: `~/work/onyxplus/internal/content/docs/mpc.mdx`,
+`~/work/onyxplus/papers/onyx-plus-mpc/onyx-plus-mpc.pdf`.
+
 ## Related Skills
 
 - `hanzo/hanzo-kms.md` - Key management service (control plane for MPC)
+- `hanzo/hanzo-iam.md` - JWT issuer (same JWKS gates MPC ZAP listener)
 - `hanzo/hanzo-vault.md` - PCI-compliant card tokenization
 - `hanzo/hanzo-web3.md` - Web3 services and gateway
 - `hanzo/hanzo-evm.md` - EVM execution engine
+- `liquidity/liquidity-app.md` - Liquidity tenant (BD/TA hold MPC_SERVICE_KEY)
 
 ---
 
-**Last Updated**: 2026-03-13
+**Last Updated**: 2026-05-12
 **Category**: Hanzo Ecosystem
 **Related**: mpc, threshold-signing, wallet, cryptography, custody
 **Prerequisites**: Go 1.23+, NATS, BadgerDB
