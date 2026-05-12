@@ -56,13 +56,13 @@ Terraform provider for Hanzo infrastructure.
 ### Identity & Security (7 skills)
 
 **Hanzo ID** (`hanzo-id.md`)
-Identity at hanzo.id. Multi-org IAM (Casdoor), OIDC/OAuth2, 4 orgs (hanzo/lux/zoo/pars). RFC 6749 endpoints. Cloudflare Worker edge auth.
+Identity at hanzo.id. Multi-org IAM, OIDC/OAuth2, 4 orgs (hanzo/lux/zoo/pars). RFC 6749 endpoints. Cloudflare Worker edge auth.
 
 **Hanzo KMS** (`hanzo-kms.md`)
-Secrets at kms.hanzo.ai (Infisical fork). 9 Vault subsystems. KMSSecret CRDs for K8s sync. Universal Auth.
+Secrets at kms.hanzo.ai. 9 Vault subsystems. KMSSecret CRDs for K8s sync. Universal Auth.
 
 **Hanzo IAM** (`hanzo-iam.md`)
-IAM server (Casdoor fork, Go/Beego). OAuth2/OIDC/SAML/LDAP backend.
+IAM server (Go/Beego). OAuth2/OIDC/SAML/LDAP backend.
 
 **Hanzo Identity** (`hanzo-identity.md`)
 Identity service and certificate management.
@@ -372,28 +372,28 @@ How to use AI with Hanzo + Lux.
 
 ```
 What do you need?
-+-- Deploy a service              -> hanzo-deploy.md + hanzo-k8s.md
-+-- K8s infrastructure            -> hanzo-k8s.md + hanzo-ingress.md
-+-- PaaS (deploy apps)            -> hanzo-platform.md
-+-- Authentication                -> hanzo-id.md (IAM) + hanzo-iam.md (server)
-+-- Secrets                       -> hanzo-kms.md
-+-- Call LLMs                     -> hanzo-chat.md (UI) or python-sdk.md (SDK)
-+-- LLM cost tracking             -> hanzo-console.md
-+-- Infrastructure monitoring     -> hanzo-o11y.md
-+-- Build agents                  -> hanzo-agent.md + hanzo-mcp.md + hanzo-tools.md
++-- Deploy a service -> hanzo-deploy.md + hanzo-k8s.md
++-- K8s infrastructure -> hanzo-k8s.md + hanzo-ingress.md
++-- PaaS (deploy apps) -> hanzo-platform.md
++-- Authentication -> hanzo-id.md (IAM) + hanzo-iam.md (server)
++-- Secrets -> hanzo-kms.md
++-- Call LLMs -> hanzo-chat.md (UI) or python-sdk.md (SDK)
++-- LLM cost tracking -> hanzo-console.md
++-- Infrastructure monitoring -> hanzo-o11y.md
++-- Build agents -> hanzo-agent.md + hanzo-mcp.md + hanzo-tools.md
 +-- Bot on Discord/Telegram/Slack -> hanzo-bot.md
-+-- Orchestrate bots              -> hanzo-playground.md
-+-- Team collaboration            -> hanzo-team.md
-+-- Billing/payments              -> hanzo-billing.md
-+-- React components              -> hanzo-ui.md
-+-- API routing                   -> hanzo-gateway.md (behind ingress)
-+-- Zero-trust networking         -> hanzo-zt.md + hanzo-zrok.md
-+-- DNS                           -> hanzo-dns.md
-+-- Database access via MCP       -> hanzo-zap.md
-+-- Static site serving           -> hanzo-static.md
-+-- AI provider management        -> hanzo-cloud.md
-+-- Run locally                   -> hanzo-engine.md + hanzo-stack.md
-+-- Prod infra manifests          -> hanzo-universe.md (private)
++-- Orchestrate bots -> hanzo-playground.md
++-- Team collaboration -> hanzo-team.md
++-- Billing/payments -> hanzo-billing.md
++-- React components -> hanzo-ui.md
++-- API routing -> hanzo-gateway.md (behind ingress)
++-- Zero-trust networking -> hanzo-zt.md + hanzo-zrok.md
++-- DNS -> hanzo-dns.md
++-- Database access via MCP -> hanzo-zap.md
++-- Static site serving -> hanzo-static.md
++-- AI provider management -> hanzo-cloud.md
++-- Run locally -> hanzo-engine.md + hanzo-stack.md
++-- Prod infra manifests -> hanzo-universe.md (private)
 ```
 
 ## Related Ecosystems

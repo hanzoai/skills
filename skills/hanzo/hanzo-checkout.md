@@ -60,47 +60,47 @@ Repo: `github.com/hanzoai/checkout.js` (branch: `master`, 96 stars).
 
 <script src="https://cdn.rawgit.com/hanzoai/checkout.js/v2.1.21/checkout.min.js"></script>
 <script>
-  var Checkout = window.Crowdstart.Checkout
+ var Checkout = window.Crowdstart.Checkout
 
-  var checkout = new Checkout('your-hanzo-api-key', {
-    config: {
-      currency: 'usd',
-      processors: { stripe: true, paypal: false },
-      showPromoCode: true,
-      termsUrl: 'https://example.com/terms'
-    },
-    order: {
-      currency: 'usd',
-      items: []
-    },
-    user: {
-      email: '',
-      firstName: '',
-      lastName: ''
-    },
-    thankyou: {
-      header: 'Thank You!',
-      body: 'Check your email for the order confirmation.',
-      twitter: 'hanaboroai',
-      facebook: 'hanzoai'
-    },
-    theme: {
-      background: 'white',
-      calloutBackground: '#27AE60',
-      fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-      borderRadius: 5
-    }
-  })
+ var checkout = new Checkout('your-hanzo-api-key', {
+ config: {
+ currency: 'usd',
+ processors: { stripe: true, paypal: false },
+ showPromoCode: true,
+ termsUrl: 'https://example.com/terms'
+ },
+ order: {
+ currency: 'usd',
+ items: []
+ },
+ user: {
+ email: '',
+ firstName: '',
+ lastName: ''
+ },
+ thankyou: {
+ header: 'Thank You!',
+ body: 'Check your email for the order confirmation.',
+ twitter: 'hanaboroai',
+ facebook: 'hanzoai'
+ },
+ theme: {
+ background: 'white',
+ calloutBackground: '#27AE60',
+ fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+ borderRadius: 5
+ }
+ })
 
-  // Add items by product ID or slug
-  checkout.setItem('84cRXBYs9jX7w', 1)
-  checkout.setItem('doge-shirt', 2)
+ // Add items by product ID or slug
+ checkout.setItem('84cRXBYs9jX7w', 1)
+ checkout.setItem('doge-shirt', 2)
 
-  // Open the widget
-  document.querySelector('.btn').addEventListener('click', function(e) {
-    e.preventDefault()
-    checkout.open()
-  })
+ // Open the widget
+ document.querySelector('.btn').addEventListener('click', function(e) {
+ e.preventDefault()
+ checkout.open()
+ })
 </script>
 ```
 
@@ -114,7 +114,7 @@ npm install checkout.js
 var Checkout = require('checkout.js')
 
 var checkout = new Checkout('your-api-key', {
-  config: { currency: 'usd' }
+ config: { currency: 'usd' }
 })
 checkout.setItem('product-slug', 1)
 checkout.open()
@@ -126,30 +126,30 @@ checkout.open()
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Browser Page                                    │
-│                                                  │
-│  ┌─────────────┐    ┌────────────────────────┐  │
-│  │ Buy Button  │───>│  Checkout Modal (Riot)  │  │
-│  │ href=#checkout   │                        │  │
-│  └─────────────┘    │  ┌──────────────────┐  │  │
-│                     │  │ Screen Manager   │  │  │
-│                     │  │  - Payment       │  │  │
-│                     │  │  - Shipping      │  │  │
-│                     │  │  - Thank You     │  │  │
-│                     │  └──────────────────┘  │  │
-│                     └───────────┬────────────┘  │
-│                                 │                │
-│                     ┌───────────▼────────────┐  │
-│                     │  hanzo.js API Client    │  │
-│                     │  (Crowdstart SDK)       │  │
-│                     └───────────┬────────────┘  │
-│                                 │                │
+│ Browser Page │
+│ │
+│ ┌─────────────┐ ┌────────────────────────┐ │
+│ │ Buy Button │───>│ Checkout Modal (Riot) │ │
+│ │ href=#checkout │ │ │
+│ └─────────────┘ │ ┌──────────────────┐ │ │
+│ │ │ Screen Manager │ │ │
+│ │ │ - Payment │ │ │
+│ │ │ - Shipping │ │ │
+│ │ │ - Thank You │ │ │
+│ │ └──────────────────┘ │ │
+│ └───────────┬────────────┘ │
+│ │ │
+│ ┌───────────▼────────────┐ │
+│ │ hanzo.js API Client │ │
+│ │ (Crowdstart SDK) │ │
+│ └───────────┬────────────┘ │
+│ │ │
 └─────────────────────────────────┼────────────────┘
-                                  │
-                      ┌───────────▼────────────┐
-                      │  Hanzo Commerce API     │
-                      │  (api.hanzo.ai)         │
-                      └────────────────────────┘
+ │
+ ┌───────────▼────────────┐
+ │ Hanzo Commerce API │
+ │ (api.hanzo.ai) │
+ └────────────────────────┘
 ```
 
 ### Checkout Flow (Screen Script)
@@ -192,52 +192,52 @@ The widget follows a three-step flow defined by `script: ['payment', 'shipping',
 
 ```
 checkout.js/
-  checkout.js           # Built bundle (1.1MB)
-  checkout.min.js       # Minified bundle (245KB)
-  checkout.css          # Built stylesheet (45KB)
-  package.json          # npm config, v2.1.21
-  Cakefile              # Build/test tasks
-  bebop.coffee          # Dev server config
-  src/
-    index.coffee        # Main Checkout class
-    events.coffee       # Event definitions
-    data/
-      countries.coffee  # Country list for shipping
-      currencies.coffee # Supported currencies
-      states.coffee     # US state list
-    utils/
-      analytics.coffee  # Tracking pixel helper
-      country.coffee    # Country lookup
-      currency.coffee   # Currency formatting
-      input.coffee      # Input validation
-      theme.coffee      # Dynamic theme injection
-    views/
-      widget.coffee     # Root Riot tag
-      modal.coffee      # Modal overlay
-      header.coffee     # Widget header
-      screenmanager.coffee  # Screen navigation
-      invoice.coffee    # Order summary
-      lineitem.coffee   # Single line item
-      confirm.coffee    # Order confirmation
-      promo.coffee      # Promo code input
-      tabs.coffee       # Payment method tabs
-      controls/         # Form input controls
-      screens/
-        screen.coffee   # Base screen class
-        payment.coffee  # Credit card / PayPal entry
-        shipping.coffee # Address form
-        thankyou.coffee # Post-purchase screen
-        choose.coffee   # Payment method selection
-        paypal.coffee   # PayPal-specific flow
-  templates/            # Jade templates for each view
-  css/                  # Stylus source files
-  vendor/               # Vendored JS/CSS (select2)
-  examples/
-    basic/              # Basic HTML integration example
-  test/
-    test.coffee         # Selenium WebDriver tests
-    widget.html         # Test harness HTML
-    ci-config.coffee    # Cross-browser CI config
+ checkout.js # Built bundle (1.1MB)
+ checkout.min.js # Minified bundle (245KB)
+ checkout.css # Built stylesheet (45KB)
+ package.json # npm config, v2.1.21
+ Cakefile # Build/test tasks
+ bebop.coffee # Dev server config
+ src/
+ index.coffee # Main Checkout class
+ events.coffee # Event definitions
+ data/
+ countries.coffee # Country list for shipping
+ currencies.coffee # Supported currencies
+ states.coffee # US state list
+ utils/
+ analytics.coffee # Tracking pixel helper
+ country.coffee # Country lookup
+ currency.coffee # Currency formatting
+ input.coffee # Input validation
+ theme.coffee # Dynamic theme injection
+ views/
+ widget.coffee # Root Riot tag
+ modal.coffee # Modal overlay
+ header.coffee # Widget header
+ screenmanager.coffee # Screen navigation
+ invoice.coffee # Order summary
+ lineitem.coffee # Single line item
+ confirm.coffee # Order confirmation
+ promo.coffee # Promo code input
+ tabs.coffee # Payment method tabs
+ controls/ # Form input controls
+ screens/
+ screen.coffee # Base screen class
+ payment.coffee # Credit card / PayPal entry
+ shipping.coffee # Address form
+ thankyou.coffee # Post-purchase screen
+ choose.coffee # Payment method selection
+ paypal.coffee # PayPal-specific flow
+ templates/ # Jade templates for each view
+ css/ # Stylus source files
+ vendor/ # Vendored JS/CSS (select2)
+ examples/
+ basic/ # Basic HTML integration example
+ test/
+ test.coffee # Selenium WebDriver tests
+ widget.html # Test harness HTML
+ ci-config.coffee # Cross-browser CI config
 ```
 
 ## Troubleshooting

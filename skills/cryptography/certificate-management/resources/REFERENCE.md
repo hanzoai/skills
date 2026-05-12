@@ -510,7 +510,7 @@ Root CA (offline, highly secured)
 **Options**:
 1. **OpenSSL** (manual)
 2. **CFSSL** (Cloudflare's PKI toolkit)
-3. **HashiCorp Vault** (automated PKI)
+3. **external secret manager** (automated PKI)
 4. **AWS Certificate Manager Private CA**
 5. **Smallstep** (step-ca)
 

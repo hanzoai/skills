@@ -72,13 +72,13 @@ bun add hanzoai
 import Hanzo from "hanzoai"
 
 const client = new Hanzo({
-  apiKey: process.env.HANZO_API_KEY,  // defaults to HANZO_API_KEY env var
-  // baseURL: "https://api.hanzo.ai",  // default
+ apiKey: process.env.HANZO_API_KEY, // defaults to HANZO_API_KEY env var
+ // baseURL: "https://api.hanzo.ai", // default
 })
 
 const response = await client.chat.completions.create({
-  model: "zen-70b",
-  messages: [{ role: "user", content: "Hello, Hanzo!" }],
+ model: "zen-70b",
+ messages: [{ role: "user", content: "Hello, Hanzo!" }],
 })
 console.log(response.choices[0].message.content)
 ```
@@ -87,14 +87,14 @@ console.log(response.choices[0].message.content)
 
 ```typescript
 const stream = await client.chat.completions.create({
-  model: "zen-70b",
-  messages: [{ role: "user", content: "Write a poem about code" }],
-  stream: true,
+ model: "zen-70b",
+ messages: [{ role: "user", content: "Write a poem about code" }],
+ stream: true,
 })
 
 for await (const chunk of stream) {
-  const content = chunk.choices[0]?.delta?.content
-  if (content) process.stdout.write(content)
+ const content = chunk.choices[0]?.delta?.content
+ if (content) process.stdout.write(content)
 }
 ```
 
@@ -102,8 +102,8 @@ for await (const chunk of stream) {
 
 ```typescript
 const embedding = await client.embeddings.create({
-  model: "zen-embedding",
-  input: "Hello world",
+ model: "zen-embedding",
+ input: "Hello world",
 })
 console.log(embedding.data[0].embedding.length) // dimension count
 ```
@@ -112,28 +112,28 @@ console.log(embedding.data[0].embedding.length) // dimension count
 
 ```typescript
 const response = await client.chat.completions.create({
-  model: "zen-70b",
-  messages: [{ role: "user", content: "What's the weather in Tokyo?" }],
-  tools: [{
-    type: "function",
-    function: {
-      name: "get_weather",
-      description: "Get current weather for a location",
-      parameters: {
-        type: "object",
-        properties: {
-          location: { type: "string", description: "City name" },
-        },
-        required: ["location"],
-      },
-    },
-  }],
+ model: "zen-70b",
+ messages: [{ role: "user", content: "What's the weather in Tokyo?" }],
+ tools: [{
+ type: "function",
+ function: {
+ name: "get_weather",
+ description: "Get current weather for a location",
+ parameters: {
+ type: "object",
+ properties: {
+ location: { type: "string", description: "City name" },
+ },
+ required: ["location"],
+ },
+ },
+ }],
 })
 
 const toolCall = response.choices[0].message.tool_calls?.[0]
 if (toolCall) {
-  console.log(toolCall.function.name)       // "get_weather"
-  console.log(toolCall.function.arguments)  // '{"location":"Tokyo"}'
+ console.log(toolCall.function.name) // "get_weather"
+ console.log(toolCall.function.arguments) // '{"location":"Tokyo"}'
 }
 ```
 
@@ -141,14 +141,14 @@ if (toolCall) {
 
 ```typescript
 const response = await client.chat.completions.create({
-  model: "zen-vision",
-  messages: [{
-    role: "user",
-    content: [
-      { type: "text", text: "What's in this image?" },
-      { type: "image_url", image_url: { url: "https://example.com/photo.jpg" } },
-    ],
-  }],
+ model: "zen-vision",
+ messages: [{
+ role: "user",
+ content: [
+ { type: "text", text: "What's in this image?" },
+ { type: "image_url", image_url: { url: "https://example.com/photo.jpg" } },
+ ],
+ }],
 })
 ```
 
@@ -209,21 +209,21 @@ The SDK also includes namespaces for: assistants, threads, runs, batches, vector
 
 ```typescript
 const client = new Hanzo({
-  apiKey: "your-key",                    // Required (or HANZO_API_KEY env)
-  baseURL: "https://api.hanzo.ai",       // Default
-  timeout: 60_000,                       // Request timeout (ms)
-  maxRetries: 2,                         // Auto-retry count
-  defaultHeaders: { "X-Custom": "val" }, // Extra headers
-  defaultQuery: { version: "2" },        // Extra query params
+ apiKey: "your-key", // Required (or HANZO_API_KEY env)
+ baseURL: "https://api.hanzo.ai", // Default
+ timeout: 60_000, // Request timeout (ms)
+ maxRetries: 2, // Auto-retry count
+ defaultHeaders: { "X-Custom": "val" }, // Extra headers
+ defaultQuery: { version: "2" }, // Extra query params
 })
 ```
 
 ### Environment Variables
 
 ```bash
-HANZO_API_KEY=your-api-key          # Required
-HANZO_BASE_URL=https://...          # Override base URL
-HANZO_LOG=debug                     # Enable debug logging
+HANZO_API_KEY=your-api-key # Required
+HANZO_BASE_URL=https://... # Override base URL
+HANZO_LOG=debug # Enable debug logging
 ```
 
 ### Auth Header
@@ -236,8 +236,8 @@ The gateway accepts the API key via:
 ```typescript
 // Use sandbox for testing
 const client = new Hanzo({
-  apiKey: process.env.HANZO_SANDBOX_KEY,
-  baseURL: "https://api.sandbox.hanzo.ai",
+ apiKey: process.env.HANZO_SANDBOX_KEY,
+ baseURL: "https://api.sandbox.hanzo.ai",
 })
 ```
 
@@ -247,13 +247,13 @@ const client = new Hanzo({
 import OpenAI from "openai"
 
 const client = new OpenAI({
-  baseURL: "https://api.hanzo.ai/v1",
-  apiKey: process.env.HANZO_API_KEY,
+ baseURL: "https://api.hanzo.ai/v1",
+ apiKey: process.env.HANZO_API_KEY,
 })
 // Everything works — same API shape
 const response = await client.chat.completions.create({
-  model: "zen-70b",
-  messages: [{ role: "user", content: "Hello" }],
+ model: "zen-70b",
+ messages: [{ role: "user", content: "Hello" }],
 })
 ```
 
@@ -268,17 +268,17 @@ import Hanzo from "hanzoai"
 const client = new Hanzo()
 
 export async function POST(req: Request) {
-  const { messages } = await req.json()
+ const { messages } = await req.json()
 
-  const stream = await client.chat.completions.create({
-    model: "zen-70b",
-    messages,
-    stream: true,
-  })
+ const stream = await client.chat.completions.create({
+ model: "zen-70b",
+ messages,
+ stream: true,
+ })
 
-  return new Response(stream.toReadableStream(), {
-    headers: { "Content-Type": "text/event-stream" },
-  })
+ return new Response(stream.toReadableStream(), {
+ headers: { "Content-Type": "text/event-stream" },
+ })
 }
 ```
 
@@ -289,13 +289,13 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { streamText } from "ai"
 
 const hanzo = createOpenAI({
-  baseURL: "https://api.hanzo.ai/v1",
-  apiKey: process.env.HANZO_API_KEY,
+ baseURL: "https://api.hanzo.ai/v1",
+ apiKey: process.env.HANZO_API_KEY,
 })
 
 const result = await streamText({
-  model: hanzo("zen-70b"),
-  prompt: "Write a haiku",
+ model: hanzo("zen-70b"),
+ prompt: "Write a haiku",
 })
 ```
 
@@ -305,13 +305,13 @@ const result = await streamText({
 import Hanzo, { APIError, RateLimitError } from "hanzoai"
 
 try {
-  const response = await client.chat.completions.create({ ... })
+ const response = await client.chat.completions.create({ ... })
 } catch (err) {
-  if (err instanceof RateLimitError) {
-    console.log("Rate limited, retry after:", err.headers?.["retry-after"])
-  } else if (err instanceof APIError) {
-    console.log("API error:", err.status, err.message)
-  }
+ if (err instanceof RateLimitError) {
+ console.log("Rate limited, retry after:", err.headers?.["retry-after"])
+ } else if (err instanceof APIError) {
+ console.log("API error:", err.status, err.message)
+ }
 }
 ```
 
@@ -320,14 +320,14 @@ try {
 ```typescript
 // Auto-pagination
 for await (const model of client.models.list()) {
-  console.log(model.id)
+ console.log(model.id)
 }
 
 // Manual pagination
 const page = await client.models.list()
 console.log(page.data)
 if (page.hasNextPage()) {
-  const next = await page.getNextPage()
+ const next = await page.getNextPage()
 }
 ```
 

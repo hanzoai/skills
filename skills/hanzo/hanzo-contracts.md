@@ -51,21 +51,21 @@ The contracts use `@luxfi/` imports (from the Lux standard library) and OpenZepp
 ## Project structure
 
 ```
-contracts/          (main branch)
-├── foundry.toml    # Foundry config (solc 0.8.31, Cancun, via-IR)
+contracts/ (main branch)
+├── foundry.toml # Foundry config (solc 0.8.31, Cancun, via-IR)
 ├── foundry.lock
 ├── package.json
 ├── src/
-│   ├── AIToken.sol
-│   ├── AIFaucet.sol
-│   └── identity-registry/
-│       └── HanzoRegistry.sol
-├── scripts/        # Deployment scripts
-├── broadcast/      # Deployment artifacts
-├── lib/            # Git submodule dependencies
-│   ├── standard/   # @luxfi/standard (Lux standard library)
-│   └── forge-std/  # Foundry test utilities
-└── .github/        # CI workflows
+│ ├── AIToken.sol
+│ ├── AIFaucet.sol
+│ └── identity-registry/
+│ └── HanzoRegistry.sol
+├── scripts/ # Deployment scripts
+├── broadcast/ # Deployment artifacts
+├── lib/ # Git submodule dependencies
+│ ├── standard/ # @luxfi/standard (Lux standard library)
+│ └── forge-std/ # Foundry test utilities
+└── .github/ # CI workflows
 ```
 
 ## AIToken.sol
@@ -83,11 +83,11 @@ ERC20 governance token ("AI Token", ticker "AI") with a 1 billion max supply:
 
 ```toml
 remappings = [
-    "@luxfi/=lib/standard/contracts/",
-    "@luxfi/standard/=lib/standard/contracts/",
-    "@openzeppelin/contracts/=lib/standard/lib/openzeppelin-contracts/contracts/",
-    "@openzeppelin/contracts-upgradeable/=lib/standard/lib/openzeppelin-contracts-upgradeable/contracts/",
-    "forge-std/=lib/forge-std/src/",
+ "@luxfi/=lib/standard/contracts/",
+ "@luxfi/standard/=lib/standard/contracts/",
+ "@openzeppelin/contracts/=lib/standard/lib/openzeppelin-contracts/contracts/",
+ "@openzeppelin/contracts-upgradeable/=lib/standard/lib/openzeppelin-contracts-upgradeable/contracts/",
+ "forge-std/=lib/forge-std/src/",
 ]
 ```
 
@@ -96,7 +96,7 @@ remappings = [
 ```toml
 hanzo_mainnet = "http://127.0.0.1:19630/ext/bc/.../rpc"
 hanzo_testnet = "http://127.0.0.1:19640/ext/bc/.../rpc"
-hanzo_devnet  = "http://127.0.0.1:19650/ext/bc/.../rpc"
+hanzo_devnet = "http://127.0.0.1:19650/ext/bc/.../rpc"
 ```
 
 These point to local Lux subnet RPC endpoints for development.
@@ -123,7 +123,7 @@ import {AIToken} from "src/AIToken.sol";
 
 // Deploy with treasury address
 // AIToken token = new AIToken(treasuryAddress);
-// token.stake(1000 * 10**18, 90);  // Stake 1000 AI for 90 days at 6% APR
+// token.stake(1000 * 10**18, 90); // Stake 1000 AI for 90 days at 6% APR
 ```
 
 ## Legacy branch (master)

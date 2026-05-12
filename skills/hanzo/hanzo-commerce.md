@@ -39,7 +39,7 @@ Hanzo Commerce is the **core product** of Hanzo AI -- a multi-tenant e-commerce 
 | ORM | hanzoai/orm v0.3.1 (generic CRUD, mixin.Model[T]) |
 | Analytics | ClickHouse (hanzoai/datastore-go) |
 | Auth | hanzo.id OIDC + legacy access tokens |
-| Secrets | KMS (Infisical-compatible REST) |
+| Secrets | KMS (Hanzo KMS-compatible REST) |
 | Crypto | luxfi/crypto, luxfi/geth, btcsuite |
 | Image | `ghcr.io/hanzoai/commerce:latest` |
 | Testing | Ginkgo v2 + Gomega |
@@ -86,31 +86,31 @@ Use this skill when:
 ## Architecture
 
 ```
-                    +-----------------------+
-                    |    API Gateway         |
-                    |    (api.hanzo.ai)      |
-                    +----------+------------+
-                               |
-                    +----------v------------+
-                    |   Commerce App         |
-                    |   (Cobra + Gin)        |
-                    +------------------------+
-                    | HTTP Routes (/api/v1)  |
-                    | Middleware Chain        |
-                    | Hook System            |
-                    +----+------+------+----+
-                         |      |      |
-              +----------+  +---+---+  +----------+
-              |             |       |              |
-     +--------v---+  +-----v--+  +-v--------+  +--v--------+
-     | SQLite/PG  |  | Redis  |  | NATS     |  | ClickHouse|
-     | (per-org)  |  | (cache)|  | (events) |  | (analytics|
-     +------------+  +--------+  +----------+  +-----------+
-              |
-     +--------v-----------+
-     | KMS    | Meilisearch|
-     | (creds)| (search)   |
-     +--------+------------+
+ +-----------------------+
+ | API Gateway |
+ | (api.hanzo.ai) |
+ +----------+------------+
+ |
+ +----------v------------+
+ | Commerce App |
+ | (Cobra + Gin) |
+ +------------------------+
+ | HTTP Routes (/api/v1) |
+ | Middleware Chain |
+ | Hook System |
+ +----+------+------+----+
+ | | |
+ +----------+ +---+---+ +----------+
+ | | | |
+ +--------v---+ +-----v--+ +-v--------+ +--v--------+
+ | SQLite/PG | | Redis | | NATS | | ClickHouse|
+ | (per-org) | | (cache)| | (events) | | (analytics|
+ +------------+ +--------+ +----------+ +-----------+
+ |
+ +--------v-----------+
+ | KMS | Meilisearch|
+ | (creds)| (search) |
+ +--------+------------+
 ```
 
 ### Multi-Tenancy Model
@@ -124,7 +124,7 @@ Use this skill when:
 
 ### Hook System
 
-Extensible lifecycle hooks (PocketBase-compatible pattern):
+Extensible lifecycle hooks (Hanzo Base-compatible pattern):
 - `OnBootstrap` -- app initialization
 - `OnServe` -- before HTTP server starts
 - `OnRouteSetup` -- add custom routes
@@ -135,223 +135,223 @@ Extensible lifecycle hooks (PocketBase-compatible pattern):
 
 ```
 commerce/
-  commerce.go          Main App framework (Config, Bootstrap, Routes, Serve, Shutdown)
-  cmd/commerce/        CLI entry point (main.go)
+ commerce.go Main App framework (Config, Bootstrap, Routes, Serve, Shutdown)
+ cmd/commerce/ CLI entry point (main.go)
 
-  api/                 HTTP Handlers (30+ resource groups)
-    accesstoken/       API token management
-    account/           User account (login, register, profile)
-    affiliate/         Affiliate program
-    auth/              OAuth2 token endpoint
-    billing/           Balance, usage, deposits, credits
-    cart/              Shopping cart
-    cdn/               CDN/asset serving
-    checkout/          Checkout sessions (Stripe Checkout)
-    contributor/       Contributor management
-    counter/           Atomic counters
-    coupon/            Coupon codes
-    customergroup/     Customer segmentation
-    dashv2/            Dashboard v2 API
-    data/              Generic data API
-    deploy/            Deploy management
-    form/              Form submissions
-    fulfillment/       Order fulfillment
-    inventory/         Inventory tracking
-    library/           Content library
-    namespace/         Namespace management (admin-only)
-    notification/      Notifications
-    order/             Order CRUD
-    organization/      Org management
-    pricing/           Price lists and rules
-    promotion/         Promotions
-    referrer/          Referral tracking
-    region/            Geographic regions
-    review/            Product reviews
-    search/            Search proxy
-    store/             Storefront
-    subscription/      Subscriptions
-    tax/               Tax calculation
-    transaction/       Transaction records
-    user/              User management
-    xd/                Cross-domain helpers
+ api/ HTTP Handlers (30+ resource groups)
+ accesstoken/ API token management
+ account/ User account (login, register, profile)
+ affiliate/ Affiliate program
+ auth/ OAuth2 token endpoint
+ billing/ Balance, usage, deposits, credits
+ cart/ Shopping cart
+ cdn/ CDN/asset serving
+ checkout/ Checkout sessions (Stripe Checkout)
+ contributor/ Contributor management
+ counter/ Atomic counters
+ coupon/ Coupon codes
+ customergroup/ Customer segmentation
+ dashv2/ Dashboard v2 API
+ data/ Generic data API
+ deploy/ Deploy management
+ form/ Form submissions
+ fulfillment/ Order fulfillment
+ inventory/ Inventory tracking
+ library/ Content library
+ namespace/ Namespace management (admin-only)
+ notification/ Notifications
+ order/ Order CRUD
+ organization/ Org management
+ pricing/ Price lists and rules
+ promotion/ Promotions
+ referrer/ Referral tracking
+ region/ Geographic regions
+ review/ Product reviews
+ search/ Search proxy
+ store/ Storefront
+ subscription/ Subscriptions
+ tax/ Tax calculation
+ transaction/ Transaction records
+ user/ User management
+ xd/ Cross-domain helpers
 
-  models/              Data Models (100+ entities)
-    product/           Product, variant, collection
-    order/             Order, lineitem, fulfillmentmodel
-    cart/              Shopping cart
-    subscription/      Subscription, subscriptionitem, subscriptionschedule
-    plan/              Subscription plans
-    payment/           Payments, paymentintent, paymentmethod
-    invoice/           Invoices
-    billing*/          billingevent, billinginvoice
-    credit/            Credits, creditgrant
-    coupon/            Coupons, discount, promotion, promotionrule, redemption
-    user/              User accounts
-    organization/      Multi-tenant orgs
-    token/             API tokens, oauthtoken, publishableapikey
-    wallet/            Crypto wallets
-    cryptobalance/     Crypto balances
-    cryptopaymentintent/ Crypto payment intents
-    networktoken/      Network tokens
-    tokensale/         Token sales
-    affiliate/         Affiliates
-    referral/          Referral programs
-    inventory/         Inventory, inventorylevel, stocklocation
-    shippingoption/    Shipping options, profiles, rates
-    fulfillment*/      Fulfillment providers, sets
-    region/            Regions, geozones, servicezones
-    taxrate/           Tax rates, rules, providers, regions
-    price/             Price, pricelist, priceset, pricepreference, pricerule, pricingrule
-    meter/             Usage metering
-    usagewatermark/    Usage watermarks
-    spendalert/        Spend alerts
-    balancetransaction/ Balance transactions
-    dispute/           Payment disputes
-    refund/            Refunds
-    fee/               Fees
-    payout/            Payouts
-    transfer/          Transfers
-    review/            Product reviews
-    form/              Form submissions
-    webhook/           Webhooks, webhookendpoint
-    notification/      Notifications
-    types/             Shared types (currency, etc.)
-    mixin/             Generic Model[T] mixin with CRUD
-    migrations/        Schema migrations
-    fixtures/          Test fixtures
+ models/ Data Models (100+ entities)
+ product/ Product, variant, collection
+ order/ Order, lineitem, fulfillmentmodel
+ cart/ Shopping cart
+ subscription/ Subscription, subscriptionitem, subscriptionschedule
+ plan/ Subscription plans
+ payment/ Payments, paymentintent, paymentmethod
+ invoice/ Invoices
+ billing*/ billingevent, billinginvoice
+ credit/ Credits, creditgrant
+ coupon/ Coupons, discount, promotion, promotionrule, redemption
+ user/ User accounts
+ organization/ Multi-tenant orgs
+ token/ API tokens, oauthtoken, publishableapikey
+ wallet/ Crypto wallets
+ cryptobalance/ Crypto balances
+ cryptopaymentintent/ Crypto payment intents
+ networktoken/ Network tokens
+ tokensale/ Token sales
+ affiliate/ Affiliates
+ referral/ Referral programs
+ inventory/ Inventory, inventorylevel, stocklocation
+ shippingoption/ Shipping options, profiles, rates
+ fulfillment*/ Fulfillment providers, sets
+ region/ Regions, geozones, servicezones
+ taxrate/ Tax rates, rules, providers, regions
+ price/ Price, pricelist, priceset, pricepreference, pricerule, pricingrule
+ meter/ Usage metering
+ usagewatermark/ Usage watermarks
+ spendalert/ Spend alerts
+ balancetransaction/ Balance transactions
+ dispute/ Payment disputes
+ refund/ Refunds
+ fee/ Fees
+ payout/ Payouts
+ transfer/ Transfers
+ review/ Product reviews
+ form/ Form submissions
+ webhook/ Webhooks, webhookendpoint
+ notification/ Notifications
+ types/ Shared types (currency, etc.)
+ mixin/ Generic Model[T] mixin with CRUD
+ migrations/ Schema migrations
+ fixtures/ Test fixtures
 
-  billing/             Billing Engine
-    credit/            Credit system
-    engine/            Billing calculation engine
-    ledger/            Double-entry ledger
-    tier/              Tiered pricing
-    workflows/         Temporal billing workflows
+ billing/ Billing Engine
+ credit/ Credit system
+ engine/ Billing calculation engine
+ ledger/ Double-entry ledger
+ tier/ Tiered pricing
+ workflows/ Temporal billing workflows
 
-  payment/             Payment Processing
-    processor/         Payment processor interface
-    providers/         Provider implementations
-      adyen/           Adyen
-      braintree/       Braintree
-      lemonsqueezy/    Lemon Squeezy
-      paypal/          PayPal
-      recurly/         Recurly
-    router/            Payment routing logic
+ payment/ Payment Processing
+ processor/ Payment processor interface
+ providers/ Provider implementations
+ adyen/ Adyen
+ braintree/ Braintree
+ lemonsqueezy/ Lemon Squeezy
+ paypal/ PayPal
+ recurly/ Recurly
+ router/ Payment routing logic
 
-  thirdparty/          Third-Party Integrations (25+)
-    authorizenet/      Authorize.net
-    bitcoin/           Bitcoin payments
-    ethereum/          Ethereum payments
-    square/            Square payments
-    paypal/            PayPal (legacy)
-    kms/               KMS client (secret management)
-    cardconnect/       CardConnect
-    cloudflare/        Cloudflare CDN
-    facebook/          Facebook integration
-    indiegogo/         Indiegogo crowdfunding
-    mailchimp/         Mailchimp email
-    mandrill/          Mandrill transactional email
-    mercury/           Mercury banking
-    mpc/               Multi-party computation
-    netlify/           Netlify deployment
-    reamaze/           Reamaze support
-    recaptcha/         reCAPTCHA
-    sendgrid/          SendGrid email
-    shipstation/       ShipStation fulfillment
-    shipwire/          Shipwire fulfillment
-    smtprelay/         SMTP relay
-    wire/              Wire transfers
-    woopra/            Woopra analytics
-    bigquery/          BigQuery analytics
-    paymentmethods/    Payment method registry
+ thirdparty/ Third-Party Integrations (25+)
+ authorizenet/ Authorize.net
+ bitcoin/ Bitcoin payments
+ ethereum/ Ethereum payments
+ square/ Square payments
+ paypal/ PayPal (legacy)
+ kms/ KMS client (secret management)
+ cardconnect/ CardConnect
+ cloudflare/ Cloudflare CDN
+ facebook/ Facebook integration
+ indiegogo/ Indiegogo crowdfunding
+ mailchimp/ Mailchimp email
+ mandrill/ Mandrill transactional email
+ mercury/ Mercury banking
+ mpc/ Multi-party computation
+ netlify/ Netlify deployment
+ reamaze/ Reamaze support
+ recaptcha/ reCAPTCHA
+ sendgrid/ SendGrid email
+ shipstation/ ShipStation fulfillment
+ shipwire/ Shipwire fulfillment
+ smtprelay/ SMTP relay
+ wire/ Wire transfers
+ woopra/ Woopra analytics
+ bigquery/ BigQuery analytics
+ paymentmethods/ Payment method registry
 
-  db/                  Database Backends
-    sqlite.go          SQLite + sqlite-vec (embedded, per-org)
-    postgres.go        PostgreSQL + pgvector (production)
-    mongo.go           MongoDB (alternative)
-    datastore.go       ClickHouse via hanzoai/datastore-go (analytics)
-    db.go              Manager, interface, pool
-    query.go           Query builder (PascalCase -> camelCase auto-conversion)
-    model.go           Generic model interface
-    serialize.go       JSON serialization
+ db/ Database Backends
+ sqlite.go SQLite + sqlite-vec (embedded, per-org)
+ postgres.go PostgreSQL + pgvector (production)
+ mongo.go MongoDB (alternative)
+ datastore.go ClickHouse via hanzoai/datastore-go (analytics)
+ db.go Manager, interface, pool
+ query.go Query builder (PascalCase -> camelCase auto-conversion)
+ model.go Generic model interface
+ serialize.go JSON serialization
 
-  datastore/           Cloud Datastore abstraction layer
-    datastore.go       Core datastore interface
-    get.go, put.go     CRUD operations
-    delete.go          Delete operations
-    key.go, key/       Key generation
-    query.go, query/   Query builder
-    parallel/          Parallel query execution
+ datastore/ Cloud Datastore abstraction layer
+ datastore.go Core datastore interface
+ get.go, put.go CRUD operations
+ delete.go Delete operations
+ key.go, key/ Key generation
+ query.go, query/ Query builder
+ parallel/ Parallel query execution
 
-  infra/               Infrastructure Clients
-    infra.go           Manager (connect, health, close)
-    kv.go              Redis/Valkey client
-    search.go          Meilisearch client
-    vector.go          Qdrant vector client
-    storage.go         MinIO/S3 storage client
-    pubsub.go          NATS/JetStream client
-    tasks.go           Temporal task client
-    locking.go         Distributed locking
+ infra/ Infrastructure Clients
+ infra.go Manager (connect, health, close)
+ kv.go Redis/Valkey client
+ search.go Meilisearch client
+ vector.go Qdrant vector client
+ storage.go MinIO/S3 storage client
+ pubsub.go NATS/JetStream client
+ tasks.go Temporal task client
+ locking.go Distributed locking
 
-  hooks/               Hook System
-    hooks.go           Registry, Hook[T] generic
-    tagged.go          TaggedHook[T]
-    event.go           Event types
+ hooks/ Hook System
+ hooks.go Registry, Hook[T] generic
+ tagged.go TaggedHook[T]
+ event.go Event types
 
-  events/              Event System
-    publisher.go       NATS/JetStream publisher
-    client.go          HTTP analytics client
-    bootstrap.go       Stream bootstrap
-    schema.go          Event schema
+ events/ Event System
+ publisher.go NATS/JetStream publisher
+ client.go HTTP analytics client
+ bootstrap.go Stream bootstrap
+ schema.go Event schema
 
-  auth/                Authentication
-    auth.go            Auth helpers
-    iam.go             IAM (hanzo.id) OIDC/JWKS validation
-    password/          Password hashing
+ auth/ Authentication
+ auth.go Auth helpers
+ iam.go IAM (hanzo.id) OIDC/JWKS validation
+ password/ Password hashing
 
-  middleware/           HTTP Middleware
-    accesstoken.go     API token auth
-    iammiddleware/     IAM JWT validation
-    oauthmiddleware/   OAuth middleware
-    organization.go    Org resolution
-    cache.go           Cache headers
-    cors.go            CORS
-    error.go           Error handler
-    logger.go          Request logging
+ middleware/ HTTP Middleware
+ accesstoken.go API token auth
+ iammiddleware/ IAM JWT validation
+ oauthmiddleware/ OAuth middleware
+ organization.go Org resolution
+ cache.go Cache headers
+ cors.go CORS
+ error.go Error handler
+ logger.go Request logging
 
-  ai/                  AI Features
-    recommendations.go Vector-based product recommendations
+ ai/ AI Features
+ recommendations.go Vector-based product recommendations
 
-  email/               Email System
-    email.go           Email sending
-    emails.go          Template rendering
-    subscribe.go       Mailing list
-    tasks/             Async email tasks
+ email/ Email System
+ email.go Email sending
+ emails.go Template rendering
+ subscribe.go Mailing list
+ tasks/ Async email tasks
 
-  cron/                Background Jobs
-    payout/            Payout processing
-    tasks/             Scheduled tasks
+ cron/ Background Jobs
+ payout/ Payout processing
+ tasks/ Scheduled tasks
 
-  k8s/                 Kubernetes Manifests
-    deployment.yaml    Deployment (Recreate strategy, 1 replica)
-    service.yaml       ClusterIP service (port 8001)
-    api-ingress.yaml   Ingress for commerce.hanzo.ai
-    configmap.yaml     Environment config
-    pvc.yaml           PersistentVolumeClaim (10Gi)
-    kms-auth-secret.yaml KMS auth credentials
-    frontend-admin.yaml  Admin UI deployment
-    frontend-site.yaml   Marketing site deployment
-    frontend-store.yaml  Storefront deployment
+ k8s/ Kubernetes Manifests
+ deployment.yaml Deployment (Recreate strategy, 1 replica)
+ service.yaml ClusterIP service (port 8001)
+ api-ingress.yaml Ingress for commerce.hanzo.ai
+ configmap.yaml Environment config
+ pvc.yaml PersistentVolumeClaim (10Gi)
+ kms-auth-secret.yaml KMS auth credentials
+ frontend-admin.yaml Admin UI deployment
+ frontend-site.yaml Marketing site deployment
+ frontend-store.yaml Storefront deployment
 
-  config/              Environment configs (dev, staging, production, sandbox)
-  templates/           Email and page templates
-  test/                Ginkgo test suites
-  test-integration/    Integration tests
-  demo/                Demo data
-  deploy/              Deployment scripts
-  docs/                Documentation
-  scripts/             Utility scripts
-  openapi.yaml         OpenAPI 3.0.3 specification (88KB)
-  bench_test.go        Benchmarks
+ config/ Environment configs (dev, staging, production, sandbox)
+ templates/ Email and page templates
+ test/ Ginkgo test suites
+ test-integration/ Integration tests
+ demo/ Demo data
+ deploy/ Deployment scripts
+ docs/ Documentation
+ scripts/ Utility scripts
+ openapi.yaml OpenAPI 3.0.3 specification (88KB)
+ bench_test.go Benchmarks
 ```
 
 ## Running
@@ -362,8 +362,8 @@ go run cmd/commerce/main.go serve --dev
 
 # Production (PostgreSQL)
 SQL_URL=postgresql://user:pass@host:5432/commerce \
-  KMS_ENABLED=true KMS_URL=http://kms:8080 \
-  ./commerce serve 0.0.0.0:8001
+ KMS_ENABLED=true KMS_URL=http://kms:8080 \
+ ./commerce serve 0.0.0.0:8001
 
 # Seed an organization with plans and API tokens
 ./commerce seed bootnode
@@ -485,14 +485,14 @@ All payment credentials are stored in KMS. No fallback to org-stored fields.
 **Request**:
 ```json
 {
-  "company": "acme",
-  "providerHint": "stripe",
-  "currency": "usd",
-  "org": "acme",
-  "customer": { "email": "user@example.com" },
-  "items": [{ "productId": "prod_xyz", "quantity": 1 }],
-  "successUrl": "https://acme.com/success",
-  "cancelUrl": "https://acme.com/cancel"
+ "company": "acme",
+ "providerHint": "stripe",
+ "currency": "usd",
+ "org": "acme",
+ "customer": { "email": "user@example.com" },
+ "items": [{ "productId": "prod_xyz", "quantity": 1 }],
+ "successUrl": "https://acme.com/success",
+ "cancelUrl": "https://acme.com/cancel"
 }
 ```
 
@@ -506,9 +506,9 @@ Org resolved from `X-Hanzo-Org` header or request body. Per-request Stripe clien
 # Build for linux/amd64 from macOS (zig cross-compile for CGO)
 go mod vendor
 CC="zig cc -target x86_64-linux-musl" CXX="zig c++ -target x86_64-linux-musl" \
-  CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
-  go build -mod=vendor -ldflags="-s -w -extldflags '-static'" \
-  -o commerce ./cmd/commerce/main.go
+ CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
+ go build -mod=vendor -ldflags="-s -w -extldflags '-static'" \
+ -o commerce ./cmd/commerce/main.go
 
 # Push to GHCR
 docker build --platform linux/amd64 -t ghcr.io/hanzoai/commerce:latest .

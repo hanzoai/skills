@@ -50,27 +50,27 @@ Repo: `github.com/hanzoai/desktop`. Package: `@hanzo/source` v1.1.34. Desktop ap
 
 ```
 desktop/
-├── package.json            # @hanzo/source v1.1.34 (workspace root)
-├── nx.json                 # NX workspace config
+├── package.json # @hanzo/source v1.1.34 (workspace root)
+├── nx.json # NX workspace config
 ├── tsconfig.base.json
 ├── eslint.config.mjs
-├── mise.toml               # Runtime version manager
+├── mise.toml # Runtime version manager
 ├── apps/
-│   └── hanzo-desktop/      # Main Tauri desktop application
-│       └── src-tauri/      # Rust backend + Tauri config
+│ └── hanzo-desktop/ # Main Tauri desktop application
+│ └── src-tauri/ # Rust backend + Tauri config
 ├── libs/
-│   ├── hanzo-message-ts/   # Message protocols for Hanzo Node communication
-│   ├── hanzo-node-state/   # React Query state management for node data
-│   ├── hanzo-ui/           # Reusable React component library
-│   ├── hanzo-artifacts/    # Styled UI primitives (Radix + Tailwind)
-│   ├── hanzo-i18n/         # i18next internationalization (8 languages)
-│   └── shinkai-node-state/ # Legacy state lib (upstream naming)
-├── ci-scripts/             # Build, binary download, Ollama repo generation
-├── scripts/                # Development utilities
-├── tools/                  # NX plugins and dev tools
-├── patches/                # npm patch-package overrides
-├── docs/                   # Documentation
-└── assets/                 # App icons and images
+│ ├── hanzo-message-ts/ # Message protocols for Hanzo Node communication
+│ ├── hanzo-node-state/ # React Query state management for node data
+│ ├── hanzo-ui/ # Reusable React component library
+│ ├── hanzo-artifacts/ # Styled UI primitives (Radix + Tailwind)
+│ ├── hanzo-i18n/ # i18next internationalization (8 languages)
+│ └── shinkai-node-state/ # Legacy state lib (upstream naming)
+├── ci-scripts/ # Build, binary download, Ollama repo generation
+├── scripts/ # Development utilities
+├── tools/ # NX plugins and dev tools
+├── patches/ # npm patch-package overrides
+├── docs/ # Documentation
+└── assets/ # App icons and images
 ```
 
 ## Key features (verified from repo)

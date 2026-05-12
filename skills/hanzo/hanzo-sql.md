@@ -61,11 +61,11 @@ Repo: `hanzoai/sql` (PostgreSQL fork). The `hanzo/` directory contains Hanzo-spe
 
 ```bash
 docker run -d --name hanzo-sql \
-  -p 5432:5432 \
-  -e POSTGRES_DB=hanzo \
-  -e POSTGRES_USER=hanzo \
-  -e POSTGRES_PASSWORD=secret \
-  ghcr.io/hanzoai/sql
+ -p 5432:5432 \
+ -e POSTGRES_DB=hanzo \
+ -e POSTGRES_USER=hanzo \
+ -e POSTGRES_PASSWORD=secret \
+ ghcr.io/hanzoai/sql
 ```
 
 ### Docker Compose (local dev)
@@ -82,24 +82,24 @@ The `hanzo/compose.yml` starts PostgreSQL 17 with pgvector and pgAdmin:
 
 ```yaml
 services:
-  postgres:
-    image: pgvector/pgvector:pg17
-    container_name: hanzo-postgres
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: hanzo
-      POSTGRES_USER: hanzo
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hanzo_dev}
+ postgres:
+ image: pgvector/pgvector:pg17
+ container_name: hanzo-postgres
+ ports:
+ - "5432:5432"
+ environment:
+ POSTGRES_DB: hanzo
+ POSTGRES_USER: hanzo
+ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hanzo_dev}
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: hanzo-pgadmin
-    ports:
-      - "5050:80"
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@hanzo.ai}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+ pgadmin:
+ image: dpage/pgadmin4:latest
+ container_name: hanzo-pgadmin
+ ports:
+ - "5050:80"
+ environment:
+ PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@hanzo.ai}
+ PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
 ```
 
 ## Core Concepts
@@ -164,10 +164,10 @@ max_wal_size = 2GB
 ### Integration Points
 
 ```
-hanzo/console  -- AI observability metadata
-hanzo/iam      -- User/org data (Casdoor)
+hanzo/console -- AI observability metadata
+hanzo/iam -- User/org data (Hanzo IAM)
 hanzo/platform -- PaaS orchestration metadata
-hanzo/kms      -- Secret management data
+hanzo/kms -- Secret management data
 ```
 
 Connection string pattern:
@@ -179,23 +179,23 @@ DATABASE_URL=postgresql://hanzo:password@localhost:5432/hanzo
 
 ```
 sql/
-  README.md              # Upstream PostgreSQL README
-  Dockerfile             # Multi-stage: build extensions + runtime
-  Makefile               # PostgreSQL build
-  meson.build            # Meson build system
-  configure / configure.ac
-  conf/
-    postgresql.conf      # Hanzo-tuned PostgreSQL config
-  docker-entrypoint-initdb.d/
-    01-extensions.sql    # Auto-enable extensions on startup
-  hanzo/
-    LLM.md               # Hanzo-specific documentation
-    compose.yml          # Local dev compose (PG + pgAdmin)
-    init.sql             # Schema, roles, tables, indexes
-  src/                   # PostgreSQL source code
-  contrib/               # PostgreSQL contrib modules
-  doc/                   # PostgreSQL documentation
-  config/                # Build configuration
+ README.md # Upstream PostgreSQL README
+ Dockerfile # Multi-stage: build extensions + runtime
+ Makefile # PostgreSQL build
+ meson.build # Meson build system
+ configure / configure.ac
+ conf/
+ postgresql.conf # Hanzo-tuned PostgreSQL config
+ docker-entrypoint-initdb.d/
+ 01-extensions.sql # Auto-enable extensions on startup
+ hanzo/
+ LLM.md # Hanzo-specific documentation
+ compose.yml # Local dev compose (PG + pgAdmin)
+ init.sql # Schema, roles, tables, indexes
+ src/ # PostgreSQL source code
+ contrib/ # PostgreSQL contrib modules
+ doc/ # PostgreSQL documentation
+ config/ # Build configuration
 ```
 
 ### Syncing with Upstream
@@ -203,7 +203,7 @@ sql/
 ```bash
 git fetch upstream
 git merge upstream/master
-git checkout --ours hanzo/   # Preserve Hanzo customizations
+git checkout --ours hanzo/ # Preserve Hanzo customizations
 git push origin master
 ```
 

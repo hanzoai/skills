@@ -53,32 +53,32 @@ Hanzo Memory (`@hanzo/memory`) is a **TypeScript AI memory service** that stores
 
 ```
 hanzoai/memory/
-  package.json              # @hanzo/memory 0.1.0
-  tsconfig.json             # TypeScript config
-  tsup.config.ts            # Build config (tsup)
-  vitest.config.ts          # Test config
-  Dockerfile                # 4-stage build
-  docker-compose.yml        # Server, test, benchmark, dev targets
-  .env.example              # Configuration template
-  src/
-    index.ts                # Package exports
-    server.ts               # Fastify REST API server
-    client.ts               # MemoryClient class
-    config.ts               # Configuration loading from env
-    db/                     # Database backends
-    models/                 # Zod schemas and types
-    services/
-      memory.ts             # Core MemoryService
-      embeddings.ts         # Embedding provider factory
-      embeddings/           # Provider implementations
-      llm.ts                # LLM provider (OpenAI, Mock)
-      index.ts              # Service exports
-    types/                  # TypeScript type definitions
-  packages/
-    embedding/              # Standalone embedding package
-    inference/              # Standalone inference package
-  tests/                    # Unit and integration tests
-  benchmarks/               # Performance benchmarks
+ package.json # @hanzo/memory 0.1.0
+ tsconfig.json # TypeScript config
+ tsup.config.ts # Build config (tsup)
+ vitest.config.ts # Test config
+ Dockerfile # 4-stage build
+ docker-compose.yml # Server, test, benchmark, dev targets
+ .env.example # Configuration template
+ src/
+ index.ts # Package exports
+ server.ts # Fastify REST API server
+ client.ts # MemoryClient class
+ config.ts # Configuration loading from env
+ db/ # Database backends
+ models/ # Zod schemas and types
+ services/
+ memory.ts # Core MemoryService
+ embeddings.ts # Embedding provider factory
+ embeddings/ # Provider implementations
+ llm.ts # LLM provider (OpenAI, Mock)
+ index.ts # Service exports
+ types/ # TypeScript type definitions
+ packages/
+ embedding/ # Standalone embedding package
+ inference/ # Standalone inference package
+ tests/ # Unit and integration tests
+ benchmarks/ # Performance benchmarks
 ```
 
 ## Dependencies
@@ -136,16 +136,16 @@ const client = new MemoryClient()
 
 // Store a memory
 const memory = await client.remember({
-  userid: 'user-123',
-  content: 'User prefers dark mode',
-  importance: 8
+ userid: 'user-123',
+ content: 'User prefers dark mode',
+ importance: 8
 })
 
 // Semantic search
 const results = await client.search({
-  userid: 'user-123',
-  query: 'What are the user preferences?',
-  limit: 5
+ userid: 'user-123',
+ query: 'What are the user preferences?',
+ limit: 5
 })
 ```
 
@@ -155,16 +155,16 @@ const results = await client.search({
 git clone https://github.com/hanzoai/memory.git
 cd memory
 pnpm install
-pnpm run server:dev   # Dev mode with auto-reload on port 8000
+pnpm run server:dev # Dev mode with auto-reload on port 8000
 ```
 
 ### Docker
 
 ```bash
-docker-compose up memory-server      # Production
-docker-compose up memory-dev         # Development with hot-reload
-docker-compose up memory-test        # Run tests
-docker-compose up memory-benchmark   # Run benchmarks
+docker-compose up memory-server # Production
+docker-compose up memory-dev # Development with hot-reload
+docker-compose up memory-test # Run tests
+docker-compose up memory-benchmark # Run benchmarks
 ```
 
 ## Embedding providers
@@ -184,11 +184,11 @@ Configure via `EMBEDDING_PROVIDER` env var.
 
 ```bash
 # Database
-DB_BACKEND=lancedb              # or 'memory'
+DB_BACKEND=lancedb # or 'memory'
 LANCEDB_URI=./lancedb_data
 
 # Embeddings
-EMBEDDING_PROVIDER=mock         # mock|openai|onnx|transformers|candle|llama
+EMBEDDING_PROVIDER=mock # mock|openai|onnx|transformers|candle|llama
 EMBEDDING_MODEL=Xenova/all-MiniLM-L6-v2
 
 # OpenAI (optional)

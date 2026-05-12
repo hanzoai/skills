@@ -17,7 +17,7 @@ Activate this skill when:
 - Meeting compliance requirements (GDPR, HIPAA, PCI-DSS, FIPS 140-2)
 - Designing key management and rotation strategies
 - Choosing between encryption layers (application, database, filesystem, disk)
-- Integrating with Key Management Services (AWS KMS, Azure Key Vault, HashiCorp Vault)
+- Integrating with Key Management Services (AWS KMS, Azure Key Vault, external secret manager)
 - Implementing envelope encryption patterns
 
 ## Core Concepts
@@ -328,7 +328,7 @@ crypto_client = CryptographyClient(key, credential=credential)
 result = crypto_client.encrypt(EncryptionAlgorithm.rsa_oaep, plaintext)
 ```
 
-### HashiCorp Vault
+### external secret manager
 
 ```bash
 # Enable transit secrets engine
@@ -496,7 +496,7 @@ Comprehensive technical reference covering:
 - Envelope Encryption: Patterns, benefits, implementation details
 - Database Encryption: PostgreSQL pgcrypto, MongoDB TDE, MySQL InnoDB encryption
 - File and Disk Encryption: LUKS, BitLocker, FileVault, self-encrypting drives
-- Cloud KMS Integration: AWS KMS, GCP KMS, Azure Key Vault, HashiCorp Vault
+- Cloud KMS Integration: AWS KMS, GCP KMS, Azure Key Vault, external secret manager
 - Key Rotation: Zero-downtime strategies, phased migration, rollback procedures
 - Compliance Standards: FIPS 140-2, PCI-DSS, HIPAA, GDPR requirements
 - Performance: Hardware acceleration (AES-NI), benchmarks, optimization techniques

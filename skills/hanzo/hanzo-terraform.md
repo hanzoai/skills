@@ -57,16 +57,16 @@ The provider is in early alpha. The `provider.go` registers authentication (API 
 
 ```hcl
 terraform {
-  required_providers {
-    terraform-provider-hanzo = {
-      source  = "hanzoai/terraform-provider-hanzo"
-      version = "~> 0.1.0-alpha.2"
-    }
-  }
+ required_providers {
+ terraform-provider-hanzo = {
+ source = "hanzoai/terraform-provider-hanzo"
+ version = "~> 0.1.0-alpha.2"
+ }
+ }
 }
 
 provider "terraform-provider-hanzo" {
-  api_key = "hk-..."  # or set HANZO_API_KEY env var
+ api_key = "hk-..." # or set HANZO_API_KEY env var
 }
 ```
 
@@ -83,29 +83,29 @@ The `environment` attribute accepts `"production"` or `"sandbox"`. Cannot be set
 ## Repository Structure
 
 ```
-main.go                          # Provider entry point (providerserver.Serve)
+main.go # Provider entry point (providerserver.Serve)
 internal/
-  provider.go                    # Provider config, auth, client initialization
-  version.go                     # Version constant
-  apiform/                       # API form encoding utilities
-  apijson/                       # API JSON marshaling
-  customfield/                   # Custom Terraform field types
-  customvalidator/               # Custom validators
-  importpath/                    # Import path utilities
-  logging/                       # Structured logging
-  test_helpers/                  # Test helpers
-  types/                         # Terraform type definitions
-bin/                             # Build scripts
+ provider.go # Provider config, auth, client initialization
+ version.go # Version constant
+ apiform/ # API form encoding utilities
+ apijson/ # API JSON marshaling
+ customfield/ # Custom Terraform field types
+ customvalidator/ # Custom validators
+ importpath/ # Import path utilities
+ logging/ # Structured logging
+ test_helpers/ # Test helpers
+ types/ # Terraform type definitions
+bin/ # Build scripts
 docs/
-  index.md                       # Terraform Registry docs
-examples/                        # Usage examples
-scripts/                         # CI/release scripts
-tools/                           # Development tools
-.goreleaser.yml                  # GoReleaser config (multi-platform builds)
-.release-please-manifest.json    # Release automation
-release-please-config.json       # Release-please configuration
+ index.md # Terraform Registry docs
+examples/ # Usage examples
+scripts/ # CI/release scripts
+tools/ # Development tools
+.goreleaser.yml # GoReleaser config (multi-platform builds)
+.release-please-manifest.json # Release automation
+release-please-config.json # Release-please configuration
 terraform-registry-manifest.json # Registry metadata
-CHANGELOG.md                     # Versioned changelog
+CHANGELOG.md # Versioned changelog
 ```
 
 ## Build and Development
@@ -146,8 +146,8 @@ Platforms: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64, 
 ## Environment Variables
 
 ```bash
-HANZO_API_KEY=hk-...              # API authentication (required)
-HANZO_BASE_URL=https://...        # Override API base URL
+HANZO_API_KEY=hk-... # API authentication (required)
+HANZO_BASE_URL=https://... # Override API base URL
 ```
 
 ## Troubleshooting

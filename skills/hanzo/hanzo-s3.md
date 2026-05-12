@@ -35,7 +35,7 @@ Fork of **MinIO** (minio/minio). Repo: `hanzoai/s3`, branch: `main`.
 ```bash
 docker build -t hanzo-storage .
 docker run -p 9000:9000 -p 9001:9001 \
-  hanzo-storage server /data --console-address :9001
+ hanzo-storage server /data --console-address :9001
 ```
 
 Default credentials: `minioadmin:minioadmin` -- change immediately in production.
@@ -85,11 +85,11 @@ Any S3-compatible SDK works. Purpose-built options:
 ## Build and test
 
 ```bash
-make build          # build binary
-make test           # lint + unit tests
-make verify         # integration verification
-make install        # install to $GOPATH/bin
-make docker         # build Docker image
+make build # build binary
+make test # lint + unit tests
+make verify # integration verification
+make install # install to $GOPATH/bin
+make docker # build Docker image
 ```
 
 ## Makefile targets

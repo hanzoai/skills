@@ -55,34 +55,34 @@ Repo: `github.com/hanzoai/form.js` (branch: `master`, 16 stars).
 
 ```html
 <form action="/subscribe" method="POST">
-  <input type="email" name="email" placeholder="Email" required />
-  <input type="text" name="firstName" placeholder="First Name" />
-  <button type="submit">Subscribe</button>
+ <input type="email" name="email" placeholder="Email" required />
+ <input type="text" name="firstName" placeholder="First Name" />
+ <button type="submit">Subscribe</button>
 
-  <script src="https://unpkg.com/form.js@0.2.0/lib/form.cjs.js"></script>
-  <script>
-    var Inform = window.Inform
+ <script src="https://unpkg.com/form.js@0.2.0/lib/form.cjs.js"></script>
+ <script>
+ var Inform = window.Inform
 
-    // Listen for form submission (prevents default, gives you control)
-    Inform.on('inform-submit', function(done, event) {
-      var formData = new FormData(event.target)
-      var data = {}
-      formData.forEach(function(value, key) { data[key] = value })
+ // Listen for form submission (prevents default, gives you control)
+ Inform.on('inform-submit', function(done, event) {
+ var formData = new FormData(event.target)
+ var data = {}
+ formData.forEach(function(value, key) { data[key] = value })
 
-      fetch('/api/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-      .then(function() { done() })  // Call done() to fire the 'done' event
-      .catch(function(err) { console.error(err) })
-    })
+ fetch('/api/subscribe', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify(data)
+ })
+ .then(function() { done() }) // Call done() to fire the 'done' event
+ .catch(function(err) { console.error(err) })
+ })
 
-    // Listen for successful submission
-    Inform.on('inform-done', function(event) {
-      alert('Thanks for subscribing!')
-    })
-  </script>
+ // Listen for successful submission
+ Inform.on('inform-done', function(event) {
+ alert('Thanks for subscribing!')
+ })
+ </script>
 </form>
 ```
 
@@ -97,8 +97,8 @@ npm install form.js
 import Inform from 'form.js'
 
 Inform.on('inform-submit', function(done, event) {
-  // Handle submission
-  done()
+ // Handle submission
+ done()
 })
 ```
 
@@ -108,26 +108,26 @@ Inform.on('inform-submit', function(done, event) {
 
 ```
 ┌────────────────────────────────────────┐
-│  HTML Page                              │
-│                                         │
-│  <form>                                 │
-│    <input name="email" />               │
-│    <button type="submit">Go</button>    │
-│                                         │
-│    <script src="form.js"></script>       │
-│  </form>                                │
-│                                         │
-│  ┌──────────────────────────────────┐   │
-│  │  Inform (EventEmitter)           │   │
-│  │                                  │   │
-│  │  Events:                         │   │
-│  │  1. init-inform-script  ─────>  script tag ref    │
-│  │  2. init-inform-form    ─────>  form element ref  │
-│  │  3. init-inform-inputs  ─────>  input elements    │
-│  │  4. init-inform-submits ─────>  submit buttons    │
-│  │  5. inform-submit       ─────>  (done, event)     │
-│  │  6. inform-done         ─────>  completion         │
-│  └──────────────────────────────────┘   │
+│ HTML Page │
+│ │
+│ <form> │
+│ <input name="email" /> │
+│ <button type="submit">Go</button> │
+│ │
+│ <script src="form.js"></script> │
+│ </form> │
+│ │
+│ ┌──────────────────────────────────┐ │
+│ │ Inform (EventEmitter) │ │
+│ │ │ │
+│ │ Events: │ │
+│ │ 1. init-inform-script ─────> script tag ref │
+│ │ 2. init-inform-form ─────> form element ref │
+│ │ 3. init-inform-inputs ─────> input elements │
+│ │ 4. init-inform-submits ─────> submit buttons │
+│ │ 5. inform-submit ─────> (done, event) │
+│ │ 6. inform-done ─────> completion │
+│ └──────────────────────────────────┘ │
 └────────────────────────────────────────┘
 ```
 
@@ -166,24 +166,24 @@ A minimal XMLHttpRequest wrapper with a `post(url, headers, payload, callback)` 
 
 ```
 form.js/
-  package.json          # npm config, v0.2.0
-  Cakefile              # Build/test tasks (shortcake + cake-bundle)
-  README.md             # Minimal README
-  LICENSE               # BSD-3-Clause
-  .travis.yml           # Travis CI config
-  src/
-    index.coffee        # Main library (event emitter + form interception)
-    xhr.coffee          # XMLHttpRequest POST helper
-  test/
-    test.coffee         # Selenium WebDriver integration tests
-    test.html           # Test harness HTML page
-    inform.js           # Built test bundle
-    util.coffee         # Test utilities
-    ci-config.coffee    # Cross-browser Sauce Labs config
-    jquery-1.11.3.min.js  # jQuery for test assertions
-  lib/                  # Built output (generated)
-    form.cjs.js         # CommonJS bundle
-    form.es.js          # ES module bundle
+ package.json # npm config, v0.2.0
+ Cakefile # Build/test tasks (shortcake + cake-bundle)
+ README.md # Minimal README
+ LICENSE # BSD-3-Clause
+ .travis.yml # Travis CI config
+ src/
+ index.coffee # Main library (event emitter + form interception)
+ xhr.coffee # XMLHttpRequest POST helper
+ test/
+ test.coffee # Selenium WebDriver integration tests
+ test.html # Test harness HTML page
+ inform.js # Built test bundle
+ util.coffee # Test utilities
+ ci-config.coffee # Cross-browser Sauce Labs config
+ jquery-1.11.3.min.js # jQuery for test assertions
+ lib/ # Built output (generated)
+ form.cjs.js # CommonJS bundle
+ form.es.js # ES module bundle
 ```
 
 ## Build and Test

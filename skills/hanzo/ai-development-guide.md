@@ -135,13 +135,13 @@ Zen is Hanzo's frontier model family built on MoDE (Mixture of Diverse Experts) 
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://api.hanzo.ai/v1",
-    api_key="your-hanzo-api-key"
+ base_url="https://api.hanzo.ai/v1",
+ api_key="your-hanzo-api-key"
 )
 
 response = client.chat.completions.create(
-    model="zen-70b",
-    messages=[{"role": "user", "content": "Explain post-quantum cryptography"}]
+ model="zen-70b",
+ messages=[{"role": "user", "content": "Explain post-quantum cryptography"}]
 )
 ```
 
@@ -205,13 +205,13 @@ cat path/to/lux/skills/skills/lux/INDEX.md
 
 ```
 Tier 1: Gateway (auto-discovers relevant skills)
-  → discover-hanzo/SKILL.md or discover-lux/SKILL.md
+ → discover-hanzo/SKILL.md or discover-lux/SKILL.md
 
 Tier 2: INDEX (full catalog with decision tree)
-  → skills/hanzo/INDEX.md or skills/lux/INDEX.md
+ → skills/hanzo/INDEX.md or skills/lux/INDEX.md
 
 Tier 3: Individual skills (deep technical detail)
-  → skills/hanzo/hanzo-mcp.md, skills/lux/lux-consensus.md, etc.
+ → skills/hanzo/hanzo-mcp.md, skills/lux/lux-consensus.md, etc.
 ```
 
 ## 6. Cross-Stack Workflow Examples
@@ -220,8 +220,8 @@ Tier 3: Individual skills (deep technical detail)
 
 ```
 Skills needed:
-  Hanzo: hanzo-chat.md, hanzo-ui.md, python-sdk.md
-  Lux: lux-exchange.md, lux-dex.md, lux-evm.md
+ Hanzo: hanzo-chat.md, hanzo-ui.md, python-sdk.md
+ Lux: lux-exchange.md, lux-dex.md, lux-evm.md
 
 Flow:
 1. Use Zen model to analyze market data (python-sdk)
@@ -234,8 +234,8 @@ Flow:
 
 ```
 Skills needed:
-  Hanzo: hanzo-search.md, hanzo-engine.md
-  Lux: lux-explorer.md, lux-fhe.md, lux-evm.md
+ Hanzo: hanzo-search.md, hanzo-engine.md
+ Lux: lux-explorer.md, lux-fhe.md, lux-evm.md
 
 Flow:
 1. Index blockchain data with Hanzo Search (Meilisearch, Rust)
@@ -248,8 +248,8 @@ Flow:
 
 ```
 Skills needed:
-  Hanzo: hanzo-agent.md, hanzo-mcp.md, hanzo-kms.md
-  Lux: lux-dex.md, lux-bridge.md, lux-oracle.md
+ Hanzo: hanzo-agent.md, hanzo-mcp.md, hanzo-kms.md
+ Lux: lux-dex.md, lux-bridge.md, lux-oracle.md
 
 Flow:
 1. Agent monitors oracle prices (lux-oracle)

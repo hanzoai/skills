@@ -39,38 +39,38 @@ Hanzo ORM is a **Go generics-based ORM** with automatic serialization, KV cachin
 package main
 
 import (
-    "github.com/hanzoai/orm"
-    ormdb "github.com/hanzoai/orm/db"
+ "github.com/hanzoai/orm"
+ ormdb "github.com/hanzoai/orm/db"
 )
 
 type User struct {
-    ID    int64  `orm:"pk,autoincr"`
-    Name  string `orm:"notnull"`
-    Email string `orm:"unique,notnull"`
-    Age   int    `orm:"default:0"`
+ ID int64 `orm:"pk,autoincr"`
+ Name string `orm:"notnull"`
+ Email string `orm:"unique,notnull"`
+ Age int `orm:"default:0"`
 }
 
 func main() {
-    db, _ := orm.OpenSQLite(&ormdb.SQLiteDBConfig{
-        Path: "app.db",
-        Config: ormdb.SQLiteConfig{BusyTimeout: 5000, JournalMode: "WAL"},
-    })
-    repo := orm.NewRepository[User](db)
+ db, _ := orm.OpenSQLite(&ormdb.SQLiteDBConfig{
+ Path: "app.db",
+ Config: ormdb.SQLiteConfig{BusyTimeout: 5000, JournalMode: "WAL"},
+ })
+ repo := orm.NewRepository[User](db)
 
-    // Create
-    user := User{Name: "Alice", Email: "alice@hanzo.ai", Age: 30}
-    repo.Create(&user)
+ // Create
+ user := User{Name: "Alice", Email: "alice@hanzo.ai", Age: 30}
+ repo.Create(&user)
 
-    // Query
-    found, _ := repo.FindByID(user.ID)
-    all, _ := repo.FindAll(orm.Where("age > ?", 25))
+ // Query
+ found, _ := repo.FindByID(user.ID)
+ all, _ := repo.FindAll(orm.Where("age > ?", 25))
 
-    // Update
-    found.Age = 31
-    repo.Update(found)
+ // Update
+ found.Age = 31
+ repo.Update(found)
 
-    // Delete
-    repo.Delete(found.ID)
+ // Delete
+ repo.Delete(found.ID)
 }
 ```
 
@@ -78,13 +78,13 @@ func main() {
 
 ```go
 import (
-    "github.com/hanzoai/orm"
-    ormdb "github.com/hanzoai/orm/db"
+ "github.com/hanzoai/orm"
+ ormdb "github.com/hanzoai/orm/db"
 )
 
 db, _ := orm.OpenZap(&ormdb.ZapConfig{
-    Endpoint: "localhost:5432",
-    Database: "mydb",
+ Endpoint: "localhost:5432",
+ Database: "mydb",
 })
 repo := orm.NewRepository[User](db)
 // Same API, production database
@@ -94,7 +94,7 @@ repo := orm.NewRepository[User](db)
 
 ```go
 db, _ := orm.OpenSQL(&ormdb.SQLConfig{
-    DSN: "postgresql://user:pass@localhost:5432/mydb",
+ DSN: "postgresql://user:pass@localhost:5432/mydb",
 })
 ```
 

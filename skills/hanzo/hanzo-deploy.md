@@ -72,23 +72,23 @@ All images are built in CI/CD pipelines, never locally.
 # Typical .github/workflows/build.yml
 name: Build and Push
 on:
-  push:
-    branches: [main, develop]
+ push:
+ branches: [main, develop]
 jobs:
-  build:
-    runs-on: self-hosted  # MUST use self-hosted runners
-    steps:
-      - uses: actions/checkout@v4
-      - name: Login to GHCR
-        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u hanzoai --password-stdin
-      - name: Build and push
-        run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            --push \
-            -t ghcr.io/hanzoai/<service>:latest \
-            -t ghcr.io/hanzoai/<service>:${{ github.sha }} \
-            .
+ build:
+ runs-on: self-hosted # MUST use self-hosted runners
+ steps:
+ - uses: actions/checkout@v4
+ - name: Login to GHCR
+ run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u hanzoai --password-stdin
+ - name: Build and push
+ run: |
+ docker buildx build \
+ --platform linux/amd64 \
+ --push \
+ -t ghcr.io/hanzoai/<service>:latest \
+ -t ghcr.io/hanzoai/<service>:${{ github.sha }} \
+ .
 ```
 
 ### Secret management
@@ -98,54 +98,54 @@ jobs:
 apiVersion: kms.hanzo.ai/v1
 kind: KMSSecret
 metadata:
-  name: my-service-secrets
-  namespace: hanzo
+ name: my-service-secrets
+ namespace: hanzo
 spec:
-  project: my-service
-  environment: production
-  syncInterval: 5m
-  secretRef:
-    name: my-service-secrets
-  secrets:
-    - DATABASE_URL
-    - API_KEY
-    - JWT_SECRET
+ project: my-service
+ environment: production
+ syncInterval: 5m
+ secretRef:
+ name: my-service-secrets
+ secrets:
+ - DATABASE_URL
+ - API_KEY
+ - JWT_SECRET
 ```
 
 ## Universe directory structure
 
 ```
 universe/infra/k8s/
-  namespace.yaml         # hanzo namespace
-  cluster-issuer.yaml    # Let's Encrypt issuer
-  platform-ingress.yaml  # Platform-level ingress
-  rbac/                  # RBAC for service accounts
-  base/                  # Shared base manifests
-  # --- Services ---
-  app/                   # hanzo.app
-  billing/               # billing.hanzo.ai
-  bot/                   # bot gateway
-  chat/                  # chat.hanzo.ai
-  cloud/                 # cloud.hanzo.ai (Casibase)
-  commerce/              # commerce API
-  console/               # console.hanzo.ai (Langfuse)
-  dns/                   # CoreDNS
-  flow/                  # workflow builder
-  gateway/               # API gateway (KrakenD)
-  iam/                   # hanzo.id (Casdoor)
-  kms/                   # kms.hanzo.ai (Infisical)
-  monitoring/            # Prometheus/Grafana
-  o11y/                  # SigNoz observability
-  paas/                  # platform.hanzo.ai
-  registry/              # container registry
-  search/                # search service
-  sql/                   # PostgreSQL + ZAP sidecar
-  storage/               # MinIO
-  team/                  # hanzo.team
-  vector/                # vector DB
-  zen/                   # Zen model serving
-  zt/                    # zero-trust (OpenZiti)
-  # ... 40+ service directories
+ namespace.yaml # hanzo namespace
+ cluster-issuer.yaml # Let's Encrypt issuer
+ platform-ingress.yaml # Platform-level ingress
+ rbac/ # RBAC for service accounts
+ base/ # Shared base manifests
+ # --- Services ---
+ app/ # hanzo.app
+ billing/ # billing.hanzo.ai
+ bot/ # bot gateway
+ chat/ # chat.hanzo.ai
+ cloud/ # cloud.hanzo.ai (Casibase)
+ commerce/ # commerce API
+ console/ # console.hanzo.ai (Langfuse)
+ dns/ # CoreDNS
+ flow/ # workflow builder
+ gateway/ # API gateway (KrakenD)
+ iam/ # hanzo.id (Hanzo IAM)
+ kms/ # kms.hanzo.ai (Hanzo KMS)
+ monitoring/ # Prometheus/Grafana
+ o11y/ # SigNoz observability
+ paas/ # platform.hanzo.ai
+ registry/ # container registry
+ search/ # search service
+ sql/ # PostgreSQL + ZAP sidecar
+ storage/ # MinIO
+ team/ # hanzo.team
+ vector/ # vector DB
+ zen/ # Zen model serving
+ zt/ # zero-trust (OpenZiti)
+ # ... 40+ service directories
 ```
 
 ## Cluster topology

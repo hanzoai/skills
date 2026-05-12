@@ -121,11 +121,11 @@ make build
 
 # Datastore mode (ClickHouse sidecar)
 ZAP_USER=default ZAP_DATABASE=default \
-  ./bin/zap --mode datastore --backend localhost:9000
+ ./bin/zap --mode datastore --backend localhost:9000
 
 # DocumentDB mode (MongoDB/FerretDB sidecar)
 ZAP_DATABASE=hanzo \
-  ./bin/zap --mode documentdb --backend localhost:27017
+ ./bin/zap --mode documentdb --backend localhost:27017
 ```
 
 ## K8s sidecar deployment
@@ -135,17 +135,17 @@ ZAP runs as a sidecar in a StatefulSet, not a standalone Deployment:
 ```yaml
 # In the sql StatefulSet
 containers:
-  - name: postgres
-    image: ghcr.io/hanzoai/sql:latest
-  - name: zap
-    image: ghcr.io/hanzoai/zap:latest
-    args: ["--mode", "sql", "--backend", "localhost:5432"]
-    ports:
-      - containerPort: 9651
-    livenessProbe:
-      httpGet:
-        path: /health
-        port: 9651
+ - name: postgres
+ image: ghcr.io/hanzoai/sql:latest
+ - name: zap
+ image: ghcr.io/hanzoai/zap:latest
+ args: ["--mode", "sql", "--backend", "localhost:5432"]
+ ports:
+ - containerPort: 9651
+ livenessProbe:
+ httpGet:
+ path: /health
+ port: 9651
 ```
 
 ## Wire format
