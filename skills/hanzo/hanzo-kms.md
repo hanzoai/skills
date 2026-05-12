@@ -227,6 +227,29 @@ jobs:
 | Token key mismatch | Custom bootstrap template | Set `additionalOrganizationsTokenSecretKey` |
 | HSM connection failed | Wrong PKCS#11 path | Verify `HSM_LIBRARY_PATH` and slot number |
 
+## OnyxPlus consumer
+
+OnyxPlus (`github.com/onyx-plus/*`) reads its runtime secrets from the
+shared `liquid-kms` instance over ZAP (binary protocol, TCP 9999).
+
+**Secret paths**:
+```
+secret/data/onyxplus/{env}/onyx_signing_key   # secp256k1 ECDSA, ERC-735 signer
+secret/data/onyxplus/{env}/iam_client_secret  # onyxplus-onyxd OAuth2 secret
+secret/data/onyxplus/{env}/mpc_webhook_secret # HMAC for inbound MPC callbacks
+```
+
+**Auth**: same IAM JWKS that gates BD/ATS/TA. The `onyxplus-onyxd`
+IAM app issues a JWT with `aud=onyxplus-onyxd,liquidity-kms`; KMS
+validates `iss` byte-for-byte and `aud ∈ KMS_EXPECTED_AUDIENCE`.
+
+**Boot path**: `onyxd/secrets.go::loadFromKMS` dials `KMS_ZAP_ADDR`,
+reads the three secrets above, populates process env. CrashLoops if
+KMS unreachable — no plaintext fallback in production.
+
+Companion docs: `~/work/onyxplus/internal/content/docs/kms.mdx`,
+`~/work/onyxplus/papers/onyx-plus-kms/onyx-plus-kms.pdf`.
+
 ## Related Skills
 
 - `hanzo/hanzo-id.md` -- IAM (KMS uses IAM for user auth)
@@ -234,10 +257,11 @@ jobs:
 - `hanzo/hanzo-platform.md` -- PaaS (uses KMS for secrets)
 - `hanzo/hanzo-k8s.md` -- K8s infrastructure
 - `hanzo/hanzo-deploy.md` -- Deployment workflow
+- `liquidity/liquidity-universe.md` -- Liquidity deployment + KMS env
 
 ---
 
-**Last Updated**: 2026-03-23
+**Last Updated**: 2026-05-12
 **Category**: Hanzo Ecosystem
 **Related**: secrets, kms, infisical, encryption, security, vault
 **Prerequisites**: API key concepts, K8s basics
