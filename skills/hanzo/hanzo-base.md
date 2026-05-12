@@ -348,6 +348,25 @@ import { useBaseQuery } from '@hanzoai/base-react';
 | JS hooks not executing | Wrong hooks directory | Use `--hooksDir=./hz_hooks` flag |
 | Modernc version mismatch | Dependency conflict | Check `modernc_versions_check.go` logs |
 
+## OnyxPlus consumer
+
+`onyxd` (`github.com/onyx-plus/onyxd`) embeds Hanzo Base as its backend
+framework. The daemon uses:
+
+- `base.NewWithConfig({DefaultDataDir: "/data/onyxd"})` to bootstrap
+- `migratecmd` plugin for auto-migration on `enrollments` /
+  `attestations` collections
+- `platform` plugin to wire IAM + KMS endpoints
+- Custom routes mounted on `app.OnServe().BindFunc(...)` for
+  `/v1/onyxplus/*` and `/v1/onyx/claims/{enrollmentId}`
+- Superuser command + custom CLI subcommands via `basecmd`
+
+Base's embedded SQLite is the production store (Postgres retired per
+`internal@00f79c5`). Realtime subscriptions are not used today;
+collection rows are written through standard `app.Save(rec)` calls.
+
+See: `~/work/onyxplus/onyxd/main.go` and `onyx-plus/onyx-plus-onyxd.md`.
+
 ## Related Skills
 
 - `hanzo/hanzo-platform.md` - PaaS platform (uses Base platform plugin)
@@ -356,10 +375,11 @@ import { useBaseQuery } from '@hanzoai/base-react';
 - `hanzo/js-sdk.md` - JavaScript SDK ecosystem
 - `hanzo/hanzo-id.md` - IAM (used by platform plugin)
 - `hanzo/hanzo-kms.md` - Secret management (used by platform plugin)
+- `onyx-plus/onyx-plus-onyxd.md` - OnyxPlus daemon (embeds Base)
 
 ---
 
-**Last Updated**: 2026-03-13
+**Last Updated**: 2026-05-12
 **Category**: Hanzo Ecosystem
 **Related**: backend, baas, go, realtime, crdt, auth, admin
 **Prerequisites**: Go 1.24+, basic REST API knowledge
