@@ -630,7 +630,7 @@ def rotate_all_user_secrets(user_id, event):
 - Credentials expire automatically
 - Least privilege (scoped to specific operations)
 
-**HashiCorp Vault Example**:
+**external secret manager Example**:
 
 ```python
 import hvac
@@ -968,7 +968,7 @@ resource "azurerm_eventgrid_event_subscription" "secret_near_expiry" {
 }
 ```
 
-### HashiCorp Vault
+### external secret manager
 
 **Features**:
 - Dynamic secrets (temporary credentials)
@@ -2329,7 +2329,7 @@ api_key = os.environ['STRIPE_API_KEY']
 
 **All secrets must be encrypted**:
 - AWS Secrets Manager: KMS encryption (automatic)
-- HashiCorp Vault: Transit backend or KMS
+- external secret manager: Transit backend or KMS
 - Kubernetes: EncryptionConfiguration
 
 ```yaml
@@ -2506,7 +2506,7 @@ def rotate_with_rollback(secret_name):
 - **AWS Secrets Manager**: https://docs.aws.amazon.com/secretsmanager/
 - **Google Cloud Secret Manager**: https://cloud.google.com/secret-manager/docs
 - **Azure Key Vault**: https://docs.microsoft.com/azure/key-vault/
-- **HashiCorp Vault**: https://www.vaultproject.io/docs
+- **external secret manager**: https://www.vaultproject.io/docs
 - **Kubernetes Secrets**: https://kubernetes.io/docs/concepts/configuration/secret/
 
 ### Tools and Libraries

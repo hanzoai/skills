@@ -52,25 +52,25 @@ cargo build --release
 
 # Index documents
 curl -X POST http://localhost:7700/indexes/movies/documents \
-  -H "Authorization: Bearer YOUR_KEY" \
-  -H "Content-Type: application/json" \
-  --data-binary @movies.json
+ -H "Authorization: Bearer YOUR_KEY" \
+ -H "Content-Type: application/json" \
+ --data-binary @movies.json
 
 # Search
 curl http://localhost:7700/indexes/movies/search \
-  -H "Authorization: Bearer YOUR_KEY" \
-  -d '{"q": "batman", "limit": 10}'
+ -H "Authorization: Bearer YOUR_KEY" \
+ -d '{"q": "batman", "limit": 10}'
 ```
 
 ### Configuration
 
 ```bash
 # Environment variables
-MEILI_MASTER_KEY=your-master-key    # API authentication
-MEILI_DB_PATH=./data.ms             # Data directory
-MEILI_HTTP_ADDR=0.0.0.0:7700       # Listen address
-MEILI_ENV=production                # production or development
-MEILI_MAX_INDEXING_MEMORY=2Gi      # Indexing memory limit
+MEILI_MASTER_KEY=your-master-key # API authentication
+MEILI_DB_PATH=./data.ms # Data directory
+MEILI_HTTP_ADDR=0.0.0.0:7700 # Listen address
+MEILI_ENV=production # production or development
+MEILI_MAX_INDEXING_MEMORY=2Gi # Indexing memory limit
 ```
 
 ### Vector Search
@@ -78,22 +78,22 @@ MEILI_MAX_INDEXING_MEMORY=2Gi      # Indexing memory limit
 ```bash
 # Create index with embedder
 curl -X PATCH http://localhost:7700/indexes/docs/settings \
-  -H "Authorization: Bearer YOUR_KEY" \
-  -d '{
-    "embedders": {
-      "default": {
-        "source": "openAi",
-        "apiKey": "sk-...",
-        "model": "text-embedding-3-small",
-        "dimensions": 1536
-      }
-    }
-  }'
+ -H "Authorization: Bearer YOUR_KEY" \
+ -d '{
+ "embedders": {
+ "default": {
+ "source": "openAi",
+ "apiKey": "sk-...",
+ "model": "text-embedding-3-small",
+ "dimensions": 1536
+ }
+ }
+ }'
 
 # Hybrid search (keyword + vector)
 curl http://localhost:7700/indexes/docs/search \
-  -H "Authorization: Bearer YOUR_KEY" \
-  -d '{"q": "how to deploy", "hybrid": {"semanticRatio": 0.5}}'
+ -H "Authorization: Bearer YOUR_KEY" \
+ -d '{"q": "how to deploy", "hybrid": {"semanticRatio": 0.5}}'
 ```
 
 ## Workspace Crates
@@ -115,9 +115,9 @@ Key crates in the Rust workspace:
 
 ```bash
 docker run -p 7700:7700 \
-  -v $(pwd)/meili_data:/meili_data \
-  -e MEILI_MASTER_KEY=YOUR_KEY \
-  ghcr.io/hanzoai/search:latest
+ -v $(pwd)/meili_data:/meili_data \
+ -e MEILI_MASTER_KEY=YOUR_KEY \
+ ghcr.io/hanzoai/search:latest
 ```
 
 ## Related Skills

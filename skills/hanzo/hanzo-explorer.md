@@ -93,30 +93,30 @@ mix phx.server
 
 ```
 hanzoai/explorer/
-  apps/                         Umbrella Elixir apps
-    block_scout_web/            Phoenix web app (API + UI)
-    ethereum_jsonrpc/           JSON-RPC client for EVM nodes
-    explorer/                   Core data models + indexing logic
-    indexer/                    Blockchain indexer (blocks, txs, tokens)
-    nft_media_handler/          NFT media processing
-    utils/                      Shared utilities
-  config/                       Elixir configuration
-  docker-compose/               Generic Docker configs
-    docker-compose.yml          Standard setup (Postgres, Redis, backend, frontend, nginx)
-    erigon.yml                  Erigon JSON-RPC client config
-    geth.yml                    Geth JSON-RPC client config
-    hardhat-network.yml         HardHat dev network config
-    microservices.yml           Stats, visualizer, sig-provider
-    envs/                       Environment variable files
-  docker-luxnet/                Lux Network specific configs
-    explorer.yml                Lux mainnet explorer compose
-    microservices.yml           Lux microservices compose
-    services/                   Service definitions
-  docker-testnet/               Testnet configurations
-  docker/                       Dockerfile and build configs
-  rel/                          Elixir release configuration
-  bin/                          Helper scripts
-  mix.exs                       Umbrella project definition
+ apps/ Umbrella Elixir apps
+ block_scout_web/ Phoenix web app (API + UI)
+ ethereum_jsonrpc/ JSON-RPC client for EVM nodes
+ explorer/ Core data models + indexing logic
+ indexer/ Blockchain indexer (blocks, txs, tokens)
+ nft_media_handler/ NFT media processing
+ utils/ Shared utilities
+ config/ Elixir configuration
+ docker-compose/ Generic Docker configs
+ docker-compose.yml Standard setup (Postgres, Redis, backend, frontend, nginx)
+ erigon.yml Erigon JSON-RPC client config
+ geth.yml Geth JSON-RPC client config
+ hardhat-network.yml HardHat dev network config
+ microservices.yml Stats, visualizer, sig-provider
+ envs/ Environment variable files
+ docker-luxnet/ Lux Network specific configs
+ explorer.yml Lux mainnet explorer compose
+ microservices.yml Lux microservices compose
+ services/ Service definitions
+ docker-testnet/ Testnet configurations
+ docker/ Dockerfile and build configs
+ rel/ Elixir release configuration
+ bin/ Helper scripts
+ mix.exs Umbrella project definition
 ```
 
 ### Umbrella Apps

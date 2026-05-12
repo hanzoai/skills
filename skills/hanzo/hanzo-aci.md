@@ -122,18 +122,18 @@ errors = linter.lint("src/main.py")
 
 ```
 ┌─────────────────────────────────────────────┐
-│              hanzo-dev CLI                    │
-│  (unified entry point)                       │
+│ hanzo-dev CLI │
+│ (unified entry point) │
 ├──────────┬──────────────┬───────────────────┤
-│  serve   │    edit      │     index         │
-│  (MCP)   │  (ACI)      │   (LocAgent)      │
+│ serve │ edit │ index │
+│ (MCP) │ (ACI) │ (LocAgent) │
 └────┬─────┴──────┬───────┴────────┬──────────┘
-     │            │                │
+ │ │ │
 ┌────▼────┐ ┌────▼──────────┐ ┌───▼──────────┐
-│hanzo-mcp│ │ hanzo_aci/    │ │ indexing/     │
-│ server  │ │  editor/      │ │  locagent/   │
-│         │ │  linter/      │ │   tools.py   │
-│         │ │  utils/       │ │   repo/      │
+│hanzo-mcp│ │ hanzo_aci/ │ │ indexing/ │
+│ server │ │ editor/ │ │ locagent/ │
+│ │ │ linter/ │ │ tools.py │
+│ │ │ utils/ │ │ repo/ │
 └─────────┘ └───────────────┘ └──────────────┘
 ```
 
@@ -185,15 +185,15 @@ Code intelligence and search.
 ### CLI Commands
 
 ```
-hanzo-dev serve [--transport stdio|sse]    # Start MCP server (default)
-hanzo-dev edit <file> [--line N]           # Open file in ACI editor
-hanzo-dev index <path> [--output file]     # Index a codebase
+hanzo-dev serve [--transport stdio|sse] # Start MCP server (default)
+hanzo-dev edit <file> [--line N] # Open file in ACI editor
+hanzo-dev index <path> [--output file] # Index a codebase
 
 Common flags:
-  --allow-path <path>       Allow access to specific paths
-  --enable-all-tools        Enable all available tools
-  --enable-agent-tool       Enable agent delegation tool
-  --log-level DEBUG|INFO|WARNING|ERROR
+ --allow-path <path> Allow access to specific paths
+ --enable-all-tools Enable all available tools
+ --enable-agent-tool Enable agent delegation tool
+ --log-level DEBUG|INFO|WARNING|ERROR
 ```
 
 ## Directory structure
@@ -201,51 +201,51 @@ Common flags:
 ```
 aci/
 ├── hanzo_aci/
-│   ├── __init__.py            # Exports file_editor, FileCache
-│   ├── cli.py                 # hanzo-dev CLI (v0.3.1)
-│   ├── editor/
-│   │   ├── __init__.py        # Editor module exports
-│   │   ├── editor.py          # FileEditor class (26KB)
-│   │   ├── file_cache.py      # File content caching
-│   │   ├── history.py         # Undo/redo history
-│   │   ├── encoding.py        # Charset detection
-│   │   ├── exceptions.py      # EditorError types
-│   │   ├── prompts.py         # Agent prompt templates
-│   │   ├── results.py         # Structured results
-│   │   ├── config.py          # Editor configuration
-│   │   └── md_converter.py    # Document-to-Markdown (41KB)
-│   ├── linter/
-│   │   ├── __init__.py        # Linter exports
-│   │   ├── linter.py          # Main linter
-│   │   ├── base.py            # Base interface
-│   │   └── impl/              # Language-specific linters
-│   ├── indexing/
-│   │   └── locagent/
-│   │       ├── tools.py       # Code indexing (46KB)
-│   │       ├── results.py     # Search results
-│   │       ├── compress.py    # Code compression
-│   │       ├── utils.py       # Utilities
-│   │       └── repo/          # Repo analysis
-│   └── utils/
-│       ├── diff.py            # Diff generation
-│       ├── shell.py           # Shell execution
-│       └── logger.py          # Logging setup
+│ ├── __init__.py # Exports file_editor, FileCache
+│ ├── cli.py # hanzo-dev CLI (v0.3.1)
+│ ├── editor/
+│ │ ├── __init__.py # Editor module exports
+│ │ ├── editor.py # FileEditor class (26KB)
+│ │ ├── file_cache.py # File content caching
+│ │ ├── history.py # Undo/redo history
+│ │ ├── encoding.py # Charset detection
+│ │ ├── exceptions.py # EditorError types
+│ │ ├── prompts.py # Agent prompt templates
+│ │ ├── results.py # Structured results
+│ │ ├── config.py # Editor configuration
+│ │ └── md_converter.py # Document-to-Markdown (41KB)
+│ ├── linter/
+│ │ ├── __init__.py # Linter exports
+│ │ ├── linter.py # Main linter
+│ │ ├── base.py # Base interface
+│ │ └── impl/ # Language-specific linters
+│ ├── indexing/
+│ │ └── locagent/
+│ │ ├── tools.py # Code indexing (46KB)
+│ │ ├── results.py # Search results
+│ │ ├── compress.py # Code compression
+│ │ ├── utils.py # Utilities
+│ │ └── repo/ # Repo analysis
+│ └── utils/
+│ ├── diff.py # Diff generation
+│ ├── shell.py # Shell execution
+│ └── logger.py # Logging setup
 ├── tests/
-│   ├── unit/                  # Unit tests
-│   ├── integration/           # Integration tests
-│   └── data/                  # Test fixtures
+│ ├── unit/ # Unit tests
+│ ├── integration/ # Integration tests
+│ └── data/ # Test fixtures
 ├── dev_config/
-│   └── python/
-│       └── .pre-commit-config.yaml
+│ └── python/
+│ └── .pre-commit-config.yaml
 ├── .github/workflows/
-│   ├── py-unit-tests.yml      # Unit test CI
-│   ├── py-intg-tests.yml      # Integration test CI
-│   ├── lint.yml               # Ruff lint CI
-│   ├── pypi-release.yml       # PyPI publish on release
-│   └── hanzo-resolver.yml     # Issue resolver
-├── pyproject.toml             # Poetry config, v1.0.0
+│ ├── py-unit-tests.yml # Unit test CI
+│ ├── py-intg-tests.yml # Integration test CI
+│ ├── lint.yml # Ruff lint CI
+│ ├── pypi-release.yml # PyPI publish on release
+│ └── hanzo-resolver.yml # Issue resolver
+├── pyproject.toml # Poetry config, v1.0.0
 ├── poetry.lock
-├── Makefile                   # lint, install-pre-commit-hooks
+├── Makefile # lint, install-pre-commit-hooks
 └── pytest.ini
 ```
 

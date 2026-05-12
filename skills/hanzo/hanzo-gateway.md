@@ -31,7 +31,7 @@ API gateway for all Hanzo services. KrakenD-based with Go auth middleware.
 ## Headers (2026-03-28)
 - Gateway sets: X-User-Id, X-Org-Id, X-User-Email (unified, no IAM prefix)
 - KrakenD propagates same headers via propagate_claims
-- JWT claims: extracts `sub` (user ID), `owner` (org), `email`, with fallback to `preferred_username`/`name` when `sub` is empty (Casdoor compatibility)
+- JWT claims: extracts `sub` (user ID), `owner` (org), `email`, with fallback to `preferred_username`/`name` when `sub` is empty (Hanzo IAM compatibility)
 - Billing check: GET /api/v1/billing/balance on commerce (fail-open)
 
 ## Health Endpoint (2026-03-27)

@@ -1734,7 +1734,7 @@ import os
 CLIENT_SECRET = os.environ['OAUTH_CLIENT_SECRET']
 
 # OR use secret management service
-# AWS Secrets Manager, HashiCorp Vault, etc.
+# AWS Secrets Manager, external secret manager, etc.
 ```
 
 **Logging**:

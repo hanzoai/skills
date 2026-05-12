@@ -233,7 +233,7 @@ cat skills/hanzo/hanzo-orm.md          # Go generics ORM
 ### Identity & Security
 ```bash
 cat skills/hanzo/hanzo-id.md           # Identity & OAuth2/OIDC
-cat skills/hanzo/hanzo-kms.md          # Secret management (Infisical)
+cat skills/hanzo/hanzo-kms.md          # Secret management (Hanzo KMS)
 cat skills/hanzo/hanzo-vault.md        # PCI card tokenization
 ```
 

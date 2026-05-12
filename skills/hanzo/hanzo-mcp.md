@@ -82,34 +82,34 @@ The core tool set uses action-based routing where each tool handles multiple ope
 import { MCPServer, Tool, Resource } from '@hanzo/mcp'
 
 const inferTool: Tool = {
-  name: 'hanzo_infer',
-  description: 'Run inference on Hanzo LLM Gateway',
-  parameters: {
-    model: { type: 'string', required: true },
-    prompt: { type: 'string', required: true },
-    temperature: { type: 'number', default: 0.7 }
-  },
-  async execute({ model, prompt, temperature }) {
-    const response = await fetch('https://api.hanzo.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.HANZO_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature
-      })
-    })
-    return await response.json()
-  }
+ name: 'hanzo_infer',
+ description: 'Run inference on Hanzo LLM Gateway',
+ parameters: {
+ model: { type: 'string', required: true },
+ prompt: { type: 'string', required: true },
+ temperature: { type: 'number', default: 0.7 }
+ },
+ async execute({ model, prompt, temperature }) {
+ const response = await fetch('https://api.hanzo.ai/v1/chat/completions', {
+ method: 'POST',
+ headers: {
+ 'Authorization': `Bearer ${process.env.HANZO_API_KEY}`,
+ 'Content-Type': 'application/json'
+ },
+ body: JSON.stringify({
+ model,
+ messages: [{ role: 'user', content: prompt }],
+ temperature
+ })
+ })
+ return await response.json()
+ }
 }
 
 const server = new MCPServer({
-  name: 'hanzo-node-mcp',
-  version: '1.0.0',
-  tools: [inferTool]
+ name: 'hanzo-node-mcp',
+ version: '1.0.0',
+ tools: [inferTool]
 })
 
 await server.listen(8081)
@@ -121,10 +121,10 @@ await server.listen(8081)
 import { MCPClient } from '@hanzo/mcp'
 
 const client = new MCPClient({
-  servers: [
-    { name: 'hanzo-node', url: 'http://localhost:8081' },
-    { name: 'hanzo-db', url: 'http://localhost:8082' }
-  ]
+ servers: [
+ { name: 'hanzo-node', url: 'http://localhost:8081' },
+ { name: 'hanzo-db', url: 'http://localhost:8082' }
+ ]
 })
 
 await client.connect()
@@ -134,8 +134,8 @@ const tools = await client.listTools()
 
 // Call a tool
 const result = await client.callTool('hanzo_infer', {
-  model: 'zen-70b',
-  prompt: 'Explain Rust ownership'
+ model: 'zen-70b',
+ prompt: 'Explain Rust ownership'
 })
 ```
 
@@ -167,12 +167,12 @@ hanzo-mcp install-desktop
 
 # This adds to ~/Library/Application Support/Claude/claude_desktop_config.json:
 {
-  "mcpServers": {
-    "hanzo": {
-      "command": "hanzo-mcp",
-      "args": ["serve"]
-    }
-  }
+ "mcpServers": {
+ "hanzo": {
+ "command": "hanzo-mcp",
+ "args": ["serve"]
+ }
+ }
 }
 ```
 
@@ -182,40 +182,40 @@ hanzo-mcp install-desktop
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hanzo-mcp
-  namespace: hanzo
+ name: hanzo-mcp
+ namespace: hanzo
 spec:
-  replicas: 3
-  template:
-    spec:
-      containers:
-        - name: mcp-server
-          image: ghcr.io/hanzoai/mcp:latest
-          ports:
-            - containerPort: 8081
-          env:
-            - name: HANZO_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: mcp-secrets
-                  key: HANZO_API_KEY
+ replicas: 3
+ template:
+ spec:
+ containers:
+ - name: mcp-server
+ image: ghcr.io/hanzoai/mcp:latest
+ ports:
+ - containerPort: 8081
+ env:
+ - name: HANZO_API_KEY
+ valueFrom:
+ secretKeyRef:
+ name: mcp-secrets
+ key: HANZO_API_KEY
 ```
 
 ## Security
 
 ```typescript
 const server = new MCPServer({
-  name: 'hanzo-node',
-  auth: {
-    type: 'bearer',
-    validate: async (token) => {
-      return await validateJWT(token)
-    }
-  },
-  rateLimits: {
-    'hanzo_infer': { windowMs: 60000, max: 10 }
-  },
-  tools: [...]
+ name: 'hanzo-node',
+ auth: {
+ type: 'bearer',
+ validate: async (token) => {
+ return await validateJWT(token)
+ }
+ },
+ rateLimits: {
+ 'hanzo_infer': { windowMs: 60000, max: 10 }
+ },
+ tools: [...]
 })
 ```
 

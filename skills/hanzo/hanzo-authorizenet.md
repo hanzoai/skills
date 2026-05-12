@@ -62,56 +62,56 @@ Repo: `hanzoai/authorizenet-go` (3 stars). Default branch: `master`.
 package main
 
 import (
-    "fmt"
-    "os"
+ "fmt"
+ "os"
 
-    authorizenet "github.com/hanzoai/authorizenet-go"
+ authorizenet "github.com/hanzoai/authorizenet-go"
 )
 
 func main() {
-    client := authorizenet.New(
-        os.Getenv("AUTHORIZENET_API_NAME"),
-        os.Getenv("AUTHORIZENET_API_KEY"),
-        true, // testMode
-    )
+ client := authorizenet.New(
+ os.Getenv("AUTHORIZENET_API_NAME"),
+ os.Getenv("AUTHORIZENET_API_KEY"),
+ true, // testMode
+ )
 
-    // Verify connection
-    connected, err := client.IsConnected()
-    if err != nil || !connected {
-        fmt.Println("Failed to connect:", err)
-        os.Exit(1)
-    }
+ // Verify connection
+ connected, err := client.IsConnected()
+ if err != nil || !connected {
+ fmt.Println("Failed to connect:", err)
+ os.Exit(1)
+ }
 
-    // Charge a card
-    txn := authorizenet.NewTransaction{
-        Amount: "15.90",
-        CreditCard: authorizenet.CreditCard{
-            CardNumber:     "4007000000027",
-            ExpirationDate: "10/27",
-            CardCode:       "123",
-        },
-        BillTo: &authorizenet.BillTo{
-            FirstName: "Jane",
-            LastName:  "Doe",
-            Address:   "123 Main St",
-            City:      "Los Angeles",
-            State:     "CA",
-            Zip:       "90001",
-            Country:   "USA",
-        },
-    }
+ // Charge a card
+ txn := authorizenet.NewTransaction{
+ Amount: "15.90",
+ CreditCard: authorizenet.CreditCard{
+ CardNumber: "4007000000027",
+ ExpirationDate: "10/27",
+ CardCode: "123",
+ },
+ BillTo: &authorizenet.BillTo{
+ FirstName: "Jane",
+ LastName: "Doe",
+ Address: "123 Main St",
+ City: "Los Angeles",
+ State: "CA",
+ Zip: "90001",
+ Country: "USA",
+ },
+ }
 
-    res, err := txn.Charge(*client)
-    if err != nil {
-        fmt.Println("Error:", err)
-        os.Exit(1)
-    }
+ res, err := txn.Charge(*client)
+ if err != nil {
+ fmt.Println("Error:", err)
+ os.Exit(1)
+ }
 
-    if res.Approved() {
-        fmt.Println("Approved! Transaction ID:", res.TransactionID())
-    } else {
-        fmt.Println("Declined:", res.Response.Errors)
-    }
+ if res.Approved() {
+ fmt.Println("Approved! Transaction ID:", res.TransactionID())
+ } else {
+ fmt.Println("Declined:", res.Response.Errors)
+ }
 }
 ```
 
@@ -121,55 +121,55 @@ func main() {
 
 ```
 authorizenet.New(name, key, testMode) -> *Client
-    |
-    |-- Client.IsConnected()
-    |-- Client.GetMerchantDetails()
-    |-- Client.GetProfileIds()
-    |-- Client.GetPaymentProfileIds()
-    |-- Client.SubscriptionList(search)
-    |-- Client.UnsettledBatchList()
-    |-- Client.UnSettledBatch()
-    |
-    NewTransaction (payment operations)
-    |-- txn.Charge(client)           # authCaptureTransaction
-    |-- txn.AuthOnly(client)         # authOnlyTransaction
-    |-- txn.Refund(client)           # refundTransaction
-    |-- txn.ChargeProfile(customer, client)
-    |
-    PreviousTransaction (post-auth operations)
-    |-- prev.Capture(client)         # priorAuthCaptureTransaction
-    |-- prev.Void(client)            # voidTransaction
-    |-- prev.Approve(client)         # approve held transaction
-    |-- prev.Decline(client)         # decline held transaction
-    |-- prev.Info(client)            # get transaction details
-    |
-    Profile (CIM customer profiles)
-    |-- profile.CreateProfile(client)
-    |-- profile.UpdateProfile(client)
-    |-- profile.UpdatePaymentProfile(client)
-    |-- profile.CreateShipping(client)
-    |-- profile.UpdateShippingProfile(client)
-    |
-    Customer (CIM queries)
-    |-- customer.Info(client)
-    |-- customer.Validate(client)
-    |-- customer.DeleteProfile(client)
-    |-- customer.DeletePaymentProfile(client)
-    |-- customer.DeleteShippingProfile(client)
-    |
-    Subscription (ARB)
-    |-- sub.Charge(client)
-    |-- sub.Update(client)
-    |
-    SetSubscription (ARB queries)
-    |-- setSub.Info(client)
-    |-- setSub.Status(client)
-    |-- setSub.Cancel(client)
-    |
-    Range (reporting)
-    |-- range.SettledBatch(client)
-    |-- range.Transactions(client)
-    |-- range.Statistics(client)
+ |
+ |-- Client.IsConnected()
+ |-- Client.GetMerchantDetails()
+ |-- Client.GetProfileIds()
+ |-- Client.GetPaymentProfileIds()
+ |-- Client.SubscriptionList(search)
+ |-- Client.UnsettledBatchList()
+ |-- Client.UnSettledBatch()
+ |
+ NewTransaction (payment operations)
+ |-- txn.Charge(client) # authCaptureTransaction
+ |-- txn.AuthOnly(client) # authOnlyTransaction
+ |-- txn.Refund(client) # refundTransaction
+ |-- txn.ChargeProfile(customer, client)
+ |
+ PreviousTransaction (post-auth operations)
+ |-- prev.Capture(client) # priorAuthCaptureTransaction
+ |-- prev.Void(client) # voidTransaction
+ |-- prev.Approve(client) # approve held transaction
+ |-- prev.Decline(client) # decline held transaction
+ |-- prev.Info(client) # get transaction details
+ |
+ Profile (CIM customer profiles)
+ |-- profile.CreateProfile(client)
+ |-- profile.UpdateProfile(client)
+ |-- profile.UpdatePaymentProfile(client)
+ |-- profile.CreateShipping(client)
+ |-- profile.UpdateShippingProfile(client)
+ |
+ Customer (CIM queries)
+ |-- customer.Info(client)
+ |-- customer.Validate(client)
+ |-- customer.DeleteProfile(client)
+ |-- customer.DeletePaymentProfile(client)
+ |-- customer.DeleteShippingProfile(client)
+ |
+ Subscription (ARB)
+ |-- sub.Charge(client)
+ |-- sub.Update(client)
+ |
+ SetSubscription (ARB queries)
+ |-- setSub.Info(client)
+ |-- setSub.Status(client)
+ |-- setSub.Cancel(client)
+ |
+ Range (reporting)
+ |-- range.SettledBatch(client)
+ |-- range.Transactions(client)
+ |-- range.Statistics(client)
 ```
 
 ### Client Initialization
@@ -193,63 +193,63 @@ client.Verbose = true
 All responses embed `MessagesResponse` which provides:
 
 ```go
-res.Ok()           // bool - ResultCode == "Ok"
-res.Approved()     // bool - ResponseCode == "1" or "4" (held)
-res.Held()         // bool - ResponseCode == "4"
+res.Ok() // bool - ResultCode == "Ok"
+res.Approved() // bool - ResponseCode == "1" or "4" (held)
+res.Held() // bool - ResponseCode == "4"
 res.TransactionID() // string
-res.AVS()          // AVS struct with avsResultCode, cvvResultCode, cavvResultCode
+res.AVS() // AVS struct with avsResultCode, cvvResultCode, cavvResultCode
 res.ErrorMessage() // string - first error message
-res.Message()      // string - first message text
+res.Message() // string - first message text
 ```
 
 ### Interval Helpers for Subscriptions
 
 ```go
-authorizenet.IntervalWeekly()      // every 7 days
-authorizenet.IntervalMonthly()     // every 1 month
-authorizenet.IntervalQuarterly()   // every 3 months
-authorizenet.IntervalYearly()      // every 365 days
-authorizenet.IntervalDays("15")    // every N days
-authorizenet.IntervalMonths("6")   // every N months
+authorizenet.IntervalWeekly() // every 7 days
+authorizenet.IntervalMonthly() // every 1 month
+authorizenet.IntervalQuarterly() // every 3 months
+authorizenet.IntervalYearly() // every 365 days
+authorizenet.IntervalDays("15") // every N days
+authorizenet.IntervalMonths("6") // every N months
 ```
 
 ### Time Helpers for Reporting
 
 ```go
-authorizenet.Now()          // current UTC time
-authorizenet.LastWeek()     // 1 day ago (note: misnamed, actually yesterday)
-authorizenet.LastMonth()    // 1 month ago
-authorizenet.LastYear()     // 1 year ago
-authorizenet.CurrentDate()  // "2006-01-02" formatted string
+authorizenet.Now() // current UTC time
+authorizenet.LastWeek() // 1 day ago (note: misnamed, actually yesterday)
+authorizenet.LastMonth() // 1 month ago
+authorizenet.LastYear() // 1 year ago
+authorizenet.CurrentDate() // "2006-01-02" formatted string
 ```
 
 ## Directory structure
 
 ```
 github.com/hanzoai/authorizenet-go/
-    authorizenet.go               # Client struct, New(), SendRequest(), SetHTTPClient(), AVS
-    payment_transactions.go       # NewTransaction (Charge, AuthOnly, Refund), PreviousTransaction
-                                  #   (Void, Capture), all payment types and request/response structs
-    transaction_responses.go      # Response helpers: Approved(), Ok(), Held(), TransactionID(), AVS()
-    customer_profile.go           # CIM: Profile CRUD, Customer CRUD, PaymentProfile, ShippingProfile
-    recurring_billing.go          # ARB: Subscription create/update/cancel/status/list
-    transaction_reporting.go      # Reporting: settled batches, unsettled, transaction details,
-                                  #   batch statistics, merchant details
-    fraud_management.go           # Unsettled batch list, approve/decline held transactions
-    time_references.go            # Time and interval helper functions
-    customer_profile_test.go      # CIM integration tests
-    payment_transactions_test.go  # Payment integration tests
-    recurring_billing_test.go     # ARB integration tests
-    transaction_reporting_test.go # Reporting integration tests
-    fraud_management_test.go      # Fraud management tests
-    xcleanup_test.go              # Test cleanup (runs last due to x prefix)
-    examples/
-        new_transaction/
-            main.go               # Example: charge + void
-    .travis.yml                   # CI config (Go 1.8)
-    .codeclimate.yml              # Code climate config
-    LICENSE                       # MIT
-    README.md                     # Full API documentation with examples
+ authorizenet.go # Client struct, New(), SendRequest(), SetHTTPClient(), AVS
+ payment_transactions.go # NewTransaction (Charge, AuthOnly, Refund), PreviousTransaction
+ # (Void, Capture), all payment types and request/response structs
+ transaction_responses.go # Response helpers: Approved(), Ok(), Held(), TransactionID(), AVS()
+ customer_profile.go # CIM: Profile CRUD, Customer CRUD, PaymentProfile, ShippingProfile
+ recurring_billing.go # ARB: Subscription create/update/cancel/status/list
+ transaction_reporting.go # Reporting: settled batches, unsettled, transaction details,
+ # batch statistics, merchant details
+ fraud_management.go # Unsettled batch list, approve/decline held transactions
+ time_references.go # Time and interval helper functions
+ customer_profile_test.go # CIM integration tests
+ payment_transactions_test.go # Payment integration tests
+ recurring_billing_test.go # ARB integration tests
+ transaction_reporting_test.go # Reporting integration tests
+ fraud_management_test.go # Fraud management tests
+ xcleanup_test.go # Test cleanup (runs last due to x prefix)
+ examples/
+ new_transaction/
+ main.go # Example: charge + void
+ .travis.yml # CI config (Go 1.8)
+ .codeclimate.yml # Code climate config
+ LICENSE # MIT
+ README.md # Full API documentation with examples
 ```
 
 ## API Coverage

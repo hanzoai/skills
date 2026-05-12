@@ -15,7 +15,7 @@ description:  -- biometric identity attestation product (). Repos, components, d
 - **Repo org**: `github.com/onyx-plus` (private, SSH host `github-hanzo-dev`)
 - **GCP**: `-{devnet,testnet,mainnet}` projects; clusters `dev`, `test`, `main` in `us-central1`
 - **Registry**: `us-docker.pkg.dev/-registry/onyx-plus/{name}:{semver}` -- separate from `liquidity-registry` and `ghcr.io/hanzoai`
-- **Auth**: shared Liquidity IAM (``, Casdoor fork) -- the `` org is a peer tenant
+- **Auth**: shared Liquidity IAM (``) -- the `` org is a peer tenant
 - **Secrets**: shared Liquidity KMS (``, ZapDB) under path `secret/data//{env}/*`
 - **MPC**: shared `-{0,1,2}` mesh; onyxd holds zero MPC authority -- BD → TA → MPC is the wallet provision path
 - **Daemon convention**: `<x>d` (`onyxd`, `hanzod`); no `luxd` in  context
@@ -51,21 +51,21 @@ description:  -- biometric identity attestation product (). Repos, components, d
 ## Decision tree
 
 ```
-Question                                  → Skill
---------                                  ---------
-"How does (orgID,userID) → wallet?"       → onyx-plus-mpc.md
-"How does onyxd read secrets?"            → onyx-plus-kms.md
-"How does the verify SPA authenticate?"   → onyx-plus-iam.md
-"What ERC-735 topics does onyxd issue?"   → onyx-plus-attestation.md
+Question → Skill
+-------- ---------
+"How does (orgID,userID) → wallet?" → onyx-plus-mpc.md
+"How does onyxd read secrets?" → onyx-plus-kms.md
+"How does the verify SPA authenticate?" → onyx-plus-iam.md
+"What ERC-735 topics does onyxd issue?" → onyx-plus-attestation.md
 "How do I bump onyxd from 0.2.2 to 0.2.3?"→ onyx-plus-deploy.md
-"What's in the admin dashboard?"          → onyx-plus-admin.md
-"How is the internal docs site gated?"    → onyx-plus-internal.md
-"Why is  better than Simplici?"   → onyx-plus.md
+"What's in the admin dashboard?" → onyx-plus-admin.md
+"How is the internal docs site gated?" → onyx-plus-internal.md
+"Why is  better than Simplici?" → onyx-plus.md
 ```
 
 ## Related skills
 
-- `hanzo/hanzo-iam.md` - IAM upstream (Casdoor fork)
+- `hanzo/hanzo-iam.md` - IAM upstream (Go/Beego)
 - `hanzo/hanzo-kms.md` - KMS upstream (ZapDB)
 - `hanzo/hanzo-mpc.md` - MPC upstream (CGGMP21 + FROST)
 - `hanzo/hanzo-base.md` - Backend framework onyxd embeds

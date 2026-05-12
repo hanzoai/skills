@@ -23,9 +23,9 @@ Hanzo Identity (`hanzoai/identity`) is a **decentralized identity (DID) registra
 ### DID format
 
 ```
-did:lux:alice      # W3C canonical format
-alice@lux.id       # Display format
-alice.lux.id       # Web subdomain
+did:lux:alice # W3C canonical format
+alice@lux.id # Display format
+alice.lux.id # Web subdomain
 ```
 
 ### Supported chains
@@ -69,36 +69,36 @@ alice.lux.id       # Web subdomain
 
 ```
 hanzoai/identity/
-  package.json              # identity-contracts 1.0.0
-  foundry.toml              # Foundry config (solc 0.8.31, via_ir)
-  server.js                 # Static file server (port 3100)
-  index.html                # Contract interaction UI
-  test-all.js               # Contract test suite
-  soul.md                   # Hanzo AI identity and values
-  playwright.config.js      # E2E test config
-  script/
-    DeployLocal.s.sol        # Forge deployment script (local)
-    deploy.sol               # Forge deployment script (production)
-  scripts/
-    deploy.js                # ethers.js deployment (generic)
-    deploy-local.js          # ethers.js deployment (Anvil)
-    deploy-final.js          # ethers.js deployment (mainnet)
-    deploy-with-cast.sh      # cast-based deployment (shell)
-    deploy-with-proxy.js     # Proxy deployment (upgradeable)
-    register-test-identities.js  # Register test DIDs
-    run-all-tests.sh         # Full test runner
-    run-with-ui.sh           # Start Anvil + UI together
-  app/                       # Next.js frontend
-    package.json             # @hanzo/identity-dapp 1.0.0
-    next.config.js
-    src/
-      app/                   # Next.js app router pages
-      components/            # React components
-      lib/                   # Contract interaction helpers
-      types/                 # TypeScript types
-    public/                  # Static assets
-  docs/                      # Documentation
-  tests/                     # Playwright e2e tests
+ package.json # identity-contracts 1.0.0
+ foundry.toml # Foundry config (solc 0.8.31, via_ir)
+ server.js # Static file server (port 3100)
+ index.html # Contract interaction UI
+ test-all.js # Contract test suite
+ soul.md # Hanzo AI identity and values
+ playwright.config.js # E2E test config
+ script/
+ DeployLocal.s.sol # Forge deployment script (local)
+ deploy.sol # Forge deployment script (production)
+ scripts/
+ deploy.js # ethers.js deployment (generic)
+ deploy-local.js # ethers.js deployment (Anvil)
+ deploy-final.js # ethers.js deployment (mainnet)
+ deploy-with-cast.sh # cast-based deployment (shell)
+ deploy-with-proxy.js # Proxy deployment (upgradeable)
+ register-test-identities.js # Register test DIDs
+ run-all-tests.sh # Full test runner
+ run-with-ui.sh # Start Anvil + UI together
+ app/ # Next.js frontend
+ package.json # @hanzo/identity-dapp 1.0.0
+ next.config.js
+ src/
+ app/ # Next.js app router pages
+ components/ # React components
+ lib/ # Contract interaction helpers
+ types/ # TypeScript types
+ public/ # Static assets
+ docs/ # Documentation
+ tests/ # Playwright e2e tests
 ```
 
 ## Dependencies
@@ -129,9 +129,9 @@ npm run dev
 # Anvil on port 8545, static server on port 3100
 
 # Or separately:
-npm run anvil                          # Local chain
-node scripts/deploy-local.js           # Deploy contracts
-npm run serve                          # Static UI on 3100
+npm run anvil # Local chain
+node scripts/deploy-local.js # Deploy contracts
+npm run serve # Static UI on 3100
 ```
 
 ### Frontend development
@@ -149,11 +149,11 @@ pnpm dev
 
 ```bash
 # Contract tests
-npm test                    # node test-all.js
+npm test # node test-all.js
 
 # E2E tests
-npm run test:e2e            # Playwright headless
-npm run test:e2e:headed     # Playwright with browser
+npm run test:e2e # Playwright headless
+npm run test:e2e:headed # Playwright with browser
 
 # Full suite
 npm run test:all
@@ -188,9 +188,9 @@ via_ir = true
 optimizer = true
 optimizer_runs = 200
 remappings = [
-    "@luxfi/standard/=node_modules/@luxfi/standard/contracts/",
-    "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
-    "@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/"
+ "@luxfi/standard/=node_modules/@luxfi/standard/contracts/",
+ "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
+ "@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/"
 ]
 ```
 
@@ -204,7 +204,7 @@ remappings = [
 
 ## Related Skills
 
-- `hanzo/hanzo-iam.md` -- Centralized IAM (hanzo.id, Casdoor-based), complementary to DID
+- `hanzo/hanzo-iam.md` -- Centralized IAM (hanzo.id, Hanzo IAM-based), complementary to DID
 - `hanzo/hanzo-id.md` -- Login UI for Hanzo IAM
 - `hanzo/hanzo-contracts.md` -- Smart contract patterns
 - `hanzo/hanzo-web3.md` -- Web3 integration

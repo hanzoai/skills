@@ -42,25 +42,25 @@ Hanzo Playground is a **Kubernetes-style control plane for AI bots**. Provides p
 ## Architecture
 
 ```
-                 app.hanzo.bot
-                      |
-               +------+------+
-               |             |
-           Web UI        REST API
-           (React)       (Go/Gin)
-               |             |
-               +------+------+
-                      |
-           +----------+----------+
-           |          |          |
-        Bot Nodes  Workflow    Memory
-        (registry) Engine     Scopes
-           |       (DAG)      (4 levels)
-           |          |          |
-      +----+----+    |     +----+----+
-      |    |    |    |     |    |    |
-    Python Go  TS   Job   Global Bot
-    SDK   SDK  SDK  Queue Session Run
+ app.hanzo.bot
+ |
+ +------+------+
+ | |
+ Web UI REST API
+ (React) (Go/Gin)
+ | |
+ +------+------+
+ |
+ +----------+----------+
+ | | |
+ Bot Nodes Workflow Memory
+ (registry) Engine Scopes
+ | (DAG) (4 levels)
+ | | |
+ +----+----+ | +----+----+
+ | | | | | | |
+ Python Go TS Job Global Bot
+ SDK SDK SDK Queue Session Run
 ```
 
 ## Core concepts
@@ -79,12 +79,12 @@ Compose multi-bot workflows with dependency tracking:
 
 ```json
 {
-  "name": "research-pipeline",
-  "steps": [
-    {"id": "search", "bot": "web-researcher", "skill": "search"},
-    {"id": "analyze", "bot": "analyst", "skill": "summarize", "depends": ["search"]},
-    {"id": "report", "bot": "writer", "skill": "generate", "depends": ["analyze"]}
-  ]
+ "name": "research-pipeline",
+ "steps": [
+ {"id": "search", "bot": "web-researcher", "skill": "search"},
+ {"id": "analyze", "bot": "analyst", "skill": "summarize", "depends": ["search"]},
+ {"id": "report", "bot": "writer", "skill": "generate", "depends": ["analyze"]}
+ ]
 }
 ```
 
@@ -111,15 +111,15 @@ from hanzo_playground import Bot, Skill
 
 @Skill(name="greet", description="Greet a user")
 async def greet(name: str) -> str:
-    return f"Hello, {name}!"
+ return f"Hello, {name}!"
 
 bot = Bot(
-    name="greeter",
-    control_plane="https://app.hanzo.bot",
-    skills=[greet],
+ name="greeter",
+ control_plane="https://app.hanzo.bot",
+ skills=[greet],
 )
 
-bot.run()  # Registers with control plane and starts serving
+bot.run() # Registers with control plane and starts serving
 ```
 
 ## Go SDK quickstart
@@ -128,20 +128,20 @@ bot.run()  # Registers with control plane and starts serving
 package main
 
 import (
-    playground "github.com/hanzoai/playground/sdk/go"
+ playground "github.com/hanzoai/playground/sdk/go"
 )
 
 func main() {
-    bot := playground.NewBot("greeter", playground.Config{
-        ControlPlane: "https://app.hanzo.bot",
-    })
+ bot := playground.NewBot("greeter", playground.Config{
+ ControlPlane: "https://app.hanzo.bot",
+ })
 
-    bot.RegisterSkill("greet", func(ctx playground.Context) (string, error) {
-        name := ctx.Param("name")
-        return fmt.Sprintf("Hello, %s!", name), nil
-    })
+ bot.RegisterSkill("greet", func(ctx playground.Context) (string, error) {
+ name := ctx.Param("name")
+ return fmt.Sprintf("Hello, %s!", name), nil
+ })
 
-    bot.Run()
+ bot.Run()
 }
 ```
 
@@ -154,13 +154,13 @@ The control plane can provision agents as:
 ```bash
 # Provision a new bot instance
 curl -X POST https://app.hanzo.bot/api/v1/bots \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -d '{
-    "name": "web-researcher",
-    "image": "ghcr.io/hanzoai/bot:latest",
-    "provisioner": "kubernetes",
-    "replicas": 1
-  }'
+ -H "Authorization: Bearer ${TOKEN}" \
+ -d '{
+ "name": "web-researcher",
+ "image": "ghcr.io/hanzoai/bot:latest",
+ "provisioner": "kubernetes",
+ "replicas": 1
+ }'
 ```
 
 ## K8s deployment
@@ -169,22 +169,22 @@ curl -X POST https://app.hanzo.bot/api/v1/bots \
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: playground
-  namespace: hanzo
+ name: playground
+ namespace: hanzo
 spec:
-  replicas: 2
-  template:
-    spec:
-      containers:
-        - name: playground
-          image: ghcr.io/hanzoai/playground:latest
-          ports:
-            - containerPort: 8080
-          env:
-            - name: DATABASE_URL
-              value: postgresql://playground:pass@postgres.hanzo.svc:5432/playground
-            - name: PLAYGROUND_MODE
-              value: cloud
+ replicas: 2
+ template:
+ spec:
+ containers:
+ - name: playground
+ image: ghcr.io/hanzoai/playground:latest
+ ports:
+ - containerPort: 8080
+ env:
+ - name: DATABASE_URL
+ value: postgresql://playground:pass@postgres.hanzo.svc:5432/playground
+ - name: PLAYGROUND_MODE
+ value: cloud
 ```
 
 ## Network policy

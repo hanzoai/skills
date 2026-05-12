@@ -71,22 +71,22 @@ docker compose up -d
 
 # Create a payment
 curl -X POST http://localhost:8080/payments/create \
-  -H "Content-Type: application/json" \
-  -H "api-key: dev_key" \
-  -d '{
-    "amount": 1000,
-    "currency": "USD",
-    "payment_method": "card",
-    "payment_method_data": {
-      "card": {
-        "card_number": "4242424242424242",
-        "card_exp_month": "12",
-        "card_exp_year": "2027",
-        "card_cvc": "123"
-      }
-    },
-    "connector": "stripe"
-  }'
+ -H "Content-Type: application/json" \
+ -H "api-key: dev_key" \
+ -d '{
+ "amount": 1000,
+ "currency": "USD",
+ "payment_method": "card",
+ "payment_method_data": {
+ "card": {
+ "card_number": "4242424242424242",
+ "card_exp_month": "12",
+ "card_exp_year": "2027",
+ "card_cvc": "123"
+ }
+ },
+ "connector": "stripe"
+ }'
 ```
 
 ### Local Development
@@ -111,13 +111,13 @@ cargo build --release --no-default-features --features release --features v1
 ### Architecture
 
 ```
-hanzo/commerce    Storefront, catalog, orders
-       |
-hanzo/payments    Payment routing (50+ processors)   <-- this service
-       |
-hanzo/treasury    Ledger, reconciliation, wallets
-       |
-lux/treasury      On-chain treasury, MPC/KMS wallets
+hanzo/commerce Storefront, catalog, orders
+ |
+hanzo/payments Payment routing (50+ processors) <-- this service
+ |
+hanzo/treasury Ledger, reconciliation, wallets
+ |
+lux/treasury On-chain treasury, MPC/KMS wallets
 ```
 
 ### Workspace Crates

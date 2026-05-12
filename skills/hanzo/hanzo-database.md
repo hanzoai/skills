@@ -38,11 +38,11 @@ Hanzo Database covers PostgreSQL (with pgvector), Redis, MongoDB, and MinIO conf
 | Service | Database | Host |
 |---------|----------|------|
 | `postgres.hanzo.svc` | — | Shared PostgreSQL instance |
-| ↳ | `iam` | Casdoor (hanzo.id) |
+| ↳ | `iam` | Hanzo IAM (hanzo.id) |
 | ↳ | `cloud` | Cloud dashboard |
 | ↳ | `console` | Observability |
 | ↳ | `hanzo_cloud` | Cloud API |
-| ↳ | `kms` | KMS/Infisical |
+| ↳ | `kms` | KMS/Hanzo KMS |
 | ↳ | `platform` | PaaS platform |
 
 ### lux-k8s Cluster
@@ -67,22 +67,22 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Create embeddings table
 CREATE TABLE embeddings (
-    id SERIAL PRIMARY KEY,
-    content TEXT NOT NULL,
-    embedding vector(1536),       -- OpenAI ada-002 dimensions
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMPTZ DEFAULT NOW()
+ id SERIAL PRIMARY KEY,
+ content TEXT NOT NULL,
+ embedding vector(1536), -- OpenAI ada-002 dimensions
+ metadata JSONB DEFAULT '{}',
+ created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- IVFFlat index (fast approximate search)
 CREATE INDEX ON embeddings
-    USING ivfflat (embedding vector_cosine_ops)
-    WITH (lists = 100);
+ USING ivfflat (embedding vector_cosine_ops)
+ WITH (lists = 100);
 
 -- HNSW index (better recall, more memory)
 CREATE INDEX ON embeddings
-    USING hnsw (embedding vector_cosine_ops)
-    WITH (m = 16, ef_construction = 64);
+ USING hnsw (embedding vector_cosine_ops)
+ WITH (m = 16, ef_construction = 64);
 ```
 
 ### Similarity Search
@@ -126,21 +126,21 @@ register_vector(conn)
 cur = conn.cursor()
 
 # Insert embedding
-embedding = np.random.rand(1536).astype(np.float32)  # Your actual embedding
+embedding = np.random.rand(1536).astype(np.float32) # Your actual embedding
 cur.execute(
-    "INSERT INTO embeddings (content, embedding, metadata) VALUES (%s, %s, %s)",
-    ("Hello world", embedding, '{"source": "docs"}')
+ "INSERT INTO embeddings (content, embedding, metadata) VALUES (%s, %s, %s)",
+ ("Hello world", embedding, '{"source": "docs"}')
 )
 
 # Similarity search
-query_vec = np.random.rand(1536).astype(np.float32)  # Your query embedding
+query_vec = np.random.rand(1536).astype(np.float32) # Your query embedding
 cur.execute(
-    "SELECT content, 1 - (embedding <=> %s) AS similarity "
-    "FROM embeddings ORDER BY embedding <=> %s LIMIT 5",
-    (query_vec, query_vec)
+ "SELECT content, 1 - (embedding <=> %s) AS similarity "
+ "FROM embeddings ORDER BY embedding <=> %s LIMIT 5",
+ (query_vec, query_vec)
 )
 for row in cur.fetchall():
-    print(f"{row[0]}: {row[1]:.3f}")
+ print(f"{row[0]}: {row[1]:.3f}")
 
 conn.commit()
 ```
@@ -149,8 +149,8 @@ conn.commit()
 
 ```go
 import (
-    "github.com/jackc/pgx/v5"
-    "github.com/pgvector/pgvector-go"
+ "github.com/jackc/pgx/v5"
+ "github.com/pgvector/pgvector-go"
 )
 
 conn, _ := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
@@ -158,15 +158,15 @@ conn, _ := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
 // Insert
 embedding := pgvector.NewVector(floats)
 conn.Exec(ctx,
-    "INSERT INTO embeddings (content, embedding) VALUES ($1, $2)",
-    "Hello world", embedding,
+ "INSERT INTO embeddings (content, embedding) VALUES ($1, $2)",
+ "Hello world", embedding,
 )
 
 // Search
 rows, _ := conn.Query(ctx,
-    "SELECT content, 1 - (embedding <=> $1) AS similarity "+
-    "FROM embeddings ORDER BY embedding <=> $1 LIMIT 5",
-    pgvector.NewVector(queryVec),
+ "SELECT content, 1 - (embedding <=> $1) AS similarity "+
+ "FROM embeddings ORDER BY embedding <=> $1 LIMIT 5",
+ pgvector.NewVector(queryVec),
 )
 ```
 
@@ -188,7 +188,7 @@ import redis
 r = redis.from_url(os.environ["REDIS_URL"])
 
 # Cache
-r.setex("key", 3600, "value")  # 1 hour TTL
+r.setex("key", 3600, "value") # 1 hour TTL
 value = r.get("key")
 
 # Session
@@ -199,7 +199,7 @@ key = f"ratelimit:{user_id}:{minute}"
 count = r.incr(key)
 r.expire(key, 60)
 if count > 100:
-    raise RateLimitExceeded()
+ raise RateLimitExceeded()
 
 # Job queue (BullMQ pattern)
 r.xadd("jobs:inference", {"model": "zen-70b", "prompt": "Hello"})
@@ -209,52 +209,52 @@ r.xadd("jobs:inference", {"model": "zen-70b", "prompt": "Hello"})
 
 ```yaml
 services:
-  postgres:
-    image: postgres:16
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: hanzo
-      POSTGRES_USER: hanzo
-      POSTGRES_PASSWORD: "${DB_PASSWORD}"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+ postgres:
+ image: postgres:16
+ ports:
+ - "5432:5432"
+ environment:
+ POSTGRES_DB: hanzo
+ POSTGRES_USER: hanzo
+ POSTGRES_PASSWORD: "${DB_PASSWORD}"
+ volumes:
+ - postgres_data:/var/lib/postgresql/data
+ - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
+ redis:
+ image: redis:7-alpine
+ ports:
+ - "6379:6379"
+ volumes:
+ - redis_data:/data
 
-  mongodb:
-    image: mongo:7
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: hanzo
-      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_PASSWORD}"
-    volumes:
-      - mongo_data:/data/db
+ mongodb:
+ image: mongo:7
+ ports:
+ - "27017:27017"
+ environment:
+ MONGO_INITDB_ROOT_USERNAME: hanzo
+ MONGO_INITDB_ROOT_PASSWORD: "${MONGO_PASSWORD}"
+ volumes:
+ - mongo_data:/data/db
 
-  minio:
-    image: minio/minio
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: hanzo
-      MINIO_ROOT_PASSWORD: "${MINIO_PASSWORD}"
-    command: server /data --console-address ":9001"
-    volumes:
-      - minio_data:/data
+ minio:
+ image: minio/minio
+ ports:
+ - "9000:9000"
+ - "9001:9001"
+ environment:
+ MINIO_ROOT_USER: hanzo
+ MINIO_ROOT_PASSWORD: "${MINIO_PASSWORD}"
+ command: server /data --console-address ":9001"
+ volumes:
+ - minio_data:/data
 
 volumes:
-  postgres_data:
-  redis_data:
-  mongo_data:
-  minio_data:
+ postgres_data:
+ redis_data:
+ mongo_data:
+ minio_data:
 ```
 
 ## Troubleshooting

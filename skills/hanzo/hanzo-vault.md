@@ -57,25 +57,25 @@ Content-Type: application/json
 Authorization: Bearer <service-token>
 
 {
-  "card": {
-    "number": "4111111111111111",
-    "exp_month": 12,
-    "exp_year": 2027,
-    "cvc": "123",
-    "name": "Card Holder"
-  }
+ "card": {
+ "number": "4111111111111111",
+ "exp_month": 12,
+ "exp_year": 2027,
+ "cvc": "123",
+ "name": "Card Holder"
+ }
 }
 ```
 
 Response:
 ```json
 {
-  "id": "tok_abc123def456",
-  "last4": "1111",
-  "brand": "visa",
-  "exp_month": 12,
-  "exp_year": 2027,
-  "fingerprint": "fp_a1b2c3d4e5"
+ "id": "tok_abc123def456",
+ "last4": "1111",
+ "brand": "visa",
+ "exp_month": 12,
+ "exp_year": 2027,
+ "fingerprint": "fp_a1b2c3d4e5"
 }
 ```
 
@@ -87,16 +87,16 @@ Content-Type: application/json
 Authorization: Bearer <restricted-service-token>
 
 {
-  "token_id": "tok_abc123def456",
-  "fields": ["number", "cvc"]
+ "token_id": "tok_abc123def456",
+ "fields": ["number", "cvc"]
 }
 ```
 
 Response:
 ```json
 {
-  "number": "4111111111111111",
-  "cvc": "123"
+ "number": "4111111111111111",
+ "cvc": "123"
 }
 ```
 
@@ -120,16 +120,16 @@ Authorization: Bearer <service-token>
 import "github.com/hanzoai/vault/client"
 
 vc := client.New(client.Config{
-    Endpoint: "http://vault.hanzo.svc:8080",
-    Token:    os.Getenv("VAULT_SERVICE_TOKEN"),
+ Endpoint: "http://vault.hanzo.svc:8080",
+ Token: os.Getenv("VAULT_SERVICE_TOKEN"),
 })
 
 // Tokenize a card
 token, err := vc.Tokenize(ctx, client.Card{
-    Number:   "4111111111111111",
-    ExpMonth: 12,
-    ExpYear:  2027,
-    CVC:      "123",
+ Number: "4111111111111111",
+ ExpMonth: 12,
+ ExpYear: 2027,
+ CVC: "123",
 })
 // token.ID = "tok_abc123" (safe to store anywhere)
 // token.Last4 = "1111"
@@ -137,13 +137,13 @@ token, err := vc.Tokenize(ctx, client.Card{
 
 // Detokenize (restricted — requires elevated permissions)
 card, err := vc.Detokenize(ctx, "tok_abc123", client.DetokenizeOpts{
-    Fields: []string{"number", "cvc"},
-    Reason: "payment_processing",  // Audit trail
+ Fields: []string{"number", "cvc"},
+ Reason: "payment_processing", // Audit trail
 })
 
 // List customer's tokens
 tokens, err := vc.ListTokens(ctx, client.ListOpts{
-    CustomerID: "cus_123",
+ CustomerID: "cus_123",
 })
 
 // Delete token
@@ -179,40 +179,40 @@ err = vc.DeleteToken(ctx, "tok_abc123")
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vault
-  namespace: hanzo
+ name: vault
+ namespace: hanzo
 spec:
-  replicas: 2
-  template:
-    spec:
-      containers:
-        - name: vault
-          image: ghcr.io/hanzoai/vault:latest
-          ports:
-            - containerPort: 8080
-            - containerPort: 8443
-          env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: vault-secrets
-                  key: database-url
-            - name: KMS_ENDPOINT
-              value: "http://kms.hanzo.svc:8080"
+ replicas: 2
+ template:
+ spec:
+ containers:
+ - name: vault
+ image: ghcr.io/hanzoai/vault:latest
+ ports:
+ - containerPort: 8080
+ - containerPort: 8443
+ env:
+ - name: DATABASE_URL
+ valueFrom:
+ secretKeyRef:
+ name: vault-secrets
+ key: database-url
+ - name: KMS_ENDPOINT
+ value: "http://kms.hanzo.svc:8080"
 ---
 # No Ingress — internal only
 apiVersion: v1
 kind: Service
 metadata:
-  name: vault
-  namespace: hanzo
+ name: vault
+ namespace: hanzo
 spec:
-  type: ClusterIP  # Internal only
-  ports:
-    - port: 8080
-      name: http
-    - port: 8443
-      name: grpc
+ type: ClusterIP # Internal only
+ ports:
+ - port: 8080
+ name: http
+ - port: 8443
+ name: grpc
 ```
 
 ## Troubleshooting

@@ -28,23 +28,23 @@ Fork of **FerretDB**. Repo: `hanzoai/documentdb`, branch: `main`.
 
 ```
 Application (any MongoDB driver)
-    |
-    | MongoDB wire protocol (BSON)
-    v
-  DocDB proxy (this project)
-    |
-    | PostgreSQL protocol (SQL)
-    v
-  PostgreSQL + DocumentDB extension
+ |
+ | MongoDB wire protocol (BSON)
+ v
+ DocDB proxy (this project)
+ |
+ | PostgreSQL protocol (SQL)
+ v
+ PostgreSQL + DocumentDB extension
 ```
 
 ## Quick start (Docker)
 
 ```bash
 docker run -d --rm --name docdb -p 27017:27017 \
-  -e POSTGRES_USER=myuser \
-  -e POSTGRES_PASSWORD=mypass \
-  ghcr.io/hanzoai/docdb-eval:2
+ -e POSTGRES_USER=myuser \
+ -e POSTGRES_PASSWORD=mypass \
+ ghcr.io/hanzoai/docdb-eval:2
 ```
 
 Connect with any MongoDB client:

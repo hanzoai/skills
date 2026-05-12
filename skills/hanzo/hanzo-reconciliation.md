@@ -35,13 +35,13 @@ Repo: `hanzoai/reconciliation` (Formance reconciliation fork). Go module path is
 ### Architecture Context
 
 ```
-hanzo/commerce    Storefront, catalog, orders
-       |
-hanzo/payments    Payment routing (50+ processors)
-       |
-hanzo/treasury    Ledger, reconciliation, wallets   <-- this service
-       |
-lux/treasury      On-chain treasury, MPC/KMS wallets
+hanzo/commerce Storefront, catalog, orders
+ |
+hanzo/payments Payment routing (50+ processors)
+ |
+hanzo/treasury Ledger, reconciliation, wallets <-- this service
+ |
+lux/treasury On-chain treasury, MPC/KMS wallets
 ```
 
 ## When to use
@@ -80,36 +80,36 @@ go build -o ./bin/reconciliation .
 
 # Run with auto-migrate
 ./bin/reconciliation serve \
-  --postgres-uri "postgresql://user:pass@localhost:5432/reconciliation" \
-  --stack-url "http://localhost:8080" \
-  --stack-client-id "client-id" \
-  --stack-client-secret "client-secret" \
-  --auto-migrate \
-  --listen ":8080"
+ --postgres-uri "postgresql://user:pass@localhost:5432/reconciliation" \
+ --stack-url "http://localhost:8080" \
+ --stack-client-id "client-id" \
+ --stack-client-secret "client-secret" \
+ --auto-migrate \
+ --listen ":8080"
 ```
 
 ### Create a reconciliation policy
 
 ```bash
 curl -X POST http://localhost:8080/policies \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "stripe-daily",
-    "ledgerName": "default",
-    "ledgerQuery": {"$match": {"metadata[provider]": "stripe"}},
-    "paymentsPoolID": "stripe-pool"
-  }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "name": "stripe-daily",
+ "ledgerName": "default",
+ "ledgerQuery": {"$match": {"metadata[provider]": "stripe"}},
+ "paymentsPoolID": "stripe-pool"
+ }'
 ```
 
 ### Trigger reconciliation
 
 ```bash
 curl -X POST http://localhost:8080/policies/{policyID}/reconciliation \
-  -H "Content-Type: application/json" \
-  -d '{
-    "reconciledAtLedger": "2026-03-13T00:00:00.000Z",
-    "reconciledAtPayments": "2026-03-13T00:00:00.000Z"
-  }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "reconciledAtLedger": "2026-03-13T00:00:00.000Z",
+ "reconciledAtPayments": "2026-03-13T00:00:00.000Z"
+ }'
 ```
 
 ### Check results
@@ -128,20 +128,20 @@ curl http://localhost:8080/reconciliations/{reconciliationID}
 
 ```
 Policy
-  |-- id, name, createdAt
-  |-- ledgerName          (which ledger to query)
-  |-- ledgerQuery         (filter for ledger transactions)
-  |-- paymentsPoolID      (which payment pool to compare against)
+ |-- id, name, createdAt
+ |-- ledgerName (which ledger to query)
+ |-- ledgerQuery (filter for ledger transactions)
+ |-- paymentsPoolID (which payment pool to compare against)
 
 Reconciliation
-  |-- id, policyID, createdAt
-  |-- reconciledAtLedger      (point-in-time for ledger snapshot)
-  |-- reconciledAtPayments    (point-in-time for payments snapshot)
-  |-- status                  (COMPLETED, FAILED, etc.)
-  |-- ledgerBalances          (map[asset]bigint from ledger)
-  |-- paymentsBalances        (map[asset]bigint from payments)
-  |-- driftBalances           (map[asset]bigint -- the difference)
-  |-- error                   (if status is FAILED)
+ |-- id, policyID, createdAt
+ |-- reconciledAtLedger (point-in-time for ledger snapshot)
+ |-- reconciledAtPayments (point-in-time for payments snapshot)
+ |-- status (COMPLETED, FAILED, etc.)
+ |-- ledgerBalances (map[asset]bigint from ledger)
+ |-- paymentsBalances (map[asset]bigint from payments)
+ |-- driftBalances (map[asset]bigint -- the difference)
+ |-- error (if status is FAILED)
 ```
 
 ### API Endpoints (OpenAPI 3.0.3)
@@ -170,65 +170,65 @@ Response includes `cursor.hasMore`, `cursor.next`, `cursor.previous`.
 ### CLI Commands
 
 ```bash
-reconciliation serve      # Start HTTP server
-reconciliation migrate    # Run database migrations
-reconciliation version    # Print version info
+reconciliation serve # Start HTTP server
+reconciliation migrate # Run database migrations
+reconciliation version # Print version info
 ```
 
 ### Serve Flags
 
 ```
---listen              HTTP listen address (default ":8080")
---stack-url           Formance stack URL (for ledger + payments API)
---stack-client-id     OAuth2 client ID for stack API
+--listen HTTP listen address (default ":8080")
+--stack-url Formance stack URL (for ledger + payments API)
+--stack-client-id OAuth2 client ID for stack API
 --stack-client-secret OAuth2 client secret for stack API
---auto-migrate        Auto-run database migrations on startup
---postgres-uri        PostgreSQL connection string
+--auto-migrate Auto-run database migrations on startup
+--postgres-uri PostgreSQL connection string
 ```
 
 ## Directory structure
 
 ```
 github.com/hanzoai/reconciliation/
-    main.go                          # Entrypoint (calls cmd.Execute())
-    openapi.yaml                     # OpenAPI 3.0.3 spec (full API definition)
-    Justfile                         # Build commands (test, lint, build, release)
-    build.Dockerfile                 # Production container image
-    scratch.Dockerfile               # Minimal scratch-based image
-    Earthfile                        # Earthly build definition
-    .goreleaser.yml                  # Cross-platform release config
-    cmd/
-        root.go                      # CLI root command, service name, flags
-        serve.go                     # HTTP server with fx DI, OAuth2 stack client
-        migrate.go                   # Database migration command
-        version.go                   # Version info command
-    internal/
-        api/
-            router.go                # Chi router setup
-            module.go                # fx HTTP module
-            policy.go                # Policy CRUD handlers
-            reconciliation.go        # Reconciliation run + query handlers
-            query.go                 # Query builder helpers
-            utils.go                 # HTTP response utilities
-            backend/                 # Backend service interface + mock
-            service/                 # Business logic layer
-            policy_test.go           # Policy handler tests
-            reconciliation_test.go   # Reconciliation handler tests
-        models/
-            policy.go                # Policy domain model
-            reconciliation.go        # Reconciliation domain model
-        storage/
-            store.go                 # Store interface
-            module.go                # fx storage module
-            policy.go                # Policy DB queries (bun)
-            reconciliations.go       # Reconciliation DB queries (bun)
-            error.go                 # Storage error types
-            ping.go                  # Database health check
-            utils.go                 # Query utilities
-            migrations/              # SQL migration files
-            main_test.go             # Test harness (dockertest PostgreSQL)
-            policy_test.go           # Policy storage tests
-            reconciliations_test.go  # Reconciliation storage tests
+ main.go # Entrypoint (calls cmd.Execute())
+ openapi.yaml # OpenAPI 3.0.3 spec (full API definition)
+ Justfile # Build commands (test, lint, build, release)
+ build.Dockerfile # Production container image
+ scratch.Dockerfile # Minimal scratch-based image
+ Earthfile # Earthly build definition
+ .goreleaser.yml # Cross-platform release config
+ cmd/
+ root.go # CLI root command, service name, flags
+ serve.go # HTTP server with fx DI, OAuth2 stack client
+ migrate.go # Database migration command
+ version.go # Version info command
+ internal/
+ api/
+ router.go # Chi router setup
+ module.go # fx HTTP module
+ policy.go # Policy CRUD handlers
+ reconciliation.go # Reconciliation run + query handlers
+ query.go # Query builder helpers
+ utils.go # HTTP response utilities
+ backend/ # Backend service interface + mock
+ service/ # Business logic layer
+ policy_test.go # Policy handler tests
+ reconciliation_test.go # Reconciliation handler tests
+ models/
+ policy.go # Policy domain model
+ reconciliation.go # Reconciliation domain model
+ storage/
+ store.go # Store interface
+ module.go # fx storage module
+ policy.go # Policy DB queries (bun)
+ reconciliations.go # Reconciliation DB queries (bun)
+ error.go # Storage error types
+ ping.go # Database health check
+ utils.go # Query utilities
+ migrations/ # SQL migration files
+ main_test.go # Test harness (dockertest PostgreSQL)
+ policy_test.go # Policy storage tests
+ reconciliations_test.go # Reconciliation storage tests
 ```
 
 ## Troubleshooting
