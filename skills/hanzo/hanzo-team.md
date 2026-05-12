@@ -44,19 +44,19 @@ Hanzo Team is the **collaboration platform** at `hanzo.team`. Upstream fork of h
 ## Architecture
 
 ```
-                  hanzo.team
-                      |
-               Hanzo Ingress
-                      |
-          +-----------+-----------+
-          |           |           |
-       Front       Account    Collaborator
-       (Svelte)    (auth)     (realtime)
-          |           |           |
-          +-----+-----+-----+----+
-                |           |
-            MongoDB      MinIO
-            (state)    (files/blobs)
+ hanzo.team
+ |
+ Hanzo Ingress
+ |
+ +-----------+-----------+
+ | | |
+ Front Account Collaborator
+ (Svelte) (auth) (realtime)
+ | | |
+ +-----+-----+-----+----+
+ | |
+ MongoDB MinIO
+ (state) (files/blobs)
 ```
 
 ### Key services

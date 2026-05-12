@@ -83,8 +83,8 @@ curl -sSL https://get.hanzo.ai/fn | bash
 ```python
 # handler.py
 def handler(context, event):
-    name = event.body.get("name", "World")
-    return {"statusCode": 200, "body": f"Hello, {name}!"}
+ name = event.body.get("name", "World")
+ return {"statusCode": 200, "body": f"Hello, {name}!"}
 ```
 
 ```bash
@@ -99,23 +99,23 @@ fission function test --name hello
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      Hanzo Functions                         │
-│                                                              │
-│  ┌──────────┐   ┌──────────┐   ┌────────────────────────┐  │
-│  │ Router   │──>│ Executor │──>│ Function Pods           │  │
-│  │ (gateway)│   │          │   │  ┌─────┐ ┌─────┐       │  │
-│  └──────────┘   └──────────┘   │  │ Fn  │ │ Fn  │ ...   │  │
-│       │                        │  └─────┘ └─────┘       │  │
-│       │         ┌──────────┐   └────────────────────────┘  │
-│       └────────>│ KEDA     │                                │
-│                 │ Scaler   │   ┌────────────────────────┐  │
-│                 └──────────┘   │ Builder                 │  │
-│                                │ (source -> container)   │  │
-│  ┌──────────┐                  └────────────────────────┘  │
-│  │ Fetcher  │  ┌──────────┐   ┌────────────────────────┐  │
-│  │ (code    │  │ Storage  │   │ TimerTrigger / MQ      │  │
-│  │  loader) │  │ Service  │   │ / KubeWatcher          │  │
-│  └──────────┘  └──────────┘   └────────────────────────┘  │
+│ Hanzo Functions │
+│ │
+│ ┌──────────┐ ┌──────────┐ ┌────────────────────────┐ │
+│ │ Router │──>│ Executor │──>│ Function Pods │ │
+│ │ (gateway)│ │ │ │ ┌─────┐ ┌─────┐ │ │
+│ └──────────┘ └──────────┘ │ │ Fn │ │ Fn │ ... │ │
+│ │ │ └─────┘ └─────┘ │ │
+│ │ ┌──────────┐ └────────────────────────┘ │
+│ └────────>│ KEDA │ │
+│ │ Scaler │ ┌────────────────────────┐ │
+│ └──────────┘ │ Builder │ │
+│ │ (source -> container) │ │
+│ ┌──────────┐ └────────────────────────┘ │
+│ │ Fetcher │ ┌──────────┐ ┌────────────────────────┐ │
+│ │ (code │ │ Storage │ │ TimerTrigger / MQ │ │
+│ │ loader) │ │ Service │ │ / KubeWatcher │ │
+│ └──────────┘ └──────────┘ └────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -157,46 +157,46 @@ fission function test --name hello
 
 ```
 functions/
-  Makefile               # Build: check, build-fission-cli, codegen, release
-  .goreleaser.yml        # GoReleaser config for multi-platform builds
-  skaffold.yaml          # Skaffold dev/deploy config
-  kind.yaml              # KinD cluster config for local dev
-  go.mod                 # github.com/fission/fission, Go 1.24
-  cmd/
-    fission-bundle/      # Main server binary
-    fission-cli/         # CLI binary
-    builder/             # Source builder
-    fetcher/             # Code fetcher
-    reporter/            # Usage reporter
-    preupgradechecks/    # Upgrade validator
-  pkg/
-    apis/                # CRD type definitions (core/v1)
-    router/              # HTTP request routing
-    executor/            # Function pod management
-    builder/             # Build pipeline
-    buildermgr/          # Builder manager
-    fetcher/             # Code fetch logic
-    fission-cli/         # CLI command implementations
-    mqtrigger/           # Message queue trigger handler
-    kubewatcher/         # K8s watch trigger handler
-    timer/               # Cron trigger handler
-    cache/               # In-memory caching
-    storagesvc/          # Archive storage
-    throttler/           # Request throttling
-    webhook/             # Admission webhooks
-    generated/           # Generated client code
-    crd/                 # CRD client helpers
-    healthcheck/         # Health/readiness probes
-    utils/               # Shared utilities
-    plugin/              # Plugin interface
-    publisher/           # Event publisher
-    tracker/             # Request tracking
-  crds/v1/               # CRD YAML manifests
-  charts/fission-all/    # Helm chart
-  hack/                  # Code generation, release scripts
-  test/                  # Integration and e2e tests
-  tools/                 # Doc generation, CRD ref docs
-  .github/               # GitHub Actions workflows
+ Makefile # Build: check, build-fission-cli, codegen, release
+ .goreleaser.yml # GoReleaser config for multi-platform builds
+ skaffold.yaml # Skaffold dev/deploy config
+ kind.yaml # KinD cluster config for local dev
+ go.mod # github.com/fission/fission, Go 1.24
+ cmd/
+ fission-bundle/ # Main server binary
+ fission-cli/ # CLI binary
+ builder/ # Source builder
+ fetcher/ # Code fetcher
+ reporter/ # Usage reporter
+ preupgradechecks/ # Upgrade validator
+ pkg/
+ apis/ # CRD type definitions (core/v1)
+ router/ # HTTP request routing
+ executor/ # Function pod management
+ builder/ # Build pipeline
+ buildermgr/ # Builder manager
+ fetcher/ # Code fetch logic
+ fission-cli/ # CLI command implementations
+ mqtrigger/ # Message queue trigger handler
+ kubewatcher/ # K8s watch trigger handler
+ timer/ # Cron trigger handler
+ cache/ # In-memory caching
+ storagesvc/ # Archive storage
+ throttler/ # Request throttling
+ webhook/ # Admission webhooks
+ generated/ # Generated client code
+ crd/ # CRD client helpers
+ healthcheck/ # Health/readiness probes
+ utils/ # Shared utilities
+ plugin/ # Plugin interface
+ publisher/ # Event publisher
+ tracker/ # Request tracking
+ crds/v1/ # CRD YAML manifests
+ charts/fission-all/ # Helm chart
+ hack/ # Code generation, release scripts
+ test/ # Integration and e2e tests
+ tools/ # Doc generation, CRD ref docs
+ .github/ # GitHub Actions workflows
 ```
 
 ### Development

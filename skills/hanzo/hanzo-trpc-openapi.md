@@ -90,24 +90,24 @@ const t = initTRPC.meta<OpenApiMeta>().create();
 
 // 2. Define router with openapi metadata
 const appRouter = t.router({
-  getUser: t.procedure
-    .meta({ openapi: { method: 'GET', path: '/users/{id}' } })
-    .input(z.object({ id: z.string() }))
-    .output(z.object({ id: z.string(), name: z.string() }))
-    .query(({ input }) => ({ id: input.id, name: 'Hanzo User' })),
+ getUser: t.procedure
+ .meta({ openapi: { method: 'GET', path: '/users/{id}' } })
+ .input(z.object({ id: z.string() }))
+ .output(z.object({ id: z.string(), name: z.string() }))
+ .query(({ input }) => ({ id: input.id, name: 'Hanzo User' })),
 
-  createUser: t.procedure
-    .meta({ openapi: { method: 'POST', path: '/users', protect: true } })
-    .input(z.object({ name: z.string(), email: z.string().email() }))
-    .output(z.object({ id: z.string(), name: z.string() }))
-    .mutation(({ input }) => ({ id: 'usr_new', name: input.name })),
+ createUser: t.procedure
+ .meta({ openapi: { method: 'POST', path: '/users', protect: true } })
+ .input(z.object({ name: z.string(), email: z.string().email() }))
+ .output(z.object({ id: z.string(), name: z.string() }))
+ .mutation(({ input }) => ({ id: 'usr_new', name: input.name })),
 });
 
 // 3. Generate OpenAPI document
 const openApiDoc = generateOpenApiDocument(appRouter, {
-  title: 'My API',
-  version: '1.0.0',
-  baseUrl: 'http://localhost:3000',
+ title: 'My API',
+ version: '1.0.0',
+ baseUrl: 'http://localhost:3000',
 });
 
 // 4. Serve REST endpoints
@@ -123,18 +123,18 @@ app.listen(3000);
 
 ```
 ┌──────────────────────┐
-│  tRPC Router         │
-│  (procedures + meta) │
+│ tRPC Router │
+│ (procedures + meta) │
 └──────┬───────────────┘
-       │
-  ┌────▼────────────────────┐
-  │  generateOpenApiDocument │──── OpenAPI 3.x JSON
-  └────┬────────────────────┘
-       │
-  ┌────▼────────────────────┐
-  │  HTTP Adapter            │──── REST endpoints
-  │  (Express/Fastify/Next)  │     GET /users/{id}
-  └─────────────────────────┘     POST /users
+ │
+ ┌────▼────────────────────┐
+ │ generateOpenApiDocument │──── OpenAPI 3.x JSON
+ └────┬────────────────────┘
+ │
+ ┌────▼────────────────────┐
+ │ HTTP Adapter │──── REST endpoints
+ │ (Express/Fastify/Next) │ GET /users/{id}
+ └─────────────────────────┘ POST /users
 ```
 
 ### Adapters
@@ -180,10 +180,10 @@ app.listen(3000);
 
 ```typescript
 const doc = generateOpenApiDocument<{ isPublic: boolean }>(appRouter, {
-  title: 'API',
-  version: '1.0.0',
-  baseUrl: 'http://localhost:3000',
-  filter: ({ metadata }) => metadata.isPublic === true,
+ title: 'API',
+ version: '1.0.0',
+ baseUrl: 'http://localhost:3000',
+ filter: ({ metadata }) => metadata.isPublic === true,
 });
 ```
 
@@ -192,35 +192,35 @@ const doc = generateOpenApiDocument<{ isPublic: boolean }>(appRouter, {
 ```
 trpc-openapi/
 ├── src/
-│   ├── index.ts              # Re-exports everything
-│   ├── types.ts              # OpenApiMeta, OpenApiMethod, response types
-│   ├── generator/
-│   │   ├── index.ts          # generateOpenApiDocument()
-│   │   ├── paths.ts          # OpenAPI path generation
-│   │   └── schema.ts         # Zod-to-OpenAPI schema conversion
-│   ├── adapters/
-│   │   ├── express.ts        # Express middleware
-│   │   ├── fastify.ts        # Fastify plugin
-│   │   ├── next.ts           # Next.js handler (pages + app)
-│   │   ├── nuxt.ts           # Nuxt handler
-│   │   ├── koa.ts            # Koa middleware
-│   │   ├── fetch.ts          # Fetch API handler
-│   │   ├── standalone.ts     # Standalone Node HTTP
-│   │   └── node-http/        # Core Node HTTP handler
-│   └── utils/                # Internal utilities
+│ ├── index.ts # Re-exports everything
+│ ├── types.ts # OpenApiMeta, OpenApiMethod, response types
+│ ├── generator/
+│ │ ├── index.ts # generateOpenApiDocument()
+│ │ ├── paths.ts # OpenAPI path generation
+│ │ └── schema.ts # Zod-to-OpenAPI schema conversion
+│ ├── adapters/
+│ │ ├── express.ts # Express middleware
+│ │ ├── fastify.ts # Fastify plugin
+│ │ ├── next.ts # Next.js handler (pages + app)
+│ │ ├── nuxt.ts # Nuxt handler
+│ │ ├── koa.ts # Koa middleware
+│ │ ├── fetch.ts # Fetch API handler
+│ │ ├── standalone.ts # Standalone Node HTTP
+│ │ └── node-http/ # Core Node HTTP handler
+│ └── utils/ # Internal utilities
 ├── test/
-│   ├── generator.test.ts     # 115KB of generator tests
-│   └── adapters/             # Adapter-specific tests
+│ ├── generator.test.ts # 115KB of generator tests
+│ └── adapters/ # Adapter-specific tests
 ├── examples/
-│   ├── with-express/
-│   ├── with-fastify/
-│   ├── with-nextjs/
-│   ├── with-nextjs-appdir/
-│   └── with-nuxtjs/
+│ ├── with-express/
+│ ├── with-fastify/
+│ ├── with-nextjs/
+│ ├── with-nextjs-appdir/
+│ └── with-nuxtjs/
 ├── dist/
-│   ├── cjs/                  # CommonJS build output
-│   └── esm/                  # ESM build output
-├── package.json              # @hanzo/trpc-openapi v0.0.17
+│ ├── cjs/ # CommonJS build output
+│ └── esm/ # ESM build output
+├── package.json # @hanzo/trpc-openapi v0.0.17
 ├── tsconfig.json
 └── jest.config.ts
 ```

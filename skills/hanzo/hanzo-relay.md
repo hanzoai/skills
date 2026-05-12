@@ -56,12 +56,12 @@ Repo: `github.com/hanzoai/relay`
 use hanzo_tunnel::{connect, TunnelConfig, AppKind};
 
 let conn = connect(TunnelConfig {
-    relay_url: "wss://api.hanzo.ai/v1/relay".into(),
-    auth_token: "sk-hanzo-...".into(),
-    app_kind: AppKind::Dev,
-    display_name: "z-macbook".into(),
-    capabilities: vec!["chat".into(), "exec".into()],
-    ..Default::default()
+ relay_url: "wss://api.hanzo.ai/v1/relay".into(),
+ auth_token: "sk-hanzo-...".into(),
+ app_kind: AppKind::Dev,
+ display_name: "z-macbook".into(),
+ capabilities: vec!["chat".into(), "exec".into()],
+ ..Default::default()
 }).await?;
 
 // Send events to cloud
@@ -69,8 +69,8 @@ conn.send_event("chat.delta", serde_json::json!({"text": "hello"})).await?;
 
 // Receive commands from cloud
 while let Some(cmd) = conn.recv_command().await {
-    println!("got: {} {}", cmd.method, cmd.params);
-    conn.respond(cmd.id, true, None).await?;
+ println!("got: {} {}", cmd.method, cmd.params);
+ conn.respond(cmd.id, true, None).await?;
 }
 ```
 
@@ -90,10 +90,10 @@ println!("Session URL: {:?}", conn.session_url);
 use hanzo_tunnel::expose::{expose, ExposedService, ExposeProtocol};
 
 expose(&conn.event_sender(), ExposedService {
-    name: "app-server".into(),
-    local_addr: "127.0.0.1:3000".into(),
-    protocol: ExposeProtocol::Http,
-    subdomain: Some("my-dev".into()),
+ name: "app-server".into(),
+ local_addr: "127.0.0.1:3000".into(),
+ protocol: ExposeProtocol::Http,
+ subdomain: Some("my-dev".into()),
 }).await?;
 ```
 
@@ -114,11 +114,11 @@ All frames are JSON over WebSocket text messages, tagged by `type`:
 
 ```rust
 pub enum AppKind {
-    Dev,        // Development agent
-    Node,       // Blockchain/AI node
-    Desktop,    // Desktop application
-    Bot,        // Bot instance
-    Extension,  // Browser/IDE extension
+ Dev, // Development agent
+ Node, // Blockchain/AI node
+ Desktop, // Desktop application
+ Bot, // Bot instance
+ Extension, // Browser/IDE extension
 }
 ```
 
@@ -146,8 +146,8 @@ pub enum AppKind {
 
 ```rust
 pub enum AuthToken {
-    Jwt { token: String },      // JWT from hanzo.id
-    ApiKey { key: String },     // sk-hanzo-... API key
+ Jwt { token: String }, // JWT from hanzo.id
+ ApiKey { key: String }, // sk-hanzo-... API key
 }
 
 // Auto-detects: 2+ dots = JWT, otherwise API key
@@ -158,25 +158,25 @@ let token = AuthToken::from_string("sk-hanzo-abc123");
 
 ```rust
 pub struct TransportConfig {
-    pub url: String,                    // wss://api.hanzo.ai/v1/relay
-    pub auth: AuthToken,
-    pub initial_backoff: Duration,      // 1s
-    pub max_backoff: Duration,          // 60s
-    pub heartbeat_interval: Duration,   // 30s
-    pub connect_timeout: Duration,      // 10s
+ pub url: String, // wss://api.hanzo.ai/v1/relay
+ pub auth: AuthToken,
+ pub initial_backoff: Duration, // 1s
+ pub max_backoff: Duration, // 60s
+ pub heartbeat_interval: Duration, // 30s
+ pub connect_timeout: Duration, // 10s
 }
 ```
 
 ## TunnelConnection API
 
 ```rust
-conn.send_event(event, data).await?;       // Stream event to cloud
-conn.recv_command().await;                   // Next command (None = closed)
-conn.respond(id, ok, data).await?;          // Reply to command
-conn.respond_error(id, msg).await?;         // Reply with error
-conn.event_sender();                         // Clone sender for spawned tasks
-conn.shutdown();                             // Graceful disconnect
-conn.is_connected();                         // Check liveness
+conn.send_event(event, data).await?; // Stream event to cloud
+conn.recv_command().await; // Next command (None = closed)
+conn.respond(id, ok, data).await?; // Reply to command
+conn.respond_error(id, msg).await?; // Reply with error
+conn.event_sender(); // Clone sender for spawned tasks
+conn.shutdown(); // Graceful disconnect
+conn.is_connected(); // Check liveness
 ```
 
 ## Related Skills

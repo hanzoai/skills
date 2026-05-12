@@ -111,8 +111,8 @@ go build ./...
 go test ./...
 
 # Using Makefile
-make victoria-metrics   # Build single-node
-make vminsert vmselect vmstorage  # Build cluster components
+make victoria-metrics # Build single-node
+make vminsert vmselect vmstorage # Build cluster components
 ```
 
 ## Quick start
@@ -129,29 +129,29 @@ go build ./app/victoria-metrics
 ## Key directories (master branch)
 
 ```
-app/                    # Application binaries
-  victoria-metrics/     # Single-node server
-  vminsert/             # Cluster write proxy
-  vmselect/             # Cluster read proxy
-  vmstorage/            # Cluster storage
-  vmagent/              # Scraping agent
-  vmalert/              # Alerting engine
-  vmauth/               # Auth proxy
-  vmbackup/             # Backup
-  vmrestore/            # Restore
-  vmctl/                # Migration tool
-  vmgateway/            # Rate limiting gateway
-  vmui/                 # Web UI
-  victoria-logs/        # Bundled log engine
-apptest/                # Application-level tests
-benchmarks/             # Performance benchmarks
-dashboards/             # Grafana dashboards
-deployment/             # Deployment configs
-docs/                   # Documentation
-lib/                    # Core libraries
-package/                # Packaging scripts
-ports/                  # Protocol-specific port handlers
-vendor/                 # Go vendor directory
+app/ # Application binaries
+ victoria-metrics/ # Single-node server
+ vminsert/ # Cluster write proxy
+ vmselect/ # Cluster read proxy
+ vmstorage/ # Cluster storage
+ vmagent/ # Scraping agent
+ vmalert/ # Alerting engine
+ vmauth/ # Auth proxy
+ vmbackup/ # Backup
+ vmrestore/ # Restore
+ vmctl/ # Migration tool
+ vmgateway/ # Rate limiting gateway
+ vmui/ # Web UI
+ victoria-logs/ # Bundled log engine
+apptest/ # Application-level tests
+benchmarks/ # Performance benchmarks
+dashboards/ # Grafana dashboards
+deployment/ # Deployment configs
+docs/ # Documentation
+lib/ # Core libraries
+package/ # Packaging scripts
+ports/ # Protocol-specific port handlers
+vendor/ # Go vendor directory
 ```
 
 ## Ingestion protocols

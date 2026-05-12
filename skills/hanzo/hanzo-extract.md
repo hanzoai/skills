@@ -56,9 +56,9 @@ cargo add hanzo-extract
 ```toml
 # Cargo.toml - pick what you need
 [dependencies]
-hanzo-extract = "0.1"                                         # web + pdf (default)
-hanzo-extract = { version = "0.1", features = ["full"] }      # everything
-hanzo-extract = { version = "0.1", features = ["conversations"] }  # dataset export
+hanzo-extract = "0.1" # web + pdf (default)
+hanzo-extract = { version = "0.1", features = ["full"] } # everything
+hanzo-extract = { version = "0.1", features = ["conversations"] } # dataset export
 ```
 
 ## Usage
@@ -70,13 +70,13 @@ use hanzo_extract::{WebExtractor, ExtractorConfig, Extractor};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let extractor = WebExtractor::new(ExtractorConfig::default());
-    let result = extractor.extract("https://example.com").await?;
+ let extractor = WebExtractor::new(ExtractorConfig::default());
+ let result = extractor.extract("https://example.com").await?;
 
-    println!("Title: {:?}", result.title);
-    println!("Text: {}", result.text);
-    println!("Words: {}", result.word_count);
-    Ok(())
+ println!("Title: {:?}", result.title);
+ println!("Text: {}", result.text);
+ println!("Words: {}", result.word_count);
+ Ok(())
 }
 ```
 
@@ -98,20 +98,20 @@ use std::path::Path;
 
 let mut exporter = ConversationExporter::new();
 exporter.export(
-    Path::new("~/.claude/projects"),
-    Path::new("./training-data"),
+ Path::new("~/.claude/projects"),
+ Path::new("./training-data"),
 )?;
 ```
 
 Output structure:
 ```
 ./training-data/
-  conversations_20260313.jsonl   # Full conversation data
-  training_20260313.jsonl        # Instruction/response pairs
-  splits/
-    train_20260313.jsonl         # 80%
-    val_20260313.jsonl           # 10%
-    test_20260313.jsonl          # 10%
+ conversations_20260313.jsonl # Full conversation data
+ training_20260313.jsonl # Instruction/response pairs
+ splits/
+ train_20260313.jsonl # 80%
+ val_20260313.jsonl # 10%
+ test_20260313.jsonl # 10%
 ```
 
 ### CLI Binaries
@@ -133,15 +133,15 @@ extract-conversations --source ~/.claude/projects --output ./conversations
 use hanzo_extract::ExtractorConfig;
 
 let config = ExtractorConfig::default()
-    .with_max_length(200_000)       // Max chars (default: 100,000)
-    .with_timeout(60)               // Request timeout secs (default: 30)
-    .with_clean_text(true);         // Strip HTML/scripts (default: true)
+ .with_max_length(200_000) // Max chars (default: 100,000)
+ .with_timeout(60) // Request timeout secs (default: 30)
+ .with_clean_text(true); // Strip HTML/scripts (default: true)
 
 // With sanitization (requires `sanitize` feature)
 let config = config
-    .with_sanitize(true)
-    .with_redact_pii(true)
-    .with_detect_injection(true);
+ .with_sanitize(true)
+ .with_redact_pii(true)
+ .with_detect_injection(true);
 ```
 
 ## Feature Flags

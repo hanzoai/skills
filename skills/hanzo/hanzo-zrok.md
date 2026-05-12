@@ -104,23 +104,23 @@ zrok share private localhost:3000
 package main
 
 import (
-    "github.com/openziti/zrok/v2/sdk/golang/sdk"
+ "github.com/openziti/zrok/v2/sdk/golang/sdk"
 )
 
 func main() {
-    root, _ := sdk.LoadRoot()
+ root, _ := sdk.LoadRoot()
 
-    // Create a private share
-    shr, _ := sdk.CreateShare(root, &sdk.ShareRequest{
-        BackendMode: sdk.TcpTunnelBackendMode,
-        ShareMode:   sdk.PrivateShareMode,
-    })
+ // Create a private share
+ shr, _ := sdk.CreateShare(root, &sdk.ShareRequest{
+ BackendMode: sdk.TcpTunnelBackendMode,
+ ShareMode: sdk.PrivateShareMode,
+ })
 
-    // Listen for connections
-    listener, _ := sdk.NewListener(shr.Token, root)
-    defer listener.Close()
+ // Listen for connections
+ listener, _ := sdk.NewListener(shr.Token, root)
+ defer listener.Close()
 
-    // Accept and handle connections...
+ // Accept and handle connections...
 }
 ```
 
@@ -141,7 +141,7 @@ cd agent/agentUi && npm ci && npm run build && cd ..
 
 # Build binary
 CGO_ENABLED=1 go build -tags sqlite_foreign_keys \
-  -o zrok2 ./cmd/zrok2/
+ -o zrok2 ./cmd/zrok2/
 ```
 
 ## Core Concepts
@@ -149,19 +149,19 @@ CGO_ENABLED=1 go build -tags sqlite_foreign_keys \
 ### Architecture
 
 ```
-+------------------+     +-------------------+     +------------------+
-|  zrok Client     |     |  zrok Controller  |     |  Hanzo ZT Fabric |
-|                  |     |                   |     |                  |
-|  zrok share      |---->|  REST API         |---->|  Controller      |
-|  zrok access     |     |  Account mgmt     |     |  Routers         |
-|  zrok reserve    |     |  Share mgmt       |     |  Smart routing   |
-|                  |     |  Metrics/limits    |     |  E2E encryption  |
-+------------------+     +-------------------+     +------------------+
-                                |
-                         +------+------+
-                         |   SQLite    |
-                         |   (state)   |
-                         +-------------+
++------------------+ +-------------------+ +------------------+
+| zrok Client | | zrok Controller | | Hanzo ZT Fabric |
+| | | | | |
+| zrok share |---->| REST API |---->| Controller |
+| zrok access | | Account mgmt | | Routers |
+| zrok reserve | | Share mgmt | | Smart routing |
+| | | Metrics/limits | | E2E encryption |
++------------------+ +-------------------+ +------------------+
+ |
+ +------+------+
+ | SQLite |
+ | (state) |
+ +-------------+
 ```
 
 ### Sharing Modes
@@ -187,35 +187,35 @@ CGO_ENABLED=1 go build -tags sqlite_foreign_keys \
 ### Directory Structure
 
 ```
-cmd/zrok2/              # Main binary entrypoint
-controller/             # zrok controller (API server, share/access management)
-agent/                  # zrok agent (daemon, background shares)
-  agentUi/              # Agent web UI (Node.js)
-endpoints/              # Backend mode implementations (proxy, web, drive, tunnel)
-environment/            # Environment/identity management
-drives/                 # WebDAV drive implementation
+cmd/zrok2/ # Main binary entrypoint
+controller/ # zrok controller (API server, share/access management)
+agent/ # zrok agent (daemon, background shares)
+ agentUi/ # Agent web UI (Node.js)
+endpoints/ # Backend mode implementations (proxy, web, drive, tunnel)
+environment/ # Environment/identity management
+drives/ # WebDAV drive implementation
 sdk/
-  golang/               # Go SDK with examples
-  nodejs/               # Node.js SDK
-  python/               # Python SDK
-rest_client_zrok/       # Generated REST API client
-rest_model_zrok/        # Generated REST API models
-rest_server_zrok/       # Generated REST API server
-specs/                  # OpenAPI/Swagger specifications
-tui/                    # Terminal UI (Charm stack)
-ui/                     # Web console UI (Node.js/React)
+ golang/ # Go SDK with examples
+ nodejs/ # Node.js SDK
+ python/ # Python SDK
+rest_client_zrok/ # Generated REST API client
+rest_model_zrok/ # Generated REST API models
+rest_server_zrok/ # Generated REST API server
+specs/ # OpenAPI/Swagger specifications
+tui/ # Terminal UI (Charm stack)
+ui/ # Web console UI (Node.js/React)
 docker/
-  compose/
-    zrok-instance/      # Self-hosted instance compose
-    zrok-private-access/
-    zrok-private-share/
-    zrok-public-reserved/
-  images/               # Docker image definitions
-build/                  # Build scripts
-canary/                 # Canary testing
-etc/                    # Configuration templates
-website/                # Documentation website
-nfpm/                   # Linux package definitions (deb, rpm)
+ compose/
+ zrok-instance/ # Self-hosted instance compose
+ zrok-private-access/
+ zrok-private-share/
+ zrok-public-reserved/
+ images/ # Docker image definitions
+build/ # Build scripts
+canary/ # Canary testing
+etc/ # Configuration templates
+website/ # Documentation website
+nfpm/ # Linux package definitions (deb, rpm)
 ```
 
 ### Relationship to Hanzo ZT
