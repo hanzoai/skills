@@ -76,20 +76,21 @@ Platform uses `provider=hanzo` via Better Auth generic OAuth.
 
 **CRITICAL**: `platform/app/platform/pages/index.tsx` MUST target provider `"hanzo"` (NOT `"github"`).
 
-### IAM environment variables (multiple fallback aliases supported)
+### IAM environment variables (canonical `IAM_*` contract)
 
 ```bash
-# IAM URL (checked in order)
-HANZO_IAM_URL=https://hanzo.id
-HANZO_IAM_ENDPOINT=https://hanzo.id
-HANZO_IAM_SERVER_URL=https://hanzo.id
+# IAM server endpoint
 IAM_ENDPOINT=https://hanzo.id
 
-# IAM Client (checked in order)
-HANZO_IAM_CLIENT_ID=app-hanzo
-HANZO_IAM_CLIENT_SECRET=secret
-HANZO_CLIENT_ID=app-hanzo
-HANZO_CLIENT_SECRET=secret
+# IAM client credentials (per-app, sourced from KMS)
+IAM_CLIENT_ID=app-hanzo
+IAM_CLIENT_SECRET=secret
+
+# Optional: OIDC issuer, userinfo URL, signing cert
+IAM_ISSUER=https://hanzo.id
+IAM_USERINFO_URL=https://hanzo.id/oauth/userinfo
+IAM_ORG=hanzo
+IAM_APP=app-hanzo
 ```
 
 Auth validator supports `provider=hanzo` by validating bearer tokens against IAM userinfo (`IAM_USERINFO_URL` / `IAM_ENDPOINT`).
