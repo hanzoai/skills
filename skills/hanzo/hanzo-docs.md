@@ -166,32 +166,29 @@ Service-specific docs have vanity URLs:
 - `hanzo.ai/docs/api` → Full API reference
 - `hanzo.ai/docs/sdks/python` → Python SDK guide
 
-##  consumer
+## Known-issue: `@hanzo/docs` workspace-protocol leak
 
-`onyx-plus/internal` (`internal..{env}.`) is an
-engineering docs site built on `@hanzo/docs`. Two quirks worth knowing
-for future consumers:
+`@hanzo/docs@16.4.2` and sibling `16.7.5` packages were published with
+unresolved `workspace:*` deps — including `@hanzo/docs-tailwind` which
+was never published to npm. Downstream consumers see install failures.
 
-1. **Vendor workaround**: `@hanzo/docs@16.4.2` and sibling 16.7.5
- packages were published with unresolved `workspace:*` deps including
- `@hanzo/docs-tailwind` (never published to npm at all). 
- internal vendors `~/work/hanzo/docs/packages/*` into
- `vendor/hanzo-docs/packages/` and wires a `pnpm-workspace.yaml` so
- `workspace:*` resolves locally. A `.pnpmfile.cjs` strips workspace
- refs to packages not vendored (build-only tooling).
- **Upstream fix**: add a `prepublishOnly` hook that rewrites
- `workspace:*` → concrete versions, or publish the missing packages.
+**Workarounds for consumers**:
+1. Vendor `~/work/hanzo/docs/packages/*` into a `vendor/hanzo-docs/`
+   directory and wire a `pnpm-workspace.yaml` so `workspace:*` resolves
+   locally. A `.pnpmfile.cjs` can strip workspace refs to packages not
+   vendored (build-only tooling).
+2. Pin to a known-clean version pair (`@hanzo/docs@16.4.1` +
+   `@hanzo/docs-ui@16.4.8`) — see `~/work/zap/zap-protocol.github.io/`
+   for a reference setup.
 
-2. **API renames** between docs versions:
- - `app/layout.tsx`: `@hanzo/docs/ui/provider/next` (missing in
- published umbrella) → use `@hanzo/docs-core/framework/next` ×
- `@hanzo/docs/ui/provider/base`
- - `lib/source.ts`: `docs.toFumadocsSource()` → `docs.toSource()`
+**Upstream fix**: add a `prepublishOnly` hook that rewrites
+`workspace:*` → concrete versions, or publish the missing packages.
 
- internal is -gated via NextAuth v5 + Google OAuth
-(not Hanzo IAM -- engineering-only audience).
-
-See: `~/work//internal/` and `onyx-plus/onyx-plus-internal.md`.
+**API renames** between docs versions:
+- `app/layout.tsx`: `@hanzo/docs/ui/provider/next` (missing in published
+  umbrella) → use `@hanzo/docs-core/framework/next` ×
+  `@hanzo/docs/ui/provider/base`
+- `lib/source.ts`: `docs.toFumadocsSource()` → `docs.toSource()`
 
 ## Related Skills
 
