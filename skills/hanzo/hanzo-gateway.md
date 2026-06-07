@@ -45,7 +45,7 @@ API gateway for all Hanzo services. KrakenD-based with Go auth middleware.
 - Service name: gateway, sample rate: 0.1
 
 ## Build & Deploy
-- Go 1.26.1, Dockerfile uses golang:1.26.1-alpine
+- Go 1.26.4, Dockerfile uses golang:1.26.4-alpine
 - K8s: deployment/gateway, 2 replicas
 - CI: shared docker-build.yml workflow (multi-arch)
 - Makefile: `make build`, `make test`
