@@ -230,7 +230,7 @@ jobs:
 ##  consumer
 
  (`github.com/onyx-plus/*`) reads its runtime secrets from the
-shared `` instance over ZAP (binary protocol, TCP 9999).
+shared `hanzo-kms` instance over ZAP (binary protocol, TCP 9999).
 
 **Secret paths**:
 ```
@@ -239,8 +239,8 @@ secret/data//{env}/iam_client_secret # -onyxd OAuth2 secret
 secret/data//{env}/mpc_webhook_secret # HMAC for inbound MPC callbacks
 ```
 
-**Auth**: same IAM JWKS that gates BD/ATS/TA. The `-onyxd`
-IAM app issues a JWT with `aud=-onyxd,liquidity-kms`; KMS
+**Auth**: same IAM JWKS that gates other tenant apps. The `-onyxd`
+IAM app issues a JWT with `aud=-onyxd,hanzo-kms`; KMS
 validates `iss` byte-for-byte and `aud ∈ KMS_EXPECTED_AUDIENCE`.
 
 **Boot path**: `onyxd/secrets.go::loadFromKMS` dials `KMS_ZAP_ADDR`,
@@ -257,7 +257,6 @@ Companion docs: `~/work//internal/content/docs/kms.mdx`,
 - `hanzo/hanzo-platform.md` -- PaaS (uses KMS for secrets)
 - `hanzo/hanzo-k8s.md` -- K8s infrastructure
 - `hanzo/hanzo-deploy.md` -- Deployment workflow
-- `liquidity/liquidity-universe.md` -- Liquidity deployment + KMS env
 
 ---
 
