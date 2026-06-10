@@ -327,7 +327,6 @@ Companion docs: `~/work//internal/content/docs/mpc.mdx`,
 - `hanzo/hanzo-vault.md` - PCI-compliant card tokenization
 - `hanzo/hanzo-web3.md` - Web3 services and gateway
 - `hanzo/hanzo-evm.md` - EVM execution engine
-- `liquidity/liquidity-app.md` - Liquidity tenant (BD/TA hold MPC_SERVICE_KEY)
 
 ---
 
