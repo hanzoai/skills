@@ -196,7 +196,6 @@ was never published to npm. Downstream consumers see install failures.
 - `hanzo/js-sdk.md` - JS SDK (documented here)
 - `hanzo/hanzo-brand.md` - Brand guidelines for docs styling
 - `hanzo/hanzo-cloud.md` - Cloud dashboard (links to docs)
-- `onyx-plus/onyx-plus-internal.md` -  internal docs site
 
 ---
 
