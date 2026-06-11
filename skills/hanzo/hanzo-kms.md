@@ -227,29 +227,6 @@ jobs:
 | Token key mismatch | Custom bootstrap template | Set `additionalOrganizationsTokenSecretKey` |
 | HSM connection failed | Wrong PKCS#11 path | Verify `HSM_LIBRARY_PATH` and slot number |
 
-##  consumer
-
- (`github.com/onyx-plus/*`) reads its runtime secrets from the
-shared `hanzo-kms` instance over ZAP (binary protocol, TCP 9999).
-
-**Secret paths**:
-```
-secret/data//{env}/onyx_signing_key # secp256k1 ECDSA, ERC-735 signer
-secret/data//{env}/iam_client_secret # -onyxd OAuth2 secret
-secret/data//{env}/mpc_webhook_secret # HMAC for inbound MPC callbacks
-```
-
-**Auth**: same IAM JWKS that gates other tenant apps. The `-onyxd`
-IAM app issues a JWT with `aud=-onyxd,hanzo-kms`; KMS
-validates `iss` byte-for-byte and `aud ∈ KMS_EXPECTED_AUDIENCE`.
-
-**Boot path**: `onyxd/secrets.go::loadFromKMS` dials `KMS_ZAP_ADDR`,
-reads the three secrets above, populates process env. CrashLoops if
-KMS unreachable — no plaintext fallback in production.
-
-Companion docs: `~/work//internal/content/docs/kms.mdx`,
-`~/work//papers/onyx-plus-kms/onyx-plus-kms.pdf`.
-
 ## Related Skills
 
 - `hanzo/hanzo-id.md` -- IAM (KMS uses IAM for user auth)
