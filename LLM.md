@@ -1,4 +1,4 @@
-# LLM.md - Hanzo Skills
+# Hanzo Skills
 
 ## Overview
 
