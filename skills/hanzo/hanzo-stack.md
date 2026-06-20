@@ -174,9 +174,9 @@ DATABASE_URL=postgresql://hanzo:hanzo@postgres:5432/hanzo
 REDIS_URL=redis://redis:6379
 
 # IAM
-HANZO_IAM_URL=https://hanzo.id
-HANZO_IAM_CLIENT_ID=app-hanzo
-HANZO_IAM_CLIENT_SECRET=secret
+IAM_ENDPOINT=https://hanzo.id
+IAM_CLIENT_ID=app-hanzo
+IAM_CLIENT_SECRET=secret
 
 # KMS
 KMS_ENDPOINT=https://kms.hanzo.ai

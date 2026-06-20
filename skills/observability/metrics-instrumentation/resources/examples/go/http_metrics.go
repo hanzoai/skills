@@ -25,9 +25,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	metric "github.com/luxfi/metric"
 )
 
 // ============================================================================
@@ -35,16 +33,16 @@ import (
 // ============================================================================
 
 var (
-	httpRequestsTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	httpRequestsTotal = metric.NewCounterVec(
+		metric.CounterOpts{
 			Name: "http_requests_total",
 			Help: "Total HTTP requests",
 		},
 		[]string{"method", "endpoint", "status"},
 	)
 
-	httpRequestDuration = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
+	httpRequestDuration = metric.NewHistogramVec(
+		metric.HistogramOpts{
 			Name:    "http_request_duration_seconds",
 			Help:    "HTTP request latency in seconds",
 			Buckets: []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0},
@@ -52,24 +50,24 @@ var (
 		[]string{"method", "endpoint"},
 	)
 
-	httpRequestsInProgress = promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
+	httpRequestsInProgress = metric.NewGaugeVec(
+		metric.GaugeOpts{
 			Name: "http_requests_in_progress",
 			Help: "Number of HTTP requests in progress",
 		},
 		[]string{"method", "endpoint"},
 	)
 
-	httpRequestSize = promauto.NewSummaryVec(
-		prometheus.SummaryOpts{
+	httpRequestSize = metric.NewSummaryVec(
+		metric.SummaryOpts{
 			Name: "http_request_size_bytes",
 			Help: "HTTP request size in bytes",
 		},
 		[]string{"method", "endpoint"},
 	)
 
-	httpResponseSize = promauto.NewSummaryVec(
-		prometheus.SummaryOpts{
+	httpResponseSize = metric.NewSummaryVec(
+		metric.SummaryOpts{
 			Name: "http_response_size_bytes",
 			Help: "HTTP response size in bytes",
 		},
@@ -82,8 +80,8 @@ var (
 // ============================================================================
 
 var (
-	appInfo = promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
+	appInfo = metric.NewGaugeVec(
+		metric.GaugeOpts{
 			Name: "app_info",
 			Help: "Application information",
 		},
@@ -100,47 +98,47 @@ func init() {
 // ============================================================================
 
 var (
-	userLoginTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	userLoginTotal = metric.NewCounterVec(
+		metric.CounterOpts{
 			Name: "user_login_total",
 			Help: "Total user logins",
 		},
 		[]string{"status"},
 	)
 
-	userSessionsActive = promauto.NewGauge(
-		prometheus.GaugeOpts{
+	userSessionsActive = metric.NewGauge(
+		metric.GaugeOpts{
 			Name: "user_sessions_active",
 			Help: "Number of active user sessions",
 		},
 	)
 
-	orderValueDollars = promauto.NewHistogram(
-		prometheus.HistogramOpts{
+	orderValueDollars = metric.NewHistogram(
+		metric.HistogramOpts{
 			Name:    "order_value_dollars",
 			Help:    "Order value in dollars",
 			Buckets: []float64{1, 5, 10, 25, 50, 100, 250, 500, 1000, 5000},
 		},
 	)
 
-	ordersTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	ordersTotal = metric.NewCounterVec(
+		metric.CounterOpts{
 			Name: "orders_total",
 			Help: "Total orders processed",
 		},
 		[]string{"product_category", "payment_method"},
 	)
 
-	databaseQueriesTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	databaseQueriesTotal = metric.NewCounterVec(
+		metric.CounterOpts{
 			Name: "database_queries_total",
 			Help: "Total database queries",
 		},
 		[]string{"operation", "table"},
 	)
 
-	databaseQueryDuration = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
+	databaseQueryDuration = metric.NewHistogramVec(
+		metric.HistogramOpts{
 			Name:    "database_query_duration_seconds",
 			Help:    "Database query duration",
 			Buckets: []float64{0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0},
@@ -148,8 +146,8 @@ var (
 		[]string{"operation", "table"},
 	)
 
-	cacheOperationsTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	cacheOperationsTotal = metric.NewCounterVec(
+		metric.CounterOpts{
 			Name: "cache_operations_total",
 			Help: "Total cache operations",
 		},
@@ -162,15 +160,15 @@ var (
 // ============================================================================
 
 var (
-	processGoroutines = promauto.NewGauge(
-		prometheus.GaugeOpts{
+	processGoroutines = metric.NewGauge(
+		metric.GaugeOpts{
 			Name: "process_goroutines",
 			Help: "Number of goroutines",
 		},
 	)
 
-	processMemoryBytes = promauto.NewGauge(
-		prometheus.GaugeOpts{
+	processMemoryBytes = metric.NewGauge(
+		metric.GaugeOpts{
 			Name: "process_memory_bytes",
 			Help: "Process memory usage in bytes",
 		},
@@ -426,7 +424,7 @@ func main() {
 	mux.HandleFunc("/health", healthHandler)
 
 	// Metrics endpoint
-	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/metrics", metric.NewHTTPHandler(metric.DefaultGatherer, metric.HandlerOpts{}))
 
 	// Apply middleware
 	handler := metricsMiddleware(mux)

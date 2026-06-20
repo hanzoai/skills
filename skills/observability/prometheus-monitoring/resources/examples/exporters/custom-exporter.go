@@ -20,46 +20,44 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	metric "github.com/luxfi/metric"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
 var (
 	// System metrics
-	cpuUsage = promauto.NewGauge(prometheus.GaugeOpts{
+	cpuUsage = metric.NewGauge(metric.GaugeOpts{
 		Name: "custom_cpu_usage_percent",
 		Help: "CPU usage percentage",
 	})
 
-	cpuCores = promauto.NewGauge(prometheus.GaugeOpts{
+	cpuCores = metric.NewGauge(metric.GaugeOpts{
 		Name: "custom_cpu_cores",
 		Help: "Number of CPU cores",
 	})
 
-	memoryUsageBytes = promauto.NewGauge(prometheus.GaugeOpts{
+	memoryUsageBytes = metric.NewGauge(metric.GaugeOpts{
 		Name: "custom_memory_usage_bytes",
 		Help: "Memory usage in bytes",
 	})
 
-	memoryTotalBytes = promauto.NewGauge(prometheus.GaugeOpts{
+	memoryTotalBytes = metric.NewGauge(metric.GaugeOpts{
 		Name: "custom_memory_total_bytes",
 		Help: "Total memory in bytes",
 	})
 
 	// Application metrics
-	appRequestsTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	appRequestsTotal = metric.NewCounterVec(
+		metric.CounterOpts{
 			Name: "custom_app_requests_total",
 			Help: "Total application requests",
 		},
 		[]string{"endpoint", "method", "status"},
 	)
 
-	appRequestDuration = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
+	appRequestDuration = metric.NewHistogramVec(
+		metric.HistogramOpts{
 			Name:    "custom_app_request_duration_seconds",
 			Help:    "Application request duration",
 			Buckets: []float64{0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0, 10.0},
@@ -67,21 +65,21 @@ var (
 		[]string{"endpoint", "method"},
 	)
 
-	appErrorsTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	appErrorsTotal = metric.NewCounterVec(
+		metric.CounterOpts{
 			Name: "custom_app_errors_total",
 			Help: "Total application errors",
 		},
 		[]string{"error_type"},
 	)
 
-	appActiveConnections = promauto.NewGauge(prometheus.GaugeOpts{
+	appActiveConnections = metric.NewGauge(metric.GaugeOpts{
 		Name: "custom_app_active_connections",
 		Help: "Number of active connections",
 	})
 
-	appQueueSize = promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
+	appQueueSize = metric.NewGaugeVec(
+		metric.GaugeOpts{
 			Name: "custom_app_queue_size",
 			Help: "Queue size",
 		},
@@ -89,22 +87,22 @@ var (
 	)
 
 	// Business metrics
-	ordersTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	ordersTotal = metric.NewCounterVec(
+		metric.CounterOpts{
 			Name: "custom_orders_total",
 			Help: "Total orders processed",
 		},
 		[]string{"product_category", "status"},
 	)
 
-	orderValueDollars = promauto.NewHistogram(prometheus.HistogramOpts{
+	orderValueDollars = metric.NewHistogram(metric.HistogramOpts{
 		Name:    "custom_order_value_dollars",
 		Help:    "Order value in dollars",
 		Buckets: []float64{10, 25, 50, 100, 250, 500, 1000, 5000},
 	})
 
-	revenueTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
+	revenueTotal = metric.NewCounterVec(
+		metric.CounterOpts{
 			Name: "custom_revenue_total_dollars",
 			Help: "Total revenue in dollars",
 		},
@@ -112,8 +110,8 @@ var (
 	)
 
 	// Build info
-	buildInfo = promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
+	buildInfo = metric.NewGaugeVec(
+		metric.GaugeOpts{
 			Name: "custom_app_build_info",
 			Help: "Application build information",
 		},
@@ -210,7 +208,7 @@ func main() {
 	go collectMetrics()
 
 	// Expose metrics endpoint
-	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/metrics", metric.NewHTTPHandler(metric.DefaultGatherer, metric.HandlerOpts{}))
 
 	log.Printf("Custom exporter started on %s\n", port)
 	log.Printf("Metrics available at http://localhost%s/metrics\n", port)

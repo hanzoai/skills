@@ -557,27 +557,27 @@ curl -f http://localhost:8000/api/health
 | LDAP not starting | Port 389 in use | Check `ldapServerPort` in conf |
 | WAF blocking requests | Coraza rules too strict | Adjust `conf/waf.conf` |
 
-## OnyxPlus tenant
+## Multi-tenant deployment example
 
-OnyxPlus (Satschel biometric identity, `github.com/onyx-plus/*`) is a
-tenant in the same `liquid-iam` instance that gates BD/ATS/TA/AML.
+A canonical multi-tenant deployment (e.g., a regulated-tokenization
+tenant + a biometric-identity tenant in the same IAM instance) uses:
 
-**Organisations**: `liquidity` (canonical) + `onyxplus` (multi-tenant peer).
+**Organisations**: `<tenant1>` (canonical) + `<tenant2>` (peer).
 
 **SPA apps** (`authorization_code`):
-- `onyxplus-admin` — operator dashboard at `onyxplus.{env}.satschel.com`
-- `onyxplus-verify` — standalone IDV flow at `verify.{env}.satschel.com`
+- `<tenant2>-admin` — operator dashboard at `<tenant2>.{env}.<domain>`
+- `<tenant2>-verify` — standalone IDV flow at `verify.{env}.<domain>`
 
 **Service app** (`client_credentials`):
-- `onyxplus-onyxd` with `aud=onyxplus-onyxd,liquidity-kms` (needs both:
- the daemon scope for inbound calls + `liquidity-kms` to read secrets)
+- `<tenant2>-daemon` with `aud=<tenant2>-daemon,<tenant1>-kms` (needs both:
+  the daemon scope for inbound calls + `<tenant1>-kms` to read secrets)
 
-**Internal docs site** (`internal.onyxplus.{env}.satschel.com`) uses
-NextAuth v5 + Google OAuth restricted to `@satschel.com`, separate from
-IAM (engineering-only surface).
+**Internal docs sites** are typically gated by NextAuth v5 + Google OAuth
+restricted to a corporate email domain, separate from IAM
+(engineering-only surface).
 
-Companion docs: `~/work/onyxplus/internal/content/docs/iam.mdx`,
-`~/work/onyxplus/papers/onyx-plus-iam/onyx-plus-iam.pdf`.
+Companion docs live in the tenant's own repo under `internal/content/docs/`
+and `papers/`.
 
 ## Related Skills
 
@@ -588,7 +588,7 @@ Companion docs: `~/work/onyxplus/internal/content/docs/iam.mdx`,
 - `hanzo/hanzo-console.md` - Admin console (uses IAM for auth)
 - `hanzo/hanzo-commerce.md` - Commerce (writes user balances to IAM)
 - `hanzo/hanzo-universe.md` - K8s infrastructure manifests
-- `liquidity/liquidity-app.md` - Liquidity tenant (BD/ATS/TA/AML)
+- (downstream tenant skill packs live in the tenant's own repo)
 
 ---
 
