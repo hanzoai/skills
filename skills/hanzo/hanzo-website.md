@@ -183,9 +183,9 @@ All marketing pages live under `app/(marketing)/` which applies the shared marke
 
 ```bash
 # IAM OAuth2 (from .env.example)
-VITE_HANZO_IAM_URL=https://id.hanzo.ai
-VITE_HANZO_CLIENT_ID=your-client-id
-VITE_HANZO_REDIRECT_URI=http://localhost:8084/auth/callback
+VITE_IAM_ENDPOINT=https://id.hanzo.ai
+VITE_IAM_CLIENT_ID=your-client-id
+VITE_IAM_REDIRECT_URI=http://localhost:8084/auth/callback
 
 # Commerce API
 VITE_HANZO_API_URL=https://api.hanzo.ai
