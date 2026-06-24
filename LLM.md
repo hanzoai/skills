@@ -15,7 +15,7 @@ skills/
       hanzo-deploy.md   # Deployment guide
       hanzo-platform.md # PaaS (Dokploy fork)
       hanzo-id.md       # Identity/IAM (Casdoor)
-      hanzo-kms.md      # Secrets (Infisical fork)
+      hanzo-kms.md      # Secrets (luxfi/kms MPC)
       hanzo-ingress.md  # Ingress (Traefik fork)
       hanzo-cloud.md    # AI provider mgmt (Casibase)
       hanzo-console.md  # LLM observability (Langfuse)
