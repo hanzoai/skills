@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="skills" width="880"></p>
+
 # Atomic Skills for Claude Code
 
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-blue)](https://docs.claude.com/en/docs/claude-code/plugins)
