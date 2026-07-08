@@ -19,6 +19,14 @@ This skill auto-activates when you're working with:
 - rollback
 - deployment strategies
 
+## Hanzo Reality (read first)
+
+Hanzo services do NOT deploy via Heroku/Netlify. Deployment is HIP-0117:
+ONE binary, three modes — `cloud serve` (no k8s), `cloud cluster init`
+(fetch k3s + operator + `services.hanzo.ai` CRs), `helm install` (BYO k8s).
+CI/CD is Gitea Actions on git.hanzo.ai; GitHub is the OSS mirror.
+Load `cat skills/hanzo-cloud-architecture/SKILL.md`.
+
 ## Available Skills
 
 ### Quick Reference

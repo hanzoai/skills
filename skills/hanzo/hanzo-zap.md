@@ -1,14 +1,31 @@
-# Hanzo ZAP - Protocol Bridge Sidecar
+# Hanzo ZAP - The Transport (and the DB Protocol Bridge)
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-mcp.md`, `hanzo/hanzo-sql.md`, `hanzo/hanzo-kv.md`
+**Canonical spec**: HIP-0114 (ZAP transport), HIP-0116 (plugin VMs over ZAP)
+**Related Skills**: `hanzo-cloud-architecture/SKILL.md`, `hanzo/hanzo-mcp.md`, `hanzo/hanzo-sql.md`, `hanzo/hanzo-kv.md`
 
 ## Overview
 
-Hanzo ZAP (`hanzoai/zap`) is a **Go sidecar that bridges the ZAP protocol to backend infrastructure services**. Runs as a sidecar container alongside databases and caches, translating ZAP protocol calls into native protocol calls. Supports 4 modes: SQL (PostgreSQL), KV (Valkey/Redis), Datastore (ClickHouse), and DocumentDB (MongoDB wire protocol). ZAP's schema maps 1:1 with MCP, so any ZAP service gets MCP tools for free.
+**ZAP is THE Hanzo transport** (HIP-0114): the zero-copy protocol every Hanzo
+service speaks — subsystem↔subsystem inside the `cloud` binary (ZAP-typed Go
+interfaces in-process), host↔plugin-VM over the wire (ZAP RPC, HIP-0116), and
+service↔database via the bridge below. There is **ZERO gRPC and ZERO protobuf
+in Hanzo code**; the only protobuf anywhere is the tiny `zap2pb` tool
+(`~/work/zap/zap2pb`, ~30 LOC) at the OTel (OTLP/OpAMP) interop edge —
+`pb2zap`/`zap2pb`/`zapc` handle the pb↔zap boundary while services hold only
+ZAP types. The `zip` server (`github.com/hanzoai/zip`) serves ZAP as its
+primary listener with HTTP as an extra.
+
+This skill also covers `hanzoai/zap`, the **Go bridge that translates ZAP
+calls into native database protocols**. It runs alongside databases and
+caches in 4 modes: SQL (PostgreSQL), KV (Valkey/Redis), Datastore
+(ClickHouse), and DocumentDB (MongoDB wire protocol). ZAP's schema maps 1:1
+with MCP, so any ZAP service gets MCP tools for free.
 
 ## When to use
 
+- Choosing the transport for ANY Hanzo service-to-service call (answer: ZAP)
+- Wiring a plugin VM to the cloud host (ZAP RPC, HIP-0116)
 - Adding MCP tool support to PostgreSQL, Redis, ClickHouse, or MongoDB
 - Building AI agents that need direct database access via MCP
 - Deploying database sidecars in K8s for ZAP/MCP access
@@ -150,12 +167,21 @@ containers:
 
 ## Wire format
 
-ZAP is a native TCP binary protocol on port 9651. The wire format is designed for zero-copy operation:
+ZAP is a native TCP binary protocol (bridge default port 9651; zip's primary
+ZAP listener uses 9653). The wire format is designed for zero-copy operation:
 
 - **Header**: 8 bytes (4-byte length + 4-byte type)
-- **Body**: Protobuf-encoded request/response
+- **Body**: ZAP zero-copy encoding — NOT protobuf; messages are read in place
 - **Streaming**: Bidirectional streaming for large result sets
 - **Service mesh**: mDNS discovery for automatic sidecar registration
+
+### The one pb boundary
+
+Protobuf exists at exactly one edge: OTel interop (OTLP/OpAMP). `zap2pb`
+converts outbound ZAP telemetry to OTLP pb; `pb2zap` converts inbound;
+`zapc` compiles the schemas. No Hanzo service imports
+`google.golang.org/grpc` or `google.golang.org/protobuf` — if you find one,
+that is a bug.
 
 ## Environment variables
 

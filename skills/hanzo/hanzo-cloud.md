@@ -1,166 +1,159 @@
-# Hanzo Cloud - AI Provider Management Platform
+# Hanzo Cloud - The Unified One-Binary Cloud
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-console.md`, `hanzo/hanzo-platform.md`, `hanzo/hanzo-id.md`
+**Canonical spec**: HIP-0106 (one binary), HIP-0114 (ZAP), HIP-0116 (plugin VMs), HIP-0117 (deploy modes)
+**Related Skills**: `hanzo-cloud-architecture/SKILL.md` (read first), `hanzo/hanzo-zap.md`, `hanzo/hanzo-gateway.md`, `hanzo/hanzo-console.md`, `hanzo/hanzo-iam.md`
 
 ## Overview
 
-Hanzo Cloud is the **AI provider management platform** -- Go 1.26 Beego MVC backend with React frontend, PostgreSQL database, and integrations for 30+ AI providers. Fork of Casibase. Available at `cloud.hanzo.ai`. Provides the OpenAI-compatible API gateway at `api.hanzo.ai`, project management, API key generation, usage metrics, billing, and team management.
+`hanzoai/cloud` is **ONE Go binary** that embeds every Hanzo-native subsystem
+— IAM, KMS, o11y, tasks, notify, pubsub, kafka, console, ai (the former LLM
+control plane), and the rest — behind a single plugin registry. It is built
+on **zip** (`github.com/hanzoai/zip`, the ZAP-native high-performance server):
+a **977-LOC shim** plus `cloud.Register(name, order, mount)` and **74,561 LOC
+of plugins** under `clients/*` (76:1 plugin:core). The console SPA is
+`go:embed`'d (real `hanzoai/console` static build; 303.6 MiB one-binary;
+fail-hard Dockerfile). The same artifact powers `api.hanzo.ai`,
+`api.lux.cloud`, `api.zoo.cloud`, and every white-label surface — brand,
+enabled subsystems, and tenant scope are deployment configuration.
+
+**Naming note**: the former "AI provider management platform" content that
+used to live at `hanzoai/cloud` was renamed to `hanzoai/ai` and mounts as the
+`ai` subsystem inside this binary. White-label fork target is `hanzoai/cloud`.
 
 ## When to use
 
-- Managing AI provider configurations and API keys
-- Monitoring LLM usage and costs across 100+ providers
-- Creating projects with per-environment API keys
-- Managing team access to AI resources with RBAC
-- Setting up billing and subscriptions
-- Accessing the OpenAI-compatible API at `api.hanzo.ai/v1`
+- Working on any embedded subsystem (`clients/*`) or the cloud core
+- Standing up a full Hanzo cloud locally (`cloud serve` — no Kubernetes)
+- Deploying or white-labeling a cloud surface
+- Managing AI providers/keys (the `ai` subsystem + gateway HIP-0004)
+- Wiring per-product metered usage and 402 balance-gating via console
 
 ## Hard requirements
 
-1. **IAM configured** at hanzo.id for authentication
-2. **iamEndpoint MUST be public URL** (`https://hanzo.id`), not internal cluster address
-3. **PostgreSQL** for project/user/key storage
-4. **LLM Gateway** (`hanzoai/llm`) for model routing
+1. **ZAP only** (HIP-0114): zero gRPC, zero protobuf in Hanzo code. The pb
+   boundary is `zap2pb`/`pb2zap`/`zapc` at the OTel edge exclusively.
+2. **zip is the one server framework** — no Beego, no Gin, no echo, no
+   second framework.
+3. **SQLite-primary per-tenant** storage; PostgreSQL only for production
+   multi-instance. Never default to PostgreSQL for local dev.
+4. **Subsystems fail closed**: an embed without its required config refuses
+   to mount. Disabled-by-default in production; deployments enable
+   explicitly via `cfg.Enable` (flags/env).
+5. **IAM identity from hanzo.id**; org from the JWT `owner` claim; all data
+   scoped to org.
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
-| Dashboard | `https://cloud.hanzo.ai` |
-| API Gateway | `https://api.hanzo.ai/v1` (OpenAI-compatible) |
-| LLM Endpoint | `https://llm.hanzo.ai` |
-| Auth | IAM via hanzo.id |
-| Backend | Go 1.26 + Beego MVC |
-| Frontend | React (CRA via CRACO, .js + .less) |
-| Database | PostgreSQL |
-| Upstream | Casibase |
-| Repo | `github.com/hanzoai/cloud` |
-| K8s manifests | `universe/infra/k8s/cloud/` |
-| Image | `ghcr.io/hanzoai/cloud:latest` |
-| K8s service | `cloud-api.hanzo.svc:8000` |
-| Port | 8000 |
+| Repo | `github.com/hanzoai/cloud` (`~/work/hanzo/cloud`) |
+| Entrypoints | `cmd/cloud` (full surface), `cmd/hanzo` (subcommand dispatcher) |
+| Registry | `cloud.Register` / `cloud.RegisterWithShutdown` (`build.go`) |
+| Subsystem set | `subsystems` bundle (one source of truth, blank-imported) |
+| Plugins | `clients/*` (admin, ai, billing, console, iamsvc, kmssvc, kafka, notify, o11y, tasksvc, ...) |
+| Server | `github.com/hanzoai/zip` — ZAP primary + HTTP extra, one `Listen` |
+| Console | `go:embed` SPA (`webui.go`, `clients/console`) |
+| Helm chart | `cloud/helm/cloud` |
+| Image | `ghcr.io/hanzoai/cloud` (Gitea Actions CI, GH mirror) |
+| API surface | `api.hanzo.ai` (`/v1/...`, never `/api/` prefixes) |
+| Dashboard | `console.hanzo.ai` (usage metering, 402 balance-gating) |
 
 ## Architecture
 
 ```
-cloud.hanzo.ai (dashboard)
- |
- Cloud Backend (Go/Beego, port 8000)
- |
- +----+----+----+
- | | | |
- IAM PostgreSQL LLM Gateway Console
- (hanzo.id) (llm.hanzo.svc) (console.hanzo.ai)
+                 ONE binary: cloud
+┌───────────────────────────────────────────────────┐
+│ zip (ZAP-native server, Fiber v3/fasthttp)        │
+│ cloud core: 977-LOC shim + Register() registry    │
+├───────────────────────────────────────────────────┤
+│ clients/* plugins (74,561 LOC)                    │
+│  iamsvc │ kmssvc │ o11y │ tasksvc │ notify        │
+│  pubsub │ kafka  │ console (embedded SPA) │ ai    │
+│  billing │ admin │ analytics │ ...                │
+├───────────────────────────────────────────────────┤
+│ SQLite per-tenant   │ datastore (ClickHouse)      │
+│ Quasar + zapdb (replication — no ZK/raft/etcd)    │
+└───────────────────────────────────────────────────┘
+        transport everywhere: ZAP (HIP-0114)
 ```
 
-### Integration with LLM Gateway
+Each `hanzoai/<repo>` service still builds standalone; inside cloud it is a
+subsystem, and (HIP-0116, staged) the same code runs as an out-of-process
+**plugin VM** dialed over ZAP and distributed via `luxfi/lpm`. In-process vs
+out-of-process is deployment topology, not architecture.
 
-Cloud's AI bot uses `http://cloud-api.hanzo.svc:8000/api` as `OPENAI_BASE_URL`. The LLM Gateway (`hanzoai/llm`, aka hanzo-llm on PyPI) routes to 100+ providers including all Zen models.
+## Adding a subsystem
 
-### Integration with Console
+```go
+// clients/example/example.go
+package example
 
-Cloud API POSTs traces to `console.hanzo.ai/api/public/ingestion` for centralized observability of all LLM calls.
+import "github.com/hanzoai/cloud"
 
-## Multi-org support
+func init() {
+    cloud.Register("example", 50, mount) // name, mount order, mount func
+}
 
-Cloud supports multiple organizations: hanzo, lux, zoo, pars.
-
-### Organization hierarchy
-
+func mount(app cloud.App, cfg cloud.Config) error {
+    if cfg.ExampleDSN == "" {
+        return cloud.ErrNotConfigured // fail closed, never degrade silently
+    }
+    app.Get("/v1/example/:id", handler) // /v1/, never /api/
+    return nil
+}
 ```
-Organization (hanzo)
- +-- Project (my-ai-app)
- | +-- API Key (sk-hanzo-...)
- | +-- Environment (production)
- | +-- Environment (staging)
- +-- Project (chatbot)
- +-- Members
- +-- admin@hanzo.ai (OWNER)
- +-- dev@hanzo.ai (DEVELOPER)
-```
 
-### Multi-org bootstrap
+Then add it to the `subsystems` bundle — the ONE place the set is defined.
+
+## Running
 
 ```bash
-HANZO_INIT_ORG_IDS=hanzo,lux,zoo,pars
-HANZO_INIT_ORG_NAMES="Hanzo AI,Lux Network,Zoo Foundation,Pars"
-HANZO_INIT_USER_EMAIL=z@hanzo.ai
-HANZO_INIT_PROJECT_ORG_ID=hanzo
+# The whole cloud on a laptop — no Kubernetes, SQLite per-tenant (HIP-0117 mode 1)
+cloud serve
+
+# Bootstrap a k3s HA cluster + operator + services.hanzo.ai CRs (mode 2, staged)
+cloud cluster init
+
+# BYO Kubernetes (mode 3)
+helm install cloud ./helm/cloud
 ```
 
-Membership bootstrap supports existing users by email -- password only required for brand-new users.
-
-## API key usage
+## API key usage (the `ai` subsystem + gateway)
 
 ```bash
-# Create key via dashboard, then use:
-export HANZO_API_KEY=sk-hanzo-...
+export HANZO_API_KEY=sk-...
 
-# OpenAI-compatible chat completions
 curl https://api.hanzo.ai/v1/chat/completions \
  -H "Authorization: Bearer ${HANZO_API_KEY}" \
  -H "Content-Type: application/json" \
- -d '{
- "model": "zen-70b",
- "messages": [{"role": "user", "content": "Hello"}]
- }'
-
-# List available models
-curl https://api.hanzo.ai/v1/models \
- -H "Authorization: Bearer ${HANZO_API_KEY}"
+ -d '{"model": "zen-70b", "messages": [{"role": "user", "content": "Hello"}]}'
 ```
 
-## Supported providers (100+)
-
-Zen models (14 frontier models), OpenAI, Anthropic, Google (Gemini), Meta (Llama), Mistral, Together AI, Groq, Fireworks, Ollama, Azure OpenAI, AWS Bedrock, Cohere, Replicate, DeepSeek, and many more via the LLM Gateway.
-
-## K8s deployment
-
-The Cloud API runs as `cloud-api` service in the hanzo namespace:
-
-```yaml
-# universe/infra/k8s/cloud/deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
- name: cloud-api
- namespace: hanzo
-spec:
- replicas: 2
- template:
- spec:
- containers:
- - name: cloud
- image: ghcr.io/hanzoai/cloud:latest
- ports:
- - containerPort: 8000
- env:
- - name: iamEndpoint
- value: "https://hanzo.id" # MUST be public URL
-```
+The gateway (HIP-0004) is the unified AI provider interface — 100+ providers,
+BYO keys. Usage is metered per product in console; exhausted balance returns
+**402** at the gate.
 
 ## Troubleshooting
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| Login fails | `iamEndpoint` is internal URL | Set to `https://hanzo.id` (public) |
-| API key not working | Key not associated with project | Create key via dashboard under correct project |
-| Wrong org after login | Hardcoded org in config | Use `/api/get-app-login` for dynamic resolution |
-| 502 on api.hanzo.ai | LLM Gateway down | Check `llm` pod in hanzo namespace |
-| Traces not appearing | Console ingestion URL wrong | Verify `CONSOLE_URL` env var |
+| Subsystem missing from a deploy | Not in `cfg.Enable` | Enable it explicitly; embeds are disabled-by-default |
+| Subsystem refuses to mount | Required config absent | That is fail-closed working as designed — supply the config |
+| Console SPA 404 | Binary built without embed | Rebuild via CI; the Dockerfile fails hard when the SPA is missing |
+| Postgres in local dev | Wrong default | `cloud serve` uses per-tenant SQLite; do not add Postgres |
+| gRPC/proto imports in review | Stale pattern | Rewrite on ZAP types; pb only at the OTel edge (`zap2pb`) |
 
 ## Related Skills
 
-- `hanzo/hanzo-console.md` -- Observability and tracing
-- `hanzo/hanzo-id.md` -- Authentication
-- `hanzo/hanzo-chat.md` -- Chat UI
-- `hanzo/hanzo-llm-gateway.md` -- LLM proxy (100+ providers)
-- `hanzo/hanzo-billing.md` -- Billing portal
+- `hanzo-cloud-architecture/SKILL.md` — the canonical architecture skill
+- `hanzo/hanzo-zap.md` — ZAP transport and MCP mapping
+- `hanzo/hanzo-gateway.md` — HIP-0004 AI gateway at api.hanzo.ai
+- `hanzo/hanzo-console.md` — dashboard, metering, LLM observability
+- `hanzo/hanzo-iam.md` — identity (embedded `iamsvc`)
 
 ---
 
-**Last Updated**: 2026-03-23
 **Category**: Hanzo Ecosystem
-**Related**: cloud, dashboard, api-gateway, billing, providers, casibase
-**Prerequisites**: Web browser, Hanzo account
+**Related**: cloud, one-binary, zip, zap, plugins, subsystems, white-label, console
+**Prerequisites**: Go, the hanzo-cloud-architecture skill

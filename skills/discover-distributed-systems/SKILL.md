@@ -19,6 +19,13 @@ This skill auto-activates when you're working with:
 - Gossip protocols
 - Probabilistic data structures
 
+## Hanzo/Lux Production Reality (read first)
+
+These skills are theory. In production: transport = **ZAP** (HIP-0114, never
+gRPC/protobuf), consensus = **Lux Quasar + zapdb** (never ZooKeeper/raft/
+etcd), services = **plugin VMs** over ZAP distributed via `luxfi/lpm`
+(HIP-0116). Load `cat skills/hanzo-cloud-architecture/SKILL.md`.
+
 ## Available Skills
 
 ### Quick Reference

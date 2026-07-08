@@ -19,6 +19,14 @@ This skill auto-activates when you're working with:
 - dashboards
 - observability
 
+## Hanzo Reality (read first)
+
+Hanzo o11y is an embedded subsystem of the `cloud` binary (HIP-0106) — not a
+separate deployment. Native datastore (ClickHouse) metrics driver,
+OTLP-over-ZAP with the pb boundary only at the OTel edge (`zap2pb`). No
+ZooKeeper. Load `cat skills/hanzo/hanzo-o11y.md` and
+`cat skills/hanzo-cloud-architecture/SKILL.md`.
+
 ## Available Skills
 
 ### Quick Reference
