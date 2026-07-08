@@ -10,6 +10,32 @@ version: 1.0.0
 
 Deploy and manage containerized applications on Kubernetes with production best practices for high availability, security, and scalability.
 
+## Hanzo Production Reality (read first)
+
+For Hanzo/Lux services this generic skill is background knowledge only —
+deployment is prescribed by HIP-0117 (one binary, three modes) and the
+operator. See `skills/hanzo-cloud-architecture/SKILL.md`.
+
+1. **`cloud serve`** — single process, NO Kubernetes. The whole cloud
+   (IAM, KMS, o11y, tasks, console, ...) in one binary with per-tenant
+   SQLite. This is local dev and single-node/edge production.
+2. **`cloud cluster init`** — the binary fetches k3s, bootstraps the
+   cluster, installs the operator, and hands reconciliation to
+   `services.hanzo.ai` CRs. Devs do NOT hand-write Deployments; the
+   operator reconciles CRs. (Decided per HIP-0117; staged.)
+3. **`helm install cloud ./helm/cloud`** — BYO Kubernetes, same image.
+
+Rules that override the generic advice below:
+- You deploy by editing a `services.hanzo.ai` CR (or universe manifests),
+  never by `kubectl create deployment`.
+- CI/CD is Gitea Actions on git.hanzo.ai (GH-Actions-compatible workflows on
+  our runners); GitHub is the OSS mirror. Never build images locally.
+- Images: `ghcr.io/hanzoai/*` (Hanzo) / `ghcr.io/luxfi/*` (Lux) — never mix.
+- Secrets come from KMS (KMSSecret CRDs), never plain K8s Secrets in manifests.
+- Ingress is `hanzoai/ingress` — no nginx, no caddy.
+- 8 Kubernetes clusters are operated; visor autoscales fleets across
+  providers (BYO provider).
+
 ## Overview
 
 This skill covers Kubernetes deployment strategies, including:

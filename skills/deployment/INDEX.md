@@ -5,6 +5,16 @@
 **Total Skills**: 6
 **Category**: deployment
 
+## Hanzo Reality (read first)
+
+The skills below cover third-party platforms (Heroku, Netlify). **Hanzo
+services do NOT deploy this way.** Hanzo deployment is HIP-0117: ONE binary,
+three modes — `cloud serve` (no Kubernetes), `cloud cluster init` (fetch k3s
++ operator + `services.hanzo.ai` CRs), or `helm install` (BYO k8s). CI/CD is
+Gitea Actions on git.hanzo.ai; GitHub is the OSS mirror.
+
+Load: `cat skills/hanzo-cloud-architecture/SKILL.md`
+
 ## Skills in This Category
 
 ### heroku-addons.md
