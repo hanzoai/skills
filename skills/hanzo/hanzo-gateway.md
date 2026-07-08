@@ -2,6 +2,12 @@
 
 API gateway for all Hanzo services. KrakenD-based with Go auth middleware.
 
+Per **HIP-0004**, the gateway is the **unified AI provider interface**: one
+OpenAI-compatible surface over 100+ providers, bring-your-own AI/keys. It
+injects identity (X-User-Id / X-Org-Id / X-User-Email from the IAM JWT) and
+fronts the unified `cloud` binary (HIP-0106) — per-product usage is metered
+in console.hanzo.ai and exhausted balances are gated with **402** responses.
+
 ## URLs
 - **Production**: api.hanzo.ai
 - **Health**: api.hanzo.ai/__health (KrakenD built-in, via gateway.json)

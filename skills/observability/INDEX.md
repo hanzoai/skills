@@ -5,6 +5,19 @@
 **Total Skills**: 8
 **Category**: observability
 
+## Hanzo Reality (read first)
+
+In the Hanzo stack, observability is NOT a separate deployment: o11y is an
+embedded subsystem of the unified `cloud` binary (HIP-0106), with a **native
+datastore (ClickHouse) metrics driver** and **OTLP-over-ZAP** — services hold
+ZAP-typed telemetry end-to-end and the pb↔zap boundary lives only at the
+OTel interop edge (`zap2pb`/`pb2zap`). Third-party OTLP SDKs ingest via the
+collector on standard 4317/4318. No ZooKeeper anywhere; datastore runs
+keeper-free.
+
+Load: `cat skills/hanzo/hanzo-o11y.md` and
+`cat skills/hanzo-cloud-architecture/SKILL.md`
+
 ## Skills in This Category
 
 ### alerting-strategy.md

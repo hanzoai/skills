@@ -5,6 +5,21 @@
 **Total Skills**: 17
 **Category**: distributed-systems
 
+## Hanzo/Lux Production Reality (read first)
+
+The skills below are theory (RAFT, Paxos, ZooKeeper locks, ...). The Hanzo/
+Lux production stack does NOT use them:
+
+- **Transport**: ZAP (HIP-0114) — zero-copy, ZAP-typed interfaces in-process,
+  ZAP RPC across processes. NEVER gRPC, NEVER protobuf in Hanzo code.
+- **Consensus/replication**: Lux Quasar (`luxfi/consensus`) + `luxfi/zapdb`.
+  NO ZooKeeper, NO raft libraries, NO etcd.
+- **Service composition**: plugin VMs on the cloud host (HIP-0116),
+  distributed via `luxfi/lpm` — not a microservice mesh.
+
+Load: `cat skills/hanzo-cloud-architecture/SKILL.md` for the realized
+architecture; use this category for the underlying theory only.
+
 ## Skills in This Category
 
 ### cap-theorem.md

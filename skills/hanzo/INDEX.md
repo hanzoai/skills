@@ -8,11 +8,12 @@ Hanzo is a comprehensive AI ecosystem -- from frontier models (Zen MoDE) to prod
 
 ### Key Rules
 
+- **One binary, ZAP only** -- `hanzoai/cloud` embeds the subsystems; transport is ZAP, never gRPC/protobuf. Read `../hanzo-cloud-architecture/SKILL.md` first
 - **KMS for all secrets** -- never hardcode in manifests, never plaintext
 - **GHCR for images** -- `ghcr.io/hanzoai/<service>`, always `--platform linux/amd64`
 - **Kustomize, not Helm** -- `kubectl kustomize . | kubectl apply -f -`
 - **No nginx, no caddy** -- Hanzo Ingress (Traefik) handles all routing
-- **Self-hosted runners only** -- never GitHub Actions billing
+- **Self-hosted runners only** -- Gitea Actions on git.hanzo.ai is native CI; GitHub is the OSS mirror
 - **IAM for all auth** -- hanzo.id, RFC 6749/OIDC endpoints only
 - **Universe is source of truth** -- all K8s manifests in `hanzoai/universe`
 - **Zen models: qwen3+ only** -- never qwen2, never reference upstream names
@@ -79,7 +80,7 @@ Multi-party computation for distributed wallets.
 ### Cloud Services & Apps (12 skills)
 
 **Hanzo Cloud** (`hanzo-cloud.md`)
-AI provider management at cloud.hanzo.ai (Casibase fork). OpenAI-compatible API at api.hanzo.ai. 100+ providers, billing, team management.
+THE unified one-binary cloud (HIP-0106): one Go binary on zip embedding IAM/KMS/o11y/tasks/notify/pubsub/kafka/console/ai via the `cloud.Register` plugin registry. ZAP-only transport. White-label by config. See also `../hanzo-cloud-architecture/SKILL.md`.
 
 **Hanzo Console** (`hanzo-console.md`)
 Observability at console.hanzo.ai (Langfuse fork). LLM traces, token usage, cost tracking, prompt management, datasets.
@@ -155,7 +156,7 @@ Memory API server for AI agents.
 ### Protocol & Bridge (2 skills)
 
 **Hanzo ZAP** (`hanzo-zap.md`)
-ZAP protocol bridge sidecar. Native TCP binary protocol on port 9651. SQL/KV/Datastore/DocumentDB modes. ZAP-MCP 1:1 mapping.
+THE Hanzo transport (HIP-0114) — zero-copy, zero gRPC/protobuf in Hanzo code (pb only at the OTel edge via zap2pb). Also the DB protocol bridge: SQL/KV/Datastore/DocumentDB modes, ZAP-MCP 1:1 mapping.
 
 **Hanzo Zrok** (`hanzo-zrok.md`)
 Zero-trust sharing platform (zrok fork). Public/private shares through ZT fabric.
@@ -244,7 +245,7 @@ Browser and IDE extensions.
 ### Data & Observability (15 skills)
 
 **Hanzo O11y** (`hanzo-o11y.md`)
-Full-stack observability (SigNoz fork). ClickHouse + OTEL. Logs, metrics, traces. APM for infrastructure.
+Full-stack observability, embedded in the `cloud` binary as the `o11y` subsystem. ClickHouse (datastore, keeper-free) + native metrics driver + OTLP-over-ZAP. Logs, metrics, traces. APM for infrastructure.
 
 **Hanzo Database** (`hanzo-database.md`) | **Hanzo SQL** (`hanzo-sql.md`)
 PostgreSQL with AI extensions (`ghcr.io/hanzoai/sql`).
