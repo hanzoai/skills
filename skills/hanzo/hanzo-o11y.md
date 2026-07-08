@@ -2,11 +2,22 @@
 # Hanzo O11y - Full-Stack Observability Platform
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-console.md`, `hanzo/hanzo-k8s.md`, `hanzo/hanzo-deploy.md`
+**Related Skills**: `hanzo-cloud-architecture/SKILL.md`, `hanzo/hanzo-console.md`, `hanzo/hanzo-k8s.md`, `hanzo/hanzo-deploy.md`
 
 ## Overview
 
-Hanzo O11y is a **full-stack observability platform** for logs, metrics, and traces. Fork of SigNoz. Go 1.25 backend (Gin/gorilla-mux) with React 18 + Vite frontend. Uses **ClickHouse** as the telemetry datastore and **OpenTelemetry** for ingestion. Live at `o11y.hanzo.ai`.
+Hanzo O11y is the **full-stack observability platform** for logs, metrics,
+and traces. It ships **embedded in the unified `cloud` binary** as the `o11y`
+subsystem (`clients/o11y`, HIP-0106) — the standalone o11y pod is retired;
+the repo still builds standalone per the dual-build contract (HIP-0116).
+Uses **ClickHouse** (`datastore` — the one non-Go exception in the stack) as
+the telemetry store, with a **native datastore metrics driver**, and
+**OpenTelemetry** at the ingestion edge. Live at `o11y.hanzo.ai`.
+
+**Telemetry transport**: Hanzo services hold ZAP-typed telemetry end-to-end
+(OTLP-over-ZAP); the pb↔zap boundary at the OTel interop edge is handled by
+`zap2pb`/`pb2zap` — the only protobuf in the stack (HIP-0114). Third-party
+OTLP SDKs still ingest over standard OTLP 4317/4318.
 
 **Hanzo O11y is for infrastructure observability (APM, logs, metrics). For LLM-specific observability (traces, costs, prompts), use Hanzo Console.**
 
@@ -22,9 +33,10 @@ Hanzo O11y is a **full-stack observability platform** for logs, metrics, and tra
 ## Hard requirements
 
 1. **ClickHouse** (`ghcr.io/hanzoai/datastore`) for telemetry storage
-2. **ZooKeeper** for ClickHouse coordination
-3. **OpenTelemetry Collector** (`ghcr.io/hanzoai/otel-collector`) for data ingestion
-4. **Docker or Kubernetes** for deployment
+2. **OpenTelemetry Collector** (`ghcr.io/hanzoai/otel-collector`) at the interop edge
+3. **NO ZooKeeper** — there is no ZooKeeper/raft/etcd anywhere in the Hanzo
+   stack; coordination is Lux Quasar + zapdb, and datastore runs keeper-free
+4. Runs inside `cloud` (`cloud serve` mounts it) or via K8s for the split topology
 
 ## Quick reference
 
@@ -68,11 +80,11 @@ ClickHouse O11y Backend
 
 | Component | Image | Port | Purpose |
 |-----------|-------|------|---------|
-| Frontend | `ghcr.io/hanzoai/o11y-frontend` | 3301 | React dashboard |
-| Query Service | `ghcr.io/hanzoai/o11y-query` | 8080 | Backend API |
-| OTEL Collector | `ghcr.io/hanzoai/otel-collector` | 4317, 4318 | Telemetry ingestion |
-| ClickHouse | `ghcr.io/hanzoai/datastore` | 9000, 8123 | Columnar telemetry store |
-| ZooKeeper | `bitnami/zookeeper` | 2181 | ClickHouse coordination |
+| o11y subsystem | inside `ghcr.io/hanzoai/cloud` | — | Query API + dashboard, embedded (primary) |
+| Frontend | `ghcr.io/hanzoai/o11y-frontend` | 3301 | React dashboard (split topology) |
+| Query Service | `ghcr.io/hanzoai/o11y-query` | 8080 | Backend API (split topology) |
+| OTEL Collector | `ghcr.io/hanzoai/otel-collector` | 4317, 4318 | Telemetry ingestion (pb edge) |
+| ClickHouse | `ghcr.io/hanzoai/datastore` | 9000, 8123 | Columnar telemetry store, keeper-free |
 
 ## Instrument your application
 
