@@ -19,13 +19,23 @@ This skill auto-activates when you're working with:
 - Azure
 - deployment
 
+## Hanzo Reality (read first)
+
+Hanzo's own cloud is NOT AWS/GCP-shaped: it is ONE Go binary
+(`hanzoai/cloud`) on zip with ZAP-only transport, embedded subsystems, and
+three deploy modes (HIP-0106/0114/0116/0117).
+Load `cat skills/hanzo-cloud-architecture/SKILL.md` first; use the vendor
+skills below for customer/BYO-provider infrastructure.
+
 ## Available Skills
 
 ### Quick Reference
 
-The Cloud category contains 0 skills:
+The Cloud category contains 13 skills:
 
-
+1. **aws/** — API Gateway, databases, EC2, IAM, Lambda, networking, storage
+2. **gcp/** — compute, databases, IAM, networking, serverless, storage
+3. **cloud-kubernetes-deployment** — generic K8s (see `skills/cloud-kubernetes-deployment.md`)
 
 ### Load Full Category Details
 
