@@ -336,6 +336,7 @@ cat skills/database/redpanda-streaming.md
     │   ├── discover-plt/           # Programming language theory
     │   ├── discover-formal/        # Formal methods, verification
     │   ├── discover-cloud/         # Serverless, cloud platforms
+    │   ├── discover-hanzo-cloud-architecture/  # Hanzo one-binary ZAP-native cloud
     │   ├── discover-zig/           # Zig systems programming
     │   ├── discover-networking/    # SSH, mTLS, VPN, resilience
     │   ├── discover-workflow/      # Beads, context strategies
