@@ -249,7 +249,7 @@ docker run -p 8080:8080 -e SWAGGER_JSON=/specs/hanzo.yaml \
 | @hanzokv | Key-value store (valkey) |
 | @hanzocr | Container registry (harbor) |
 | @hanzomsg | Messaging (nats-server, nats.go, nats.js, nats.py) |
-| @hanzoo11y | Observability (loki, grafana, signoz) |
+| @hanzoo11y | Observability (loki, grafana, o11y) |
 
 ## Related Skills
 
