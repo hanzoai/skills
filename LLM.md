@@ -54,7 +54,7 @@ skills/
 
 ### Data
 - `hanzo-zap.md` -- ZAP sidecar bridges SQL/KV/Datastore/DocumentDB to MCP
-- `hanzo-o11y.md` -- Infrastructure APM (SigNoz, ClickHouse, OTEL)
+- `hanzo-o11y.md` -- Infrastructure APM (O11y, ClickHouse, OTEL)
 
 ## Hard Rules
 
