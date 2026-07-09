@@ -135,7 +135,7 @@ universe/infra/k8s/
  iam/ # hanzo.id (Hanzo IAM)
  kms/ # kms.hanzo.ai (Hanzo KMS)
  monitoring/ # Prometheus/Grafana
- o11y/ # SigNoz observability
+ o11y/ # O11y observability
  paas/ # platform.hanzo.ai
  registry/ # container registry
  search/ # search service
