@@ -253,7 +253,7 @@ spec:
 
 - `hanzo/hanzo-cloud.md` -- Cloud API (sends traces to Console)
 - `hanzo/hanzo-chat.md` -- Chat app (auto-instrumented)
-- `hanzo/hanzo-o11y.md` -- Infrastructure observability (SigNoz)
+- `hanzo/hanzo-o11y.md` -- Infrastructure observability (Hanzo o11y)
 - `hanzo/python-sdk.md` -- Python SDK with `@observe()` decorator
 
 ---

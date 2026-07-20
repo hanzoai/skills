@@ -94,7 +94,7 @@ Hanzo Ingress is a **Kubernetes-native L7 reverse proxy and load balancer** that
 | `chat.hanzo.ai` | Chat (LibreChat) | 3080 |
 | `hanzo.team` | Team (Huly fork) | 8087 |
 | `billing.hanzo.ai` | Billing | 80 |
-| `o11y.hanzo.ai` | SigNoz | 3301 |
+| `o11y.hanzo.ai` | Hanzo o11y | 3301 |
 
 ## Create an Ingress resource
 
