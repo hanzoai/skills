@@ -69,7 +69,7 @@ Hanzo runs all production services on **DOKS (DigitalOcean Kubernetes Service)**
 | `chat.hanzo.ai` | Chat (LibreChat) | 3080 |
 | `hanzo.team` | Team (Huly fork) | 8087 |
 | `billing.hanzo.ai` | Billing portal | 80 |
-| `o11y.hanzo.ai` | SigNoz | 3301 |
+| `o11y.hanzo.ai` | Hanzo o11y | 3301 |
 
 ### lux-k8s domains and services
 
