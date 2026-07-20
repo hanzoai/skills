@@ -180,8 +180,8 @@ kubectl --context do-sfo3-hanzo-k8s kustomize . | kubectl apply -f -
 # Example alert rule
 - alert: HighErrorRate
  expr: |
- sum(rate(signoz_calls_total{status_code="STATUS_CODE_ERROR"}[5m]))
- / sum(rate(signoz_calls_total[5m])) > 0.05
+ sum(rate(o11y_calls_total{status_code="STATUS_CODE_ERROR"}[5m]))
+ / sum(rate(o11y_calls_total[5m])) > 0.05
  for: 5m
  labels:
  severity: warning
@@ -221,5 +221,5 @@ Use O11y for infrastructure. Use Console for LLM-specific observability. Both co
 
 **Last Updated**: 2026-03-23
 **Category**: Hanzo Ecosystem
-**Related**: observability, signoz, opentelemetry, traces, metrics, logs, clickhouse
+**Related**: observability, o11y, opentelemetry, traces, metrics, logs, clickhouse
 **Prerequisites**: OTEL concepts, ClickHouse basics
