@@ -191,7 +191,7 @@ kubectl --context do-sfo3-hanzo-k8s kustomize . | kubectl apply -f -
 
 ## O11y vs Console
 
-| Feature | O11y (SigNoz) | Console (Langfuse) |
+| Feature | O11y | Console (Langfuse) |
 |---------|---------------|---------------------|
 | Purpose | Infrastructure APM | LLM observability |
 | Traces | Distributed service traces | LLM call traces |
