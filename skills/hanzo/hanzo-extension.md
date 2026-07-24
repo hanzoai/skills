@@ -50,14 +50,16 @@ Hanzo Extensions is a **monorepo of browser and IDE extensions** providing AI-po
 
 ## Browser Extension Auth Flow
 
-**CRITICAL**: Uses implicit OAuth2 (`response_type=token`), NOT code flow.
+**The ONE way**: the `@hanzo/iam` SDK, OAuth2 authorization-code + **PKCE
+`S256`** against the canonical `/v1/iam/oauth/*` endpoints. No implicit flow,
+no hand-rolled OAuth, no legacy `/login/oauth/*`. See `hanzo/hanzo-id.md`.
 
 ```
-1. Extension opens tab → hanzo.id/login/oauth/authorize?response_type=token&...
-2. User logs in on Hanzo IAM form
-3. Redirect to hanzo.ai/callback?access_token=JWT&state=...
-4. Extension catches redirect via chrome.tabs.onUpdated
-5. Extracts token, closes tab
+1. Extension opens the SDK authorize URL (PKCE S256) in a tab / launchWebAuthFlow
+2. User logs in on Hanzo IAM
+3. Redirect to the registered callback with ?code=...&state=...
+4. Extension catches the redirect and calls handleCallback() ONCE (single-use code)
+5. SDK exchanges the code for tokens (PKCE) and stores them
 ```
 
 **LLM endpoint**: `api.hanzo.ai/v1/chat/completions` (NOT `llm.hanzo.ai` which is Cloud UI)
@@ -66,45 +68,29 @@ Hanzo Extensions is a **monorepo of browser and IDE extensions** providing AI-po
 
 ```typescript
 // packages/browser/src/auth.ts
-async function startAuth(): Promise<string> {
- const state = crypto.randomUUID()
+import { configureIam, getLoginUrl, handleCallback, getUser } from "@hanzo/iam/browser"
 
- const authUrl = new URL("https://hanzo.id/login/oauth/authorize")
- authUrl.searchParams.set("response_type", "token")
- authUrl.searchParams.set("client_id", "app-hanzo")
- authUrl.searchParams.set("redirect_uri", "https://hanzo.ai/callback")
- authUrl.searchParams.set("scope", "openid profile email")
- authUrl.searchParams.set("state", state)
+configureIam({
+  serverUrl: "https://hanzo.id",       // issuer / brand host (not iam.hanzo.ai)
+  clientId: "hanzo-extension",         // <org>-<app>
+  redirectUri: chrome.identity.getRedirectURL("callback"),
+  scope: "openid profile email",
+})
 
- // Open auth tab
- const tab = await chrome.tabs.create({ url: authUrl.toString() })
-
- // Listen for redirect
- return new Promise((resolve) => {
- chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
- if (tabId !== tab.id || !info.url?.includes("callback")) return
-
- const hash = new URL(info.url).hash.substring(1)
- const params = new URLSearchParams(hash)
- const token = params.get("access_token")
-
- chrome.tabs.onUpdated.removeListener(listener)
- chrome.tabs.remove(tabId)
- resolve(token!)
- })
- })
+async function startAuth(): Promise<void> {
+  const authUrl = await getLoginUrl()  // PKCE S256 + state handled by the SDK
+  const redirect = await chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true })
+  // Single-use code: run the exchange exactly once.
+  await handleCallback(redirect)
 }
 ```
 
 ### User Profile
 
 ```typescript
-// /api/userinfo only returns `sub` — use /api/get-account
-async function getProfile(token: string) {
- const res = await fetch("https://iam.hanzo.ai/api/get-account", {
- headers: { "Authorization": `Bearer ${token}` }
- })
- return res.json() // { name, email, avatar, ... }
+// Read identity via the SDK — never a legacy /api/get-account call.
+async function getProfile() {
+  return getUser()  // { sub, email, name, owner, ... }
 }
 ```
 
@@ -140,7 +126,7 @@ cd packages/jetbrains
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| Code flow fails | Hanzo IAM empty grant_type bug | Use implicit flow (response_type=token) |
+| Login fails / wrong path | Hardcoded/legacy OAuth path | Use `@hanzo/iam/browser` (PKCE S256, `/v1/iam/oauth/*`) — never hand-rolled implicit flow |
 | LLM returns 404 | Using llm.hanzo.ai | Use api.hanzo.ai/v1/chat/completions |
 | Safari build fails | Missing Xcode | Build on macOS with Xcode installed |
 | JetBrains build fails | Missing gradle wrapper | Commit gradle-wrapper.jar |

@@ -1,12 +1,19 @@
-<!-- Updated: 2026-03-28T14:30:00Z -->
+<!-- Updated: 2026-07-23 -->
 # Hanzo IAM - Identity and Access Management Server
 
 **Category**: Hanzo Ecosystem
 **Related Skills**: `hanzo/hanzo-id.md`, `hanzo/hanzo-platform.md`, `hanzo/hanzo-kms.md`, `hanzo/hanzo-cloud.md`
+**Spec**: HIP-0111 (auth) + HIP-0112 (cloud topology). Ground truth: `~/work/hanzo/CLAUDE.md`.
 
 ## Overview
 
-Hanzo IAM is the **server-side identity and access management service** for the Hanzo ecosystem. A Hanzo IAM fork written in Go (Beego framework) with a React admin UI, providing OAuth 2.0/OIDC/SAML/CAS/LDAP/SCIM/WebAuthn/TOTP/RADIUS authentication and authorization. Serves SSO across hanzo.id, lux.id, zoo.id, and pars.id. Includes built-in MCP (Model Context Protocol) server for AI agent identity management.
+Hanzo IAM is the **server-side identity and access management service** for the Hanzo ecosystem. Written in Go (Beego framework) with a React admin UI, providing OAuth 2.0/OIDC/SAML/CAS/LDAP/SCIM/WebAuthn/TOTP/RADIUS authentication and authorization. Serves SSO across hanzo.id, lux.id, zoolabs.id, and pars.id. Includes built-in MCP (Model Context Protocol) server for AI agent identity management.
+
+### Clean server vs retired fork
+
+- **`hanzoai/iam`** — the **clean rewrite** and the ONLY server. It is **embedded in `hanzoai/cloud`** and serves the canonical OIDC surface under **`/v1/iam/*`** (see endpoints below). This is what production runs.
+- **`hanzoai/iam-v1`** — the **retired** Casdoor fork. Do not build, deploy, or reference it for new work. The rewrite deliberately continues the version line to supersede it (MVS).
+- **Clients never talk to this server's admin internals** — they authenticate with the **`@hanzo/iam`** SDK against `/v1/iam/oauth/*`. See `hanzo/hanzo-id.md`.
 
 ### Why Hanzo IAM?
 
@@ -31,9 +38,9 @@ Hanzo IAM is the **server-side identity and access management service** for the 
 
 ### OSS Base
 
-Fork of [Hanzo IAM](https://github.com/iam/iam) by the Casbin community. Apache-2.0 licensed.
+Derived from Casdoor (Apache-2.0), a Casbin-community OIDC provider. `hanzoai/iam` is a clean rewrite of that base, not a live fork.
 
-Repo: `github.com/hanzoai/iam`
+Repo: `github.com/hanzoai/iam` (retired fork: `github.com/hanzoai/iam-v1`)
 
 ## When to use
 
@@ -74,15 +81,17 @@ For **client-side OAuth flows** (login UI, token extraction, redirect handling),
 
 ## Domains served
 
+Brands are selected **host-based** (one deployment, many origins). The brand host is the OIDC **issuer**; `iam.hanzo.ai` is the internal cluster/admin host and is **never** the issuer.
+
 | Domain | Purpose |
 |--------|---------|
-| `hanzo.id` | Hanzo AI accounts |
-| `lux.id` | Lux Network accounts |
-| `zoo.id` | Zoo Labs accounts |
-| `pars.id` | Pars accounts |
-| `id.ad.nexus` | Ad Nexus accounts |
-| `id.bootno.de` | Bootnode accounts |
-| `iam.hanzo.ai` | Core IAM API |
+| `hanzo.id` | Hanzo AI accounts (issuer) |
+| `lux.id` | Lux Network accounts (issuer) |
+| `zoolabs.id` | Zoo Labs accounts (issuer) — NOT `zoo.id` |
+| `pars.id` | Pars accounts (issuer) |
+| `id.bootno.de` | Bootnode accounts (issuer) |
+| `id.ad.nexus` | Ad Nexus accounts (issuer) |
+| `iam.hanzo.ai` | Internal backend/admin host (NOT an issuer) |
 
 ## One-file quickstart
 
@@ -107,7 +116,7 @@ services:
  - REDIS_URL=redis://redis:6379
  - IAM_ORIGIN=https://hanzo.id
  - ENABLE_MULTI_TENANT=true
- - ALLOWED_ORIGINS=hanzo.id,zoo.id,lux.id,pars.id,iam.hanzo.ai
+ - ALLOWED_ORIGINS=hanzo.id,zoolabs.id,lux.id,pars.id,iam.hanzo.ai
  volumes:
  - ./init_data.json:/app/init_data.json:ro
  depends_on:
@@ -178,7 +187,7 @@ curl -X POST "https://iam.hanzo.ai/api/add-application" \
  "clientSecret": "my-client-secret",
  "redirectUris": ["https://myservice.hanzo.ai/callback"],
  "expireInHours": 168,
- "grantTypes": ["authorization_code", "implicit"]
+ "grantTypes": ["authorization_code", "refresh_token"]
  }'
 
 # Update user balance (billing integration)
@@ -382,7 +391,7 @@ POSTGRES_DB=iam
 IAM_ORIGIN=https://iam.hanzo.ai
 ENCRYPTION_KEY=<32-byte-hex-key>
 ENABLE_MULTI_TENANT=true
-ALLOWED_ORIGINS=hanzo.id,zoo.id,lux.id,pars.id,iam.hanzo.ai
+ALLOWED_ORIGINS=hanzo.id,zoolabs.id,lux.id,pars.id,iam.hanzo.ai
 
 # Per-org client secrets (override init_data.json placeholders)
 HANZO_CLIENT_SECRET=<generate-secret>
@@ -431,20 +440,23 @@ make build-prod # Build and push production image
 
 ## API Endpoints
 
-### OAuth2/OIDC (RFC 6749 compliant)
+### OAuth2/OIDC — canonical surface (HIP-0111, host-relative to the issuer)
+
+These are the ONLY client-facing paths. There is no legacy `/oauth/*` and no `/api/login/*`. The `@hanzo/iam` SDK (`src/paths.ts` `OIDC_PATHS`) is the single source of truth; clients import it, never hardcode a path.
 
 | Endpoint | Path | Method |
 |----------|------|--------|
-| Authorize | `/oauth/authorize` | GET |
-| Token | `/oauth/token` | POST |
-| Introspect | `/oauth/introspect` | POST |
-| Revoke | `/oauth/revoke` | POST |
-| UserInfo | `/oauth/userinfo` | GET |
-| Device | `/oauth/device` | POST |
-| Logout | `/oauth/logout` | GET |
+| Authorize | `/v1/iam/oauth/authorize` | GET |
+| Token | `/v1/iam/oauth/token` | POST |
+| Introspect | `/v1/iam/oauth/introspect` | POST |
+| Revoke | `/v1/iam/oauth/revoke` | POST |
+| UserInfo | `/v1/iam/oauth/userinfo` | GET |
+| Device | `/v1/iam/oauth/device` | POST |
+| Logout | `/v1/iam/oauth/logout` | GET |
 | OIDC Discovery | `/.well-known/openid-configuration` | GET |
-| OAuth Metadata | `/.well-known/oauth-authorization-server` | GET |
-| JWKS | `/.well-known/jwks` | GET |
+| JWKS | `/v1/iam/.well-known/jwks` | GET |
+
+PKCE `S256` always; `client_secret_basic`; scopes `openid profile email`; `client_id = <org>-<app>`. GOTCHA: any unregistered path returns a `200 text/html` SPA catch-all (silent breakage, not a 404) — clients MUST hit these exact paths and keep `originFrontend` EMPTY so discovery stays host-relative.
 
 ### Admin REST API (`/api/`)
 
@@ -479,47 +491,39 @@ make build-prod # Build and push production image
 
 Prometheus metrics exposed at `/api/metrics`.
 
-## SDK Integration
+## SDK Integration — ONE package: `@hanzo/iam`
 
-### Go SDK
+Clients authenticate with the **`@hanzo/iam`** SDK (npm, 0.13.7) against the
+canonical `/v1/iam/oauth/*` endpoints. The retired `@hanzo/iam-js-sdk` and any
+hand-rolled OAuth are forbidden. Full client contract: `hanzo/hanzo-id.md`.
 
-```go
-import "github.com/hanzoid/go-sdk/iamsdk"
+### TypeScript — browser (PKCE)
 
-iamsdk.InitConfig(
- "https://hanzo.id",
- "hanzo-app-client-id",
- "hanzo-app-client-secret",
- "cert-hanzo",
- "hanzo",
- "app-hanzo",
-)
+```typescript
+import { configureIam, startLogin, handleCallback, getUser } from "@hanzo/iam/browser"
 
-// Validate a token
-claims, err := iamsdk.ParseJwtToken(token)
-
-// Get user
-user, err := iamsdk.GetUser("admin/username")
-```
-
-### JavaScript SDK
-
-```javascript
-import { SDK } from 'iam-js-sdk'
-
-const sdk = new SDK({
- serverUrl: 'https://hanzo.id',
- clientId: 'hanzo-app-client-id',
- appName: 'app-hanzo',
- organizationName: 'hanzo',
+configureIam({
+  serverUrl: "https://hanzo.id",   // brand host / issuer
+  clientId: "hanzo-app",           // <org>-<app>
+  redirectUri: "https://app.hanzo.ai/auth/callback",
 })
-
-// Start auth
-sdk.signin_redirect()
-
-// Parse callback
-const token = sdk.exchangeForAccessToken()
+await startLogin()                 // PKCE S256 handled by the SDK
+await handleCallback()             // on the callback route (run once)
+const user = await getUser()       // { sub, email, owner, ... }
 ```
+
+### TypeScript — server-side token validation
+
+```typescript
+import { validateToken } from "@hanzo/iam/server"
+const claims = await validateToken(bearer, { serverUrl: "https://hanzo.id" })
+const orgID = claims.owner         // scope all queries to the org
+```
+
+Go/other services validate the JWT against JWKS
+(`/v1/iam/.well-known/jwks`) — in practice the gateway (`api.hanzo.ai`) does
+this and injects `X-Org-Id`/`X-User-Id`/`X-User-Email` for downstream
+services (and strips any client-supplied identity headers first).
 
 ## Production Deployment
 
@@ -549,8 +553,9 @@ curl -f http://localhost:8000/api/health
 |-------|-------|----------|
 | "Access denied to database hanzo_iamhanzo_iam" | MySQL dataSourceName includes dbname | End with `/` not `/dbname` |
 | "could not open pg_filenode.map" | PostgreSQL volume corruption | `docker compose down -v && docker volume prune` |
-| Tokens expire instantly | `expireInHours=0` on app | Set `expireInHours=168` in Hanzo IAM app config |
-| Code flow rejected | Empty grant_type xorm bug | Use implicit flow (`response_type=token`) |
+| Tokens expire instantly | `expireInHours=0` on app | Set `expireInHours=168` in the IAM app config |
+| Client gets a `200` HTML page instead of tokens | Wrong path hit the SPA catch-all | Use canonical `/v1/iam/oauth/*`; keep `originFrontend` empty; use the `@hanzo/iam` SDK (never a hardcoded path or `genericOAuth({discoveryUrl})`) |
+| "Missing PKCE code verifier" at callback | Callback effect ran twice / single-use code | Run `handleCallback` once (see hanzo-id.md); upgrade `@hanzo/iam` to 0.13.8+ |
 | initData overwrites on restart | `initDataNewOnly=false` | Set `initDataNewOnly=true` in conf |
 | App owner queries fail | Apps under `owner=admin` not org | WHERE `owner='admin'` not org name |
 | Redis not found | No Redis endpoint configured | Auto-discovers `hanzo-kv` or `redis` DNS; set `redisEndpoint` explicitly |

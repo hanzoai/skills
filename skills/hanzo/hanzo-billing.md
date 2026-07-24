@@ -68,10 +68,10 @@ RainbowKit + wagmi + viem for wallet-based payments across 7 chains:
 Self-contained PKCE auth module -- no external auth package:
 
 ```typescript
-// lib/iam-auth.ts
-// 1. Generate code_verifier and code_challenge
-// 2. Redirect to hanzo.id/oauth/authorize with PKCE params
-// 3. Exchange code for token at /oauth/token
+// Use the @hanzo/iam SDK (never hand-rolled). It performs, canonically:
+// 1. Generate code_verifier and code_challenge (PKCE S256)
+// 2. Redirect to hanzo.id/v1/iam/oauth/authorize with PKCE params
+// 3. Exchange code for token at /v1/iam/oauth/token
 // 4. Store token in httpOnly cookie
 ```
 

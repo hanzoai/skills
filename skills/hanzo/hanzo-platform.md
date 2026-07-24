@@ -88,7 +88,7 @@ IAM_CLIENT_SECRET=secret
 
 # Optional: OIDC issuer, userinfo URL, signing cert
 IAM_ISSUER=https://hanzo.id
-IAM_USERINFO_URL=https://hanzo.id/oauth/userinfo
+IAM_USERINFO_URL=https://hanzo.id/v1/iam/oauth/userinfo
 IAM_ORG=hanzo
 IAM_APP=app-hanzo
 ```
