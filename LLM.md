@@ -29,7 +29,9 @@ skills/
       hanzo-k8s.md      # K8s infrastructure
       hanzo-deploy.md   # Deployment guide
       hanzo-platform.md # PaaS (Dokploy fork)
-      hanzo-id.md       # Identity/IAM (Casdoor)
+      hanzo-id.md       # Client auth flows — @hanzo/iam SDK (PKCE, one way)
+      hanzo-iam.md      # IAM server — hanzoai/iam (clean rewrite; retired fork = iam-v1)
+      hanzo-identity.md # On-chain DID (distinct product, not the IAM login)
       hanzo-kms.md      # Secrets (luxfi/kms MPC)
       hanzo-ingress.md  # Ingress (Traefik fork)
       hanzo-cloud.md    # THE unified one-binary cloud (HIP-0106)
