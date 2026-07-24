@@ -177,8 +177,8 @@ libs/computer-use
 Dashboard uses OIDC SSO via Hanzo IAM:
 
 ```bash
-# Dashboard environment
-VITE_OIDC_DOMAIN=https://iam.hanzo.ai
+# Dashboard environment (issuer = brand host, not iam.hanzo.ai; auth via @hanzo/iam)
+VITE_OIDC_DOMAIN=https://hanzo.id
 VITE_OIDC_CLIENT_ID=runtime-dashboard
 VITE_API_URL=https://api.runtime.hanzo.ai
 ```

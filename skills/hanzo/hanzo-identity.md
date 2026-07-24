@@ -1,7 +1,18 @@
 # Hanzo Identity - Decentralized Identity (DID) System
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-iam.md`, `hanzo/hanzo-contracts.md`
+**Related Skills**: `hanzo/hanzo-iam.md`, `hanzo/hanzo-id.md`, `hanzo/hanzo-contracts.md`
+
+> **Not the login system.** This skill is **on-chain DID** (blockchain identity,
+> W3C `did:` + NFT). It is distinct from the OIDC auth stack — do not confuse
+> the three:
+> - **`hanzo-iam.md`** — the IAM **server** (OAuth2/OIDC backend, `hanzoai/iam`).
+> - **`hanzo-id.md`** — **client-side** auth via the `@hanzo/iam` SDK (how apps log users in).
+> - **`hanzo-identity.md`** (this) — **decentralized** identity: DID registry contracts + dapp.
+>
+> The `@lux.id` / `@zoo.id` display strings below are **on-chain DID
+> namespaces** (a chain's DID method), NOT the IAM issuer hosts (whose brand
+> serverUrls are `hanzo.id` / `lux.id` / `zoolabs.id` / `pars.id`).
 
 ## Overview
 
@@ -204,8 +215,8 @@ remappings = [
 
 ## Related Skills
 
-- `hanzo/hanzo-iam.md` -- Centralized IAM (hanzo.id, Hanzo IAM-based), complementary to DID
-- `hanzo/hanzo-id.md` -- Login UI for Hanzo IAM
+- `hanzo/hanzo-iam.md` -- Centralized IAM **server** (OIDC backend); complementary to on-chain DID
+- `hanzo/hanzo-id.md` -- Client-side auth via the `@hanzo/iam` SDK (OAuth2/OIDC/PKCE)
 - `hanzo/hanzo-contracts.md` -- Smart contract patterns
 - `hanzo/hanzo-web3.md` -- Web3 integration
 

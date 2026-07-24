@@ -193,8 +193,8 @@ curl -H "Authorization: Bearer hk-your-api-key" https://api.hanzo.ai/v1/models
 | Method | Use Case |
 |--------|----------|
 | API Key | Server-to-server (`Authorization: Bearer hk-...`) |
-| OAuth2 + PKCE | User-facing apps (`hanzo.id/oauth/authorize`) |
-| Client Credentials | Service-to-service (`POST hanzo.id/oauth/token`) |
+| OAuth2 + PKCE | User-facing apps via `@hanzo/iam` (`hanzo.id/v1/iam/oauth/authorize`) |
+| Client Credentials | Service-to-service (`POST hanzo.id/v1/iam/oauth/token`) |
 | JWT | After OAuth login (`Authorization: Bearer eyJ...`) |
 
 ## Common Operations

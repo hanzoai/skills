@@ -32,12 +32,12 @@ The Hanzo extension provides AI chat, code completion, and MCP tool access acros
 - AI chat sidebar in browser and IDE
 - Code completion with Zen models
 - MCP tool access (13 unified tools)
-- Auth via hanzo.id (implicit OAuth2)
+- Auth via hanzo.id (`@hanzo/iam`, OAuth2 + PKCE)
 - Access to 435 models (28 Zen + 400+ third-party) via `api.hanzo.ai/v1/chat/completions`
 
 ### Configuration
 
-After installing, sign in via hanzo.id. The extension authenticates using implicit OAuth2 flow — no API key management needed. LLM requests route through `api.hanzo.ai/v1/chat/completions`.
+After installing, sign in via hanzo.id. The extension authenticates using the `@hanzo/iam` SDK (OAuth2 authorization-code + PKCE S256) — no API key management needed. LLM requests route through `api.hanzo.ai/v1/chat/completions`.
 
 ## 2. Hanzo Dev for CLI Coding
 
