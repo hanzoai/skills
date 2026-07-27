@@ -539,7 +539,7 @@ IAM runs on the hanzo-k8s cluster at `24.199.76.156`:
 ### Health Check
 
 ```bash
-curl -f http://localhost:8000/api/health
+curl -f http://localhost:8000/healthz
 ```
 
 ## Troubleshooting
