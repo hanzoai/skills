@@ -154,7 +154,6 @@ docker run --name vmd -d -p 4822:4822 ghcr.io/hanzovm/vmd
 | `iamOrganization` | hanzo | IAM organization |
 | `iamApplication` | app-hanzo-vm | IAM application name |
 | `guacamoleEndpoint` | 127.0.0.1:4822 | vmd RDP endpoint |
-| `redisEndpoint` | - | Redis for sessions (optional, falls back to file) |
 
 ### Directory Structure
 
@@ -231,7 +230,7 @@ This uses Hanzo's fork of the Hanzo IAM SDK for IAM integration.
 | RDP not working | vmd not running | Start vmd container: `docker run -d -p 4822:4822 ghcr.io/hanzovm/vmd` |
 | Cloud provider errors | Wrong credentials | Verify cloud provider credentials in provider configuration |
 | Frontend 404 | Build not run | Run `cd web && yarn build` to generate `web/build/` |
-| Session expired | Redis not configured | Set `redisEndpoint` in app.conf or accept file-based sessions |
+| Session expired | Token expired | Sessions are stateless — re-authenticate through Hanzo IAM |
 
 ## Related Skills
 
