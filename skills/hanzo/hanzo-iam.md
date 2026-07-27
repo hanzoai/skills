@@ -167,11 +167,11 @@ cp conf/app.dev.conf conf/app.conf
 
 ```bash
 # Get all users in an organization
-curl -s "https://iam.hanzo.ai/api/get-users?owner=hanzo" \
+curl -s "https://iam.hanzo.ai/v1/iam/get-users?owner=hanzo" \
  -H "Authorization: Bearer ${ADMIN_TOKEN}"
 
 # Create a new application
-curl -X POST "https://iam.hanzo.ai/api/add-application" \
+curl -X POST "https://iam.hanzo.ai/v1/iam/add-application" \
  -H "Authorization: Bearer ${ADMIN_TOKEN}" \
  -H "Content-Type: application/json" \
  -d '{
@@ -186,7 +186,7 @@ curl -X POST "https://iam.hanzo.ai/api/add-application" \
  }'
 
 # Update user balance (billing integration)
-curl -X POST "https://iam.hanzo.ai/api/update-user" \
+curl -X POST "https://iam.hanzo.ai/v1/iam/update-user" \
  -H "Authorization: Bearer ${ADMIN_TOKEN}" \
  -H "Content-Type: application/json" \
  -d '{
@@ -453,7 +453,7 @@ These are the ONLY client-facing paths. There is no legacy `/oauth/*` and no `/a
 
 PKCE `S256` always; `client_secret_basic`; scopes `openid profile email`; `client_id = <org>-<app>`. GOTCHA: any unregistered path returns a `200 text/html` SPA catch-all (silent breakage, not a 404) — clients MUST hit these exact paths and keep `originFrontend` EMPTY so discovery stays host-relative.
 
-### Admin REST API (`/api/`)
+### Admin REST API (`/v1/iam/`)
 
 | Resource | Endpoints |
 |----------|-----------|
