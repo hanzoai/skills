@@ -12,7 +12,7 @@ Hanzo IAM is the **server-side identity and access management service** for the 
 ### Clean server vs retired fork
 
 - **`hanzoai/iam`** — the **clean rewrite** and the ONLY server. It is **embedded in `hanzoai/cloud`** and serves the canonical OIDC surface under **`/v1/iam/*`** (see endpoints below). This is what production runs.
-- **`hanzoai/iam-v1`** — the **retired** Casdoor fork. Do not build, deploy, or reference it for new work. The rewrite deliberately continues the version line to supersede it (MVS).
+- **`hanzoai/iam-v1`** — the **retired** predecessor. Do not build, deploy, or reference it for new work. The current server deliberately continues the version line to supersede it (MVS).
 - **Clients never talk to this server's admin internals** — they authenticate with the **`@hanzo/iam`** SDK against `/v1/iam/oauth/*`. See `hanzo/hanzo-id.md`.
 
 ### Why Hanzo IAM?
@@ -35,12 +35,7 @@ Hanzo IAM is the **server-side identity and access management service** for the 
 - **Auth libraries**: casbin/casbin v2, go-webauthn, go-jose, gosaml2, go-ldap
 - **Identity providers**: markbates/goth + custom implementations in `idp/` directory
 - **Image**: `ghcr.io/hanzoai/iam:latest`
-
-### OSS Base
-
-Derived from Casdoor (Apache-2.0), a Casbin-community OIDC provider. `hanzoai/iam` is a clean rewrite of that base, not a live fork.
-
-Repo: `github.com/hanzoai/iam` (retired fork: `github.com/hanzoai/iam-v1`)
+- **Repo**: `github.com/hanzoai/iam` — original work, Apache-2.0 (retired predecessor: `github.com/hanzoai/iam-v1`)
 
 ## When to use
 
