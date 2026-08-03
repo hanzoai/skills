@@ -743,7 +743,7 @@ Generates comprehensive HTML/JSON reports from test results:
 - `test_api_integration.test.ts`: Express API testing with Supertest, PostgreSQL Pool, CRUD operations, pagination, performance tests (350+ lines)
 
 **Docker Infrastructure** (`/resources/examples/docker/`):
-- `docker-compose-test.yml`: Complete test infrastructure with PostgreSQL, Redis, RabbitMQ, MongoDB, MySQL, MinIO, Elasticsearch, Mailhog, WireMock - all with health checks
+- `compose-test.yml`: Complete test infrastructure with PostgreSQL, Redis, RabbitMQ, MongoDB, MySQL, Hanzo S3, Elasticsearch, Mailhog, WireMock - all with health checks
 
 All scripts are production-ready with:
 - Comprehensive --help documentation

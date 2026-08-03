@@ -84,7 +84,7 @@ hanzo-mpc start -n node0
 ```bash
 cd deploy
 docker-compose up -d
-# Starts: 3 MPC nodes, NATS, MinIO (backup), KMS
+# Starts: 3 MPC nodes, NATS, Hanzo S3 (backup), KMS
 ```
 
 ### Go client
@@ -258,7 +258,7 @@ K8s Cluster: hanzo-k8s (do-sfo3)
 | hanzo-mpc-{0,1,2} | 6000-6002 | MPC nodes |
 | hanzo-kms | 8080 | Key management |
 | nats | 4222 | Message broker |
-| minio | 9000 | S3 backup storage |
+| s3 | 9000 | S3 backup storage |
 
 ## Testing
 

@@ -1,7 +1,7 @@
 # Hanzo Vector - High-Performance Vector Search Engine
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-database.md`, `hanzo/hanzo-storage.md`, `hanzo/hanzo-llm-gateway.md`
+**Related Skills**: `hanzo/hanzo-database.md`, `hanzo/hanzo-s3.md`, `hanzo/hanzo-llm-gateway.md`
 
 ## Overview
 
@@ -582,7 +582,7 @@ cd tests && uv run pytest
 ## Related Skills
 
 - `hanzo/hanzo-database.md` - PostgreSQL (pgvector for simpler vector search)
-- `hanzo/hanzo-storage.md` - S3-compatible object storage
+- `hanzo/hanzo-s3.md` - S3-compatible object storage
 - `hanzo/hanzo-llm-gateway.md` - LLM Gateway (generates embeddings for vector storage)
 
 ---

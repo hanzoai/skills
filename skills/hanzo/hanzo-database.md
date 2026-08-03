@@ -5,7 +5,7 @@
 
 ## Overview
 
-Hanzo Database covers PostgreSQL (with pgvector), Redis, MongoDB, and MinIO configurations used across the Hanzo ecosystem. **All databases run in-cluster on K8s** — no managed database services (DO Managed DB decommissioned Feb 2026).
+Hanzo Database covers PostgreSQL (with pgvector), Redis, MongoDB, and Hanzo S3 configurations used across the Hanzo ecosystem. **All databases run in-cluster on K8s** — no managed database services (DO Managed DB decommissioned Feb 2026).
 
 ### Why In-Cluster?
 
@@ -29,7 +29,7 @@ Hanzo Database covers PostgreSQL (with pgvector), Redis, MongoDB, and MinIO conf
 | PostgreSQL | 5432 | `postgres:16` | Primary RDBMS, pgvector |
 | Redis | 6379 | `redis:7-alpine` | Cache, sessions, BullMQ queues |
 | MongoDB | 27017 | `mongo:7` | Document storage (Chat) |
-| MinIO | 9000 | `minio/minio` | S3-compatible object storage |
+| Hanzo S3 | 9000 | `ghcr.io/hanzoai/s3` | S3-compatible object storage |
 
 ## Production Layout
 
@@ -238,23 +238,21 @@ services:
  volumes:
  - mongo_data:/data/db
 
- minio:
- image: minio/minio
+ s3:
+ image: ghcr.io/hanzoai/s3:v1.0.14
  ports:
  - "9000:9000"
- - "9001:9001"
  environment:
- MINIO_ROOT_USER: hanzo
- MINIO_ROOT_PASSWORD: "${MINIO_PASSWORD}"
- command: server /data --console-address ":9001"
+ AWS_ACCESS_KEY_ID: "${S3_ACCESS_KEY}"
+ AWS_SECRET_ACCESS_KEY: "${S3_SECRET_KEY}"
  volumes:
- - minio_data:/data
+ - s3_data:/data
 
 volumes:
  postgres_data:
  redis_data:
  mongo_data:
- minio_data:
+ s3_data:
 ```
 
 ## Troubleshooting
@@ -289,5 +287,5 @@ kubectl exec -it postgres-0 -n hanzo -- psql -U hanzo
 
 **Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: postgresql, redis, pgvector, mongodb, minio, database
+**Related**: postgresql, redis, pgvector, mongodb, s3, database
 **Prerequisites**: SQL, Redis basics, Docker
