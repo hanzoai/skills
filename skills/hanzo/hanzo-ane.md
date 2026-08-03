@@ -1,7 +1,7 @@
 # Hanzo ANE - Apple Neural Engine Training
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-engine.md`, `hanzo/hanzo-candle.md`, `hanzo/zenlm.md`
+**Related Skills**: `hanzo/hanzo-engine.md`, `hanzo/zenlm.md`
 
 ## Overview
 
@@ -200,7 +200,6 @@ For most training workloads, **MLX is recommended** over direct ANE:
 ## Related Skills
 
 - `hanzo/hanzo-engine.md` - Rust inference engine (can use ANE for serving)
-- `hanzo/hanzo-candle.md` - Rust ML framework (Metal backend complement)
 - `hanzo/zenlm.md` - Zen model family (training targets)
 - `hanzo/hanzo-jin.md` - Multimodal framework
 

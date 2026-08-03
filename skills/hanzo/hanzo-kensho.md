@@ -1,7 +1,7 @@
 # Hanzo Kensho - Image Generation Foundation Model
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-ml.md`, `hanzo/hanzo-engine.md`, `hanzo/hanzo-candle.md`
+**Related Skills**: `hanzo/hanzo-ml.md`, `hanzo/hanzo-engine.md`
 
 ## Overview
 
@@ -211,7 +211,6 @@ kensho/
 
 - `hanzo/hanzo-ml.md` - Rust ML framework for inference optimization
 - `hanzo/hanzo-engine.md` - Model serving infrastructure
-- `hanzo/hanzo-candle.md` - Candle tensor operations
 - `hanzo/hanzo-sho.md` - Text diffusion (complementary modality)
 
 ---

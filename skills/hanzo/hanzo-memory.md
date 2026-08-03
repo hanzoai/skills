@@ -13,7 +13,7 @@ Hanzo Memory (`@hanzo/memory`) is a **TypeScript AI memory service** that stores
 - Fastify REST API server (`src/server.ts`) on port 8000
 - TypeScript client (`src/client.ts`) for programmatic access
 - LanceDB vector database backend (default) + in-memory backend (testing)
-- 6 embedding providers: Mock, OpenAI, ONNX, Transformers.js, Candle (Rust/Metal), llama.cpp
+- 6 embedding providers: Mock, OpenAI, ONNX, Transformers.js, llama.cpp, and Candle (present in code but unusable — see the provider table)
 - 2 LLM providers: OpenAI, Mock (for PII stripping and result filtering)
 - Zod for runtime type validation
 - 110 tests passing (92 unit + 18 integration)
@@ -175,7 +175,7 @@ docker-compose up memory-benchmark # Run benchmarks
 | OpenAI | `openai` | No | N/A | `OPENAI_API_KEY` |
 | ONNX | `onnx` | Yes | No | `onnxruntime-node` |
 | Transformers.js | `transformers` | Yes | No | `sharp` module |
-| Candle | `candle` | Yes | Metal (macOS) | Rust + `candle-embeddings` |
+| Candle | `candle` | Yes | Metal (macOS) | **Unavailable** — shells out to a `candle-embeddings` CLI that is not published on crates.io |
 | llama.cpp | `llama` | Yes | CUDA/Metal | `llama.cpp` binary + model |
 
 Configure via `EMBEDDING_PROVIDER` env var.
@@ -210,7 +210,7 @@ FILTER_WITH_LLM_DEFAULT=false
 - **sharp install fails on macOS**: Use `EMBEDDING_PROVIDER=mock` or `EMBEDDING_PROVIDER=openai` to avoid Transformers.js dependency
 - **LanceDB write errors**: Check `LANCEDB_URI` directory exists and is writable
 - **ONNX returns mock embeddings**: Full ONNX model support planned, currently falls back to mock
-- **Candle not found**: Install via `cargo install candle-embeddings`
+- **Candle not found**: there is no fix — the provider shells out to a `candle-embeddings` binary that has never been published to crates.io, so `cargo install candle-embeddings` cannot succeed. Use `onnx` (the real local path, via the `onnxruntime-node` dependency) or `openai`.
 - **Vite CJS deprecation warning**: Comes from Vitest, does not affect functionality
 
 ## Related Skills
@@ -218,7 +218,6 @@ FILTER_WITH_LLM_DEFAULT=false
 - `hanzo/hanzo-agent.md` -- Agent framework that uses memory
 - `hanzo/hanzo-mcp.md` -- MCP integration for memory tools
 - `hanzo/hanzo-chat.md` -- Chat application with memory support
-- `hanzo/hanzo-candle.md` -- Rust ML framework (Candle embeddings)
 
 ---
 
