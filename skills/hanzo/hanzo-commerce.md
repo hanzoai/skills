@@ -33,7 +33,7 @@ Hanzo Commerce is the **core product** of Hanzo AI -- a multi-tenant e-commerce 
 | KV Cache | Redis/Valkey (hanzoai/kv-go) |
 | Search | Meilisearch (hanzoai/search-go) |
 | Vector | Qdrant (hanzoai/vector-go) |
-| Object Storage | MinIO/S3 (hanzoai/storage-go) |
+| Object Storage | Hanzo S3 (hanzoai/storage-go) |
 | Pub/Sub | NATS + JetStream (hanzoai/pubsub-go) |
 | Tasks | Temporal SDK (billing workflows) |
 | ORM | hanzoai/orm v0.3.1 (generic CRUD, mixin.Model[T]) |
@@ -287,7 +287,7 @@ commerce/
  kv.go Redis/Valkey client
  search.go Meilisearch client
  vector.go Qdrant vector client
- storage.go MinIO/S3 storage client
+ storage.go Hanzo S3 storage client
  pubsub.go NATS/JetStream client
  tasks.go Temporal task client
  locking.go Distributed locking
@@ -384,7 +384,7 @@ docker build --platform linux/amd64 -t ghcr.io/hanzoai/commerce:latest .
 | `KV_URL` | - | Redis/Valkey URL |
 | `SEARCH_URL` | - | Meilisearch URL |
 | `VECTOR_URL` | - | Qdrant URL |
-| `S3_URL` | - | S3/MinIO URL |
+| `S3_URL` | - | Hanzo S3 endpoint URL |
 | `PUBSUB_URL` | - | NATS URL |
 | `TASKS_URL` | - | Temporal URL |
 | `DATASTORE_URL` | - | ClickHouse DSN |

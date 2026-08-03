@@ -4,7 +4,7 @@
 
 ## Overview
 
-Hanzo is a comprehensive AI ecosystem -- from frontier models (Zen MoDE) to production infrastructure (PaaS, KMS, IAM) to developer tools (SDKs, CLI, MCP). 131 skills cover every component.
+Hanzo is a comprehensive AI ecosystem -- from frontier models (Zen MoDE) to production infrastructure (PaaS, KMS, IAM) to developer tools (SDKs, CLI, MCP). 130 skills cover every component.
 
 ### Key Rules
 
@@ -242,7 +242,7 @@ Documentation site (fumadocs fork, Next.js/MDX).
 **Hanzo Extension** (`hanzo-extension.md`)
 Browser and IDE extensions.
 
-### Data & Observability (15 skills)
+### Data & Observability (14 skills)
 
 **Hanzo O11y** (`hanzo-o11y.md`)
 Full-stack observability, embedded in the `cloud` binary as the `o11y` subsystem. ClickHouse (datastore, keeper-free) + native metrics driver + OTLP-over-ZAP. Logs, metrics, traces. APM for infrastructure.
@@ -259,8 +259,8 @@ MongoDB-compatible (FerretDB over PostgreSQL).
 **Hanzo Datastore** (`hanzo-datastore.md`) | **Hanzo Vector** (`hanzo-vector.md`)
 ClickHouse analytics and Qdrant vector search.
 
-**Hanzo S3** (`hanzo-s3.md`) | **Hanzo Storage** (`hanzo-storage.md`)
-S3-compatible object storage (MinIO).
+**Hanzo S3** (`hanzo-s3.md`)
+S3-compatible object storage (`ghcr.io/hanzoai/s3`).
 
 **Hanzo PubSub** (`hanzo-pubsub.md`) | **Hanzo Stream** (`hanzo-stream.md`)
 NATS pub/sub and Kafka event streaming.
@@ -405,5 +405,5 @@ What do you need?
 ---
 
 **Last Updated**: 2026-03-23
-**Total Skills**: 131
+**Total Skills**: 130
 **Gateway**: `discover-hanzo/SKILL.md`

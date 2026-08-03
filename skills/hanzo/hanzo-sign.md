@@ -154,7 +154,7 @@ docker run -d --restart=unless-stopped \
 
 **Storage** (`NEXT_PUBLIC_UPLOAD_TRANSPORT`):
 - `database` -- Store files as Base64 in PostgreSQL (default)
-- `s3` -- S3-compatible storage (AWS, MinIO, etc.)
+- `s3` -- S3-compatible storage (Hanzo S3, AWS S3, etc.)
 
 **PDF Signing** (`NEXT_PRIVATE_SIGNING_TRANSPORT`):
 - `local` -- P12 certificate file (default)
@@ -227,8 +227,7 @@ Place at `apps/remix/resources/certificate.p12`.
 | PostgreSQL | 54320 |
 | Inbucket (Mail UI) | 9000 |
 | Inbucket (SMTP) | 2500 |
-| MinIO (S3 Dashboard) | 9001 |
-| MinIO (S3 API) | 9002 |
+| Hanzo S3 (S3 API) | 9002 |
 
 ## Troubleshooting
 

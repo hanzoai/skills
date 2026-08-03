@@ -2,7 +2,7 @@
 
 ## Overview
 
-Context-efficient development knowledge via progressive skill discovery. 131 skill files covering the entire Hanzo AI ecosystem.
+Context-efficient development knowledge via progressive skill discovery. 130 skill files covering the entire Hanzo AI ecosystem.
 
 ## The Architecture (current truth)
 
@@ -24,7 +24,7 @@ skills/
   skills/
     hanzo-cloud-architecture/  # THE architecture skill (read first)
       SKILL.md
-    hanzo/              # 131 Hanzo ecosystem skills (flat markdown)
+    hanzo/              # 130 Hanzo ecosystem skills (flat markdown)
       INDEX.md          # Catalog and decision tree
       hanzo-k8s.md      # K8s infrastructure
       hanzo-deploy.md   # Deployment guide
@@ -105,7 +105,7 @@ hanzo-k8s (do-sfo3-hanzo-k8s, LB: 165.232.146.176)
   +-- Chat (chat.hanzo.ai), Team (hanzo.team), Bot, DNS, ZT, ...
   +-- SQLite per-tenant (in-binary) + PostgreSQL for multi-instance
   +-- datastore/ClickHouse (telemetry, keeper-free)
-  +-- Valkey (redis.hanzo.svc), MinIO (minio.hanzo.svc)
+  +-- Valkey (redis.hanzo.svc), Hanzo S3 (s3.hanzo.svc)
 
 lux-k8s (do-sfo3-lux-k8s, LB: 24.144.69.101)
   +-- validators

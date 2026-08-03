@@ -5,7 +5,7 @@
 
 ## Overview
 
-Hanzo Stack provides the **complete integrated development environment** for running all Hanzo services locally. One command to start everything: LLM Gateway, Chat, Console, Cloud, IAM, KMS, PostgreSQL, Redis, MongoDB, MinIO.
+Hanzo Stack provides the **complete integrated development environment** for running all Hanzo services locally. One command to start everything: LLM Gateway, Chat, Console, Cloud, IAM, KMS, PostgreSQL, Redis, MongoDB, Hanzo S3.
 
 **NOTE**: The stack uses **three compose files** (production, development, core) and **git submodules** for all services, allowing each service to track its own repo while being orchestrated together.
 
@@ -111,7 +111,7 @@ cd services/chat && git pull origin main
 | PostgreSQL | 5432 | `postgresql://localhost:5432` | Primary database |
 | Redis | 6379 | `redis://localhost:6379` | Cache/queues |
 | MongoDB | 27017 | `mongodb://localhost:27017` | Document storage |
-| MinIO | 9000 | `http://localhost:9000` | S3-compatible storage |
+| Hanzo S3 | 9000 | `http://localhost:9000` | S3-compatible storage |
 | Prometheus | 9090 | `http://localhost:9090` | Metrics collection |
 
 ## One-file quickstart
@@ -205,7 +205,7 @@ KMS_CLIENT_SECRET=...
 │ └──┬─────────┬──────────┬───────────┘ │
 │ │ │ │ │
 │ ┌──┴───┐ ┌──┴───┐ ┌───┴────┐ ┌─────┐│
-│ │Postgres│ │Redis │ │MongoDB │ │MinIO││
+│ │Postgres│ │Redis │ │MongoDB │ │ S3  ││
 │ │ :5432 │ │:6379 │ │ :27017 │ │:9000││
 │ └───────┘ └──────┘ └────────┘ └─────┘│
 └─────────────────────────────────────────┘

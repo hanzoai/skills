@@ -55,7 +55,7 @@ Hanzo Team is the **collaboration platform** at `hanzo.team`. Upstream fork of h
  | | |
  +-----+-----+-----+----+
  | |
- MongoDB MinIO
+ MongoDB Hanzo S3
  (state) (files/blobs)
 ```
 

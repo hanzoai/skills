@@ -140,7 +140,7 @@ universe/infra/k8s/
  registry/ # container registry
  search/ # search service
  sql/ # PostgreSQL + ZAP sidecar
- storage/ # MinIO
+ storage/ # Hanzo S3
  team/ # hanzo.team
  vector/ # vector DB
  zen/ # Zen model serving

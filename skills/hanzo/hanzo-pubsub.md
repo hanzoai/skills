@@ -1,7 +1,7 @@
 # Hanzo PubSub - Event Streaming and Message Queue
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-storage.md`, `hanzo/hanzo-platform.md`, `hanzo/hanzo-universe.md`
+**Related Skills**: `hanzo/hanzo-s3.md`, `hanzo/hanzo-platform.md`, `hanzo/hanzo-universe.md`
 
 ## Overview
 
@@ -264,7 +264,7 @@ for _, msg := range msgs {
 
 ## Related Skills
 
-- `hanzo/hanzo-storage.md` - S3-compatible object storage (uses PubSub for event notifications)
+- `hanzo/hanzo-s3.md` - S3-compatible object storage (uses PubSub for event notifications)
 - `hanzo/hanzo-platform.md` - PaaS deployment
 - `hanzo/hanzo-universe.md` - Production K8s infrastructure
 - `hanzo/hanzo-database.md` - PostgreSQL database
