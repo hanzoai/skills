@@ -2,7 +2,7 @@
 
 ## Overview
 
-Context-efficient development knowledge via progressive skill discovery. 131 skill files covering the entire Hanzo AI ecosystem.
+Context-efficient development knowledge via progressive skill discovery. 130 skill files covering the entire Hanzo AI ecosystem.
 
 ## The Architecture (current truth)
 
@@ -24,7 +24,7 @@ skills/
   skills/
     hanzo-cloud-architecture/  # THE architecture skill (read first)
       SKILL.md
-    hanzo/              # 131 Hanzo ecosystem skills (flat markdown)
+    hanzo/              # 130 Hanzo ecosystem skills (flat markdown)
       INDEX.md          # Catalog and decision tree
       hanzo-k8s.md      # K8s infrastructure
       hanzo-deploy.md   # Deployment guide

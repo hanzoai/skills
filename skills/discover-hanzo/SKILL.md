@@ -248,8 +248,8 @@ cat skills/hanzo/hanzo-dev.md          # Terminal coding agent
 ### AI/ML & Research
 ```bash
 cat skills/hanzo/zenlm.md             # Zen frontier models
-cat skills/hanzo/hanzo-jin.md          # Multimodal LLM (text/vision/audio)
-cat skills/hanzo/hanzo-candle.md       # Rust ML framework
+cat skills/hanzo/hanzo-jin.md          # Visual JEPA research (vision-only)
+cat skills/hanzo/hanzo-ml.md           # Rust tensor & ML framework
 cat skills/hanzo/hanzo-ane.md          # Apple Neural Engine training
 cat skills/hanzo/hanzo-evm.md          # Rust EVM execution engine
 ```

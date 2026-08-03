@@ -1,7 +1,7 @@
 # Hanzo Jin - Visual Self-Supervised Learning Framework
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-engine.md`, `hanzo/hanzo-candle.md`, `hanzo/zenlm.md`
+**Related Skills**: `hanzo/hanzo-engine.md`, `hanzo/zenlm.md`
 
 ## Overview
 
@@ -197,7 +197,6 @@ Grant proposals describe future multimodal expansion:
 ## Related Skills
 
 - `hanzo/hanzo-engine.md` - Inference engine (future: serve trained Jin models)
-- `hanzo/hanzo-candle.md` - Rust ML framework
 - `hanzo/zenlm.md` - Text-only Zen models
 - `hanzo/hanzo-gym.md` - Training infrastructure
 

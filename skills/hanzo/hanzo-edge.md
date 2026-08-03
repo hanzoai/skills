@@ -1,7 +1,7 @@
 # Hanzo Edge - On-Device AI Inference Runtime
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-engine.md`, `hanzo/hanzo-llm-gateway.md`, `hanzo/hanzo-candle.md`, `hanzo/zenlm.md`
+**Related Skills**: `hanzo/hanzo-engine.md`, `hanzo/hanzo-llm-gateway.md`, `hanzo/zenlm.md`
 
 ## Overview
 
@@ -19,7 +19,7 @@ Hanzo Edge is an **on-device AI inference runtime** for running Zen models and a
 ### Tech Stack
 
 - **Language**: Rust (edition 2021)
-- **ML Backend**: Candle (candle-core, candle-nn, candle-transformers v0.9)
+- **ML Backend**: upstream [candle](https://github.com/huggingface/candle) from crates.io (`candle-core`, `candle-nn`, `candle-transformers` 0.9)
 - **HTTP Server**: Axum 0.7
 - **CLI**: Clap 4
 - **WASM**: wasm-bindgen 0.2, web-sys 0.3
@@ -28,7 +28,7 @@ Hanzo Edge is an **on-device AI inference runtime** for running Zen models and a
 
 ### OSS Base
 
-Repo: `hanzoai/edge`. Built on [Hanzo ML](https://github.com/hanzoai/ml) (Candle fork) for tensor operations.
+Repo: `hanzoai/edge`. Tensor operations come from upstream [candle](https://github.com/huggingface/candle) 0.9, resolved from crates.io — Edge does not depend on `hanzo-ml`.
 
 ## When to use
 
@@ -265,7 +265,6 @@ cargo clippy --workspace -- -D warnings
 
 - `hanzo/hanzo-engine.md` - Cloud GPU inference (complementary to Edge)
 - `hanzo/hanzo-llm-gateway.md` - Unified LLM proxy for 100+ providers
-- `hanzo/hanzo-candle.md` - Rust ML framework (tensor ops, used by Edge)
 - `hanzo/zenlm.md` - Zen model family
 
 ---

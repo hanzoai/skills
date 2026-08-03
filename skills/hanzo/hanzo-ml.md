@@ -1,20 +1,21 @@
 # Hanzo ML - Rust ML Framework
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-candle.md`, `hanzo/hanzo-engine.md`, `hanzo/hanzo-kensho.md`
+**Related Skills**: `hanzo/hanzo-engine.md`, `hanzo/hanzo-kensho.md`
 
 ## Overview
 
-Hanzo ML is a **Rust-based minimalist ML framework** forked from HuggingFace Candle, optimized for edge AI, quantization, and multimodal inference. It provides the tensor computation layer for the Hanzo ecosystem, with GPU acceleration via CUDA, Metal (Apple Silicon), and CPU optimizations (MKL, Accelerate).
+Hanzo ML is the **multi-backend Rust tensor and ML framework** beneath the Hanzo stack, tuned for edge AI, quantization, and multimodal inference. It runs on CPU (the no-feature baseline), CUDA, Metal, ROCm and Vulkan, with CPU acceleration through MKL and Accelerate. No Python runtime is required.
 
-The repository maintains **dual crate namespaces**: original `candle-*` crates for upstream compatibility plus `hanzo-*` crates as the forward-looking Hanzo-branded API. Both coexist in the workspace and share the same underlying code.
+It is a derivative of [candle](https://github.com/huggingface/candle) — the repo's `NOTICE` records the attribution — rebuilt for the Hanzo stack. It also carries code ported from llama.cpp / ggml.
 
-### Key Differentiators from Upstream Candle
+Every crate is `hanzo-*`; there are **no `candle-*` crates in the workspace**.
 
-- **Hanzo-branded crates**: `hanzo-ml`, `hanzo-nn`, `hanzo-transformers`, `hanzo-datasets` published at v0.9.2-alpha.2
-- **HANZO_INTEGRATION.md**: Integration guide for Hanzo Engine (mistral-rs fork)
-- **Hanzo-specific kernels**: `hanzo-flash-attn`, `hanzo-metal-kernels`, `hanzo-kernels`
-- **Python bindings**: `hanzo-ml-pyo3` for Python interop
+- **Crate**: [`hanzo-ml`](https://crates.io/crates/hanzo-ml) on crates.io
+- **API docs**: [docs.rs/hanzo-ml](https://docs.rs/hanzo-ml/latest/hanzo_ml/)
+- **Kernels**: `hanzo-kernels` (CUDA), `hanzo-metal-kernels`, `hanzo-rocm-kernels`, `hanzo-flash-attn`
+- **Kernel DSL**: `hanzo-kernel` — one Rust source lowered to CUDA/ROCm/Vulkan/Metal (BSD-3-Clause, built outside the workspace)
+- **Python bindings**: `hanzo-ml-pyo3`
 - **WASM examples**: `hanzo-ml-wasm-examples` for browser inference
 
 ## When to use
@@ -39,14 +40,14 @@ The repository maintains **dual crate namespaces**: original `candle-*` crates f
 | Repo | `github.com/hanzoai/ml` |
 | Branch | `main` |
 | Language | Rust (primary), C++/CUDA/Metal/Python |
-| Version | 0.9.2-alpha.2 (hanzo crates), 0.9.2 (candle crates) |
+| Crate version | `hanzo-ml` 0.11.95 (workspace default is 0.11.18 — a different number, inherited by only two crates) |
 | Build | `cargo build --workspace` |
 | Test | `cargo test --workspace` |
-| License | BSD-3-Clause OR Apache-2.0 |
+| License | MIT OR Apache-2.0 |
+
+The repo root ships `LICENSE-MIT` and `LICENSE-APACHE`, and `NOTICE` states the work "remains dual-licensed under `MIT OR Apache-2.0`". The published crate metadata on crates.io currently reads `BSD-3-Clause OR Apache-2.0` — a stale SPDX string in the crate manifests with no BSD text behind it. Treat the licence files as authoritative.
 
 ## Workspace Crates
-
-### Hanzo-Branded (v0.9.2-alpha.2)
 
 | Crate | Purpose |
 |-------|---------|
@@ -64,17 +65,6 @@ The repository maintains **dual crate namespaces**: original `candle-*` crates f
 | `hanzo-ml-wasm-examples` | Browser WASM examples |
 | `hanzo-ml-wasm-tests` | WASM test suite |
 
-### Upstream-Compatible (v0.9.2)
-
-| Crate | Purpose |
-|-------|---------|
-| `candle-core` | Original tensor core (same code as hanzo-ml) |
-| `candle-nn` | Original NN layers |
-| `candle-transformers` | Original transformer models |
-| `candle-datasets` | Original datasets |
-| `candle-examples` | Original examples |
-| `candle-pyo3` | Original Python bindings |
-
 ### GPU Backend Crates (opt-in)
 
 | Crate | Purpose |
@@ -87,10 +77,14 @@ The repository maintains **dual crate namespaces**: original `candle-*` crates f
 
 | Feature | Effect |
 |---------|--------|
-| `cuda` | NVIDIA GPU via cudarc 0.19.1 |
+| *(none)* | CPU — `default = []`, the no-feature baseline |
+| `cuda` | NVIDIA GPU via cudarc |
 | `cudnn` | Additional cuDNN kernels |
 | `nccl` | Multi-GPU distribution |
 | `mkl` | Intel Math Kernel Library |
+| `rocm` | AMD GPU via `hanzo-rocm-kernels` |
+| `rocm-miopen` | MIOpen kernels (Linux ROCm SDK only) |
+| `vulkan` | Vulkan backend via ash |
 | `accelerate` | Apple Accelerate framework |
 | `metal` | Apple GPU via hanzo-metal-kernels + objc2-metal |
 | `ug` | Universal Graph backend |
@@ -182,15 +176,10 @@ let weight = vb.get((768, 768), "transformer.h.0.attn.c_attn.weight")?;
 
 ```toml
 [dependencies]
-# From crates.io (when published)
-hanzo-ml = { version = "0.9.2-alpha.2", features = ["metal"] }
-hanzo-nn = "0.9.2-alpha.2"
-hanzo-transformers = "0.9.2-alpha.2"
-
-# From git (current)
-hanzo-ml = { git = "https://github.com/hanzoai/ml", branch = "main" }
-hanzo-nn = { git = "https://github.com/hanzoai/ml", branch = "main" }
-hanzo-transformers = { git = "https://github.com/hanzoai/ml", branch = "main" }
+# All three are published on crates.io — prefer the registry over a git dependency.
+hanzo-ml = { version = "0.11.95", features = ["metal"] }
+hanzo-nn = "0.11.39"
+hanzo-transformers = "0.11.9"
 ```
 
 ## Integration with Hanzo Engine
@@ -268,12 +257,7 @@ ml/
 ├── hanzo-onnx/ # ONNX evaluation
 ├── hanzo-ml-examples/ # Example binaries
 ├── hanzo-ml-wasm-examples/ # WASM browser examples
-├── candle-core/ # Upstream-compatible core (v0.9.2)
-├── candle-nn/ # Upstream-compatible NN
-├── candle-transformers/ # Upstream-compatible transformers
-├── candle-datasets/ # Upstream-compatible datasets
-├── candle-examples/ # Upstream-compatible examples
-├── candle-book/ # Documentation book
+├── hanzo-ml-book/ # Documentation book
 ├── tensor-tools/ # CLI tensor manipulation
 ├── Cargo.toml # Workspace root
 ├── Makefile
@@ -298,12 +282,9 @@ cargo build --workspace --features cuda
 
 # Run example (LLaMA inference)
 cargo run --release --example llama -- --model meta-llama/Llama-3.2-3B-Instruct
-
-# Sync from upstream
-git remote add upstream https://github.com/huggingface/candle.git
-git fetch upstream
-git merge upstream/main
 ```
+
+Hanzo ML is not a GitHub fork of candle and its history has diverged from upstream, so there is no `git merge upstream/main` path. Port changes deliberately rather than merging.
 
 ## Performance Considerations
 
@@ -324,7 +305,6 @@ git merge upstream/main
 
 ## Related Skills
 
-- `hanzo/hanzo-candle.md` - Upstream candle documentation (planned fork)
 - `hanzo/hanzo-engine.md` - Inference engine using hanzo-ml
 - `hanzo/hanzo-ane.md` - Apple Neural Engine (complementary to Metal)
 - `hanzo/hanzo-kensho.md` - Image generation model

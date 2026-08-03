@@ -282,7 +282,6 @@ mugen/
 - `hanzo/hanzo-koe.md` - Text-to-dialogue model (speech-specific)
 - `hanzo/hanzo-engine.md` - Model serving infrastructure
 - `hanzo/hanzo-ml.md` - Rust ML framework
-- `hanzo/hanzo-candle.md` - Candle audio model support (Whisper, EnCodec)
 
 ---
 

@@ -4,7 +4,7 @@
 
 ## Overview
 
-Hanzo is a comprehensive AI ecosystem -- from frontier models (Zen MoDE) to production infrastructure (PaaS, KMS, IAM) to developer tools (SDKs, CLI, MCP). 131 skills cover every component.
+Hanzo is a comprehensive AI ecosystem -- from frontier models (Zen MoDE) to production infrastructure (PaaS, KMS, IAM) to developer tools (SDKs, CLI, MCP). 130 skills cover every component.
 
 ### Key Rules
 
@@ -283,12 +283,9 @@ Training platform, multimodal LLM, image generation.
 Text-to-dialogue, audio generation, text diffusion.
 
 **Hanzo ML** (`hanzo-ml.md`)
-ML utilities and shared libraries.
+Multi-backend Rust tensor & ML framework (crate `hanzo-ml`).
 
-### ML Infrastructure (3 skills)
-
-**Hanzo Candle** (`hanzo-candle.md`)
-Rust ML framework (HF candle fork).
+### ML Infrastructure (2 skills)
 
 **Hanzo ANE** (`hanzo-ane.md`)
 Apple Neural Engine training (M1+).
@@ -405,5 +402,5 @@ What do you need?
 ---
 
 **Last Updated**: 2026-03-23
-**Total Skills**: 131
+**Total Skills**: 130
 **Gateway**: `discover-hanzo/SKILL.md`

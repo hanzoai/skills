@@ -1,7 +1,7 @@
 # Hanzo vLLM - Rust-Based LLM Inference Engine
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-candle.md`, `hanzo/hanzo-cloud.md`, `hanzo/hanzo-llm-gateway.md`, `hanzo/hanzo-engine.md`
+**Related Skills**: `hanzo/hanzo-ml.md`, `hanzo/hanzo-cloud.md`, `hanzo/hanzo-llm-gateway.md`, `hanzo/hanzo-engine.md`
 
 ## Overview
 
@@ -325,16 +325,16 @@ python3 examples/benchmark.py --batch 16 --max_tokens 1024
 | `--log` | Enable logging | false |
 | `--num-experts-offload-per-rank` | CPU offload (MoE models) | 0 |
 
-## Relationship to Hanzo Candle
+## Relationship to Hanzo ML
 
-Hanzo vLLM depends on `guoqingbao/candle` (a fork of `huggingface/candle`) for tensor operations, neural network layers, and GPU backends. The Hanzo Candle repo (`hanzoai/candle`) is the same Candle framework but maintained under the Hanzo org. They serve different purposes:
+Hanzo vLLM depends on `guoqingbao/candle` (a fork of `huggingface/candle`) for tensor operations, neural network layers, and GPU backends — pinned in its `Cargo.toml`. It does **not** use `hanzo-ml`. The two are separate layers, built on separate tensor stacks:
 
-- **hanzoai/candle** -- ML framework (tensors, layers, GPU ops)
-- **hanzoai/vllm** -- Inference server (API, batching, scheduling, PagedAttention) built on Candle
+- **hanzoai/ml** -- the Hanzo ML framework: tensors, layers, GPU kernels
+- **hanzoai/vllm** -- this inference server: OpenAI-compatible API, continuous batching, scheduling, PagedAttention
 
 ## Related Skills
 
-- `hanzo/hanzo-candle.md` - Rust ML framework (underlying tensor engine)
+- `hanzo/hanzo-ml.md` - the Hanzo Rust ML framework (a separate tensor stack)
 - `hanzo/hanzo-cloud.md` - Cloud LLM inference API (uses this as a backend)
 - `hanzo/hanzo-llm-gateway.md` - LLM proxy gateway (routes to this and 100+ providers)
 - `hanzo/hanzo-engine.md` - GPU scheduling and ML job management
