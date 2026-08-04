@@ -94,9 +94,9 @@ remappings = [
 ## RPC endpoints (from foundry.toml)
 
 ```toml
-hanzo_mainnet = "http://127.0.0.1:19630/ext/bc/.../rpc"
-hanzo_testnet = "http://127.0.0.1:19640/ext/bc/.../rpc"
-hanzo_devnet = "http://127.0.0.1:19650/ext/bc/.../rpc"
+hanzo_mainnet = "http://127.0.0.1:19630/v1/bc/.../rpc"
+hanzo_testnet = "http://127.0.0.1:19640/v1/bc/.../rpc"
+hanzo_devnet = "http://127.0.0.1:19650/v1/bc/.../rpc"
 ```
 
 These point to local Lux subnet RPC endpoints for development.
