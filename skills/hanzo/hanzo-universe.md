@@ -307,7 +307,7 @@ Applied separately via `kubectl apply -k lux/ --context do-sfo3-lux-k8s`:
 - **15 validators total**: 5 per network, managed by `lux.network/v1alpha1 LuxNetwork` CRD
 - **Image**: `ghcr.io/luxfi/node:v1.23.23`
 - **Ports**: mainnet 9630-9631, testnet 9640-9641, devnet 9650-9651
-- **Staking keys**: Synced from KMS (`kms.lux.network`) per environment
+- **Staking keys**: Synced from KMS (`kms.lux.cloud`) per environment
 - **Snapshots**: Hourly to S3 (in-cluster MinIO), 5 retained, RLP exports included
 - **Gateway**: KrakenD (`api.lux.network`)
 - **Explorer**: Blockscout + frontend (`explorer.lux.network`)
