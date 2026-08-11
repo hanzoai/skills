@@ -259,8 +259,8 @@ MongoDB-compatible (FerretDB over PostgreSQL).
 **Hanzo Datastore** (`hanzo-datastore.md`) | **Hanzo Vector** (`hanzo-vector.md`)
 ClickHouse analytics and Qdrant vector search.
 
-**Hanzo S3** (`hanzo-s3.md`) | **Hanzo Storage** (`hanzo-storage.md`)
-S3-compatible object storage (MinIO).
+**Hanzo Storage** (`hanzo-storage.md`)
+S3-compatible object storage (`hanzoai/s3`, SeaweedFS-derived).
 
 **Hanzo PubSub** (`hanzo-pubsub.md`) | **Hanzo Stream** (`hanzo-stream.md`)
 NATS pub/sub and Kafka event streaming.
