@@ -39,7 +39,7 @@ Hanzo runs all production services on **DOKS (DigitalOcean Kubernetes Service)**
 | PostgreSQL | `postgres.hanzo.svc:5432` |
 | Redis/Valkey | `redis.hanzo.svc:6379` |
 | MongoDB | `mongodb.hanzo.svc:27017` |
-| MinIO | `minio.hanzo.svc:9000` |
+| Hanzo S3 | `s3.hanzo.svc:9000` |
 
 ### lux-k8s (blockchain)
 
