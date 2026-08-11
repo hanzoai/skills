@@ -64,7 +64,7 @@ universe/
  sql/ # PostgreSQL 16 + ZAP (StatefulSet, 20Gi PVC)
  kv/ # Valkey + ZAP (StatefulSet, 2Gi PVC)
  docdb/ # DocDB -- FerretDB (MongoDB wire protocol over PostgreSQL)
- storage/ # Hanzo S3 (MinIO, s3.hanzo.ai)
+ storage/ # Hanzo S3 (s3.hanzo.ai)
  search/ # Meilisearch (search.hanzo.ai, backup CronJob)
  vector/ # Qdrant (vector.hanzo.ai, backup CronJob)
  nats/ # NATS core messaging
@@ -215,7 +215,7 @@ kubectl apply -k lux/ --context do-sfo3-lux-k8s
 | **sql** | `ghcr.io/hanzoai/sql:latest` | StatefulSet | 5432 (PG) + 9651 (ZAP) | 20Gi do-block-storage |
 | **kv** | `ghcr.io/hanzoai/kv:latest` | StatefulSet | 6379 (Valkey) + 9651 (ZAP) | 2Gi |
 | **docdb** | DocDB | StatefulSet | MongoDB wire protocol | Via PostgreSQL |
-| **storage** | MinIO | Deployment | S3 API | PVC |
+| **storage** | Hanzo S3 | Deployment | S3 API | PVC |
 | **search** | Meilisearch | Deployment | HTTP | PVC + backup CronJob |
 | **vector** | Qdrant | Deployment | gRPC + HTTP | PVC + backup CronJob |
 | **nats** | NATS | - | 4222 | - |
@@ -308,7 +308,7 @@ Applied separately via `kubectl apply -k lux/ --context do-sfo3-lux-k8s`:
 - **Image**: `ghcr.io/luxfi/node:v1.23.23`
 - **Ports**: mainnet 9630-9631, testnet 9640-9641, devnet 9650-9651
 - **Staking keys**: Synced from KMS (`kms.lux.cloud`) per environment
-- **Snapshots**: Hourly to S3 (in-cluster MinIO), 5 retained, RLP exports included
+- **Snapshots**: Hourly to S3 (in-cluster Hanzo S3), 5 retained, RLP exports included
 - **Gateway**: KrakenD (`api.lux.network`)
 - **Explorer**: Blockscout + frontend (`explorer.lux.network`)
 - **Bridge**: Cross-chain bridge service
