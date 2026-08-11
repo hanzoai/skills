@@ -5,7 +5,7 @@
 
 ## Overview
 
-Hanzo Storage is a **high-performance, S3-compatible object storage server** for AI workloads. It is a fork of MinIO, rebranded and optimized for the Hanzo ecosystem. Written in Go. Live in production on Hanzo K8s clusters.
+Hanzo Storage is a **high-performance, S3-compatible object storage server** for AI workloads. Derived from SeaweedFS and optimized for the Hanzo ecosystem. Written in Go. Live in production on Hanzo K8s clusters.
 
 ### Why Hanzo Storage?
 
@@ -14,18 +14,19 @@ Hanzo Storage is a **high-performance, S3-compatible object storage server** for
 - **Erasure Coding**: Configurable data redundancy across drives and nodes
 - **Server-Side Encryption**: SSE-S3 and SSE-KMS for data at rest and in transit
 - **Multi-Tenancy**: Isolated namespaces and access boundaries for teams and services
-- **Web Console**: Hanzo-branded console UI (`hanzoai/storage-console` fork)
+- **CLI**: the `s3` binary's own shell — 153 commands covering fs, cluster, ec, volume, and mq
 
 ### Tech Stack
 
-- **Language**: Go (module: `github.com/minio/minio`)
-- **Go Version**: 1.26
-- **Console**: `github.com/hanzoai/storage-console` v1.7.7-hanzo.1
-- **License**: AGPL v3
+- **Language**: Go (module: `github.com/hanzoai/s3`)
+- **Go Version**: 1.26.5
+- **License**: Apache-2.0
 
 ### OSS Base
 
-Fork of [MinIO](https://github.com/minio/minio). Repo: `hanzoai/s3` (GitHub name is `s3`, branded as "Hanzo Storage").
+Derived from [SeaweedFS](https://github.com/seaweedfs/seaweedfs) (Apache-2.0), attribution retained in `LICENSE`. Repo: `hanzoai/s3`. `go.mod` names zero MinIO modules; the checksum libraries are our Apache-2.0 forks under `hanzos3/` (`crc64nvme`, `md5-simd`, `go`).
+
+There is no separate CLI or console repo. `mc` and the MinIO console are not part of this stack — use the `s3` shell for administration.
 
 ## When to use
 
@@ -37,7 +38,7 @@ Fork of [MinIO](https://github.com/minio/minio). Repo: `hanzoai/s3` (GitHub name
 
 ## Hard requirements
 
-1. **Go 1.24+** to build from source
+1. **Go 1.26+** to build from source
 2. **Docker** for container deployment
 3. **NVMe/SSD storage** recommended for performance
 
@@ -46,63 +47,65 @@ Fork of [MinIO](https://github.com/minio/minio). Repo: `hanzoai/s3` (GitHub name
 | Item | Value |
 |------|-------|
 | Repo | `github.com/hanzoai/s3` |
-| Module | `github.com/minio/minio` (upstream path retained) |
-| Go Version | 1.26 |
-| License | AGPL v3 |
-| API Port | 9000 |
-| Console Port | 9001 |
-| Docker Image | `ghcr.io/hanzoai/s3:latest` |
-| Console Fork | `github.com/hanzoai/storage-console` |
-| Dockerfile | `Dockerfile.hanzo` (production) |
+| Module | `github.com/hanzoai/s3` |
+| Go Version | 1.26.5 |
+| License | Apache-2.0 (SeaweedFS-derived) |
+| S3 API Port | 9000 |
+| Filer / Master / Volume | 8888 / 9333 / 8080 |
+| Docker Image | `ghcr.io/hanzoai/s3:v1.0.14` (pin a semver; never `:latest`) |
+| CLI | the `s3` shell (in-binary) |
 
 ## One-file quickstart
 
-### Docker (Hanzo build)
+### Docker
 
 ```bash
-docker build -f Dockerfile.hanzo -t hanzo-storage .
-docker run -p 9000:9000 -p 9001:9001 \
- hanzo-storage server /data --console-address :9001
+docker run -p 9000:9000 -v s3-data:/data ghcr.io/hanzoai/s3:v1.0.14 \
+  server -dir=/data -filer -s3 -s3.port=9000
 ```
 
 ### Build from source
 
 ```bash
 git clone https://github.com/hanzoai/s3.git
-cd s3
-go build -o hanzo-storage .
-./hanzo-storage server /data --console-address :9001
+cd s3 && go build -o s3 .
+./s3 server -dir=/data -filer -s3 -s3.port=9000
 ```
 
-### Verify with S3 client (mc)
+### Administer with the `s3` shell
+
+The shell is the CLI. There is no `mc`.
 
 ```bash
-mc alias set hanzo http://localhost:9000 minioadmin minioadmin
-mc admin info hanzo
-mc mb hanzo/my-bucket
-mc cp ~/data/model.safetensors hanzo/my-bucket/
-mc ls hanzo/my-bucket/
+s3 shell
+> s3.bucket.create -name my-bucket
+> s3.bucket.list
+> s3.accesskey.create -user alice
+> fs.ls /buckets/my-bucket
+> cluster.status
 ```
+
+`fs.*` walks the filer namespace, `s3.*` manages buckets and access keys,
+`cluster.*` and `ec.*` cover topology and erasure coding.
 
 ### Docker Compose
 
 ```yaml
 # compose.yml
 services:
- storage:
- image: ghcr.io/hanzoai/s3:latest
- ports:
- - "9000:9000"
- - "9001:9001"
- command: server /data --console-address :9001
- environment:
- MINIO_ROOT_USER: "${S3_ROOT_USER}"
- MINIO_ROOT_PASSWORD: "${S3_ROOT_PASSWORD}"
- volumes:
- - storage-data:/data
+  s3:
+    image: ghcr.io/hanzoai/s3:v1.0.14
+    ports:
+      - "9000:9000"
+    command: server -dir=/data -ip.bind=0.0.0.0 -filer -s3 -s3.port=9000
+    environment:
+      AWS_ACCESS_KEY_ID: "${S3_ACCESS_KEY}"
+      AWS_SECRET_ACCESS_KEY: "${S3_SECRET_KEY}"
+    volumes:
+      - s3-data:/data
 
 volumes:
- storage-data:
+  s3-data:
 ```
 
 ## Core Concepts
@@ -110,28 +113,19 @@ volumes:
 ### Architecture
 
 ```
-┌──────────────┐ ┌──────────────────┐
-│ S3 Clients │────>│ Hanzo Storage │
-│ (any SDK) │ │ (port 9000) │
-└──────────────┘ └────────┬─────────┘
- │
-┌──────────────┐ ┌────────┴─────────┐
-│ Console UI │────>│ Console Server │
-│ (browser) │ │ (port 9001) │
-└──────────────┘ └──────────────────┘
+S3 clients (any SDK) ──> s3 gateway (:9000)
+                              │
+                          filer (:8888) ──> master (:9333) ──> volume (:8080)
 ```
+
+Master tracks topology, volume stores chunks, filer holds the namespace, and the
+S3 gateway maps buckets onto filer paths.
 
 ### SDK Compatibility
 
-Any S3-compatible SDK works. Purpose-built SDKs:
-
-| Language | Package |
-|----------|---------|
-| Go | `github.com/minio/minio-go/v7` |
-| JavaScript / TypeScript | `minio` (npm) |
-| Python | `minio` (pip) |
-
-Standard AWS SDKs (`aws-sdk-go`, `boto3`, `@aws-sdk/client-s3`) also work without modification.
+Standard AWS SDKs (`aws-sdk-go`, `boto3`, `@aws-sdk/client-s3`) work without
+modification — prefer them. For Go, `github.com/hanzos3/go` is our Apache-2.0
+client.
 
 ### Key Internal Packages
 
@@ -161,38 +155,40 @@ s3/
 ### Environment Variables
 
 ```bash
-# Hanzo-specific env var names (from Dockerfile.hanzo)
-S3_ACCESS_KEY_FILE=access_key
-S3_SECRET_KEY_FILE=secret_key
-S3_ROOT_USER_FILE=access_key
-S3_ROOT_PASSWORD_FILE=secret_key
-S3_KMS_SECRET_KEY_FILE=kms_master_key
-S3_CONFIG_ENV_FILE=config.env
-MC_CONFIG_DIR=/tmp/.mc
+# S3 credentials (standard AWS names)
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
 
-# Standard MinIO env vars also supported
-MINIO_ROOT_USER=minioadmin
-MINIO_ROOT_PASSWORD=minioadmin
+# Admin identities
+S3_ADMIN_USER=...
+S3_ADMIN_PASSWORD=...
+S3_ADMIN_READONLY_USER=...
+S3_ADMIN_READONLY_PASSWORD=...
+
+# Optional
+S3_BUCKET=...
+S3_EXTERNAL_URL=...
 ```
+
+Credentials come from KMS, never from literals in a manifest.
 
 ### Key Features
 
-- **Erasure Coding**: Data protection with configurable redundancy
-- **Bucket Policies**: S3-compatible policy documents for access control
-- **Object Lifecycle**: Automated expiration, transition, and tiering rules
-- **Event Notifications**: Kafka, NATS, MQTT, Elasticsearch, Redis, PostgreSQL, MySQL targets
-- **S3 Select**: Query objects with SQL expressions
+- **Erasure Coding**: `ec.encode` / `ec.rebuild` / `ec.balance` / `ec.scrub`
+- **Bucket Policies**: `s3.bucket.access`, `s3.bucket.owner`, `s3.anonymous.*`
+- **Object Lifecycle**: `s3.bucket.lifecycle` (expiration and tiering rules)
+- **Quotas and Locking**: `s3.bucket.quota`, `s3.bucket.lock`
 - **Versioning**: Object versioning with delete markers
-- **Replication**: Cross-site bucket replication
+- **Remote Tiering**: `remote.mount` / `remote.cache` against a backing store
 
 ## Troubleshooting
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| Default credentials | Using `minioadmin:minioadmin` | Set `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` |
-| Console not loading | Console address not set | Add `--console-address :9001` |
-| Build fails | Go version mismatch | Requires Go 1.24+ |
-| Module path confusion | Module is `github.com/minio/minio` | Upstream module path retained for SDK compat |
+| Reaching for `mc` | Habit from the MinIO era | Use `s3 shell`; `mc` is not part of this stack |
+| Build fails | Go version mismatch | Requires Go 1.26+ |
+| S3 API refuses a bucket | Bucket has no filer path yet | `s3.bucket.create -name <bucket>` in the shell |
+| Volume full | `volumeSizeLimitMB` reached | Raise `-master.volumeSizeLimitMB` or add volume servers |
 
 ## Related Skills
 
@@ -203,7 +199,6 @@ MINIO_ROOT_PASSWORD=minioadmin
 
 ---
 
-**Last Updated**: 2026-03-13
 **Category**: Hanzo Ecosystem
-**Related**: s3, storage, object-storage, minio, ai-data
-**Prerequisites**: Go 1.24+, Docker
+**Related**: s3, storage, object-storage, seaweedfs, ai-data
+**Prerequisites**: Go 1.26+, Docker
