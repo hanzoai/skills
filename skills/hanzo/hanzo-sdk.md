@@ -9,7 +9,7 @@ Hanzo SDK is a **unified multi-language SDK and CLI** (`@hanzo/cli`) that wraps 
 
 ### How This Differs from Individual SDKs
 
-The individual SDK repos (`python-sdk`, `js-sdk`, `go-sdk`, `rust-sdk`) are **Stainless-generated API clients** focused on typed HTTP wrappers for `api.hanzo.ai`. This unified SDK is different:
+The individual SDK repos (`python-sdk`, `js-sdk`, `go-sdk`, `rust-sdk`) are **generated API clients** focused on typed HTTP wrappers for `api.hanzo.ai`. This unified SDK is different:
 
 - **CLI-first**: Provides the `hanzo` CLI binary with subcommands (`node`, `agent`, `mcp`, `net`, `dev`, `auth`, `config`)
 - **Multi-language monorepo**: All four language implementations in one repo (`src/py/`, `src/js/`, `src/rs/`, `src/go/`)

@@ -190,10 +190,10 @@ Full local dev environment.
 ### SDKs & Libraries (15 skills)
 
 **Python SDK** (`python-sdk.md`)
-Python SDK (`hanzoai` v2.2.0, Stainless, 9 packages).
+Python SDK (`hanzoai` v2.2.0, 9 packages).
 
 **JS SDK** (`js-sdk.md`)
-TypeScript SDK (`hanzoai` v0.1.0-alpha.2, Stainless).
+TypeScript SDK (`hanzoai` v0.1.0-alpha.2).
 
 **Go SDK** (`go-sdk.md`)
 Go SDK (`github.com/hanzoai/go-sdk` v0.1.0-alpha.4).
