@@ -53,7 +53,7 @@ Repo: `hanzoai/insights`. License: MIT.
 2. **PostgreSQL** for metadata and Django ORM
 3. **Kafka** (Redpanda) for event streaming pipeline
 4. **Redis** for caching and task queues
-5. **Object storage** (MinIO/S3/SeaweedFS) for session recordings and batch exports
+5. **Object storage** (Hanzo S3) for session recordings and batch exports
 
 ## Quick reference
 
@@ -211,7 +211,7 @@ The `docker-compose.hobby.yml` runs the complete stack:
 - `property-defs-rs`: Rust property definitions
 - `livestream`: Go real-time events
 - `cymbal`: Rust error symbolication
-- `objectstorage`: MinIO
+- `objectstorage`: Hanzo S3
 - `seaweedfs`: Session recording storage
 - `temporal`: Workflow orchestration
 - `proxy`: Caddy reverse proxy
