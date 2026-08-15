@@ -97,7 +97,7 @@ Draft -> Review -> Last Call (14-day final review) -> Final (or Withdrawn/Supers
 ### HIP-008: Unified Payment Platform
 - **Status**: Draft
 - **Category**: Infrastructure
-- PCI DSS v4.0 compliant self-hosted payment infrastructure with three-zone isolation
+- Self-hosted payment infrastructure with three-zone isolation, designed to the PCI DSS v4.0 control set
 - Zone 3 (Vault CDE): card tokenization with AES-256-GCM envelope encryption, network tokenization (Visa VTS, Mastercard MDES)
 - Zone 2 (Commerce): payment intent orchestration, multi-processor routing (Stripe, Adyen, Square, PayPal, Braintree), double-entry ledger, subscription engine (Temporal workflows)
 - Crypto payments: BTC (on-chain + Lightning), ETH, ERC-20 (custodial and non-custodial)
