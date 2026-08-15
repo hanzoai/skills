@@ -1,15 +1,15 @@
-# Hanzo Vault - PCI-Compliant Card Tokenization
+# Hanzo Vault - Card Tokenization and Cardholder Data Environment
 
 **Category**: Hanzo Ecosystem
 **Related Skills**: `hanzo/hanzo-kms.md`, `hanzo/hanzo-commerce-api.md`
 
 ## Overview
 
-Hanzo Vault is a **PCI DSS-compliant card tokenization service** (CDE - Cardholder Data Environment). Securely tokenize, store, and detokenize payment card data without handling raw card numbers in your application. Written in Go with hardware-backed encryption.
+Hanzo Vault is a **card tokenization service** that runs as an isolated cardholder data environment (CDE). Securely tokenize, store, and detokenize payment card data without handling raw card numbers in your application. Written in Go with hardware-backed encryption.
 
 ### Why Hanzo Vault?
 
-- **PCI DSS Level 1**: Full cardholder data environment isolation
+- **PCI DSS controls**: Full cardholder data environment isolation
 - **Zero plaintext**: Card numbers never exist in plaintext outside Vault
 - **Hardware-backed**: Encryption keys in HSM/KMS, never in memory
 - **Go performance**: Sub-millisecond tokenization
@@ -23,7 +23,7 @@ Vault is an **internal service** — never exposed publicly. Applications call V
 ## When to use
 
 - Processing credit/debit card payments
-- PCI DSS compliance requirements
+- Reducing PCI DSS scope
 - Tokenizing sensitive payment data
 - Building e-commerce payment flows
 - Storing card-on-file for subscriptions
