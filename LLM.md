@@ -24,6 +24,11 @@ skills/
   skills/
     hanzo-cloud-architecture/  # THE architecture skill (read first)
       SKILL.md
+    hanzo-api/          # 121 product skills — how to CALL api.hanzo.ai
+      INDEX.md          # every product, grouped into 13 domains
+      <product>.md      # one per x-app: families, operations, real curls
+                        # GENERATED: scripts/generate_hanzo_api_skills.py
+                        # (source: https://api.hanzo.ai/v1/openapi.json)
     hanzo/              # 131 Hanzo ecosystem skills (flat markdown)
       INDEX.md          # Catalog and decision tree
       hanzo-k8s.md      # K8s infrastructure
