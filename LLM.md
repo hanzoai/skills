@@ -56,49 +56,70 @@ skills/
 
 ## The site — hanzoskills.com
 
-`public/` is the site, byte for byte. It is a **Cloudflare Pages** project
-(direct upload), not a Worker and not ingress+s3 — the live host returns
-`access-control-allow-origin: *` and a charset-suffixed content-type, which
-Workers Static Assets does not emit. Compare `/llms.txt` against hanzo.codes
-(a Worker) to tell them apart; the `/` response alone does not distinguish them.
+`public/` is the site, byte for byte. It serves off the **Hanzo Sites plane** —
+an S3 prefix plus a host route, no pod, no image, no replicas. Cloudflare is DNS
+and CDN for the zone and nothing else: there is no Pages project, no Worker, and
+no Cloudflare credential anywhere in the lane.
 
 ```
 public/          index.html + 537 <name>.html + <name>.md + all.md, llms.txt, favicon.svg
 scripts/site.py  the shared chrome: style, nav, hero, copy-prompt menu, agent bar
 scripts/marks.py mark geometry, from hanzoai/design assets/{providers,logos}
 tests/site.mjs   browser checks — mark, menu, bar, computed border-radius
-wrangler.toml    pages_build_output_dir = public
 ```
 
 - `scripts/site.py` is the ONE definition of the chrome and rewrites every page.
   It is idempotent, and CI fails if `public/` does not match it.
-- Publishing is `.github/workflows/deploy.yml` on push to main. It resolves the
-  Pages project **by hostname** rather than by a remembered name, then asserts
-  the live host serves the new bytes. Do not publish by hand.
-- Cloudflare injects its analytics beacon at the edge; `site.py` strips it so it
-  never enters source.
+- Publishing is `.hanzo/workflows/deploy.yml` on push to main — `.hanzo`, not
+  `.github`: the forge reads the first workflow dir that exists and this repo is
+  private, so GitHub-hosted jobs never start anyway. It calls
+  `hanzoai/ci/.github/actions/site@v1`, which is `bin/site`: enqueue → upload the
+  objects straight to S3 → complete. The bytes never pass through the API. Do not
+  publish by hand, and do not transcribe those three calls here.
+- ONE credential, `KMS_CLIENT_ID`/`KMS_CLIENT_SECRET` (org-level on git.hanzo.ai),
+  which the action trades at `kms.hanzo.ai` for the deploy key.
 - Controls are pills (`--r: 999px`) and surfaces are `--r-soft: 14px`, matching
   hanzo.ai, whose buttons compute to a full pill at 44px tall.
 - `public/` content is a snapshot of the corpus, not generated from `skills/`.
   The markdown→html generator that produced it has no home in this repo.
 
-### Publishing is blocked on the KMS machine identity
+### Where the site lives, outside this repo
 
-The deploy runs green through the browser checks and stops at the credential
-read. KMS answers `/v1/kms/auth/login` with **502** for this repo's
-`KMS_CLIENT_ID`/`KMS_CLIENT_SECRET`, from both `cloud.hanzo.svc:8000` and
-`api.hanzo.ai`. A wrong client id/secret returns **401**, so 502 means the
-identity is found and then fails to resolve server-side — a KMS provisioning
-fault, not a network or workflow one. Cloud logs show the split cleanly:
-internal callers 502, external callers with bad creds 401.
+Two files in `hanzo/universe`, both on paths that self-heal:
 
-To unblock, someone with KMS admin needs to reissue the machine identity for
-this repo and confirm `CF_API_TOKEN` and `CF_ACCOUNT_ID` are sealed at
-`hanzo/deploy/cf-pages` env=prod. Nothing in this repo needs to change.
+```
+charts/app/values/hanzo/static-sites.yaml   hanzoskills-headers + hanzoskills-static
+                                            (root s3://hanzo-sites/hanzo/hanzoskills)
+                                            and the apex ‖ www route
+infra/k8s/ingress/wildcard-certs.yaml       *.hanzoskills.com + hanzoskills.com
+```
 
-GitHub Actions is not an alternative here: `hanzoai/skills` is private and the
-org's Actions billing is failing, so private-repo jobs never start. Public
-repos (hanzo.codes) still run.
+Response headers are declared THERE, not here: staticFiles reads objects out of
+S3 and never a `_headers` file, so a header this site wants is a middleware or it
+does not exist. DNS is apex + www `A -> 129.212.164.5`, proxied.
+
+The robots.txt in `public/` is the one that is served, and that is the point of
+the move — the zone used to answer with a Cloudflare-managed file that named no
+crawler at all, on a site whose whole purpose is being read by agents.
+
+### The plane sends no Content-Type for `.md`
+
+Measured on the live host: `.html`, `.txt`, `.xml` and `.svg` are correct, and
+the 539 markdown twins arrive `200` with the right bytes and **no `Content-Type`
+header at all**. With `nosniff` set, a browser will not render those inline.
+
+It is an ingress defect, not a site one, and not the obvious cause. The
+middleware sets a type only when `mime.TypeByExtension` knows the extension and
+otherwise leaves `http.ServeContent` to sniff — and that path, reproduced
+faithfully, returns `text/plain`. So the mime table alone does not explain it:
+something later in the response chain drops the sniffed value. The stored S3 type
+is not the answer either — `objectInfo` carries no content type, so the serving
+path never reads what `bin/site` stored.
+
+The robust fix is one line, `mime.AddExtensionType(".md", "text/markdown; charset=utf-8")`,
+which makes the middleware `Set` the header explicitly and never reach the sniff.
+It needs an `hanzoai/ingress` release and a roll of the shared fleet ingress,
+so it is not something to slip in beside a site change.
 
 ## Key Skills by Domain
 
