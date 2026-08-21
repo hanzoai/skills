@@ -26,5 +26,18 @@ jobs:
       # The parser lives once, in the tool. This repository holds skills, not a
       # second copy of the code that reads them — it asks the tool the same
       # question a loader would, and a skill no agent could load fails here.
+      #
+      # Fetched with a credential because the forge serves nothing anonymously:
+      # a clone that works from a developer's machine works because that machine
+      # is logged in, which says nothing about a runner.
       - name: Validate
-        run: npx --yes git+https://git.hanzo.ai/hanzoai/skill.git validate skills/
+        env:
+          FORGE_TOKEN: ${{ secrets.FORGE_TOKEN }}
+        run: |
+          if [ -z "${FORGE_TOKEN:-}" ]; then
+            echo "::error::FORGE_TOKEN is unset, so the checker could not be fetched."
+            exit 1
+          fi
+          git clone --quiet --depth 1 "https://x:${FORGE_TOKEN}@git.hanzo.ai/hanzoai/skill.git" /tmp/skill
+          npm --prefix /tmp/skill ci --silent
+          node /tmp/skill/dist/cli.js validate skills/
