@@ -105,17 +105,24 @@ jobs:
           KMS_CLIENT_SECRET: ${{ secrets.KMS_CLIENT_SECRET }}
 
       - name: the live host serves the new page
+        # `grep <<<"$body"`, never `printf … | grep -q`. That pipeline is a race
+        # the size of this page loses: grep -q exits on the FIRST match and
+        # closes the pipe, printf takes SIGPIPE on the remaining ~180KB, and
+        # pipefail promotes 141 to a step failure. It reports a healthy host as
+        # a failed deploy — measured, exitcode 141, five minutes of retries
+        # against a page that was correct on every attempt. A herestring is not
+        # a pipeline, so there is nothing to signal.
         run: |
           set -euo pipefail
           body=""
           for i in $(seq 1 30); do
             body=$(curl -sS "https://$HOST/" || true)
-            if printf '%s' "$body" | grep -q 'id="copybtn"'; then break; fi
+            if grep -q 'id="copybtn"' <<<"$body"; then break; fi
             sleep 10
           done
-          printf '%s' "$body" | grep -q 'id="copybtn"'
-          printf '%s' "$body" | grep -q 'class="mark"'
-          printf '%s' "$body" | grep -q 'Drop into any agent'
+          grep -q 'id="copybtn"' <<<"$body"
+          grep -q 'class="mark"' <<<"$body"
+          grep -q 'Drop into any agent' <<<"$body"
           curl -sfS -o /dev/null "https://$HOST/favicon.svg"
           curl -sfS -o /dev/null "https://$HOST/sitemap.xml"
 
@@ -126,10 +133,10 @@ jobs:
         run: |
           set -euo pipefail
           r=$(curl -sS "https://$HOST/robots.txt")
-          printf '%s' "$r" | grep -q 'ai-train=yes' \
+          grep -q 'ai-train=yes' <<<"$r" \
             || { echo "::error::the live robots.txt is not ours"; exit 1; }
-          printf '%s' "$r" | grep -q '^Allow: /'
-          printf '%s' "$r" | grep -q '^User-agent: ClaudeBot'
+          grep -q '^Allow: /' <<<"$r"
+          grep -q '^User-agent: ClaudeBot' <<<"$r"
 
       - name: www resolves
         run: |
