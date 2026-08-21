@@ -1,0 +1,218 @@
+name: deploy
+
+# Publishes hanzoskills.com from public/ and refuses to pass unless the live
+# host serves what was just published.
+#
+# Our runners, not GitHub's: this repository is private, and GitHub-hosted
+# minutes for private repositories are billed at the org. The Cloudflare
+# credential comes from KMS at run time, which is where credentials live.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/**'
+      - 'scripts/site.py'
+      - 'scripts/marks.py'
+      - 'tests/site.mjs'
+      - 'wrangler.toml'
+      - '.hanzo/workflows/deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hanzoskills
+  cancel-in-progress: false
+
+env:
+  KMS_ENDPOINT: https://kms.hanzo.ai
+  HOSTNAME_APEX: hanzoskills.com
+  HOSTNAME_WWW: www.hanzoskills.com
+
+jobs:
+  deploy:
+    runs-on: [hanzo-build-linux-amd64]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # The chrome has one definition. If rendering it changes any page, the
+      # committed site and its source have drifted.
+      - name: public/ matches scripts/site.py
+        run: |
+          set -euo pipefail
+          python3 scripts/site.py
+          git diff --exit-code -- public/ \
+            || { echo "::error::public/ is stale — run python3 scripts/site.py"; exit 1; }
+
+      - name: the site is intact
+        run: |
+          set -euo pipefail
+          test -s public/index.html
+          grep -q '<title>Hanzo Skills</title>' public/index.html
+          grep -q 'ai-train=yes' public/robots.txt
+          ! grep -qE '^Disallow: /$' public/robots.txt
+          for f in index.md llms.txt all.md favicon.svg skill.md sitemap.xml robots.txt; do
+            test -s "public/$f"
+          done
+          # Cloudflare adds its analytics beacon at the edge; it is not ours to ship.
+          ! grep -rlq cloudflareinsights public/ || { echo "::error::beacon in source"; exit 1; }
+          # Monochrome palette, as on hanzo.codes.
+          bad=$(grep -ohE '#[0-9a-fA-F]{6}' public/index.html public/favicon.svg | sort -fu \
+                | grep -viE '^#(000000|ffffff|dddddd|f4f4f2|9c9c98|7a7a75|6a6a66|0a0a0a|232323|3a3a3a|d8d8d4|141414|181818)$' || true)
+          [ -z "$bad" ] || { echo "::error::non-monochrome colour in the page: $bad"; exit 1; }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: browser checks
+        run: |
+          set -euo pipefail
+          npm i --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium || npx playwright install chromium
+          python3 -m http.server 8787 --bind 127.0.0.1 --directory public &
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:8787/; then break; fi
+            sleep 1
+          done
+          node tests/site.mjs http://127.0.0.1:8787 shots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots
+          path: shots/
+
+      - name: read the cloudflare credential from KMS
+        id: cf
+        env:
+          KMS_CLIENT_ID: ${{ secrets.KMS_CLIENT_ID }}
+          KMS_CLIENT_SECRET: ${{ secrets.KMS_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KMS_CLIENT_ID:-}" ] || [ -z "${KMS_CLIENT_SECRET:-}" ]; then
+            echo "::error::no KMS_CLIENT_ID/KMS_CLIENT_SECRET on this repo — seal them to publish"; exit 1
+          fi
+          tok=$(curl -fsS -X POST "$KMS_ENDPOINT/v1/kms/auth/login" \
+                -H 'Content-Type: application/json' \
+                -d "{\"clientId\":\"$KMS_CLIENT_ID\",\"clientSecret\":\"$KMS_CLIENT_SECRET\"}" \
+                | jq -r '.accessToken // empty')
+          [ -n "$tok" ] || { echo "::error::KMS login failed at $KMS_ENDPOINT"; exit 1; }
+          read_secret() {
+            curl -fsS "$KMS_ENDPOINT/v1/kms/orgs/hanzo/secrets/deploy/cf-pages/$1?env=prod" \
+              -H "Authorization: Bearer $tok" \
+              | jq -r '.secret.value // .secret.secretValue // empty'
+          }
+          api=$(read_secret CF_API_TOKEN)
+          acct=$(read_secret CF_ACCOUNT_ID)
+          if [ -z "$api" ] || [ -z "$acct" ]; then
+            echo "::error::KMS holds no CF_API_TOKEN/CF_ACCOUNT_ID at hanzo/deploy/cf-pages env=prod — seal them, then rerun"; exit 1
+          fi
+          echo "::add-mask::$api"
+          echo "::add-mask::$acct"
+          echo "api=$api" >> "$GITHUB_OUTPUT"
+          echo "acct=$acct" >> "$GITHUB_OUTPUT"
+
+      # Bind by hostname, not by a remembered name: whichever Pages project
+      # already answers for the domain is the one that gets the new assets.
+      - name: resolve the pages project serving the domain
+        id: svc
+        env:
+          CF: ${{ steps.cf.outputs.api }}
+          ACCT: ${{ steps.cf.outputs.acct }}
+        run: |
+          set -euo pipefail
+          n=$(curl -sS -H "Authorization: Bearer $CF" \
+              "https://api.cloudflare.com/client/v4/accounts/$ACCT/pages/projects?per_page=100" \
+              | jq -r --arg h "$HOSTNAME_APEX" 'first(.result[]? | select(.domains // [] | index($h)) | .name) // empty')
+          [ -n "$n" ] || { echo "::error::no Pages project serves $HOSTNAME_APEX"; exit 1; }
+          echo "using project: $n"
+          echo "name=$n" >> "$GITHUB_OUTPUT"
+
+      - name: publish
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.cf.outputs.api }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.cf.outputs.acct }}
+        run: |
+          npx wrangler@3 pages deploy public \
+            --project-name "${{ steps.svc.outputs.name }}" --branch main
+
+      # Pages custom domains are project settings, not routes in wrangler.toml.
+      # Adding www here also creates its DNS record on the zone.
+      - name: www is a domain on the project
+        env:
+          CF: ${{ steps.cf.outputs.api }}
+          ACCT: ${{ steps.cf.outputs.acct }}
+          PROJECT: ${{ steps.svc.outputs.name }}
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$ACCT/pages/projects/$PROJECT/domains"
+          if curl -sS -H "Authorization: Bearer $CF" "$api" \
+             | jq -e --arg h "$HOSTNAME_WWW" '.result[]? | select(.name == $h)' >/dev/null; then
+            echo "already attached"
+          else
+            curl -sS -X POST -H "Authorization: Bearer $CF" -H "Content-Type: application/json" \
+              --data "{\"name\":\"$HOSTNAME_WWW\"}" "$api" | head -c 400
+          fi
+
+      # Cloudflare answers this host with `cf-cache-status: HIT`, so a fresh
+      # deploy is not a fresh response. Best-effort: the token may not carry
+      # Cache Purge, and the checks below are what decide.
+      - name: purge the edge
+        continue-on-error: true
+        env:
+          CF: ${{ steps.cf.outputs.api }}
+        run: |
+          set -euo pipefail
+          zone=$(curl -sS -H "Authorization: Bearer $CF" \
+                 "https://api.cloudflare.com/client/v4/zones?name=$HOSTNAME_APEX" \
+                 | jq -r '.result[0].id // empty')
+          [ -n "$zone" ] || { echo "no zone id — leaving it to revalidation"; exit 0; }
+          curl -sS -X POST -H "Authorization: Bearer $CF" -H "Content-Type: application/json" \
+               --data '{"purge_everything":true}' \
+               "https://api.cloudflare.com/client/v4/zones/$zone/purge_cache" | head -c 300
+
+      - name: the live host serves the new page
+        run: |
+          set -euo pipefail
+          body=""
+          for i in $(seq 1 30); do
+            body=$(curl -sS "https://$HOSTNAME_APEX/" || true)
+            if printf '%s' "$body" | grep -q 'id="copybtn"'; then break; fi
+            sleep 10
+          done
+          printf '%s' "$body" | grep -q 'id="copybtn"'
+          printf '%s' "$body" | grep -q 'class="mark"'
+          printf '%s' "$body" | grep -q 'Drop into any agent'
+          curl -sfS -o /dev/null "https://$HOSTNAME_APEX/favicon.svg"
+          curl -sfS -o /dev/null "https://$HOSTNAME_APEX/sitemap.xml"
+
+      # A file in git does not beat a zone setting: Cloudflare can serve a
+      # managed robots.txt that names no crawler. Ask the live host.
+      - name: crawlers are actually welcome
+        run: |
+          set -euo pipefail
+          r=$(curl -sS "https://$HOSTNAME_APEX/robots.txt")
+          printf '%s' "$r" | grep -q 'ai-train=yes' \
+            || { echo "::error::the live robots.txt is not ours"; exit 1; }
+          printf '%s' "$r" | grep -q '^Allow: /'
+
+      - name: www resolves
+        run: |
+          set -euo pipefail
+          code=000
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://$HOSTNAME_WWW/" || true)
+            if [ "$code" = "200" ]; then break; fi
+            sleep 10
+          done
+          [ "$code" = "200" ] || { echo "::error::$HOSTNAME_WWW returned $code"; exit 1; }
+
+      - name: the live host renders
+        run: node tests/site.mjs "https://$HOSTNAME_APEX" shots-live
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots-live
+          path: shots-live/
