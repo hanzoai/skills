@@ -66,8 +66,8 @@ See `skills/README.md` for the complete catalog of all categories and gateway sk
 
 ---
 
-**Browse**: This index provides a quick reference. Load the `discover-product` gateway skill for common workflows and integration patterns.
+**Browse**: This index provides a quick reference. Load the `product` gateway skill for common workflows and integration patterns.
 
 ```bash
-cat skills/discover-product/SKILL.md
+cat skills/product/SKILL.md
 ```

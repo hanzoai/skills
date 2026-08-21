@@ -2,7 +2,7 @@
 
 ## Overview
 
-Context-efficient development knowledge via progressive skill discovery. 131 skill files covering the entire Hanzo AI ecosystem.
+A skill is a directory: {name}/SKILL.md says what it covers and names the files beside it. 45 skills, 678 files covering the entire Hanzo AI ecosystem.
 
 ## The Architecture (current truth)
 
@@ -43,7 +43,7 @@ skills/
       hanzo-console.md  # LLM observability (Langfuse)
       hanzo-chat.md     # Chat UI (LibreChat fork)
       hanzo-team.md     # Collaboration (Huly fork)
-      hanzo-bot.md      # Multi-channel bot gateway
+      hanzo-bot.md      # Multi-channel bot skill
       hanzo-mcp.md      # Model Context Protocol
       hanzo-zap.md      # ZAP — THE transport (HIP-0114) + DB bridge
       hanzo-o11y.md     # Observability (embedded o11y subsystem)
@@ -69,11 +69,11 @@ skills/
 
 ### AI Services
 - `hanzo-cloud.md` -- THE unified one-binary cloud (HIP-0106); `ai` subsystem = provider mgmt
-- `hanzo-gateway.md` -- HIP-0004 unified AI provider interface at api.hanzo.ai, BYO keys
+- `hanzo-skill.md` -- HIP-0004 unified AI provider interface at api.hanzo.ai, BYO keys
 - `hanzo-console.md` -- LLM traces, costs, prompts + per-product metering, 402 balance-gating
 - `hanzo-chat.md` -- Multi-model chat UI (14 Zen + 100+ third-party)
 - `hanzo-mcp.md` -- 260+ tools, 13 HIP-0300 unified tools
-- `hanzo-bot.md` -- 50+ messaging adapters, ACP gateway
+- `hanzo-bot.md` -- 50+ messaging adapters, ACP skill
 
 ### Data
 - `hanzo-zap.md` -- ZAP: THE transport (HIP-0114) + SQL/KV/Datastore/DocumentDB→MCP bridge

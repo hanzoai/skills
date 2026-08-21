@@ -34,13 +34,13 @@ Each skill is **focused, self-contained, and composable**:
 
 ### Three-Tier Architecture
 
-**Tier 1: Gateway Skills (31 auto-discovered Agent Skills)**
+**Tier 1: Skills (31 auto-discovered Agent Skills)**
 Lightweight entry points that activate automatically based on keywords:
-- `discover-api` → triggers on "REST", "GraphQL", "authentication"
-- `discover-database` → triggers on "PostgreSQL", "MongoDB", "Redis"
-- `discover-zig` → triggers on "Zig", "comptime", "allocators"
+- `api` → triggers on "REST", "GraphQL", "authentication"
+- `database` → triggers on "PostgreSQL", "MongoDB", "Redis"
+- `zig` → triggers on "Zig", "comptime", "allocators"
 
-Each gateway is ~200 lines with quick reference and loading commands.
+Each skill is ~200 lines with quick reference and loading commands.
 
 **Tier 2: Category Indexes (30 detailed references)**
 Full skill listings with descriptions, use cases, and workflows:
@@ -57,18 +57,18 @@ Complete implementation guides loaded only when needed:
 
 **Context efficiency**: 60-84% reduction vs monolithic index
 - Old approach: Load 25K token index on boot
-- New approach: Load 2-5K tokens of relevant gateways as needed
+- New approach: Load 2-5K tokens of relevant skills as needed
 - Result: More context available for actual code and conversation
 
 **No boot overhead**: Claude Code starts with zero skills loaded
-- Gateway skills auto-discover based on your prompt keywords
+- skills auto-discover based on your prompt keywords
 - Manual loading available when auto-discovery isn't enough
 - System scales to hundreds more skills without boot cost
 
 **Discoverability**: Users don't need to know what exists
-- Keywords in prompts trigger relevant gateways automatically
-- Gateways show what's available in their domain
-- Progressive loading: gateway → index → specific skill
+- Keywords in prompts trigger relevant skills automatically
+- Skills show what's available in their domain
+- Progressive loading: skill → index → specific skill
 
 ## What's Covered
 
@@ -173,10 +173,10 @@ That's it! All 350+ skills and the `/skills` command are immediately available.
 Skills activate in three ways:
 
 **1. Auto-Discovery (Automatic)**
-Gateway skills (`discover-*`) automatically activate when you mention relevant keywords:
-- Say "REST API" → `discover-api` loads automatically
-- Say "PostgreSQL" → `discover-database` loads automatically
-- Say "machine learning" → `discover-ml` loads automatically
+A skill activates when your request matches what its description says it covers:
+- Say "REST API" → `api` loads automatically
+- Say "PostgreSQL" → `database` loads automatically
+- Say "machine learning" → `ml` loads automatically
 
 You don't need to do anything - just work naturally.
 
@@ -207,7 +207,7 @@ python skills/anti-slop/scripts/detect_slop.py file.md
 ```
 
 **How to Tell When Skills Are Active**:
-- Gateway skills mention themselves when they activate
+- skills mention themselves when they activate
 - Claude will reference skill content in responses
 - You can ask: "What skills are you currently using?"
 
@@ -222,8 +222,8 @@ cat skills/README.md
 cat skills/api/INDEX.md          # All API skills
 cat skills/database/INDEX.md     # All database skills
 
-# Load a gateway
-cat skills/discover-ml/SKILL.md  # ML gateway with quick reference
+# Load a skill
+cat skills/ml/SKILL.md  # ML skill with quick reference
 
 # Load specific skills
 cat skills/api/rest-api-design.md
@@ -262,7 +262,7 @@ Assessment: ✅ Low slop detected - Writing appears authentic and purposeful
 **Other Agent Skills with Tools**:
 - `skills/elegant-design/` - UI design analysis and recommendations
 - `skills/typed-holes-refactor/` - Systematic refactoring with type-driven development
-- `skills/discover-*/` - Gateway skills that auto-activate on keywords
+- `skills/<name>/SKILL.md` - what the skill covers, and the files beside it
 
 **General Pattern**:
 1. Load the skill: `cat skills/category/skill-name/SKILL.md`
@@ -323,24 +323,24 @@ cat skills/database/redpanda-streaming.md
 │
 ├── README.md              # This file
 │
-└── skills/                # 283 atomic skills, 31 gateways, 30 categories
+└── skills/                # 283 atomic skills, 31 skills, 30 categories
     │
     ├── README.md          # Skills catalog
     │
-    ├── Gateway Skills (31 auto-discovered Agent Skills)
-    │   ├── discover-api/           # REST, GraphQL, authentication
-    │   ├── discover-database/      # PostgreSQL, MongoDB, Redis
-    │   ├── discover-frontend/      # React, Next.js, UI components
-    │   ├── discover-ml/            # Machine learning, models
-    │   ├── discover-math/          # Mathematics, algorithms
-    │   ├── discover-plt/           # Programming language theory
-    │   ├── discover-formal/        # Formal methods, verification
-    │   ├── discover-cloud/         # Serverless, cloud platforms
-    │   ├── discover-hanzo-cloud-architecture/  # Hanzo one-binary ZAP-native cloud
-    │   ├── discover-zig/           # Zig systems programming
-    │   ├── discover-networking/    # SSH, mTLS, VPN, resilience
-    │   ├── discover-workflow/      # Beads, context strategies
-    │   └── ... 20 more gateways
+    ├── Skills (31 auto-discovered Agent Skills)
+    │   ├── api/           # REST, GraphQL, authentication
+    │   ├── database/      # PostgreSQL, MongoDB, Redis
+    │   ├── frontend/      # React, Next.js, UI components
+    │   ├── ml/            # Machine learning, models
+    │   ├── math/          # Mathematics, algorithms
+    │   ├── plt/           # Programming language theory
+    │   ├── formal/        # Formal methods, verification
+    │   ├── cloud/         # Serverless, cloud platforms
+    │   ├── hanzo-cloud-architecture/  # Hanzo one-binary ZAP-native cloud
+    │   ├── zig/           # Zig systems programming
+    │   ├── networking/    # SSH, mTLS, VPN, resilience
+    │   ├── workflow/      # Beads, context strategies
+    │   └── ... 20 more skills
     │
     ├── Category Indexes (30 detailed references)
     │   ├── api/INDEX.md            # All API skills overview
@@ -394,29 +394,29 @@ cat skills/database/redpanda-streaming.md
 
 ## Technology Coverage
 
-| Domain | Technologies | Skills | Gateway |
+| Domain | Technologies | Skills | Skill |
 |--------|-------------|--------|---------|
-| **Backend** | Python, Zig, Rust, Go | 18 | discover-backend |
-| **Frontend** | React, Next.js, TypeScript | 9 | discover-frontend |
-| **Mobile** | SwiftUI, Swift, React Native | 10 | discover-mobile |
-| **Build** | Make, CMake, Gradle, Maven, Bazel | 8 | discover-build-systems |
-| **Debug** | GDB, LLDB, pdb, DevTools, Valgrind | 14 | discover-debugging |
-| **Cloud** | AWS, GCP, Modal, Vercel, Cloudflare | 27 | discover-cloud |
-| **Database** | Postgres, Mongo, Redis, Redpanda, Iceberg | 11 | discover-database |
-| **Caching** | Redis, HTTP, CDN, Service Workers | 7 | discover-caching |
-| **ML/AI** | DSPy, HuggingFace, Arize, GraphRAG | 33 | discover-ml |
-| **IR** | Elasticsearch, Vector DBs, Ranking | 5 | discover-ir |
-| **Systems** | WebAssembly, eBPF | 8 | discover-wasm, discover-ebpf |
-| **Collaboration** | GitHub, PRD, RFC | 17 | discover-collaboration, discover-product, discover-engineering |
-| **Formal** | Z3, Lean 4, CSP | 10 | discover-formal |
-| **Math** | Linear algebra, topology, category theory | 19 | discover-math |
-| **PLT** | Lambda calculus, type systems, typed holes | 13 | discover-plt |
-| **DevOps** | GitHub Actions, Terraform, K8s, Docker | 16 | discover-cicd, discover-infrastructure, discover-containers |
-| **Observability** | Prometheus, OpenTelemetry, Grafana | 8 | discover-observability |
-| **Networking** | SSH, mTLS, VPN, Tailscale, NAT | 5 | discover-networking |
-| **TUI** | Bubble Tea, Ratatui | 5 | discover-tui |
-| **Zig** | Build systems, C interop, memory management | 6 | discover-zig |
-| **Workflow** | Beads, context strategies | 4 | discover-workflow |
+| **Backend** | Python, Zig, Rust, Go | 18 | engineering |
+| **Frontend** | React, Next.js, TypeScript | 9 | frontend |
+| **Mobile** | SwiftUI, Swift, React Native | 10 | mobile |
+| **Build** | Make, CMake, Gradle, Maven, Bazel | 8 | build-systems-systems |
+| **Debug** | GDB, LLDB, pdb, DevTools, Valgrind | 14 | debugging |
+| **Cloud** | AWS, GCP, Modal, Vercel, Cloudflare | 27 | cloud |
+| **Database** | Postgres, Mongo, Redis, Redpanda, Iceberg | 11 | database |
+| **Caching** | Redis, HTTP, CDN, Service Workers | 7 | caching |
+| **ML/AI** | DSPy, HuggingFace, Arize, GraphRAG | 33 | ml |
+| **IR** | Elasticsearch, Vector DBs, Ranking | 5 | ir |
+| **Systems** | WebAssembly, eBPF | 8 | wasm, ebpf |
+| **Collaboration** | GitHub, PRD, RFC | 17 | collaborationoration, product, engineering |
+| **Formal** | Z3, Lean 4, CSP | 10 | formal |
+| **Math** | Linear algebra, topology, category theory | 19 | math |
+| **PLT** | Lambda calculus, type systems, typed holes | 13 | plt |
+| **DevOps** | GitHub Actions, Terraform, K8s, Docker | 16 | cicd, infrastructurestructure, containers |
+| **Observability** | Prometheus, OpenTelemetry, Grafana | 8 | observability |
+| **Networking** | SSH, mTLS, VPN, Tailscale, NAT | 5 | networking |
+| **TUI** | Bubble Tea, Ratatui | 5 | tui |
+| **Zig** | Build systems, C interop, memory management | 6 | zig |
+| **Workflow** | Beads, context strategies | 4 | workflow |
 
 ## Development Philosophy
 
@@ -428,7 +428,7 @@ cat skills/database/redpanda-streaming.md
 
 ### Progressive Discovery
 - **Zero boot cost**: No skills loaded until needed
-- **Automatic activation**: Gateway skills trigger on keywords
+- **Automatic activation**: skills trigger on keywords
 - **Manual override**: Browse and load specific skills
 - **Context efficient**: Load only what's relevant
 
@@ -598,4 +598,4 @@ Feel free to fork and adapt for your own use. Pull requests welcome.
 
 ---
 
-**350+ atomic skills** • **41 gateway Agent Skills** • **35+ categories** • **100% CI-validated**
+**350+ atomic skills** • **41 skill Agent Skills** • **35+ categories** • **100% CI-validated**

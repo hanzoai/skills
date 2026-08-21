@@ -119,8 +119,8 @@ See `skills/README.md` for the complete catalog of all categories and gateway sk
 
 ---
 
-**Browse**: This index provides a quick reference. Load the `discover-observability` gateway skill for common workflows and integration patterns.
+**Browse**: This index provides a quick reference. Load the `observability` gateway skill for common workflows and integration patterns.
 
 ```bash
-cat skills/discover-observability/SKILL.md
+cat skills/observability/SKILL.md
 ```

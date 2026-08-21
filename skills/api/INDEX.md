@@ -191,7 +191,7 @@ Comprehensive skills for designing, securing, and implementing production-ready 
 
 ## Skill Combinations
 
-### With Database Skills (`discover-database`)
+### With Database Skills (`database`)
 - API endpoints backed by database queries
 - Connection pooling for API servers
 - Query optimization for API performance
@@ -204,7 +204,7 @@ Comprehensive skills for designing, securing, and implementing production-ready 
 
 ---
 
-### With Testing Skills (`discover-testing`)
+### With Testing Skills (`testing`)
 - Integration tests for API endpoints
 - Contract testing for API consumers
 - Load testing for API performance
@@ -216,7 +216,7 @@ Comprehensive skills for designing, securing, and implementing production-ready 
 
 ---
 
-### With Frontend Skills (`discover-frontend`)
+### With Frontend Skills (`frontend`)
 - API client libraries and data fetching
 - Error handling in UI
 - Authentication state management
@@ -228,7 +228,7 @@ Comprehensive skills for designing, securing, and implementing production-ready 
 
 ---
 
-### With Infrastructure Skills (`discover-infra`, `discover-cloud`)
+### With Infrastructure Skills (`infrastructure`, `cloud`)
 - API deployment strategies
 - Load balancing and scaling
 - API gateways and proxies
@@ -292,8 +292,8 @@ cat skills/api/api-error-handling.md
 ---
 
 **Related Categories**:
-- `discover-database` - Database design and queries
-- `discover-testing` - API testing strategies
-- `discover-frontend` - API consumption patterns
-- `discover-infra` - API deployment and scaling
-- `discover-cloud` - Serverless APIs (Modal, Lambda, etc.)
+- `database` - Database design and queries
+- `testing` - API testing strategies
+- `frontend` - API consumption patterns
+- `infrastructure` - API deployment and scaling
+- `cloud` - Serverless APIs (Modal, Lambda, etc.)

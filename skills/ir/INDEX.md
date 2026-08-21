@@ -76,8 +76,8 @@ See `skills/README.md` for the complete catalog of all categories and gateway sk
 
 ---
 
-**Browse**: This index provides a quick reference. Load the `discover-ir` gateway skill for common workflows and integration patterns.
+**Browse**: This index provides a quick reference. Load the `ir` gateway skill for common workflows and integration patterns.
 
 ```bash
-cat skills/discover-ir/SKILL.md
+cat skills/ir/SKILL.md
 ```

@@ -1,5 +1,5 @@
 ---
-description: Discover and activate relevant skills (292 skills, 28 gateways)
+description: Discover and activate relevant skills (292 skills, 28 skills)
 argument-hint: [category|search-term] (optional)
 ---
 
@@ -31,17 +31,17 @@ ls -la | head -30
 ls *.{json,md,go,py,rs,swift,zig,toml,yaml,yml} 2>/dev/null | head -20
 ```
 
-**Technology Detection → Gateway Mapping:**
-- `package.json` → **discover-frontend** (React, Next.js, TypeScript)
-- `go.mod` → **discover-backend** (Go), may also need discover-api
-- `requirements.txt`, `pyproject.toml`, `uv.lock` → **discover-backend** (Python), **discover-ml** if ML work
-- `Cargo.toml` → **discover-backend** (Rust), **discover-wasm** if WASM
+**Technology Detection → Skill Mapping:**
+- `package.json` → **frontend** (React, Next.js, TypeScript)
+- `go.mod` → **engineering** (Go), may also need api
+- `requirements.txt`, `pyproject.toml`, `uv.lock` → **engineering** (Python), **ml** if ML work
+- `Cargo.toml` → **engineering** (Rust), **wasm** if WASM
 - `build.zig` → Zig skills at root level
-- `*.swift`, `*.xcodeproj` → **discover-mobile** (iOS/Swift)
-- `Dockerfile`, `docker-compose.yml` → **discover-containers**
+- `*.swift`, `*.xcodeproj` → **mobile** (iOS/Swift)
+- `Dockerfile`, `docker-compose.yml` → **containers**
 - `.beads/` → Beads workflow skills (root level)
-- `tests/`, `__tests__/` → **discover-testing**
-- Database files → **discover-database**
+- `tests/`, `__tests__/` → **testing**
+- Database files → **database**
 
 ### 3. Analyze Conversation Context
 
@@ -51,20 +51,20 @@ Review the current conversation for:
 - Explicit skill requests
 - Work phase (planning, implementation, testing, deployment)
 
-Map to gateway keywords:
-- "REST API" → **discover-api**
-- "GraphQL" → **discover-api**
-- "Postgres", "MongoDB", "Redis" → **discover-database**
-- "Docker", "Kubernetes" → **discover-containers**
-- "CI/CD", "GitHub Actions" → **discover-cicd**
-- "observability", "logging", "metrics" → **discover-observability**
-- "caching", "CDN" → **discover-caching**
-- "debugging", "GDB", "profiling" → **discover-debugging**
-- "build", "Make", "CMake" → **discover-build-systems**
-- "ML", "model", "training" → **discover-ml**
-- "math", "linear algebra" → **discover-math**
-- "compiler", "parser", "AST" → **discover-plt**
-- "diagram", "flowchart", "Mermaid", "visualization" → **discover-diagrams**
+Map to skill keywords:
+- "REST API" → **api**
+- "GraphQL" → **api**
+- "Postgres", "MongoDB", "Redis" → **database**
+- "Docker", "Kubernetes" → **containers**
+- "CI/CD", "GitHub Actions" → **cicd**
+- "observability", "logging", "metrics" → **observability**
+- "caching", "CDN" → **caching**
+- "debugging", "GDB", "profiling" → **debugging**
+- "build", "Make", "CMake" → **build-systems-systems**
+- "ML", "model", "training" → **ml**
+- "math", "linear algebra" → **math**
+- "compiler", "parser", "AST" → **plt**
+- "diagram", "flowchart", "Mermaid", "visualization" → **diagrams**
 
 ### 4. Provide Contextual Recommendations
 
@@ -77,15 +77,15 @@ Display in this format:
 ━━━ SKILLS DISCOVERY ━━━
 
 RECOMMENDED FOR THIS PROJECT:
-→ discover-[category]
+→ [skill]
   Keywords: [key topics]
-  cat skills/discover-[category]/SKILL.md
+  cat skills/[skill]/SKILL.md
 
-→ discover-[category]
+→ [skill]
   Keywords: [key topics]
-  cat skills/discover-[category]/SKILL.md
+  cat skills/[skill]/SKILL.md
 
-CATEGORIES (292 skills, 28 gateways):
+CATEGORIES (292 skills, 28 skills):
 Frontend (8) | Database (8) | API (7) | Testing (6) | Diagrams (8) | ML (30)
 Math (19) | Debugging (14) | Build Systems (8) | Caching (7) | Observability (8)
 Containers (5) | CI/CD (4) | PLT (13) | Formal (10) | Cloud (13)
@@ -97,14 +97,14 @@ COMMANDS:
 /skills list         - Show all categories
 ```
 
-Recommend 2-4 gateway skills that match:
+Recommend 2-4 skills that match:
 - Detected technologies in the current directory
 - Topics discussed in conversation
 - Common workflows for the project type
 
 **If ARGUMENT = category name:**
 
-**A) If discover-{category} gateway exists:**
+**A) If the skill exists:**
 ```
 ━━━ {CATEGORY} SKILLS (N total) ━━━
 
@@ -115,8 +115,8 @@ KEY SKILLS:
 → [skill-name] - [one-line description]
 → [skill-name] - [one-line description]
 
-LOAD GATEWAY:
-cat skills/discover-{category}/SKILL.md    # Overview + quick reference
+LOAD SKILL:
+cat skills/{skill}/SKILL.md    # what it covers, and the files beside it
 
 LOAD FULL INDEX:
 cat skills/{category}/INDEX.md              # All skills with details
@@ -149,7 +149,7 @@ KEY SKILLS:
 → api-error-handling - RFC 7807, validation errors
 
 LOAD:
-cat skills/discover-api/SKILL.md       # Gateway overview
+cat skills/api/SKILL.md       # Skill overview
 cat skills/api/INDEX.md                # Full details
 cat skills/api/rest-api-design.md     # Specific skill
 ```
@@ -157,19 +157,19 @@ cat skills/api/rest-api-design.md     # Specific skill
 **If ARGUMENT = search term:**
 
 Search across:
-- Gateway skill descriptions (discover-*/SKILL.md)
+- skill descriptions (*/SKILL.md)
 - Category INDEX.md files
 - skills/README.md catalog
 - Root-level skill filenames
 
-Display matching gateway categories FIRST, then specific skills:
+Display matching skill categories FIRST, then specific skills:
 ```
 ━━━ SEARCH: 'postgres' ━━━
 
-GATEWAY:
-→ discover-database
+SKILL:
+→ database
   Keywords: PostgreSQL, MongoDB, Redis, query optimization
-  cat skills/discover-database/SKILL.md
+  cat skills/database/SKILL.md
 
 MATCHING SKILLS:
 → postgres-query-optimization.md - Database/Performance
@@ -184,8 +184,8 @@ MATCHING SKILLS:
   Designing schemas, relationships, data types
   cat skills/database/postgres-schema-design.md
 
-RELATED GATEWAYS:
-discover-observability, discover-caching, discover-debugging
+RELATED SKILLS:
+observability, caching, debugging
 
 [Refine search: /skills postgres optimization]
 [View category: /skills database]
@@ -193,47 +193,47 @@ discover-observability, discover-caching, discover-debugging
 
 **If ARGUMENT = "list":**
 
-Show all 28 gateway categories:
+Show all 28 skill categories:
 ```
-━━━ ALL CATEGORIES (292 skills, 28 gateways) ━━━
+━━━ ALL CATEGORIES (292 skills, 28 skills) ━━━
 
 BACKEND & DATA:
-  discover-api (7)         - REST, GraphQL, auth, rate limiting
-  discover-database (8)    - Postgres, MongoDB, Redis, optimization
-  discover-data (5)        - ETL, streaming, batch processing
-  discover-caching (7)     - Redis, CDN, HTTP caching, invalidation
+  api (7)         - REST, GraphQL, auth, rate limiting
+  database (8)    - Postgres, MongoDB, Redis, optimization
+  data (5)        - ETL, streaming, batch processing
+  caching (7)     - Redis, CDN, HTTP caching, invalidation
 
 FRONTEND & MOBILE:
-  discover-frontend (8)    - React, Next.js, state management, a11y
-  discover-mobile (4)      - iOS, Swift, SwiftUI, concurrency
+  frontend (8)    - React, Next.js, state management, a11y
+  mobile (4)      - iOS, Swift, SwiftUI, concurrency
 
 TESTING & DOCUMENTATION:
-  discover-testing (6)     - Unit, integration, e2e, TDD, coverage
-  discover-diagrams (8)    - Mermaid flowcharts, sequence, ER, architecture, Gantt
+  testing (6)     - Unit, integration, e2e, TDD, coverage
+  diagrams (8)    - Mermaid flowcharts, sequence, ER, architecture, Gantt
 
 INFRASTRUCTURE:
-  discover-containers (5)  - Docker, Kubernetes, security
-  discover-cicd (4)        - GitHub Actions, pipelines
-  discover-cloud (13)      - Modal, AWS, GCP, serverless
-  discover-infra (6)       - Terraform, IaC, Cloudflare Workers
-  discover-observability (8) - Logging, metrics, tracing, alerts
-  discover-debugging (14)  - GDB, LLDB, profiling, memory leaks
-  discover-build-systems (8) - Make, CMake, Gradle, Maven, Bazel
-  discover-deployment (6)  - Netlify, Heroku, platforms
-  discover-realtime (4)    - WebSockets, SSE, pub/sub
+  containers (5)  - Docker, Kubernetes, security
+  cicd (4)        - GitHub Actions, pipelines
+  cloud (13)      - Modal, AWS, GCP, serverless
+  infrastructure (6)       - Terraform, IaC, Cloudflare Workers
+  observability (8) - Logging, metrics, tracing, alerts
+  debugging (14)  - GDB, LLDB, profiling, memory leaks
+  build-systems-systems (8) - Make, CMake, Gradle, Maven, Bazel
+  deployment (6)  - Netlify, Heroku, platforms
+  realtime (4)    - WebSockets, SSE, pub/sub
 
 SPECIALIZED:
-  discover-ml (30)         - Training, RAG, embeddings, evaluation
-  discover-math (19)       - Linear algebra, topology, category theory
-  discover-plt (13)        - Compilers, type systems, verification
-  discover-formal (10)     - SAT/SMT, Z3, Lean, theorem proving
-  discover-wasm (4)        - WebAssembly fundamentals, Rust to WASM
-  discover-ebpf (4)        - eBPF tracing, networking, security
-  discover-ir (5)          - LLVM IR, compiler optimizations
-  discover-modal (2)       - Modal functions, scheduling
-  discover-engineering (4) - Code review, documentation, leadership
-  discover-product (4)     - Product strategy, roadmaps
-  discover-collab (5)      - Collaboration, code review, pair programming
+  ml (30)         - Training, RAG, embeddings, evaluation
+  math (19)       - Linear algebra, topology, category theory
+  plt (13)        - Compilers, type systems, verification
+  formal (10)     - SAT/SMT, Z3, Lean, theorem proving
+  wasm (4)        - WebAssembly fundamentals, Rust to WASM
+  ebpf (4)        - eBPF tracing, networking, security
+  ir (5)          - LLVM IR, compiler optimizations
+  modal (2)       - Modal functions, scheduling
+  engineering (4) - Code review, documentation, leadership
+  product (4)     - Product strategy, roadmaps
+  collaboration (5)      - Collaboration, code review, pair programming
 
 AGENT SKILLS (Root):
   elegant-design          - UI/UX design, accessibility, design systems
@@ -283,7 +283,7 @@ Skills catalog not found at skills/README.md
 Expected structure:
 skills/
 ├── README.md              (Master catalog)
-├── discover-*/SKILL.md    (28 gateway skills)
+├── <name>/SKILL.md    (one skill, one directory)
 └── {category}/INDEX.md    (Category indexes)
 
 Is your repository in a different location?
@@ -297,7 +297,7 @@ No skills found matching your search.
 
 TRY:
 → Broader search term
-→ View all gateways: /skills list
+→ View all skills: /skills list
 → Browse full catalog: cat skills/README.md
 → Check a category: /skills api
 ```
@@ -308,9 +308,9 @@ TRY:
 
 No project files detected in current directory.
 
-GENERAL-PURPOSE GATEWAYS:
-→ discover-collab - Collaboration, documentation, CodeTour walkthroughs
-  cat skills/discover-collab/SKILL.md
+GENERAL-PURPOSE SKILLS:
+→ collaboration - Collaboration, documentation, CodeTour walkthroughs
+  cat skills/collaboration/SKILL.md
 
 ROOT-LEVEL SKILLS:
 → beads-workflow.md - Multi-session task management
@@ -324,10 +324,10 @@ ROOT-LEVEL SKILLS:
 ## Remember
 
 - Read skills/README.md to get accurate information (NOT _INDEX.md - that's archived)
-- Recommend gateway skills first, then specific skills
+- Recommend skills first, then specific skills
 - Match skills to project context when possible
 - Keep output concise and actionable
 - Never modify the skills library
 - Provide clear, copy-paste commands
 - Use Unicode box drawing for visual clarity
-- The catalog has: 292 skills, 28 gateways, 31 categories
+- The catalog has: 292 skills, 28 skills, 31 categories

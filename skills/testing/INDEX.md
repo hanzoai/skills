@@ -86,8 +86,8 @@ See `skills/README.md` for the complete catalog of all categories and gateway sk
 
 ---
 
-**Browse**: This index provides a quick reference. Load the `discover-testing` gateway skill for common workflows and integration patterns.
+**Browse**: This index provides a quick reference. Load the `testing` gateway skill for common workflows and integration patterns.
 
 ```bash
-cat skills/discover-testing/SKILL.md
+cat skills/testing/SKILL.md
 ```

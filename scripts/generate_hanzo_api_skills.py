@@ -17,7 +17,7 @@ the way to fix a stale skill.
 
 Output is the repository's existing three tiers, no new format:
 
-    skills/discover-hanzo-api/SKILL.md   gateway, auto-activates on keywords
+    skills/hanzo-api/SKILL.md            what it covers, and the files beside it
     skills/hanzo-api/INDEX.md            category index, products by domain
     skills/hanzo-api/<product>.md        one skill per product
 
@@ -733,7 +733,7 @@ def render_gateway(products, today):
                          sorted(products.values(), key=lambda p: -len(p["ops"]))[:28])
     out = []
     out.append("---")
-    out.append(f"name: discover-{CATEGORY}")
+    out.append(f"name: {CATEGORY}")
     out.append("description: Automatically discover how to CALL Hanzo's own products "
                "over api.hanzo.ai — models, agents, sandboxes, secrets, billing, "
                "deployments, identity, telemetry. Activates when a task needs a Hanzo "
@@ -801,11 +801,11 @@ def render_gateway(products, today):
     out.append("")
     out.append("## Integration with Other Skills")
     out.append("")
-    out.append("- `discover-hanzo` — what each Hanzo repo IS and how it is operated; "
+    out.append("- `hanzo` — what each Hanzo repo IS and how it is operated; "
                "this gateway is how to CALL it")
     out.append("- `hanzo-cloud-architecture/SKILL.md` — one binary, ZAP transport, "
                "why every product answers on one host")
-    out.append("- `discover-api` — designing your own API; this one consumes ours")
+    out.append("- `api` — designing your own API; this one consumes ours")
     out.append("")
     out.append("## Progressive Loading")
     out.append("")
@@ -913,10 +913,10 @@ def main():
     (cat / "INDEX.md").write_text(render_index(products, set(chosen), today))
     print(f"✓ {CATEGORY}/INDEX.md  ({len(products)} products)")
 
-    gw = repo / "skills" / f"discover-{CATEGORY}"
+    gw = repo / "skills" / CATEGORY
     gw.mkdir(parents=True, exist_ok=True)
     (gw / "SKILL.md").write_text(render_gateway(products, today))
-    print(f"✓ discover-{CATEGORY}/SKILL.md")
+    print(f"✓ {CATEGORY}/SKILL.md")
 
 
 if __name__ == "__main__":

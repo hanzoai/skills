@@ -52,15 +52,15 @@ Activate this skill when:
 **Gateway Auto-Discovery** (RECOMMENDED):
 - Repository analysis triggers relevant gateway skills automatically
 - Gateway skills activate based on keywords in files and patterns
-- Example: `package.json` with `"next"` → `discover-frontend` gateway activates
-- Example: `build.zig` → `discover-build` gateway activates
-- Example: Database migrations → `discover-database` gateway activates
-- Example: `.github/workflows/` → `discover-cicd` gateway activates
+- Example: `package.json` with `"next"` → `frontend` gateway activates
+- Example: `build.zig` → `build-systems` gateway activates
+- Example: Database migrations → `database` gateway activates
+- Example: `.github/workflows/` → `cicd` gateway activates
 
 **Gateway Skills Available**:
 ```bash
 # View all gateway skills
-ls -d skills/discover-*
+ls -d skills/*/
 
 # Read catalog with all gateways
 cat skills/README.md
@@ -68,21 +68,21 @@ cat skills/README.md
 
 **Direct Mapping** (Tech → Gateway → Skills):
 - Technology identified → Trigger gateway → Load specific skills
-- Example: `package.json` with `"react"` → `discover-frontend` → `react-*.md` skills
-- Example: `requirements.txt` with `sqlalchemy` → `discover-database` → `orm-patterns.md`
-- Example: `Dockerfile` → `discover-containers` → `dockerfile-optimization.md`
+- Example: `package.json` with `"react"` → `frontend` → `react-*.md` skills
+- Example: `requirements.txt` with `sqlalchemy` → `database` → `orm-patterns.md`
+- Example: `Dockerfile` → `containers` → `dockerfile-optimization.md`
 
 **Pattern-Based Mapping** (Code Patterns → Gateway):
 - Code patterns identified → Activate gateway skill
-- Example: `@app.function` decorators → `discover-modal` or `discover-cloud`
-- Example: GraphQL schema files → `discover-api` gateway
-- Example: Test files in `tests/` → `discover-testing` gateway
+- Example: `@app.function` decorators → `modal` or `cloud`
+- Example: GraphQL schema files → `api` gateway
+- Example: Test files in `tests/` → `testing` gateway
 
 **Workflow Mapping** (Process → Gateway):
 - Development workflow identified → Activate workflow gateways
 - Example: `.beads/` directory → Beads workflow skills (root level)
-- Example: GitHub Actions with tests → `discover-cicd`, `discover-testing`
-- Example: Database migrations → `discover-database`
+- Example: GitHub Actions with tests → `cicd`, `testing`
+- Example: Database migrations → `database`
 
 ### Coverage Analysis
 
