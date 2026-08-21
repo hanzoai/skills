@@ -120,47 +120,11 @@ jobs:
           echo "api=$api" >> "$GITHUB_OUTPUT"
           echo "acct=$acct" >> "$GITHUB_OUTPUT"
 
-      # Bind by hostname, not by a remembered name: whichever Pages project
-      # already answers for the domain is the one that gets the new assets.
-      - name: resolve the pages project serving the domain
-        id: svc
-        env:
-          CF: ${{ steps.cf.outputs.api }}
-          ACCT: ${{ steps.cf.outputs.acct }}
-        run: |
-          set -euo pipefail
-          n=$(curl -sS -H "Authorization: Bearer $CF" \
-              "https://api.cloudflare.com/client/v4/accounts/$ACCT/pages/projects?per_page=100" \
-              | jq -r --arg h "$HOSTNAME_APEX" 'first(.result[]? | select(.domains // [] | index($h)) | .name) // empty')
-          [ -n "$n" ] || { echo "::error::no Pages project serves $HOSTNAME_APEX"; exit 1; }
-          echo "using project: $n"
-          echo "name=$n" >> "$GITHUB_OUTPUT"
-
       - name: publish
         env:
           CLOUDFLARE_API_TOKEN: ${{ steps.cf.outputs.api }}
           CLOUDFLARE_ACCOUNT_ID: ${{ steps.cf.outputs.acct }}
-        run: |
-          npx wrangler@3 pages deploy public \
-            --project-name "${{ steps.svc.outputs.name }}" --branch main
-
-      # Pages custom domains are project settings, not routes in wrangler.toml.
-      # Adding www here also creates its DNS record on the zone.
-      - name: www is a domain on the project
-        env:
-          CF: ${{ steps.cf.outputs.api }}
-          ACCT: ${{ steps.cf.outputs.acct }}
-          PROJECT: ${{ steps.svc.outputs.name }}
-        run: |
-          set -euo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/$ACCT/pages/projects/$PROJECT/domains"
-          if curl -sS -H "Authorization: Bearer $CF" "$api" \
-             | jq -e --arg h "$HOSTNAME_WWW" '.result[]? | select(.name == $h)' >/dev/null; then
-            echo "already attached"
-          else
-            curl -sS -X POST -H "Authorization: Bearer $CF" -H "Content-Type: application/json" \
-              --data "{\"name\":\"$HOSTNAME_WWW\"}" "$api" | head -c 400
-          fi
+        run: npx wrangler@3 deploy
 
       # Cloudflare answers this host with `cf-cache-status: HIT`, so a fresh
       # deploy is not a fresh response. Best-effort: the token may not carry
