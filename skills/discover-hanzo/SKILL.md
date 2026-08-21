@@ -1,3 +1,8 @@
+---
+name: discover-hanzo
+description: Automatically discover the Hanzo stack — local-first models, the MCP tooling, the SDKs and the cluster pieces — and which part answers a given need. Activates when a task names Hanzo, local AI, MCP or an agentic workflow.
+---
+
 # Discover Hanzo - AI Infrastructure & Development Ecosystem
 
 **Gateway Skill**: Auto-activates on keywords like "hanzo", "local ai", "mcp", "privacy ai", "agentic workflow"
