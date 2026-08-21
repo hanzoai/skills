@@ -24,8 +24,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # api.hanzo.ai is the unified endpoint; KMS answers under /v1/kms there.
-  KMS_ENDPOINT: https://api.hanzo.ai
+  # KMS answers under /v1/kms on the unified API. This job runs on an
+  # in-cluster runner whose job container reaches the ingress ClusterIP but
+  # gets 502 from it, so try the service directly first and fall back.
+  KMS_ENDPOINTS: "http://cloud.hanzo.svc:8000 https://api.hanzo.ai"
   HOSTNAME_APEX: hanzoskills.com
   HOSTNAME_WWW: www.hanzoskills.com
 
@@ -95,17 +97,19 @@ jobs:
           if [ -z "${KMS_CLIENT_ID:-}" ] || [ -z "${KMS_CLIENT_SECRET:-}" ]; then
             echo "::error::no KMS_CLIENT_ID/KMS_CLIENT_SECRET on this repo — seal them to publish"; exit 1
           fi
-          # Say what the endpoint answered. `curl -f` reports a bare exit 22 and
+          # Say what each endpoint answered. `curl -f` reports a bare exit 22 and
           # hides which hop refused, which is how a 502 here reads as a mystery.
-          code=$(curl -sS -o /tmp/kms.json -w '%{http_code}' -X POST "$KMS_ENDPOINT/v1/kms/auth/login" \
-                 -H 'Content-Type: application/json' \
-                 -d "{\"clientId\":\"$KMS_CLIENT_ID\",\"clientSecret\":\"$KMS_CLIENT_SECRET\"}" || echo 000)
-          tok=$(jq -r '.accessToken // empty' /tmp/kms.json 2>/dev/null || true)
+          tok=""; KMS_ENDPOINT=""
+          for ep in $KMS_ENDPOINTS; do
+            code=$(curl -sS --max-time 20 -o /tmp/kms.json -w '%{http_code}' \
+                   -X POST "$ep/v1/kms/auth/login" -H 'Content-Type: application/json' \
+                   -d "{\"clientId\":\"$KMS_CLIENT_ID\",\"clientSecret\":\"$KMS_CLIENT_SECRET\"}" || echo 000)
+            tok=$(jq -r '.accessToken // empty' /tmp/kms.json 2>/dev/null || true)
+            if [ -n "$tok" ]; then KMS_ENDPOINT="$ep"; echo "KMS: $ep"; break; fi
+            echo "KMS: $ep returned $code $(head -c 120 /tmp/kms.json 2>/dev/null || true)"
+          done
           if [ -z "$tok" ]; then
-            echo "::error::KMS login to $KMS_ENDPOINT/v1/kms/auth/login returned $code"
-            echo "resolved: $(getent hosts "${KMS_ENDPOINT#https://}" || echo unresolved)"
-            head -c 300 /tmp/kms.json || true
-            exit 1
+            echo "::error::no KMS endpoint authenticated — see the statuses above"; exit 1
           fi
           # Two shapes answer here: the unscoped path and the org-scoped one.
           read_secret() {
