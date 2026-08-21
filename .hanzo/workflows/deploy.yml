@@ -1,11 +1,21 @@
 name: deploy
 
-# Publishes hanzoskills.com from public/ and refuses to pass unless the live
-# host serves what was just published.
+# A SITE IS NOT AN APP.
 #
-# Our runners, not GitHub's: this repository is private, and GitHub-hosted
-# minutes for private repositories are billed at the org. The Cloudflare
-# credential comes from KMS at run time, which is where credentials live.
+# hanzoskills.com is 1081 flat files that never execute. It gets no image, no
+# App CR and no reconcile — it goes to the Sites plane:
+#
+#   POST /v1/projects/hanzoskills/deployments   (202, a prefix-scoped upload grant)
+#   POST the objects straight to S3             (the bytes skip the API)
+#   POST .../deployments/<id>/complete          (live; prunes what the build dropped)
+#
+# The mechanics are NOT transcribed here; they are `bin/site` in hanzoai/ci,
+# which hanzo.works, hanzo.ai and hips all call. The action self-provisions the
+# project, so committing this file was enough to stand the site up.
+#
+# ONE credential, and it is a KMS read, not a Cloudflare token. Cloudflare is
+# DNS and CDN for this host and nothing else — there is no account credential
+# in this lane to expire, fail to fetch, or scope wrongly.
 
 on:
   push:
@@ -15,21 +25,17 @@ on:
       - 'scripts/site.py'
       - 'scripts/marks.py'
       - 'tests/site.mjs'
-      - 'wrangler.toml'
       - '.hanzo/workflows/deploy.yml'
   workflow_dispatch:
 
 concurrency:
+  # Never cancel a publish in flight: a half-uploaded prefix is a broken site.
   group: deploy-hanzoskills
   cancel-in-progress: false
 
 env:
-  # KMS answers under /v1/kms on the unified API. This job runs on an
-  # in-cluster runner whose job container reaches the ingress ClusterIP but
-  # gets 502 from it, so try the service directly first and fall back.
-  KMS_ENDPOINTS: "http://cloud.hanzo.svc:8000 https://api.hanzo.ai"
-  HOSTNAME_APEX: hanzoskills.com
-  HOSTNAME_WWW: www.hanzoskills.com
+  HOST: hanzoskills.com
+  WWW: www.hanzoskills.com
 
 jobs:
   deploy:
@@ -57,7 +63,7 @@ jobs:
           for f in index.md llms.txt all.md favicon.svg skill.md sitemap.xml robots.txt; do
             test -s "public/$f"
           done
-          # Cloudflare adds its analytics beacon at the edge; it is not ours to ship.
+          # One collector, ours. A beacon in the source is a second one.
           ! grep -rlq cloudflareinsights public/ || { echo "::error::beacon in source"; exit 1; }
           # Monochrome palette, as on hanzo.codes.
           bad=$(grep -ohE '#[0-9a-fA-F]{6}' public/index.html public/favicon.svg | sort -fu \
@@ -68,6 +74,8 @@ jobs:
         with:
           node-version: '22'
 
+      # The gates run in the job that PUBLISHES. Workflows sharing a trigger do
+      # not order themselves, so a red gate in ci.yml cannot stop a publish here.
       - name: browser checks
         run: |
           set -euo pipefail
@@ -87,136 +95,66 @@ jobs:
           name: shots
           path: shots/
 
-      - name: read the cloudflare credential from KMS
-        id: cf
+      - name: Publish to the Sites plane
+        uses: https://git.hanzo.ai/hanzoai/ci/.github/actions/site@v1
+        with:
+          slug: hanzoskills
+          dir: public
         env:
           KMS_CLIENT_ID: ${{ secrets.KMS_CLIENT_ID }}
           KMS_CLIENT_SECRET: ${{ secrets.KMS_CLIENT_SECRET }}
-        run: |
-          set -euo pipefail
-          if [ -z "${KMS_CLIENT_ID:-}" ] || [ -z "${KMS_CLIENT_SECRET:-}" ]; then
-            echo "::error::no KMS_CLIENT_ID/KMS_CLIENT_SECRET on this repo — seal them to publish"; exit 1
-          fi
-          # Say what each endpoint answered. `curl -f` reports a bare exit 22 and
-          # hides which hop refused, which is how a 502 here reads as a mystery.
-          tok=""; KMS_ENDPOINT=""
-          for ep in $KMS_ENDPOINTS; do
-            code=$(curl -sS --max-time 20 -o /tmp/kms.json -w '%{http_code}' \
-                   -X POST "$ep/v1/kms/auth/login" -H 'Content-Type: application/json' \
-                   -d "{\"clientId\":\"$KMS_CLIENT_ID\",\"clientSecret\":\"$KMS_CLIENT_SECRET\"}" || echo 000)
-            tok=$(jq -r '.accessToken // empty' /tmp/kms.json 2>/dev/null || true)
-            if [ -n "$tok" ]; then KMS_ENDPOINT="$ep"; echo "KMS: $ep"; break; fi
-            echo "KMS: $ep returned $code $(head -c 120 /tmp/kms.json 2>/dev/null || true)"
-          done
-          if [ -z "$tok" ]; then
-            echo "::error::no KMS endpoint authenticated — see the statuses above"; exit 1
-          fi
-          # Two shapes answer here: the unscoped path and the org-scoped one.
-          read_secret() {
-            v=$(curl -fsS "$KMS_ENDPOINT/v1/kms/secrets/deploy/cf-pages/$1?env=prod" \
-                -H "Authorization: Bearer $tok" | jq -r '.value // empty' || true)
-            if [ -z "$v" ]; then
-              v=$(curl -fsS "$KMS_ENDPOINT/v1/kms/orgs/hanzo/secrets/deploy/cf-pages/$1?env=prod" \
-                  -H "Authorization: Bearer $tok" | jq -r '.secret.value // .secret.secretValue // empty' || true)
-            fi
-            printf '%s' "$v"
-          }
-          api=$(read_secret CF_API_TOKEN)
-          acct=$(read_secret CF_ACCOUNT_ID)
-          if [ -z "$api" ] || [ -z "$acct" ]; then
-            echo "::error::KMS holds no CF_API_TOKEN/CF_ACCOUNT_ID at hanzo/deploy/cf-pages env=prod — seal them, then rerun"; exit 1
-          fi
-          echo "::add-mask::$api"
-          echo "::add-mask::$acct"
-          echo "api=$api" >> "$GITHUB_OUTPUT"
-          echo "acct=$acct" >> "$GITHUB_OUTPUT"
-
-      # Pages and Workers both serve static assets and this host has been read
-      # as each. Ask Cloudflare which one owns the name and publish that way,
-      # so the answer comes from the account rather than from a comment.
-      - name: publish
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ steps.cf.outputs.api }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ steps.cf.outputs.acct }}
-          CF: ${{ steps.cf.outputs.api }}
-          ACCT: ${{ steps.cf.outputs.acct }}
-        run: |
-          set -euo pipefail
-          proj=$(curl -sS -H "Authorization: Bearer $CF" \
-                 "https://api.cloudflare.com/client/v4/accounts/$ACCT/pages/projects?per_page=100" \
-                 | jq -r --arg h "$HOSTNAME_APEX" \
-                   'first(.result[]? | select((.domains // []) | index($h)) | .name) // empty')
-          if [ -n "$proj" ]; then
-            echo "Pages project $proj serves $HOSTNAME_APEX"
-            npx wrangler@3 pages deploy public --project-name "$proj" --branch main
-            dom="https://api.cloudflare.com/client/v4/accounts/$ACCT/pages/projects/$proj/domains"
-            if curl -sS -H "Authorization: Bearer $CF" "$dom" \
-               | jq -e --arg h "$HOSTNAME_WWW" '.result[]? | select(.name == $h)' >/dev/null; then
-              echo "$HOSTNAME_WWW already attached"
-            else
-              curl -sS -X POST -H "Authorization: Bearer $CF" -H "Content-Type: application/json" \
-                --data "{\"name\":\"$HOSTNAME_WWW\"}" "$dom" | head -c 400
-            fi
-          else
-            echo "no Pages project holds $HOSTNAME_APEX — publishing the Worker in wrangler.toml"
-            npx wrangler@3 deploy
-          fi
-
-      # Cloudflare answers this host with `cf-cache-status: HIT`, so a fresh
-      # deploy is not a fresh response. Best-effort: the token may not carry
-      # Cache Purge, and the checks below are what decide.
-      - name: purge the edge
-        continue-on-error: true
-        env:
-          CF: ${{ steps.cf.outputs.api }}
-        run: |
-          set -euo pipefail
-          zone=$(curl -sS -H "Authorization: Bearer $CF" \
-                 "https://api.cloudflare.com/client/v4/zones?name=$HOSTNAME_APEX" \
-                 | jq -r '.result[0].id // empty')
-          [ -n "$zone" ] || { echo "no zone id — leaving it to revalidation"; exit 0; }
-          curl -sS -X POST -H "Authorization: Bearer $CF" -H "Content-Type: application/json" \
-               --data '{"purge_everything":true}' \
-               "https://api.cloudflare.com/client/v4/zones/$zone/purge_cache" | head -c 300
 
       - name: the live host serves the new page
         run: |
           set -euo pipefail
           body=""
           for i in $(seq 1 30); do
-            body=$(curl -sS "https://$HOSTNAME_APEX/" || true)
+            body=$(curl -sS "https://$HOST/" || true)
             if printf '%s' "$body" | grep -q 'id="copybtn"'; then break; fi
             sleep 10
           done
           printf '%s' "$body" | grep -q 'id="copybtn"'
           printf '%s' "$body" | grep -q 'class="mark"'
           printf '%s' "$body" | grep -q 'Drop into any agent'
-          curl -sfS -o /dev/null "https://$HOSTNAME_APEX/favicon.svg"
-          curl -sfS -o /dev/null "https://$HOSTNAME_APEX/sitemap.xml"
+          curl -sfS -o /dev/null "https://$HOST/favicon.svg"
+          curl -sfS -o /dev/null "https://$HOST/sitemap.xml"
 
-      # A file in git does not beat a zone setting: Cloudflare can serve a
-      # managed robots.txt that names no crawler. Ask the live host.
+      # A file in git is not a file being served: this host answered a managed
+      # robots.txt naming no crawler while ours sat in the repo unread. Ask the
+      # live host, on a site whose whole purpose is being read by agents.
       - name: crawlers are actually welcome
         run: |
           set -euo pipefail
-          r=$(curl -sS "https://$HOSTNAME_APEX/robots.txt")
+          r=$(curl -sS "https://$HOST/robots.txt")
           printf '%s' "$r" | grep -q 'ai-train=yes' \
             || { echo "::error::the live robots.txt is not ours"; exit 1; }
           printf '%s' "$r" | grep -q '^Allow: /'
+          printf '%s' "$r" | grep -q '^User-agent: ClaudeBot'
 
       - name: www resolves
         run: |
           set -euo pipefail
           code=000
           for i in $(seq 1 30); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' "https://$HOSTNAME_WWW/" || true)
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://$WWW/" || true)
             if [ "$code" = "200" ]; then break; fi
             sleep 10
           done
-          [ "$code" = "200" ] || { echo "::error::$HOSTNAME_WWW returned $code"; exit 1; }
+          [ "$code" = "200" ] || { echo "::error::$WWW returned $code"; exit 1; }
+
+      # The markdown twin is half the corpus and the half agents fetch. An
+      # object served as a download is one a reader never sees.
+      - name: the markdown twins render
+        run: |
+          set -euo pipefail
+          ct=$(curl -sS -o /dev/null -w '%{content_type}' "https://$HOST/index.md")
+          case "$ct" in
+            text/*) echo "index.md: $ct" ;;
+            *) echo "::error::index.md is served as $ct — a browser downloads that"; exit 1 ;;
+          esac
 
       - name: the live host renders
-        run: node tests/site.mjs "https://$HOSTNAME_APEX" shots-live
+        run: node tests/site.mjs "https://$HOST" shots-live
 
       - uses: actions/upload-artifact@v3
         if: always()
