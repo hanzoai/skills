@@ -1,0 +1,169 @@
+name: deploy
+
+# Publishes hanzoskills.com from public/ and refuses to pass unless the live
+# host serves what was just published.
+#
+# Runs on GitHub's runner: the only copy of the Cloudflare credential lives in
+# GitHub org secrets, and this repo builds no container image.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/**'
+      - 'scripts/site.py'
+      - 'scripts/marks.py'
+      - 'wrangler.toml'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hanzoskills
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # The chrome has one definition. If rendering it changes any page, the
+      # committed site and its source have drifted.
+      - name: public/ matches scripts/site.py
+        run: |
+          set -euo pipefail
+          python3 scripts/site.py
+          git diff --exit-code -- public/ \
+            || { echo "::error::public/ is stale — run python3 scripts/site.py"; exit 1; }
+
+      - name: the site is intact
+        run: |
+          set -euo pipefail
+          test -s public/index.html
+          grep -q '<title>Hanzo Skills</title>' public/index.html
+          grep -q 'ai-train=yes' public/robots.txt
+          ! grep -qE '^Disallow: /$' public/robots.txt
+          for f in index.md llms.txt all.md favicon.svg skill.md; do test -s "public/$f"; done
+          # No page ships Cloudflare's edge-injected analytics beacon.
+          ! grep -rlq cloudflareinsights public/ || { echo "::error::beacon in source"; exit 1; }
+          # Monochrome palette, as on hanzo.codes.
+          bad=$(grep -ohE '#[0-9a-fA-F]{6}' public/index.html public/favicon.svg | sort -fu \
+                | grep -viE '^#(000000|ffffff|dddddd|f4f4f2|9c9c98|7a7a75|6a6a66|0a0a0a|232323|3a3a3a|d8d8d4|141414|181818)$' || true)
+          [ -z "$bad" ] || { echo "::error::non-monochrome colour in the page: $bad"; exit 1; }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: browser checks
+        run: |
+          set -euo pipefail
+          npm i --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+          python3 -m http.server 8787 --bind 127.0.0.1 --directory public &
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:8787/ && break; sleep 1; done
+          node tests/site.mjs http://127.0.0.1:8787 shots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots
+          path: shots/
+
+      # Bind by hostname, not by a remembered name: whichever Pages project
+      # already answers for the domain is the one that gets the new assets.
+      - name: resolve the pages project serving the domain
+        id: svc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          n=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=100" \
+              | python3 -c '
+import sys, json
+for p in json.load(sys.stdin).get("result") or []:
+    if "hanzoskills.com" in (p.get("domains") or []):
+        print(p["name"]); break
+')
+          [ -n "$n" ] || { echo "::error::no Pages project serves hanzoskills.com"; exit 1; }
+          echo "using project: $n"
+          echo "name=$n" >> "$GITHUB_OUTPUT"
+
+      - name: publish
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler@3 pages deploy public \
+            --project-name "${{ steps.svc.outputs.name }}" --branch main
+
+      # Pages custom domains are project settings, not routes in wrangler.toml.
+      # Adding www here also creates its DNS record on the zone.
+      - name: www is a domain on the project
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT: ${{ steps.svc.outputs.name }}
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/domains"
+          have=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" \
+                 | python3 -c 'import sys,json;print(" ".join(d.get("name","") for d in (json.load(sys.stdin).get("result") or [])))')
+          case " $have " in
+            *" www.hanzoskills.com "*) echo "already attached";;
+            *) curl -sS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+                 -H "Content-Type: application/json" \
+                 --data '{"name":"www.hanzoskills.com"}' "$api" | head -c 400;;
+          esac
+
+      # Cloudflare answers this host with `cf-cache-status: HIT`, so a fresh
+      # deploy is not a fresh response. Best-effort: the token may not carry
+      # Cache Purge, and the checks below are what decide.
+      - name: purge the edge
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          zone=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+                 "https://api.cloudflare.com/client/v4/zones?name=hanzoskills.com" \
+                 | sed -n 's/.*"id":"\([0-9a-f]\{32\}\)".*/\1/p' | head -1)
+          [ -n "$zone" ] || { echo "no zone id — leaving it to revalidation"; exit 0; }
+          curl -sS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+               -H "Content-Type: application/json" --data '{"purge_everything":true}' \
+               "https://api.cloudflare.com/client/v4/zones/$zone/purge_cache" | head -c 300
+
+      - name: the live host serves the new page
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            body=$(curl -sS https://hanzoskills.com/ || true)
+            echo "$body" | grep -q 'id="copybtn"' && echo "$body" | grep -q 'class="mark"' && break
+            sleep 10
+          done
+          echo "$body" | grep -q 'id="copybtn"'
+          echo "$body" | grep -q 'class="mark"'
+          echo "$body" | grep -q 'Drop into any agent'
+          curl -sfS -o /dev/null https://hanzoskills.com/favicon.svg
+
+      - name: www resolves
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://www.hanzoskills.com/ || true)
+            [ "$code" = "200" ] && break
+            sleep 10
+          done
+          [ "$code" = "200" ] || { echo "::error::www.hanzoskills.com returned $code"; exit 1; }
+
+      - name: the live host renders
+        run: node tests/site.mjs https://hanzoskills.com shots-live
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots-live
+          path: shots-live/
