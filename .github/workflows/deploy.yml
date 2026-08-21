@@ -44,7 +44,7 @@ jobs:
           grep -q '<title>Hanzo Skills</title>' public/index.html
           grep -q 'ai-train=yes' public/robots.txt
           ! grep -qE '^Disallow: /$' public/robots.txt
-          for f in index.md llms.txt all.md favicon.svg skill.md; do test -s "public/$f"; done
+          for f in index.md llms.txt all.md favicon.svg skill.md sitemap.xml robots.txt; do test -s "public/$f"; done
           # No page ships Cloudflare's edge-injected analytics beacon.
           ! grep -rlq cloudflareinsights public/ || { echo "::error::beacon in source"; exit 1; }
           # Monochrome palette, as on hanzo.codes.
@@ -62,7 +62,10 @@ jobs:
           npm i --no-save playwright@1.62.1
           npx playwright install --with-deps chromium
           python3 -m http.server 8787 --bind 127.0.0.1 --directory public &
-          for i in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:8787/ && break; sleep 1; done
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:8787/; then break; fi
+            sleep 1
+          done
           node tests/site.mjs http://127.0.0.1:8787 shots
 
       - uses: actions/upload-artifact@v4
@@ -82,12 +85,7 @@ jobs:
           set -euo pipefail
           n=$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=100" \
-              | python3 -c '
-import sys, json
-for p in json.load(sys.stdin).get("result") or []:
-    if "hanzoskills.com" in (p.get("domains") or []):
-        print(p["name"]); break
-')
+              | python3 -c "import sys,json;print(next((p['name'] for p in (json.load(sys.stdin).get('result') or []) if 'hanzoskills.com' in (p.get('domains') or [])),''))")
           [ -n "$n" ] || { echo "::error::no Pages project serves hanzoskills.com"; exit 1; }
           echo "using project: $n"
           echo "name=$n" >> "$GITHUB_OUTPUT"
@@ -141,7 +139,7 @@ for p in json.load(sys.stdin).get("result") or []:
           set -euo pipefail
           for i in $(seq 1 30); do
             body=$(curl -sS https://hanzoskills.com/ || true)
-            echo "$body" | grep -q 'id="copybtn"' && echo "$body" | grep -q 'class="mark"' && break
+            if printf '%s' "$body" | grep -q 'id="copybtn"'; then break; fi
             sleep 10
           done
           echo "$body" | grep -q 'id="copybtn"'
@@ -154,7 +152,7 @@ for p in json.load(sys.stdin).get("result") or []:
           set -euo pipefail
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w '%{http_code}' https://www.hanzoskills.com/ || true)
-            [ "$code" = "200" ] && break
+            if [ "$code" = "200" ]; then break; fi
             sleep 10
           done
           [ "$code" = "200" ] || { echo "::error::www.hanzoskills.com returned $code"; exit 1; }
