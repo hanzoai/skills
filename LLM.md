@@ -82,6 +82,24 @@ wrangler.toml    pages_build_output_dir = public
 - `public/` content is a snapshot of the corpus, not generated from `skills/`.
   The markdown→html generator that produced it has no home in this repo.
 
+### Publishing is blocked on the KMS machine identity
+
+The deploy runs green through the browser checks and stops at the credential
+read. KMS answers `/v1/kms/auth/login` with **502** for this repo's
+`KMS_CLIENT_ID`/`KMS_CLIENT_SECRET`, from both `cloud.hanzo.svc:8000` and
+`api.hanzo.ai`. A wrong client id/secret returns **401**, so 502 means the
+identity is found and then fails to resolve server-side — a KMS provisioning
+fault, not a network or workflow one. Cloud logs show the split cleanly:
+internal callers 502, external callers with bad creds 401.
+
+To unblock, someone with KMS admin needs to reissue the machine identity for
+this repo and confirm `CF_API_TOKEN` and `CF_ACCOUNT_ID` are sealed at
+`hanzo/deploy/cf-pages` env=prod. Nothing in this repo needs to change.
+
+GitHub Actions is not an alternative here: `hanzoai/skills` is private and the
+org's Actions billing is failing, so private-repo jobs never start. Public
+repos (hanzo.codes) still run.
+
 ## Key Skills by Domain
 
 ### Infrastructure
