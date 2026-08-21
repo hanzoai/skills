@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>observability-prometheus-monitoring</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/observability-prometheus-monitoring.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/observability-prometheus-monitoring.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>observability-prometheus-monitoring</h1><p class="lede">Production-ready Prometheus monitoring and alerting</p><h1>Prometheus Monitoring</h1>
+<p><strong>Scope</strong>: Prometheus, PromQL, recording rules, alerting rules, exporters, service discovery, federation</p>
+<p><strong>Lines</strong>: 650</p>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Setting up Prometheus for infrastructure or application monitoring</li><li>Writing PromQL queries for metrics analysis</li><li>Configuring recording rules for query optimization</li><li>Creating alerting rules for proactive monitoring</li><li>Implementing custom exporters for application metrics</li><li>Configuring service discovery for dynamic environments</li><li>Setting up Prometheus federation for multi-cluster monitoring</li><li>Optimizing Prometheus performance and storage</li><li>Debugging high cardinality issues</li><li>Integrating Prometheus with Grafana or Alertmanager</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Log aggregation (use Loki or ELK instead)</li><li>Distributed tracing (use Jaeger or Tempo instead)</li><li>APM with transaction profiling (use dedicated APM tools)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Prometheus Architecture</h3>
+<p><strong>Pull-Based Model</strong>: Prometheus scrapes metrics from targets</p>
+<ul><li>Targets expose metrics at HTTP endpoints (typically <code>/metrics</code>)</li><li>Prometheus pulls metrics at configured intervals (default: 15s)</li><li>Targets discovered via static config or service discovery</li><li>Pushgateway available for batch jobs that can&#x27;t be scraped</li></ul>
+<p><strong>Components</strong>:</p>
+<ul><li><strong>Prometheus Server</strong>: Time-series database + query engine</li><li><strong>Exporters</strong>: Expose metrics from third-party systems</li><li><strong>Alertmanager</strong>: Handle alerts (deduplication, grouping, routing)</li><li><strong>Pushgateway</strong>: Receive metrics from short-lived jobs</li><li><strong>Client Libraries</strong>: Instrument applications</li></ul>
+<h3>Data Model</h3>
+<p><strong>Metrics</strong>: Named time series with key-value labels</p>
+<pre><code>http_requests_total{method=&quot;GET&quot;, endpoint=&quot;/api/users&quot;, status=&quot;200&quot;} 1234
+|                  |                                                    |
+metric name        labels (dimensions)                               value</code></pre>
+<p><strong>Metric Types</strong>:</p>
+<ol><li><strong>Counter</strong>: Monotonically increasing (requests, errors, bytes)</li><li><strong>Gauge</strong>: Can go up/down (temperature, memory, active connections)</li><li><strong>Histogram</strong>: Distribution in buckets (latency, request size)</li><li><strong>Summary</strong>: Similar to histogram, client-side quantiles</li></ol>
+<h3>PromQL Basics</h3>
+<p><strong>Selectors</strong>:</p>
+<pre><code class="lang-promql"># Instant vector (one value per series at query time)
+http_requests_total
+
+# Filter by labels
+http_requests_total{status=&quot;200&quot;, method=&quot;GET&quot;}
+
+# Regex matching
+http_requests_total{status=~&quot;2..&quot;}
+
+# Negative matching
+http_requests_total{status!=&quot;200&quot;}
+
+# Range vector (values over time window)
+http_requests_total[5m]</code></pre>
+<p><strong>Functions</strong>:</p>
+<pre><code class="lang-promql"># Rate: per-second average rate over time window
+rate(http_requests_total[5m])
+
+# Increase: total increase over time window
+increase(http_requests_total[1h])
+
+# Sum: aggregate across labels
+sum(http_requests_total)
+
+# Sum by label (keeps label)
+sum by (status) (http_requests_total)
+
+# Histogram quantile (percentile from histogram)
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Prometheus Configuration</h3>
+<pre><code class="lang-yaml"># prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: &#x27;production&#x27;
+    region: &#x27;us-east-1&#x27;
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - localhost:9093
+
+# Load rules
+rule_files:
+  - &quot;rules/*.yml&quot;
+  - &quot;alerts/*.yml&quot;
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: &#x27;prometheus&#x27;
+    static_configs:
+      - targets: [&#x27;localhost:9090&#x27;]
+
+  # Node exporter (system metrics)
+  - job_name: &#x27;node&#x27;
+    static_configs:
+      - targets:
+          - &#x27;node1:9100&#x27;
+          - &#x27;node2:9100&#x27;
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: &#x27;([^:]+):\d+&#x27;
+        target_label: instance
+        replacement: &#x27;${1}&#x27;
+
+  # Kubernetes service discovery
+  - job_name: &#x27;kubernetes-pods&#x27;
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+
+  # Consul service discovery
+  - job_name: &#x27;consul-services&#x27;
+    consul_sd_configs:
+      - server: &#x27;localhost:8500&#x27;
+    relabel_configs:
+      - source_labels: [__meta_consul_service]
+        target_label: job
+
+  # File-based service discovery
+  - job_name: &#x27;file-sd&#x27;
+    file_sd_configs:
+      - files:
+          - &#x27;targets/*.json&#x27;
+          - &#x27;targets/*.yml&#x27;
+        refresh_interval: 30s</code></pre>
+<h3>Pattern 2: Recording Rules</h3>
+<pre><code class="lang-yaml"># rules/recording-rules.yml
+groups:
+  - name: api_performance
+    interval: 30s
+    rules:
+      # Precompute request rate per endpoint
+      - record: api:http_requests:rate5m
+        expr: |
+          sum by (job, endpoint, method) (
+            rate(http_requests_total[5m])
+          )
+
+      # Precompute error rate percentage
+      - record: api:http_errors:rate5m
+        expr: |
+          sum by (job, endpoint) (
+            rate(http_requests_total{status=~&quot;5..&quot;}[5m])
+          ) / sum by (job, endpoint) (
+            rate(http_requests_total[5m])
+          ) * 100
+
+      # Precompute latency percentiles
+      - record: api:http_latency:p95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (job, endpoint, le) (
+              rate(http_request_duration_seconds_bucket[5m])
+            )
+          )
+
+      - record: api:http_latency:p99
+        expr: |
+          histogram_quantile(0.99,
+            sum by (job, endpoint, le) (
+              rate(http_request_duration_seconds_bucket[5m])
+            )
+          )
+
+  - name: resource_utilization
+    interval: 30s
+    rules:
+      # CPU utilization percentage
+      - record: node:cpu:utilization
+        expr: |
+          100 - (avg by (instance) (
+            rate(node_cpu_seconds_total{mode=&quot;idle&quot;}[5m])
+          ) * 100)
+
+      # Memory utilization percentage
+      - record: node:memory:utilization
+        expr: |
+          100 * (1 - (
+            node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes
+          ))
+
+      # Disk utilization percentage
+      - record: node:disk:utilization
+        expr: |
+          100 - (
+            node_filesystem_avail_bytes / node_filesystem_size_bytes * 100
+          )</code></pre>
+<h3>Pattern 3: Alerting Rules</h3>
+<pre><code class="lang-yaml"># alerts/alerting-rules.yml
+groups:
+  - name: service_health
+    interval: 15s
+    rules:
+      # Service down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: &quot;Service {{ $labels.job }} is down&quot;
+          description: &quot;{{ $labels.instance }} has been down for more than 1 minute&quot;
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: |
+          sum by (job, endpoint) (
+            rate(http_requests_total{status=~&quot;5..&quot;}[5m])
+          ) / sum by (job, endpoint) (
+            rate(http_requests_total[5m])
+          ) &gt; 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;High error rate on {{ $labels.job }}/{{ $labels.endpoint }}&quot;
+          description: &quot;Error rate is {{ $value | humanizePercentage }}&quot;
+
+      # High latency
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (job, endpoint, le) (
+              rate(http_request_duration_seconds_bucket[5m])
+            )
+          ) &gt; 1.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;High p95 latency on {{ $labels.job }}/{{ $labels.endpoint }}&quot;
+          description: &quot;p95 latency is {{ $value }}s&quot;
+
+  - name: resource_alerts
+    interval: 15s
+    rules:
+      # High CPU usage
+      - alert: HighCPU
+        expr: |
+          100 - (avg by (instance) (
+            rate(node_cpu_seconds_total{mode=&quot;idle&quot;}[5m])
+          ) * 100) &gt; 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;High CPU on {{ $labels.instance }}&quot;
+          description: &quot;CPU usage is {{ $value }}%&quot;
+
+      # High memory usage
+      - alert: HighMemory
+        expr: |
+          100 * (1 - (
+            node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes
+          )) &gt; 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: &quot;High memory on {{ $labels.instance }}&quot;
+          description: &quot;Memory usage is {{ $value }}%&quot;
+
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: |
+          100 - (
+            node_filesystem_avail_bytes{fstype!~&quot;tmpfs|fuse.*&quot;}
+            / node_filesystem_size_bytes * 100
+          ) &gt; 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;Low disk space on {{ $labels.instance }}&quot;
+          description: &quot;Disk {{ $labels.device }} is {{ $value }}% full&quot;</code></pre>
+<h3>Pattern 4: Custom Exporter (Python)</h3>
+<pre><code class="lang-python">#!/usr/bin/env python3
+from prometheus_client import start_http_server, Gauge, Counter, Histogram
+import time
+import random
+
+# Define metrics
+app_status = Gauge(&#x27;app_status&#x27;, &#x27;Application status&#x27;, [&#x27;app_name&#x27;])
+requests_total = Counter(&#x27;requests_total&#x27;, &#x27;Total requests&#x27;, [&#x27;endpoint&#x27;, &#x27;status&#x27;])
+request_duration = Histogram(
+    &#x27;request_duration_seconds&#x27;,
+    &#x27;Request duration&#x27;,
+    [&#x27;endpoint&#x27;],
+    buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0]
+)
+queue_size = Gauge(&#x27;queue_size&#x27;, &#x27;Current queue size&#x27;, [&#x27;queue_name&#x27;])
+active_connections = Gauge(&#x27;active_connections&#x27;, &#x27;Active connections&#x27;)
+
+def collect_metrics():
+    &quot;&quot;&quot;Collect application metrics.&quot;&quot;&quot;
+    # Update status metrics
+    app_status.labels(app_name=&#x27;api-server&#x27;).set(1)  # 1 = healthy
+
+    # Simulate request metrics
+    endpoints = [&#x27;/api/users&#x27;, &#x27;/api/orders&#x27;, &#x27;/api/products&#x27;]
+    statuses = [&#x27;200&#x27;, &#x27;404&#x27;, &#x27;500&#x27;]
+
+    for endpoint in endpoints:
+        status = random.choice(statuses)
+        requests_total.labels(endpoint=endpoint, status=status).inc()
+
+        duration = random.uniform(0.01, 1.0)
+        request_duration.labels(endpoint=endpoint).observe(duration)
+
+    # Update gauge metrics
+    queue_size.labels(queue_name=&#x27;tasks&#x27;).set(random.randint(0, 100))
+    active_connections.set(random.randint(10, 500))
+
+if __name__ == &#x27;__main__&#x27;:
+    # Start HTTP server for metrics endpoint
+    start_http_server(8080)
+    print(&quot;Exporter running on :8080/metrics&quot;)
+
+    # Collect metrics periodically
+    while True:
+        collect_metrics()
+        time.sleep(5)</code></pre>
+<h3>Pattern 5: Custom Exporter (Go)</h3>
+<pre><code class="lang-go">package main
+
+import (
+    &quot;log&quot;
+    &quot;math/rand&quot;
+    &quot;net/http&quot;
+    &quot;time&quot;
+
+    &quot;github.com/prometheus/client_golang/prometheus&quot;
+    &quot;github.com/prometheus/client_golang/prometheus/promauto&quot;
+    &quot;github.com/prometheus/client_golang/prometheus/promhttp&quot;
+)
+
+var (
+    appStatus = promauto.NewGaugeVec(
+        prometheus.GaugeOpts{
+            Name: &quot;app_status&quot;,
+            Help: &quot;Application status&quot;,
+        },
+        []string{&quot;app_name&quot;},
+    )
+
+    requestsTotal = promauto.NewCounterVec(
+        prometheus.CounterOpts{
+            Name: &quot;requests_total&quot;,
+            Help: &quot;Total requests&quot;,
+        },
+        []string{&quot;endpoint&quot;, &quot;status&quot;},
+    )
+
+    requestDuration = promauto.NewHistogramVec(
+        prometheus.HistogramOpts{
+            Name:    &quot;request_duration_seconds&quot;,
+            Help:    &quot;Request duration&quot;,
+            Buckets: []float64{0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0},
+        },
+        []string{&quot;endpoint&quot;},
+    )
+
+    queueSize = promauto.NewGaugeVec(
+        prometheus.GaugeOpts{
+            Name: &quot;queue_size&quot;,
+            Help: &quot;Current queue size&quot;,
+        },
+        []string{&quot;queue_name&quot;},
+    )
+
+    activeConnections = promauto.NewGauge(
+        prometheus.GaugeOpts{
+            Name: &quot;active_connections&quot;,
+            Help: &quot;Active connections&quot;,
+        },
+    )
+)
+
+func collectMetrics() {
+    endpoints := []string{&quot;/api/users&quot;, &quot;/api/orders&quot;, &quot;/api/products&quot;}
+    statuses := []string{&quot;200&quot;, &quot;404&quot;, &quot;500&quot;}
+
+    for {
+        // Update status
+        appStatus.WithLabelValues(&quot;api-server&quot;).Set(1)
+
+        // Simulate requests
+        for _, endpoint := range endpoints {
+            status := statuses[rand.Intn(len(statuses))]
+            requestsTotal.WithLabelValues(endpoint, status).Inc()
+
+            duration := rand.Float64()
+            requestDuration.WithLabelValues(endpoint).Observe(duration)
+        }
+
+        // Update gauges
+        queueSize.WithLabelValues(&quot;tasks&quot;).Set(float64(rand.Intn(100)))
+        activeConnections.Set(float64(rand.Intn(490) + 10))
+
+        time.Sleep(5 * time.Second)
+    }
+}
+
+func main() {
+    // Start metrics collector
+    go collectMetrics()
+
+    // Expose metrics endpoint
+    http.Handle(&quot;/metrics&quot;, promhttp.Handler())
+    log.Println(&quot;Exporter running on :8080/metrics&quot;)
+    log.Fatal(http.ListenAndServe(&quot;:8080&quot;, nil))
+}</code></pre>
+<h3>Pattern 6: Federation</h3>
+<pre><code class="lang-yaml"># prometheus.yml (central Prometheus)
+scrape_configs:
+  # Federate from regional Prometheus instances
+  - job_name: &#x27;federate-us-east&#x27;
+    scrape_interval: 30s
+    honor_labels: true
+    metrics_path: &#x27;/federate&#x27;
+    params:
+      &#x27;match[]&#x27;:
+        - &#x27;{job=&quot;api-server&quot;}&#x27;
+        - &#x27;{__name__=~&quot;api:.*&quot;}&#x27;  # Aggregated metrics
+    static_configs:
+      - targets:
+          - &#x27;prometheus-us-east:9090&#x27;
+
+  - job_name: &#x27;federate-eu-west&#x27;
+    scrape_interval: 30s
+    honor_labels: true
+    metrics_path: &#x27;/federate&#x27;
+    params:
+      &#x27;match[]&#x27;:
+        - &#x27;{job=&quot;api-server&quot;}&#x27;
+        - &#x27;{__name__=~&quot;api:.*&quot;}&#x27;
+    static_configs:
+      - targets:
+          - &#x27;prometheus-eu-west:9090&#x27;</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>PromQL Operators</h3>
+<pre><code class="lang-promql"># Arithmetic
+metric1 + metric2
+metric1 - metric2
+metric1 * metric2
+metric1 / metric2
+metric1 % metric2
+metric1 ^ metric2
+
+# Comparison (returns 0 or 1)
+metric1 == metric2
+metric1 != metric2
+metric1 &gt; metric2
+metric1 &lt; metric2
+metric1 &gt;= metric2
+metric1 &lt;= metric2
+
+# Logical (on boolean results)
+metric1 and metric2
+metric1 or metric2
+metric1 unless metric2</code></pre>
+<h3>Aggregation Functions</h3>
+<pre><code class="lang-promql">sum(metric) by (label)           # Sum
+avg(metric) by (label)           # Average
+min(metric) by (label)           # Minimum
+max(metric) by (label)           # Maximum
+count(metric) by (label)         # Count
+stddev(metric) by (label)        # Standard deviation
+stdvar(metric) by (label)        # Variance
+topk(5, metric)                  # Top 5 values
+bottomk(5, metric)               # Bottom 5 values
+count_values(&quot;label&quot;, metric)    # Count unique values</code></pre>
+<h3>Time Functions</h3>
+<pre><code class="lang-promql">rate(metric[5m])                 # Per-second rate
+irate(metric[5m])                # Instant rate
+increase(metric[1h])             # Total increase
+delta(metric[1h])                # Difference (for gauges)
+idelta(metric[5m])               # Instant delta
+deriv(metric[5m])                # Per-second derivative
+predict_linear(metric[1h], 3600) # Predict 1h ahead</code></pre>
+<h3>Label Manipulation</h3>
+<pre><code class="lang-promql"># Keep only specific labels
+label_replace(metric, &quot;new&quot;, &quot;$1&quot;, &quot;old&quot;, &quot;(.*)&quot;)
+
+# Join metrics
+metric1 * on(label) metric2
+
+# Group left/right
+metric1 * on(label) group_left(extra) metric2</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>High Cardinality Labels</h3>
+<pre><code class="lang-yaml"># WRONG: User ID creates millions of time series
+http_requests{user_id=&quot;user_12345&quot;}
+
+# CORRECT: Use low-cardinality labels
+http_requests{endpoint=&quot;/api/users&quot;, status=&quot;200&quot;}</code></pre>
+<h3>Unbounded Label Values</h3>
+<pre><code class="lang-yaml"># WRONG: URL path with parameters
+http_requests{path=&quot;/api/users/12345/orders/67890&quot;}
+
+# CORRECT: Template the path
+http_requests{endpoint=&quot;/api/users/:id/orders/:order_id&quot;}</code></pre>
+<h3>Missing Recording Rules</h3>
+<pre><code class="lang-promql"># WRONG: Complex query repeated in every dashboard
+histogram_quantile(0.95,
+  sum by (job, endpoint, le) (
+    rate(http_request_duration_seconds_bucket[5m])
+  )
+)
+
+# CORRECT: Create recording rule
+- record: api:http_latency:p95
+  expr: histogram_quantile(0.95, ...)</code></pre>
+<h3>Inefficient Queries</h3>
+<pre><code class="lang-promql"># WRONG: Aggregation after filtering
+sum(rate(metric[5m])) by (label1, label2) &gt; 0
+
+# CORRECT: Filter before aggregation
+sum(rate(metric[5m])) by (label1, label2) &gt; 0</code></pre>
+<hr>
+<h2>Level 3: Resources</h2>
+<p>This skill has <strong>Level 3 Resources</strong> available with comprehensive reference material, production-ready scripts, and runnable examples.</p>
+<h3>Resource Structure</h3>
+<pre><code>prometheus-monitoring/resources/
+├── REFERENCE.md                    # Comprehensive reference (3,200 lines)
+│   ├── Prometheus architecture and components
+│   ├── Complete PromQL reference with examples
+│   ├── Recording rules patterns and best practices
+│   ├── Alerting rules with severity levels
+│   ├── Service discovery configurations
+│   ├── Federation and high availability
+│   ├── Storage configuration and retention
+│   ├── Cardinality management
+│   ├── Performance optimization
+│   └── Production troubleshooting
+│
+├── scripts/                        # Production-ready tools
+│   ├── analyze_metrics.py          # Metrics and config analyzer
+│   ├── validate_promql.py          # PromQL query validator
+│   └── test_exporter.sh            # Exporter testing tool
+│
+└── examples/                       # Runnable examples
+    ├── config/
+    │   └── prometheus.yml          # Complete Prometheus config
+    ├── rules/
+    │   ├── recording-rules.yml     # Recording rules examples
+    │   └── alert-rules.yml         # Alerting rules examples
+    ├── exporters/
+    │   ├── custom-exporter.py      # Python custom exporter
+    │   └── custom-exporter.go      # Go custom exporter
+    ├── queries/
+    │   └── promql-examples.txt     # Common PromQL patterns
+    ├── docker/
+    │   └── docker-compose.yml      # Full monitoring stack
+    └── python/
+        └── metrics-client.py       # Application instrumentation</code></pre>
+<h3>Key Resources</h3>
+<p><strong>REFERENCE.md</strong> (3,200 lines): Comprehensive guide covering:</p>
+<ul><li>Prometheus architecture and data model</li><li>Complete PromQL reference with 100+ query examples</li><li>Recording rules for performance optimization</li><li>Alerting rules with best practices</li><li>All service discovery mechanisms (Kubernetes, Consul, EC2, file)</li><li>Federation for multi-cluster setups</li><li>Remote write and remote read configurations</li><li>Storage optimization and retention policies</li><li>Cardinality management techniques</li><li>Performance tuning and troubleshooting</li><li>Integration with Grafana and Alertmanager</li><li>Production deployment patterns</li></ul>
+<p><strong>analyze_metrics.py</strong>: Production-ready analyzer</p>
+<ul><li>Parses prometheus.yml configuration</li><li>Analyzes metric cardinality from Prometheus API</li><li>Detects high-cardinality labels</li><li>Identifies anti-patterns (naming, labeling)</li><li>Validates recording and alerting rules</li><li>Provides optimization recommendations</li><li>Example: <code>analyze_metrics.py --config prometheus.yml --json</code></li></ul>
+<p><strong>validate_promql.py</strong>: PromQL validator</p>
+<ul><li>Validates PromQL syntax</li><li>Tests queries against Prometheus API</li><li>Checks for common anti-patterns</li><li>Measures query performance</li><li>Suggests optimizations</li><li>Example: <code>validate_promql.py --query &#x27;rate(http_requests_total[5m])&#x27; --json</code></li></ul>
+<p><strong>test_exporter.sh</strong>: Exporter testing tool</p>
+<ul><li>Tests metrics endpoints</li><li>Validates Prometheus text format</li><li>Checks metric naming conventions</li><li>Identifies cardinality issues</li><li>Validates HELP and TYPE annotations</li><li>Example: <code>test_exporter.sh --endpoint http://localhost:9090/metrics --json</code></li></ul>
+<p><strong>Runnable Examples</strong>:</p>
+<ul><li>Complete Prometheus configuration with all features</li><li>Recording rules and alerting rules</li><li>Custom exporters in Python and Go</li><li>50+ PromQL query examples</li><li>Docker Compose stack (Prometheus + Grafana + Alertmanager + Node Exporter)</li><li>Application instrumentation example</li></ul>
+<h3>Usage</h3>
+<pre><code class="lang-bash"># Access comprehensive reference
+cat prometheus-monitoring/resources/REFERENCE.md
+
+# Analyze Prometheus configuration and metrics
+./scripts/analyze_metrics.py --config prometheus.yml --metrics-endpoint http://localhost:9090
+
+# Validate PromQL queries
+./scripts/validate_promql.py --query &#x27;sum(rate(http_requests_total[5m]))&#x27; --json
+
+# Test custom exporter
+./scripts/test_exporter.sh --endpoint http://localhost:8080/metrics
+
+# Run full monitoring stack
+cd examples/docker
+docker-compose up -d
+# Prometheus: http://localhost:9090
+# Grafana: http://localhost:3000 (admin/admin)
+# Alertmanager: http://localhost:9093
+
+# Run custom exporter
+cd examples/exporters
+python3 custom-exporter.py
+# Metrics at http://localhost:8080/metrics</code></pre>
+<h3>When to Use Level 3 Resources</h3>
+<p>Use these resources when:</p>
+<ul><li>Setting up Prometheus for production environments</li><li>Writing complex PromQL queries</li><li>Optimizing Prometheus performance</li><li>Debugging high cardinality issues</li><li>Creating recording and alerting rules</li><li>Implementing custom exporters</li><li>Configuring service discovery</li><li>Setting up federation or remote storage</li><li>Training team on Prometheus best practices</li><li>Troubleshooting Prometheus issues</li></ul>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>metrics-instrumentation.md</strong> - Instrumenting applications with Prometheus</li><li><strong>distributed-tracing.md</strong> - Complementary distributed tracing</li><li><strong>alerting-strategy.md</strong> - Advanced alerting patterns</li><li><strong>dashboard-design.md</strong> - Visualizing Prometheus data in Grafana</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic) <strong>Level 3 Resources</strong>: Available</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/observability-prometheus-monitoring.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>observability-structured-logging</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/observability-structured-logging.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/observability-structured-logging.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>observability-structured-logging</h1><p class="lede">Setting up application logging infrastructure</p><h1>Structured Logging</h1>
+<p><strong>Scope</strong>: JSON logging, log levels, correlation IDs, log aggregation, structured formats</p>
+<p><strong>Lines</strong>: 387</p>
+<p><strong>Last Updated</strong>: 2025-10-18</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Setting up application logging infrastructure</li><li>Migrating from unstructured (text) logs to structured (JSON) logs</li><li>Implementing correlation IDs for request tracing</li><li>Configuring log aggregation systems (ELK, Loki, CloudWatch)</li><li>Designing log levels and filtering strategies</li><li>Building multi-service systems requiring log correlation</li><li>Debugging production issues requiring searchable, queryable logs</li><li>Implementing compliance/audit logging requirements</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Simple scripts with minimal logging needs</li><li>Local development without aggregation needs (plain text is fine)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Structured vs Unstructured Logging</h3>
+<p><strong>Unstructured (Text)</strong>:</p>
+<pre><code>2025-10-18 10:23:45 INFO User john@example.com logged in from 192.168.1.1</code></pre>
+<p><strong>Structured (JSON)</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;timestamp&quot;: &quot;2025-10-18T10:23:45.123Z&quot;,
+  &quot;level&quot;: &quot;info&quot;,
+  &quot;message&quot;: &quot;user_login&quot;,
+  &quot;user_email&quot;: &quot;john@example.com&quot;,
+  &quot;ip_address&quot;: &quot;192.168.1.1&quot;,
+  &quot;service&quot;: &quot;auth&quot;,
+  &quot;trace_id&quot;: &quot;a1b2c3d4e5f6&quot;
+}</code></pre>
+<p><strong>Benefits of Structured Logging</strong>:</p>
+<ul><li>Machine-parseable without regex</li><li>Queryable by field (WHERE user_email = &quot;john@example.com&quot;)</li><li>Consistent format across services</li><li>Easy to index and aggregate</li><li>Type-safe fields</li></ul>
+<h3>Log Levels</h3>
+<p>Standard hierarchy (least to most severe):</p>
+<ol><li><strong>TRACE</strong>: Very detailed debugging (function entry/exit)</li><li><strong>DEBUG</strong>: Detailed debugging information</li><li><strong>INFO</strong>: General informational messages</li><li><strong>WARN</strong>: Warning messages (degraded state, retries)</li><li><strong>ERROR</strong>: Error messages (handled exceptions)</li><li><strong>FATAL/CRITICAL</strong>: Unrecoverable errors (process crashes)</li></ol>
+<h3>Correlation IDs</h3>
+<p><strong>Purpose</strong>: Track requests across multiple services</p>
+<p><strong>Types</strong>:</p>
+<ul><li><strong>Trace ID</strong>: Unique identifier for entire request flow</li><li><strong>Span ID</strong>: Unique identifier for single operation within trace</li><li><strong>Request ID</strong>: HTTP request identifier</li><li><strong>Session ID</strong>: User session identifier</li><li><strong>User ID</strong>: User identifier</li></ul>
+<h3>Log Aggregation</h3>
+<p><strong>Common Stacks</strong>:</p>
+<ul><li><strong>ELK</strong>: Elasticsearch + Logstash + Kibana</li><li><strong>Loki</strong>: Grafana Loki (labels-based, cost-efficient)</li><li><strong>CloudWatch Logs</strong>: AWS native</li><li><strong>Datadog</strong>: Commercial SaaS</li><li><strong>Splunk</strong>: Enterprise log management</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Structured Logger Setup (Python)</h3>
+<pre><code class="lang-python">import logging
+import json
+import uuid
+from datetime import datetime
+from contextvars import ContextVar
+
+# Context variable for correlation ID
+correlation_id: ContextVar[str] = ContextVar(&#x27;correlation_id&#x27;, default=None)
+
+class StructuredFormatter(logging.Formatter):
+    &quot;&quot;&quot;JSON formatter for structured logging.&quot;&quot;&quot;
+
+    def __init__(self, service_name: str, environment: str):
+        super().__init__()
+        self.service_name = service_name
+        self.environment = environment
+
+    def format(self, record: logging.LogRecord) -&gt; str:
+        log_data = {
+            &quot;timestamp&quot;: datetime.utcnow().isoformat() + &quot;Z&quot;,
+            &quot;level&quot;: record.levelname.lower(),
+            &quot;message&quot;: record.getMessage(),
+            &quot;logger&quot;: record.name,
+            &quot;service&quot;: self.service_name,
+            &quot;environment&quot;: self.environment,
+        }
+
+        # Add correlation ID if present
+        trace_id = correlation_id.get()
+        if trace_id:
+            log_data[&quot;trace_id&quot;] = trace_id
+
+        # Add extra fields from record
+        if hasattr(record, &#x27;extra_fields&#x27;):
+            log_data.update(record.extra_fields)
+
+        # Add exception info if present
+        if record.exc_info:
+            log_data[&quot;exception&quot;] = {
+                &quot;type&quot;: record.exc_info[0].__name__,
+                &quot;message&quot;: str(record.exc_info[1]),
+                &quot;traceback&quot;: self.formatException(record.exc_info)
+            }
+
+        return json.dumps(log_data)
+
+def setup_logging(service_name: str, environment: str, level: str = &quot;INFO&quot;):
+    &quot;&quot;&quot;Configure structured logging.&quot;&quot;&quot;
+    logger = logging.getLogger()
+    logger.setLevel(getattr(logging, level.upper()))
+
+    # Remove existing handlers
+    logger.handlers.clear()
+
+    # Add JSON handler
+    handler = logging.StreamHandler()
+    handler.setFormatter(StructuredFormatter(service_name, environment))
+    logger.addHandler(handler)
+
+    return logger
+
+# Usage
+logger = setup_logging(&quot;api-service&quot;, &quot;production&quot;, &quot;INFO&quot;)
+
+def log_with_context(level: str, message: str, **kwargs):
+    &quot;&quot;&quot;Log with additional context fields.&quot;&quot;&quot;
+    log_method = getattr(logger, level)
+
+    # Create log record with extra fields
+    extra_record = logging.LogRecord(
+        name=logger.name,
+        level=getattr(logging, level.upper()),
+        pathname=&quot;&quot;,
+        lineno=0,
+        msg=message,
+        args=(),
+        exc_info=None
+    )
+    extra_record.extra_fields = kwargs
+
+    logger.handle(extra_record)
+
+# Example usage
+correlation_id.set(str(uuid.uuid4()))
+
+log_with_context(&quot;info&quot;, &quot;user_login&quot;,
+    user_id=&quot;user_123&quot;,
+    email=&quot;john@example.com&quot;,
+    ip_address=&quot;192.168.1.1&quot;
+)
+
+log_with_context(&quot;error&quot;, &quot;payment_failed&quot;,
+    user_id=&quot;user_123&quot;,
+    amount=99.99,
+    currency=&quot;USD&quot;,
+    error_code=&quot;card_declined&quot;
+)</code></pre>
+<h3>Pattern 2: Structured Logger Setup (Go)</h3>
+<pre><code class="lang-go">package logger
+
+import (
+    &quot;context&quot;
+    &quot;encoding/json&quot;
+    &quot;os&quot;
+    &quot;time&quot;
+
+    &quot;github.com/google/uuid&quot;
+)
+
+type Level string
+
+const (
+    LevelTrace Level = &quot;trace&quot;
+    LevelDebug Level = &quot;debug&quot;
+    LevelInfo  Level = &quot;info&quot;
+    LevelWarn  Level = &quot;warn&quot;
+    LevelError Level = &quot;error&quot;
+    LevelFatal Level = &quot;fatal&quot;
+)
+
+type Logger struct {
+    serviceName string
+    environment string
+    minLevel    Level
+}
+
+type LogEntry struct {
+    Timestamp   string                 `json:&quot;timestamp&quot;`
+    Level       Level                  `json:&quot;level&quot;`
+    Message     string                 `json:&quot;message&quot;`
+    Service     string                 `json:&quot;service&quot;`
+    Environment string                 `json:&quot;environment&quot;`
+    TraceID     string                 `json:&quot;trace_id,omitempty&quot;`
+    SpanID      string                 `json:&quot;span_id,omitempty&quot;`
+    Fields      map[string]interface{} `json:&quot;fields,omitempty&quot;`
+}
+
+func New(serviceName, environment string, minLevel Level) *Logger {
+    return &amp;Logger{
+        serviceName: serviceName,
+        environment: environment,
+        minLevel:    minLevel,
+    }
+}
+
+func (l *Logger) log(ctx context.Context, level Level, message string, fields map[string]interface{}) {
+    entry := LogEntry{
+        Timestamp:   time.Now().UTC().Format(time.RFC3339Nano),
+        Level:       level,
+        Message:     message,
+        Service:     l.serviceName,
+        Environment: l.environment,
+        Fields:      fields,
+    }
+
+    // Extract trace ID from context
+    if traceID := ctx.Value(&quot;trace_id&quot;); traceID != nil {
+        entry.TraceID = traceID.(string)
+    }
+
+    if spanID := ctx.Value(&quot;span_id&quot;); spanID != nil {
+        entry.SpanID = spanID.(string)
+    }
+
+    jsonData, _ := json.Marshal(entry)
+    os.Stdout.Write(append(jsonData, &#x27;\n&#x27;))
+}
+
+func (l *Logger) Info(ctx context.Context, message string, fields map[string]interface{}) {
+    l.log(ctx, LevelInfo, message, fields)
+}
+
+func (l *Logger) Error(ctx context.Context, message string, fields map[string]interface{}) {
+    l.log(ctx, LevelError, message, fields)
+}
+
+// Usage
+func main() {
+    log := logger.New(&quot;api-service&quot;, &quot;production&quot;, logger.LevelInfo)
+
+    ctx := context.Background()
+    ctx = context.WithValue(ctx, &quot;trace_id&quot;, uuid.New().String())
+
+    log.Info(ctx, &quot;user_login&quot;, map[string]interface{}{
+        &quot;user_id&quot;: &quot;user_123&quot;,
+        &quot;email&quot;:   &quot;john@example.com&quot;,
+        &quot;ip&quot;:      &quot;192.168.1.1&quot;,
+    })
+}</code></pre>
+<h3>Pattern 3: Correlation ID Middleware (FastAPI)</h3>
+<pre><code class="lang-python">from fastapi import FastAPI, Request
+from uuid import uuid4
+from contextvars import ContextVar
+import logging
+
+app = FastAPI()
+correlation_id_var: ContextVar[str] = ContextVar(&#x27;correlation_id&#x27;)
+
+@app.middleware(&quot;http&quot;)
+async def correlation_id_middleware(request: Request, call_next):
+    &quot;&quot;&quot;Add correlation ID to request context.&quot;&quot;&quot;
+    # Check for existing trace ID from upstream
+    trace_id = request.headers.get(&quot;X-Trace-ID&quot;) or str(uuid4())
+
+    # Set in context
+    correlation_id_var.set(trace_id)
+
+    # Add to response headers
+    response = await call_next(request)
+    response.headers[&quot;X-Trace-ID&quot;] = trace_id
+
+    return response
+
+@app.get(&quot;/api/users/{user_id}&quot;)
+async def get_user(user_id: str):
+    trace_id = correlation_id_var.get()
+
+    logging.info(
+        &quot;Fetching user&quot;,
+        extra={
+            &quot;trace_id&quot;: trace_id,
+            &quot;user_id&quot;: user_id,
+            &quot;endpoint&quot;: &quot;/api/users&quot;
+        }
+    )
+
+    # ... fetch user logic
+
+    return {&quot;user_id&quot;: user_id, &quot;trace_id&quot;: trace_id}</code></pre>
+<h3>Pattern 4: Log Aggregation with Loki Labels</h3>
+<pre><code class="lang-python">import logging
+from pythonjsonlogger import jsonlogger
+
+class LokiFormatter(jsonlogger.JsonFormatter):
+    &quot;&quot;&quot;Formatter optimized for Grafana Loki.&quot;&quot;&quot;
+
+    def add_fields(self, log_record, record, message_dict):
+        super(LokiFormatter, self).add_fields(log_record, record, message_dict)
+
+        # Loki uses labels for indexing (keep cardinality low)
+        log_record[&#x27;service&#x27;] = &#x27;api-service&#x27;
+        log_record[&#x27;environment&#x27;] = &#x27;production&#x27;
+        log_record[&#x27;level&#x27;] = record.levelname.lower()
+
+        # High-cardinality fields go in message (not labels)
+        log_record[&#x27;message&#x27;] = record.getMessage()
+        log_record[&#x27;timestamp&#x27;] = record.created
+
+# Configure handler
+handler = logging.StreamHandler()
+handler.setFormatter(LokiFormatter())
+
+logger = logging.getLogger()
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+# Example log
+logger.info(
+    &quot;Payment processed&quot;,
+    extra={
+        &#x27;user_id&#x27;: &#x27;user_123&#x27;,  # High cardinality - not a label
+        &#x27;amount&#x27;: 99.99,
+        &#x27;transaction_id&#x27;: &#x27;txn_abc123&#x27;
+    }
+)</code></pre>
+<h3>Pattern 5: Contextual Logger (Rust)</h3>
+<pre><code class="lang-rust">use serde_json::json;
+use tracing::{info, error, span, Level};
+use tracing_subscriber::{fmt, prelude::*};
+use uuid::Uuid;
+
+fn setup_logging() {
+    tracing_subscriber::registry()
+        .with(fmt::layer().json())
+        .init();
+}
+
+fn main() {
+    setup_logging();
+
+    let trace_id = Uuid::new_v4().to_string();
+
+    // Create span with trace context
+    let span = span!(Level::INFO, &quot;request&quot;, trace_id = %trace_id);
+    let _enter = span.enter();
+
+    info!(
+        user_id = &quot;user_123&quot;,
+        email = &quot;john@example.com&quot;,
+        &quot;user_login&quot;
+    );
+
+    error!(
+        user_id = &quot;user_123&quot;,
+        error_code = &quot;card_declined&quot;,
+        amount = 99.99,
+        &quot;payment_failed&quot;
+    );
+}</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Python Libraries</h3>
+<pre><code class="lang-bash"># Standard library (built-in)
+import logging
+import json
+
+# JSON formatter
+pip install python-json-logger
+
+# Structured logging library
+pip install structlog</code></pre>
+<h3>Go Libraries</h3>
+<pre><code class="lang-bash">go get -u go.uber.org/zap              # Fast structured logging
+go get -u github.com/sirupsen/logrus   # Structured logging
+go get -u github.com/rs/zerolog        # Zero-allocation JSON logger</code></pre>
+<h3>Rust Libraries</h3>
+<pre><code class="lang-bash"># Add to Cargo.toml
+[dependencies]
+tracing = &quot;0.1&quot;
+tracing-subscriber = { version = &quot;0.3&quot;, features = [&quot;json&quot;] }
+serde_json = &quot;1.0&quot;</code></pre>
+<h3>Log Level Guidelines</h3>
+<pre><code>TRACE:   Function entry/exit, variable values
+DEBUG:   Detailed diagnostic information
+INFO:    Business events, request/response summaries
+WARN:    Degraded performance, retries, deprecated usage
+ERROR:   Handled errors, failed operations
+FATAL:   Unrecoverable errors, immediate shutdown</code></pre>
+<h3>Essential Fields</h3>
+<p><strong>Always include</strong>:</p>
+<ul><li><code>timestamp</code> (ISO 8601 UTC)</li><li><code>level</code> (lowercase: info, warn, error)</li><li><code>message</code> (event name or description)</li><li><code>service</code> (service name)</li></ul>
+<p><strong>Include when available</strong>:</p>
+<ul><li><code>trace_id</code> (request correlation)</li><li><code>span_id</code> (operation within trace)</li><li><code>user_id</code> (user context)</li><li><code>request_id</code> (HTTP request ID)</li><li><code>environment</code> (dev/staging/prod)</li></ul>
+<h3>Loki Label Best Practices</h3>
+<p><strong>Good labels</strong> (low cardinality):</p>
+<ul><li><code>service</code>, <code>environment</code>, <code>level</code>, <code>host</code>, <code>region</code></li></ul>
+<p><strong>Bad labels</strong> (high cardinality):</p>
+<ul><li><code>user_id</code>, <code>request_id</code>, <code>trace_id</code>, <code>email</code>, <code>ip_address</code></li></ul>
+<p><strong>Rule</strong>: If it has &gt;100 unique values, it&#x27;s a field, not a label.</p>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Logging Sensitive Data</h3>
+<pre><code class="lang-python"># WRONG: PII in logs
+logger.info(f&quot;User password: {password}&quot;)
+logger.info(f&quot;Credit card: {card_number}&quot;)
+
+# CORRECT: Redact sensitive data
+logger.info(f&quot;User authenticated&quot;, extra={&quot;user_id&quot;: user_id})
+logger.info(f&quot;Payment processed&quot;, extra={&quot;last4&quot;: card_number[-4:]})</code></pre>
+<h3>❌ String Concatenation in Logs</h3>
+<pre><code class="lang-python"># WRONG: Loses structure
+logger.info(f&quot;User {user_id} logged in from {ip}&quot;)
+
+# CORRECT: Structured fields
+logger.info(&quot;user_login&quot;, extra={&quot;user_id&quot;: user_id, &quot;ip&quot;: ip})</code></pre>
+<h3>❌ Excessive Logging</h3>
+<pre><code class="lang-python"># WRONG: Log spam
+for item in items:  # 10,000 items
+    logger.info(f&quot;Processing {item}&quot;)
+
+# CORRECT: Batch logging
+logger.info(f&quot;Processing batch&quot;, extra={&quot;count&quot;: len(items)})
+# ... process items
+logger.info(f&quot;Batch complete&quot;, extra={&quot;count&quot;: len(items), &quot;duration_ms&quot;: elapsed})</code></pre>
+<h3>❌ Unstructured Exception Logging</h3>
+<pre><code class="lang-python"># WRONG: String-only exception
+try:
+    process()
+except Exception as e:
+    logger.error(f&quot;Error: {e}&quot;)
+
+# CORRECT: Structured with context
+try:
+    process()
+except Exception as e:
+    logger.error(
+        &quot;process_failed&quot;,
+        extra={
+            &quot;error_type&quot;: type(e).__name__,
+            &quot;error_message&quot;: str(e),
+            &quot;user_id&quot;: user_id
+        },
+        exc_info=True  # Includes traceback
+    )</code></pre>
+<h3>❌ Logging in Hot Paths</h3>
+<pre><code class="lang-python"># WRONG: Logging in tight loop
+for i in range(1_000_000):
+    logger.debug(f&quot;Iteration {i}&quot;)
+    compute()
+
+# CORRECT: Sample or aggregate
+if i % 10_000 == 0:
+    logger.debug(f&quot;Progress: {i} iterations&quot;)</code></pre>
+<h3>❌ High-Cardinality Loki Labels</h3>
+<pre><code class="lang-yaml"># WRONG: High cardinality labels
+labels:
+  service: api
+  user_id: user_123  # Millions of unique values!
+  trace_id: abc123   # Billions of unique values!
+
+# CORRECT: Low cardinality labels
+labels:
+  service: api
+  environment: prod
+  level: info
+# user_id and trace_id go in log fields</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>metrics-instrumentation.md</strong> - Complementary numeric metrics</li><li><strong>distributed-tracing.md</strong> - Deep request tracing with spans</li><li><strong>alerting-strategy.md</strong> - Log-based alerts and anomaly detection</li><li><strong>dashboard-design.md</strong> - Log visualization in Grafana</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/observability-structured-logging.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

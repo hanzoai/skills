@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distributed-systems-replication-strategies</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/distributed-systems-replication-strategies.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/distributed-systems-replication-strategies.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>distributed-systems-replication-strategies</h1><p class="lede">Data replication strategies including primary-backup, multi-primary, chain replication, and quorum-based replication</p><h1>Replication Strategies</h1>
+<p><strong>Scope</strong>: Primary-backup, multi-primary, chain replication, quorum replication, trade-offs <strong>Lines</strong>: ~270 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Designing distributed databases</li><li>Planning high availability systems</li><li>Understanding replication trade-offs</li><li>Implementing data redundancy</li><li>Building fault-tolerant services</li><li>Optimizing read/write performance</li><li>Understanding database internals</li><li>Choosing replication topology</li></ul>
+<h2>Replication Strategies</h2>
+<h3>1. Primary-Backup (Master-Slave)</h3>
+<p><strong>Approach</strong>: One primary handles writes, backups handle reads</p>
+<pre><code>Client writes → Primary → Replicate → Backups
+Client reads  → Primary or Backups</code></pre>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">class PrimaryBackupStore:
+    &quot;&quot;&quot;Primary-backup replication&quot;&quot;&quot;
+
+    def __init__(self, is_primary=False):
+        self.is_primary = is_primary
+        self.data = {}
+        self.backups = []
+
+    def write(self, key, value):
+        &quot;&quot;&quot;Write (primary only)&quot;&quot;&quot;
+        if not self.is_primary:
+            raise NotPrimaryError()
+
+        self.data[key] = value
+
+        # Replicate to all backups
+        for backup in self.backups:
+            backup.replicate(key, value)
+
+        return True
+
+    def replicate(self, key, value):
+        &quot;&quot;&quot;Receive replication (backup only)&quot;&quot;&quot;
+        if self.is_primary:
+            return
+
+        self.data[key] = value
+
+    def read(self, key):
+        &quot;&quot;&quot;Read (any node)&quot;&quot;&quot;
+        return self.data.get(key)
+
+# Usage
+primary = PrimaryBackupStore(is_primary=True)
+backup1 = PrimaryBackupStore(is_primary=False)
+backup2 = PrimaryBackupStore(is_primary=False)
+
+primary.backups = [backup1, backup2]
+
+primary.write(&#x27;key1&#x27;, &#x27;value1&#x27;)  # Replicated to backups
+print(backup1.read(&#x27;key1&#x27;))      # &#x27;value1&#x27;</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Simple</li><li>Strong consistency possible</li><li>Read scalability (read from backups)</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Single point of failure (primary)</li><li>Write bottleneck</li><li>Replication lag (eventual consistency)</li></ul>
+<h3>2. Multi-Primary (Multi-Master)</h3>
+<p><strong>Approach</strong>: Multiple nodes accept writes, sync with each other</p>
+<pre><code>Client A writes → Primary A ←─┐
+                      ↓        │ Sync
+                  Primary B ←──┘
+                      ↑
+Client B writes ──────┘</code></pre>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">class MultiPrimaryStore:
+    &quot;&quot;&quot;Multi-primary with conflict resolution&quot;&quot;&quot;
+
+    def __init__(self, node_id):
+        self.node_id = node_id
+        self.data = {}  # key → (value, vector_clock)
+        self.peers = []
+
+    def write(self, key, value):
+        &quot;&quot;&quot;Write to local node&quot;&quot;&quot;
+        # Update with new vector clock
+        vc = self._increment_vector_clock(key)
+        self.data[key] = (value, vc)
+
+        # Async replicate to peers
+        for peer in self.peers:
+            peer.replicate_async(key, value, vc)
+
+    def replicate_async(self, key, value, vector_clock):
+        &quot;&quot;&quot;Receive replication from peer&quot;&quot;&quot;
+        if key not in self.data:
+            self.data[key] = (value, vector_clock)
+        else:
+            # Merge with conflict resolution
+            self._merge(key, value, vector_clock)
+
+    def _merge(self, key, new_value, new_vc):
+        &quot;&quot;&quot;Merge concurrent updates&quot;&quot;&quot;
+        old_value, old_vc = self.data[key]
+
+        if self._causally_before(old_vc, new_vc):
+            # New value supersedes old
+            self.data[key] = (new_value, new_vc)
+        elif self._causally_before(new_vc, old_vc):
+            # Old value supersedes new
+            pass
+        else:
+            # Concurrent - keep both (siblings) or use LWW
+            # For simplicity, use LWW based on node ID
+            if new_vc &gt; old_vc:  # Simplified comparison
+                self.data[key] = (new_value, new_vc)</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>No single point of failure</li><li>Write scalability</li><li>Low latency (write locally)</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Complex conflict resolution</li><li>Potential inconsistency</li><li>More coordination overhead</li></ul>
+<h3>3. Chain Replication</h3>
+<p><strong>Approach</strong>: Nodes in a chain, writes flow through chain</p>
+<pre><code>Client write → Head → Node 2 → ... → Tail → Ack to client
+Client read  ← Tail (strongly consistent)</code></pre>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">class ChainNode:
+    &quot;&quot;&quot;Node in chain replication&quot;&quot;&quot;
+
+    def __init__(self, node_id):
+        self.node_id = node_id
+        self.data = {}
+        self.next_node = None
+        self.is_tail = False
+
+    def write(self, key, value):
+        &quot;&quot;&quot;Write (head only)&quot;&quot;&quot;
+        self.data[key] = value
+
+        if self.next_node:
+            # Forward to next node
+            self.next_node.write(key, value)
+        elif self.is_tail:
+            # Tail: acknowledge to client
+            return True
+
+    def read(self, key):
+        &quot;&quot;&quot;Read from tail only (strongly consistent)&quot;&quot;&quot;
+        if not self.is_tail:
+            raise MustReadFromTailError()
+
+        return self.data.get(key)
+
+# Setup chain
+head = ChainNode(&#x27;head&#x27;)
+middle = ChainNode(&#x27;middle&#x27;)
+tail = ChainNode(&#x27;tail&#x27;)
+
+head.next_node = middle
+middle.next_node = tail
+tail.is_tail = True
+
+# Write flows through chain
+head.write(&#x27;key1&#x27;, &#x27;value1&#x27;)
+
+# Read from tail (has all committed writes)
+print(tail.read(&#x27;key1&#x27;))  # &#x27;value1&#x27;</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Strong consistency</li><li>Simple recovery</li><li>Efficient replication</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Head is write bottleneck</li><li>Higher write latency (chain)</li><li>Tail failure delays reads</li></ul>
+<h3>4. Quorum Replication</h3>
+<p><strong>Approach</strong>: Write to W nodes, read from R nodes where W+R &gt; N</p>
+<pre><code>Write: Ack when W replicas confirm
+Read: Query R replicas, return latest</code></pre>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">class QuorumStore:
+    &quot;&quot;&quot;Quorum-based replication&quot;&quot;&quot;
+
+    def __init__(self, nodes, w, r):
+        self.nodes = nodes
+        self.w = w  # Write quorum
+        self.r = r  # Read quorum
+
+    def write(self, key, value):
+        &quot;&quot;&quot;Write to W nodes&quot;&quot;&quot;
+        version = self._generate_version()
+        acks = 0
+
+        for node in self.nodes:
+            try:
+                if node.put(key, value, version):
+                    acks += 1
+                if acks &gt;= self.w:
+                    return True
+            except:
+                continue
+
+        raise QuorumNotMetError(f&quot;Only {acks}/{self.w} acks&quot;)
+
+    def read(self, key):
+        &quot;&quot;&quot;Read from R nodes&quot;&quot;&quot;
+        responses = []
+
+        for node in self.nodes:
+            try:
+                value, version = node.get(key)
+                responses.append((value, version))
+                if len(responses) &gt;= self.r:
+                    break
+            except:
+                continue
+
+        if len(responses) &lt; self.r:
+            raise QuorumNotMetError(f&quot;Only {len(responses)}/{self.r} responses&quot;)
+
+        # Return value with highest version
+        return max(responses, key=lambda x: x[1])[0]</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Tunable consistency</li><li>Fault tolerance (tolerates N-W or N-R failures)</li><li>No single point of failure</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>More complex</li><li>Potential conflicts</li><li>Higher latency</li></ul>
+<hr>
+<h2>Synchronous vs Asynchronous</h2>
+<h3>Synchronous Replication</h3>
+<pre><code class="lang-python">def sync_write(primary, backups, key, value):
+    &quot;&quot;&quot;Wait for all backups to acknowledge&quot;&quot;&quot;
+    primary.write(key, value)
+
+    for backup in backups:
+        backup.replicate(key, value)  # Blocks until complete
+
+    return True  # All replicas updated</code></pre>
+<p><strong>Pros</strong>: Strong consistency <strong>Cons</strong>: Higher latency, availability depends on all nodes</p>
+<h3>Asynchronous Replication</h3>
+<pre><code class="lang-python">import threading
+
+def async_write(primary, backups, key, value):
+    &quot;&quot;&quot;Don&#x27;t wait for backups&quot;&quot;&quot;
+    primary.write(key, value)
+
+    for backup in backups:
+        threading.Thread(target=backup.replicate, args=(key, value)).start()
+
+    return True  # Don&#x27;t wait for replication</code></pre>
+<p><strong>Pros</strong>: Low latency, high availability <strong>Cons</strong>: Eventual consistency, data loss risk</p>
+<hr>
+<h2>Replication Topologies</h2>
+<h3>Star (Primary-Backup)</h3>
+<pre><code>        Primary
+       /   |   \
+  Backup Backup Backup</code></pre>
+<h3>Ring (Chain)</h3>
+<pre><code>Node A → Node B → Node C → Node A</code></pre>
+<h3>Mesh (Multi-Primary)</h3>
+<pre><code>Node A ←→ Node B
+  ↕         ↕
+Node C ←→ Node D</code></pre>
+<hr>
+<h2>Strategy Comparison</h2>
+<p>| Strategy | Consistency | Availability | Write Perf | Read Perf | Complexity | |----------|-------------|--------------|------------|-----------|------------| | <strong>Primary-Backup</strong> | Strong | Low | Low | Medium | Low | | <strong>Multi-Primary</strong> | Eventual | High | High | High | High | | <strong>Chain</strong> | Strong | Medium | Low | Medium | Medium | | <strong>Quorum</strong> | Tunable | Medium | Medium | Medium | Medium |</p>
+<hr>
+<h2>Real-World Examples</h2>
+<h3>MySQL Replication (Primary-Backup)</h3>
+<pre><code class="lang-sql">-- On primary
+CHANGE MASTER TO
+  MASTER_HOST=&#x27;primary_host&#x27;,
+  MASTER_USER=&#x27;repl_user&#x27;,
+  MASTER_PASSWORD=&#x27;password&#x27;;
+
+START SLAVE;</code></pre>
+<h3>MongoDB Replica Set</h3>
+<pre><code class="lang-python">from pymongo import MongoClient
+
+client = MongoClient(&#x27;mongodb://host1,host2,host3/?replicaSet=myReplicaSet&#x27;)
+
+# Write to primary
+db = client.mydb
+db.collection.insert_one({&#x27;key&#x27;: &#x27;value&#x27;})
+
+# Read from secondary
+db.collection.find_one({&#x27;key&#x27;: &#x27;value&#x27;}, read_preference=ReadPreference.SECONDARY)</code></pre>
+<h3>Cassandra (Quorum)</h3>
+<pre><code class="lang-python">from cassandra.cluster import Cluster
+from cassandra import ConsistencyLevel
+
+cluster = Cluster()
+session = cluster.connect(&#x27;keyspace&#x27;)
+
+# Write to quorum
+session.execute(query, consistency_level=ConsistencyLevel.QUORUM)</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>distributed-systems-consensus-raft</code> - Consensus-based replication</li><li><code>distributed-systems-eventual-consistency</code> - Consistency models</li><li><code>distributed-systems-conflict-resolution</code> - Handling conflicts</li><li><code>distributed-systems-partitioning-sharding</code> - Data partitioning</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/distributed-systems-replication-strategies.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

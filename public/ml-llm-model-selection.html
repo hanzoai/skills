@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ml-llm-model-selection</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ml-llm-model-selection.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ml-llm-model-selection.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ml-llm-model-selection</h1><p class="lede">Choosing the right LLM based on capabilities, benchmarks, pricing, and use cases</p><h1>LLM Model Selection</h1>
+<p><strong>Scope</strong>: Model comparison, capability mapping, pricing analysis, benchmark interpretation, strategic selection <strong>Lines</strong>: ~420 <strong>Last Updated</strong>: 2025-10-26</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Starting a new LLM-powered project and selecting initial models</li><li>Evaluating whether to switch models due to cost or performance</li><li>Building multi-model systems that leverage specialized capabilities</li><li>Optimizing LLM budgets without sacrificing quality</li><li>Comparing frontier models (GPT-4o, Claude 3.5/4, Gemini 2.5, DeepSeek)</li><li>Benchmarking models for specific tasks (code, reasoning, multilingual)</li><li>Understanding tradeoffs between quality, speed, cost, and context length</li></ul>
+<h2>Core Concepts</h2>
+<h3>The Model Selection Framework</h3>
+<p><strong>Decision Factors</strong>:</p>
+<ol><li><strong>Task Fit</strong>: What capabilities does the task require?</li><li><strong>Budget</strong>: What&#x27;s the acceptable cost per query?</li><li><strong>Latency</strong>: How fast must responses be?</li><li><strong>Quality</strong>: What&#x27;s the minimum acceptable performance?</li><li><strong>Context</strong>: How much input context is needed?</li><li><strong>Scale</strong>: What&#x27;s the expected query volume?</li></ol>
+<p><strong>Selection Process</strong>:</p>
+<pre><code>Define requirements -&gt; Filter by constraints -&gt; Benchmark finalists -&gt; Select optimal model(s)</code></pre>
+<h3>2025 Model Landscape</h3>
+<p><strong>Frontier Models</strong> (Strongest):</p>
+<ul><li><strong>OpenAI</strong>: GPT-4o (multimodal, 128k), o1 (reasoning-focused)</li><li><strong>Anthropic</strong>: Claude 3.5 Sonnet (200k context), Claude 4 (upcoming)</li><li><strong>Google</strong>: Gemini 2.5 Pro, Gemini 2.5 Flash (fast, multimodal)</li><li><strong>xAI</strong>: Grok 3 (X Premium+, competitive benchmarks)</li></ul>
+<p><strong>Open-Weight Leaders</strong>:</p>
+<ul><li><strong>Meta</strong>: LLaMA 3.3 70B (instruction-tuned, multilingual)</li><li><strong>DeepSeek</strong>: R1 (reasoning), V3 (671B MoE, $5.5M training cost)</li><li><strong>Mistral</strong>: Mixtral 8x22B, Mistral Large</li></ul>
+<p><strong>Fast/Cheap Tier</strong>:</p>
+<ul><li><strong>OpenAI</strong>: GPT-4o mini ($0.15/$0.60 per million tokens)</li><li><strong>Anthropic</strong>: Claude 3 Haiku ($0.25/$1.25)</li><li><strong>Google</strong>: Gemini 2.5 Flash ($0.10/$0.40, 370 tok/s)</li></ul>
+<h3>Benchmark Interpretation</h3>
+<p><strong>MMLU (Massive Multitask Language Understanding)</strong>:</p>
+<ul><li>Measures general knowledge across 57 subjects</li><li><strong>Top performers</strong>: GPT-4o (88.7%), Gemini 2.5 (88-89%), Claude 3.5 Sonnet (82.25%)</li><li><strong>Use for</strong>: General-purpose model selection</li><li><strong>Limitation</strong>: Doesn&#x27;t test reasoning depth or code quality</li></ul>
+<p><strong>HumanEval (Code Generation)</strong>:</p>
+<ul><li>Python programming problems, pass@1 metric</li><li><strong>Top performers</strong>: Claude 3.5 Sonnet (92.0%), GPT-4o (90.2%)</li><li><strong>Use for</strong>: Selecting coding assistants</li><li><strong>Limitation</strong>: Only Python; doesn&#x27;t test debugging or explanation</li></ul>
+<p><strong>BBH (Big Bench Hard)</strong>:</p>
+<ul><li>23 challenging reasoning tasks</li><li><strong>Top performers</strong>: GPT-4o, Claude 3.5, DeepSeek R1</li><li><strong>Use for</strong>: Complex reasoning applications</li><li><strong>Limitation</strong>: Academic tasks; real-world reasoning may differ</li></ul>
+<p><strong>MATH-500 (Mathematics)</strong>:</p>
+<ul><li>College-level math problems</li><li><strong>Top performer</strong>: DeepSeek R1 Distilled (94.5%)</li><li><strong>Use for</strong>: STEM tutoring, technical analysis</li><li><strong>Limitation</strong>: Symbolic math only; not applied problems</li></ul>
+<p><strong>GPQA Diamond (Graduate-Level Science)</strong>:</p>
+<ul><li>PhD-level questions in physics, chemistry, biology</li><li><strong>Top performer</strong>: DeepSeek R1 Distilled (65.2%)</li><li><strong>Use for</strong>: Research assistance, expert-level queries</li><li><strong>Limitation</strong>: Narrow domain; doesn&#x27;t generalize to all expertise</li></ul>
+<h3>Capability Matrix</h3>
+<p><strong>Strengths by Model</strong> (2025 data):</p>
+<p>| Model               | Code | Reason | Speed | Cost | Context | Multimodal | |---------------------|------|--------|-------|------|---------|------------| | GPT-4o              | A    | A      | B     | C    | 128k    | Yes        | | GPT-4o mini         | B    | B      | A     | A    | 128k    | Yes        | | Claude 3.5 Sonnet   | A+   | A      | B     | C    | 200k    | Yes (basic)| | Claude 3 Haiku      | B    | B      | A     | A    | 200k    | No         | | Gemini 2.5 Pro      | A    | A      | B     | B    | 1M      | Yes        | | Gemini 2.5 Flash    | B+   | B+     | A+    | A+   | 1M      | Yes        | | DeepSeek V3         | A    | B+     | B     | A+   | 128k    | No         | | DeepSeek R1         | A    | A+     | C     | A    | 128k    | No         | | LLaMA 3.3 70B       | B+   | B      | A     | A    | 128k    | No         | | Grok 3              | A    | A      | B     | D    | 128k    | Yes        |</p>
+<p><em>A+ = Best-in-class, A = Excellent, B = Good, C = Average, D = Expensive</em></p>
+<h3>Pricing Deep Dive (2025)</h3>
+<p><strong>Premium Tier</strong> ($10-75 per million output tokens):</p>
+<ul><li>Claude 3 Opus: $15/$75 (highest quality, rarely needed)</li><li>GPT-4o: $5/$20 (balanced strong model)</li><li>Claude 3.5 Sonnet: $3/$15 (best coding ROI)</li></ul>
+<p><strong>Mid Tier</strong> ($1-5 per million output tokens):</p>
+<ul><li>Gemini 2.5 Pro: $1.25/$5 (long context)</li><li>DeepSeek V3: ~$0.30/$1 (open-source alternative)</li><li>Claude 3 Haiku: $0.25/$1.25 (fast)</li></ul>
+<p><strong>Budget Tier</strong> ($0.40-1 per million output tokens):</p>
+<ul><li>Gemini 2.5 Flash: $0.10/$0.40 (cheapest strong model)</li><li>GPT-4o mini: $0.15/$0.60 (reliable baseline)</li></ul>
+<p><strong>Cost Efficiency</strong>:</p>
+<ul><li>DeepSeek V3 is 27.4x cheaper than GPT-4o for similar quality</li><li>Gemini Flash is 20x cheaper than GPT-4o with 370 tok/s speed</li><li>Claude Haiku is 16x cheaper than Claude Sonnet for simple tasks</li></ul>
+<hr>
+<h2>Implementation Patterns</h2>
+<h3>Strategic Stack Approach</h3>
+<pre><code class="lang-python">from enum import Enum
+from typing import Optional
+
+class TaskComplexity(Enum):
+    SIMPLE = &quot;simple&quot;  # Factual, short
+    MODERATE = &quot;moderate&quot;  # Multi-step, some reasoning
+    COMPLEX = &quot;complex&quot;  # Deep analysis, coding
+
+class ModelStack:
+    &quot;&quot;&quot;Strategic model selection based on task characteristics&quot;&quot;&quot;
+
+    def __init__(self):
+        self.models = {
+            &quot;coding_expert&quot;: &quot;claude-3-5-sonnet-20241022&quot;,
+            &quot;reasoning_expert&quot;: &quot;gpt-4o&quot;,
+            &quot;speed_optimized&quot;: &quot;gemini-2.5-flash&quot;,
+            &quot;cost_optimized&quot;: &quot;gpt-4o-mini&quot;,
+            &quot;long_context&quot;: &quot;claude-3-5-sonnet-20241022&quot;,  # 200k
+            &quot;multimodal&quot;: &quot;gpt-4o&quot;,
+        }
+
+    def select(
+        self,
+        task_type: str,
+        complexity: TaskComplexity,
+        context_length: int = 0,
+        budget_sensitive: bool = False
+    ) -&gt; str:
+        &quot;&quot;&quot;Select optimal model based on task characteristics&quot;&quot;&quot;
+
+        # Long context override (&gt;100k tokens)
+        if context_length &gt; 100_000:
+            return self.models[&quot;long_context&quot;]
+
+        # Budget override
+        if budget_sensitive and complexity != TaskComplexity.COMPLEX:
+            return self.models[&quot;cost_optimized&quot;]
+
+        # Task-specific selection
+        if task_type == &quot;code&quot;:
+            return self.models[&quot;coding_expert&quot;]
+
+        if task_type == &quot;vision&quot; or task_type == &quot;multimodal&quot;:
+            return self.models[&quot;multimodal&quot;]
+
+        # Complexity-based selection
+        if complexity == TaskComplexity.SIMPLE:
+            return self.models[&quot;speed_optimized&quot;]
+        elif complexity == TaskComplexity.MODERATE:
+            return self.models[&quot;cost_optimized&quot;]
+        else:  # COMPLEX
+            if task_type == &quot;reasoning&quot;:
+                return self.models[&quot;reasoning_expert&quot;]
+            return self.models[&quot;coding_expert&quot;]
+
+# Usage
+stack = ModelStack()
+
+# Coding task
+model = stack.select(&quot;code&quot;, TaskComplexity.COMPLEX)
+print(f&quot;Coding: {model}&quot;)  # claude-3-5-sonnet
+
+# Simple factual query
+model = stack.select(&quot;qa&quot;, TaskComplexity.SIMPLE)
+print(f&quot;Simple QA: {model}&quot;)  # gemini-2.5-flash
+
+# Long document analysis
+model = stack.select(&quot;analysis&quot;, TaskComplexity.COMPLEX, context_length=150_000)
+print(f&quot;Long context: {model}&quot;)  # claude-3-5-sonnet (200k)
+
+# Budget-sensitive moderate task
+model = stack.select(&quot;summary&quot;, TaskComplexity.MODERATE, budget_sensitive=True)
+print(f&quot;Budget summary: {model}&quot;)  # gpt-4o-mini</code></pre>
+<h3>Benchmark-Driven Selection</h3>
+<pre><code class="lang-python">import pandas as pd
+
+# 2025 benchmark data
+benchmark_data = {
+    &quot;model&quot;: [
+        &quot;gpt-4o&quot;,
+        &quot;claude-3.5-sonnet&quot;,
+        &quot;gemini-2.5-flash&quot;,
+        &quot;gpt-4o-mini&quot;,
+        &quot;deepseek-v3&quot;,
+        &quot;deepseek-r1-distilled-70b&quot;
+    ],
+    &quot;mmlu&quot;: [88.7, 82.3, 85.0, 82.0, 84.5, 83.0],
+    &quot;humaneval&quot;: [90.2, 92.0, 88.0, 87.2, 89.0, 87.5],
+    &quot;math_500&quot;: [76.0, 78.0, 70.0, 72.0, 75.0, 94.5],
+    &quot;gpqa_diamond&quot;: [53.6, 59.4, 50.0, 48.0, 55.0, 65.2],
+    &quot;input_cost&quot;: [5.00, 3.00, 0.10, 0.15, 0.30, 0.30],
+    &quot;output_cost&quot;: [20.00, 15.00, 0.40, 0.60, 1.00, 1.00],
+    &quot;speed_tokens_per_sec&quot;: [50, 45, 370, 80, 60, 40]
+}
+
+df = pd.DataFrame(benchmark_data)
+
+def select_model_by_benchmark(
+    task: str,
+    budget_per_1k_output: float = None,
+    min_score: float = 80.0
+) -&gt; pd.DataFrame:
+    &quot;&quot;&quot;Filter models by task benchmark and constraints&quot;&quot;&quot;
+
+    # Select relevant benchmark
+    benchmark_map = {
+        &quot;code&quot;: &quot;humaneval&quot;,
+        &quot;reasoning&quot;: &quot;mmlu&quot;,
+        &quot;math&quot;: &quot;math_500&quot;,
+        &quot;research&quot;: &quot;gpqa_diamond&quot;
+    }
+
+    benchmark_col = benchmark_map.get(task, &quot;mmlu&quot;)
+
+    # Filter by minimum score
+    filtered = df[df[benchmark_col] &gt;= min_score].copy()
+
+    # Calculate cost for 1M tokens (typical workload)
+    filtered[&quot;cost_per_1m&quot;] = (
+        (filtered[&quot;input_cost&quot;] * 0.2) +  # 20% input, 80% output
+        (filtered[&quot;output_cost&quot;] * 0.8)
+    )
+
+    # Budget filter
+    if budget_per_1k_output:
+        max_cost_per_1m = budget_per_1k_output * 1000
+        filtered = filtered[filtered[&quot;cost_per_1m&quot;] &lt;= max_cost_per_1m]
+
+    # Sort by performance, then cost
+    filtered = filtered.sort_values(
+        [benchmark_col, &quot;cost_per_1m&quot;],
+        ascending=[False, True]
+    )
+
+    return filtered[[
+        &quot;model&quot;, benchmark_col, &quot;cost_per_1m&quot;, &quot;speed_tokens_per_sec&quot;
+    ]]
+
+# Example: Select coding model with $10 budget per 1k output tokens
+print(&quot;Code generation models (budget $10/1k output):&quot;)
+print(select_model_by_benchmark(&quot;code&quot;, budget_per_1k_output=10))
+
+# Example: Select math model (no budget constraint)
+print(&quot;\nMath reasoning models:&quot;)
+print(select_model_by_benchmark(&quot;math&quot;, min_score=70))
+
+# Output:
+#                       model  humaneval  cost_per_1m  speed_tokens_per_sec
+# 1       claude-3.5-sonnet       92.0        12.60                    45
+# 4              deepseek-v3       89.0         0.86                    60
+# 5  deepseek-r1-distilled...     87.5         0.86                    40</code></pre>
+<h3>Cost-Quality Pareto Frontier</h3>
+<pre><code class="lang-python">import numpy as np
+import matplotlib.pyplot as plt
+
+# Plot cost vs quality for model selection
+models = df.copy()
+models[&quot;quality_score&quot;] = models[[&quot;mmlu&quot;, &quot;humaneval&quot;]].mean(axis=1)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(
+    models[&quot;output_cost&quot;],
+    models[&quot;quality_score&quot;],
+    s=models[&quot;speed_tokens_per_sec&quot;],  # Bubble size = speed
+    alpha=0.6
+)
+
+for idx, row in models.iterrows():
+    plt.annotate(
+        row[&quot;model&quot;],
+        (row[&quot;output_cost&quot;], row[&quot;quality_score&quot;]),
+        fontsize=9
+    )
+
+plt.xlabel(&quot;Output Cost ($/M tokens)&quot;)
+plt.ylabel(&quot;Average Quality Score&quot;)
+plt.title(&quot;LLM Pareto Frontier: Cost vs Quality\n(Bubble size = speed)&quot;)
+plt.xscale(&quot;log&quot;)
+plt.grid(True, alpha=0.3)
+
+# Identify Pareto-optimal models
+# (Models not dominated by any other in both cost and quality)
+def is_pareto_optimal(costs, qualities):
+    is_optimal = np.ones(len(costs), dtype=bool)
+    for i, (c, q) in enumerate(zip(costs, qualities)):
+        is_optimal[i] = not np.any(
+            (costs &lt; c) &amp; (qualities &gt; q)
+        )
+    return is_optimal
+
+pareto = is_pareto_optimal(
+    models[&quot;output_cost&quot;].values,
+    models[&quot;quality_score&quot;].values
+)
+
+print(&quot;Pareto-optimal models:&quot;)
+print(models[pareto][[&quot;model&quot;, &quot;output_cost&quot;, &quot;quality_score&quot;]])</code></pre>
+<h3>Multi-Model Portfolio</h3>
+<pre><code class="lang-python">from typing import Dict, List
+from dataclasses import dataclass
+
+@dataclass
+class ModelConfig:
+    name: str
+    cost_per_1k: float
+    strength: str
+    use_cases: List[str]
+
+class ModelPortfolio:
+    &quot;&quot;&quot;Manage a portfolio of models for different use cases&quot;&quot;&quot;
+
+    def __init__(self):
+        self.models = [
+            ModelConfig(
+                &quot;claude-3-5-sonnet&quot;,
+                cost_per_1k=12.6,
+                strength=&quot;coding&quot;,
+                use_cases=[&quot;code_generation&quot;, &quot;code_review&quot;, &quot;debugging&quot;]
+            ),
+            ModelConfig(
+                &quot;gpt-4o&quot;,
+                cost_per_1k=16.5,
+                strength=&quot;reasoning&quot;,
+                use_cases=[&quot;analysis&quot;, &quot;planning&quot;, &quot;complex_reasoning&quot;]
+            ),
+            ModelConfig(
+                &quot;gemini-2.5-flash&quot;,
+                cost_per_1k=0.35,
+                strength=&quot;speed&quot;,
+                use_cases=[&quot;simple_qa&quot;, &quot;classification&quot;, &quot;summarization&quot;]
+            ),
+            ModelConfig(
+                &quot;gpt-4o-mini&quot;,
+                cost_per_1k=0.54,
+                strength=&quot;balanced&quot;,
+                use_cases=[&quot;general&quot;, &quot;moderate_complexity&quot;, &quot;fallback&quot;]
+            ),
+            ModelConfig(
+                &quot;deepseek-v3&quot;,
+                cost_per_1k=0.86,
+                strength=&quot;cost_efficiency&quot;,
+                use_cases=[&quot;high_volume&quot;, &quot;batch_processing&quot;]
+            )
+        ]
+
+    def recommend(self, use_case: str, max_cost: float = None) -&gt; List[str]:
+        &quot;&quot;&quot;Recommend models for a use case&quot;&quot;&quot;
+        candidates = [
+            m.name for m in self.models
+            if use_case in m.use_cases
+        ]
+
+        if max_cost:
+            candidates = [
+                m.name for m in self.models
+                if use_case in m.use_cases and m.cost_per_1k &lt;= max_cost
+            ]
+
+        return candidates
+
+    def cost_report(self, monthly_queries: Dict[str, int]):
+        &quot;&quot;&quot;Estimate monthly costs based on query distribution&quot;&quot;&quot;
+        total_cost = 0
+        for use_case, count in monthly_queries.items():
+            models = self.recommend(use_case)
+            if not models:
+                continue
+
+            # Use cheapest model for use case
+            cheapest = min(
+                [m for m in self.models if m.name in models],
+                key=lambda x: x.cost_per_1k
+            )
+
+            cost = count * cheapest.cost_per_1k / 1000
+            total_cost += cost
+
+            print(f&quot;{use_case:20} | {count:8} queries | {cheapest.name:20} | ${cost:8.2f}&quot;)
+
+        print(f&quot;\n{&#x27;Total&#x27;:20} | {sum(monthly_queries.values()):8} queries | {&#x27;&#x27;:&lt;20} | ${total_cost:8.2f}&quot;)
+
+# Usage
+portfolio = ModelPortfolio()
+
+# Monthly query distribution
+queries = {
+    &quot;code_generation&quot;: 50_000,
+    &quot;simple_qa&quot;: 500_000,
+    &quot;analysis&quot;: 10_000,
+    &quot;summarization&quot;: 100_000
+}
+
+portfolio.cost_report(queries)
+
+# Output:
+# code_generation      |    50000 queries | claude-3-5-sonnet    |   630.00
+# simple_qa            |   500000 queries | gemini-2.5-flash     |   175.00
+# analysis             |    10000 queries | gpt-4o               |   165.00
+# summarization        |   100000 queries | gemini-2.5-flash     |    35.00
+#
+# Total                |   660000 queries |                      |  1005.00</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Model Selection Decision Tree</h3>
+<pre><code>Start here -&gt; What&#x27;s the primary constraint?
+
+Cost-constrained:
+  ├─ High volume (&gt;1M queries/month) -&gt; DeepSeek V3 or Gemini Flash
+  ├─ Moderate volume -&gt; GPT-4o mini
+  └─ Complex tasks only -&gt; RouteLLM with GPT-4o/mini pair
+
+Quality-constrained:
+  ├─ Coding -&gt; Claude 3.5 Sonnet
+  ├─ Reasoning/Analysis -&gt; GPT-4o or DeepSeek R1
+  ├─ Math -&gt; DeepSeek R1 Distilled
+  └─ General -&gt; GPT-4o or Gemini 2.5 Pro
+
+Latency-constrained:
+  ├─ Maximum speed -&gt; Gemini 2.5 Flash (370 tok/s)
+  ├─ Balanced -&gt; GPT-4o mini
+  └─ OK with moderate -&gt; Claude 3.5 Sonnet
+
+Context-constrained:
+  ├─ &gt;128k tokens -&gt; Claude 3.5 Sonnet (200k) or Gemini (1M)
+  ├─ 32-128k -&gt; GPT-4o, Claude, or Gemini
+  └─ &lt;32k -&gt; Any model</code></pre>
+<h3>Benchmarks by Use Case</h3>
+<pre><code>Use Case               | Primary Benchmark | Secondary Benchmark
+-----------------------|-------------------|--------------------
+Code generation        | HumanEval         | MBPP (Python)
+Complex reasoning      | BBH, GPQA         | MMLU
+Mathematics            | MATH-500          | GSM8K
+General knowledge      | MMLU              | TriviaQA
+Instruction following  | IFEval            | MT Bench
+Multilingual           | MGSM              | XLSum
+Long context           | RULER, BABILong   | QMSum</code></pre>
+<h3>Cost Optimization Strategies</h3>
+<pre><code>Strategy                | Savings  | Complexity | When to Use
+------------------------|----------|------------|---------------------------
+Use cheaper models      | 50-95%   | Low        | Simple/moderate tasks
+Model routing           | 40-85%   | Medium     | Mixed-complexity workload
+Prompt caching          | 10-90%   | Low        | Repeated context
+Batch processing        | 50%      | Medium     | Non-urgent queries
+Open-source self-host   | 70-100%  | High       | Very high volume</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Always using the latest model</strong>: GPT-4o not always better than Claude 3.5 for code ✅ Benchmark models for your specific use case before committing</p>
+<p>❌ <strong>Choosing based on MMLU alone</strong>: Doesn&#x27;t predict real-world performance ✅ Evaluate on multiple benchmarks relevant to your domain</p>
+<p>❌ <strong>Ignoring speed/latency differences</strong>: Gemini Flash is 7x faster than GPT-4o ✅ Consider tokens/second for user-facing applications</p>
+<p>❌ <strong>Not testing open-source alternatives</strong>: DeepSeek V3 rivals GPT-4o at 1/20th cost ✅ Benchmark LLaMA 3.3, DeepSeek, Mixtral for cost-sensitive projects</p>
+<p>❌ <strong>Overlooking context length limits</strong>: Running out of context mid-conversation ✅ Choose Claude (200k) or Gemini (1M) for long-context applications</p>
+<p>❌ <strong>Single-model commitment</strong>: Locks you into one provider&#x27;s pricing/limits ✅ Build abstraction layer to support multiple models (see multi-model-orchestration)</p>
+<p>❌ <strong>Not tracking actual costs</strong>: &quot;Budget-friendly&quot; model becomes expensive at scale ✅ Monitor token usage and costs per endpoint/model combination</p>
+<p>❌ <strong>Choosing based on marketing claims</strong>: &quot;Most advanced AI&quot; doesn&#x27;t mean best for your task ✅ Run your own evaluations with representative test cases</p>
+<hr>
+<h2>Hanzo SDK: Automatic Model Selection</h2>
+<p>Instead of manually implementing model selection logic, use <strong>Hanzo SDK</strong> for automatic routing with privacy-first local inference and intelligent cloud fallback.</p>
+<h3>Quick Start</h3>
+<pre><code class="lang-python">from hanzo import Hanzo
+
+# Initialize with automatic routing
+hanzo = Hanzo(
+    inference_mode=&#x27;hybrid&#x27;,  # Local + cloud
+    auto_route=True,          # Automatic model selection
+    routing_strategy=&#x27;balanced&#x27;  # balance quality/cost/latency
+)
+
+# Hanzo automatically selects best model for each query
+response = hanzo.chat.completions.create(
+    messages=[{&#x27;role&#x27;: &#x27;user&#x27;, &#x27;content&#x27;: query}]
+    # No model specified - SDK chooses based on:
+    # 1. Query complexity analysis
+    # 2. Available local models (Hanzo Node)
+    # 3. Cost constraints
+    # 4. Latency requirements
+)
+
+print(f&quot;Model used: {response.model}&quot;)
+print(f&quot;Reasoning: {response.routing_reason}&quot;)
+print(f&quot;Cost: ${response.cost:.4f}&quot;)</code></pre>
+<h3>Hanzo vs Manual Model Selection</h3>
+<p>| Aspect | Manual Selection | Hanzo SDK | |--------|-----------------|-----------| | Setup | 100+ lines per provider | 3 lines total | | Model registry | Manual tracking | Automatic discovery | | Cost tracking | Custom implementation | Built-in | | Routing logic | Manual complexity analysis | Automatic | | Local models | Separate setup (Ollama/vLLM) | Built-in (Hanzo Node) | | Privacy | Manual local/cloud split | Local-first automatic | | Failover | Custom retry logic | Automatic | | Caching | Manual implementation | Semantic caching | | Budget limits | Custom enforcement | Built-in guardrails |</p>
+<h3>Routing Strategies</h3>
+<pre><code class="lang-python"># Cost-optimized: Prefer cheapest models
+hanzo = Hanzo(
+    routing_strategy=&#x27;cost_optimized&#x27;,
+    max_cost_per_request=0.01,
+    preferred_models=[&#x27;llama-3-8b&#x27;, &#x27;gpt-4o-mini&#x27;]
+)
+
+# Quality-focused: Use best models
+hanzo = Hanzo(
+    routing_strategy=&#x27;quality_focused&#x27;,
+    min_quality_threshold=&#x27;excellent&#x27;,
+    preferred_models=[&#x27;gpt-4&#x27;, &#x27;claude-3-5-sonnet&#x27;]
+)
+
+# Latency-optimized: Fastest responses
+hanzo = Hanzo(
+    routing_strategy=&#x27;latency_optimized&#x27;,
+    max_latency_ms=500,
+    prefer_streaming=True
+)
+
+# Privacy-first: Local only, never cloud
+hanzo = Hanzo(
+    inference_mode=&#x27;local&#x27;,
+    fallback_on_error=False
+)</code></pre>
+<h3>Comparison: Manual Portfolio vs Hanzo SDK</h3>
+<p><strong>Manual Model Portfolio</strong> (from examples above):</p>
+<pre><code class="lang-python"># 100+ lines of ModelPortfolio class
+# Manual model registry
+# Manual cost calculation
+# Manual routing logic
+
+portfolio = ModelPortfolio()
+model = portfolio.recommend(&quot;code_generation&quot;)[0]
+# Still need to call the right API manually</code></pre>
+<p><strong>Hanzo SDK Equivalent</strong>:</p>
+<pre><code class="lang-python"># 3 lines total
+from hanzo import Hanzo
+
+hanzo = Hanzo(inference_mode=&#x27;hybrid&#x27;, auto_route=True)
+
+response = hanzo.chat.completions.create(
+    messages=[{&#x27;role&#x27;: &#x27;user&#x27;, &#x27;content&#x27;: &#x27;Write a sorting function&#x27;}]
+)
+# Automatically:
+# - Analyzed query complexity
+# - Selected Claude 3.5 Sonnet (best for code)
+# - Routed to local Hanzo Node if available
+# - Tracked cost ($0.012)
+# - Cached for future identical queries</code></pre>
+<h3>Model Selection Decision Tree with Hanzo</h3>
+<pre><code>Start here -&gt; Use Hanzo SDK
+
+Hanzo automatically:
+  ├─ Detects cost constraints -&gt; Routes to DeepSeek/Gemini Flash
+  ├─ Detects quality needs -&gt; Routes to GPT-4o/Claude 3.5
+  ├─ Detects latency needs -&gt; Uses fastest available model
+  ├─ Detects privacy needs -&gt; Uses local Hanzo Node
+  └─ Balances all constraints -&gt; Optimal model for each query
+
+No manual decision tree needed!</code></pre>
+<h3>Advanced: Custom Selection Logic</h3>
+<pre><code class="lang-python">from hanzo import Hanzo
+from hanzo.routing import RoutingStrategy
+
+class CustomStrategy(RoutingStrategy):
+    &quot;&quot;&quot;Custom model selection based on business rules.&quot;&quot;&quot;
+    
+    def select_model(self, messages, options):
+        # Your custom logic (with Hanzo&#x27;s automatic fallback)
+        if &#x27;pricing&#x27; in messages[-1][&#x27;content&#x27;].lower():
+            return &#x27;gpt-4&#x27;  # Complex financial analysis
+        elif len(messages[-1][&#x27;content&#x27;]) &lt; 100:
+            return &#x27;llama-3-8b&#x27;  # Simple queries use local
+        else:
+            return None  # Let Hanzo auto-route
+    
+    def should_use_local(self, messages, options):
+        # Force local for PII
+        return self.contains_pii(messages)
+
+hanzo = Hanzo(
+    inference_mode=&#x27;hybrid&#x27;,
+    routing_strategy=CustomStrategy()
+)</code></pre>
+<p><strong>See Also</strong>:</p>
+<ul><li><strong>python-sdk.md</strong> - Complete Hanzo SDK documentation</li><li><strong>hanzo-node.md</strong> - Local model inference setup</li><li><strong>llm-model-routing.md</strong> - Detailed routing strategies</li></ul>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>llm-model-routing.md</code> - Dynamic routing between models for cost optimization</li><li><code>multi-model-orchestration.md</code> - Coordinating multiple models in workflows</li><li><code>modal-gpu-workloads.md</code> - Self-hosting open-source models on GPUs</li><li><code>api-rate-limiting.md</code> - Managing rate limits across providers</li><li><code>llm-dataset-preparation.md</code> - Preparing evaluation datasets</li><li><code>observability-distributed-tracing.md</code> - Monitoring model performance</li><li><strong><code>python-sdk.md</code></strong> - Hanzo SDK for automatic model selection</li><li><strong><code>hanzo-node.md</code></strong> - Local AI inference infrastructure</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-28 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ml-llm-model-selection.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

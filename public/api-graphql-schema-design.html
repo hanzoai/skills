@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>api-graphql-schema-design</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/api-graphql-schema-design.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/api-graphql-schema-design.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>api-graphql-schema-design</h1><p class="lede">Designing GraphQL APIs from scratch</p><h1>GraphQL Schema Design</h1>
+<p><strong>Scope</strong>: Schema design, resolvers, N+1 prevention, pagination, authorization <strong>Lines</strong>: ~260 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Designing GraphQL APIs from scratch</li><li>Implementing GraphQL resolvers and DataLoader</li><li>Solving N+1 query problems (performance)</li><li>Adding pagination to GraphQL queries</li><li>Implementing authorization in GraphQL</li><li>Handling errors and validation</li><li>Optimizing GraphQL query performance</li></ul>
+<h2>Schema Design Principles</h2>
+<h3>Types and Nullability</h3>
+<pre><code class="lang-graphql">type User {
+  id: ID!                    # Non-null ID
+  email: String!             # Non-null String
+  age: Int                   # Nullable Int
+  isActive: Boolean!         # Non-null Boolean
+  createdAt: DateTime        # Custom scalar
+}
+
+type Post {
+  id: ID!
+  title: String!
+  author: User!              # Relationship
+  comments: [Comment!]!      # Non-null list of non-null items
+}</code></pre>
+<p><strong>Nullability rules</strong>:</p>
+<ul><li>Use <code>!</code> for required fields</li><li>Avoid <code>!</code> on top-level lists: <code>[Item!]!</code> allows empty list, <code>[Item]</code> allows null items</li><li>Non-null fields can&#x27;t be removed (breaking change)</li></ul>
+<h3>Queries and Mutations</h3>
+<pre><code class="lang-graphql">type Query {
+  user(id: ID!): User
+  posts(limit: Int, after: String): PostConnection!
+}
+
+type Mutation {
+  createPost(input: CreatePostInput!): CreatePostPayload!
+  updatePost(id: ID!, input: UpdatePostInput!): Post!
+  deletePost(id: ID!): DeletePostPayload!
+}
+
+input CreatePostInput {
+  title: String!
+  content: String!
+  tags: [String!]
+}
+
+type CreatePostPayload {
+  post: Post
+  errors: [ValidationError!]!
+}
+
+type ValidationError {
+  field: String!
+  message: String!
+}</code></pre>
+<p><strong>Mutation patterns</strong>:</p>
+<ul><li>Use input types for complex arguments</li><li>Return payload types with errors</li><li>Name with verb prefix (create, update, delete)</li><li>Keep atomic (single responsibility)</li></ul>
+<h3>Subscriptions (Real-time)</h3>
+<pre><code class="lang-graphql">type Subscription {
+  postCreated: Post!
+  postUpdated(postId: ID!): Post!
+  commentAdded(postId: ID!): Comment!
+}</code></pre>
+<p><strong>Implementation</strong> (Node.js):</p>
+<pre><code class="lang-javascript">const { PubSub } = require(&#x27;graphql-subscriptions&#x27;);
+const pubsub = new PubSub();
+
+const resolvers = {
+  Subscription: {
+    postCreated: {
+      subscribe: () =&gt; pubsub.asyncIterator([&#x27;POST_CREATED&#x27;])
+    }
+  },
+  Mutation: {
+    createPost: async (_, { input }) =&gt; {
+      const post = await db.createPost(input);
+      pubsub.publish(&#x27;POST_CREATED&#x27;, { postCreated: post });
+      return { post };
+    }
+  }
+};</code></pre>
+<hr>
+<h2>N+1 Problem and DataLoader</h2>
+<h3>The N+1 Problem</h3>
+<p><strong>Example</strong>: Fetching 10 posts with authors</p>
+<pre><code class="lang-javascript">// This resolver is called 10 times (once per post)
+Post: {
+  author: async (post, args, context) =&gt; {
+    // N+1: 1 query for posts + 10 queries for authors
+    return await db.query(&#x27;SELECT * FROM users WHERE id = ?&#x27;, [post.authorId]);
+  }
+}</code></pre>
+<p><strong>Result</strong>: 11 database queries (inefficient)</p>
+<h3>DataLoader Solution</h3>
+<p><strong>DataLoader batches and caches requests within a single request</strong></p>
+<pre><code class="lang-javascript">const DataLoader = require(&#x27;dataloader&#x27;);
+
+// Batch function: receives array of IDs, returns array of users
+const batchGetUsers = async (userIds) =&gt; {
+  const users = await db.query(
+    &#x27;SELECT * FROM users WHERE id IN (?)&#x27;,
+    [userIds]
+  );
+
+  // CRITICAL: Return users in same order as userIds
+  const userMap = new Map(users.map(u =&gt; [u.id, u]));
+  return userIds.map(id =&gt; userMap.get(id) || new Error(&#x27;Not found&#x27;));
+};
+
+// Create DataLoader in context (per-request)
+context: ({ req }) =&gt; ({
+  loaders: {
+    userLoader: new DataLoader(batchGetUsers)
+  }
+})
+
+// Use in resolver
+Post: {
+  author: async (post, args, context) =&gt; {
+    // DataLoader batches all calls and executes once
+    return await context.loaders.userLoader.load(post.authorId);
+  }
+}</code></pre>
+<p><strong>Result</strong>: 2 database queries (1 for posts + 1 batched for authors)</p>
+<h3>DataLoader Best Practices</h3>
+<pre><code class="lang-javascript">// ✅ CORRECT: Create loaders in context (per-request)
+context: ({ req }) =&gt; ({
+  loaders: {
+    userLoader: new DataLoader(batchGetUsers),
+    postLoader: new DataLoader(batchGetPosts)
+  }
+})
+
+// ❌ WRONG: Global DataLoader (caches across requests)
+const globalUserLoader = new DataLoader(batchGetUsers);  // Memory leak!
+
+// ✅ CORRECT: Return array in same order as input
+const batchGetUsers = async (ids) =&gt; {
+  const users = await fetchUsers(ids);
+  const userMap = new Map(users.map(u =&gt; [u.id, u]));
+  return ids.map(id =&gt; userMap.get(id) || new Error(&#x27;Not found&#x27;));
+};</code></pre>
+<hr>
+<h2>Error Handling</h2>
+<h3>User Errors (Validation)</h3>
+<pre><code class="lang-javascript">Mutation: {
+  createPost: async (parent, { input }, context) =&gt; {
+    const errors = [];
+
+    if (input.title.length &lt; 5) {
+      errors.push({ field: &#x27;title&#x27;, message: &#x27;Title too short&#x27; });
+    }
+
+    if (input.content.length &lt; 20) {
+      errors.push({ field: &#x27;content&#x27;, message: &#x27;Content too short&#x27; });
+    }
+
+    if (errors.length &gt; 0) {
+      return { post: null, errors };
+    }
+
+    const post = await db.createPost(input);
+    return { post, errors: [] };
+  }
+}</code></pre>
+<h3>System Errors (Unexpected)</h3>
+<pre><code class="lang-javascript">const { AuthenticationError, UserInputError } = require(&#x27;apollo-server&#x27;);
+
+Query: {
+  user: async (parent, { id }, context) =&gt; {
+    if (!context.user) {
+      throw new AuthenticationError(&#x27;Must be logged in&#x27;);
+    }
+
+    if (!id.match(/^\d+$/)) {
+      throw new UserInputError(&#x27;Invalid ID format&#x27;);
+    }
+
+    return await db.getUserById(id);
+  }
+}</code></pre>
+<hr>
+<h2>Pagination</h2>
+<h3>Cursor-Based Pagination (Recommended)</h3>
+<pre><code class="lang-graphql">type Query {
+  posts(first: Int = 10, after: String): PostConnection!
+}
+
+type PostConnection {
+  edges: [PostEdge!]!
+  pageInfo: PageInfo!
+}
+
+type PostEdge {
+  node: Post!
+  cursor: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}</code></pre>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-javascript">Query: {
+  posts: async (parent, { first = 10, after }) =&gt; {
+    const cursor = after ? decodeCursor(after) : 0;
+
+    // Fetch one extra to check hasNextPage
+    const posts = await db.query(
+      &#x27;SELECT * FROM posts WHERE id &gt; ? ORDER BY id ASC LIMIT ?&#x27;,
+      [cursor, first + 1]
+    );
+
+    const hasNextPage = posts.length &gt; first;
+    const nodes = hasNextPage ? posts.slice(0, -1) : posts;
+
+    const edges = nodes.map(post =&gt; ({
+      node: post,
+      cursor: encodeCursor(post.id)
+    }));
+
+    return {
+      edges,
+      pageInfo: {
+        hasNextPage,
+        endCursor: edges[edges.length - 1]?.cursor
+      }
+    };
+  }
+}
+
+const encodeCursor = (id) =&gt; Buffer.from(id.toString()).toString(&#x27;base64&#x27;);
+const decodeCursor = (cursor) =&gt; parseInt(Buffer.from(cursor, &#x27;base64&#x27;).toString());</code></pre>
+<p><strong>Pros</strong>: Consistent results, efficient for large datasets <strong>Cons</strong>: Can&#x27;t jump to arbitrary page</p>
+<h3>Offset Pagination (Simpler)</h3>
+<pre><code class="lang-graphql">type Query {
+  posts(limit: Int = 10, offset: Int = 0): PostPage!
+}
+
+type PostPage {
+  items: [Post!]!
+  total: Int!
+}</code></pre>
+<p><strong>Pros</strong>: Simple, can jump to page N <strong>Cons</strong>: Inconsistent if data changes, slow for large offsets</p>
+<hr>
+<h2>Authorization</h2>
+<h3>Field-Level Authorization</h3>
+<pre><code class="lang-javascript">const resolvers = {
+  Query: {
+    users: async (parent, args, context) =&gt; {
+      // Query-level auth
+      if (!context.user?.isAdmin) {
+        throw new AuthenticationError(&#x27;Admin only&#x27;);
+      }
+      return await db.getUsers();
+    }
+  },
+
+  User: {
+    email: (user, args, context) =&gt; {
+      // Field-level auth (hide email from non-owners)
+      if (context.user?.id !== user.id &amp;&amp; !context.user?.isAdmin) {
+        return null;
+      }
+      return user.email;
+    }
+  }
+};</code></pre>
+<h3>Directive-Based Authorization</h3>
+<pre><code class="lang-graphql">directive @auth(requires: Role = USER) on FIELD_DEFINITION
+
+enum Role {
+  USER
+  ADMIN
+}
+
+type Query {
+  posts: [Post!]!
+  users: [User!]! @auth(requires: ADMIN)
+}
+
+type User {
+  id: ID!
+  name: String!
+  email: String! @auth(requires: USER)
+}</code></pre>
+<hr>
+<h2>Schema Patterns</h2>
+<h3>Interface (Polymorphism)</h3>
+<pre><code class="lang-graphql">interface Searchable {
+  id: ID!
+  title: String!
+}
+
+type Post implements Searchable {
+  id: ID!
+  title: String!
+  content: String!
+}
+
+type Video implements Searchable {
+  id: ID!
+  title: String!
+  url: String!
+}
+
+type Query {
+  search(query: String!): [Searchable!]!
+}</code></pre>
+<p><strong>Resolver</strong>:</p>
+<pre><code class="lang-javascript">Searchable: {
+  __resolveType(obj) {
+    if (obj.content) return &#x27;Post&#x27;;
+    if (obj.url) return &#x27;Video&#x27;;
+    return null;
+  }
+}</code></pre>
+<h3>Union (Flexible Results)</h3>
+<pre><code class="lang-graphql">union SearchResult = Post | Video | User
+
+type Query {
+  search(query: String!): [SearchResult!]!
+}</code></pre>
+<p><strong>Client query</strong>:</p>
+<pre><code class="lang-graphql">query Search($query: String!) {
+  search(query: $query) {
+    __typename
+    ... on Post { title content }
+    ... on Video { title url }
+    ... on User { name email }
+  }
+}</code></pre>
+<hr>
+<h2>Common Anti-Patterns</h2>
+<p>| Anti-Pattern | Problem | Solution | |-------------|---------|----------| | N+1 queries | Not using DataLoader | Batch with DataLoader | | Deep queries | No depth limits | <code>validationRules: [depthLimit(5)]</code> | | Large lists | No pagination | Use cursor pagination | | Scalar mutations | <code>deletePost: Boolean</code> | Return payload object | | Global DataLoader | Caches across requests | Create per-request in context | | No error handling | Throw on validation | Return errors in payload | | Logic in resolvers | Business logic mixed | Resolvers call service layer |</p>
+<hr>
+<h2>Level 3: Resources</h2>
+<h3>Reference Documentation</h3>
+<p><strong>Location</strong>: <code>skills/api/graphql-schema-design/resources/REFERENCE.md</code></p>
+<p>Comprehensive 900+ line reference covering:</p>
+<ul><li>GraphQL schema design principles and best practices</li><li>Complete type system (scalars, objects, interfaces, unions, enums, inputs)</li><li>Schema patterns (Node, Connection, Payload, Error types)</li><li>Query and mutation design with examples</li><li>Subscription patterns for real-time updates</li><li>Error handling strategies and types</li><li>Pagination (offset-based, cursor-based, Relay connections)</li><li>Performance optimization (DataLoader, complexity analysis, caching)</li><li>Security (authentication, authorization, rate limiting, validation)</li><li>Schema versioning and deprecation strategies</li><li>Schema federation and stitching</li><li>Testing strategies for schemas</li><li>Complete anti-patterns catalog</li></ul>
+<h3>Executable Scripts</h3>
+<p><strong>Location</strong>: <code>skills/api/graphql-schema-design/resources/scripts/</code></p>
+<ol><li><strong>analyze_schema.py</strong> - GraphQL schema analyzer</li></ol>
+<ul><li>Analyzes GraphQL schemas for anti-patterns and best practices</li><li>Detects naming convention violations</li><li>Checks documentation coverage</li><li>Validates pagination patterns</li><li>Identifies nullability issues</li><li>Checks mutation design patterns</li><li>Calculates quality score (0-100)</li><li>Output: Human-readable report or JSON</li></ul>
+<p>   ``<code>bash    ./analyze_schema.py schema.graphql    ./analyze_schema.py schema.graphql --json    ./analyze_schema.py schema.graphql --min-score 80    </code>``</p>
+<ol><li><strong>generate_types.py</strong> - TypeScript type generator</li></ol>
+<ul><li>Generates TypeScript type definitions from GraphQL schemas</li><li>Supports all GraphQL type system features</li><li>Handles custom scalars, enums, interfaces, unions</li><li>Configurable nullability handling</li><li>JSON output for programmatic use</li><li>Output: TypeScript .d.ts file or JSON</li></ul>
+<p>   ``<code>bash    ./generate_types.py schema.graphql -o types.ts    ./generate_types.py schema.graphql --nullable-by-default    ./generate_types.py schema.graphql --json    </code>``</p>
+<ol><li><strong>benchmark_queries.js</strong> - GraphQL query benchmarking tool</li></ol>
+<ul><li>Benchmarks GraphQL query performance</li><li>Concurrent request support</li><li>Detailed timing metrics (min, max, avg, p50, p90, p95, p99)</li><li>Throughput calculation (requests/sec)</li><li>Payload size analysis</li><li>Warmup phase support</li><li>Custom headers and authentication</li><li>JSON output for CI/CD integration</li></ul>
+<p>   ``<code>bash    ./benchmark_queries.js -e http://localhost:4000/graphql -q &quot;{ users { id } }&quot;    ./benchmark_queries.js -e http://localhost:4000/graphql --query-file query.graphql -c 10 -i 100    ./benchmark_queries.js -e http://localhost:4000/graphql -q &quot;{ posts { title } }&quot; --json    </code>``</p>
+<h3>Code Examples</h3>
+<p><strong>Location</strong>: <code>skills/api/graphql-schema-design/resources/examples/</code></p>
+<ol><li><strong>python/graphql_server.py</strong> - Strawberry GraphQL server</li></ol>
+<ul><li>Complete GraphQL server using Strawberry (Python)</li><li>Type-safe schema with Python type hints</li><li>DataLoader for N+1 prevention</li><li>Connection-based pagination</li><li>Error handling with union types</li><li>Authentication and authorization</li><li>Input types and payload types</li><li>Runnable example with FastAPI</li></ul>
+<ol><li><strong>typescript/graphql_server.ts</strong> - Apollo Server implementation</li></ol>
+<ul><li>Complete GraphQL server using Apollo Server</li><li>Type-safe resolvers with TypeScript</li><li>DataLoader batching patterns</li><li>Relay-style pagination</li><li>Error handling with interfaces</li><li>Context-based authentication</li><li>Subscription support</li><li>Runnable standalone server</li></ul>
+<ol><li><strong>typescript/graphql_client.ts</strong> - Apollo Client implementation</li></ol>
+<ul><li>Complete GraphQL client using Apollo Client</li><li>Type-safe queries and mutations</li><li>Fragment composition</li><li>Cache management strategies</li><li>Pagination handling</li><li>Optimistic updates</li><li>Real-time query watching</li><li>Error handling patterns</li></ul>
+<ol><li><strong>schemas/good-schema.graphql</strong> - Best practices schema</li></ol>
+<ul><li>Production-ready schema demonstrating all best practices</li><li>Complete documentation for all types and fields</li><li>Proper naming conventions (PascalCase, camelCase, SCREAMING_SNAKE_CASE)</li><li>Node interface for global object identification</li><li>Relay connection pattern for pagination</li><li>Error handling with interface types</li><li>Input types for all mutations</li><li>Payload types with success/errors fields</li><li>Custom scalars (DateTime, Email, URL, UUID)</li><li>Comprehensive type system usage</li></ul>
+<ol><li><strong>schemas/anti-patterns.graphql</strong> - Anti-patterns catalog</li></ol>
+<ul><li>Comprehensive catalog of 30+ GraphQL anti-patterns</li><li>Each pattern documented with explanation</li><li>Shows incorrect approaches with comments</li><li>Covers naming, structure, performance, and design issues</li><li>Use as negative reference (&quot;what NOT to do&quot;)</li></ul>
+<h3>Usage</h3>
+<p>All scripts are executable and include <code>--help</code>:</p>
+<pre><code class="lang-bash">cd skills/api/graphql-schema-design/resources/scripts
+./analyze_schema.py --help
+./generate_types.py --help
+./benchmark_queries.js --help</code></pre>
+<p>Examples are runnable with dependencies installed:</p>
+<pre><code class="lang-bash"># Python server
+cd examples/python
+pip install strawberry-graphql fastapi uvicorn
+python graphql_server.py
+
+# TypeScript server
+cd examples/typescript
+npm install @apollo/server dataloader
+ts-node graphql_server.ts
+
+# TypeScript client
+cd examples/typescript
+npm install @apollo/client
+ts-node graphql_client.ts</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>rest-api-design.md</code> - Comparing REST vs GraphQL</li><li><code>dataloader-optimization.md</code> - Advanced DataLoader patterns</li><li><code>postgres-query-optimization.md</code> - Optimizing database queries</li><li><code>api-authentication.md</code> - JWT and OAuth patterns</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/api-graphql-schema-design.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

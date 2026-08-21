@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dspy-rag</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/dspy-rag.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/dspy-rag.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>dspy-rag</h1><p class="lede">Building Retrieval-Augmented Generation pipelines with DSPy and vector databases</p><h1>DSPy RAG</h1>
+<p><strong>Scope</strong>: RAG patterns, retrieval modules, vector databases, context optimization <strong>Lines</strong>: ~420 <strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Building RAG (Retrieval-Augmented Generation) systems with DSPy</li><li>Integrating vector databases (ChromaDB, Weaviate, Qdrant) with DSPy</li><li>Optimizing retrieval quality and context selection</li><li>Implementing multi-hop reasoning over documents</li><li>Creating question-answering systems over custom knowledge bases</li><li>Reducing hallucinations with grounded generation</li></ul>
+<h2>Core Concepts</h2>
+<h3>What is RAG?</h3>
+<p><strong>Retrieval-Augmented Generation</strong>: Combine retrieval + generation</p>
+<ol><li><strong>Retrieve</strong>: Find relevant documents from knowledge base</li><li><strong>Augment</strong>: Add retrieved context to prompt</li><li><strong>Generate</strong>: LM produces answer based on context</li></ol>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Reduce hallucinations (grounded in facts)</li><li>Access up-to-date information</li><li>Domain-specific knowledge</li><li>Transparent (can cite sources)</li></ul>
+<h3>DSPy RAG Components</h3>
+<p><strong>dspy.Retrieve</strong>: Built-in retrieval module</p>
+<ul><li>Queries vector database or search API</li><li>Returns top-k relevant passages</li><li>Integrates with ChromaDB, Weaviate, Qdrant, etc.</li></ul>
+<p><strong>Custom RAG modules</strong>: Combine retrieval + generation</p>
+<ul><li>Control retrieval strategy</li><li>Format context</li><li>Cite sources</li><li>Handle multi-hop reasoning</li></ul>
+<h3>Vector Database Integration</h3>
+<p><strong>Supported</strong>:</p>
+<ul><li>ChromaDB (local, simple)</li><li>Weaviate (production, scalable)</li><li>Qdrant (high performance)</li><li>Pinecone (managed cloud)</li><li>Custom retrievers (API-based)</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Simple RAG with ChromaDB</h3>
+<pre><code class="lang-python">import dspy
+import chromadb
+
+# Set up ChromaDB
+chroma_client = chromadb.Client()
+collection = chroma_client.create_collection(&quot;knowledge_base&quot;)
+
+# Add documents
+documents = [
+    &quot;DSPy is a framework for programming language models.&quot;,
+    &quot;Paris is the capital of France.&quot;,
+    &quot;Python is a popular programming language.&quot;,
+]
+
+collection.add(
+    documents=documents,
+    ids=[str(i) for i in range(len(documents))],
+)
+
+# Configure DSPy with retriever
+retriever = dspy.Retrieve(k=3)
+rm = dspy.chromadb_rm.ChromadbRM(
+    collection_name=&quot;knowledge_base&quot;,
+    persist_directory=&quot;./chroma_db&quot;
+)
+dspy.settings.configure(rm=rm)
+
+# Simple RAG module
+class SimpleRAG(dspy.Module):
+    def __init__(self):
+        super().__init__()
+        self.retrieve = dspy.Retrieve(k=3)
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question):
+        # Retrieve relevant passages
+        context = self.retrieve(question).passages
+
+        # Generate answer
+        return self.generate(context=context, question=question)
+
+# Use RAG
+lm = dspy.LM(&quot;openai/gpt-4o-mini&quot;)
+dspy.configure(lm=lm)
+
+rag = SimpleRAG()
+result = rag(question=&quot;What is DSPy?&quot;)
+print(result.answer)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Small knowledge bases (&lt;10K documents)</li><li>Local development</li><li>Quick prototyping</li></ul>
+<h3>Pattern 2: RAG with Citations</h3>
+<pre><code class="lang-python">import dspy
+
+class CitedRAG(dspy.Module):
+    &quot;&quot;&quot;RAG system that cites sources.&quot;&quot;&quot;
+
+    def __init__(self, k=5):
+        super().__init__()
+        self.retrieve = dspy.Retrieve(k=k)
+
+        # Signature includes citations
+        self.generate = dspy.ChainOfThought(
+            &quot;context, question -&gt; answer, citations: list[int]&quot;
+        )
+
+    def forward(self, question):
+        # Retrieve passages
+        retrieval_result = self.retrieve(question)
+        passages = retrieval_result.passages
+
+        # Format context with passage numbers
+        context_parts = []
+        for i, passage in enumerate(passages):
+            context_parts.append(f&quot;[{i+1}] {passage}&quot;)
+
+        context = &quot;\n\n&quot;.join(context_parts)
+
+        # Generate with citations
+        result = self.generate(context=context, question=question)
+
+        # Attach retrieved passages for reference
+        result.retrieved_passages = passages
+
+        return result
+
+# Use RAG with citations
+rag = CitedRAG(k=5)
+result = rag(question=&quot;What is DSPy?&quot;)
+
+print(&quot;Answer:&quot;, result.answer)
+print(&quot;Citations:&quot;, result.citations)
+print(&quot;\nSources:&quot;)
+for citation_idx in result.citations:
+    print(f&quot;[{citation_idx}] {result.retrieved_passages[citation_idx-1][:100]}...&quot;)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Verifiable answers</li><li>Transparent reasoning</li><li>User can check sources</li></ul>
+<h3>Pattern 3: Multi-Hop RAG</h3>
+<pre><code class="lang-python">import dspy
+
+class MultiHopRAG(dspy.Module):
+    &quot;&quot;&quot;RAG with multiple retrieval rounds for complex questions.&quot;&quot;&quot;
+
+    def __init__(self, max_hops=2):
+        super().__init__()
+        self.max_hops = max_hops
+        self.retrieve = dspy.Retrieve(k=3)
+
+        # Generate follow-up queries
+        self.gen_query = dspy.ChainOfThought(
+            &quot;question, context -&gt; needs_more_info: bool, follow_up_query&quot;
+        )
+
+        # Final answer generation
+        self.generate_answer = dspy.ChainOfThought(
+            &quot;question, all_context -&gt; answer&quot;
+        )
+
+    def forward(self, question):
+        all_passages = []
+        current_question = question
+
+        # Multi-hop retrieval
+        for hop in range(self.max_hops):
+            # Retrieve for current query
+            passages = self.retrieve(current_question).passages
+            all_passages.extend(passages)
+
+            # Check if we need more information
+            context = &quot;\n&quot;.join(all_passages)
+            query_result = self.gen_query(question=question, context=context)
+
+            if not query_result.needs_more_info:
+                break
+
+            # Generate follow-up query
+            current_question = query_result.follow_up_query
+
+        # Generate final answer with all context
+        all_context = &quot;\n\n&quot;.join(all_passages)
+        result = self.generate_answer(question=question, all_context=all_context)
+
+        result.num_hops = hop + 1
+        result.all_passages = all_passages
+
+        return result
+
+# Use multi-hop RAG
+rag = MultiHopRAG(max_hops=3)
+result = rag(question=&quot;What programming languages are used in DSPy development?&quot;)
+
+print(f&quot;Answer: {result.answer}&quot;)
+print(f&quot;Required {result.num_hops} retrieval hops&quot;)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Complex questions requiring multiple pieces of information</li><li>Questions with implicit dependencies</li><li>Deep knowledge base exploration</li></ul>
+<h3>Pattern 4: RAG with Weaviate</h3>
+<pre><code class="lang-python">import dspy
+import weaviate
+
+# Connect to Weaviate
+weaviate_client = weaviate.Client(&quot;http://localhost:8080&quot;)
+
+# Create schema
+schema = {
+    &quot;class&quot;: &quot;Document&quot;,
+    &quot;properties&quot;: [
+        {&quot;name&quot;: &quot;content&quot;, &quot;dataType&quot;: [&quot;text&quot;]},
+        {&quot;name&quot;: &quot;title&quot;, &quot;dataType&quot;: [&quot;string&quot;]},
+    ],
+}
+
+weaviate_client.schema.create_class(schema)
+
+# Add documents
+documents = [
+    {&quot;content&quot;: &quot;DSPy is a framework...&quot;, &quot;title&quot;: &quot;DSPy Overview&quot;},
+    # ... more documents
+]
+
+for doc in documents:
+    weaviate_client.data_object.create(doc, &quot;Document&quot;)
+
+# Configure DSPy with Weaviate
+rm = dspy.WeaviateRM(&quot;Document&quot;, weaviate_client=weaviate_client)
+dspy.settings.configure(rm=rm)
+
+# Use retriever
+class WeaviateRAG(dspy.Module):
+    def __init__(self):
+        super().__init__()
+        self.retrieve = dspy.Retrieve(k=5)
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question):
+        passages = self.retrieve(question).passages
+        context = &quot;\n\n&quot;.join(passages)
+        return self.generate(context=context, question=question)
+
+# Use RAG
+rag = WeaviateRAG()
+result = rag(question=&quot;What is DSPy?&quot;)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Production RAG systems</li><li>Large knowledge bases (&gt;100K documents)</li><li>Need for scalability and performance</li></ul>
+<h3>Pattern 5: RAG with Reranking</h3>
+<pre><code class="lang-python">import dspy
+
+class RerankedRAG(dspy.Module):
+    &quot;&quot;&quot;RAG with passage reranking for better quality.&quot;&quot;&quot;
+
+    def __init__(self, retrieve_k=10, use_k=3):
+        super().__init__()
+        self.retrieve_k = retrieve_k
+        self.use_k = use_k
+
+        self.retrieve = dspy.Retrieve(k=retrieve_k)
+
+        # Reranker: score each passage for relevance
+        self.rerank = dspy.Predict(
+            &quot;question, passage -&gt; relevance_score: float&quot;
+        )
+
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question):
+        # Initial retrieval (over-fetch)
+        passages = self.retrieve(question).passages
+
+        # Rerank passages
+        scored_passages = []
+        for passage in passages:
+            score_result = self.rerank(question=question, passage=passage)
+            try:
+                score = float(score_result.relevance_score)
+            except:
+                score = 0.5
+
+            scored_passages.append((score, passage))
+
+        # Sort by score and take top-k
+        scored_passages.sort(reverse=True, key=lambda x: x[0])
+        top_passages = [p for _, p in scored_passages[:self.use_k]]
+
+        # Generate answer with reranked context
+        context = &quot;\n\n&quot;.join(top_passages)
+        return self.generate(context=context, question=question)
+
+# Use reranked RAG
+rag = RerankedRAG(retrieve_k=10, use_k=3)
+result = rag(question=&quot;What is DSPy?&quot;)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Better context quality</li><li>Reduce noise from irrelevant passages</li><li>Improved answer accuracy</li></ul>
+<p><strong>Trade-off</strong>: More LM calls (one per passage for reranking)</p>
+<h3>Pattern 6: RAG Optimization with BootstrapFewShot</h3>
+<pre><code class="lang-python">import dspy
+
+# Define RAG module
+class SimpleRAG(dspy.Module):
+    def __init__(self):
+        super().__init__()
+        self.retrieve = dspy.Retrieve(k=3)
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question):
+        context = self.retrieve(question).passages
+        return self.generate(context=context, question=question)
+
+# Prepare training data
+trainset = [
+    dspy.Example(
+        question=&quot;What is DSPy?&quot;,
+        answer=&quot;A framework for programming language models&quot;
+    ).with_inputs(&quot;question&quot;),
+    # ... more examples
+]
+
+# Define metric
+def rag_metric(example, pred, trace=None):
+    &quot;&quot;&quot;Check if answer is correct.&quot;&quot;&quot;
+    return example.answer.lower() in pred.answer.lower()
+
+# Optimize RAG pipeline
+optimizer = dspy.BootstrapFewShot(metric=rag_metric)
+
+rag = SimpleRAG()
+optimized_rag = optimizer.compile(student=rag, trainset=trainset)
+
+# Optimized RAG now has better prompts for generation
+result = optimized_rag(question=&quot;What is DSPy?&quot;)</code></pre>
+<p><strong>What gets optimized</strong>:</p>
+<ul><li>Generation module prompts</li><li>Few-shot examples for generation</li><li>Context formatting (implicitly)</li></ul>
+<h3>Pattern 7: RAG with Modal-Hosted Models</h3>
+<pre><code class="lang-python">import dspy
+import modal
+
+# Deploy retrieval-optimized model on Modal
+app = modal.App(&quot;dspy-rag&quot;)
+
+@app.function(
+    image=modal.Image.debian_slim().pip_install(&quot;vllm&quot;, &quot;sentence-transformers&quot;),
+    gpu=&quot;L40S&quot;,
+)
+@modal.web_endpoint(method=&quot;POST&quot;)
+def embed_documents(request: dict):
+    &quot;&quot;&quot;Embedding endpoint for RAG retrieval.&quot;&quot;&quot;
+    from sentence_transformers import SentenceTransformer
+
+    model = SentenceTransformer(&quot;all-MiniLM-L6-v2&quot;)
+    texts = request.get(&quot;texts&quot;, [])
+    embeddings = model.encode(texts)
+
+    return {&quot;embeddings&quot;: embeddings.tolist()}
+
+# Configure DSPy with Modal-hosted LM for generation
+lm = dspy.LM(
+    &quot;openai/meta-llama/Meta-Llama-3.1-8B-Instruct&quot;,
+    api_base=&quot;https://your-app--serve.modal.run/v1&quot;,
+    api_key=&quot;EMPTY&quot;,
+)
+
+dspy.configure(lm=lm)
+
+# Use with RAG
+class ModalRAG(dspy.Module):
+    def __init__(self):
+        super().__init__()
+        self.retrieve = dspy.Retrieve(k=5)
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question):
+        passages = self.retrieve(question).passages
+        context = &quot;\n\n&quot;.join(passages)
+        return self.generate(context=context, question=question)
+
+# Use Modal-powered RAG
+rag = ModalRAG()
+result = rag(question=&quot;What is DSPy?&quot;)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Cost-effective GPU inference</li><li>Serverless scaling</li><li>Custom model deployment</li></ul>
+<h3>Pattern 8: Production RAG Pipeline</h3>
+<pre><code class="lang-python">import dspy
+from typing import List, Optional
+
+class ProductionRAG(dspy.Module):
+    &quot;&quot;&quot;Production-ready RAG with error handling and logging.&quot;&quot;&quot;
+
+    def __init__(self, k=5, min_relevance=0.3):
+        super().__init__()
+        self.k = k
+        self.min_relevance = min_relevance
+
+        self.retrieve = dspy.Retrieve(k=k)
+        self.generate = dspy.ChainOfThought(
+            &quot;context, question -&gt; answer, confidence: float&quot;
+        )
+
+    def forward(self, question: str) -&gt; dspy.Prediction:
+        try:
+            # Retrieve passages
+            retrieval_result = self.retrieve(question)
+            passages = retrieval_result.passages
+
+            if not passages:
+                # Fallback: no retrieval results
+                return dspy.Prediction(
+                    answer=&quot;I don&#x27;t have enough information to answer this question.&quot;,
+                    confidence=0.0,
+                    error=&quot;No passages retrieved&quot;
+                )
+
+            # Format context
+            context = &quot;\n\n&quot;.join(passages)
+
+            # Generate answer
+            result = self.generate(context=context, question=question)
+
+            # Validate confidence
+            try:
+                confidence = float(result.confidence)
+            except:
+                confidence = 0.5
+
+            # Low confidence warning
+            if confidence &lt; self.min_relevance:
+                result.warning = &quot;Low confidence answer&quot;
+
+            result.num_passages = len(passages)
+            return result
+
+        except Exception as e:
+            # Error handling
+            return dspy.Prediction(
+                answer=&quot;An error occurred while processing your question.&quot;,
+                confidence=0.0,
+                error=str(e)
+            )
+
+# Use production RAG
+rag = ProductionRAG(k=5, min_relevance=0.6)
+result = rag(question=&quot;What is DSPy?&quot;)
+
+print(f&quot;Answer: {result.answer}&quot;)
+print(f&quot;Confidence: {result.confidence}&quot;)
+if hasattr(result, &#x27;warning&#x27;):
+    print(f&quot;Warning: {result.warning}&quot;)</code></pre>
+<p><strong>Production features</strong>:</p>
+<ul><li>Error handling</li><li>Confidence scoring</li><li>Validation</li><li>Fallback responses</li><li>Logging/monitoring hooks</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Basic RAG Pattern</h3>
+<pre><code class="lang-python">class SimpleRAG(dspy.Module):
+    def __init__(self):
+        super().__init__()
+        self.retrieve = dspy.Retrieve(k=3)
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question):
+        passages = self.retrieve(question).passages
+        context = &quot;\n\n&quot;.join(passages)
+        return self.generate(context=context, question=question)</code></pre>
+<h3>Vector DB Setup</h3>
+<pre><code class="lang-python"># ChromaDB (local)
+import chromadb
+client = chromadb.Client()
+collection = client.create_collection(&quot;docs&quot;)
+rm = dspy.chromadb_rm.ChromadbRM(&quot;docs&quot;)
+
+# Weaviate (production)
+import weaviate
+client = weaviate.Client(&quot;http://localhost:8080&quot;)
+rm = dspy.WeaviateRM(&quot;Document&quot;, weaviate_client=client)
+
+# Configure DSPy
+dspy.settings.configure(rm=rm)</code></pre>
+<h3>RAG Best Practices</h3>
+<pre><code>✅ DO: Use reranking for better quality
+✅ DO: Include citations for transparency
+✅ DO: Optimize retrieval (k value, chunking strategy)
+✅ DO: Handle empty retrieval results
+✅ DO: Monitor retrieval quality
+
+❌ DON&#x27;T: Retrieve too many passages (context overflow)
+❌ DON&#x27;T: Skip passage deduplication
+❌ DON&#x27;T: Ignore retrieval failures
+❌ DON&#x27;T: Use RAG when LM already has knowledge</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Too many retrieved passages</strong>: Context overflow, slow generation</p>
+<pre><code class="lang-python"># Bad
+self.retrieve = dspy.Retrieve(k=50)  # Too many!</code></pre>
+<p>✅ Use reasonable k and rerank:</p>
+<pre><code class="lang-python"># Good
+self.retrieve = dspy.Retrieve(k=10)
+# Rerank to top 3</code></pre>
+<p>❌ <strong>No error handling</strong>: Crashes on retrieval failure</p>
+<pre><code class="lang-python"># Bad
+passages = self.retrieve(question).passages  # May fail!
+context = &quot;\n&quot;.join(passages)</code></pre>
+<p>✅ Handle errors:</p>
+<pre><code class="lang-python"># Good
+try:
+    passages = self.retrieve(question).passages
+    if not passages:
+        return fallback_response()
+except Exception as e:
+    log_error(e)
+    return error_response()</code></pre>
+<p>❌ <strong>Ignoring retrieval quality</strong>: Using irrelevant passages</p>
+<pre><code class="lang-python"># Bad - use all retrieved passages blindly
+passages = self.retrieve(question).passages
+context = &quot;\n&quot;.join(passages)  # May include irrelevant content</code></pre>
+<p>✅ Filter or rerank:</p>
+<pre><code class="lang-python"># Good - rerank or filter
+passages = self.retrieve(question).passages
+relevant = [p for p in passages if is_relevant(question, p)]
+context = &quot;\n&quot;.join(relevant)</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>dspy-modules.md</code> - Building RAG modules</li><li><code>dspy-optimizers.md</code> - Optimizing RAG pipelines</li><li><code>dspy-evaluation.md</code> - Evaluating RAG quality</li><li><code>database/mongodb-basics.md</code> - Document storage</li><li><code>database/postgres-query-optimization.md</code> - Metadata storage</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/dspy-rag.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

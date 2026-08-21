@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>formal-backtracking-search</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/formal-backtracking-search.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/formal-backtracking-search.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>formal-backtracking-search</h1><p class="lede">Implementing CSP solvers with systematic search</p><h1>Backtracking Search</h1>
+<p><strong>Scope</strong>: Backtracking search for CSPs, variable ordering heuristics, value ordering, optimization <strong>Lines</strong>: ~320 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Implementing CSP solvers with systematic search</li><li>Finding all solutions to constraint problems</li><li>Optimizing search with variable/value ordering heuristics</li><li>Solving scheduling, assignment, or configuration problems</li><li>Building puzzle solvers requiring exhaustive search</li><li>Implementing constraint-based optimization</li><li>Understanding CSP search performance tuning</li></ul>
+<h2>Core Concepts</h2>
+<h3>Backtracking Framework</h3>
+<p><strong>Basic algorithm</strong>: Depth-first search with constraint checking</p>
+<ol><li>Select unassigned variable</li><li>Try each value in variable&#x27;s domain</li><li>Check if assignment consistent with constraints</li><li>Recurse on remaining variables</li><li>Backtrack if no consistent assignment found</li></ol>
+<p><strong>Completeness</strong>: Explores entire search tree</p>
+<ul><li>Guaranteed to find solution if one exists</li><li>Can prove unsatisfiability by exhausting search space</li></ul>
+<p><strong>Performance</strong>: Exponential worst case O(d^n)</p>
+<ul><li>n variables, d domain size</li><li>Heuristics critical for practical performance</li></ul>
+<h3>Variable Ordering Heuristics</h3>
+<p><strong>Minimum Remaining Values (MRV)</strong>: Choose variable with fewest legal values</p>
+<ul><li>&quot;Most constrained variable&quot; or &quot;fail-first&quot; heuristic</li><li>Detects failures earlier, prunes search tree</li><li>Example: Sudoku cell with only 2 candidates vs cell with 7</li></ul>
+<p><strong>Degree heuristic</strong>: Tiebreaker for MRV</p>
+<ul><li>Choose variable involved in most constraints with unassigned variables</li><li>Reduces branching factor in future choices</li></ul>
+<p><strong>Dynamic ordering</strong>: Recompute best variable at each step</p>
+<ul><li>More expensive but more effective than static ordering</li><li>Standard approach in modern CSP solvers</li></ul>
+<h3>Value Ordering Heuristics</h3>
+<p><strong>Least Constraining Value (LCV)</strong>: Try value leaving most choices for other variables</p>
+<ul><li>Choose value that rules out fewest values in other domains</li><li>&quot;Most likely to succeed&quot; heuristic</li><li>Useful when finding any solution (not all solutions)</li></ul>
+<p><strong>Random ordering</strong>: No heuristic</p>
+<ul><li>Useful for unstructured problems</li><li>Simpler to implement</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Basic Backtracking Search</h3>
+<pre><code class="lang-python">def backtracking_search(variables, domains, constraints):
+    &quot;&quot;&quot;
+    Find solution to CSP using backtracking.
+
+    Returns:
+        Assignment (dict) if solution found, None otherwise
+    &quot;&quot;&quot;
+    return backtrack({}, variables, domains, constraints)
+
+def backtrack(assignment, variables, domains, constraints):
+    &quot;&quot;&quot;Recursive backtracking with constraint checking.&quot;&quot;&quot;
+    # Base case: assignment complete
+    if len(assignment) == len(variables):
+        return assignment
+
+    # Select unassigned variable
+    var = select_unassigned_variable(variables, assignment)
+
+    # Try each value in domain
+    for value in order_domain_values(var, domains):
+        # Check if assignment consistent
+        if is_consistent(var, value, assignment, constraints):
+            # Add to assignment
+            assignment[var] = value
+
+            # Recurse
+            result = backtrack(assignment, variables, domains, constraints)
+            if result is not None:
+                return result
+
+            # Backtrack: remove assignment
+            del assignment[var]
+
+    return None  # No solution found
+
+def is_consistent(var, value, assignment, constraints):
+    &quot;&quot;&quot;Check if var=value consistent with current assignment.&quot;&quot;&quot;
+    for other_var, other_value in assignment.items():
+        # Check constraint between var and other_var
+        if (var, other_var) in constraints:
+            constraint = constraints[(var, other_var)]
+            if not constraint(value, other_value):
+                return False
+
+        # Check reverse constraint
+        if (other_var, var) in constraints:
+            constraint = constraints[(other_var, var)]
+            if not constraint(other_value, value):
+                return False
+
+    return True</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Simple CSP problems</li><li>Educational implementations</li><li>Baseline for comparing optimizations</li></ul>
+<h3>Pattern 2: MRV (Minimum Remaining Values) Heuristic</h3>
+<pre><code class="lang-python">def select_unassigned_variable_mrv(variables, assignment, domains):
+    &quot;&quot;&quot;
+    Select variable with MRV heuristic.
+    Choose variable with fewest remaining legal values.
+    &quot;&quot;&quot;
+    unassigned = [v for v in variables if v not in assignment]
+
+    # Count remaining values for each variable
+    def count_values(var):
+        # If using domain reduction, count current domain size
+        return len(domains[var])
+
+    # Choose variable with minimum remaining values
+    mrv_var = min(unassigned, key=count_values)
+
+    return mrv_var
+
+def select_unassigned_variable_mrv_degree(
+    variables, assignment, domains, constraints
+):
+    &quot;&quot;&quot;
+    MRV with degree heuristic as tiebreaker.
+    Degree = number of constraints with unassigned variables.
+    &quot;&quot;&quot;
+    unassigned = [v for v in variables if v not in assignment]
+
+    def mrv_degree_key(var):
+        # Primary: MRV (fewer values better, so positive count)
+        mrv = len(domains[var])
+
+        # Secondary: Degree (more constraints better, so negative count)
+        degree = -sum(
+            1 for other_var in unassigned
+            if other_var != var and (
+                (var, other_var) in constraints or
+                (other_var, var) in constraints
+            )
+        )
+
+        return (mrv, degree)
+
+    return min(unassigned, key=mrv_degree_key)
+
+# Example usage
+variables = [&#x27;A&#x27;, &#x27;B&#x27;, &#x27;C&#x27;, &#x27;D&#x27;]
+domains = {
+    &#x27;A&#x27;: {1, 2, 3},      # 3 values
+    &#x27;B&#x27;: {1, 2},         # 2 values (MRV chooses this)
+    &#x27;C&#x27;: {1, 2, 3, 4},   # 4 values
+    &#x27;D&#x27;: {1, 2, 3}       # 3 values
+}
+assignment = {}
+
+var = select_unassigned_variable_mrv(variables, assignment, domains)
+print(var)  # &#x27;B&#x27;</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Prunes search tree earlier</li><li>10-100x speedup on many problems</li><li>Nearly always beneficial</li></ul>
+<h3>Pattern 3: LCV (Least Constraining Value) Heuristic</h3>
+<pre><code class="lang-python">def order_domain_values_lcv(var, assignment, domains, constraints):
+    &quot;&quot;&quot;
+    Order values using LCV heuristic.
+    Try value that rules out fewest choices for other variables first.
+    &quot;&quot;&quot;
+    def count_conflicts(value):
+        &quot;&quot;&quot;Count how many values ruled out in other domains.&quot;&quot;&quot;
+        conflicts = 0
+
+        for other_var in domains:
+            if other_var in assignment or other_var == var:
+                continue  # Skip assigned and self
+
+            # Count values in other_var ruled out by var=value
+            for other_value in domains[other_var]:
+                if (var, other_var) in constraints:
+                    constraint = constraints[(var, other_var)]
+                    if not constraint(value, other_value):
+                        conflicts += 1
+
+        return conflicts
+
+    # Sort values by number of conflicts (ascending)
+    values = sorted(domains[var], key=count_conflicts)
+    return values
+
+# Example
+def backtrack_with_heuristics(assignment, variables, domains, constraints):
+    &quot;&quot;&quot;Backtracking with MRV and LCV.&quot;&quot;&quot;
+    if len(assignment) == len(variables):
+        return assignment
+
+    # MRV: Select most constrained variable
+    var = select_unassigned_variable_mrv(variables, assignment, domains)
+
+    # LCV: Try least constraining values first
+    values = order_domain_values_lcv(var, assignment, domains, constraints)
+
+    for value in values:
+        if is_consistent(var, value, assignment, constraints):
+            assignment[var] = value
+            result = backtrack_with_heuristics(
+                assignment, variables, domains, constraints
+            )
+            if result is not None:
+                return result
+            del assignment[var]
+
+    return None</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Finding single solution (not all solutions)</li><li>Domains have many values</li><li>Constraints are tight</li></ul>
+<h3>Pattern 4: Backtracking with Forward Checking</h3>
+<pre><code class="lang-python">def backtrack_fc(assignment, domains, variables, constraints):
+    &quot;&quot;&quot;Backtracking with forward checking (domain pruning).&quot;&quot;&quot;
+    if len(assignment) == len(variables):
+        return assignment
+
+    var = select_unassigned_variable_mrv(variables, assignment, domains)
+
+    for value in domains[var]:
+        if is_consistent(var, value, assignment, constraints):
+            # Save current domains
+            saved_domains = {v: d.copy() for v, d in domains.items()}
+
+            # Assign and forward check
+            assignment[var] = value
+            domains[var] = {value}
+
+            # Prune domains of unassigned variables
+            pruned = forward_check(var, value, domains, constraints, assignment)
+
+            if pruned:  # No domain wipeout
+                result = backtrack_fc(
+                    assignment, domains, variables, constraints
+                )
+                if result is not None:
+                    return result
+
+            # Restore domains and backtrack
+            domains.update(saved_domains)
+            del assignment[var]
+
+    return None
+
+def forward_check(var, value, domains, constraints, assignment):
+    &quot;&quot;&quot;
+    Prune domains after assigning var=value.
+    Returns False if any domain becomes empty.
+    &quot;&quot;&quot;
+    for other_var in domains:
+        if other_var in assignment or other_var == var:
+            continue
+
+        if (var, other_var) in constraints:
+            constraint = constraints[(var, other_var)]
+
+            # Remove inconsistent values from other_var
+            to_remove = []
+            for other_value in domains[other_var]:
+                if not constraint(value, other_value):
+                    to_remove.append(other_value)
+
+            for v in to_remove:
+                domains[other_var].discard(v)
+
+            # Check for domain wipeout
+            if len(domains[other_var]) == 0:
+                return False
+
+    return True</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Detects failures earlier than plain backtracking</li><li>Reduces search tree size significantly</li><li>Standard optimization in CSP solvers</li></ul>
+<h3>Pattern 5: Finding All Solutions</h3>
+<pre><code class="lang-python">def find_all_solutions(variables, domains, constraints):
+    &quot;&quot;&quot;Find all solutions to CSP.&quot;&quot;&quot;
+    solutions = []
+
+    def backtrack_all(assignment):
+        if len(assignment) == len(variables):
+            # Found complete assignment
+            solutions.append(assignment.copy())
+            return
+
+        var = select_unassigned_variable_mrv(variables, assignment, domains)
+
+        for value in domains[var]:
+            if is_consistent(var, value, assignment, constraints):
+                assignment[var] = value
+                backtrack_all(assignment)  # Don&#x27;t return early
+                del assignment[var]
+
+    backtrack_all({})
+    return solutions
+
+# Example: All 4-Queens solutions
+variables = list(range(4))
+domains = {i: {0, 1, 2, 3} for i in range(4)}
+
+def no_attack_constraint(col1, col2, row1, row2):
+    &quot;&quot;&quot;Queens don&#x27;t attack each other.&quot;&quot;&quot;
+    return (col1 != col2 and  # Different columns
+            abs(row1 - row2) != abs(col1 - col2))  # Not diagonal
+
+constraints = {
+    (i, j): (lambda c1, c2, r1=i, r2=j:
+             no_attack_constraint(c1, c2, r1, r2))
+    for i in range(4) for j in range(i + 1, 4)
+}
+
+all_solutions = find_all_solutions(variables, domains, constraints)
+print(f&quot;Found {len(all_solutions)} solutions&quot;)  # 2 solutions</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Generating all puzzle solutions</li><li>Enumerating configurations</li><li>Checking solution uniqueness</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Heuristic Combinations</h3>
+<p>| Variable Order | Value Order | Use Case | Performance | |----------------|-------------|----------|-------------| | Static | Static | Baseline | Worst | | MRV | Static | Medium problems | Good | | MRV + Degree | Static | Tight constraints | Better | | MRV | LCV | Single solution | Best | | MRV + Degree | LCV | Complex CSPs | Best |</p>
+<h3>Search Enhancements</h3>
+<pre><code>Technique               | Overhead | Benefit        | When to Use
+------------------------|----------|----------------|------------------
+Forward Checking        | Low      | Medium         | Always
+Maintaining Arc-3       | Medium   | High           | Tight constraints
+Conflict Backjumping    | Medium   | High           | Deep search trees
+Symmetry Breaking       | Low      | Problem-dep    | Symmetric problems
+Randomization + Restart | Low      | Problem-dep    | Heavy-tailed dist</code></pre>
+<h3>Implementation Tips</h3>
+<pre><code>✅ DO: Use MRV heuristic (almost always helps)
+✅ DO: Implement forward checking
+✅ DO: Copy domains when backtracking (not references)
+✅ DO: Use degree heuristic as MRV tiebreaker
+❌ DON&#x27;T: Recompute static information in loops
+❌ DON&#x27;T: Use LCV when finding all solutions (overhead wasted)
+❌ DON&#x27;T: Forget to restore state when backtracking
+❌ DON&#x27;T: Use recursion depth for very large problems (use iterative)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Static variable ordering</strong></p>
+<pre><code class="lang-python"># Inefficient: Always tries variables in same order
+for var in variables:
+    if var not in assignment:
+        return var</code></pre>
+<p>✅ Use MRV to choose most constrained variable</p>
+<p>❌ <strong>No domain pruning</strong></p>
+<pre><code class="lang-python"># Slow: Checks all constraints at assignment time only
+if is_consistent(var, value, assignment, constraints):
+    assignment[var] = value</code></pre>
+<p>✅ Use forward checking to prune domains early</p>
+<p>❌ <strong>Computing LCV for all solutions</strong></p>
+<pre><code class="lang-python"># Wasteful: LCV overhead without benefit
+def backtrack_all(assignment):
+    # ... finding all solutions
+    values = order_domain_values_lcv(var, ...)  # Wasted work</code></pre>
+<p>✅ Use LCV only when finding single solution</p>
+<p>❌ <strong>Modifying shared domain objects</strong></p>
+<pre><code class="lang-python"># Bug: Modifying domain affects all branches
+domains[var].remove(value)  # Side effect!
+backtrack(assignment, domains, ...)</code></pre>
+<p>✅ Copy domains before modification</p>
+<p>❌ <strong>Deep recursion without iterative alternative</strong></p>
+<pre><code class="lang-python"># Risk: Stack overflow on large problems
+def backtrack(assignment, ...):
+    return backtrack(assignment, ...)  # 1000+ levels</code></pre>
+<p>✅ Implement iterative version or increase stack limit</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>csp-modeling.md</code> - Defining CSP problems and variables</li><li><code>constraint-propagation.md</code> - Domain reduction techniques</li><li><code>sat-solving-strategies.md</code> - Boolean constraint solving</li><li><code>optimization-algorithms.md</code> - Optimization with constraints</li><li><code>graph-algorithms.md</code> - Graph coloring and constraint graphs</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/formal-backtracking-search.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

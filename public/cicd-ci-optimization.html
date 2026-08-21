@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cicd-ci-optimization</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/cicd-ci-optimization.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/cicd-ci-optimization.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>cicd-ci-optimization</h1><p class="lede">CI pipelines are taking too long (&gt;10 minutes for feedback)</p><h1>CI Optimization</h1>
+<p><strong>Scope</strong>: Pipeline speed optimization, caching strategies, parallelization, incremental builds, and resource efficiency</p>
+<p><strong>Lines</strong>: 370</p>
+<p><strong>Last Updated</strong>: 2025-10-18</p>
+<p><strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>CI pipelines are taking too long (&gt;10 minutes for feedback)</li><li>Optimizing build times and test execution</li><li>Reducing CI costs and resource usage</li><li>Implementing efficient caching strategies</li><li>Parallelizing independent tasks</li><li>Setting up incremental builds</li><li>Optimizing Docker image builds</li><li>Reducing dependency installation time</li></ul>
+<p>Don&#x27;t use this skill for:</p>
+<ul><li>Basic workflow configuration (see <code>github-actions-workflows.md</code>)</li><li>Testing strategies (see <code>ci-testing-strategy.md</code>)</li><li>Deployment patterns (see <code>cd-deployment-patterns.md</code>)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Optimization Hierarchy</h3>
+<pre><code>1. Eliminate unnecessary work    ← Biggest impact
+2. Parallelize independent tasks
+3. Cache expensive operations
+4. Optimize hot paths
+5. Tune resource allocation      ← Smallest impact</code></pre>
+<h3>Pipeline Stages by Cost</h3>
+<pre><code>Stage              | Time  | Cost | Optimization Priority
+───────────────────|───────|──────|──────────────────────
+Lint               | 10s   | $    | ★
+Unit Tests         | 1m    | $    | ★★
+Build              | 3m    | $$   | ★★★★
+Integration Tests  | 5m    | $$$  | ★★★★★
+E2E Tests          | 15m   | $$$$ | ★★★★★
+Deployment         | 2m    | $$   | ★★</code></pre>
+<h3>Feedback Loop Target</h3>
+<pre><code>Critical: &lt; 5 minutes  (lint + unit tests)
+Standard: &lt; 10 minutes (+ build + integration)
+Extended: &lt; 30 minutes (+ E2E tests)</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Dependency Caching Strategies</h3>
+<pre><code class="lang-yaml">jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node.js - automatic caching
+      - uses: actions/setup-node@v4
+        with:
+          node-version: &#x27;20&#x27;
+          cache: &#x27;npm&#x27;
+      - run: npm ci
+
+      # Python - uv with caching
+      - uses: actions/setup-python@v5
+        with:
+          python-version: &#x27;3.12&#x27;
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles(&#x27;**/pyproject.toml&#x27;) }}
+      - run: uv sync
+
+      # Rust - cargo caching
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles(&#x27;**/Cargo.lock&#x27;) }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # Go - module caching
+      - uses: actions/setup-go@v5
+        with:
+          go-version: &#x27;1.22&#x27;
+          cache: true
+      - run: go build ./...
+
+      # Gradle - build caching
+      - uses: actions/setup-java@v4
+        with:
+          java-version: &#x27;21&#x27;
+          distribution: &#x27;temurin&#x27;
+          cache: &#x27;gradle&#x27;
+      - run: ./gradlew build</code></pre>
+<h3>Docker Layer Caching</h3>
+<pre><code class="lang-yaml">jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Docker buildx with cache
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and cache
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: myapp:${{ github.sha }}
+
+      # Multi-stage build optimization
+      - name: Build with optimized Dockerfile
+        run: docker build -t myapp:${{ github.sha }} .</code></pre>
+<p><strong>Optimized Dockerfile:</strong></p>
+<pre><code class="lang-dockerfile"># Use specific versions for reproducibility
+FROM node:20-alpine AS deps
+WORKDIR /app
+
+# Copy only dependency files first (best caching)
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
+
+# Build stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Production stage (smallest image)
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY package.json ./
+
+CMD [&quot;node&quot;, &quot;dist/index.js&quot;]</code></pre>
+<h3>Parallel Job Execution</h3>
+<pre><code class="lang-yaml">jobs:
+  # Fast feedback jobs run in parallel
+  lint:
+    runs-on: ubuntu-latest
+    steps: [...]
+
+  type-check:
+    runs-on: ubuntu-latest
+    steps: [...]
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - run: npm test -- --shard=${{ matrix.shard }}/4
+
+  # Dependent jobs only after fast checks pass
+  build:
+    needs: [lint, type-check, unit-tests]
+    runs-on: ubuntu-latest
+    steps: [...]
+
+  integration-tests:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        suite: [api, database, external]
+    steps:
+      - run: npm run test:${{ matrix.suite }}</code></pre>
+<h3>Incremental Builds</h3>
+<pre><code class="lang-yaml">jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for change detection
+
+      # Detect changed files
+      - name: Get changed files
+        id: changed
+        run: |
+          if git rev-parse HEAD^ &gt;/dev/null 2&gt;&amp;1; then
+            echo &quot;files=$(git diff --name-only HEAD^ HEAD | tr &#x27;\n&#x27; &#x27; &#x27;)&quot; &gt;&gt; $GITHUB_OUTPUT
+          else
+            echo &quot;files=all&quot; &gt;&gt; $GITHUB_OUTPUT
+          fi
+
+      # Skip build if only docs changed
+      - name: Skip build check
+        id: skip
+        run: |
+          if [[ &quot;${{ steps.changed.outputs.files }}&quot; =~ ^(README|docs/).* ]]; then
+            echo &quot;skip=true&quot; &gt;&gt; $GITHUB_OUTPUT
+          else
+            echo &quot;skip=false&quot; &gt;&gt; $GITHUB_OUTPUT
+          fi
+
+      # Build only changed packages (monorepo)
+      - name: Build changed packages
+        if: steps.skip.outputs.skip == &#x27;false&#x27;
+        run: |
+          npx lerna run build --since HEAD^ --include-dependencies
+
+      # Turborepo incremental builds
+      - name: Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Build with Turborepo
+        run: npx turbo run build --cache-dir=.turbo</code></pre>
+<h3>Conditional Job Execution</h3>
+<pre><code class="lang-yaml">jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      docs: ${{ steps.filter.outputs.docs }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            backend:
+              - &#x27;src/backend/**&#x27;
+              - &#x27;package.json&#x27;
+            frontend:
+              - &#x27;src/frontend/**&#x27;
+              - &#x27;package.json&#x27;
+            docs:
+              - &#x27;docs/**&#x27;
+              - &#x27;*.md&#x27;
+
+  test-backend:
+    needs: changes
+    if: needs.changes.outputs.backend == &#x27;true&#x27;
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm run test:backend
+
+  test-frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == &#x27;true&#x27;
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm run test:frontend
+
+  deploy-docs:
+    needs: changes
+    if: needs.changes.outputs.docs == &#x27;true&#x27;
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm run deploy:docs</code></pre>
+<h3>Optimized Test Execution</h3>
+<pre><code class="lang-yaml">jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Cache test fixtures
+      - name: Cache test fixtures
+        uses: actions/cache@v4
+        with:
+          path: test/fixtures
+          key: fixtures-${{ hashFiles(&#x27;scripts/generate-fixtures.sh&#x27;) }}
+
+      # Run only affected tests
+      - name: Run affected tests
+        run: |
+          npm test -- --onlyChanged --changedSince=origin/main
+
+      # Fail fast - run fast tests first
+      - name: Run fast unit tests
+        run: npm test -- --testPathPattern=unit --maxWorkers=4
+
+      - name: Run slow integration tests
+        if: success()
+        run: npm test -- --testPathPattern=integration --maxWorkers=2
+
+      # Test sharding for parallelization
+      - name: Run tests with sharding
+        run: npm test -- --shard=${{ matrix.shard }}/4 --maxWorkers=50%</code></pre>
+<h3>Resource Optimization</h3>
+<pre><code class="lang-yaml">jobs:
+  build:
+    runs-on: ubuntu-latest-8-cores  # Use larger runner for compute-heavy tasks
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Optimize compilation with ccache
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-ccache-${{ github.sha }}
+
+      # Parallel compilation
+      - name: Build with parallel jobs
+        run: |
+          export MAKEFLAGS=&quot;-j$(nproc)&quot;
+          make all
+
+      # Optimize Node.js memory
+      - name: Build with increased memory
+        run: NODE_OPTIONS=&quot;--max-old-space-size=4096&quot; npm run build
+
+      # Rust release build optimization
+      - name: Cargo build
+        run: |
+          # Use all CPU cores
+          cargo build --release -j $(nproc)
+        env:
+          CARGO_INCREMENTAL: 1</code></pre>
+<h3>Matrix Strategy Optimization</h3>
+<pre><code class="lang-yaml">jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # Test critical combinations first
+        include:
+          # Tier 1: Most common (fail fast)
+          - os: ubuntu-latest
+            node: 20
+            priority: 1
+          - os: ubuntu-latest
+            node: 22
+            priority: 1
+
+          # Tier 2: Important but less common
+          - os: macos-latest
+            node: 20
+            priority: 2
+          - os: windows-latest
+            node: 20
+            priority: 2
+
+      # Run tier 1 first
+      fail-fast: true
+      max-parallel: 4
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Skip expensive setup for quick tests
+      - name: Quick validation
+        if: github.event_name == &#x27;pull_request&#x27;
+        run: npm run lint &amp;&amp; npm run test:unit
+
+      # Full test suite for main branch
+      - name: Full test suite
+        if: github.ref == &#x27;refs/heads/main&#x27;
+        run: npm test</code></pre>
+<h3>Artifact Optimization</h3>
+<pre><code class="lang-yaml">jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm run build
+
+      # Upload only necessary artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1  # Short retention for CI artifacts
+          compression-level: 9  # Maximum compression
+
+      # Exclude unnecessary files
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            logs/
+            !logs/*.debug
+            !logs/temp/
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      # Download only needed artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - run: npm test</code></pre>
+<h3>Remote Caching (Turborepo)</h3>
+<pre><code class="lang-yaml">jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Turborepo remote caching
+      - name: Setup Turborepo cache
+        run: |
+          echo &quot;TURBO_TOKEN=${{ secrets.TURBO_TOKEN }}&quot; &gt;&gt; $GITHUB_ENV
+          echo &quot;TURBO_TEAM=${{ secrets.TURBO_TEAM }}&quot; &gt;&gt; $GITHUB_ENV
+
+      - name: Build with remote cache
+        run: |
+          npx turbo run build test --cache-dir=.turbo
+
+      # Results cached across runs and branches</code></pre>
+<h3>Workflow Reuse for Common Tasks</h3>
+<pre><code class="lang-yaml"># .github/workflows/reusable-test.yml
+name: Reusable Test
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        type: string
+        default: &#x27;20&#x27;
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: &#x27;npm&#x27;
+      - run: npm ci
+      - run: npm test</code></pre>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-yaml"># .github/workflows/ci.yml
+jobs:
+  test-node-20:
+    uses: ./.github/workflows/reusable-test.yml
+    with:
+      node-version: &#x27;20&#x27;
+
+  test-node-22:
+    uses: ./.github/workflows/reusable-test.yml
+    with:
+      node-version: &#x27;22&#x27;</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Cache Key Patterns</h3>
+<pre><code class="lang-yaml"># Dependencies
+key: ${{ runner.os }}-deps-${{ hashFiles(&#x27;**/package-lock.json&#x27;) }}
+
+# Build artifacts
+key: ${{ runner.os }}-build-${{ github.sha }}
+
+# Test fixtures
+key: fixtures-${{ hashFiles(&#x27;scripts/generate-fixtures.sh&#x27;) }}
+
+# With restore keys
+key: ${{ runner.os }}-cache-${{ github.sha }}
+restore-keys: |
+  ${{ runner.os }}-cache-
+  ${{ runner.os }}-</code></pre>
+<h3>Runner Selection</h3>
+<pre><code class="lang-yaml"># Standard (2-core)
+runs-on: ubuntu-latest
+
+# Larger runners (8-core, 16-core)
+runs-on: ubuntu-latest-8-cores
+
+# GPU runners
+runs-on: [self-hosted, gpu]
+
+# ARM runners
+runs-on: [self-hosted, ARM64]</code></pre>
+<h3>Time-to-Feedback Targets</h3>
+<pre><code class="lang-yaml">Lint:            &lt; 30s
+Unit Tests:      &lt; 2m
+Build:           &lt; 3m
+Integration:     &lt; 5m
+Total Feedback:  &lt; 10m</code></pre>
+<h3>Optimization Checklist</h3>
+<pre><code class="lang-yaml">[ ] Dependencies cached
+[ ] Docker layers optimized
+[ ] Tests parallelized
+[ ] Artifacts minimized
+[ ] Conditional execution enabled
+[ ] Incremental builds configured
+[ ] Fast tests run first
+[ ] Appropriate runner size</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ No Caching</h3>
+<pre><code class="lang-yaml"># WRONG: Install every time
+- run: npm install</code></pre>
+<pre><code class="lang-yaml"># CORRECT: Cache dependencies
+- uses: actions/setup-node@v4
+  with:
+    cache: &#x27;npm&#x27;
+- run: npm ci</code></pre>
+<h3>❌ Sequential When Parallel is Possible</h3>
+<pre><code class="lang-yaml"># WRONG: Sequential jobs
+jobs:
+  test-unit:
+    steps: [...]
+  test-integration:
+    needs: test-unit
+    steps: [...]</code></pre>
+<pre><code class="lang-yaml"># CORRECT: Parallel independent jobs
+jobs:
+  test-unit:
+    steps: [...]
+  test-integration:
+    steps: [...]</code></pre>
+<h3>❌ Full Rebuild Every Time</h3>
+<pre><code class="lang-yaml"># WRONG: Clean build (inefficient - defeats caching)
+- run: rm -rf dist node_modules
+- run: npm install
+- run: npm run build</code></pre>
+<pre><code class="lang-yaml"># CORRECT: Incremental build
+- uses: actions/cache@v4
+  with:
+    path: |
+      node_modules
+      .turbo
+    key: ${{ runner.os }}-build-${{ hashFiles(&#x27;**/package-lock.json&#x27;) }}
+- run: npm ci
+- run: npx turbo build</code></pre>
+<h3>❌ Inefficient Docker Layers</h3>
+<pre><code class="lang-dockerfile"># WRONG: Copy everything, then install
+COPY . .
+RUN npm install</code></pre>
+<pre><code class="lang-dockerfile"># CORRECT: Copy deps first, then code
+COPY package*.json ./
+RUN npm ci
+COPY . .</code></pre>
+<h3>❌ Running All Tests on Doc Changes</h3>
+<pre><code class="lang-yaml"># WRONG: Test everything
+on: [push]
+jobs:
+  test:
+    steps: [run all tests]</code></pre>
+<pre><code class="lang-yaml"># CORRECT: Conditional execution
+jobs:
+  changes:
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+  test:
+    needs: changes
+    if: needs.changes.outputs.code == &#x27;true&#x27;
+    steps: [run tests]</code></pre>
+<h3>❌ Not Using Fail-Fast</h3>
+<pre><code class="lang-yaml"># WRONG: Run all matrix jobs even if one fails
+strategy:
+  matrix:
+    version: [18, 20, 22]</code></pre>
+<pre><code class="lang-yaml"># CORRECT: Fail fast for quick feedback
+strategy:
+  fail-fast: true
+  matrix:
+    version: [18, 20, 22]</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>github-actions-workflows.md</code> - Workflow configuration basics</li><li><code>ci-testing-strategy.md</code> - Test execution optimization</li><li><code>cd-deployment-patterns.md</code> - Deployment optimization</li><li><code>ci-security.md</code> - Security scanning performance</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18</p>
+<p><strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/cicd-ci-optimization.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

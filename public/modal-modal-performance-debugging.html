@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>modal-modal-performance-debugging</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/modal-modal-performance-debugging.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/modal-modal-performance-debugging.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>modal-modal-performance-debugging</h1><p class="lede">Modal functions running slower than expected</p><h1>Modal Performance Debugging</h1>
+<p><strong>Scope</strong>: Modal.com performance profiling, optimization, and cost reduction <strong>Lines</strong>: ~350 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Modal functions running slower than expected</li><li>Experiencing high cloud costs on Modal</li><li>GPU utilization is low despite allocation</li><li>Cold start times are excessive</li><li>Container initialization is slow</li><li>Functions timeout due to performance issues</li><li>Need to profile and optimize Modal workloads</li></ul>
+<h2>Core Concepts</h2>
+<h3>Performance Bottlenecks</h3>
+<p><strong>Cold starts</strong>: Time to initialize new container</p>
+<ul><li>Image download and extraction</li><li>Package imports</li><li>Model loading</li><li>Checkpoint restoration</li></ul>
+<p><strong>Warm starts</strong>: Time to reuse existing container</p>
+<ul><li>Function execution only</li><li>Significantly faster than cold starts</li><li>Depends on container reuse strategy</li></ul>
+<p><strong>Execution time</strong>: Actual function runtime</p>
+<ul><li>Business logic performance</li><li>GPU/CPU utilization</li><li>Network I/O</li><li>Disk I/O</li></ul>
+<p><strong>Resource efficiency</strong>: Utilization vs allocation</p>
+<ul><li>GPU memory usage vs allocated</li><li>CPU usage vs allocated cores</li><li>Memory usage vs allocated RAM</li><li>Cost = allocation time, not usage time</li></ul>
+<h3>Performance Metrics</h3>
+<p><strong>Key metrics to track</strong>:</p>
+<ul><li>Cold start time (container init)</li><li>Warm start time (function only)</li><li>Execution time (business logic)</li><li>GPU utilization (%)</li><li>Memory peak usage (MB)</li><li>Cost per invocation ($)</li></ul>
+<p><strong>How to measure</strong>:</p>
+<pre><code class="lang-python">import time
+import modal
+
+@app.function()
+def measure_performance():
+    start = time.time()
+
+    # Your code here
+    result = expensive_operation()
+
+    duration = time.time() - start
+    print(f&quot;Execution time: {duration:.2f}s&quot;)
+    return result</code></pre>
+<h3>Cost Optimization</h3>
+<p><strong>Cost factors</strong>:</p>
+<ul><li>Container runtime (billed per second)</li><li>GPU type and quantity</li><li>Memory allocation</li><li>CPU allocation</li><li>Cold start overhead</li></ul>
+<p><strong>Cost formula</strong>:</p>
+<pre><code>Total Cost = (Container Runtime) × (Resource Rate)
+Container Runtime = Cold Start + Execution Time</code></pre>
+<p><strong>Optimization strategy</strong>:</p>
+<ol><li>Reduce cold starts (keep containers warm)</li><li>Minimize execution time (optimize code)</li><li>Right-size resources (don&#x27;t over-allocate)</li><li>Use cheaper GPUs when possible</li></ol>
+<hr>
+<h2>Patterns</h2>
+<h3>Profiling Modal Functions</h3>
+<h4>Basic execution profiling</h4>
+<pre><code class="lang-python">import time
+import modal
+
+app = modal.App(&quot;profiling-demo&quot;)
+
+@app.function()
+def profile_execution():
+    &quot;&quot;&quot;Profile different stages of execution&quot;&quot;&quot;
+    stages = {}
+
+    # Stage 1: Data loading
+    start = time.time()
+    data = load_data()
+    stages[&quot;data_loading&quot;] = time.time() - start
+
+    # Stage 2: Processing
+    start = time.time()
+    result = process_data(data)
+    stages[&quot;processing&quot;] = time.time() - start
+
+    # Stage 3: Output
+    start = time.time()
+    save_result(result)
+    stages[&quot;saving&quot;] = time.time() - start
+
+    # Print profiling results
+    total = sum(stages.values())
+    print(f&quot;\nPerformance Profile:&quot;)
+    for stage, duration in stages.items():
+        pct = (duration / total) * 100
+        print(f&quot;  {stage}: {duration:.2f}s ({pct:.1f}%)&quot;)
+    print(f&quot;  Total: {total:.2f}s&quot;)
+
+    return result</code></pre>
+<h4>GPU utilization profiling</h4>
+<pre><code class="lang-python">import modal
+
+# Add nvidia-smi to image
+image = modal.Image.debian_slim().apt_install(&quot;nvidia-utils&quot;)
+
+@app.function(gpu=&quot;A10G&quot;, image=image)
+def profile_gpu():
+    &quot;&quot;&quot;Monitor GPU utilization during execution&quot;&quot;&quot;
+    import subprocess
+    import time
+
+    def get_gpu_stats():
+        result = subprocess.run(
+            [&quot;nvidia-smi&quot;, &quot;--query-gpu=utilization.gpu,memory.used&quot;,
+             &quot;--format=csv,noheader,nounits&quot;],
+            capture_output=True,
+            text=True
+        )
+        util, mem = result.stdout.strip().split(&quot;, &quot;)
+        return int(util), int(mem)
+
+    # Sample GPU stats during execution
+    stats = []
+    start = time.time()
+
+    # Run workload
+    for i in range(100):
+        # Your GPU work here
+        compute_intensive_task()
+
+        if i % 10 == 0:
+            util, mem = get_gpu_stats()
+            stats.append((time.time() - start, util, mem))
+
+    # Analyze GPU utilization
+    avg_util = sum(s[1] for s in stats) / len(stats)
+    avg_mem = sum(s[2] for s in stats) / len(stats)
+
+    print(f&quot;\nGPU Performance:&quot;)
+    print(f&quot;  Average utilization: {avg_util:.1f}%&quot;)
+    print(f&quot;  Average memory used: {avg_mem} MB&quot;)
+    print(f&quot;  Peak memory: {max(s[2] for s in stats)} MB&quot;)
+
+    if avg_util &lt; 50:
+        print(&quot;⚠️  WARNING: Low GPU utilization. Consider CPU-only.&quot;)
+
+    return stats</code></pre>
+<h3>Cold Start Optimization</h3>
+<h4>Minimize image size</h4>
+<pre><code class="lang-python"># ❌ Bad: Large image with unnecessary packages
+image = modal.Image.debian_slim().uv_pip_install(
+    &quot;transformers[torch]&quot;,  # Includes all dependencies
+    &quot;tensorflow&quot;,           # Not needed
+    &quot;scipy&quot;,                # Not needed
+    &quot;matplotlib&quot;            # Not needed
+)
+
+# ✅ Good: Minimal image
+image = modal.Image.debian_slim().uv_pip_install(
+    &quot;torch&quot;,
+    &quot;transformers&quot;  # Only what&#x27;s needed
+)
+
+# ✅ Better: Layer commonly used packages
+base_image = modal.Image.debian_slim().uv_pip_install(
+    &quot;torch&quot;,
+    &quot;transformers&quot;
+)
+
+# Cache this as base, add specific deps per function
+specialized_image = base_image.uv_pip_install(&quot;sentencepiece&quot;)</code></pre>
+<h4>Lazy imports for faster cold starts</h4>
+<pre><code class="lang-python"># ❌ Bad: Import heavy libraries at module level
+import torch
+import transformers
+import numpy as np
+
+@app.function()
+def inference(text: str):
+    model = transformers.AutoModel.from_pretrained(&quot;model&quot;)
+    # Cold start includes import time
+
+# ✅ Good: Lazy imports inside function
+@app.function()
+def inference(text: str):
+    import torch  # Only imported when function runs
+    import transformers
+
+    model = transformers.AutoModel.from_pretrained(&quot;model&quot;)
+    # Faster cold start
+
+# ✅ Better: Use container lifecycle for expensive ops
+@app.cls()
+class InferenceService:
+    @modal.enter()
+    def load_model(self):
+        &quot;&quot;&quot;Runs once per container, not per invocation&quot;&quot;&quot;
+        import torch
+        import transformers
+
+        self.model = transformers.AutoModel.from_pretrained(&quot;model&quot;)
+        print(&quot;Model loaded (once per container)&quot;)
+
+    @modal.method()
+    def inference(self, text: str):
+        # Model already loaded, super fast warm starts
+        return self.model(text)</code></pre>
+<h4>Checkpoint optimization</h4>
+<pre><code class="lang-python">import modal
+
+# ❌ Bad: Download model every cold start
+@app.function(gpu=&quot;A10G&quot;)
+def slow_inference():
+    from transformers import AutoModel
+
+    # Downloads ~2GB every cold start
+    model = AutoModel.from_pretrained(&quot;large-model&quot;)
+    return model
+
+# ✅ Good: Use Volume to cache model
+volume = modal.Volume.from_name(&quot;model-cache&quot;, create_if_missing=True)
+
+@app.function(
+    gpu=&quot;A10G&quot;,
+    volumes={&quot;/cache&quot;: volume}
+)
+def fast_inference():
+    from transformers import AutoModel
+    import os
+
+    cache_dir = &quot;/cache/models&quot;
+    os.makedirs(cache_dir, exist_ok=True)
+
+    # Downloads once, then cached
+    model = AutoModel.from_pretrained(
+        &quot;large-model&quot;,
+        cache_dir=cache_dir
+    )
+    return model
+
+# ✅ Better: Pre-download during image build
+def download_model():
+    from transformers import AutoModel
+    AutoModel.from_pretrained(
+        &quot;large-model&quot;,
+        cache_dir=&quot;/model&quot;
+    )
+
+image = (
+    modal.Image.debian_slim()
+    .uv_pip_install(&quot;transformers&quot;, &quot;torch&quot;)
+    .run_function(download_model)  # Download during build
+)
+
+@app.function(gpu=&quot;A10G&quot;, image=image)
+def fastest_inference():
+    from transformers import AutoModel
+
+    # Model already in image, instant load
+    model = AutoModel.from_pretrained(&quot;large-model&quot;, cache_dir=&quot;/model&quot;)
+    return model</code></pre>
+<h3>Container Reuse Optimization</h3>
+<h4>Keep containers warm</h4>
+<pre><code class="lang-python"># ❌ Bad: Containers die after each call
+@app.function(timeout=60)
+def process():
+    # Container dies after 60s timeout
+    expensive_setup()
+    do_work()
+
+# ✅ Good: Use keep_warm to maintain pool
+@app.function(
+    keep_warm=1,  # Keep 1 container always ready
+    timeout=300
+)
+def process():
+    expensive_setup()  # Only runs on cold start
+    do_work()
+
+# ✅ Better: Use cls with lifecycle management
+@app.cls(keep_warm=2)  # Keep 2 containers warm
+class Processor:
+    @modal.enter()
+    def setup(self):
+        &quot;&quot;&quot;Runs once per container&quot;&quot;&quot;
+        self.expensive_resource = load_large_model()
+        print(&quot;Setup complete (once per container)&quot;)
+
+    @modal.method()
+    def process(self, data):
+        &quot;&quot;&quot;Reuses warm container and setup&quot;&quot;&quot;
+        return self.expensive_resource.process(data)</code></pre>
+<h4>Concurrency tuning</h4>
+<pre><code class="lang-python"># ❌ Bad: One call per container (inefficient)
+@app.function()
+def handle_request(data):
+    return process(data)
+
+# ✅ Good: Allow concurrent calls on same container
+@app.function(
+    concurrency_limit=10,  # 10 calls per container
+    keep_warm=2            # 2 containers = 20 concurrent
+)
+def handle_request(data):
+    return process(data)
+
+# ⚠️ Caution: Only for thread-safe workloads
+# Not suitable for GPU workloads (GPU is exclusive)</code></pre>
+<h3>GPU Performance Optimization</h3>
+<h4>Right-size GPU allocation</h4>
+<pre><code class="lang-python"># ❌ Bad: Over-allocated GPU
+@app.function(gpu=&quot;H100&quot;)  # 80GB VRAM, expensive
+def small_model_inference():
+    # Only uses 4GB VRAM, wastes 76GB
+    model = load_small_model()
+    return model.predict()
+
+# ✅ Good: Match GPU to workload
+@app.function(gpu=&quot;T4&quot;)  # 16GB VRAM, much cheaper
+def small_model_inference():
+    # Uses 4GB, T4 is sufficient
+    model = load_small_model()
+    return model.predict()
+
+# ✅ Better: Profile first, then choose GPU
+@app.function(gpu=&quot;A10G&quot;)  # Test with mid-tier
+def profile_gpu_needs():
+    import torch
+
+    model = load_model()
+
+    # Check memory usage
+    allocated = torch.cuda.memory_allocated() / 1e9
+    reserved = torch.cuda.memory_reserved() / 1e9
+
+    print(f&quot;GPU Memory - Allocated: {allocated:.2f}GB, Reserved: {reserved:.2f}GB&quot;)
+
+    # Based on results:
+    # &lt; 8GB: Use T4
+    # 8-24GB: Use L40S or A10G
+    # &gt; 24GB: Use A100 or H100
+
+    return model.predict()</code></pre>
+<h4>Batch processing for throughput</h4>
+<pre><code class="lang-python"># ❌ Bad: Process one item at a time
+@app.function(gpu=&quot;A10G&quot;)
+def process_items(items: list):
+    results = []
+    for item in items:
+        result = model.predict(item)  # Underutilizes GPU
+        results.append(result)
+    return results
+
+# ✅ Good: Batch processing
+@app.function(gpu=&quot;A10G&quot;)
+def process_items(items: list):
+    import torch
+
+    # Process in batches to saturate GPU
+    batch_size = 32
+    results = []
+
+    for i in range(0, len(items), batch_size):
+        batch = items[i:i + batch_size]
+
+        # GPU works on 32 items simultaneously
+        batch_results = model.predict(torch.tensor(batch))
+        results.extend(batch_results)
+
+    return results
+
+# ✅ Better: Dynamic batching
+@app.function(gpu=&quot;A10G&quot;)
+def process_items(items: list):
+    import torch
+
+    # Adjust batch size based on available memory
+    gpu_mem_gb = torch.cuda.get_device_properties(0).total_memory / 1e9
+
+    if gpu_mem_gb &gt;= 40:
+        batch_size = 128
+    elif gpu_mem_gb &gt;= 20:
+        batch_size = 64
+    else:
+        batch_size = 32
+
+    print(f&quot;Using batch size: {batch_size}&quot;)
+
+    results = []
+    for i in range(0, len(items), batch_size):
+        batch = items[i:i + batch_size]
+        results.extend(model.predict(torch.tensor(batch)))
+
+    return results</code></pre>
+<h3>Memory Optimization</h3>
+<h4>Monitor and right-size memory</h4>
+<pre><code class="lang-python">import modal
+import tracemalloc
+
+@app.function(memory=2048)  # Start with 2GB
+def profile_memory():
+    &quot;&quot;&quot;Profile memory usage to right-size allocation&quot;&quot;&quot;
+    tracemalloc.start()
+
+    # Your workload
+    data = load_and_process_data()
+
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    print(f&quot;\nMemory Usage:&quot;)
+    print(f&quot;  Current: {current / 1e6:.2f} MB&quot;)
+    print(f&quot;  Peak: {peak / 1e6:.2f} MB&quot;)
+    print(f&quot;  Allocated: 2048 MB&quot;)
+    print(f&quot;  Utilization: {(peak / 1e6) / 2048 * 100:.1f}%&quot;)
+
+    # Optimal allocation: peak × 1.2 (20% headroom)
+    optimal = int(peak / 1e6 * 1.2)
+    print(f&quot;  Recommended: {optimal} MB&quot;)
+
+    return data</code></pre>
+<h4>Stream large data</h4>
+<pre><code class="lang-python"># ❌ Bad: Load entire dataset into memory
+@app.function(memory=16384)  # Need 16GB for 10GB file
+def process_large_file():
+    import pandas as pd
+
+    # Loads entire 10GB file into memory
+    df = pd.read_csv(&quot;huge_data.csv&quot;)
+    return df.describe()
+
+# ✅ Good: Stream data in chunks
+@app.function(memory=2048)  # Only need 2GB
+def process_large_file():
+    import pandas as pd
+
+    # Process 100K rows at a time
+    chunks = pd.read_csv(&quot;huge_data.csv&quot;, chunksize=100_000)
+
+    stats = []
+    for chunk in chunks:
+        stats.append(chunk.describe())
+
+    # Combine statistics
+    return pd.concat(stats).mean()</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Performance Profiling Commands</h3>
+<pre><code class="lang-python"># Execution timing
+import time
+start = time.time()
+result = function()
+print(f&quot;Duration: {time.time() - start:.2f}s&quot;)
+
+# Memory profiling
+import tracemalloc
+tracemalloc.start()
+result = function()
+current, peak = tracemalloc.get_traced_memory()
+print(f&quot;Peak memory: {peak / 1e6:.2f} MB&quot;)
+
+# GPU stats
+import subprocess
+subprocess.run([&quot;nvidia-smi&quot;])</code></pre>
+<h3>Optimization Checklist</h3>
+<pre><code>Cold Start Optimization:
+✅ Minimize image size (only required packages)
+✅ Use lazy imports where possible
+✅ Cache models in Volumes or image
+✅ Pre-download assets during image build
+
+Container Reuse:
+✅ Use keep_warm for frequently called functions
+✅ Use @app.cls() with @modal.enter() for setup
+✅ Set appropriate concurrency_limit
+
+GPU Optimization:
+✅ Profile GPU memory usage first
+✅ Choose cheapest GPU that fits workload
+✅ Use batch processing to saturate GPU
+✅ Monitor utilization (aim for &gt;80%)
+
+Memory Optimization:
+✅ Profile peak memory usage
+✅ Right-size allocation (peak × 1.2)
+✅ Stream large datasets instead of loading
+✅ Clean up large objects when done
+
+Cost Optimization:
+✅ Reduce cold starts (keep_warm)
+✅ Minimize execution time (optimize code)
+✅ Right-size all resources (GPU, memory, CPU)
+✅ Use cheaper GPUs when possible (T4 vs H100)</code></pre>
+<h3>Performance Metrics</h3>
+<pre><code>Metric                 | Good         | Investigate
+-----------------------|--------------|------------------
+Cold start time        | &lt; 10s        | &gt; 30s
+Warm start time        | &lt; 1s         | &gt; 5s
+GPU utilization        | &gt; 80%        | &lt; 50%
+Memory utilization     | 60-90%       | &lt; 40% or &gt; 95%
+Cost per invocation    | -            | Track trends</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Ignoring cold starts</strong>: Accepting slow initialization ✅ Use keep_warm, cache models, optimize image size</p>
+<p>❌ <strong>Poor checkpoint strategy</strong>: Downloading models every cold start ✅ Use Volumes or bake models into image</p>
+<p>❌ <strong>Over-sized images</strong>: Including unnecessary dependencies ✅ Only install required packages, use debian_slim</p>
+<p>❌ <strong>Wrong GPU choice</strong>: Using H100 for small models ✅ Profile first, choose cheapest GPU that fits</p>
+<p>❌ <strong>Single-item processing</strong>: Underutilizing GPU with small batches ✅ Use batch processing to saturate GPU</p>
+<p>❌ <strong>No profiling</strong>: Guessing at resource requirements ✅ Profile memory, GPU, and execution time</p>
+<p>❌ <strong>Ignoring warm containers</strong>: Every call does expensive setup ✅ Use @app.cls() with @modal.enter() for one-time setup</p>
+<p>❌ <strong>Loading entire datasets</strong>: Running out of memory ✅ Stream data in chunks when possible</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>modal-common-errors.md</code> - Debugging common Modal errors</li><li><code>modal-optimization.md</code> - Advanced optimization techniques</li><li><code>modal-gpu-workloads.md</code> - GPU configuration and best practices</li><li><code>modal-functions-basics.md</code> - Basic Modal function configuration</li><li><code>modal-image-building.md</code> - Image optimization strategies</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/modal-modal-performance-debugging.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

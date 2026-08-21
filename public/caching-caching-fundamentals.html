@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>caching-caching-fundamentals</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/caching-caching-fundamentals.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/caching-caching-fundamentals.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>caching-caching-fundamentals</h1><p class="lede">Core caching concepts, patterns, eviction policies, and cache design principles for optimizing application performance</p><h1>Caching Fundamentals</h1>
+<p><strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p><strong>Activate when</strong>:</p>
+<ul><li>Designing caching strategies for applications</li><li>Optimizing application performance and reducing latency</li><li>Reducing database load and API calls</li><li>Understanding cache behavior and tradeoffs</li><li>Choosing appropriate caching patterns</li><li>Implementing cache eviction policies</li><li>Debugging cache-related issues</li></ul>
+<p><strong>Prerequisites</strong>: Basic understanding of databases, APIs, and application architecture</p>
+<p><strong>Related Skills</strong>: <code>http-caching.md</code>, <code>cdn-edge-caching.md</code>, <code>redis-caching-patterns.md</code>, <code>cache-invalidation-strategies.md</code></p>
+<hr>
+<h2>Core Concepts</h2>
+<h3>What is Caching?</h3>
+<p><strong>Cache</strong>: Temporary storage layer that stores frequently accessed data for fast retrieval</p>
+<p><strong>Purpose</strong>:</p>
+<ul><li>Reduce latency (faster data access)</li><li>Decrease load on backend systems (databases, APIs)</li><li>Improve scalability (handle more requests)</li><li>Reduce costs (fewer database queries, API calls)</li></ul>
+<p><strong>Cache Hierarchy</strong>:</p>
+<pre><code>Browser Cache → CDN/Edge Cache → Application Cache → Database Cache
+    (ms)            (10-50ms)         (1-10ms)          (μs)</code></pre>
+<h3>Cache Types</h3>
+<pre><code class="lang-python">from enum import Enum
+from typing import Optional, Dict, Any
+
+class CacheType(Enum):
+    &quot;&quot;&quot;Different cache deployment types&quot;&quot;&quot;
+    LOCAL = &quot;local&quot;           # In-process memory
+    DISTRIBUTED = &quot;distributed&quot;  # Shared across instances
+    EDGE = &quot;edge&quot;             # CDN, geographically distributed
+
+class CacheLocation:
+    &quot;&quot;&quot;Cache location characteristics&quot;&quot;&quot;
+
+    @staticmethod
+    def local_cache():
+        &quot;&quot;&quot;
+        Local/In-Process Cache
+
+        Pros: Fastest access, no network overhead
+        Cons: Not shared, limited by process memory
+        Use: Computation results, configuration
+        &quot;&quot;&quot;
+        return {
+            &quot;latency&quot;: &quot;1-10 μs&quot;,
+            &quot;shared&quot;: False,
+            &quot;persistence&quot;: False,
+            &quot;examples&quot;: [&quot;@lru_cache&quot;, &quot;dict&quot;, &quot;Redis in same host&quot;]
+        }
+
+    @staticmethod
+    def distributed_cache():
+        &quot;&quot;&quot;
+        Distributed Cache
+
+        Pros: Shared across instances, scalable
+        Cons: Network latency, complexity
+        Use: Session data, API responses
+        &quot;&quot;&quot;
+        return {
+            &quot;latency&quot;: &quot;1-10 ms&quot;,
+            &quot;shared&quot;: True,
+            &quot;persistence&quot;: &quot;optional&quot;,
+            &quot;examples&quot;: [&quot;Redis Cluster&quot;, &quot;Memcached&quot;]
+        }
+
+    @staticmethod
+    def edge_cache():
+        &quot;&quot;&quot;
+        Edge/CDN Cache
+
+        Pros: Global distribution, reduce origin load
+        Cons: Invalidation complexity
+        Use: Static assets, public content
+        &quot;&quot;&quot;
+        return {
+            &quot;latency&quot;: &quot;10-50 ms&quot;,
+            &quot;shared&quot;: True,
+            &quot;persistence&quot;: True,
+            &quot;examples&quot;: [&quot;Cloudflare&quot;, &quot;Fastly&quot;, &quot;CloudFront&quot;]
+        }</code></pre>
+<hr>
+<h2>Caching Patterns</h2>
+<h3>1. Cache-Aside (Lazy Loading)</h3>
+<p><strong>Concept</strong>: Application checks cache first, loads from source on miss, then populates cache</p>
+<p><strong>Flow</strong>:</p>
+<pre><code>1. Check cache for data
+2. If HIT → return cached data
+3. If MISS → query source (DB/API)
+4. Store result in cache
+5. Return data</code></pre>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">from functools import wraps
+from typing import Callable, Any
+import time
+
+class CacheAside:
+    &quot;&quot;&quot;Cache-Aside (Lazy Loading) pattern&quot;&quot;&quot;
+
+    def __init__(self):
+        self.cache: Dict[str, tuple[Any, float]] = {}
+        self.ttl = 300  # 5 minutes
+
+    def get(self, key: str) -&gt; Optional[Any]:
+        &quot;&quot;&quot;Get from cache if not expired&quot;&quot;&quot;
+        if key in self.cache:
+            value, timestamp = self.cache[key]
+            if time.time() - timestamp &lt; self.ttl:
+                return value
+            else:
+                # Expired
+                del self.cache[key]
+        return None
+
+    def set(self, key: str, value: Any):
+        &quot;&quot;&quot;Set value in cache with timestamp&quot;&quot;&quot;
+        self.cache[key] = (value, time.time())
+
+    def decorator(self, key_func: Callable = None):
+        &quot;&quot;&quot;Decorator for cache-aside pattern&quot;&quot;&quot;
+        def decorator_wrapper(func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                # Generate cache key
+                if key_func:
+                    cache_key = key_func(*args, **kwargs)
+                else:
+                    cache_key = f&quot;{func.__name__}:{args}:{kwargs}&quot;
+
+                # Check cache
+                cached_value = self.get(cache_key)
+                if cached_value is not None:
+                    return cached_value
+
+                # Cache miss - call function
+                result = func(*args, **kwargs)
+
+                # Store in cache
+                self.set(cache_key, result)
+
+                return result
+            return wrapper
+        return decorator_wrapper
+
+# Usage
+cache = CacheAside()
+
+@cache.decorator(key_func=lambda user_id: f&quot;user:{user_id}&quot;)
+def get_user(user_id: int):
+    &quot;&quot;&quot;Fetch user from database (expensive operation)&quot;&quot;&quot;
+    print(f&quot;Database query for user {user_id}&quot;)
+    # Simulate DB query
+    time.sleep(0.1)
+    return {&quot;id&quot;: user_id, &quot;name&quot;: f&quot;User {user_id}&quot;}
+
+# First call - cache miss
+user1 = get_user(1)  # Prints &quot;Database query...&quot;
+
+# Second call - cache hit
+user1_again = get_user(1)  # No print, returns from cache</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Only caches requested data (efficient memory use)</li><li>Application controls caching logic</li><li>Resilient (cache failures don&#x27;t block requests)</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Initial request latency (cache miss penalty)</li><li>Potential cache stampede on popular keys</li><li>Stale data during TTL window</li></ul>
+<h3>2. Write-Through</h3>
+<p><strong>Concept</strong>: Write to cache and source simultaneously</p>
+<p><strong>Flow</strong>:</p>
+<pre><code>1. Write data to cache
+2. Write data to source (DB/API)
+3. Return success only when both complete</code></pre>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">class WriteThroughCache:
+    &quot;&quot;&quot;Write-Through caching pattern&quot;&quot;&quot;
+
+    def __init__(self, database):
+        self.cache: Dict[str, Any] = {}
+        self.db = database
+
+    def get(self, key: str) -&gt; Optional[Any]:
+        &quot;&quot;&quot;Read from cache, fall back to DB&quot;&quot;&quot;
+        if key in self.cache:
+            return self.cache[key]
+
+        # Cache miss - load from DB
+        value = self.db.get(key)
+        if value is not None:
+            self.cache[key] = value
+        return value
+
+    def set(self, key: str, value: Any):
+        &quot;&quot;&quot;Write to both cache and DB&quot;&quot;&quot;
+        # Write to cache first
+        self.cache[key] = value
+
+        # Then write to database
+        self.db.set(key, value)
+
+        # Both must succeed for consistency
+
+# Usage
+class MockDatabase:
+    def __init__(self):
+        self.data = {}
+
+    def get(self, key):
+        return self.data.get(key)
+
+    def set(self, key, value):
+        self.data[key] = value
+
+db = MockDatabase()
+cache = WriteThroughCache(db)
+
+# Write
+cache.set(&quot;user:1&quot;, {&quot;name&quot;: &quot;Alice&quot;})
+# Cache and DB both updated
+
+# Read
+user = cache.get(&quot;user:1&quot;)  # From cache</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Data consistency (cache always matches source)</li><li>No cache miss penalty on reads</li><li>Simplifies cache warming</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Write latency (two operations)</li><li>Wasted cache space (all writes cached, even if never read)</li><li>Write failures affect both layers</li></ul>
+<h3>3. Write-Behind (Write-Back)</h3>
+<p><strong>Concept</strong>: Write to cache immediately, asynchronously write to source</p>
+<p><strong>Flow</strong>:</p>
+<pre><code>1. Write data to cache
+2. Return success immediately
+3. Asynchronously batch writes to source</code></pre>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">import asyncio
+from collections import deque
+from dataclasses import dataclass
+from typing import Deque
+
+@dataclass
+class WriteOperation:
+    &quot;&quot;&quot;Pending write operation&quot;&quot;&quot;
+    key: str
+    value: Any
+    timestamp: float
+
+class WriteBehindCache:
+    &quot;&quot;&quot;Write-Behind (Write-Back) caching pattern&quot;&quot;&quot;
+
+    def __init__(self, database, batch_size=10, flush_interval=5.0):
+        self.cache: Dict[str, Any] = {}
+        self.db = database
+        self.write_queue: Deque[WriteOperation] = deque()
+        self.batch_size = batch_size
+        self.flush_interval = flush_interval
+        self.running = False
+
+    async def start(self):
+        &quot;&quot;&quot;Start background flushing&quot;&quot;&quot;
+        self.running = True
+        while self.running:
+            await asyncio.sleep(self.flush_interval)
+            await self.flush()
+
+    async def flush(self):
+        &quot;&quot;&quot;Flush pending writes to database&quot;&quot;&quot;
+        if not self.write_queue:
+            return
+
+        # Batch writes
+        batch = []
+        while self.write_queue and len(batch) &lt; self.batch_size:
+            batch.append(self.write_queue.popleft())
+
+        # Write batch to database
+        for op in batch:
+            self.db.set(op.key, op.value)
+
+        print(f&quot;Flushed {len(batch)} writes to database&quot;)
+
+    def get(self, key: str) -&gt; Optional[Any]:
+        &quot;&quot;&quot;Read from cache&quot;&quot;&quot;
+        return self.cache.get(key)
+
+    def set(self, key: str, value: Any):
+        &quot;&quot;&quot;Write to cache, queue for DB write&quot;&quot;&quot;
+        # Immediate write to cache
+        self.cache[key] = value
+
+        # Queue for async DB write
+        self.write_queue.append(
+            WriteOperation(key, value, time.time())
+        )</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Fast writes (no wait for DB)</li><li>Batching reduces DB load</li><li>Better write throughput</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Risk of data loss (if cache crashes before flush)</li><li>Complexity (background jobs, retry logic)</li><li>Eventual consistency</li></ul>
+<h3>4. Read-Through</h3>
+<p><strong>Concept</strong>: Cache automatically loads data from source on miss</p>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">class ReadThroughCache:
+    &quot;&quot;&quot;Read-Through caching pattern&quot;&quot;&quot;
+
+    def __init__(self, loader_func: Callable[[str], Any]):
+        self.cache: Dict[str, Any] = {}
+        self.loader = loader_func  # Function to load from source
+
+    def get(self, key: str) -&gt; Any:
+        &quot;&quot;&quot;
+        Get value, automatically loading on miss
+
+        Cache handles loading - application doesn&#x27;t know about source
+        &quot;&quot;&quot;
+        if key in self.cache:
+            return self.cache[key]
+
+        # Cache miss - load from source
+        value = self.loader(key)
+
+        # Store in cache
+        self.cache[key] = value
+
+        return value
+
+# Usage
+def load_user_from_db(user_id: str):
+    &quot;&quot;&quot;Loader function&quot;&quot;&quot;
+    print(f&quot;Loading user {user_id} from database&quot;)
+    return {&quot;id&quot;: user_id, &quot;name&quot;: f&quot;User {user_id}&quot;}
+
+cache = ReadThroughCache(loader_func=load_user_from_db)
+
+# Application doesn&#x27;t handle cache misses
+user = cache.get(&quot;user:1&quot;)  # Automatically loads if not cached</code></pre>
+<hr>
+<h2>Eviction Policies</h2>
+<h3>LRU (Least Recently Used)</h3>
+<p><strong>Concept</strong>: Evict least recently accessed item when cache is full</p>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">from collections import OrderedDict
+
+class LRUCache:
+    &quot;&quot;&quot;LRU Cache with O(1) get and set&quot;&quot;&quot;
+
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        self.cache = OrderedDict()
+
+    def get(self, key: str) -&gt; Optional[Any]:
+        &quot;&quot;&quot;Get value and mark as recently used&quot;&quot;&quot;
+        if key not in self.cache:
+            return None
+
+        # Move to end (most recent)
+        self.cache.move_to_end(key)
+        return self.cache[key]
+
+    def set(self, key: str, value: Any):
+        &quot;&quot;&quot;Set value, evict LRU if at capacity&quot;&quot;&quot;
+        if key in self.cache:
+            # Update existing
+            self.cache.move_to_end(key)
+        else:
+            # New key
+            if len(self.cache) &gt;= self.capacity:
+                # Evict least recently used (first item)
+                self.cache.popitem(last=False)
+
+        self.cache[key] = value
+
+    def __len__(self):
+        return len(self.cache)
+
+# Usage
+lru = LRUCache(capacity=3)
+
+lru.set(&quot;a&quot;, 1)
+lru.set(&quot;b&quot;, 2)
+lru.set(&quot;c&quot;, 3)
+
+lru.get(&quot;a&quot;)  # Access &#x27;a&#x27;, now most recent
+
+lru.set(&quot;d&quot;, 4)  # Evicts &#x27;b&#x27; (least recently used)
+
+print(&quot;b&quot; in lru.cache)  # False
+print(&quot;a&quot; in lru.cache)  # True</code></pre>
+<p><strong>Use when</strong>: Access patterns favor recent items (temporal locality)</p>
+<h3>LFU (Least Frequently Used)</h3>
+<p><strong>Concept</strong>: Evict least frequently accessed item</p>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">from collections import defaultdict
+import heapq
+
+class LFUCache:
+    &quot;&quot;&quot;LFU Cache with frequency tracking&quot;&quot;&quot;
+
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        self.cache: Dict[str, Any] = {}
+        self.frequency: Dict[str, int] = defaultdict(int)
+        self.access_time: Dict[str, int] = {}
+        self.time = 0
+
+    def get(self, key: str) -&gt; Optional[Any]:
+        &quot;&quot;&quot;Get value and increment frequency&quot;&quot;&quot;
+        if key not in self.cache:
+            return None
+
+        self.frequency[key] += 1
+        self.time += 1
+        self.access_time[key] = self.time
+
+        return self.cache[key]
+
+    def set(self, key: str, value: Any):
+        &quot;&quot;&quot;Set value, evict LFU if at capacity&quot;&quot;&quot;
+        if self.capacity == 0:
+            return
+
+        if key in self.cache:
+            self.cache[key] = value
+            self.frequency[key] += 1
+            self.time += 1
+            self.access_time[key] = self.time
+            return
+
+        if len(self.cache) &gt;= self.capacity:
+            # Find least frequently used
+            # Break ties by least recently used
+            lfu_key = min(
+                self.cache.keys(),
+                key=lambda k: (self.frequency[k], self.access_time[k])
+            )
+
+            del self.cache[lfu_key]
+            del self.frequency[lfu_key]
+            del self.access_time[lfu_key]
+
+        self.cache[key] = value
+        self.frequency[key] = 1
+        self.time += 1
+        self.access_time[key] = self.time</code></pre>
+<p><strong>Use when</strong>: Some items accessed much more frequently than others</p>
+<h3>TTL (Time To Live)</h3>
+<p><strong>Concept</strong>: Evict items after fixed time period</p>
+<pre><code class="lang-python">import time
+
+class TTLCache:
+    &quot;&quot;&quot;TTL-based cache with automatic expiration&quot;&quot;&quot;
+
+    def __init__(self, default_ttl: float = 300):
+        self.cache: Dict[str, tuple[Any, float]] = {}
+        self.default_ttl = default_ttl
+
+    def get(self, key: str) -&gt; Optional[Any]:
+        &quot;&quot;&quot;Get value if not expired&quot;&quot;&quot;
+        if key not in self.cache:
+            return None
+
+        value, expiry = self.cache[key]
+
+        if time.time() &gt; expiry:
+            # Expired
+            del self.cache[key]
+            return None
+
+        return value
+
+    def set(self, key: str, value: Any, ttl: Optional[float] = None):
+        &quot;&quot;&quot;Set value with TTL&quot;&quot;&quot;
+        if ttl is None:
+            ttl = self.default_ttl
+
+        expiry = time.time() + ttl
+        self.cache[key] = (value, expiry)
+
+    def cleanup(self):
+        &quot;&quot;&quot;Remove all expired entries&quot;&quot;&quot;
+        now = time.time()
+        expired = [k for k, (_, exp) in self.cache.items() if now &gt; exp]
+        for k in expired:
+            del self.cache[k]</code></pre>
+<p><strong>Use when</strong>: Data has natural expiration (sessions, temporary tokens)</p>
+<hr>
+<h2>Cache Key Design</h2>
+<h3>Best Practices</h3>
+<pre><code class="lang-python">class CacheKeyDesign:
+    &quot;&quot;&quot;Cache key naming best practices&quot;&quot;&quot;
+
+    @staticmethod
+    def hierarchical_key(namespace: str, entity: str, id: str) -&gt; str:
+        &quot;&quot;&quot;
+        Hierarchical naming for organization
+
+        Pattern: namespace:entity:id
+        Example: app:user:123, api:product:456
+        &quot;&quot;&quot;
+        return f&quot;{namespace}:{entity}:{id}&quot;
+
+    @staticmethod
+    def composite_key(*parts) -&gt; str:
+        &quot;&quot;&quot;
+        Composite key from multiple values
+
+        Example: user_posts(user_id, page) → &quot;posts:user:123:page:1&quot;
+        &quot;&quot;&quot;
+        return &quot;:&quot;.join(str(p) for p in parts)
+
+    @staticmethod
+    def hash_key(data: str) -&gt; str:
+        &quot;&quot;&quot;
+        Hash long or complex keys
+
+        Use for: Query strings, JSON, URLs
+        &quot;&quot;&quot;
+        import hashlib
+        return hashlib.sha256(data.encode()).hexdigest()[:16]
+
+    @staticmethod
+    def version_key(key: str, version: int) -&gt; str:
+        &quot;&quot;&quot;
+        Versioned keys for invalidation
+
+        Increment version to invalidate all old keys
+        &quot;&quot;&quot;
+        return f&quot;{key}:v{version}&quot;
+
+# Examples
+keys = CacheKeyDesign()
+
+# User data
+user_key = keys.hierarchical_key(&quot;app&quot;, &quot;user&quot;, &quot;123&quot;)
+# &quot;app:user:123&quot;
+
+# Paginated results
+posts_key = keys.composite_key(&quot;posts&quot;, &quot;user&quot;, 123, &quot;page&quot;, 1)
+# &quot;posts:user:123:page:1&quot;
+
+# Complex query
+query = &quot;SELECT * FROM users WHERE age &gt; 25 AND city = &#x27;NYC&#x27;&quot;
+query_key = f&quot;query:{keys.hash_key(query)}&quot;
+
+# Versioned cache
+config_key = keys.version_key(&quot;app:config&quot;, version=2)
+# &quot;app:config:v2&quot;</code></pre>
+<hr>
+<h2>When to Cache vs Not Cache</h2>
+<h3>Cache These</h3>
+<pre><code class="lang-python">class GoodCacheCandidates:
+    &quot;&quot;&quot;Data that benefits from caching&quot;&quot;&quot;
+
+    EXAMPLES = {
+        &quot;Expensive computations&quot;: {
+            &quot;example&quot;: &quot;ML model inference, complex calculations&quot;,
+            &quot;ttl&quot;: &quot;hours to days&quot;,
+            &quot;pattern&quot;: &quot;Cache-Aside&quot;
+        },
+        &quot;Frequently accessed data&quot;: {
+            &quot;example&quot;: &quot;User profiles, product catalogs&quot;,
+            &quot;ttl&quot;: &quot;minutes to hours&quot;,
+            &quot;pattern&quot;: &quot;Read-Through&quot;
+        },
+        &quot;Slow external API calls&quot;: {
+            &quot;example&quot;: &quot;Third-party APIs, microservices&quot;,
+            &quot;ttl&quot;: &quot;minutes&quot;,
+            &quot;pattern&quot;: &quot;Cache-Aside&quot;
+        },
+        &quot;Static or rarely changing&quot;: {
+            &quot;example&quot;: &quot;Configuration, reference data&quot;,
+            &quot;ttl&quot;: &quot;hours to days&quot;,
+            &quot;pattern&quot;: &quot;Write-Through&quot;
+        },
+        &quot;High read-to-write ratio&quot;: {
+            &quot;example&quot;: &quot;News articles, blog posts&quot;,
+            &quot;ttl&quot;: &quot;minutes to hours&quot;,
+            &quot;pattern&quot;: &quot;Cache-Aside&quot;
+        }
+    }</code></pre>
+<h3>Don&#x27;t Cache These</h3>
+<pre><code class="lang-python">class PoorCacheCandidates:
+    &quot;&quot;&quot;Data that should NOT be cached&quot;&quot;&quot;
+
+    EXAMPLES = [
+        &quot;Highly personalized data (unless user-keyed)&quot;,
+        &quot;Rapidly changing data (stock prices, live scores)&quot;,
+        &quot;Large objects (&gt;1MB, unless CDN)&quot;,
+        &quot;Data accessed once (no reuse benefit)&quot;,
+        &quot;Security-sensitive data (PII, passwords)&quot;,
+        &quot;Already fast queries (&lt;10ms)&quot;,
+    ]</code></pre>
+<hr>
+<h2>Common Anti-Patterns</h2>
+<h3>❌ No Cache Expiration</h3>
+<pre><code class="lang-python"># WRONG: Cache lives forever
+cache = {}
+cache[key] = value  # Never expires
+
+# CORRECT: Set TTL
+cache.set(key, value, ttl=300)</code></pre>
+<h3>❌ Caching Failures</h3>
+<pre><code class="lang-python"># WRONG: Cache error responses
+result = api_call()
+cache.set(key, result)  # What if result is error?
+
+# CORRECT: Only cache successful responses
+result = api_call()
+if result.success:
+    cache.set(key, result)</code></pre>
+<h3>❌ Cache Stampede</h3>
+<pre><code class="lang-python"># WRONG: All requests miss simultaneously
+# (e.g., cache expires at exact time)
+
+# CORRECT: Probabilistic early expiration
+import random
+
+def get_with_early_expiration(key, ttl):
+    value, expiry = cache.get_with_expiry(key)
+
+    # Probabilistically refresh before expiry
+    time_left = expiry - time.time()
+    if time_left &lt; ttl * random.random():
+        # Refresh cache
+        value = fetch_fresh_data(key)
+        cache.set(key, value, ttl)
+
+    return value</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Cache Pattern Selection</h3>
+<p>| Pattern | Read Speed | Write Speed | Consistency | Use Case | |---------|-----------|-------------|-------------|----------| | Cache-Aside | Medium (miss penalty) | Fast | Eventual | General purpose, read-heavy | | Write-Through | Fast | Slow | Strong | Consistent reads required | | Write-Behind | Fast | Very Fast | Eventual | High write throughput | | Read-Through | Fast | N/A | Eventual | Simplified read logic |</p>
+<h3>Eviction Policy Selection</h3>
+<p>| Policy | Best For | Worst For | |--------|----------|-----------| | LRU | Temporal locality | Scanning workloads | | LFU | Skewed access patterns | Changing patterns | | TTL | Time-sensitive data | Static data | | FIFO | Fair eviction | Performance optimization |</p>
+<hr>
+<h2>Related Skills</h2>
+<p><strong>Next Steps</strong>:</p>
+<ul><li><code>http-caching.md</code> → Browser and HTTP cache layer</li><li><code>cdn-edge-caching.md</code> → CDN and edge caching</li><li><code>redis-caching-patterns.md</code> → Distributed caching with Redis</li><li><code>cache-invalidation-strategies.md</code> → Invalidation patterns</li><li><code>cache-performance-monitoring.md</code> → Metrics and monitoring</li></ul>
+<p><strong>Foundations</strong>:</p>
+<ul><li><code>database-connection-pooling.md</code> → Database optimization</li><li><code>redis-data-structures.md</code> → Redis basics</li></ul>
+<hr>
+<h2>Summary</h2>
+<p>Caching fundamentals provide the foundation for performance optimization:</p>
+<ul><li><strong>Cache Types</strong>: Local (fastest), distributed (shared), edge (global)</li><li><strong>Patterns</strong>: Cache-Aside, Write-Through, Write-Behind, Read-Through</li><li><strong>Eviction</strong>: LRU (recency), LFU (frequency), TTL (time-based)</li><li><strong>Key Design</strong>: Hierarchical, composite, hashed, versioned</li></ul>
+<p><strong>Key takeaways</strong>:</p>
+<ol><li>Choose caching pattern based on consistency and performance needs</li><li>Set appropriate TTL values to balance freshness and hit rate</li><li>Design cache keys for organization and invalidation</li><li>Cache expensive, frequently accessed, slow-changing data</li><li>Avoid caching errors, personalized data, or one-time requests</li></ol>
+<p><strong>Next</strong>: Move to <code>http-caching.md</code> for browser and HTTP caching.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/caching-caching-fundamentals.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

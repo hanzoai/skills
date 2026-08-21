@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>database-postgres-query-optimization</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/database-postgres-query-optimization.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/database-postgres-query-optimization.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>database-postgres-query-optimization</h1><p class="lede">Debugging slow queries in PostgreSQL</p><h1>PostgreSQL Query Optimization</h1>
+<p><strong>Scope</strong>: Query analysis, EXPLAIN plans, index strategies, query rewriting <strong>Lines</strong>: ~350 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Debugging slow queries in PostgreSQL</li><li>Analyzing EXPLAIN ANALYZE output</li><li>Designing index strategies</li><li>Optimizing JOIN operations</li><li>Investigating performance degradation</li><li>Planning database capacity</li></ul>
+<h2>Core Concepts</h2>
+<h3>Query Execution Stages</h3>
+<ol><li><strong>Parsing</strong> - SQL syntax validation</li><li><strong>Planning</strong> - Query optimizer creates execution plan</li><li><strong>Execution</strong> - Plan executed, data retrieved</li><li><strong>Results</strong> - Data returned to client</li></ol>
+<p>The planner&#x27;s goal: find the lowest-cost plan.</p>
+<h3>Cost Model</h3>
+<p>PostgreSQL uses a cost-based optimizer:</p>
+<ul><li><strong>Startup cost</strong>: Time before first row returned</li><li><strong>Total cost</strong>: Time to return all rows</li><li><strong>Sequential scan cost</strong>: Reading full table</li><li><strong>Index scan cost</strong>: Reading index + table lookups</li></ul>
+<pre><code class="lang-sql">-- Cost units are arbitrary (not milliseconds)
+-- Lower cost = better plan (usually)
+Seq Scan on users  (cost=0.00..1234.56 rows=10000 width=64)
+Index Scan using idx_users_email  (cost=0.29..8.31 rows=1 width=64)</code></pre>
+<hr>
+<h2>Reading EXPLAIN ANALYZE Output</h2>
+<h3>Basic EXPLAIN</h3>
+<pre><code class="lang-sql">EXPLAIN SELECT * FROM users WHERE email = &#x27;user@example.com&#x27;;</code></pre>
+<p>Output shows the <strong>planned</strong> execution (no actual execution).</p>
+<h3>EXPLAIN ANALYZE</h3>
+<pre><code class="lang-sql">EXPLAIN ANALYZE SELECT * FROM users WHERE email = &#x27;user@example.com&#x27;;</code></pre>
+<p>Output shows <strong>planned + actual</strong> execution with real timing.</p>
+<p><strong>CRITICAL</strong>: EXPLAIN ANALYZE actually runs the query (including writes!). Use with caution on production.</p>
+<h3>Key Metrics to Watch</h3>
+<pre><code>Seq Scan on users  (cost=0.00..1234.56 rows=10000 width=64) (actual time=0.012..12.345 rows=1 loops=1)
+                    ^^^^^^^^^^^^^^^^^^^^                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                    PLANNED cost/rows                          ACTUAL time/rows/loops</code></pre>
+<p><strong>Red flags</strong>:</p>
+<ul><li><code>actual rows &gt;&gt; estimated rows</code> - Statistics out of date</li><li><code>actual time &gt;&gt; expected</code> - I/O bottleneck or missing index</li><li><code>Seq Scan</code> on large tables - Usually needs index</li><li><code>loops &gt; 1</code> on expensive operations - Nested loop inefficiency</li></ul>
+<hr>
+<h2>Scan Types</h2>
+<h3>Sequential Scan</h3>
+<pre><code>Seq Scan on orders  (cost=0.00..15234.56 rows=500000 width=128)</code></pre>
+<p><strong>When it happens</strong>:</p>
+<ul><li>No usable index</li><li>Table too small (faster to scan than use index)</li><li>Query reads &gt;5-10% of table (index overhead not worth it)</li></ul>
+<p><strong>Good for</strong>:</p>
+<ul><li>Small tables (&lt;1000 rows typically)</li><li>Reading most/all of table</li><li>Analytics queries on warehouses</li></ul>
+<p><strong>Bad for</strong>:</p>
+<ul><li>Large tables with selective filters</li><li>OLTP lookups</li><li>Real-time queries</li></ul>
+<h3>Index Scan</h3>
+<pre><code>Index Scan using idx_orders_user_id on orders  (cost=0.42..8.44 rows=1 width=128)
+  Index Cond: (user_id = 12345)</code></pre>
+<p><strong>How it works</strong>:</p>
+<ol><li>Traverse B-tree index to find entries</li><li>Fetch heap tuples (actual table rows) via pointers</li><li>Return results</li></ol>
+<p><strong>Good for</strong>:</p>
+<ul><li>Selective queries (&lt;5% of rows)</li><li>Equality comparisons (<code>=</code>, <code>IN</code>)</li><li>Range scans on indexed columns</li><li>ORDER BY on indexed columns</li></ul>
+<p><strong>Cost factors</strong>:</p>
+<ul><li>Random I/O to fetch heap tuples (expensive)</li><li>Multiple index lookups if fetching many rows</li></ul>
+<h3>Index Only Scan</h3>
+<pre><code>Index Only Scan using idx_orders_user_created on orders  (cost=0.42..4.44 rows=1 width=8)
+  Index Cond: (user_id = 12345)
+  Heap Fetches: 0</code></pre>
+<p><strong>How it works</strong>:</p>
+<ol><li>Traverse index</li><li>Return data DIRECTLY from index (no heap lookup)</li><li>Check visibility map to verify row visibility</li></ol>
+<p><strong>Requirements</strong>:</p>
+<ul><li>All query columns in index (covering index)</li><li>Table must be vacuumed (visibility map current)</li></ul>
+<p><strong>BEST PERFORMANCE</strong>: No random I/O to heap.</p>
+<pre><code class="lang-sql">-- Create covering index for this query
+CREATE INDEX idx_orders_user_created ON orders(user_id) INCLUDE (created_at);
+
+-- Query can now use Index Only Scan
+SELECT created_at FROM orders WHERE user_id = 12345;</code></pre>
+<h3>Bitmap Index Scan</h3>
+<pre><code>Bitmap Heap Scan on orders  (cost=123.45..5678.90 rows=5000 width=128)
+  Recheck Cond: (status = &#x27;pending&#x27; OR status = &#x27;processing&#x27;)
+  -&gt;  BitmapOr  (cost=123.45..123.45 rows=5000 width=0)
+        -&gt;  Bitmap Index Scan on idx_orders_status  (cost=0.00..61.00 rows=2500 width=0)
+              Index Cond: (status = &#x27;pending&#x27;)
+        -&gt;  Bitmap Index Scan on idx_orders_status  (cost=0.00..61.00 rows=2500 width=0)
+              Index Cond: (status = &#x27;processing&#x27;)</code></pre>
+<p><strong>How it works</strong>:</p>
+<ol><li>Build in-memory bitmap of matching rows</li><li>Combine bitmaps (OR, AND operations)</li><li>Sort row locations</li><li>Fetch heap tuples in sequential order (reduces random I/O)</li></ol>
+<p><strong>Good for</strong>:</p>
+<ul><li>Combining multiple indexes (<code>OR</code> conditions)</li><li>Fetching moderate number of rows (5-25% of table)</li><li>Reducing random I/O</li></ul>
+<p><strong>Better than</strong>:</p>
+<ul><li>Multiple Index Scans → merge results</li><li>Full Seq Scan when filtered set is small enough</li></ul>
+<hr>
+<h2>Index Strategies</h2>
+<h3>Index Types</h3>
+<h4>B-tree (Default, 95% of use cases)</h4>
+<pre><code class="lang-sql">CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_orders_composite ON orders(user_id, created_at);</code></pre>
+<p><strong>Good for</strong>:</p>
+<ul><li>Equality: <code>email = &#x27;foo@example.com&#x27;</code></li><li>Range: <code>created_at &gt; &#x27;2024-01-01&#x27;</code></li><li>Sorting: <code>ORDER BY created_at</code></li><li>Prefix matching: <code>email LIKE &#x27;foo%&#x27;</code> (NOT <code>LIKE &#x27;%foo&#x27;</code>)</li></ul>
+<p><strong>Multi-column indexes</strong> (composite):</p>
+<ul><li>Order matters: <code>(user_id, created_at)</code> can be used for:</li><li><code>user_id = X</code></li><li><code>user_id = X AND created_at &gt; Y</code></li><li>NOT efficient for <code>created_at &gt; Y</code> alone</li></ul>
+<h4>Hash (Rare, equality only)</h4>
+<pre><code class="lang-sql">CREATE INDEX idx_users_email_hash ON users USING HASH (email);</code></pre>
+<p><strong>Good for</strong>:</p>
+<ul><li>Equality ONLY: <code>email = &#x27;foo@example.com&#x27;</code></li><li>Slightly smaller than B-tree</li></ul>
+<p><strong>Cannot</strong>:</p>
+<ul><li>Range queries</li><li>Sorting</li><li>Prefix matching</li></ul>
+<p><strong>Usually not needed</strong> - B-tree handles equality well.</p>
+<h4>GiST (Geometric/Full-text)</h4>
+<pre><code class="lang-sql">CREATE INDEX idx_locations_geom ON locations USING GIST (geom);
+CREATE INDEX idx_documents_fts ON documents USING GIST (to_tsvector(&#x27;english&#x27;, content));</code></pre>
+<p><strong>Good for</strong>:</p>
+<ul><li>Geometric data (PostGIS)</li><li>Full-text search</li><li>Range types</li><li>Custom data types</li></ul>
+<h4>GIN (Full-text, JSONB, arrays)</h4>
+<pre><code class="lang-sql">CREATE INDEX idx_documents_fts ON documents USING GIN (to_tsvector(&#x27;english&#x27;, content));
+CREATE INDEX idx_users_tags ON users USING GIN (tags); -- array column
+CREATE INDEX idx_metadata_json ON events USING GIN (metadata); -- jsonb column</code></pre>
+<p><strong>Good for</strong>:</p>
+<ul><li>Full-text search (faster than GiST for static data)</li><li>JSONB queries: <code>metadata @&gt; &#x27;{&quot;status&quot;: &quot;active&quot;}&#x27;</code></li><li>Array containment: <code>tags @&gt; ARRAY[&#x27;postgres&#x27;]</code></li></ul>
+<p><strong>Trade-offs</strong>:</p>
+<ul><li>Larger than GiST</li><li>Slower writes</li><li>Faster reads for containment queries</li></ul>
+<h4>BRIN (Block Range Index)</h4>
+<pre><code class="lang-sql">CREATE INDEX idx_logs_created_brin ON logs USING BRIN (created_at);</code></pre>
+<p><strong>Good for</strong>:</p>
+<ul><li>Very large tables with natural clustering (e.g., time-series)</li><li>Append-only data</li><li>Low-selectivity queries acceptable</li></ul>
+<p><strong>Extremely small index</strong> (1000x smaller than B-tree).</p>
+<p><strong>Trade-off</strong>: Less precise, may scan extra blocks.</p>
+<hr>
+<h3>Index Selection Decision Tree</h3>
+<pre><code>Start: Do I need an index?
+│
+├─ Table &lt; 1000 rows? → NO (Seq Scan is fine)
+├─ Query reads &gt;10% of table? → MAYBE (test both)
+└─ Query is selective? → YES
+   │
+   ├─ What type of query?
+   │  ├─ Equality (=, IN) → B-tree
+   │  ├─ Range (&lt;, &gt;, BETWEEN) → B-tree
+   │  ├─ Sorting (ORDER BY) → B-tree on sort columns
+   │  ├─ Full-text search → GIN or GiST
+   │  ├─ JSONB queries → GIN
+   │  ├─ Geometric queries → GiST
+   │  ├─ Time-series append-only → BRIN
+   │  └─ Array containment → GIN
+   │
+   ├─ Multiple columns in WHERE?
+   │  ├─ Always used together → Composite index (user_id, created_at)
+   │  ├─ Used independently → Separate indexes (or partial indexes)
+   │  └─ OR conditions → Bitmap scan or separate indexes
+   │
+   └─ Can I cover the query? → Add INCLUDE columns for Index Only Scan</code></pre>
+<hr>
+<h2>Common Query Anti-Patterns</h2>
+<h3>1. N+1 Query Problem</h3>
+<pre><code class="lang-sql">-- Anti-pattern: Load users, then loop and query orders for each
+SELECT * FROM users;
+-- In application loop:
+--   SELECT * FROM orders WHERE user_id = ?
+
+-- Solution: JOIN or batch query
+SELECT u.*, o.*
+FROM users u
+LEFT JOIN orders o ON o.user_id = u.id;</code></pre>
+<h3>2. SELECT * Instead of Specific Columns</h3>
+<pre><code class="lang-sql">-- Anti-pattern
+SELECT * FROM orders WHERE user_id = 123;
+
+-- Better: Select only needed columns
+SELECT id, total, created_at FROM orders WHERE user_id = 123;</code></pre>
+<p><strong>Why it matters</strong>:</p>
+<ul><li>Enables Index Only Scans (covering indexes)</li><li>Reduces network transfer</li><li>Lower memory usage</li></ul>
+<h3>3. Non-Sargable Queries (Can&#x27;t Use Index)</h3>
+<pre><code class="lang-sql">-- Anti-pattern: Function on indexed column
+SELECT * FROM users WHERE LOWER(email) = &#x27;foo@example.com&#x27;;
+
+-- Solution: Functional index
+CREATE INDEX idx_users_email_lower ON users(LOWER(email));
+-- Or store email in lowercase always</code></pre>
+<pre><code class="lang-sql">-- Anti-pattern: Wildcard at start
+SELECT * FROM users WHERE email LIKE &#x27;%@example.com&#x27;;
+
+-- Solution: Full-text search or trigram index
+CREATE EXTENSION pg_trgm;
+CREATE INDEX idx_users_email_trgm ON users USING GIN (email gin_trgm_ops);</code></pre>
+<h3>4. Unnecessary DISTINCT</h3>
+<pre><code class="lang-sql">-- Anti-pattern: DISTINCT when not needed
+SELECT DISTINCT user_id FROM orders WHERE status = &#x27;pending&#x27;;
+
+-- Better if user_id is already unique per status:
+SELECT user_id FROM orders WHERE status = &#x27;pending&#x27;;</code></pre>
+<h3>5. OR Conditions Across Tables</h3>
+<pre><code class="lang-sql">-- Anti-pattern: OR across tables
+SELECT * FROM orders WHERE user_id = 123 OR vendor_id = 456;
+
+-- Better: UNION
+SELECT * FROM orders WHERE user_id = 123
+UNION
+SELECT * FROM orders WHERE vendor_id = 456;</code></pre>
+<hr>
+<h2>Query Rewriting Patterns</h2>
+<h3>Pattern 1: Subquery → JOIN</h3>
+<pre><code class="lang-sql">-- Slower: Correlated subquery
+SELECT * FROM users WHERE id IN (SELECT user_id FROM orders WHERE total &gt; 100);
+
+-- Faster: JOIN with DISTINCT
+SELECT DISTINCT u.* FROM users u INNER JOIN orders o ON o.user_id = u.id WHERE o.total &gt; 100;
+
+-- Or EXISTS (often better for large datasets)
+SELECT * FROM users u WHERE EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id AND o.total &gt; 100);</code></pre>
+<h3>Pattern 2: JOIN → Semi-Join (EXISTS)</h3>
+<pre><code class="lang-sql">-- When you only need to check existence:
+SELECT * FROM users u WHERE EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id);
+
+-- NOT:
+SELECT DISTINCT u.* FROM users u INNER JOIN orders o ON o.user_id = u.id;</code></pre>
+<p><strong>EXISTS is faster</strong> when you don&#x27;t need order data, just existence check.</p>
+<h3>Pattern 3: Partial Index for Filtered Queries</h3>
+<pre><code class="lang-sql">-- Common query:
+SELECT * FROM orders WHERE status = &#x27;pending&#x27;;
+
+-- Create partial index
+CREATE INDEX idx_orders_pending ON orders(created_at) WHERE status = &#x27;pending&#x27;;</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Smaller index (only pending orders)</li><li>Faster writes (only updated when status = pending)</li><li>Perfect for skewed data (e.g., 1% pending, 99% completed)</li></ul>
+<h3>Pattern 4: Materialized View for Complex Aggregations</h3>
+<pre><code class="lang-sql">-- Slow query run frequently:
+SELECT user_id, COUNT(*), SUM(total) FROM orders GROUP BY user_id;
+
+-- Create materialized view
+CREATE MATERIALIZED VIEW user_order_stats AS
+SELECT user_id, COUNT(*) as order_count, SUM(total) as total_spent
+FROM orders
+GROUP BY user_id;
+
+CREATE UNIQUE INDEX idx_user_order_stats_user ON user_order_stats(user_id);
+
+-- Refresh periodically
+REFRESH MATERIALIZED VIEW CONCURRENTLY user_order_stats;</code></pre>
+<hr>
+<h2>Index Maintenance</h2>
+<h3>Statistics</h3>
+<p>PostgreSQL uses table statistics to estimate row counts and plan queries.</p>
+<pre><code class="lang-sql">-- Outdated statistics cause bad plans
+-- Fix: Analyze the table
+ANALYZE users;
+ANALYZE orders;
+
+-- Auto-vacuum should handle this, but manual ANALYZE helps after bulk changes</code></pre>
+<h3>Reindexing</h3>
+<p>Indexes can become bloated over time.</p>
+<pre><code class="lang-sql">-- Check index bloat
+SELECT schemaname, tablename, indexname,
+       pg_size_pretty(pg_relation_size(indexrelid)) as index_size
+FROM pg_stat_user_indexes
+ORDER BY pg_relation_size(indexrelid) DESC;
+
+-- Rebuild index
+REINDEX INDEX idx_users_email;
+REINDEX TABLE users; -- All indexes on table
+
+-- Or recreate index (allows CONCURRENTLY, less locking)
+CREATE INDEX CONCURRENTLY idx_users_email_new ON users(email);
+DROP INDEX CONCURRENTLY idx_users_email;
+ALTER INDEX idx_users_email_new RENAME TO idx_users_email;</code></pre>
+<h3>Monitoring Index Usage</h3>
+<pre><code class="lang-sql">-- Find unused indexes
+SELECT schemaname, tablename, indexname, idx_scan
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0
+ORDER BY pg_relation_size(indexrelid) DESC;
+
+-- Drop unused indexes to improve write performance
+DROP INDEX idx_never_used;</code></pre>
+<hr>
+<h2>Optimization Workflow</h2>
+<h3>Step 1: Identify Slow Query</h3>
+<pre><code class="lang-sql">-- Enable slow query logging in postgresql.conf
+log_min_duration_statement = 1000  -- Log queries &gt; 1 second
+
+-- Or use pg_stat_statements extension
+CREATE EXTENSION pg_stat_statements;
+
+SELECT query, calls, total_exec_time, mean_exec_time, rows
+FROM pg_stat_statements
+ORDER BY mean_exec_time DESC
+LIMIT 10;</code></pre>
+<h3>Step 2: Analyze with EXPLAIN ANALYZE</h3>
+<pre><code class="lang-sql">EXPLAIN ANALYZE &lt;your slow query&gt;;</code></pre>
+<p>Look for:</p>
+<ul><li>Seq Scan on large tables</li><li>Nested Loop with high actual rows</li><li>Hash Join with large temp spills</li><li>Sort operations with large work_mem usage</li></ul>
+<h3>Step 3: Check Statistics</h3>
+<pre><code class="lang-sql">-- When was table last analyzed?
+SELECT schemaname, tablename, last_analyze, last_autoanalyze
+FROM pg_stat_user_tables
+WHERE tablename = &#x27;orders&#x27;;
+
+-- If stale, analyze
+ANALYZE orders;</code></pre>
+<h3>Step 4: Add/Modify Index</h3>
+<pre><code class="lang-sql">-- Based on WHERE, JOIN, ORDER BY clauses
+CREATE INDEX idx_orders_user_created ON orders(user_id, created_at);</code></pre>
+<h3>Step 5: Re-run EXPLAIN ANALYZE</h3>
+<pre><code class="lang-sql">EXPLAIN ANALYZE &lt;your slow query&gt;;</code></pre>
+<p>Compare before/after:</p>
+<ul><li>Total cost reduced?</li><li>Seq Scan → Index Scan?</li><li>Actual time improved?</li></ul>
+<h3>Step 6: Test in Production-like Data Volume</h3>
+<p><strong>CRITICAL</strong>: Optimizer chooses plans based on table size.</p>
+<ul><li>1K rows → Seq Scan might be optimal</li><li>1M rows → Index Scan needed</li></ul>
+<p>Test with realistic data volume.</p>
+<hr>
+<h2>Quick Reference</h2>
+<h3>EXPLAIN Options</h3>
+<pre><code class="lang-sql">EXPLAIN SELECT ...;                    -- Plan only, no execution
+EXPLAIN ANALYZE SELECT ...;            -- Plan + actual execution
+EXPLAIN (ANALYZE, BUFFERS) SELECT ...; -- Include I/O stats
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE) SELECT ...; -- Full details</code></pre>
+<h3>Index Syntax</h3>
+<pre><code class="lang-sql">-- B-tree (default)
+CREATE INDEX idx_name ON table(column);
+
+-- Composite
+CREATE INDEX idx_name ON table(col1, col2);
+
+-- Covering (Index Only Scan)
+CREATE INDEX idx_name ON table(col1) INCLUDE (col2, col3);
+
+-- Partial
+CREATE INDEX idx_name ON table(col) WHERE condition;
+
+-- Functional
+CREATE INDEX idx_name ON table(LOWER(email));
+
+-- Concurrent (no table lock)
+CREATE INDEX CONCURRENTLY idx_name ON table(column);
+
+-- Other types
+CREATE INDEX idx_name ON table USING HASH (column);
+CREATE INDEX idx_name ON table USING GIN (jsonb_column);
+CREATE INDEX idx_name ON table USING GIST (geometry_column);
+CREATE INDEX idx_name ON table USING BRIN (timestamp_column);</code></pre>
+<h3>Optimization Checklist</h3>
+<pre><code>Query Performance Issues:
+[ ] Run EXPLAIN ANALYZE to see actual execution
+[ ] Check for Seq Scan on large tables
+[ ] Verify statistics are current (ANALYZE table)
+[ ] Look for missing indexes on WHERE/JOIN columns
+[ ] Check if index is being used (Index Cond vs Filter)
+[ ] Consider composite index for multi-column queries
+[ ] Use covering index (INCLUDE) for Index Only Scan
+[ ] Check for N+1 queries (use JOIN or batch)
+[ ] Verify query is sargable (no functions on indexed columns)
+[ ] Consider partial index for filtered queries
+[ ] Test with production-like data volume
+[ ] Monitor index usage (drop unused indexes)</code></pre>
+<hr>
+<h2>Level 3 Resources</h2>
+<p>This skill includes Level 3 Resources (executable tools, reference materials, examples):</p>
+<h3>Reference Materials</h3>
+<ul><li><strong><a href="./postgres-query-optimization/resources/REFERENCE.md">REFERENCE.md</a></strong> - Deep dive into EXPLAIN output, query planner internals, all index types, and optimization patterns</li></ul>
+<h3>Executable Scripts</h3>
+<p>Located in <code>./postgres-query-optimization/resources/scripts/</code>:</p>
+<ul><li><strong>analyze_query.py</strong> - Parses EXPLAIN ANALYZE output, detects issues (seq scans, stale statistics, inefficient filters), suggests optimizations</li><li><strong>suggest_indexes.py</strong> - Recommends indexes based on query patterns (WHERE, JOIN, ORDER BY), supports covering indexes and workload analysis</li><li><strong>benchmark_queries.sh</strong> - Benchmarks query performance with statistical analysis, compares before/after optimization</li></ul>
+<p>See <a href="./postgres-query-optimization/resources/scripts/README.md">scripts/README.md</a> for usage examples.</p>
+<h3>Examples</h3>
+<ul><li><strong>slow-queries/</strong> - Real-world slow query examples with fixes (N+1 problem, missing indexes, non-sargable queries)</li><li><strong>docker/</strong> - Pre-configured PostgreSQL test environment with sample data (10K users, 100K orders, 500K events)</li></ul>
+<p><strong>Quick Start</strong>:</p>
+<pre><code class="lang-bash"># Analyze EXPLAIN output
+python postgres-query-optimization/resources/scripts/analyze_query.py --explain-file explain.txt
+
+# Get index recommendations
+python postgres-query-optimization/resources/scripts/suggest_indexes.py --query &quot;SELECT * FROM orders WHERE user_id = 123&quot;
+
+# Benchmark query
+./postgres-query-optimization/resources/scripts/benchmark_queries.sh --query &quot;SELECT ...&quot; --iterations 20
+
+# Start test environment
+cd postgres-query-optimization/resources/examples/docker &amp;&amp; docker-compose up -d</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>postgres-migrations.md</code> - Safe schema changes, adding indexes without downtime</li><li><code>postgres-schema-design.md</code> - Table design affects query performance</li><li><code>orm-patterns.md</code> - ORM-specific N+1 prevention, eager loading</li><li><code>database-connection-pooling.md</code> - Connection limits affect query concurrency</li><li><code>database-selection.md</code> - When to use Postgres vs other databases</li></ul>
+<hr>
+<h2>Common Pitfalls</h2>
+<p>❌ <strong>Running EXPLAIN ANALYZE on writes in production</strong> - It executes the query (including DELETE!) ✅ Use EXPLAIN (no ANALYZE) for writes, or test on staging</p>
+<p>❌ <strong>Creating too many indexes</strong> - Slows down writes, wastes space ✅ Monitor index usage, drop unused indexes</p>
+<p>❌ <strong>Ignoring statistics</strong> - Planner makes bad decisions with stale stats ✅ Run ANALYZE after bulk changes, ensure auto-vacuum is working</p>
+<p>❌ <strong>Not testing with realistic data volume</strong> - Plans change with table size ✅ Test on production-like dataset</p>
+<p>❌ <strong>Using DISTINCT when not needed</strong> - Adds expensive sort/dedup ✅ Only use when actually needed</p>
+<p>❌ <strong>Assuming index always helps</strong> - Small tables are faster with Seq Scan ✅ Test before/after, trust the planner for small tables</p>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/database-postgres-query-optimization.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

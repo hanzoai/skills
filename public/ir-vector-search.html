@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ir-vector-search</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ir-vector-search.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ir-vector-search.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ir-vector-search</h1><p class="lede">Dense retrieval using embeddings, vector databases, approximate nearest neighbors, and hybrid search</p><h1>Information Retrieval: Vector Search</h1>
+<p><strong>Scope</strong>: Semantic search with embeddings, vector databases (Pinecone, Weaviate, Qdrant, Chroma), ANN algorithms, and hybrid retrieval <strong>Lines</strong>: ~360 <strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Building semantic search that understands meaning, not just keywords</li><li>Implementing similarity search for documents, images, or products</li><li>Choosing between vector database options (Pinecone, Weaviate, Qdrant, Chroma)</li><li>Optimizing approximate nearest neighbor (ANN) search performance</li><li>Combining lexical and semantic search (hybrid retrieval)</li><li>Scaling vector search to millions or billions of embeddings</li><li>Selecting embedding models for specific domains</li><li>Troubleshooting vector search relevance or speed issues</li></ul>
+<h2>Core Concepts</h2>
+<h3>Concept 1: Embeddings and Dense Retrieval</h3>
+<p><strong>Dense Retrieval</strong>: Encode queries and documents as dense vectors, retrieve by similarity</p>
+<p><strong>Key Points</strong>:</p>
+<ul><li>Embeddings capture semantic meaning in vector space</li><li>Similar concepts have similar vectors (cosine similarity)</li><li>Pre-trained models: sentence-transformers, OpenAI, Cohere</li><li>Domain-specific models often outperform general models</li></ul>
+<pre><code class="lang-python">from sentence_transformers import SentenceTransformer
+import numpy as np
+
+# Load embedding model
+model = SentenceTransformer(&#x27;all-MiniLM-L6-v2&#x27;)  # 384 dimensions
+
+# Encode documents
+documents = [
+    &quot;Machine learning algorithms for classification&quot;,
+    &quot;Deep neural networks for image recognition&quot;,
+    &quot;Natural language processing with transformers&quot;,
+    &quot;Supervised learning techniques&quot;
+]
+
+doc_embeddings = model.encode(documents, convert_to_numpy=True)
+
+# Encode query
+query = &quot;classification algorithms&quot;
+query_embedding = model.encode(query, convert_to_numpy=True)
+
+# Compute cosine similarity
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+# Rank documents by similarity
+scores = [cosine_similarity(query_embedding, doc_emb) for doc_emb in doc_embeddings]
+ranked_indices = np.argsort(scores)[::-1]
+
+for idx in ranked_indices:
+    print(f&quot;Doc {idx}: {documents[idx]}&quot;)
+    print(f&quot;  Score: {scores[idx]:.4f}\n&quot;)</code></pre>
+<h3>Concept 2: Vector Databases</h3>
+<p><strong>Comparison</strong>:</p>
+<p>| Database | Hosted | Open Source | Best For | |----------|--------|-------------|----------| | Pinecone | Yes | No | Fully managed, scale to billions | | Weaviate | Yes | Yes | GraphQL, hybrid search, modules | | Qdrant | Yes | Yes | High performance, on-prem option | | Chroma | No | Yes | Embeddings + metadata, local dev |</p>
+<p><strong>Key Features</strong>:</p>
+<ul><li>Approximate nearest neighbors (ANN) for fast search</li><li>Metadata filtering alongside vector search</li><li>Horizontal scaling for large datasets</li><li>Different distance metrics (cosine, dot product, L2)</li></ul>
+<pre><code class="lang-python">import chromadb
+from chromadb.config import Settings
+
+# Initialize Chroma (local, persistent)
+client = chromadb.Client(Settings(
+    chroma_db_impl=&quot;duckdb+parquet&quot;,
+    persist_directory=&quot;./chroma_db&quot;
+))
+
+# Create collection
+collection = client.create_collection(
+    name=&quot;documents&quot;,
+    metadata={&quot;hnsw:space&quot;: &quot;cosine&quot;}  # Cosine similarity
+)
+
+# Add documents with embeddings and metadata
+collection.add(
+    ids=[&quot;doc1&quot;, &quot;doc2&quot;, &quot;doc3&quot;],
+    embeddings=doc_embeddings.tolist(),
+    documents=documents,
+    metadatas=[
+        {&quot;category&quot;: &quot;ml&quot;, &quot;date&quot;: &quot;2024-01-15&quot;},
+        {&quot;category&quot;: &quot;dl&quot;, &quot;date&quot;: &quot;2024-02-20&quot;},
+        {&quot;category&quot;: &quot;nlp&quot;, &quot;date&quot;: &quot;2024-03-10&quot;}
+    ]
+)
+
+# Query with metadata filtering
+results = collection.query(
+    query_embeddings=[query_embedding.tolist()],
+    n_results=3,
+    where={&quot;category&quot;: &quot;ml&quot;}  # Filter by metadata
+)
+
+print(results[&#x27;documents&#x27;])
+print(results[&#x27;distances&#x27;])</code></pre>
+<h3>Concept 3: Approximate Nearest Neighbors (ANN)</h3>
+<p><strong>Algorithms</strong>:</p>
+<p><strong>HNSW (Hierarchical Navigable Small World)</strong>:</p>
+<ul><li>Graph-based search with hierarchical layers</li><li>Fast queries (log n), moderate memory</li><li>Default in Chroma, Qdrant, Weaviate</li></ul>
+<p><strong>IVF (Inverted File Index)</strong>:</p>
+<ul><li>Partition vectors into clusters (Voronoi cells)</li><li>Search nearest clusters only</li><li>Used in FAISS, Pinecone</li></ul>
+<p><strong>LSH (Locality Sensitive Hashing)</strong>:</p>
+<ul><li>Hash similar vectors to same buckets</li><li>Fast but lower recall than HNSW/IVF</li></ul>
+<pre><code class="lang-python">import faiss
+import numpy as np
+
+# Build IVF index with FAISS
+dimension = 384
+nlist = 100  # Number of clusters
+
+# Create index
+quantizer = faiss.IndexFlatL2(dimension)  # L2 distance
+index = faiss.IndexIVFFlat(quantizer, dimension, nlist)
+
+# Train index on data (required for IVF)
+index.train(doc_embeddings.astype(&#x27;float32&#x27;))
+
+# Add vectors
+index.add(doc_embeddings.astype(&#x27;float32&#x27;))
+
+# Search (k=3 nearest neighbors)
+k = 3
+distances, indices = index.search(
+    query_embedding.reshape(1, -1).astype(&#x27;float32&#x27;),
+    k
+)
+
+print(&quot;Nearest neighbors:&quot;, indices)
+print(&quot;Distances:&quot;, distances)
+
+# HNSW index (no training needed)
+hnsw_index = faiss.IndexHNSWFlat(dimension, 32)  # 32 = M parameter
+hnsw_index.add(doc_embeddings.astype(&#x27;float32&#x27;))
+distances_hnsw, indices_hnsw = hnsw_index.search(
+    query_embedding.reshape(1, -1).astype(&#x27;float32&#x27;),
+    k
+)</code></pre>
+<h3>Concept 4: Distance Metrics</h3>
+<p><strong>Cosine Similarity</strong>: Angle between vectors (range: -1 to 1)</p>
+<ul><li>Best for: Text embeddings (normalized)</li><li>Formula: <code>cos(θ) = A·B / (||A|| ||B||)</code></li></ul>
+<p><strong>Dot Product</strong>: Inner product (unnormalized)</p>
+<ul><li>Best for: When magnitude matters</li><li>Formula: <code>A·B = Σ(ai × bi)</code></li></ul>
+<p><strong>Euclidean (L2)</strong>: Straight-line distance</p>
+<ul><li>Best for: Spatial data, images</li><li>Formula: <code>||A-B|| = √(Σ(ai-bi)²)</code></li></ul>
+<pre><code class="lang-python"># Configure metric in Pinecone
+import pinecone
+
+pinecone.init(api_key=&quot;your-api-key&quot;)
+
+# Cosine similarity (most common for text)
+pinecone.create_index(
+    &quot;documents&quot;,
+    dimension=384,
+    metric=&quot;cosine&quot;
+)
+
+# Dot product (if embeddings are normalized)
+pinecone.create_index(
+    &quot;normalized-docs&quot;,
+    dimension=384,
+    metric=&quot;dotproduct&quot;
+)
+
+# Euclidean distance
+pinecone.create_index(
+    &quot;spatial-data&quot;,
+    dimension=384,
+    metric=&quot;euclidean&quot;
+)</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Batch Encoding for Performance</h3>
+<p><strong>When to use</strong>: Encoding many documents or queries</p>
+<pre><code class="lang-python"># ❌ Bad: Encode one at a time (slow)
+embeddings = []
+for doc in documents:
+    emb = model.encode(doc)
+    embeddings.append(emb)
+
+# ✅ Good: Batch encoding (10-100x faster)
+embeddings = model.encode(
+    documents,
+    batch_size=32,        # Process in batches
+    show_progress_bar=True,
+    convert_to_numpy=True
+)
+
+# ✅ Better: Use GPU if available
+embeddings = model.encode(
+    documents,
+    batch_size=128,       # Larger batches on GPU
+    device=&#x27;cuda&#x27;,        # Use GPU
+    show_progress_bar=True
+)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>10-100x speedup via batching</li><li>GPU acceleration for large datasets</li><li>Progress tracking for long jobs</li></ul>
+<h3>Pattern 2: Hybrid Search (Lexical + Semantic)</h3>
+<p><strong>Use case</strong>: Combine keyword matching (BM25) with semantic similarity</p>
+<pre><code class="lang-python">from weaviate import Client
+
+client = Client(&quot;http://localhost:8080&quot;)
+
+# Create schema with hybrid search enabled
+schema = {
+    &quot;class&quot;: &quot;Article&quot;,
+    &quot;vectorizer&quot;: &quot;text2vec-transformers&quot;,
+    &quot;properties&quot;: [
+        {&quot;name&quot;: &quot;title&quot;, &quot;dataType&quot;: [&quot;text&quot;]},
+        {&quot;name&quot;: &quot;content&quot;, &quot;dataType&quot;: [&quot;text&quot;]}
+    ]
+}
+
+client.schema.create_class(schema)
+
+# Hybrid search: combines BM25 + vector search
+results = (
+    client.query
+    .get(&quot;Article&quot;, [&quot;title&quot;, &quot;content&quot;])
+    .with_hybrid(
+        query=&quot;machine learning&quot;,
+        alpha=0.5  # 0.5 = equal weight, 0 = pure BM25, 1 = pure vector
+    )
+    .with_limit(10)
+    .do()
+)
+
+# Tune alpha based on query type
+# alpha=0.2 for keyword queries (&quot;product SKU 12345&quot;)
+# alpha=0.8 for semantic queries (&quot;comfortable running shoes&quot;)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Best of both worlds: exact matching + semantic understanding</li><li>Configurable weighting (alpha parameter)</li><li>Better recall and precision</li></ul>
+<h3>Pattern 3: Metadata Filtering</h3>
+<p><strong>When to use</strong>: Combine semantic search with structured constraints</p>
+<pre><code class="lang-python">import qdrant_client
+from qdrant_client.models import Distance, VectorParams, Filter, FieldCondition
+
+# Initialize Qdrant
+client = qdrant_client.QdrantClient(host=&quot;localhost&quot;, port=6333)
+
+# Create collection
+client.create_collection(
+    collection_name=&quot;products&quot;,
+    vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+)
+
+# Upsert with metadata
+client.upsert(
+    collection_name=&quot;products&quot;,
+    points=[
+        {
+            &quot;id&quot;: 1,
+            &quot;vector&quot;: embedding1.tolist(),
+            &quot;payload&quot;: {&quot;category&quot;: &quot;electronics&quot;, &quot;price&quot;: 599, &quot;brand&quot;: &quot;Apple&quot;}
+        },
+        {
+            &quot;id&quot;: 2,
+            &quot;vector&quot;: embedding2.tolist(),
+            &quot;payload&quot;: {&quot;category&quot;: &quot;electronics&quot;, &quot;price&quot;: 299, &quot;brand&quot;: &quot;Samsung&quot;}
+        }
+    ]
+)
+
+# Search with filters
+results = client.search(
+    collection_name=&quot;products&quot;,
+    query_vector=query_embedding.tolist(),
+    query_filter=Filter(
+        must=[
+            FieldCondition(key=&quot;category&quot;, match={&quot;value&quot;: &quot;electronics&quot;}),
+            FieldCondition(key=&quot;price&quot;, range={&quot;gte&quot;: 200, &quot;lte&quot;: 600})
+        ]
+    ),
+    limit=10
+)</code></pre>
+<h3>Pattern 4: Embedding Model Selection</h3>
+<p><strong>Use case</strong>: Choose appropriate model for domain and requirements</p>
+<pre><code class="lang-python">from sentence_transformers import SentenceTransformer
+
+# ✅ General purpose, fast (384 dim)
+model_general = SentenceTransformer(&#x27;all-MiniLM-L6-v2&#x27;)
+
+# ✅ High quality, slower (768 dim)
+model_quality = SentenceTransformer(&#x27;all-mpnet-base-v2&#x27;)
+
+# ✅ Multilingual (768 dim, 50+ languages)
+model_multilingual = SentenceTransformer(&#x27;paraphrase-multilingual-mpnet-base-v2&#x27;)
+
+# ✅ Domain-specific: scientific papers
+model_scientific = SentenceTransformer(&#x27;allenai-specter&#x27;)
+
+# ✅ Asymmetric search (different query/doc encoders)
+# For Q&amp;A, search queries vs passages
+from sentence_transformers import SentenceTransformer, util
+
+model_qa = SentenceTransformer(&#x27;multi-qa-mpnet-base-dot-v1&#x27;)
+
+# Encode differently
+queries = [&quot;What is machine learning?&quot;]
+passages = [&quot;Machine learning is a subset of AI...&quot;]
+
+query_embeddings = model_qa.encode(queries, convert_to_tensor=True)
+passage_embeddings = model_qa.encode(passages, convert_to_tensor=True)
+
+# Use dot product for asymmetric models
+scores = util.dot_score(query_embeddings, passage_embeddings)</code></pre>
+<p><strong>Selection Criteria</strong>:</p>
+<ul><li>Speed vs quality: MiniLM (fast) vs MPNet (quality)</li><li>Languages: Use multilingual models for non-English</li><li>Domain: Scientific, legal, medical → use domain models</li><li>Query type: Symmetric (search) vs asymmetric (Q&amp;A)</li></ul>
+<h3>Pattern 5: Incremental Updates</h3>
+<p><strong>When to use</strong>: Add/update/delete vectors without rebuilding entire index</p>
+<pre><code class="lang-python"># Pinecone incremental updates
+import pinecone
+
+pinecone.init(api_key=&quot;your-key&quot;, environment=&quot;us-west1-gcp&quot;)
+index = pinecone.Index(&quot;documents&quot;)
+
+# Upsert new vectors (inserts or updates)
+index.upsert(
+    vectors=[
+        (&quot;doc1&quot;, embedding1.tolist(), {&quot;text&quot;: &quot;...&quot;, &quot;category&quot;: &quot;tech&quot;}),
+        (&quot;doc2&quot;, embedding2.tolist(), {&quot;text&quot;: &quot;...&quot;, &quot;category&quot;: &quot;science&quot;})
+    ]
+)
+
+# Update metadata only (no re-embedding)
+index.update(
+    id=&quot;doc1&quot;,
+    set_metadata={&quot;category&quot;: &quot;ai&quot;, &quot;updated&quot;: &quot;2024-10-25&quot;}
+)
+
+# Delete vectors
+index.delete(ids=[&quot;doc3&quot;, &quot;doc4&quot;])
+
+# Delete by metadata filter
+index.delete(filter={&quot;category&quot;: {&quot;$eq&quot;: &quot;deprecated&quot;}})</code></pre>
+<h3>Pattern 6: Query Optimization</h3>
+<p><strong>Use case</strong>: Improve search quality and speed</p>
+<pre><code class="lang-python"># ✅ Query expansion: add related terms
+from sentence_transformers import SentenceTransformer, util
+
+model = SentenceTransformer(&#x27;all-MiniLM-L6-v2&#x27;)
+
+def expand_query(query, corpus_embeddings, corpus_docs, top_k=3):
+    &quot;&quot;&quot;Expand query with similar documents from corpus&quot;&quot;&quot;
+    query_emb = model.encode(query, convert_to_tensor=True)
+    scores = util.cos_sim(query_emb, corpus_embeddings)[0]
+    top_indices = scores.argsort(descending=True)[:top_k]
+
+    # Combine original query with top results
+    expanded = [query] + [corpus_docs[i] for i in top_indices]
+    return &quot; &quot;.join(expanded)
+
+# ✅ Multi-vector search: aggregate results
+def multi_vector_search(queries, index, top_k=10):
+    &quot;&quot;&quot;Search with multiple query formulations&quot;&quot;&quot;
+    all_results = {}
+
+    for query in queries:
+        query_emb = model.encode(query)
+        results = index.search(query_emb, top_k=top_k)
+
+        # Aggregate scores
+        for doc_id, score in results:
+            all_results[doc_id] = all_results.get(doc_id, 0) + score
+
+    # Rank by aggregated score
+    ranked = sorted(all_results.items(), key=lambda x: x[1], reverse=True)
+    return ranked[:top_k]
+
+# Example: search with original + reformulations
+queries = [
+    &quot;machine learning classification&quot;,
+    &quot;supervised learning algorithms&quot;,
+    &quot;classification models&quot;
+]
+results = multi_vector_search(queries, index)</code></pre>
+<h3>Pattern 7: Approximate vs Exact Search</h3>
+<p><strong>When to use</strong>: Trade accuracy for speed</p>
+<pre><code class="lang-python">import faiss
+
+# ✅ Exact search (brute force)
+index_exact = faiss.IndexFlatL2(dimension)
+index_exact.add(embeddings.astype(&#x27;float32&#x27;))
+
+# Search all vectors (slow but 100% accurate)
+distances, indices = index_exact.search(query_emb, k=10)
+
+# ✅ Approximate search (HNSW)
+index_approx = faiss.IndexHNSWFlat(dimension, 32)
+index_approx.add(embeddings.astype(&#x27;float32&#x27;))
+
+# Much faster, ~95-99% recall
+distances, indices = index_approx.search(query_emb, k=10)
+
+# ✅ Tune recall vs speed
+index_approx.hnsw.efSearch = 64  # Higher = better recall, slower
+# efSearch = 16: fast, ~90% recall
+# efSearch = 64: balanced, ~95% recall
+# efSearch = 256: slow, ~99% recall</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Embedding Model Comparison</h3>
+<pre><code>Model                    | Dimensions | Speed   | Quality | Use Case
+-------------------------|------------|---------|---------|----------
+all-MiniLM-L6-v2         | 384        | Fast    | Good    | General, speed critical
+all-mpnet-base-v2        | 768        | Medium  | Best    | General, quality critical
+multi-qa-mpnet-base      | 768        | Medium  | Best    | Q&amp;A, asymmetric search
+paraphrase-multilingual  | 768        | Medium  | Good    | 50+ languages
+allenai-specter          | 768        | Medium  | Best    | Scientific papers</code></pre>
+<h3>Vector Database Features</h3>
+<pre><code>Feature            | Pinecone | Weaviate | Qdrant | Chroma
+-------------------|----------|----------|--------|--------
+Managed hosting    | ✅       | ✅       | ✅     | ❌
+Open source        | ❌       | ✅       | ✅     | ✅
+Hybrid search      | ❌       | ✅       | ✅     | ❌
+Metadata filtering | ✅       | ✅       | ✅     | ✅
+Horizontal scaling | ✅       | ✅       | ✅     | Limited
+GraphQL API        | ❌       | ✅       | ❌     | ❌</code></pre>
+<h3>Key Guidelines</h3>
+<pre><code>✅ DO: Normalize embeddings if using dot product metric
+✅ DO: Batch encode for 10-100x speedup
+✅ DO: Use hybrid search for best results
+✅ DO: Filter metadata before vector search when possible
+✅ DO: Monitor index size and query latency
+✅ DO: Test different embedding models for your domain
+
+❌ DON&#x27;T: Use high-dimensional embeddings without need (768 vs 384)
+❌ DON&#x27;T: Encode one document at a time
+❌ DON&#x27;T: Ignore metadata filtering capabilities
+❌ DON&#x27;T: Use exact search for &gt;100k vectors (too slow)
+❌ DON&#x27;T: Mix distance metrics (cosine vs L2) carelessly</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-python"># ❌ NEVER: Store raw text in vector DB without chunking
+long_document = &quot;...&quot; * 10000  # 50k words
+embedding = model.encode(long_document)  # Loses information, poor quality
+
+# ✅ CORRECT: Chunk documents before embedding
+def chunk_document(text, chunk_size=512, overlap=50):
+    &quot;&quot;&quot;Split into overlapping chunks&quot;&quot;&quot;
+    words = text.split()
+    chunks = []
+    for i in range(0, len(words), chunk_size - overlap):
+        chunk = &quot; &quot;.join(words[i:i + chunk_size])
+        chunks.append(chunk)
+    return chunks
+
+chunks = chunk_document(long_document)
+embeddings = model.encode(chunks, batch_size=32)
+
+# Store each chunk separately with document ID
+for i, (chunk, emb) in enumerate(zip(chunks, embeddings)):
+    index.upsert(
+        id=f&quot;doc1_chunk{i}&quot;,
+        vector=emb.tolist(),
+        metadata={&quot;doc_id&quot;: &quot;doc1&quot;, &quot;chunk_id&quot;: i, &quot;text&quot;: chunk}
+    )</code></pre>
+<p>❌ <strong>Long document embedding</strong>: Information loss, poor retrieval quality ✅ <strong>Correct approach</strong>: Chunk documents (256-512 tokens), embed separately</p>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Use wrong metric for normalized embeddings
+# Sentence-transformers normalize embeddings by default
+index = faiss.IndexFlatL2(dimension)  # L2 distance (wrong for normalized)
+
+# ✅ Correct: Use dot product or cosine for normalized embeddings
+index = faiss.IndexFlatIP(dimension)  # Inner product (correct)
+
+# Verify normalization
+norms = np.linalg.norm(embeddings, axis=1)
+print(f&quot;Norms: {norms}&quot;)  # Should be ~1.0 for normalized</code></pre>
+<p>❌ <strong>Metric mismatch</strong>: Wrong distance metric gives poor results ✅ <strong>Better</strong>: Match metric to embedding properties (normalized → dot product/cosine)</p>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Rebuild entire index for small updates
+# Bad: Re-embed and rebuild for every new document
+all_docs.append(new_doc)
+all_embeddings = model.encode(all_docs)  # Re-encodes everything
+index = build_index(all_embeddings)      # Rebuilds entire index
+
+# ✅ Correct: Incremental updates
+new_embedding = model.encode([new_doc])
+index.upsert(id=&quot;new_doc_id&quot;, vector=new_embedding[0].tolist())</code></pre>
+<p>❌ <strong>Full rebuilds</strong>: Wastes compute, increases latency ✅ <strong>Better</strong>: Use incremental upsert/delete operations</p>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Ignore query-document asymmetry
+# Same encoder for &quot;What is ML?&quot; and &quot;Machine learning is...&quot;
+model = SentenceTransformer(&#x27;all-MiniLM-L6-v2&#x27;)
+query_emb = model.encode(&quot;What is ML?&quot;)
+doc_emb = model.encode(&quot;Machine learning is a subset of AI...&quot;)
+
+# ✅ Correct: Use asymmetric model for Q&amp;A
+model = SentenceTransformer(&#x27;multi-qa-mpnet-base-dot-v1&#x27;)
+query_emb = model.encode(&quot;What is ML?&quot;)
+doc_emb = model.encode(&quot;Machine learning is a subset of AI...&quot;)
+# Model trained to map questions → answers in same space</code></pre>
+<p>❌ <strong>Symmetric models for Q&amp;A</strong>: Lower quality question-answer matching ✅ <strong>Better</strong>: Use models trained for asymmetric retrieval (multi-qa-*)</p>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Store embeddings without metadata
+index.upsert(id=&quot;doc1&quot;, vector=embedding.tolist())
+# Later: No way to filter by category, date, etc.
+
+# ✅ Correct: Always include useful metadata
+index.upsert(
+    id=&quot;doc1&quot;,
+    vector=embedding.tolist(),
+    metadata={
+        &quot;text&quot;: doc_text,      # Original text
+        &quot;title&quot;: doc_title,
+        &quot;category&quot;: &quot;tech&quot;,
+        &quot;date&quot;: &quot;2024-10-25&quot;,
+        &quot;author&quot;: &quot;Alice&quot;,
+        &quot;url&quot;: &quot;https://...&quot;
+    }
+)
+
+# Enables filtered search
+results = index.query(
+    vector=query_emb,
+    filter={&quot;category&quot;: &quot;tech&quot;, &quot;date&quot;: {&quot;$gte&quot;: &quot;2024-01-01&quot;}}
+)</code></pre>
+<p>❌ <strong>No metadata</strong>: Can&#x27;t filter results by attributes ✅ <strong>Better</strong>: Store rich metadata for filtering and display</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>ir-search-fundamentals.md</code> - Lexical search (BM25) to combine with vector search (hybrid)</li><li><code>ir-ranking-reranking.md</code> - Rerank vector search results with cross-encoders for better quality</li><li><code>ir-query-understanding.md</code> - Process queries before embedding (expansion, correction)</li><li><code>ml/dspy-rag.md</code> - Use vector search for retrieval in RAG pipelines</li><li><code>database-postgres.md</code> - pgvector extension for vector search in Postgres</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ir-vector-search.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

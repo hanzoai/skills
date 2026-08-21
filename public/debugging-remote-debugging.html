@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>debugging-remote-debugging</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/debugging-remote-debugging.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/debugging-remote-debugging.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>debugging-remote-debugging</h1><p class="lede">Comprehensive guide to remote debugging techniques for production and development environments. Covers SSH port forwarding, VSCode Remote Development, JetBrains Gateway, container debugging (Docker), Kubernetes debugging, production-safe debugging, debug symbols, and source maps.</p><h1>Remote Debugging</h1>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<h2>Overview</h2>
+<p>Remote debugging enables debugging applications running on remote servers, containers, or cloud environments. This guide covers safe and effective remote debugging strategies.</p>
+<h2>Core Concepts</h2>
+<h3>Remote Debugging Architecture</h3>
+<pre><code>Local Machine (Debugger)
+  ↓ SSH / Network
+Remote Machine (Debuggee)
+  ↓
+Debug Server (gdbserver, debugpy, etc.)
+  ↓
+Application Process</code></pre>
+<h3>When to Use Remote Debugging</h3>
+<pre><code>✅ Development on remote server (cloud VM)
+✅ Docker container debugging
+✅ Kubernetes pod debugging
+✅ Production issue investigation (with caution)
+✅ IoT / embedded device debugging
+✅ Cross-platform debugging (Windows ↔ Linux)
+
+❌ Local development (use local debugger)
+❌ Production without monitoring (risky)
+❌ High-throughput systems (performance impact)</code></pre>
+<hr>
+<h2>SSH Port Forwarding</h2>
+<h3>Local Port Forwarding</h3>
+<p><strong>Forward remote port to local machine</strong>:</p>
+<pre><code class="lang-bash"># Forward remote debugger port 5678 to local 5678
+ssh -L 5678:localhost:5678 user@remote-server.com
+
+# Now connect local debugger to localhost:5678
+# It tunnels to remote-server.com:5678</code></pre>
+<p><strong>Example: Python debugpy</strong>:</p>
+<pre><code class="lang-bash"># On remote server:
+python -m debugpy --listen 0.0.0.0:5678 --wait-for-client script.py
+
+# On local machine:
+ssh -L 5678:localhost:5678 user@remote-server.com
+
+# In VSCode: Attach to localhost:5678</code></pre>
+<h3>Remote Port Forwarding</h3>
+<p><strong>Forward local port to remote machine</strong>:</p>
+<pre><code class="lang-bash"># Make local port 8080 accessible on remote at port 9090
+ssh -R 9090:localhost:8080 user@remote-server.com
+
+# Remote can now access localhost:9090 → your local 8080</code></pre>
+<h3>Dynamic Port Forwarding (SOCKS Proxy)</h3>
+<p><strong>Create SOCKS proxy for multiple ports</strong>:</p>
+<pre><code class="lang-bash"># Dynamic proxy on local port 1080
+ssh -D 1080 user@remote-server.com
+
+# Configure browser/app to use SOCKS proxy localhost:1080
+# All connections tunnel through SSH</code></pre>
+<h3>Persistent SSH Tunnels</h3>
+<p><strong>Keep tunnel alive</strong>:</p>
+<pre><code class="lang-bash"># Auto-reconnect on disconnect
+ssh -L 5678:localhost:5678 -o ServerAliveInterval=60 -o ServerAliveCountMax=3 user@remote-server.com
+
+# Or use autossh
+autossh -M 0 -L 5678:localhost:5678 user@remote-server.com</code></pre>
+<hr>
+<h2>VSCode Remote Development</h2>
+<h3>Remote - SSH Extension</h3>
+<p><strong>Install extension</strong>:</p>
+<pre><code>Extensions → Search &quot;Remote - SSH&quot; → Install</code></pre>
+<p><strong>Connect to remote</strong>:</p>
+<pre><code>1. Cmd+Shift+P → &quot;Remote-SSH: Connect to Host&quot;
+2. Enter: user@remote-server.com
+3. Select platform: Linux / Windows / macOS
+4. Opens new VSCode window connected to remote
+
+Now:
+  - File Explorer shows remote files
+  - Terminal is remote shell
+  - Debugger runs on remote
+  - Extensions installed on remote</code></pre>
+<p><strong>SSH Config</strong> (~/.ssh/config):</p>
+<pre><code>Host my-remote
+    HostName 192.168.1.100
+    User myuser
+    Port 22
+    IdentityFile ~/.ssh/id_rsa
+    ForwardAgent yes
+
+# Connect in VSCode: &quot;Remote-SSH: Connect to Host&quot; → my-remote</code></pre>
+<h3>Remote Debugging Python</h3>
+<p><strong>Install Python extension on remote</strong>:</p>
+<pre><code>VSCode → Remote connection → Extensions → Install Python</code></pre>
+<p><strong>launch.json</strong> (remote debugging):</p>
+<pre><code class="lang-json">{
+    &quot;version&quot;: &quot;0.2.0&quot;,
+    &quot;configurations&quot;: [
+        {
+            &quot;name&quot;: &quot;Python: Current File (Remote)&quot;,
+            &quot;type&quot;: &quot;python&quot;,
+            &quot;request&quot;: &quot;launch&quot;,
+            &quot;program&quot;: &quot;${file}&quot;,
+            &quot;console&quot;: &quot;integratedTerminal&quot;,
+            &quot;justMyCode&quot;: false
+        }
+    ]
+}</code></pre>
+<p><strong>Workflow</strong>:</p>
+<pre><code>1. Open remote folder in VSCode
+2. Set breakpoint in Python file
+3. F5 to debug
+4. Debugger runs on remote, UI in local VSCode</code></pre>
+<h3>Remote - Containers Extension</h3>
+<p><strong>Debug inside Docker container</strong>:</p>
+<pre><code>1. Install &quot;Remote - Containers&quot; extension
+2. Cmd+Shift+P → &quot;Remote-Containers: Attach to Running Container&quot;
+3. Select container
+4. Debug inside container environment</code></pre>
+<p><strong>devcontainer.json</strong>:</p>
+<pre><code class="lang-json">{
+    &quot;name&quot;: &quot;Python Dev&quot;,
+    &quot;image&quot;: &quot;python:3.11&quot;,
+    &quot;extensions&quot;: [
+        &quot;ms-python.python&quot;
+    ],
+    &quot;forwardPorts&quot;: [5678],
+    &quot;postCreateCommand&quot;: &quot;pip install debugpy&quot;
+}</code></pre>
+<hr>
+<h2>JetBrains Gateway</h2>
+<h3>Remote Development via Gateway</h3>
+<p><strong>Setup</strong>:</p>
+<pre><code>1. Download JetBrains Gateway
+2. New Connection → SSH
+3. Enter: user@remote-server.com
+4. Select IDE (PyCharm, IntelliJ, etc.)
+5. Gateway installs IDE backend on remote
+6. Opens IDE UI locally, runs on remote</code></pre>
+<p><strong>Advantages</strong>:</p>
+<pre><code>✅ Full IDE features on remote
+✅ Large codebase stays on remote (fast indexing)
+✅ Automatic port forwarding
+✅ Integrated debugger</code></pre>
+<p><strong>Remote debugging</strong>:</p>
+<pre><code>1. Open project on remote via Gateway
+2. Set breakpoints
+3. Run → Debug (Shift+F9)
+4. Debugger runs on remote, UI local</code></pre>
+<hr>
+<h2>Docker Debugging</h2>
+<h3>Attach to Running Container</h3>
+<p><strong>VSCode attach</strong>:</p>
+<pre><code class="lang-bash"># Start container with debugger port exposed
+docker run -p 5678:5678 my-image
+
+# In VSCode launch.json:
+{
+    &quot;name&quot;: &quot;Python: Attach to Docker&quot;,
+    &quot;type&quot;: &quot;python&quot;,
+    &quot;request&quot;: &quot;attach&quot;,
+    &quot;connect&quot;: {
+        &quot;host&quot;: &quot;localhost&quot;,
+        &quot;port&quot;: 5678
+    },
+    &quot;pathMappings&quot;: [
+        {
+            &quot;localRoot&quot;: &quot;${workspaceFolder}&quot;,
+            &quot;remoteRoot&quot;: &quot;/app&quot;
+        }
+    ]
+}</code></pre>
+<p><strong>Python container example</strong>:</p>
+<pre><code class="lang-dockerfile"># Dockerfile
+FROM python:3.11
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+RUN pip install debugpy
+COPY . .
+
+# Start with debugger
+CMD [&quot;python&quot;, &quot;-m&quot;, &quot;debugpy&quot;, &quot;--listen&quot;, &quot;0.0.0.0:5678&quot;, &quot;--wait-for-client&quot;, &quot;app.py&quot;]</code></pre>
+<pre><code class="lang-bash"># Build and run
+docker build -t my-app .
+docker run -p 5678:5678 my-app
+
+# Attach VSCode debugger to localhost:5678</code></pre>
+<h3>Docker Exec (Interactive Debugging)</h3>
+<p><strong>Attach to running container</strong>:</p>
+<pre><code class="lang-bash"># Find container ID
+docker ps
+
+# Exec into container
+docker exec -it &lt;container-id&gt; /bin/bash
+
+# Install debugger
+pip install ipdb
+
+# Add breakpoint in code
+import ipdb; ipdb.set_trace()
+
+# Run app, drops into debugger in terminal</code></pre>
+<h3>Docker Compose Debugging</h3>
+<p><strong>docker-compose.yml</strong>:</p>
+<pre><code class="lang-yaml">services:
+  app:
+    build: .
+    ports:
+      - &quot;5678:5678&quot;
+    environment:
+      - DEBUGPY_ENABLED=true
+    volumes:
+      - .:/app  # Mount source for live editing
+    command: python -m debugpy --listen 0.0.0.0:5678 --wait-for-client app.py</code></pre>
+<pre><code class="lang-bash"># Start with compose
+docker-compose up
+
+# Attach debugger to localhost:5678</code></pre>
+<hr>
+<h2>Kubernetes Debugging</h2>
+<h3>kubectl debug (Ephemeral Containers)</h3>
+<p><strong>Debug running pod</strong> (Kubernetes 1.23+):</p>
+<pre><code class="lang-bash"># Create ephemeral debug container in pod
+kubectl debug my-pod -it --image=busybox --target=my-container
+
+# Or with debug utilities
+kubectl debug my-pod -it --image=nicolaka/netshoot --target=my-container
+
+# Inside debug container:
+# Can inspect processes, network, filesystem
+ps aux
+netstat -tuln
+ls /proc/1/root/app</code></pre>
+<p><strong>Debug with copy</strong>:</p>
+<pre><code class="lang-bash"># Create copy of pod for debugging
+kubectl debug my-pod --copy-to=my-pod-debug --container=my-container
+
+# Modify container in copy
+kubectl debug my-pod --copy-to=my-pod-debug --container=my-container --image=python:3.11-debug</code></pre>
+<h3>Port Forwarding</h3>
+<p><strong>Forward pod port to local</strong>:</p>
+<pre><code class="lang-bash"># Forward pod port 5678 to local 5678
+kubectl port-forward pod/my-pod 5678:5678
+
+# Attach debugger to localhost:5678</code></pre>
+<p><strong>Forward service</strong>:</p>
+<pre><code class="lang-bash"># Forward service port
+kubectl port-forward service/my-service 5678:5678</code></pre>
+<h3>Remote Debugging in Pod</h3>
+<p><strong>Deploy with debugger</strong>:</p>
+<pre><code class="lang-yaml"># deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        image: my-app:latest
+        ports:
+        - containerPort: 5678  # Debug port
+        env:
+        - name: DEBUG_MODE
+          value: &quot;true&quot;
+        command: [&quot;python&quot;, &quot;-m&quot;, &quot;debugpy&quot;, &quot;--listen&quot;, &quot;0.0.0.0:5678&quot;, &quot;--wait-for-client&quot;, &quot;app.py&quot;]</code></pre>
+<pre><code class="lang-bash"># Apply deployment
+kubectl apply -f deployment.yaml
+
+# Forward port
+kubectl port-forward deployment/my-app 5678:5678
+
+# Attach debugger to localhost:5678</code></pre>
+<h3>Kubernetes Debugging Best Practices</h3>
+<pre><code>✅ Use ephemeral containers for live debugging
+✅ Create pod copy for intrusive debugging
+✅ Use port-forward for debugger access
+✅ Remove debug configuration from production
+✅ Use separate debug environment/namespace
+
+❌ Don&#x27;t debug production pods directly (use copy)
+❌ Don&#x27;t leave debug ports exposed
+❌ Don&#x27;t modify production deployments for debugging</code></pre>
+<hr>
+<h2>Production-Safe Debugging</h2>
+<h3>Principles</h3>
+<p><strong>Safety rules</strong>:</p>
+<pre><code>1. NEVER pause execution in production
+   → Use logging, tracing, metrics instead
+
+2. MINIMIZE performance impact
+   → Use sampling, not continuous debugging
+
+3. ISOLATE debugging sessions
+   → Debug copy of pod/container, not live instance
+
+4. TIME-BOX sessions
+   → Set max debug duration, auto-timeout
+
+5. AUDIT access
+   → Log who debugged what and when
+
+6. REVERT changes
+   → Never leave debug code in production</code></pre>
+<h3>Read-Only Debugging</h3>
+<p><strong>Observe without modifying</strong>:</p>
+<pre><code class="lang-python"># ❌ Bad: Modify state in production
+def debug_user(user_id):
+    user = get_user(user_id)
+    user.role = &#x27;admin&#x27;  # DANGEROUS IN PRODUCTION
+    save_user(user)
+
+# ✅ Good: Observe only
+def debug_user(user_id):
+    user = get_user(user_id)
+    logger.info(f&quot;User state: {user}&quot;)  # Read-only
+    # Don&#x27;t modify, just observe</code></pre>
+<h3>Logging-Based Debugging</h3>
+<p><strong>Use structured logging instead of breakpoints</strong>:</p>
+<pre><code class="lang-python">import logging
+import json
+
+logger = logging.getLogger(__name__)
+
+def process_order(order):
+    # Instead of breakpoint(), log context
+    logger.info(&quot;Processing order&quot;, extra={
+        &quot;order_id&quot;: order.id,
+        &quot;user_id&quot;: order.user_id,
+        &quot;items&quot;: [item.id for item in order.items],
+        &quot;total&quot;: order.total
+    })
+
+    result = calculate_total(order)
+
+    logger.info(&quot;Order processed&quot;, extra={
+        &quot;order_id&quot;: order.id,
+        &quot;result&quot;: result
+    })
+
+    return result</code></pre>
+<h3>Sampling and Rate Limiting</h3>
+<p><strong>Debug subset of requests</strong>:</p>
+<pre><code class="lang-python">import random
+
+def should_debug():
+    # Debug 1% of requests
+    return random.random() &lt; 0.01
+
+def handle_request(request):
+    if should_debug():
+        logger.debug(&quot;Full request context&quot;, extra={
+            &quot;headers&quot;: request.headers,
+            &quot;body&quot;: request.body,
+            &quot;params&quot;: request.params
+        })
+
+    # Normal processing
+    return process(request)</code></pre>
+<h3>Time-Limited Debugging</h3>
+<p><strong>Auto-disable debug mode</strong>:</p>
+<pre><code class="lang-python">import time
+
+DEBUG_ENABLED_UNTIL = None  # Unix timestamp
+
+def enable_debug(duration_seconds):
+    global DEBUG_ENABLED_UNTIL
+    DEBUG_ENABLED_UNTIL = time.time() + duration_seconds
+    logger.warning(f&quot;Debug mode enabled for {duration_seconds}s&quot;)
+
+def is_debug_enabled():
+    if DEBUG_ENABLED_UNTIL is None:
+        return False
+    if time.time() &gt; DEBUG_ENABLED_UNTIL:
+        logger.info(&quot;Debug mode expired&quot;)
+        return False
+    return True
+
+def process_data(data):
+    if is_debug_enabled():
+        logger.debug(f&quot;Processing: {data}&quot;)
+    # Normal processing</code></pre>
+<hr>
+<h2>Debug Symbols</h2>
+<h3>Debug Symbols for Compiled Languages</h3>
+<p><strong>C/C++ with GDB</strong>:</p>
+<pre><code class="lang-bash"># Compile with debug symbols
+gcc -g program.c -o program
+
+# Strip symbols for production (smaller binary)
+strip program -o program-stripped
+
+# Debug with separate symbol file
+gcc -g program.c -o program
+objcopy --only-keep-debug program program.debug
+strip program
+objcopy --add-gnu-debuglink=program.debug program
+
+# GDB loads symbols automatically
+gdb program
+(gdb) file program
+(gdb) symbol-file program.debug</code></pre>
+<p><strong>Rust</strong>:</p>
+<pre><code class="lang-bash"># Debug build (includes symbols)
+cargo build
+
+# Release build (optimized, no symbols)
+cargo build --release
+
+# Release with debug symbols
+cargo build --release --config profile.release.debug=true</code></pre>
+<p><strong>Go</strong>:</p>
+<pre><code class="lang-bash"># Build with symbols (default)
+go build -o myapp
+
+# Strip symbols
+go build -ldflags=&quot;-s -w&quot; -o myapp
+
+# Delve debugger
+dlv exec ./myapp</code></pre>
+<h3>Symbol Servers</h3>
+<p><strong>Microsoft Symbol Server</strong> (Windows debugging):</p>
+<pre><code>Use symbol server for Windows binaries:
+SRV*c:\symbols*https://msdl.microsoft.com/download/symbols</code></pre>
+<p><strong>Linux debug symbols</strong>:</p>
+<pre><code class="lang-bash"># Ubuntu: install debug symbols
+sudo apt install &lt;package&gt;-dbg
+
+# Example: Python debug symbols
+sudo apt install python3.11-dbg</code></pre>
+<hr>
+<h2>Source Maps (JavaScript/TypeScript)</h2>
+<h3>Generating Source Maps</h3>
+<p><strong>TypeScript</strong>:</p>
+<pre><code class="lang-json">// tsconfig.json
+{
+  &quot;compilerOptions&quot;: {
+    &quot;sourceMap&quot;: true,
+    &quot;inlineSourceMap&quot;: false,  // Separate .map files
+    &quot;inlineSources&quot;: false,
+    &quot;sourceRoot&quot;: &quot;/&quot;
+  }
+}</code></pre>
+<p><strong>Webpack</strong>:</p>
+<pre><code class="lang-javascript">// webpack.config.js
+module.exports = {
+  devtool: &#x27;source-map&#x27;,  // Production: separate files
+  // devtool: &#x27;inline-source-map&#x27;,  // Development: inline
+  // devtool: &#x27;eval-source-map&#x27;,    // Fastest rebuild
+};</code></pre>
+<p><strong>Vite</strong>:</p>
+<pre><code class="lang-javascript">// vite.config.js
+export default {
+  build: {
+    sourcemap: true,  // Generate .map files
+  }
+}</code></pre>
+<h3>Using Source Maps</h3>
+<p><strong>Browser DevTools</strong>:</p>
+<pre><code>Settings (⚙️) → Sources → Enable JavaScript source maps
+
+Loads .map files automatically:
+  app.min.js
+  app.min.js.map  // Loaded automatically
+
+Debug shows original TypeScript/source code</code></pre>
+<p><strong>Node.js</strong>:</p>
+<pre><code class="lang-bash"># Enable source maps
+node --enable-source-maps app.js
+
+# Stack traces show original source, not transpiled</code></pre>
+<h3>Production Source Maps</h3>
+<p><strong>Security considerations</strong>:</p>
+<pre><code>❌ Don&#x27;t expose source maps publicly
+   → Reveals source code to attackers
+
+✅ Host source maps separately, restrict access
+✅ Use Sentry/error tracking to symbolicate server-side
+✅ Strip source maps from public builds</code></pre>
+<p><strong>Sentry source maps</strong>:</p>
+<pre><code class="lang-bash"># Upload source maps to Sentry
+sentry-cli releases files &lt;release&gt; upload-sourcemaps ./dist --rewrite
+
+# Sentry symbolicates errors using uploaded maps
+# Users never see source maps</code></pre>
+<hr>
+<h2>Remote Debugging Tools by Language</h2>
+<h3>Python: debugpy</h3>
+<p><strong>Remote script</strong>:</p>
+<pre><code class="lang-python">import debugpy
+
+# Listen on all interfaces, port 5678
+debugpy.listen((&quot;0.0.0.0&quot;, 5678))
+print(&quot;Waiting for debugger...&quot;)
+debugpy.wait_for_client()  # Block until debugger attaches
+
+# Your code
+def main():
+    for i in range(10):
+        print(f&quot;Iteration {i}&quot;)
+
+if __name__ == &quot;__main__&quot;:
+    main()</code></pre>
+<p><strong>VSCode attach</strong>:</p>
+<pre><code class="lang-json">{
+    &quot;name&quot;: &quot;Python: Remote Attach&quot;,
+    &quot;type&quot;: &quot;python&quot;,
+    &quot;request&quot;: &quot;attach&quot;,
+    &quot;connect&quot;: {
+        &quot;host&quot;: &quot;remote-server.com&quot;,
+        &quot;port&quot;: 5678
+    },
+    &quot;pathMappings&quot;: [
+        {
+            &quot;localRoot&quot;: &quot;${workspaceFolder}&quot;,
+            &quot;remoteRoot&quot;: &quot;/app&quot;
+        }
+    ]
+}</code></pre>
+<h3>Node.js: Inspector</h3>
+<p><strong>Start with inspector</strong>:</p>
+<pre><code class="lang-bash"># Remote Node.js
+node --inspect=0.0.0.0:9229 app.js
+
+# Or debug-brk (pause at start)
+node --inspect-brk=0.0.0.0:9229 app.js</code></pre>
+<p><strong>Chrome DevTools</strong>:</p>
+<pre><code>1. SSH tunnel: ssh -L 9229:localhost:9229 user@remote
+2. Chrome: chrome://inspect
+3. Configure: Add localhost:9229
+4. Click &quot;inspect&quot; under Remote Target</code></pre>
+<p><strong>VSCode attach</strong>:</p>
+<pre><code class="lang-json">{
+    &quot;name&quot;: &quot;Node: Attach to Remote&quot;,
+    &quot;type&quot;: &quot;node&quot;,
+    &quot;request&quot;: &quot;attach&quot;,
+    &quot;address&quot;: &quot;localhost&quot;,
+    &quot;port&quot;: 9229,
+    &quot;localRoot&quot;: &quot;${workspaceFolder}&quot;,
+    &quot;remoteRoot&quot;: &quot;/app&quot;
+}</code></pre>
+<h3>Go: Delve</h3>
+<p><strong>Remote debugging</strong>:</p>
+<pre><code class="lang-bash"># On remote server
+dlv debug --headless --listen=:2345 --api-version=2 --accept-multiclient
+
+# Local machine
+dlv connect remote-server.com:2345</code></pre>
+<p><strong>VSCode attach</strong>:</p>
+<pre><code class="lang-json">{
+    &quot;name&quot;: &quot;Go: Connect to Remote&quot;,
+    &quot;type&quot;: &quot;go&quot;,
+    &quot;request&quot;: &quot;attach&quot;,
+    &quot;mode&quot;: &quot;remote&quot;,
+    &quot;remotePath&quot;: &quot;/app&quot;,
+    &quot;port&quot;: 2345,
+    &quot;host&quot;: &quot;remote-server.com&quot;
+}</code></pre>
+<h3>Java: JDWP</h3>
+<p><strong>Start JVM with debug agent</strong>:</p>
+<pre><code class="lang-bash"># Remote Java
+java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -jar app.jar</code></pre>
+<p><strong>IntelliJ remote debug</strong>:</p>
+<pre><code>1. Run → Edit Configurations
+2. Add → Remote JVM Debug
+3. Host: remote-server.com
+4. Port: 5005
+5. Click Debug</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Common Mistakes</h3>
+<pre><code>❌ NEVER: Debug production without copy/staging
+   → Pausing production = downtime
+
+❌ NEVER: Leave debug ports exposed to internet
+   → Security vulnerability, remote code execution
+
+❌ NEVER: Commit debug code (breakpoint(), debugger;)
+   → Pauses production app
+
+❌ NEVER: Debug without SSH tunnel on public network
+   → Unencrypted debug traffic
+
+❌ NEVER: Modify production state while debugging
+   → Data corruption, undefined behavior
+
+❌ NEVER: Debug high-traffic endpoints
+   → Performance impact affects all users</code></pre>
+<h3>Best Practices</h3>
+<pre><code>✅ ALWAYS: Use SSH tunnels for remote debugging
+✅ ALWAYS: Debug on copy/staging, not production
+✅ ALWAYS: Time-limit debug sessions
+✅ ALWAYS: Use read-only debugging in production
+✅ ALWAYS: Prefer logging/tracing over breakpoints
+✅ ALWAYS: Remove debug configuration after session
+✅ ALWAYS: Audit who debugged what and when</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>gdb-fundamentals.md</strong>: GDB for C/C++/Rust</li><li><strong>lldb-macos-debugging.md</strong>: LLDB for macOS/iOS</li><li><strong>python-debugging.md</strong>: Python debugging tools</li><li><strong>browser-devtools.md</strong>: Browser debugging</li><li><strong>docker-debugging.md</strong>: Docker-specific debugging</li><li><strong>kubernetes-debugging.md</strong>: Kubernetes debugging strategies</li></ul>
+<hr>
+<h2>Summary</h2>
+<p>Remote debugging enables debugging applications in remote environments:</p>
+<ol><li><strong>SSH tunneling</strong>: Port forwarding for secure remote access</li><li><strong>VSCode Remote</strong>: Remote-SSH, Remote-Containers extensions</li><li><strong>JetBrains Gateway</strong>: Full IDE on remote servers</li><li><strong>Docker debugging</strong>: Attach to containers, exec debugging</li><li><strong>Kubernetes debugging</strong>: Ephemeral containers, port forwarding</li><li><strong>Production safety</strong>: Read-only, sampling, time-limited debugging</li><li><strong>Debug symbols</strong>: Separate symbols for production binaries</li><li><strong>Source maps</strong>: JavaScript/TypeScript source mapping</li></ol>
+<p><strong>Quick start (Python)</strong>:</p>
+<pre><code class="lang-bash"># Remote server
+python -m debugpy --listen 0.0.0.0:5678 --wait-for-client app.py
+
+# Local machine
+ssh -L 5678:localhost:5678 user@remote-server.com
+
+# VSCode: Attach to localhost:5678</code></pre>
+<p><strong>Production debugging</strong>:</p>
+<pre><code class="lang-python"># Use logging, not breakpoints
+logger.info(&quot;Debug context&quot;, extra={&quot;user_id&quot;: user.id, &quot;state&quot;: state})
+
+# Sample 1% of requests
+if random.random() &lt; 0.01:
+    logger.debug(&quot;Full request&quot;, extra={&quot;request&quot;: request})</code></pre>
+<p>Master remote debugging for efficient distributed system troubleshooting.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/debugging-remote-debugging.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

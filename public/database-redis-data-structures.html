@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>database-redis-data-structures</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/database-redis-data-structures.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/database-redis-data-structures.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>database-redis-data-structures</h1><p class="lede">Implementing caching layers</p><h1>Redis Data Structures and Patterns</h1>
+<p><strong>Scope</strong>: Redis data types, caching patterns, use cases <strong>Lines</strong>: ~270 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Implementing caching layers</li><li>Using Redis for sessions, queues, or pub/sub</li><li>Choosing appropriate Redis data structures</li><li>Designing rate limiters or leaderboards</li><li>Planning real-time features</li><li>Optimizing Redis memory usage</li></ul>
+<h2>Core Concepts</h2>
+<h3>What is Redis?</h3>
+<p><strong>Redis</strong> (REmote DIctionary Server) is an in-memory data store used as:</p>
+<ul><li><strong>Cache</strong>: Fast temporary storage</li><li><strong>Database</strong>: Persistent key-value store</li><li><strong>Message broker</strong>: Pub/sub, queues</li><li><strong>Session store</strong>: User sessions</li></ul>
+<p><strong>Key characteristics</strong>:</p>
+<ul><li>In-memory (microsecond latency)</li><li>Single-threaded (atomic operations)</li><li>Persistent (optional: RDB snapshots, AOF logs)</li><li>Supports complex data types</li></ul>
+<hr>
+<h2>Data Structures</h2>
+<h3>1. String (Most Common)</h3>
+<p><strong>Use case</strong>: Caching, counters, simple key-value</p>
+<pre><code class="lang-bash"># Set/Get
+SET user:123:name &quot;Alice&quot;
+GET user:123:name  # &quot;Alice&quot;
+
+# With expiration (TTL)
+SETEX session:abc123 3600 &quot;user_data&quot;  # Expires in 3600 seconds
+
+# Increment (atomic counter)
+INCR page:views  # 1
+INCR page:views  # 2
+
+# Decrement
+DECR inventory:item:5  # Atomic decrease</code></pre>
+<p><strong>Commands</strong>:</p>
+<ul><li><code>SET key value</code> - Store string</li><li><code>GET key</code> - Retrieve string</li><li><code>SETEX key seconds value</code> - Set with TTL</li><li><code>INCR key</code> / <code>DECR key</code> - Atomic increment/decrement</li><li><code>APPEND key value</code> - Append to string</li><li><code>STRLEN key</code> - Get string length</li></ul>
+<p><strong>Example: Cache API response</strong></p>
+<pre><code class="lang-python">import redis
+import json
+
+r = redis.Redis()
+
+# Cache miss: fetch from API and cache
+def get_user(user_id):
+    cache_key = f&quot;user:{user_id}&quot;
+    cached = r.get(cache_key)
+
+    if cached:
+        return json.loads(cached)
+
+    # Fetch from database
+    user = db.query(&quot;SELECT * FROM users WHERE id = ?&quot;, user_id)
+
+    # Cache for 1 hour
+    r.setex(cache_key, 3600, json.dumps(user))
+    return user</code></pre>
+<h3>2. Hash (Object Storage)</h3>
+<p><strong>Use case</strong>: Storing objects, user profiles</p>
+<pre><code class="lang-bash"># Set multiple fields
+HSET user:123 name &quot;Alice&quot; email &quot;alice@example.com&quot; age 30
+
+# Get single field
+HGET user:123 name  # &quot;Alice&quot;
+
+# Get all fields
+HGETALL user:123  # {name: &quot;Alice&quot;, email: &quot;alice@example.com&quot;, age: 30}
+
+# Increment field
+HINCRBY user:123 age 1  # 31</code></pre>
+<p><strong>Commands</strong>:</p>
+<ul><li><code>HSET key field value [field value ...]</code> - Set fields</li><li><code>HGET key field</code> - Get field</li><li><code>HGETALL key</code> - Get all fields</li><li><code>HDEL key field</code> - Delete field</li><li><code>HEXISTS key field</code> - Check if field exists</li><li><code>HINCRBY key field increment</code> - Increment field</li></ul>
+<p><strong>Why use Hash over String?</strong></p>
+<ul><li><strong>Hash</strong>: <code>HGET user:123 name</code> (get one field)</li><li><strong>String</strong>: <code>GET user:123</code> (must deserialize entire JSON)</li></ul>
+<p><strong>Memory efficient</strong> for objects with many fields.</p>
+<h3>3. List (Ordered Collection)</h3>
+<p><strong>Use case</strong>: Queues, activity feeds, recent items</p>
+<pre><code class="lang-bash"># Push to left (prepend)
+LPUSH queue:tasks &quot;task1&quot;
+LPUSH queue:tasks &quot;task2&quot;
+
+# Push to right (append)
+RPUSH queue:tasks &quot;task3&quot;
+
+# Pop from left (FIFO queue)
+LPOP queue:tasks  # &quot;task2&quot;
+
+# Pop from right (LIFO stack)
+RPOP queue:tasks  # &quot;task3&quot;
+
+# Get range
+LRANGE queue:tasks 0 9  # First 10 items
+
+# Trim to size (keep only first 100)
+LTRIM recent:posts 0 99</code></pre>
+<p><strong>Commands</strong>:</p>
+<ul><li><code>LPUSH key value</code> - Prepend</li><li><code>RPUSH key value</code> - Append</li><li><code>LPOP key</code> - Remove first</li><li><code>RPOP key</code> - Remove last</li><li><code>LRANGE key start stop</code> - Get range</li><li><code>LLEN key</code> - Get length</li><li><code>LTRIM key start stop</code> - Keep only range</li></ul>
+<p><strong>Example: Recent activity feed (capped)</strong></p>
+<pre><code class="lang-python"># Add new activity, keep last 100
+def add_activity(user_id, activity):
+    key = f&quot;feed:{user_id}&quot;
+    r.lpush(key, activity)
+    r.ltrim(key, 0, 99)  # Keep only 100 most recent
+
+# Get recent 20 activities
+def get_feed(user_id):
+    key = f&quot;feed:{user_id}&quot;
+    return r.lrange(key, 0, 19)</code></pre>
+<h3>4. Set (Unordered Unique Collection)</h3>
+<p><strong>Use case</strong>: Tags, followers, unique visitors</p>
+<pre><code class="lang-bash"># Add members
+SADD tags:post:123 &quot;python&quot; &quot;redis&quot; &quot;tutorial&quot;
+
+# Check membership
+SISMEMBER tags:post:123 &quot;python&quot;  # 1 (true)
+
+# Get all members
+SMEMBERS tags:post:123  # [&quot;python&quot;, &quot;redis&quot;, &quot;tutorial&quot;]
+
+# Set operations
+SINTER tags:post:123 tags:post:456  # Intersection
+SUNION tags:post:123 tags:post:456  # Union
+SDIFF tags:post:123 tags:post:456   # Difference
+
+# Remove member
+SREM tags:post:123 &quot;tutorial&quot;
+
+# Count members
+SCARD tags:post:123  # 2</code></pre>
+<p><strong>Commands</strong>:</p>
+<ul><li><code>SADD key member</code> - Add member</li><li><code>SISMEMBER key member</code> - Check membership</li><li><code>SMEMBERS key</code> - Get all members</li><li><code>SCARD key</code> - Count members</li><li><code>SREM key member</code> - Remove member</li><li><code>SINTER key1 key2</code> - Intersection</li><li><code>SUNION key1 key2</code> - Union</li></ul>
+<p><strong>Example: Common friends</strong></p>
+<pre><code class="lang-python"># Find mutual friends
+user1_friends = r.smembers(&quot;friends:user1&quot;)
+user2_friends = r.smembers(&quot;friends:user2&quot;)
+common = r.sinter(&quot;friends:user1&quot;, &quot;friends:user2&quot;)</code></pre>
+<h3>5. Sorted Set (Ordered by Score)</h3>
+<p><strong>Use case</strong>: Leaderboards, priority queues, time-series</p>
+<pre><code class="lang-bash"># Add members with scores
+ZADD leaderboard 100 &quot;alice&quot; 200 &quot;bob&quot; 150 &quot;charlie&quot;
+
+# Get rank (0-based, ascending)
+ZRANK leaderboard &quot;alice&quot;  # 0 (lowest score)
+
+# Get reverse rank (descending)
+ZREVRANK leaderboard &quot;alice&quot;  # 2 (highest to lowest)
+
+# Get top N (descending)
+ZREVRANGE leaderboard 0 9 WITHSCORES  # Top 10 with scores
+
+# Get by score range
+ZRANGEBYSCORE leaderboard 100 200  # Scores between 100-200
+
+# Increment score
+ZINCRBY leaderboard 50 &quot;alice&quot;  # alice now has 150
+
+# Remove member
+ZREM leaderboard &quot;bob&quot;
+
+# Count in range
+ZCOUNT leaderboard 100 200</code></pre>
+<p><strong>Commands</strong>:</p>
+<ul><li><code>ZADD key score member</code> - Add with score</li><li><code>ZRANGE key start stop [WITHSCORES]</code> - Get range (ascending)</li><li><code>ZREVRANGE key start stop [WITHSCORES]</code> - Get range (descending)</li><li><code>ZRANK key member</code> - Get rank (0-based)</li><li><code>ZSCORE key member</code> - Get score</li><li><code>ZINCRBY key increment member</code> - Increment score</li><li><code>ZREM key member</code> - Remove</li><li><code>ZCOUNT key min max</code> - Count in score range</li></ul>
+<p><strong>Example: Leaderboard</strong></p>
+<pre><code class="lang-python"># Add player score
+def add_score(player, score):
+    r.zadd(&quot;leaderboard&quot;, {player: score})
+
+# Get top 10
+def get_top_10():
+    return r.zrevrange(&quot;leaderboard&quot;, 0, 9, withscores=True)
+
+# Get player rank
+def get_rank(player):
+    return r.zrevrank(&quot;leaderboard&quot;, player) + 1  # 1-based rank</code></pre>
+<hr>
+<h2>Caching Patterns</h2>
+<h3>Pattern 1: Cache-Aside (Lazy Loading)</h3>
+<p><strong>Most common</strong>: Application manages cache.</p>
+<pre><code class="lang-python">def get_user(user_id):
+    cache_key = f&quot;user:{user_id}&quot;
+
+    # 1. Try cache
+    cached = r.get(cache_key)
+    if cached:
+        return json.loads(cached)
+
+    # 2. Cache miss: fetch from DB
+    user = db.query(&quot;SELECT * FROM users WHERE id = ?&quot;, user_id)
+
+    # 3. Store in cache
+    r.setex(cache_key, 3600, json.dumps(user))
+    return user</code></pre>
+<p><strong>Pros</strong>: Simple, cache only what&#x27;s needed <strong>Cons</strong>: Cache miss penalty (extra query)</p>
+<h3>Pattern 2: Write-Through</h3>
+<p><strong>Write</strong>: Update cache + database together.</p>
+<pre><code class="lang-python">def update_user(user_id, data):
+    # 1. Update database
+    db.execute(&quot;UPDATE users SET ... WHERE id = ?&quot;, user_id, data)
+
+    # 2. Update cache
+    cache_key = f&quot;user:{user_id}&quot;
+    r.setex(cache_key, 3600, json.dumps(data))</code></pre>
+<p><strong>Pros</strong>: Cache always fresh <strong>Cons</strong>: Write penalty (two writes)</p>
+<h3>Pattern 3: Write-Behind (Write-Back)</h3>
+<p><strong>Write</strong>: Update cache immediately, async write to database.</p>
+<pre><code class="lang-python">def update_user(user_id, data):
+    # 1. Update cache immediately
+    cache_key = f&quot;user:{user_id}&quot;
+    r.setex(cache_key, 3600, json.dumps(data))
+
+    # 2. Queue database write (background worker)
+    queue.enqueue(&quot;update_user_db&quot;, user_id, data)</code></pre>
+<p><strong>Pros</strong>: Fast writes <strong>Cons</strong>: Risk of data loss if Redis crashes before DB write</p>
+<h3>Pattern 4: Refresh-Ahead</h3>
+<p><strong>Preload</strong>: Refresh cache before expiration.</p>
+<pre><code class="lang-python">def get_user(user_id):
+    cache_key = f&quot;user:{user_id}&quot;
+    cached = r.get(cache_key)
+
+    if cached:
+        ttl = r.ttl(cache_key)
+        if ttl &lt; 600:  # Less than 10 min left
+            # Refresh in background
+            queue.enqueue(&quot;refresh_user_cache&quot;, user_id)
+        return json.loads(cached)
+
+    # ...fetch and cache</code></pre>
+<p><strong>Pros</strong>: Avoids cache miss penalty <strong>Cons</strong>: Complex, may cache unused data</p>
+<hr>
+<h2>Common Use Cases</h2>
+<h3>Use Case 1: Session Store</h3>
+<pre><code class="lang-python">import uuid
+
+def create_session(user_id):
+    session_id = str(uuid.uuid4())
+    session_key = f&quot;session:{session_id}&quot;
+
+    session_data = {&quot;user_id&quot;: user_id, &quot;created_at&quot;: time.time()}
+    r.setex(session_key, 86400, json.dumps(session_data))  # 24h TTL
+
+    return session_id
+
+def get_session(session_id):
+    session_key = f&quot;session:{session_id}&quot;
+    data = r.get(session_key)
+    return json.loads(data) if data else None</code></pre>
+<h3>Use Case 2: Rate Limiting (Sliding Window)</h3>
+<pre><code class="lang-python">def is_rate_limited(user_id, limit=100, window=60):
+    key = f&quot;rate_limit:{user_id}&quot;
+    now = time.time()
+
+    # Remove old entries outside window
+    r.zremrangebyscore(key, 0, now - window)
+
+    # Count requests in window
+    count = r.zcard(key)
+
+    if count &gt;= limit:
+        return True
+
+    # Add current request
+    r.zadd(key, {str(uuid.uuid4()): now})
+    r.expire(key, window)
+    return False</code></pre>
+<h3>Use Case 3: Leaderboard</h3>
+<pre><code class="lang-python">def update_score(player, score):
+    r.zadd(&quot;leaderboard&quot;, {player: score})
+
+def get_top_10():
+    return r.zrevrange(&quot;leaderboard&quot;, 0, 9, withscores=True)
+
+def get_player_rank(player):
+    rank = r.zrevrank(&quot;leaderboard&quot;, player)
+    return rank + 1 if rank is not None else None</code></pre>
+<h3>Use Case 4: Pub/Sub (Real-Time Messaging)</h3>
+<pre><code class="lang-python"># Publisher
+def send_notification(channel, message):
+    r.publish(channel, message)
+
+# Subscriber
+def listen_notifications(channel):
+    pubsub = r.pubsub()
+    pubsub.subscribe(channel)
+
+    for message in pubsub.listen():
+        if message[&#x27;type&#x27;] == &#x27;message&#x27;:
+            print(f&quot;Received: {message[&#x27;data&#x27;]}&quot;)</code></pre>
+<h3>Use Case 5: Distributed Lock</h3>
+<pre><code class="lang-python">def acquire_lock(resource, timeout=10):
+    lock_key = f&quot;lock:{resource}&quot;
+    lock_value = str(uuid.uuid4())
+
+    # SET NX (only if not exists) EX (with expiration)
+    acquired = r.set(lock_key, lock_value, nx=True, ex=timeout)
+    return lock_value if acquired else None
+
+def release_lock(resource, lock_value):
+    lock_key = f&quot;lock:{resource}&quot;
+
+    # Only release if we own the lock (Lua script for atomicity)
+    lua = &quot;&quot;&quot;
+    if redis.call(&quot;get&quot;, KEYS[1]) == ARGV[1] then
+        return redis.call(&quot;del&quot;, KEYS[1])
+    else
+        return 0
+    end
+    &quot;&quot;&quot;
+    return r.eval(lua, 1, lock_key, lock_value)</code></pre>
+<hr>
+<h2>TTL Strategies</h2>
+<h3>Set Expiration</h3>
+<pre><code class="lang-bash"># Set with expiration
+SETEX key 3600 &quot;value&quot;
+
+# Set expiration on existing key
+EXPIRE key 3600
+
+# Check TTL
+TTL key  # Returns seconds remaining, -1 if no expiration, -2 if key doesn&#x27;t exist
+
+# Remove expiration
+PERSIST key</code></pre>
+<h3>Choosing TTL Values</h3>
+<p>| Use Case | TTL | Reasoning | |----------|-----|-----------| | API responses | 5-15 min | Balance freshness and cache hits | | User sessions | 24 hours | Standard session duration | | Static content | Days/weeks | Rarely changes | | Real-time data | 10-60 sec | Needs to be fresh | | Rate limiting | Window size | 60 sec, 1 hour, etc. |</p>
+<p><strong>Trade-offs</strong>:</p>
+<ul><li><strong>Shorter TTL</strong>: Fresher data, more database queries</li><li><strong>Longer TTL</strong>: Fewer queries, stale data risk</li></ul>
+<hr>
+<h2>Memory Optimization</h2>
+<h3>Eviction Policies</h3>
+<p>When Redis reaches max memory, it evicts keys based on policy:</p>
+<p>| Policy | Behavior | |--------|----------| | <code>noeviction</code> | Return errors, no eviction | | <code>allkeys-lru</code> | Evict least recently used (any key) | | <code>volatile-lru</code> | Evict LRU (only keys with TTL) | | <code>allkeys-random</code> | Evict random key | | <code>volatile-ttl</code> | Evict key with shortest TTL |</p>
+<p><strong>Recommendation</strong>: <code>allkeys-lru</code> for cache, <code>noeviction</code> for persistent data.</p>
+<pre><code class="lang-bash"># Set in redis.conf
+maxmemory 2gb
+maxmemory-policy allkeys-lru</code></pre>
+<h3>Memory Efficiency Tips</h3>
+<pre><code class="lang-bash"># Use Hashes for objects (more compact)
+HSET user:123 name &quot;Alice&quot; email &quot;alice@example.com&quot;  # Better than JSON string
+
+# Use short key names
+# ❌ user:profile:123:details
+# ✅ u:123
+
+# Compress large values
+# Use gzip/zlib before storing
+
+# Use smaller data types
+# INT instead of string for numbers</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Data Structure Selection</h3>
+<pre><code>Need:                           Use:
+────────────────────────────────────────
+Cache/simple value             String
+Object/multiple fields         Hash
+Queue/feed/recent items        List
+Unique items/set operations    Set
+Ordered by score/leaderboard   Sorted Set</code></pre>
+<h3>Common Commands</h3>
+<pre><code class="lang-bash"># General
+KEYS pattern        # Find keys (avoid in production)
+SCAN cursor         # Iterate keys (production-safe)
+EXISTS key          # Check existence
+DEL key             # Delete key
+EXPIRE key seconds  # Set TTL
+TTL key             # Check TTL
+TYPE key            # Get data type
+
+# Transactions
+MULTI               # Start transaction
+EXEC                # Execute transaction
+DISCARD             # Cancel transaction</code></pre>
+<hr>
+<h2>Common Pitfalls</h2>
+<p>❌ <strong>Using KEYS in production</strong> - Blocks Redis (O(N)) ✅ Use SCAN for iteration</p>
+<p>❌ <strong>No expiration on cache keys</strong> - Memory leak ✅ Always set TTL with SETEX or EXPIRE</p>
+<p>❌ <strong>Storing large values</strong> - Slow, memory-inefficient ✅ Compress large values, or use hash for objects</p>
+<p>❌ <strong>Using Redis as primary database without persistence</strong> - Data loss on crash ✅ Enable RDB/AOF for persistent data</p>
+<p>❌ <strong>Not monitoring memory usage</strong> - OOM errors ✅ Set maxmemory and monitor with INFO memory</p>
+<hr>
+<h2>Level 3: Resources</h2>
+<h3>Comprehensive Reference</h3>
+<p><strong><code>resources/REFERENCE.md</code></strong> (1,800+ lines) Comprehensive guide covering:</p>
+<ul><li>All Redis data structures (String, List, Set, Sorted Set, Hash, Stream, Bitmap, HyperLogLog, Geospatial)</li><li>Time complexity for every operation</li><li>Memory optimization techniques and encodings</li><li>Persistence strategies (RDB, AOF, hybrid)</li><li>Replication and clustering architectures</li><li>Pub/Sub patterns and limitations</li><li>Transactions and pipelining</li><li>Lua scripting patterns</li><li>Caching strategies (cache-aside, write-through, write-behind)</li><li>Common patterns (rate limiting, locks, leaderboards, queues)</li><li>Production best practices and troubleshooting</li></ul>
+<h3>Executable Scripts</h3>
+<p><strong><code>resources/scripts/analyze_redis.py</code></strong> Analyze Redis memory usage and key patterns:</p>
+<pre><code class="lang-bash"># Analyze all keys
+./analyze_redis.py
+
+# Analyze specific pattern
+./analyze_redis.py --pattern &quot;user:*&quot;
+
+# Find large keys
+./analyze_redis.py --large-keys --threshold 5
+
+# Detailed pattern analysis
+./analyze_redis.py --analyze-pattern &quot;session:*&quot;
+
+# JSON output
+./analyze_redis.py --json</code></pre>
+<p>Features:</p>
+<ul><li>Memory usage analysis with pattern detection</li><li>Key pattern extraction (replaces IDs with placeholders)</li><li>Type and encoding distribution</li><li>TTL analysis</li><li>Optimization recommendations</li><li>Large key detection</li></ul>
+<p><strong><code>resources/scripts/benchmark_operations.py</code></strong> Benchmark Redis operations:</p>
+<pre><code class="lang-bash"># Run all benchmarks
+./benchmark_operations.py
+
+# Benchmark specific data structure
+./benchmark_operations.py --benchmark strings
+
+# More iterations
+./benchmark_operations.py --iterations 10000
+
+# JSON output
+./benchmark_operations.py --json</code></pre>
+<p>Benchmarks:</p>
+<ul><li>String operations (SET, GET, INCR)</li><li>List operations (LPUSH, RPUSH, LPOP, LRANGE)</li><li>Set operations (SADD, SISMEMBER, SINTER)</li><li>Sorted set operations (ZADD, ZSCORE, ZRANGE, ZRANK)</li><li>Hash operations (HSET, HGET, HINCRBY, HGETALL)</li><li>Pipelining vs individual commands</li><li>Different data sizes (64B to 16KB)</li></ul>
+<p>Output includes ops/sec, avg/p50/p95/p99 latency.</p>
+<p><strong><code>resources/scripts/test_patterns.sh</code></strong> Test common Redis patterns:</p>
+<pre><code class="lang-bash"># Test all patterns
+./test_patterns.sh
+
+# Test specific pattern
+./test_patterns.sh --pattern cache
+
+# JSON output
+./test_patterns.sh --json</code></pre>
+<p>Tests:</p>
+<ul><li>Cache pattern (cache-aside with TTL)</li><li>Queue pattern (FIFO, reliable queue with BRPOPLPUSH)</li><li>Pub/Sub pattern (publish, subscribe, pattern matching)</li><li>Distributed lock pattern (acquire, release with Lua)</li><li>Leaderboard pattern (ZADD, rankings, increments)</li><li>Rate limiting (counter-based, sliding window)</li></ul>
+<h3>Runnable Examples</h3>
+<p><strong>Python Examples:</strong></p>
+<ol><li><strong><code>examples/python/caching_patterns.py</code></strong> - Caching strategies:</li></ol>
+<ul><li>Cache-aside (lazy loading)</li><li>Write-through (sync cache + DB)</li><li>Write-behind (async DB writes)</li><li>Performance comparison</li><li>Mock database for demonstration</li></ul>
+<ol><li><strong><code>examples/python/rate_limiter.py</code></strong> - Rate limiting algorithms:</li></ol>
+<ul><li>Sliding window (sorted set based)</li><li>Token bucket (Lua script based)</li><li>Fixed window (simple counter)</li><li>Comparison across algorithms</li><li>API tier simulation (free vs premium)</li></ul>
+<ol><li><strong><code>examples/python/session_store.py</code></strong> - Session management:</li></ol>
+<ul><li>Basic session CRUD operations</li><li>Multiple sessions per user</li><li>Shopping cart integration</li><li>Session expiration handling</li><li>User session statistics</li></ul>
+<p><strong>Node.js Examples:</strong></p>
+<ol><li><strong><code>examples/node/leaderboard.js</code></strong> - Leaderboard implementation:</li></ol>
+<ul><li>Basic leaderboard operations</li><li>Time-based leaderboards (daily, weekly, monthly)</li><li>Score range queries</li><li>Players around position</li><li>Multiple leaderboards (casual, ranked, tournament)</li></ul>
+<ol><li><strong><code>examples/node/pubsub_example.js</code></strong> - Pub/Sub messaging:</li></ol>
+<ul><li>Basic publish/subscribe</li><li>Pattern subscriptions</li><li>Chat room implementation</li><li>Notification system</li><li>Multiple subscribers demonstration</li><li>Cache invalidation via pub/sub</li></ul>
+<p><strong>Docker Examples:</strong></p>
+<p><strong><code>examples/docker/</code></strong> - Complete Docker Compose configurations:</p>
+<p>Configurations provided:</p>
+<ul><li><strong>Basic Redis</strong>: Simple instance with persistence</li><li><strong>Configured Redis</strong>: Password, memory limits, custom config</li><li><strong>Master-Replica</strong>: Replication setup (1 master + 2 replicas)</li><li><strong>Redis Sentinel</strong>: High availability (master + replicas + 3 sentinels)</li><li><strong>Redis Cluster</strong>: Sharded setup (6 nodes with replicas)</li><li><strong>Management UIs</strong>: Redis Commander and Redis Insight</li></ul>
+<p>Quick start:</p>
+<pre><code class="lang-bash"># Basic Redis
+docker-compose up redis
+
+# Redis with replication
+docker-compose up redis-master redis-replica-1 redis-replica-2
+
+# Redis Cluster
+docker-compose up redis-cluster-1 redis-cluster-2 redis-cluster-3 \
+                  redis-cluster-4 redis-cluster-5 redis-cluster-6
+
+# Create cluster
+docker exec -it redis-cluster-1 redis-cli --cluster create \
+  redis-cluster-1:7000 redis-cluster-2:7001 redis-cluster-3:7002 \
+  redis-cluster-4:7003 redis-cluster-5:7004 redis-cluster-6:7005 \
+  --cluster-replicas 1 --cluster-yes
+
+# Web UI
+docker-compose up redis redis-commander
+# Access at http://localhost:8081</code></pre>
+<p>Includes:</p>
+<ul><li>Production-ready configurations</li><li>Persistence setup (RDB + AOF)</li><li>Networking configuration</li><li>Volume management</li><li>Health checks</li><li>README with troubleshooting</li></ul>
+<h3>Usage</h3>
+<p>All scripts support:</p>
+<ul><li><code>--help</code> flag for detailed usage</li><li><code>--json</code> flag for machine-readable output</li><li>Connection parameters (<code>--host</code>, <code>--port</code>, <code>--password</code>, <code>--db</code>)</li><li>Verbose mode (<code>--verbose</code> or <code>-v</code>)</li></ul>
+<p>All examples are self-contained and runnable with minimal setup.</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>postgres-query-optimization.md</code> - When to cache database queries</li><li><code>database-connection-pooling.md</code> - Redis connection pooling</li><li><code>api-rate-limiting.md</code> - Implementing rate limits with Redis</li><li><code>database-selection.md</code> - When to use Redis vs other databases</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/database-redis-data-structures.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

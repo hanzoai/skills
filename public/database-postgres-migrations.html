@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>database-postgres-migrations</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/database-postgres-migrations.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/database-postgres-migrations.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>database-postgres-migrations</h1><p class="lede">Creating database migrations for schema changes</p><h1>PostgreSQL Migrations</h1>
+<p><strong>Scope</strong>: Database migrations, schema versioning, zero-downtime deployments <strong>Lines</strong>: ~280 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Creating database migrations for schema changes</li><li>Managing schema versions across environments</li><li>Planning zero-downtime deployments</li><li>Rolling back migrations safely</li><li>Adding/removing columns, tables, or indexes</li><li>Choosing migration tools or strategies</li></ul>
+<h2>Core Concepts</h2>
+<h3>What Are Migrations?</h3>
+<p>Migrations are <strong>versioned scripts</strong> that modify database schema over time.</p>
+<p><strong>Key properties</strong>:</p>
+<ul><li><strong>Versioned</strong>: Each migration has a unique version/timestamp</li><li><strong>Ordered</strong>: Applied sequentially (v1 → v2 → v3)</li><li><strong>Tracked</strong>: Database knows which migrations are applied</li><li><strong>Reversible</strong>: Can roll back (ideally)</li><li><strong>Idempotent</strong>: Safe to run multiple times (ideally)</li></ul>
+<h3>Migration Tools Comparison</h3>
+<p>| Tool | Languages | Features | Best For | |------|-----------|----------|----------| | <strong>Flyway</strong> | Java/SQL | Simple, SQL-first, commercial support | Java apps, enterprise | | <strong>Liquibase</strong> | Java/XML/YAML/SQL | Complex, rollback support, database-agnostic | Enterprise, multi-DB | | <strong>golang-migrate</strong> | Go/SQL | Simple, CLI-focused, programmatic | Go apps, microservices | | <strong>Alembic</strong> | Python/SQL | SQLAlchemy integration, autogenerate | Python apps, Django/Flask | | <strong>dbmate</strong> | Any/SQL | Simple, language-agnostic, minimal | Simple projects, polyglot | | <strong>Atlas</strong> | Go/HCL | Modern, declarative, schema-as-code | Modern Go apps, GitOps |</p>
+<hr>
+<h2>Migration File Structure</h2>
+<h3>Flyway</h3>
+<pre><code>db/migration/
+├── V1__initial_schema.sql
+├── V2__add_users_table.sql
+├── V3__add_orders_table.sql
+└── V4__add_user_email_index.sql</code></pre>
+<p><strong>Naming</strong>: <code>V{version}__{description}.sql</code></p>
+<pre><code class="lang-sql">-- V1__initial_schema.sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);</code></pre>
+<h3>golang-migrate</h3>
+<pre><code>migrations/
+├── 000001_initial_schema.up.sql
+├── 000001_initial_schema.down.sql
+├── 000002_add_users_table.up.sql
+├── 000002_add_users_table.down.sql</code></pre>
+<p><strong>Up/Down pattern</strong>: Each migration has <code>.up.sql</code> (apply) and <code>.down.sql</code> (rollback).</p>
+<pre><code class="lang-sql">-- 000001_initial_schema.up.sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL
+);
+
+-- 000001_initial_schema.down.sql
+-- Example of rollback migration - destructive operation for reverting schema
+DROP TABLE users;</code></pre>
+<h3>Alembic (Python)</h3>
+<pre><code class="lang-python"># alembic/versions/abc123_add_users_table.py
+def upgrade():
+    op.create_table(
+        &#x27;users&#x27;,
+        sa.Column(&#x27;id&#x27;, sa.Integer(), primary_key=True),
+        sa.Column(&#x27;email&#x27;, sa.String(255), unique=True, nullable=False),
+        sa.Column(&#x27;created_at&#x27;, sa.DateTime(), server_default=sa.func.now())
+    )
+
+def downgrade():
+    op.drop_table(&#x27;users&#x27;)</code></pre>
+<hr>
+<h2>Writing Safe Migrations</h2>
+<h3>Rule 1: Make Migrations Reversible</h3>
+<pre><code class="lang-sql">-- ✅ GOOD: Can be reversed
+-- Up
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+
+-- Down
+ALTER TABLE users DROP COLUMN phone;</code></pre>
+<pre><code class="lang-sql">-- ❌ BAD: Cannot fully reverse (data loss)
+-- Up
+ALTER TABLE users DROP COLUMN phone;
+
+-- Down (can&#x27;t restore data!)
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);</code></pre>
+<h3>Rule 2: Make Migrations Idempotent</h3>
+<pre><code class="lang-sql">-- ✅ GOOD: Safe to run multiple times
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255)
+);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);</code></pre>
+<pre><code class="lang-sql">-- ❌ BAD: Fails if run twice
+CREATE TABLE users (...);  -- ERROR: relation &quot;users&quot; already exists
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);  -- ERROR: column already exists</code></pre>
+<h3>Rule 3: Test Migrations Before Production</h3>
+<pre><code class="lang-bash"># 1. Apply migration on local copy of production data
+pg_dump production | psql local_test
+migrate up
+
+# 2. Verify schema
+psql local_test -c &quot;\d users&quot;
+
+# 3. Test rollback
+migrate down
+migrate up
+
+# 4. Test application against new schema
+npm test</code></pre>
+<h3>Rule 4: Use Transactions (When Possible)</h3>
+<pre><code class="lang-sql">BEGIN;
+
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+CREATE INDEX idx_users_phone ON users(phone);
+
+COMMIT;</code></pre>
+<p><strong>Note</strong>: Some operations can&#x27;t be in transactions:</p>
+<ul><li><code>CREATE INDEX CONCURRENTLY</code></li><li><code>DROP INDEX CONCURRENTLY</code></li><li><code>VACUUM</code></li></ul>
+<p>For these, split into separate migration files.</p>
+<hr>
+<h2>Zero-Downtime Migration Patterns</h2>
+<h3>Pattern 1: Adding a Column (Nullable)</h3>
+<p><strong>Simple case</strong>: Adding a nullable column is safe.</p>
+<pre><code class="lang-sql">-- Migration 1: Add nullable column
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);</code></pre>
+<p><strong>Deploy</strong>: Apply migration → Deploy new code (can read/write phone).</p>
+<p><strong>No downtime</strong> because:</p>
+<ul><li>Old code ignores new column</li><li>New code reads/writes new column</li></ul>
+<h3>Pattern 2: Adding a Column (NOT NULL)</h3>
+<p><strong>Problem</strong>: <code>ALTER TABLE users ADD COLUMN phone VARCHAR(20) NOT NULL</code> locks table and fails if existing rows exist.</p>
+<p><strong>Solution</strong>: Multi-step approach.</p>
+<pre><code class="lang-sql">-- Step 1: Add nullable column
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+
+-- Step 2: Backfill existing rows (in batches)
+UPDATE users SET phone = &#x27;unknown&#x27; WHERE phone IS NULL;
+
+-- Step 3: Add NOT NULL constraint
+ALTER TABLE users ALTER COLUMN phone SET NOT NULL;</code></pre>
+<p><strong>Deploy sequence</strong>:</p>
+<ol><li>Apply Step 1 → Deploy code that writes to phone</li><li>Run Step 2 backfill (batch UPDATE with limits)</li><li>Apply Step 3 → Deploy code that requires phone</li></ol>
+<h3>Pattern 3: Removing a Column (Multi-Phase)</h3>
+<p><strong>Problem</strong>: Removing a column immediately breaks old code.</p>
+<p><strong>Solution</strong>: Expand-Contract pattern.</p>
+<p><strong>Phase 1 (Expand)</strong>: Stop writing to column</p>
+<pre><code class="lang-sql">-- No migration yet, just deploy code that ignores the column
+-- Old code still reads column, new code ignores it</code></pre>
+<p><strong>Phase 2 (Wait)</strong>: Ensure all old code is gone (all instances updated)</p>
+<p><strong>Phase 3 (Contract)</strong>: Remove column</p>
+<pre><code class="lang-sql">-- Migration: Remove column
+ALTER TABLE users DROP COLUMN phone;</code></pre>
+<p><strong>Timeline</strong>:</p>
+<ul><li>Week 1: Deploy code that stops writing to <code>phone</code></li><li>Week 2: Verify no reads/writes in logs</li><li>Week 3: Drop column via migration</li></ul>
+<h3>Pattern 4: Renaming a Column (Multi-Phase)</h3>
+<p><strong>Problem</strong>: Renaming breaks old code.</p>
+<p><strong>Solution</strong>: Dual-write pattern.</p>
+<p><strong>Phase 1</strong>: Add new column, dual-write</p>
+<pre><code class="lang-sql">ALTER TABLE users ADD COLUMN email_address VARCHAR(255);
+
+-- Trigger or application code writes to both columns
+CREATE TRIGGER sync_email_to_email_address
+BEFORE INSERT OR UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION sync_email_columns();</code></pre>
+<p><strong>Phase 2</strong>: Backfill old data</p>
+<pre><code class="lang-sql">UPDATE users SET email_address = email WHERE email_address IS NULL;</code></pre>
+<p><strong>Phase 3</strong>: Switch reads to new column</p>
+<pre><code class="lang-sql">-- Deploy code that reads email_address instead of email</code></pre>
+<p><strong>Phase 4</strong>: Remove old column</p>
+<pre><code class="lang-sql">DROP TRIGGER sync_email_to_email_address ON users;
+ALTER TABLE users DROP COLUMN email;</code></pre>
+<h3>Pattern 5: Adding an Index (CONCURRENTLY)</h3>
+<p><strong>Problem</strong>: <code>CREATE INDEX</code> locks table for writes.</p>
+<p><strong>Solution</strong>: <code>CREATE INDEX CONCURRENTLY</code></p>
+<pre><code class="lang-sql">-- ✅ GOOD: No write lock, builds index in background
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);</code></pre>
+<p><strong>Trade-offs</strong>:</p>
+<ul><li>Takes longer than regular <code>CREATE INDEX</code></li><li>Can&#x27;t run inside a transaction</li><li>Can fail and leave invalid index (must clean up)</li></ul>
+<p><strong>Check for invalid indexes</strong>:</p>
+<pre><code class="lang-sql">SELECT indexrelid::regclass, indisvalid
+FROM pg_index
+WHERE NOT indisvalid;
+
+-- Drop invalid index
+DROP INDEX CONCURRENTLY idx_users_email;</code></pre>
+<h3>Pattern 6: Adding a Constraint (Multi-Phase)</h3>
+<p><strong>Problem</strong>: <code>ALTER TABLE users ADD CONSTRAINT ... NOT VALID</code> requires table scan.</p>
+<p><strong>Solution</strong>: Add constraint without validation first, then validate.</p>
+<pre><code class="lang-sql">-- Step 1: Add constraint without validation (fast, allows new writes)
+ALTER TABLE users ADD CONSTRAINT check_age_positive CHECK (age &gt; 0) NOT VALID;
+
+-- Step 2: Validate constraint (slow, but allows concurrent reads/writes)
+ALTER TABLE users VALIDATE CONSTRAINT check_age_positive;</code></pre>
+<p><strong>Benefit</strong>: Step 1 is fast, Step 2 doesn&#x27;t block writes.</p>
+<hr>
+<h2>Data Migrations vs Schema Migrations</h2>
+<h3>Schema Migrations</h3>
+<p>Changes to structure:</p>
+<ul><li><code>CREATE TABLE</code></li><li><code>ALTER TABLE ADD COLUMN</code></li><li><code>CREATE INDEX</code></li><li><code>ALTER TABLE ADD CONSTRAINT</code></li></ul>
+<p><strong>Fast</strong>: DDL operations (with CONCURRENTLY for indexes).</p>
+<h3>Data Migrations</h3>
+<p>Changes to data:</p>
+<ul><li><code>UPDATE users SET status = &#x27;active&#x27; WHERE status IS NULL;</code></li><li>Backfilling new columns</li><li>Data transformations</li></ul>
+<p><strong>Slow</strong>: Can lock tables, requires batching.</p>
+<h3>Best Practice: Separate Data and Schema</h3>
+<pre><code class="lang-sql">-- Migration 1: Schema change (fast)
+ALTER TABLE users ADD COLUMN status VARCHAR(20);
+
+-- Migration 2: Data backfill (slow, run separately)
+-- Run in batches to avoid long locks
+DO $$
+DECLARE
+    batch_size INT := 1000;
+    rows_updated INT;
+BEGIN
+    LOOP
+        UPDATE users
+        SET status = &#x27;active&#x27;
+        WHERE id IN (
+            SELECT id FROM users WHERE status IS NULL LIMIT batch_size
+        );
+
+        GET DIAGNOSTICS rows_updated = ROW_COUNT;
+        EXIT WHEN rows_updated = 0;
+
+        COMMIT; -- Release locks between batches
+        PERFORM pg_sleep(0.1); -- Avoid overwhelming DB
+    END LOOP;
+END $$;</code></pre>
+<hr>
+<h2>Rollback Strategies</h2>
+<h3>Strategy 1: Down Migrations (Ideal)</h3>
+<pre><code class="lang-sql">-- Migration up
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+
+-- Migration down
+ALTER TABLE users DROP COLUMN phone;</code></pre>
+<p><strong>Limitations</strong>:</p>
+<ul><li>Some changes are irreversible (data deletion)</li><li>Complex migrations are hard to reverse</li></ul>
+<h3>Strategy 2: Backup Before Migration</h3>
+<pre><code class="lang-bash"># Backup before migration
+pg_dump -Fc -f backup_before_migration.dump production_db
+
+# Apply migration
+migrate up
+
+# If rollback needed
+pg_restore -d production_db backup_before_migration.dump</code></pre>
+<p><strong>Trade-offs</strong>:</p>
+<ul><li>Safe, but slow for large databases</li><li>Downtime during restore</li></ul>
+<h3>Strategy 3: Blue-Green Deployment</h3>
+<ol><li><strong>Blue</strong>: Current production database</li><li><strong>Green</strong>: New database with migrations applied</li><li>Switch traffic from Blue → Green</li><li>If issues, switch back Blue</li></ol>
+<p><strong>Benefit</strong>: Instant rollback. <strong>Cost</strong>: Requires data replication, complex setup.</p>
+<hr>
+<h2>Common Migration Patterns</h2>
+<h3>Adding a Table</h3>
+<pre><code class="lang-sql">CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    total DECIMAL(10,2) NOT NULL,
+    status VARCHAR(20) DEFAULT &#x27;pending&#x27;,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_orders_user_id ON orders(user_id);
+CREATE INDEX idx_orders_status ON orders(status);</code></pre>
+<p><strong>Safe for zero-downtime</strong>: Yes (old code ignores new table).</p>
+<h3>Dropping a Table</h3>
+<pre><code class="lang-sql">-- Example of safe table drop - requires careful coordination with code deployment
+DROP TABLE IF EXISTS old_logs;</code></pre>
+<p><strong>Safe for zero-downtime</strong>: Only if no code references it (ensure via code deployment first).</p>
+<h3>Changing Column Type (Dangerous)</h3>
+<pre><code class="lang-sql">-- ❌ DANGEROUS: Locks table, can fail
+ALTER TABLE users ALTER COLUMN age TYPE BIGINT;</code></pre>
+<p><strong>Better approach</strong>:</p>
+<ol><li>Add new column with new type</li><li>Dual-write to both columns</li><li>Backfill old column → new column</li><li>Switch reads to new column</li><li>Drop old column</li></ol>
+<pre><code class="lang-sql">-- Step 1
+ALTER TABLE users ADD COLUMN age_bigint BIGINT;
+
+-- Step 2: Application writes to both
+
+-- Step 3: Backfill
+UPDATE users SET age_bigint = age WHERE age_bigint IS NULL;
+
+-- Step 4: Application reads from age_bigint
+
+-- Step 5
+ALTER TABLE users DROP COLUMN age;
+ALTER TABLE users RENAME COLUMN age_bigint TO age;</code></pre>
+<hr>
+<h2>Migration Workflow</h2>
+<h3>Step 1: Create Migration</h3>
+<pre><code class="lang-bash"># Flyway
+flyway migrate
+
+# golang-migrate
+migrate create -ext sql -dir migrations -seq add_users_table
+
+# Alembic
+alembic revision -m &quot;add users table&quot;</code></pre>
+<h3>Step 2: Write Migration SQL/Code</h3>
+<pre><code class="lang-sql">-- V1__add_users_table.sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL
+);</code></pre>
+<h3>Step 3: Test Locally</h3>
+<pre><code class="lang-bash"># Apply migration
+migrate up
+
+# Verify schema
+psql -c &quot;\d users&quot;
+
+# Test rollback
+migrate down
+migrate up</code></pre>
+<h3>Step 4: Code Review</h3>
+<p><strong>Checklist</strong>:</p>
+<ul><li>[ ] Migration is idempotent?</li><li>[ ] Migration is reversible?</li><li>[ ] Tested locally with production-like data?</li><li>[ ] Zero-downtime compatible?</li><li>[ ] Indexes created with CONCURRENTLY?</li><li>[ ] Large data migrations batched?</li></ul>
+<h3>Step 5: Apply to Staging</h3>
+<pre><code class="lang-bash">migrate -database &quot;postgres://staging&quot; up</code></pre>
+<p><strong>Verify</strong>: Run application tests against staging.</p>
+<h3>Step 6: Apply to Production</h3>
+<pre><code class="lang-bash"># Backup first
+pg_dump -Fc production &gt; backup_$(date +%Y%m%d).dump
+
+# Apply migration
+migrate -database &quot;postgres://production&quot; up
+
+# Monitor
+tail -f /var/log/postgresql/postgresql.log</code></pre>
+<h3>Step 7: Monitor</h3>
+<p>Watch for:</p>
+<ul><li>Migration completion</li><li>Application errors</li><li>Query performance changes</li><li>Lock contention</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Migration Tool Commands</h3>
+<p><strong>Flyway</strong>:</p>
+<pre><code class="lang-bash">flyway migrate           # Apply migrations
+flyway info             # Show migration status
+flyway validate         # Validate applied migrations
+flyway repair           # Fix migration metadata</code></pre>
+<p><strong>golang-migrate</strong>:</p>
+<pre><code class="lang-bash">migrate up              # Apply all migrations
+migrate up 1            # Apply one migration
+migrate down 1          # Rollback one migration
+migrate version         # Show current version
+migrate force VERSION   # Force version (fix broken state)</code></pre>
+<p><strong>Alembic</strong>:</p>
+<pre><code class="lang-bash">alembic upgrade head    # Apply all migrations
+alembic downgrade -1    # Rollback one migration
+alembic current         # Show current version
+alembic history         # Show migration history</code></pre>
+<h3>Safety Checklist</h3>
+<pre><code>Before Running Migrations:
+[ ] Backup database
+[ ] Test migration locally with production-like data
+[ ] Verify migration is idempotent
+[ ] Verify migration is reversible (or document why not)
+[ ] Check for table locks (avoid during high traffic)
+[ ] Use CONCURRENTLY for index creation
+[ ] Batch large data migrations
+[ ] Plan rollback strategy
+[ ] Schedule during low-traffic window (if needed)
+[ ] Notify team of maintenance window</code></pre>
+<hr>
+<h2>Common Pitfalls</h2>
+<p>❌ <strong>Adding NOT NULL column without default</strong> - Fails on existing rows ✅ Add as nullable first, backfill, then add NOT NULL</p>
+<p>❌ <strong>Creating indexes without CONCURRENTLY</strong> - Locks table ✅ Use <code>CREATE INDEX CONCURRENTLY</code></p>
+<p>❌ <strong>Renaming columns directly</strong> - Breaks old code ✅ Use expand-contract pattern (add new, dual-write, drop old)</p>
+<p>❌ <strong>Running large UPDATEs in one transaction</strong> - Long locks ✅ Batch updates with LIMIT and pg_sleep()</p>
+<p>❌ <strong>Not testing rollback</strong> - Can&#x27;t recover from failed migration ✅ Always test <code>migrate down</code> locally</p>
+<p>❌ <strong>Mixing schema and data changes</strong> - Hard to debug ✅ Separate schema migrations from data migrations</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>postgres-query-optimization.md</code> - Index strategies for migrations</li><li><code>postgres-schema-design.md</code> - Designing schemas that are migration-friendly</li><li><code>database-connection-pooling.md</code> - Migration impact on connections</li><li><code>orm-patterns.md</code> - ORM-specific migration tools (Alembic, etc.)</li></ul>
+<hr>
+<h2>Level 3: Resources</h2>
+<p><strong>Location</strong>: <code>~/.hanzo/skills/database/postgres-migrations/resources/</code></p>
+<p>This skill includes comprehensive Level 3 resources for advanced migration management:</p>
+<h3>REFERENCE.md (~1,800 lines)</h3>
+<p>Comprehensive reference covering:</p>
+<ul><li>Migration fundamentals and best practices</li><li>Schema versioning strategies (forward-only, bidirectional, immutable)</li><li>Deep dive into migration tools (Flyway, golang-migrate, Alembic, Liquibase, dbmate, Atlas)</li><li>Writing safe migrations (idempotency, transactions, constraints)</li><li>Zero-downtime patterns (add column, add index, rename, change type)</li><li>PostgreSQL lock behavior reference</li><li>Data migrations and batching strategies</li><li>Testing migrations (local, staging, CI/CD)</li><li>Rollback strategies (down migrations, backups, PITR, blue-green)</li><li>Common pitfalls and solutions</li><li>Advanced topics (schema drift, multi-tenancy, partitions)</li></ul>
+<h3>Scripts (3 production-ready tools)</h3>
+<p><strong>analyze_migration.py</strong> - Migration safety analyzer</p>
+<ul><li>Detects unsafe DDL operations (locks, table rewrites)</li><li>Identifies missing idempotency guards</li><li>Warns about data loss operations</li><li>Checks transaction compatibility</li><li>Suggests safer alternatives</li><li>JSON output for CI/CD integration</li></ul>
+<p><strong>generate_migration.py</strong> - Migration file generator</p>
+<ul><li>Supports multiple migration tools (Flyway, golang-migrate, Alembic, dbmate)</li><li>Template-based generation (add table, add column, add index, etc.)</li><li>Auto-generates safe, idempotent SQL</li><li>Includes rollback scripts</li><li>Dry-run mode for preview</li></ul>
+<p><strong>test_migration.sh</strong> - Docker-based migration tester</p>
+<ul><li>Spins up temporary PostgreSQL instance</li><li>Loads production schema dumps</li><li>Applies migrations</li><li>Tests rollback (for supported tools)</li><li>Verifies schema integrity</li><li>Auto-cleanup on exit</li><li>JSON output for CI/CD</li></ul>
+<h3>Examples</h3>
+<p><strong>python/alembic_migrations/</strong> - Complete Alembic setup</p>
+<ul><li>Configuration files (alembic.ini, env.py)</li><li>Example migrations (initial schema, add tables)</li><li>README with setup and usage instructions</li></ul>
+<p><strong>sql/safe_migrations/</strong> - Safe migration patterns</p>
+<ul><li>Add nullable column</li><li>Add index concurrently</li><li>Add table with constraints</li><li>Add constraint with NOT VALID pattern</li></ul>
+<p><strong>sql/unsafe_migrations/</strong> - What NOT to do</p>
+<ul><li>Add NOT NULL column without default</li><li>Create index without CONCURRENTLY</li><li>Rename column directly</li><li>Large UPDATE without batching</li></ul>
+<p><strong>docker/</strong> - Testing environment</p>
+<ul><li>docker-compose.yml with PostgreSQL + Flyway + pgAdmin</li><li>Complete testing workflows</li><li>CI/CD integration examples</li></ul>
+<h3>Usage</h3>
+<pre><code class="lang-bash"># Analyze migration for safety
+./resources/scripts/analyze_migration.py migration.sql
+
+# Generate migration from template
+./resources/scripts/generate_migration.py --tool flyway --template add-column \
+  --table users --column phone:varchar
+
+# Test migration in Docker
+./resources/scripts/test_migration.sh --migrations-dir migrations/ --test-rollback</code></pre>
+<p>See <code>resources/scripts/README.md</code> for complete documentation.</p>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/database-postgres-migrations.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

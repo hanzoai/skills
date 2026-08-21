@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cryptography-encryption-at-rest</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/cryptography-encryption-at-rest.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/cryptography-encryption-at-rest.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>cryptography-encryption-at-rest</h1><p class="lede">Protecting stored data with encryption at rest</p><h1>Encryption at Rest</h1>
+<p><strong>Scope</strong>: Data encryption, key management, compliance (FIPS, PCI-DSS, HIPAA) <strong>Lines</strong>: ~350 <strong>Last Updated</strong>: 2025-10-27</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Implementing encryption for stored data (databases, files, backups)</li><li>Protecting data from physical theft or unauthorized access</li><li>Meeting compliance requirements (GDPR, HIPAA, PCI-DSS, FIPS 140-2)</li><li>Designing key management and rotation strategies</li><li>Choosing between encryption layers (application, database, filesystem, disk)</li><li>Integrating with Key Management Services (AWS KMS, Azure Key Vault, external secret manager)</li><li>Implementing envelope encryption patterns</li></ul>
+<h2>Core Concepts</h2>
+<h3>What is Encryption at Rest?</h3>
+<p><strong>Encryption at rest</strong> protects data stored on disk from unauthorized access when the data is not actively being transmitted.</p>
+<p><strong>Threat model</strong>:</p>
+<ul><li>✓ Physical theft (stolen laptops, hard drives)</li><li>✓ Cloud provider access (unauthorized staff)</li><li>✓ Backup compromise (stolen tapes/files)</li><li>✓ Forensic recovery from decommissioned drives</li><li>✗ Application-level attacks (SQL injection)</li><li>✗ Authorized user access (users with valid credentials)</li><li>✗ Memory dumps (data in RAM)</li></ul>
+<h3>Encryption Layers</h3>
+<pre><code>┌─────────────────────────────────────────┐
+│ Application-Level (field encryption)    │ ← Highest control, most complex
+├─────────────────────────────────────────┤
+│ Database-Level (TDE)                    │ ← Transparent, good performance
+├─────────────────────────────────────────┤
+│ Filesystem-Level                        │ ← Per-directory encryption
+├─────────────────────────────────────────┤
+│ Volume/Block-Level (LUKS, BitLocker)    │ ← Full disk encryption
+├─────────────────────────────────────────┤
+│ Hardware-Level (self-encrypting drives) │ ← Fastest, lowest control
+└─────────────────────────────────────────┘</code></pre>
+<p><strong>Trade-offs</strong>:</p>
+<ul><li><strong>Application</strong>: Highest granularity (per-field), but most complex to implement</li><li><strong>Database</strong>: Good balance of security and performance</li><li><strong>Volume</strong>: Simplest to implement, protects all data</li><li><strong>Hardware</strong>: Best performance, but less control over key management</li></ul>
+<hr>
+<h2>Key Management Patterns</h2>
+<h3>1. Envelope Encryption (Recommended)</h3>
+<p><strong>Pattern</strong>: Encrypt data with Data Encryption Key (DEK), encrypt DEK with Key Encryption Key (KEK).</p>
+<pre><code>┌──────────────┐
+│ KMS (KEK)    │ ← Master key in secure KMS
+└──────┬───────┘
+       │ encrypts
+┌──────▼───────┐
+│ DEK          │ ← Data Encryption Key (one per file/object)
+└──────┬───────┘
+       │ encrypts
+┌──────▼───────┐
+│ Data         │ ← Actual data
+└──────────────┘</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li><strong>Fast key rotation</strong>: Only re-encrypt small DEKs, not entire dataset</li><li><strong>Performance</strong>: Data encryption uses local DEK (no KMS latency)</li><li><strong>Cost-effective</strong>: Minimal KMS API calls (1 per file vs millions)</li><li><strong>Scalable</strong>: Each object has its own DEK</li></ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-python"># Generate DEK from KMS
+plaintext_dek, encrypted_dek = kms.generate_data_key()
+
+# Encrypt data with DEK (local, fast)
+ciphertext = encrypt(data, plaintext_dek)
+
+# Store encrypted_dek alongside ciphertext
+save(ciphertext, encrypted_dek)
+
+# Decrypt: decrypt DEK with KMS, then decrypt data
+plaintext_dek = kms.decrypt(encrypted_dek)
+data = decrypt(ciphertext, plaintext_dek)</code></pre>
+<h3>2. Direct KMS Encryption</h3>
+<p><strong>Pattern</strong>: Encrypt data directly using KMS.</p>
+<p><strong>Use case</strong>: Small data (&lt;4KB), secrets, API keys.</p>
+<p><strong>Limitations</strong>:</p>
+<ul><li>KMS has size limits (AWS KMS: 4KB)</li><li>Higher latency (network call per operation)</li><li>More expensive (per-operation pricing)</li></ul>
+<h3>3. Password-Based Encryption</h3>
+<p><strong>Pattern</strong>: Derive key from password using Key Derivation Function (KDF).</p>
+<pre><code class="lang-python"># Derive key from password
+key = pbkdf2(password, salt, iterations=100000)
+
+# Encrypt with derived key
+ciphertext = encrypt(data, key)</code></pre>
+<p><strong>Use case</strong>: User-encrypted files, backup encryption.</p>
+<p><strong>Critical</strong>: Use strong KDF (PBKDF2, Argon2, scrypt) with high iterations.</p>
+<hr>
+<h2>Algorithms</h2>
+<h3>Recommended Algorithms</h3>
+<p><strong>Symmetric encryption</strong> (for bulk data):</p>
+<ul><li><strong>AES-256-GCM</strong> - AEAD (authenticated), fastest with AES-NI hardware</li><li><strong>ChaCha20-Poly1305</strong> - AEAD, better for ARM/mobile, no hardware acceleration needed</li><li><strong>AES-256-XTS</strong> - For disk/block encryption (IEEE P1619 standard)</li></ul>
+<p><strong>Avoid</strong>:</p>
+<ul><li>❌ AES-ECB (reveals patterns)</li><li>❌ AES-CBC without HMAC (vulnerable to padding oracle)</li><li>❌ DES, 3DES, RC4 (weak)</li></ul>
+<p><strong>Key sizes</strong>:</p>
+<ul><li><strong>Minimum</strong>: AES-256 (256 bits), RSA-2048</li><li><strong>Recommended</strong>: AES-256, RSA-3072+, ECDSA-P256+</li></ul>
+<h3>Hardware Acceleration</h3>
+<p><strong>AES-NI</strong>: Intel/AMD instruction set for AES encryption.</p>
+<pre><code class="lang-bash"># Check if AES-NI is available
+grep -q aes /proc/cpuinfo &amp;&amp; echo &quot;AES-NI supported&quot; || echo &quot;No AES-NI&quot;</code></pre>
+<p><strong>Performance impact</strong>:</p>
+<ul><li>With AES-NI: ~3-5% overhead</li><li>Without AES-NI: ~20-30% overhead</li></ul>
+<p><strong>Recommendation</strong>: Use ChaCha20-Poly1305 if AES-NI unavailable.</p>
+<hr>
+<h2>Database Encryption</h2>
+<h3>PostgreSQL</h3>
+<p><strong>Option 1: Application-level</strong> (recommended)</p>
+<pre><code class="lang-python"># Encrypt before INSERT
+encrypted = encrypt(plaintext, key)
+cursor.execute(&quot;INSERT INTO users (ssn) VALUES (%s)&quot;, (encrypted,))</code></pre>
+<p><strong>Option 2: pgcrypto extension</strong></p>
+<pre><code class="lang-sql">CREATE EXTENSION pgcrypto;
+
+-- Encrypt column
+UPDATE users SET ssn_encrypted = pgp_sym_encrypt(ssn, &#x27;key&#x27;);
+
+-- Decrypt column
+SELECT pgp_sym_decrypt(ssn_encrypted, &#x27;key&#x27;) FROM users;</code></pre>
+<p><strong>Option 3: Filesystem encryption</strong> (LUKS)</p>
+<pre><code class="lang-bash"># Encrypt PostgreSQL data directory with LUKS
+cryptsetup luksFormat /dev/sdb1
+cryptsetup luksOpen /dev/sdb1 postgres_data
+mount /dev/mapper/postgres_data /var/lib/postgresql/data</code></pre>
+<h3>MongoDB</h3>
+<p><strong>Native encryption</strong> (Enterprise):</p>
+<pre><code class="lang-yaml"># mongod.conf
+security:
+  enableEncryption: true
+  encryptionKeyFile: /path/to/keyfile</code></pre>
+<p><strong>Client-Side Field Level Encryption (CSFLE)</strong>:</p>
+<pre><code class="lang-javascript">// Encrypt specific fields before storing
+const autoEncryptionOpts = {
+  kmsProviders: { aws: { ... } },
+  schemaMap: {
+    &#x27;db.collection&#x27;: {
+      properties: {
+        ssn: { encrypt: { algorithm: &#x27;AEAD_AES_256_CBC_HMAC_SHA_512-Random&#x27; } }
+      }
+    }
+  }
+};
+
+const client = new MongoClient(uri, { autoEncryption: autoEncryptionOpts });</code></pre>
+<h3>MySQL</h3>
+<p><strong>InnoDB encryption</strong>:</p>
+<pre><code class="lang-sql">-- Enable encryption for table
+CREATE TABLE users (
+  id INT PRIMARY KEY,
+  ssn VARCHAR(20)
+) ENCRYPTION=&#x27;Y&#x27;;
+
+-- Encrypt existing table
+ALTER TABLE users ENCRYPTION=&#x27;Y&#x27;;</code></pre>
+<hr>
+<h2>File and Disk Encryption</h2>
+<h3>Linux: LUKS (dm-crypt)</h3>
+<pre><code class="lang-bash"># Create encrypted volume
+cryptsetup luksFormat /dev/sdb1
+
+# Open encrypted volume
+cryptsetup luksOpen /dev/sdb1 encrypted_volume
+
+# Mount
+mount /dev/mapper/encrypted_volume /mnt/encrypted
+
+# Auto-mount on boot (/etc/crypttab)
+encrypted_volume /dev/sdb1 none luks</code></pre>
+<p><strong>Algorithms</strong>: AES-256-XTS (default), ChaCha20</p>
+<h3>macOS: FileVault</h3>
+<pre><code class="lang-bash"># Enable FileVault (GUI or CLI)
+sudo fdesetup enable
+
+# Check status
+fdesetup status</code></pre>
+<h3>Windows: BitLocker</h3>
+<pre><code class="lang-powershell"># Enable BitLocker
+Enable-BitLocker -MountPoint &quot;C:&quot; -EncryptionMethod Aes256 -UsedSpaceOnly
+
+# Check status
+Get-BitLockerVolume</code></pre>
+<hr>
+<h2>Cloud KMS Integration</h2>
+<h3>AWS KMS</h3>
+<pre><code class="lang-python">import boto3
+
+kms = boto3.client(&#x27;kms&#x27;, region_name=&#x27;us-east-1&#x27;)
+
+# Generate data key (envelope encryption)
+response = kms.generate_data_key(
+    KeyId=&#x27;alias/my-app-key&#x27;,
+    KeySpec=&#x27;AES_256&#x27;
+)
+
+plaintext_key = response[&#x27;Plaintext&#x27;]
+encrypted_key = response[&#x27;CiphertextBlob&#x27;]
+
+# Encrypt data locally with plaintext_key
+# Store encrypted_key alongside encrypted data
+
+# Decrypt data key
+decrypted_key = kms.decrypt(CiphertextBlob=encrypted_key)[&#x27;Plaintext&#x27;]</code></pre>
+<p><strong>Best practices</strong>:</p>
+<ul><li>Enable automatic key rotation (annual)</li><li>Use separate keys per environment (dev/staging/prod)</li><li>Use key policies to restrict access</li><li>Enable CloudTrail logging</li></ul>
+<h3>Azure Key Vault</h3>
+<pre><code class="lang-python">from azure.identity import DefaultAzureCredential
+from azure.keyvault.keys.crypto import CryptographyClient
+
+credential = DefaultAzureCredential()
+key_client = KeyClient(vault_url=&quot;https://myvault.vault.azure.net&quot;, credential=credential)
+
+# Get key
+key = key_client.get_key(&quot;my-encryption-key&quot;)
+
+# Encrypt
+crypto_client = CryptographyClient(key, credential=credential)
+result = crypto_client.encrypt(EncryptionAlgorithm.rsa_oaep, plaintext)</code></pre>
+<h3>external secret manager</h3>
+<pre><code class="lang-bash"># Enable transit secrets engine
+vault secrets enable transit
+
+# Create encryption key
+vault write -f transit/keys/my-app-key
+
+# Encrypt data
+vault write transit/encrypt/my-app-key plaintext=$(base64 &lt;&lt;&lt; &quot;sensitive data&quot;)
+
+# Decrypt data
+vault write transit/decrypt/my-app-key ciphertext=&quot;vault:v1:...&quot;</code></pre>
+<hr>
+<h2>Key Rotation</h2>
+<p><strong>Why rotate keys?</strong></p>
+<ul><li>Limit exposure if key compromised</li><li>Compliance requirements (PCI-DSS: annually)</li><li>Cryptoperiod limits (NIST SP 800-57)</li></ul>
+<h3>Zero-Downtime Rotation</h3>
+<p><strong>Phase 1: Dual-key period</strong></p>
+<pre><code>1. Generate new key (version 2)
+2. Application can decrypt with v1 or v2
+3. Application encrypts new data with v2</code></pre>
+<p><strong>Phase 2: Migration</strong></p>
+<pre><code>4. Background job re-encrypts old data (v1 → v2)
+5. Track progress, allow rollback</code></pre>
+<p><strong>Phase 3: Deprecate old key</strong></p>
+<pre><code>6. Once all data migrated, deprecate v1
+7. Keep v1 for emergency rollback (90 days)
+8. Retire v1 after retention period</code></pre>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-python"># Phase 1: Generate new key
+new_key = kms.create_key()
+
+# Phase 2: Re-encrypt in batches
+for batch in get_encrypted_items(old_key_version, batch_size=1000):
+    plaintext = decrypt(batch, old_key)
+    ciphertext = encrypt(plaintext, new_key)
+    update_item(batch.id, ciphertext, new_key_version)
+
+# Phase 3: Deprecate old key
+kms.disable_key(old_key_id)</code></pre>
+<hr>
+<h2>Compliance</h2>
+<h3>FIPS 140-2</h3>
+<p><strong>Requirements</strong>:</p>
+<ul><li>Use FIPS-approved algorithms (AES, SHA-2, RSA-2048+)</li><li>Validate cryptographic modules</li><li>Key generation in FIPS-certified hardware (HSM)</li></ul>
+<p><strong>FIPS-approved algorithms</strong>:</p>
+<ul><li>✓ AES-256-GCM, AES-128-GCM</li><li>✓ SHA-256, SHA-384, SHA-512</li><li>✓ RSA-2048+, ECDSA-P256+</li><li>✗ ChaCha20-Poly1305 (not FIPS-approved)</li></ul>
+<h3>PCI-DSS</h3>
+<p><strong>Requirements</strong>:</p>
+<ul><li>Encrypt cardholder data (Requirement 3.4)</li><li>Key rotation (annually at minimum)</li><li>Separate keys for different environments</li><li>Restrict access to encryption keys</li><li>Never log decrypted cardholder data</li></ul>
+<h3>HIPAA</h3>
+<p><strong>Requirements</strong>:</p>
+<ul><li>Encrypt PHI (Protected Health Information)</li><li>Addressable specification (implement if reasonable)</li><li>Use AES-256 or stronger</li><li>Key management and access controls</li><li>Audit logging</li></ul>
+<h3>GDPR</h3>
+<p><strong>Requirements</strong>:</p>
+<ul><li>Pseudonymization and encryption (Article 32)</li><li>Protect personal data from unauthorized access</li><li>Data breach notification (encryption may exempt)</li></ul>
+<hr>
+<h2>Performance Optimization</h2>
+<p><strong>Benchmarks</strong> (AES-256-GCM with AES-NI):</p>
+<ul><li>Throughput: ~3-5 GB/s per core</li><li>Latency: &lt;1ms for small files (&lt;1MB)</li><li>Overhead: 3-5% CPU</li></ul>
+<p><strong>Tips</strong>:</p>
+<ul><li><strong>Use hardware acceleration</strong> (AES-NI, ARM Crypto Extensions)</li><li><strong>Cache data keys</strong> (don&#x27;t call KMS for every operation)</li><li><strong>Batch operations</strong> (encrypt/decrypt multiple items together)</li><li><strong>Use streaming</strong> (for large files, don&#x27;t load all in memory)</li></ul>
+<hr>
+<h2>Common Pitfalls</h2>
+<p>❌ <strong>Hardcoded keys in code</strong> - Exposed in version control ✅ Use KMS or environment variables</p>
+<p>❌ <strong>Using weak algorithms</strong> (DES, 3DES, ECB mode) ✅ Use AES-256-GCM or ChaCha20-Poly1305</p>
+<p>❌ <strong>No key rotation</strong> - Key compromise affects all historical data ✅ Rotate keys quarterly or annually</p>
+<p>❌ <strong>Storing keys with encrypted data</strong> - No protection if both stolen ✅ Store keys in separate KMS</p>
+<p>❌ <strong>Encrypting with random key and losing it</strong> - Permanent data loss ✅ Use KMS, backup keys securely</p>
+<p>❌ <strong>Not testing decryption</strong> - Discover data loss too late ✅ Verify decryption works immediately after encryption</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>cryptography-basics.md</code> - Fundamental cryptography concepts</li><li><code>crypto-best-practices.md</code> - Security best practices for encryption</li><li><code>tls-configuration.md</code> - Encryption in transit</li><li><code>certificate-management.md</code> - Managing encryption certificates</li><li><code>pki-fundamentals.md</code> - Public Key Infrastructure basics</li></ul>
+<hr>
+<h2>Level 3: Resources</h2>
+<p><strong>Location</strong>: <code>~/.hanzo/skills/cryptography/encryption-at-rest/resources/</code></p>
+<p>This skill includes comprehensive Level 3 resources for production encryption implementations:</p>
+<h3>REFERENCE.md (~2,900 lines)</h3>
+<p>Comprehensive technical reference covering:</p>
+<ul><li>Fundamentals: Encryption concepts, at-rest vs in-transit, threat model</li><li>Core Concepts: Symmetric/asymmetric encryption, key derivation, envelope encryption</li><li>Encryption Algorithms: AES-256-GCM, ChaCha20-Poly1305, XTS mode, algorithm comparison</li><li>Key Management: KMS integration, key hierarchies, separation of duties</li><li>Envelope Encryption: Patterns, benefits, implementation details</li><li>Database Encryption: PostgreSQL pgcrypto, MongoDB TDE, MySQL InnoDB encryption</li><li>File and Disk Encryption: LUKS, BitLocker, FileVault, self-encrypting drives</li><li>Cloud KMS Integration: AWS KMS, GCP KMS, Azure Key Vault, external secret manager</li><li>Key Rotation: Zero-downtime strategies, phased migration, rollback procedures</li><li>Compliance Standards: FIPS 140-2, PCI-DSS, HIPAA, GDPR requirements</li><li>Performance: Hardware acceleration (AES-NI), benchmarks, optimization techniques</li><li>Common Patterns: Application-level, database-level, volume-level encryption</li><li>Anti-Patterns: Hardcoded keys, weak algorithms, poor rotation practices</li><li>Security Best Practices: Key separation, access control, audit logging</li><li>Real implementation examples with production-ready code</li></ul>
+<h3>Scripts (3 production-ready tools)</h3>
+<p><strong>validate_encryption.py</strong> (504 lines) - Encryption configuration validator</p>
+<ul><li>Detects weak algorithms (DES, 3DES, RC4, ECB mode)</li><li>Validates key lengths (minimum 256-bit for AES)</li><li>Scans for hardcoded keys in source code and config files</li><li>Audits key storage locations and access patterns</li><li>Checks key rotation policies and compliance</li><li>FIPS 140-2, PCI-DSS, HIPAA, GDPR compliance validation</li><li>JSON output for CI/CD integration</li><li>Severity-based reporting (critical, high, medium, low)</li><li>Usage: <code>./validate_encryption.py --config-file db.conf --check-compliance FIPS --json</code></li></ul>
+<p><strong>rotate_keys.py</strong> (569 lines) - Automated key rotation tool</p>
+<ul><li>Zero-downtime key rotation using envelope encryption</li><li>Supports multiple KMS backends (AWS KMS, local file-based)</li><li>Generates new encryption keys via KMS</li><li>Re-encrypts data with new keys (batch processing)</li><li>Progress tracking and audit logging</li><li>Rollback support for emergency recovery</li><li>Backup creation before rotation</li><li>Dual-key transitional period (read old/new, write new)</li><li>Usage: <code>./rotate_keys.py --kms-backend aws-kms --key-id alias/db-key --data-dir ./data --json</code></li></ul>
+<p><strong>benchmark_encryption.sh</strong> (570 lines) - Encryption performance benchmarking</p>
+<ul><li>Tests multiple algorithms (AES-256-GCM, ChaCha20-Poly1305, AES-CBC)</li><li>Measures throughput (MB/s) and operations per second</li><li>Tests hardware acceleration (AES-NI detection)</li><li>Benchmarks key derivation functions (PBKDF2, Argon2, scrypt)</li><li>Multiple file sizes (1MB to 1GB)</li><li>Performance comparison reports</li><li>JSON output for automation</li><li>Hardware capability detection</li><li>Usage: <code>./benchmark_encryption.sh --algorithm aes-256-gcm --file-size 1G --json</code></li></ul>
+<h3>Examples (7 production-ready implementations)</h3>
+<p><strong>python/file_encryption.py</strong> - File encryption with envelope encryption</p>
+<ul><li>Demonstrates AES-256-GCM encryption</li><li>Envelope encryption pattern (DEK + KEK)</li><li>Key rotation without re-encrypting files</li><li>Batch file encryption</li><li>Metadata management</li><li>Complete encrypt/decrypt workflow</li></ul>
+<p><strong>python/database_encryption.py</strong> - SQLAlchemy field-level encryption</p>
+<ul><li>Transparent encryption through custom SQLAlchemy types</li><li>Deterministic encryption for searchable fields</li><li>Random encryption for high-security fields</li><li>Key versioning and rotation</li><li>HIPAA-compliant medical records example</li><li>Batch operations optimization</li></ul>
+<p><strong>python/aws_kms_integration.py</strong> - AWS KMS integration</p>
+<ul><li>Data key generation (envelope encryption)</li><li>Automatic key rotation</li><li>Multi-region keys</li><li>Grant-based access control</li><li>Encryption context (AAD)</li><li>Cost optimization strategies</li><li>CloudTrail audit logging</li></ul>
+<p><strong>go/disk_encryption.go</strong> - Block-level encryption (AES-XTS)</p>
+<ul><li>Sector-based encryption (512/4096 bytes)</li><li>AES-256-XTS mode (IEEE P1619 standard)</li><li>Password-based key derivation (PBKDF2)</li><li>Encrypted volume implementation</li><li>Compatible with dm-crypt/LUKS patterns</li><li>Zero-copy encryption</li></ul>
+<p><strong>config/postgres-encryption.conf</strong> - PostgreSQL encryption setup</p>
+<ul><li>pgcrypto extension configuration</li><li>Table-level encryption strategies</li><li>Application-level encryption patterns</li><li>Transparent decryption views</li><li>Key rotation procedures</li><li>LUKS filesystem encryption</li><li>Performance optimization</li><li>GDPR, HIPAA, PCI-DSS compliance notes</li></ul>
+<p><strong>config/mongodb-encryption.conf</strong> - MongoDB encryption setup</p>
+<ul><li>Encrypted Storage Engine (Enterprise)</li><li>Client-Side Field Level Encryption (CSFLE)</li><li>AWS KMS integration</li><li>Key rotation strategies</li><li>LUKS filesystem encryption</li><li>Backup encryption</li><li>Audit logging configuration</li><li>Performance tuning</li></ul>
+<p><strong>python/key_rotation.py</strong> - Zero-downtime key rotation</p>
+<ul><li>Multi-phase rotation strategy</li><li>Dual-key transitional period</li><li>Batch re-encryption with progress tracking</li><li>Rollback procedures</li><li>Audit logging</li><li>Key lifecycle management</li><li>Production-ready patterns</li></ul>
+<h3>Quick Start</h3>
+<pre><code class="lang-bash"># Validate encryption configuration
+cd ~/.hanzo/skills/cryptography/encryption-at-rest/resources/scripts
+./validate_encryption.py --config-file /etc/app/db.conf --check-compliance PCI-DSS
+
+# Benchmark encryption performance
+./benchmark_encryption.sh --all-algorithms --file-size 100M --json
+
+# Rotate encryption keys
+./rotate_keys.py --kms-backend local --key-file master.key --data-dir ./data
+
+# Run Python examples
+cd ../examples/python
+pip install cryptography sqlalchemy boto3
+python file_encryption.py
+python database_encryption.py
+python key_rotation.py
+
+# View comprehensive reference
+cd ../
+less REFERENCE.md</code></pre>
+<h3>Integration Notes</h3>
+<p><strong>CI/CD Integration</strong>:</p>
+<pre><code class="lang-yaml"># .github/workflows/security.yml
+- name: Validate Encryption
+  run: |
+    ./scripts/validate_encryption.py \
+      --scan-directory ./config \
+      --check-compliance FIPS \
+      --json \
+      --fail-on high</code></pre>
+<p><strong>Monitoring</strong>:</p>
+<ul><li>Track key rotation age (alert if &gt;90 days)</li><li>Monitor encryption overhead (&lt;10% target)</li><li>Audit key access logs</li><li>Alert on weak algorithm detection</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<pre><code class="lang-bash"># Check for AES-NI hardware acceleration
+grep -q aes /proc/cpuinfo &amp;&amp; echo &quot;AES-NI available&quot;
+
+# Encrypt file with OpenSSL
+openssl enc -aes-256-gcm -in plaintext.txt -out encrypted.bin -K $(openssl rand -hex 32) -iv $(openssl rand -hex 12)
+
+# Generate encryption key (256-bit)
+openssl rand -base64 32
+
+# Benchmark encryption speed
+openssl speed aes-256-gcm
+
+# Create encrypted LUKS volume
+cryptsetup luksFormat /dev/sdb1
+cryptsetup luksOpen /dev/sdb1 encrypted_volume
+
+# Enable BitLocker (Windows)
+Enable-BitLocker -MountPoint &quot;C:&quot; -EncryptionMethod Aes256
+
+# Check MongoDB encryption status
+use admin
+db.serverStatus().encryptionAtRest</code></pre>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/cryptography-encryption-at-rest.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

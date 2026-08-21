@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ebpf-fundamentals</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ebpf-fundamentals.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ebpf-fundamentals.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ebpf-fundamentals</h1><p class="lede">eBPF basics including program types, verifier, maps, BCC vs libbpf toolchains, and loading programs</p><h1>eBPF Fundamentals</h1>
+<p><strong>Scope</strong>: Core eBPF concepts, program types, verifier constraints, maps, toolchain selection, and program lifecycle <strong>Lines</strong>: ~320 <strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Starting new eBPF projects for tracing, networking, or security</li><li>Understanding eBPF verifier requirements and constraints</li><li>Choosing between BCC and libbpf toolchains</li><li>Working with eBPF maps for data sharing</li><li>Loading and attaching eBPF programs to kernel hooks</li><li>Debugging verifier rejection errors</li><li>Designing safe kernel-space programs</li><li>Implementing custom observability or filtering logic</li></ul>
+<h2>Core Concepts</h2>
+<h3>Concept 1: eBPF vs Traditional BPF</h3>
+<p><strong>Classic BPF</strong>: Packet filtering only, limited instruction set <strong>eBPF</strong>: Extended functionality, multiple program types, maps, helper functions</p>
+<p><strong>Evolution</strong>:</p>
+<ul><li>Classic BPF: tcpdump filters (1990s)</li><li>eBPF: Kernel 3.18+ (2014), full programming model</li><li>Modern: JIT compilation, verifier, safety guarantees</li></ul>
+<p><strong>Architecture</strong>:</p>
+<pre><code>User Space Program
+      ↓
+  bpf() syscall
+      ↓
+ eBPF Verifier (safety check)
+      ↓
+  JIT Compiler
+      ↓
+Kernel Execution (kprobe, XDP, tracepoint, etc.)</code></pre>
+<h3>Concept 2: Program Types</h3>
+<p><strong>Common types</strong>:</p>
+<pre><code class="lang-c">// Kprobe: Trace kernel function entry
+SEC(&quot;kprobe/sys_execve&quot;)
+int trace_execve(struct pt_regs *ctx) {
+    char comm[16];
+    bpf_get_current_comm(&amp;comm, sizeof(comm));
+    bpf_printk(&quot;Process: %s\n&quot;, comm);
+    return 0;
+}
+
+// XDP: Fast packet processing
+SEC(&quot;xdp&quot;)
+int xdp_drop_icmp(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx-&gt;data_end;
+    void *data = (void *)(long)ctx-&gt;data;
+
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) &gt; data_end)
+        return XDP_PASS;
+
+    if (eth-&gt;h_proto == htons(ETH_P_IP)) {
+        struct iphdr *ip = (void *)(eth + 1);
+        if ((void *)(ip + 1) &gt; data_end)
+            return XDP_PASS;
+
+        if (ip-&gt;protocol == IPPROTO_ICMP)
+            return XDP_DROP; // Drop ICMP packets
+    }
+
+    return XDP_PASS;
+}
+
+// Tracepoint: Stable kernel ABI
+SEC(&quot;tracepoint/syscalls/sys_enter_open&quot;)
+int trace_open(struct trace_event_raw_sys_enter *ctx) {
+    char filename[256];
+    bpf_probe_read_user_str(&amp;filename, sizeof(filename),
+                            (void *)ctx-&gt;args[0]);
+    bpf_printk(&quot;Opening: %s\n&quot;, filename);
+    return 0;
+}</code></pre>
+<p><strong>Program type table</strong>:</p>
+<pre><code>Type          | Hook Point              | Use Case
+--------------|-------------------------|---------------------------
+kprobe        | Kernel function entry   | Tracing, monitoring
+kretprobe     | Kernel function exit    | Return value inspection
+tracepoint    | Stable kernel events    | Production tracing
+XDP           | Network driver RX       | Fast packet filtering
+TC            | Traffic control         | Packet modification
+socket_filter | Socket-level filtering  | Per-socket inspection
+cgroup/skb    | cgroup network events   | Container networking</code></pre>
+<h3>Concept 3: eBPF Verifier</h3>
+<p><strong>Safety guarantees</strong>:</p>
+<ul><li>No infinite loops (bounded loops only)</li><li>No unbounded memory access</li><li>No uninitialized reads</li><li>Complexity limit (~1 million instructions verified)</li></ul>
+<pre><code class="lang-c">// ❌ REJECTED: Unbounded loop
+for (int i = 0; i &lt; n; i++) { // n from packet - verifier rejects
+    // ...
+}
+
+// ✅ ACCEPTED: Bounded loop
+#pragma unroll
+for (int i = 0; i &lt; 10; i++) { // Fixed bound
+    // ...
+}
+
+// ❌ REJECTED: Uninitialized read
+int value;
+bpf_printk(&quot;%d&quot;, value); // value not initialized
+
+// ✅ ACCEPTED: Initialized first
+int value = 0;
+bpf_printk(&quot;%d&quot;, value);
+
+// ❌ REJECTED: Unbounded pointer access
+char *ptr = get_user_pointer();
+char c = *ptr; // Verifier can&#x27;t prove bounds
+
+// ✅ ACCEPTED: Bounds checking
+char *ptr = get_user_pointer();
+char buf[256];
+bpf_probe_read(&amp;buf, sizeof(buf), ptr); // Safe helper</code></pre>
+<h3>Concept 4: Maps - Data Sharing</h3>
+<p><strong>Map types</strong>:</p>
+<ul><li>Hash: Key-value storage</li><li>Array: Fixed-size indexed array</li><li>Perf buffer: Async event streaming to userspace</li><li>Ring buffer: Newer, more efficient event streaming</li><li>LRU Hash: Automatic eviction</li><li>Stack/Queue: FIFO/LIFO structures</li></ul>
+<pre><code class="lang-c">// Define map in eBPF program
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 10240);
+    __type(key, u32);    // PID
+    __type(value, u64);  // Timestamp
+} start_times SEC(&quot;.maps&quot;);
+
+// Write to map
+SEC(&quot;kprobe/sys_enter_read&quot;)
+int trace_read_entry(struct pt_regs *ctx) {
+    u32 pid = bpf_get_current_pid_tgid() &gt;&gt; 32;
+    u64 ts = bpf_ktime_get_ns();
+
+    bpf_map_update_elem(&amp;start_times, &amp;pid, &amp;ts, BPF_ANY);
+    return 0;
+}
+
+// Read from map
+SEC(&quot;kretprobe/sys_exit_read&quot;)
+int trace_read_exit(struct pt_regs *ctx) {
+    u32 pid = bpf_get_current_pid_tgid() &gt;&gt; 32;
+    u64 *tsp = bpf_map_lookup_elem(&amp;start_times, &amp;pid);
+
+    if (tsp) {
+        u64 delta = bpf_ktime_get_ns() - *tsp;
+        bpf_printk(&quot;PID %d read took %llu ns\n&quot;, pid, delta);
+        bpf_map_delete_elem(&amp;start_times, &amp;pid);
+    }
+
+    return 0;
+}</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: BCC vs libbpf Toolchain Choice</h3>
+<p><strong>BCC (BPF Compiler Collection)</strong>:</p>
+<pre><code class="lang-python"># Quick prototyping with Python
+from bcc import BPF
+
+program = &quot;&quot;&quot;
+#include &lt;uapi/linux/ptrace.h&gt;
+
+int trace_open(struct pt_regs *ctx) {
+    bpf_trace_printk(&quot;open() called\\n&quot;);
+    return 0;
+}
+&quot;&quot;&quot;
+
+b = BPF(text=program)
+b.attach_kprobe(event=&quot;do_sys_open&quot;, fn_name=&quot;trace_open&quot;)
+b.trace_print()</code></pre>
+<p><strong>libbpf (CO-RE - Compile Once, Run Everywhere)</strong>:</p>
+<pre><code class="lang-c">// Modern approach - portable binaries
+#include &lt;vmlinux.h&gt;
+#include &lt;bpf/bpf_helpers.h&gt;
+
+SEC(&quot;kprobe/do_sys_open&quot;)
+int BPF_KPROBE(trace_open, int dfd, const char __user *filename) {
+    char fname[256];
+    bpf_probe_read_user_str(&amp;fname, sizeof(fname), filename);
+    bpf_printk(&quot;Opening: %s\n&quot;, fname);
+    return 0;
+}
+
+char LICENSE[] SEC(&quot;license&quot;) = &quot;GPL&quot;;</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>BCC: Prototyping, one-off tools, dynamic programs</li><li>libbpf: Production, portable binaries, performance-critical</li></ul>
+<h3>Pattern 2: Ring Buffer for Events</h3>
+<p><strong>Use case</strong>: Efficient event streaming to userspace</p>
+<pre><code class="lang-c">// eBPF program
+struct event {
+    u32 pid;
+    char comm[16];
+    char filename[256];
+};
+
+struct {
+    __uint(type, BPF_MAP_TYPE_RINGBUF);
+    __uint(max_entries, 256 * 1024);
+} events SEC(&quot;.maps&quot;);
+
+SEC(&quot;kprobe/do_sys_open&quot;)
+int trace_open(struct pt_regs *ctx) {
+    struct event *e;
+
+    e = bpf_ringbuf_reserve(&amp;events, sizeof(*e), 0);
+    if (!e)
+        return 0;
+
+    e-&gt;pid = bpf_get_current_pid_tgid() &gt;&gt; 32;
+    bpf_get_current_comm(&amp;e-&gt;comm, sizeof(e-&gt;comm));
+    bpf_probe_read_user_str(&amp;e-&gt;filename, sizeof(e-&gt;filename),
+                            (void *)PT_REGS_PARM2(ctx));
+
+    bpf_ringbuf_submit(e, 0);
+    return 0;
+}</code></pre>
+<pre><code class="lang-c">// Userspace consumer (C)
+#include &lt;bpf/libbpf.h&gt;
+
+int handle_event(void *ctx, void *data, size_t data_sz) {
+    struct event *e = data;
+    printf(&quot;PID %d (%s) opened: %s\n&quot;, e-&gt;pid, e-&gt;comm, e-&gt;filename);
+    return 0;
+}
+
+int main() {
+    struct ring_buffer *rb;
+    struct bpf_object *obj;
+    struct bpf_map *map;
+
+    obj = bpf_object__open_file(&quot;program.bpf.o&quot;, NULL);
+    bpf_object__load(obj);
+
+    map = bpf_object__find_map_by_name(obj, &quot;events&quot;);
+    rb = ring_buffer__new(bpf_map__fd(map), handle_event, NULL, NULL);
+
+    while (1) {
+        ring_buffer__poll(rb, 100); // Poll every 100ms
+    }
+
+    return 0;
+}</code></pre>
+<h3>Pattern 3: Filtering with Maps</h3>
+<p><strong>When to use</strong>: Dynamic filtering controlled from userspace</p>
+<pre><code class="lang-c">// Allowlist map
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 1024);
+    __type(key, u32);    // PID
+    __type(value, u8);   // Dummy value
+} allowlist SEC(&quot;.maps&quot;);
+
+SEC(&quot;kprobe/sys_execve&quot;)
+int trace_execve(struct pt_regs *ctx) {
+    u32 pid = bpf_get_current_pid_tgid() &gt;&gt; 32;
+
+    // Only trace allowed PIDs
+    if (!bpf_map_lookup_elem(&amp;allowlist, &amp;pid))
+        return 0;
+
+    char comm[16];
+    bpf_get_current_comm(&amp;comm, sizeof(comm));
+    bpf_printk(&quot;Allowed PID %d: %s\n&quot;, pid, comm);
+
+    return 0;
+}</code></pre>
+<pre><code class="lang-python"># Userspace control (Python with BCC)
+from bcc import BPF
+
+b = BPF(src_file=&quot;filter.bpf.c&quot;)
+allowlist = b[&quot;allowlist&quot;]
+
+# Add PIDs to allowlist
+allowlist[c_uint(1234)] = c_ubyte(1)
+allowlist[c_uint(5678)] = c_ubyte(1)
+
+# Remove PID
+del allowlist[c_uint(1234)]</code></pre>
+<h3>Pattern 4: Aggregation with Per-CPU Maps</h3>
+<p><strong>Use case</strong>: High-performance counters</p>
+<pre><code class="lang-c">struct {
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __uint(max_entries, 256);
+    __type(key, u32);
+    __type(value, u64);
+} syscall_counts SEC(&quot;.maps&quot;);
+
+SEC(&quot;tracepoint/raw_syscalls/sys_enter&quot;)
+int count_syscalls(struct trace_event_raw_sys_enter *ctx) {
+    u32 syscall_id = ctx-&gt;id;
+    u64 *count;
+
+    count = bpf_map_lookup_elem(&amp;syscall_counts, &amp;syscall_id);
+    if (count)
+        __sync_fetch_and_add(count, 1); // Atomic increment
+
+    return 0;
+}</code></pre>
+<pre><code class="lang-c">// Userspace aggregation
+int fd = bpf_map__fd(map);
+__u32 key = 0;
+__u64 values[num_cpus];
+
+for (key = 0; key &lt; 256; key++) {
+    if (bpf_map_lookup_elem(fd, &amp;key, values) == 0) {
+        __u64 total = 0;
+        for (int i = 0; i &lt; num_cpus; i++)
+            total += values[i];
+
+        if (total &gt; 0)
+            printf(&quot;Syscall %d: %llu calls\n&quot;, key, total);
+    }
+}</code></pre>
+<h3>Pattern 5: Handling Verifier Errors</h3>
+<p><strong>Use case</strong>: Debugging complex programs</p>
+<pre><code class="lang-bash"># Load with verbose verifier output
+bpftool prog load program.o /sys/fs/bpf/myprog type kprobe
+
+# Common errors and fixes:
+
+# Error: &quot;back-edge from insn X to Y&quot;
+# Fix: Use #pragma unroll or reduce loop bound
+
+# Error: &quot;R1 invalid mem access&quot;
+# Fix: Add bounds checking before pointer dereference
+
+# Error: &quot;unreachable insn X&quot;
+# Fix: Remove dead code or ensure all paths are reachable
+
+# Error: &quot;program too large&quot;
+# Fix: Split into multiple programs or simplify logic</code></pre>
+<h3>Pattern 6: Helper Function Usage</h3>
+<p><strong>Common helpers</strong>:</p>
+<pre><code class="lang-c">// Get current process info
+u32 pid = bpf_get_current_pid_tgid() &gt;&gt; 32;
+u32 tid = bpf_get_current_pid_tgid() &amp; 0xFFFFFFFF;
+u64 uid = bpf_get_current_uid_gid() &gt;&gt; 32;
+
+char comm[16];
+bpf_get_current_comm(&amp;comm, sizeof(comm));
+
+// Time
+u64 ns = bpf_ktime_get_ns();
+
+// Kernel memory (safe)
+struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+u32 ppid;
+bpf_probe_read_kernel(&amp;ppid, sizeof(ppid), &amp;task-&gt;real_parent-&gt;tgid);
+
+// User memory (safe)
+char user_buf[256];
+bpf_probe_read_user(&amp;user_buf, sizeof(user_buf), user_ptr);
+
+// Output
+bpf_printk(&quot;Debug: %s %d\n&quot;, comm, pid);
+
+// Tail calls (program chaining)
+bpf_tail_call(ctx, &amp;prog_array, index);</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Program Loading (libbpf)</h3>
+<pre><code class="lang-bash"># Compile
+clang -O2 -target bpf -c program.bpf.c -o program.bpf.o
+
+# Load and attach
+bpftool prog load program.bpf.o /sys/fs/bpf/myprog
+bpftool prog attach pinned /sys/fs/bpf/myprog kprobe do_sys_open
+
+# List programs
+bpftool prog list
+
+# Dump map
+bpftool map dump name my_map</code></pre>
+<h3>Map Operations</h3>
+<pre><code>Operation          | Function                            | Description
+-------------------|-------------------------------------|------------------
+Lookup             | bpf_map_lookup_elem(map, &amp;key)     | Get value
+Update             | bpf_map_update_elem(map, &amp;k, &amp;v, 0)| Set value
+Delete             | bpf_map_delete_elem(map, &amp;key)     | Remove key
+Get next key       | bpf_map_get_next_key(map, &amp;k, &amp;nk) | Iterate keys</code></pre>
+<h3>Key Guidelines</h3>
+<pre><code>✅ DO: Keep programs simple and verifiable
+✅ DO: Use bounded loops with #pragma unroll
+✅ DO: Check all pointer bounds before access
+✅ DO: Use libbpf for production deployments
+✅ DO: Test with verifier verbose mode
+
+❌ DON&#x27;T: Use unbounded loops or recursion
+❌ DON&#x27;T: Access uninitialized variables
+❌ DON&#x27;T: Exceed verifier complexity limits</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-c">// ❌ NEVER: Unbounded operations
+int count = get_packet_size(); // From network
+for (int i = 0; i &lt; count; i++) { // REJECTED
+    // Process
+}
+
+// ✅ CORRECT: Bounded with max
+int count = get_packet_size();
+if (count &gt; 100)
+    count = 100;
+
+#pragma unroll
+for (int i = 0; i &lt; count; i++) { // ACCEPTED
+    // Process
+}</code></pre>
+<p>❌ <strong>Unbounded loops</strong>: Verifier rejection ✅ <strong>Correct approach</strong>: Fixed bounds or explicit limits</p>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-c">// ❌ Don&#x27;t: Forget bounds checking
+void *data_end = (void *)(long)ctx-&gt;data_end;
+void *data = (void *)(long)ctx-&gt;data;
+struct ethhdr *eth = data;
+__u16 proto = eth-&gt;h_proto; // REJECTED - no bounds check
+
+// ✅ Correct: Always check bounds
+void *data_end = (void *)(long)ctx-&gt;data_end;
+void *data = (void *)(long)ctx-&gt;data;
+struct ethhdr *eth = data;
+
+if ((void *)(eth + 1) &gt; data_end)
+    return XDP_DROP;
+
+__u16 proto = eth-&gt;h_proto; // ACCEPTED</code></pre>
+<p>❌ <strong>No bounds checking</strong>: Verifier rejection, potential crashes ✅ <strong>Better</strong>: Check before every pointer access</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>ebpf-tracing-observability.md</code> - Using eBPF for tracing and monitoring</li><li><code>ebpf-networking.md</code> - XDP and TC for packet processing</li><li><code>ebpf-security-monitoring.md</code> - Security use cases with eBPF</li><li><code>linux-kernel-internals.md</code> - Understanding kernel hooks</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ebpf-fundamentals.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

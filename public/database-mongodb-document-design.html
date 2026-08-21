@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>database-mongodb-document-design</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/database-mongodb-document-design.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/database-mongodb-document-design.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>database-mongodb-document-design</h1><p class="lede">Designing MongoDB schemas</p><h1>MongoDB Document Design</h1>
+<p><strong>Scope</strong>: Document modeling, embedding vs referencing, schema patterns <strong>Lines</strong>: ~280 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Designing MongoDB schemas</li><li>Choosing between embedding and referencing</li><li>Modeling relationships in document databases</li><li>Handling large or unbounded arrays</li><li>Optimizing for MongoDB query patterns</li><li>Migrating from relational to document model</li></ul>
+<h2>Core Concepts</h2>
+<h3>Document Model Fundamentals</h3>
+<p>MongoDB stores data as <strong>BSON documents</strong> (JSON-like):</p>
+<pre><code class="lang-javascript">{
+  &quot;_id&quot;: ObjectId(&quot;507f1f77bcf86cd799439011&quot;),
+  &quot;name&quot;: &quot;Alice&quot;,
+  &quot;email&quot;: &quot;alice@example.com&quot;,
+  &quot;created_at&quot;: ISODate(&quot;2024-01-15T10:30:00Z&quot;)
+}</code></pre>
+<p><strong>Key differences from relational</strong>:</p>
+<ul><li>No fixed schema (documents in same collection can vary)</li><li>Supports nested documents and arrays</li><li>No enforced relationships (application-level)</li><li>Optimized for document retrieval (not joins)</li></ul>
+<h3>Design Philosophy</h3>
+<p><strong>Relational</strong>: Normalize first, denormalize for performance <strong>MongoDB</strong>: Model for your access patterns, embed related data</p>
+<p><strong>Goal</strong>: Minimize queries by structuring data as it&#x27;s retrieved.</p>
+<hr>
+<h2>Embedding vs Referencing</h2>
+<h3>Embedding (Denormalization)</h3>
+<p><strong>Pattern</strong>: Store related data inside the document.</p>
+<pre><code class="lang-javascript">// User document with embedded address
+{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;name&quot;: &quot;Alice&quot;,
+  &quot;email&quot;: &quot;alice@example.com&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;123 Main St&quot;,
+    &quot;city&quot;: &quot;San Francisco&quot;,
+    &quot;state&quot;: &quot;CA&quot;,
+    &quot;zip&quot;: &quot;94105&quot;
+  }
+}</code></pre>
+<p><strong>When to embed</strong>:</p>
+<ul><li>Related data is always accessed together</li><li>Related data doesn&#x27;t change often</li><li>Related data size is bounded</li><li>One-to-one or one-to-few relationships</li></ul>
+<p><strong>Pros</strong>:</p>
+<ul><li>Single query to retrieve all data</li><li>Atomicity (update entire document in one operation)</li><li>Better performance (no joins)</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Duplicates data if embedded document is shared</li><li>Document size can grow large (16MB limit per document)</li><li>Harder to update embedded data across multiple documents</li></ul>
+<h3>Referencing (Normalization)</h3>
+<p><strong>Pattern</strong>: Store reference to another document (like foreign key).</p>
+<pre><code class="lang-javascript">// User document
+{
+  &quot;_id&quot;: ObjectId(&quot;507f1f77bcf86cd799439011&quot;),
+  &quot;name&quot;: &quot;Alice&quot;,
+  &quot;email&quot;: &quot;alice@example.com&quot;
+}
+
+// Order document with reference
+{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;user_id&quot;: ObjectId(&quot;507f1f77bcf86cd799439011&quot;),  // Reference
+  &quot;total&quot;: 99.99,
+  &quot;items&quot;: [...]
+}</code></pre>
+<p><strong>When to reference</strong>:</p>
+<ul><li>Related data changes frequently</li><li>Related data is large</li><li>Unbounded relationships (one-to-many with many)</li><li>Many-to-many relationships</li><li>Need to query related data independently</li></ul>
+<p><strong>Pros</strong>:</p>
+<ul><li>No data duplication</li><li>Smaller documents</li><li>Can update related data once (affects all references)</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Requires multiple queries or $lookup (join-like)</li><li>No foreign key enforcement (application responsibility)</li><li>Slower than embedding</li></ul>
+<hr>
+<h2>Decision Tree: Embed or Reference?</h2>
+<pre><code>Start: How is the data accessed?
+│
+├─ Always accessed together?
+│  ├─ Yes → Embed
+│  └─ No → Reference
+│
+├─ How often does related data change?
+│  ├─ Rarely → Embed
+│  └─ Frequently → Reference
+│
+├─ How many related items?
+│  ├─ One or few (1:1, 1:few) → Embed
+│  ├─ Bounded (1:many, predictable) → Embed or Reference
+│  └─ Unbounded (1:many, grows indefinitely) → Reference
+│
+├─ Is related data shared across documents?
+│  ├─ Yes → Reference
+│  └─ No → Embed
+│
+└─ Document size concerns?
+   ├─ Will exceed 16MB? → Reference
+   └─ Stays small → Embed</code></pre>
+<hr>
+<h2>Common Patterns</h2>
+<h3>Pattern 1: One-to-One (Embed)</h3>
+<p><strong>Use case</strong>: User profile</p>
+<pre><code class="lang-javascript">{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;email&quot;: &quot;alice@example.com&quot;,
+  &quot;profile&quot;: {
+    &quot;first_name&quot;: &quot;Alice&quot;,
+    &quot;last_name&quot;: &quot;Smith&quot;,
+    &quot;bio&quot;: &quot;Software engineer&quot;,
+    &quot;avatar_url&quot;: &quot;https://...&quot;
+  },
+  &quot;created_at&quot;: ISODate(&quot;...&quot;)
+}</code></pre>
+<p><strong>Why embed</strong>: Profile is always accessed with user, doesn&#x27;t change often.</p>
+<h3>Pattern 2: One-to-Few (Embed)</h3>
+<p><strong>Use case</strong>: Blog post with comments (limited)</p>
+<pre><code class="lang-javascript">{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;title&quot;: &quot;My Blog Post&quot;,
+  &quot;content&quot;: &quot;Lorem ipsum...&quot;,
+  &quot;author&quot;: &quot;Alice&quot;,
+  &quot;comments&quot;: [
+    {
+      &quot;author&quot;: &quot;Bob&quot;,
+      &quot;text&quot;: &quot;Great post!&quot;,
+      &quot;created_at&quot;: ISODate(&quot;...&quot;)
+    },
+    {
+      &quot;author&quot;: &quot;Charlie&quot;,
+      &quot;text&quot;: &quot;Thanks for sharing&quot;,
+      &quot;created_at&quot;: ISODate(&quot;...&quot;)
+    }
+  ]
+}</code></pre>
+<p><strong>Why embed</strong>: Few comments (10-20), retrieved with post.</p>
+<p><strong>Constraint</strong>: Limit embedded array size (e.g., max 100 comments).</p>
+<h3>Pattern 3: One-to-Many (Bounded) - Hybrid</h3>
+<p><strong>Use case</strong>: Product with reviews (potentially many)</p>
+<p><strong>Option 1</strong>: Embed first N reviews, reference rest</p>
+<pre><code class="lang-javascript">// Product document
+{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;name&quot;: &quot;Widget&quot;,
+  &quot;price&quot;: 29.99,
+  &quot;recent_reviews&quot;: [  // Embed first 10 for quick display
+    {
+      &quot;user&quot;: &quot;Alice&quot;,
+      &quot;rating&quot;: 5,
+      &quot;text&quot;: &quot;Great product!&quot;,
+      &quot;created_at&quot;: ISODate(&quot;...&quot;)
+    }
+  ],
+  &quot;review_count&quot;: 150
+}
+
+// Separate reviews collection for full list
+db.reviews.find({ product_id: ObjectId(&quot;...&quot;) })</code></pre>
+<p><strong>Option 2</strong>: Reference all reviews</p>
+<pre><code class="lang-javascript">// Product document
+{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;name&quot;: &quot;Widget&quot;,
+  &quot;price&quot;: 29.99,
+  &quot;review_count&quot;: 150
+}
+
+// Reviews collection
+{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;product_id&quot;: ObjectId(&quot;...&quot;),  // Reference
+  &quot;user&quot;: &quot;Alice&quot;,
+  &quot;rating&quot;: 5,
+  &quot;text&quot;: &quot;Great product!&quot;
+}</code></pre>
+<p><strong>Query with $lookup</strong> (join):</p>
+<pre><code class="lang-javascript">db.products.aggregate([
+  { $match: { _id: ObjectId(&quot;...&quot;) } },
+  { $lookup: {
+      from: &quot;reviews&quot;,
+      localField: &quot;_id&quot;,
+      foreignField: &quot;product_id&quot;,
+      as: &quot;reviews&quot;
+  }}
+])</code></pre>
+<h3>Pattern 4: One-to-Many (Unbounded) - Reference</h3>
+<p><strong>Use case</strong>: User with orders (grows indefinitely)</p>
+<pre><code class="lang-javascript">// User document
+{
+  &quot;_id&quot;: ObjectId(&quot;507f1f77bcf86cd799439011&quot;),
+  &quot;name&quot;: &quot;Alice&quot;,
+  &quot;email&quot;: &quot;alice@example.com&quot;
+}
+
+// Orders collection
+{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;user_id&quot;: ObjectId(&quot;507f1f77bcf86cd799439011&quot;),  // Reference
+  &quot;items&quot;: [...],
+  &quot;total&quot;: 99.99,
+  &quot;created_at&quot;: ISODate(&quot;...&quot;)
+}
+
+// Query user&#x27;s orders
+db.orders.find({ user_id: ObjectId(&quot;507f1f77bcf86cd799439011&quot;) })</code></pre>
+<p><strong>Why reference</strong>: Orders grow indefinitely, not always accessed with user.</p>
+<h3>Pattern 5: Many-to-Many (Reference with Junction)</h3>
+<p><strong>Use case</strong>: Users and roles</p>
+<p><strong>Option 1</strong>: Embed role IDs in user</p>
+<pre><code class="lang-javascript">// User document
+{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;name&quot;: &quot;Alice&quot;,
+  &quot;role_ids&quot;: [
+    ObjectId(&quot;role1&quot;),
+    ObjectId(&quot;role2&quot;)
+  ]
+}
+
+// Roles collection
+{
+  &quot;_id&quot;: ObjectId(&quot;role1&quot;),
+  &quot;name&quot;: &quot;admin&quot;,
+  &quot;permissions&quot;: [&quot;read&quot;, &quot;write&quot;, &quot;delete&quot;]
+}
+
+// Query with $lookup
+db.users.aggregate([
+  { $match: { _id: ObjectId(&quot;...&quot;) } },
+  { $lookup: {
+      from: &quot;roles&quot;,
+      localField: &quot;role_ids&quot;,
+      foreignField: &quot;_id&quot;,
+      as: &quot;roles&quot;
+  }}
+])</code></pre>
+<p><strong>Option 2</strong>: Separate junction collection</p>
+<pre><code class="lang-javascript">// Users
+{ &quot;_id&quot;: ObjectId(&quot;user1&quot;), &quot;name&quot;: &quot;Alice&quot; }
+
+// Roles
+{ &quot;_id&quot;: ObjectId(&quot;role1&quot;), &quot;name&quot;: &quot;admin&quot; }
+
+// User-Roles junction
+{
+  &quot;user_id&quot;: ObjectId(&quot;user1&quot;),
+  &quot;role_id&quot;: ObjectId(&quot;role1&quot;),
+  &quot;granted_at&quot;: ISODate(&quot;...&quot;)
+}</code></pre>
+<hr>
+<h2>Avoiding Unbounded Arrays</h2>
+<p><strong>Problem</strong>: Embedding unbounded arrays leads to document growth and performance issues.</p>
+<pre><code class="lang-javascript">// ❌ BAD: Unbounded array
+{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;user&quot;: &quot;Alice&quot;,
+  &quot;posts&quot;: [  // Could grow to thousands
+    { &quot;title&quot;: &quot;Post 1&quot;, &quot;content&quot;: &quot;...&quot; },
+    { &quot;title&quot;: &quot;Post 2&quot;, &quot;content&quot;: &quot;...&quot; },
+    // ... thousands more
+  ]
+}</code></pre>
+<p><strong>Solutions</strong>:</p>
+<h3>Solution 1: Reference Instead</h3>
+<pre><code class="lang-javascript">// User
+{ &quot;_id&quot;: ObjectId(&quot;user1&quot;), &quot;name&quot;: &quot;Alice&quot; }
+
+// Posts (separate collection)
+{ &quot;_id&quot;: ObjectId(&quot;...&quot;), &quot;user_id&quot;: ObjectId(&quot;user1&quot;), &quot;title&quot;: &quot;Post 1&quot; }
+{ &quot;_id&quot;: ObjectId(&quot;...&quot;), &quot;user_id&quot;: ObjectId(&quot;user1&quot;), &quot;title&quot;: &quot;Post 2&quot; }</code></pre>
+<h3>Solution 2: Bucketing Pattern</h3>
+<p><strong>Use case</strong>: Time-series data (sensor readings, logs)</p>
+<pre><code class="lang-javascript">// Instead of one document per reading:
+// { sensor_id: 1, reading: 23.5, timestamp: ... }
+
+// Bucket readings by hour:
+{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;sensor_id&quot;: 1,
+  &quot;bucket_hour&quot;: ISODate(&quot;2024-01-15T10:00:00Z&quot;),
+  &quot;readings&quot;: [
+    { &quot;value&quot;: 23.5, &quot;minute&quot;: 0 },
+    { &quot;value&quot;: 23.7, &quot;minute&quot;: 1 },
+    // ... up to 60 readings per hour
+  ],
+  &quot;reading_count&quot;: 60
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Reduces document count (60 readings → 1 document)</li><li>Bounded array size (max 60 readings)</li><li>Efficient queries (one document per hour)</li></ul>
+<h3>Solution 3: Outlier Pattern</h3>
+<p><strong>Use case</strong>: Products with varying review counts (most have few, some have thousands)</p>
+<pre><code class="lang-javascript">// For products with &lt; 100 reviews: embed
+{
+  &quot;_id&quot;: ObjectId(&quot;product1&quot;),
+  &quot;name&quot;: &quot;Widget&quot;,
+  &quot;reviews&quot;: [
+    { &quot;user&quot;: &quot;Alice&quot;, &quot;rating&quot;: 5, &quot;text&quot;: &quot;...&quot; }
+  ],
+  &quot;review_count&quot;: 10
+}
+
+// For products with &gt; 100 reviews: reference
+{
+  &quot;_id&quot;: ObjectId(&quot;product2&quot;),
+  &quot;name&quot;: &quot;Popular Widget&quot;,
+  &quot;review_count&quot;: 5000,
+  &quot;has_outlier_reviews&quot;: true  // Flag
+}
+
+// Separate reviews collection for outlier products
+db.reviews.find({ product_id: ObjectId(&quot;product2&quot;) })</code></pre>
+<hr>
+<h2>Schema Validation</h2>
+<p>MongoDB supports <strong>JSON Schema validation</strong> to enforce structure.</p>
+<pre><code class="lang-javascript">db.createCollection(&quot;users&quot;, {
+  validator: {
+    $jsonSchema: {
+      bsonType: &quot;object&quot;,
+      required: [&quot;email&quot;, &quot;name&quot;, &quot;created_at&quot;],
+      properties: {
+        email: {
+          bsonType: &quot;string&quot;,
+          pattern: &quot;^.+@.+$&quot;,
+          description: &quot;must be a valid email&quot;
+        },
+        name: {
+          bsonType: &quot;string&quot;,
+          minLength: 1,
+          maxLength: 100
+        },
+        age: {
+          bsonType: &quot;int&quot;,
+          minimum: 0,
+          maximum: 120
+        },
+        created_at: {
+          bsonType: &quot;date&quot;
+        }
+      }
+    }
+  }
+})</code></pre>
+<p><strong>Validation modes</strong>:</p>
+<ul><li><code>strict</code> (default): Reject invalid documents</li><li><code>moderate</code>: Validate new documents, allow existing invalid ones</li></ul>
+<hr>
+<h2>Indexing Strategies</h2>
+<h3>Single Field Index</h3>
+<pre><code class="lang-javascript">db.users.createIndex({ email: 1 })  // Ascending
+db.users.createIndex({ created_at: -1 })  // Descending</code></pre>
+<h3>Compound Index</h3>
+<pre><code class="lang-javascript">db.orders.createIndex({ user_id: 1, created_at: -1 })</code></pre>
+<p><strong>Order matters</strong>: Can use for <code>user_id</code> alone, but not <code>created_at</code> alone.</p>
+<h3>Unique Index</h3>
+<pre><code class="lang-javascript">db.users.createIndex({ email: 1 }, { unique: true })</code></pre>
+<h3>Sparse Index</h3>
+<p><strong>Use case</strong>: Index field that doesn&#x27;t exist in all documents.</p>
+<pre><code class="lang-javascript">db.users.createIndex({ phone: 1 }, { sparse: true })</code></pre>
+<p>Only indexes documents with <code>phone</code> field.</p>
+<h3>TTL Index (Auto-Delete)</h3>
+<p><strong>Use case</strong>: Session data, temporary records.</p>
+<pre><code class="lang-javascript">db.sessions.createIndex(
+  { created_at: 1 },
+  { expireAfterSeconds: 3600 }  // Delete after 1 hour
+)</code></pre>
+<h3>Text Index (Full-Text Search)</h3>
+<pre><code class="lang-javascript">db.posts.createIndex({ title: &quot;text&quot;, content: &quot;text&quot; })
+
+// Search
+db.posts.find({ $text: { $search: &quot;mongodb tutorial&quot; } })</code></pre>
+<hr>
+<h2>Common Pitfalls</h2>
+<p>❌ <strong>Embedding unbounded arrays</strong> - Document grows indefinitely ✅ Use referencing or bucketing pattern</p>
+<p>❌ <strong>Normalizing like relational DB</strong> - Loses MongoDB benefits ✅ Embed related data when accessed together</p>
+<p>❌ <strong>No indexing on reference fields</strong> - Slow lookups ✅ Index foreign key fields (<code>user_id</code>, etc.)</p>
+<p>❌ <strong>Exceeding 16MB document limit</strong> - Insert/update fails ✅ Reference large data, use GridFS for files</p>
+<p>❌ <strong>Using $lookup for every query</strong> - Slow (like SQL joins) ✅ Embed data when possible, minimize lookups</p>
+<p>❌ <strong>No schema validation</strong> - Data inconsistency ✅ Use JSON Schema validation for structure</p>
+<hr>
+<h2>Migration from Relational</h2>
+<h3>Relational → MongoDB Mapping</h3>
+<p>| Relational | MongoDB | |------------|---------| | Table | Collection | | Row | Document | | Column | Field | | Primary Key | <code>_id</code> field | | Foreign Key | Reference (ObjectId) or embedded | | JOIN | $lookup or embedded | | Index | Index |</p>
+<h3>Example: Blog Schema</h3>
+<p><strong>Relational</strong>:</p>
+<pre><code class="lang-sql">CREATE TABLE users (id, name, email);
+CREATE TABLE posts (id, user_id, title, content);
+CREATE TABLE comments (id, post_id, user_id, text);</code></pre>
+<p><strong>MongoDB (Embedded)</strong>:</p>
+<pre><code class="lang-javascript">// posts collection
+{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;title&quot;: &quot;My Post&quot;,
+  &quot;content&quot;: &quot;...&quot;,
+  &quot;author&quot;: {  // Embedded user (denormalized)
+    &quot;name&quot;: &quot;Alice&quot;,
+    &quot;email&quot;: &quot;alice@example.com&quot;
+  },
+  &quot;comments&quot;: [  // Embedded comments
+    {
+      &quot;author&quot;: &quot;Bob&quot;,
+      &quot;text&quot;: &quot;Great post!&quot;,
+      &quot;created_at&quot;: ISODate(&quot;...&quot;)
+    }
+  ]
+}</code></pre>
+<p><strong>MongoDB (Referenced)</strong>:</p>
+<pre><code class="lang-javascript">// users collection
+{ &quot;_id&quot;: ObjectId(&quot;user1&quot;), &quot;name&quot;: &quot;Alice&quot;, &quot;email&quot;: &quot;...&quot; }
+
+// posts collection
+{
+  &quot;_id&quot;: ObjectId(&quot;post1&quot;),
+  &quot;user_id&quot;: ObjectId(&quot;user1&quot;),  // Reference
+  &quot;title&quot;: &quot;My Post&quot;,
+  &quot;content&quot;: &quot;...&quot;
+}
+
+// comments collection
+{
+  &quot;_id&quot;: ObjectId(&quot;...&quot;),
+  &quot;post_id&quot;: ObjectId(&quot;post1&quot;),  // Reference
+  &quot;user_id&quot;: ObjectId(&quot;user1&quot;),  // Reference
+  &quot;text&quot;: &quot;Great post!&quot;
+}</code></pre>
+<p><strong>Decision</strong>: Embed if data accessed together, reference if queried independently.</p>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Embed When:</h3>
+<ul><li>Data accessed together</li><li>One-to-one or one-to-few relationship</li><li>Related data doesn&#x27;t change often</li><li>Related data is small</li></ul>
+<h3>Reference When:</h3>
+<ul><li>Data queried independently</li><li>One-to-many (unbounded)</li><li>Many-to-many</li><li>Related data changes frequently</li><li>Related data is large or shared</li></ul>
+<h3>Design Checklist</h3>
+<pre><code>Schema Design:
+[ ] Modeled for access patterns (not normalization first)
+[ ] Embedded data that&#x27;s always accessed together
+[ ] Referenced unbounded or frequently changing data
+[ ] Avoided unbounded arrays
+[ ] Considered bucketing for time-series data
+[ ] Added schema validation for critical fields
+
+Indexes:
+[ ] _id indexed automatically
+[ ] Foreign key fields (user_id, etc.) indexed
+[ ] Frequently queried fields indexed
+[ ] Compound indexes for multi-field queries
+[ ] Unique indexes where appropriate
+
+Performance:
+[ ] Documents stay under 16MB
+[ ] Minimize use of $lookup (prefer embedding)
+[ ] Use projections to return only needed fields
+[ ] Consider capping collections for logs/events</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>postgres-schema-design.md</code> - Relational schema design for comparison</li><li><code>database-selection.md</code> - When to use MongoDB vs PostgreSQL</li><li><code>redis-data-structures.md</code> - Complementary data store for caching</li><li><code>orm-patterns.md</code> - ORM usage with MongoDB (Mongoose, etc.)</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/database-mongodb-document-design.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

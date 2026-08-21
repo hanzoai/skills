@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>modal-scheduling</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/modal-scheduling.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/modal-scheduling.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>modal-scheduling</h1><p class="lede">Running periodic tasks on Modal</p><h1>Modal Scheduling</h1>
+<p><strong>Use this skill when:</strong></p>
+<ul><li>Running periodic tasks on Modal</li><li>Implementing cron jobs</li><li>Scheduling batch processing</li><li>Creating automated workflows</li><li>Building recurring data pipelines</li></ul>
+<h2>Periodic Schedules</h2>
+<h3>Simple Period</h3>
+<p>Run functions at fixed intervals:</p>
+<pre><code class="lang-python">import modal
+
+app = modal.App(&quot;scheduled-app&quot;)
+
+# Every 5 minutes
+@app.function(schedule=modal.Period(minutes=5))
+def every_five_minutes():
+    print(&quot;Running every 5 minutes&quot;)
+    return process_data()
+
+# Every hour
+@app.function(schedule=modal.Period(hours=1))
+def hourly_task():
+    print(&quot;Running hourly&quot;)
+    return cleanup_temp_files()
+
+# Every day
+@app.function(schedule=modal.Period(days=1))
+def daily_task():
+    print(&quot;Running daily&quot;)
+    return generate_report()</code></pre>
+<h3>Multiple Time Units</h3>
+<p>Combine time units:</p>
+<pre><code class="lang-python"># Every 1 hour 30 minutes
+@app.function(schedule=modal.Period(hours=1, minutes=30))
+def every_ninety_minutes():
+    return sync_data()
+
+# Every week (7 days)
+@app.function(schedule=modal.Period(days=7))
+def weekly_cleanup():
+    return archive_old_data()</code></pre>
+<h2>Cron Schedules</h2>
+<h3>Cron Syntax</h3>
+<p>Use cron expressions for precise timing:</p>
+<pre><code class="lang-python"># Every day at 2:30 AM UTC
+@app.function(schedule=modal.Cron(&quot;30 2 * * *&quot;))
+def daily_at_230am():
+    return generate_daily_report()
+
+# Every Monday at 9:00 AM UTC
+@app.function(schedule=modal.Cron(&quot;0 9 * * MON&quot;))
+def monday_morning():
+    return send_weekly_summary()
+
+# Every weekday at 8:00 AM UTC
+@app.function(schedule=modal.Cron(&quot;0 8 * * MON-FRI&quot;))
+def weekday_morning():
+    return business_day_tasks()
+
+# First day of month at midnight UTC
+@app.function(schedule=modal.Cron(&quot;0 0 1 * *&quot;))
+def monthly_billing():
+    return process_monthly_invoices()
+
+# Every 15 minutes
+@app.function(schedule=modal.Cron(&quot;*/15 * * * *&quot;))
+def every_fifteen_min():
+    return poll_external_api()</code></pre>
+<h3>Cron Format Reference</h3>
+<pre><code># Format: minute hour day month weekday
+# ┌───────── minute (0 - 59)
+# │ ┌───────── hour (0 - 23)
+# │ │ ┌───────── day of month (1 - 31)
+# │ │ │ ┌───────── month (1 - 12)
+# │ │ │ │ ┌───────── day of week (0 - 6) (Sunday=0 or 7)
+# │ │ │ │ │
+# * * * * *
+
+# Examples:
+# &quot;0 0 * * *&quot;        # Daily at midnight
+# &quot;0 */6 * * *&quot;      # Every 6 hours
+# &quot;30 3 * * 0&quot;       # Sundays at 3:30 AM
+# &quot;0 0 1,15 * *&quot;     # 1st and 15th of month
+# &quot;0 9-17 * * *&quot;     # Every hour from 9 AM to 5 PM</code></pre>
+<h2>Scheduled Data Processing</h2>
+<h3>ETL Pipeline</h3>
+<p>Schedule data extraction and processing:</p>
+<pre><code class="lang-python">image = modal.Image.debian_slim().uv_pip_install(
+    &quot;pandas&quot;,
+    &quot;sqlalchemy&quot;,
+    &quot;psycopg2-binary&quot;
+)
+
+@app.function(
+    schedule=modal.Cron(&quot;0 1 * * *&quot;),  # 1 AM daily
+    image=image,
+    timeout=3600  # 1 hour max
+)
+def etl_pipeline():
+    import pandas as pd
+    from sqlalchemy import create_engine
+
+    print(&quot;Starting ETL pipeline&quot;)
+
+    # Extract
+    source_data = extract_from_source()
+
+    # Transform
+    df = pd.DataFrame(source_data)
+    df = transform_data(df)
+
+    # Load
+    engine = create_engine(DATABASE_URL)
+    df.to_sql(&quot;analytics&quot;, engine, if_exists=&quot;replace&quot;)
+
+    print(f&quot;Loaded {len(df)} rows&quot;)
+    return {&quot;rows&quot;: len(df), &quot;status&quot;: &quot;complete&quot;}
+
+def extract_from_source():
+    # Fetch from API, S3, etc.
+    return data
+
+def transform_data(df):
+    # Clean and transform
+    return df</code></pre>
+<h3>Batch Processing</h3>
+<p>Process batches on schedule:</p>
+<pre><code class="lang-python">@app.function(
+    schedule=modal.Period(hours=6),
+    timeout=7200  # 2 hours
+)
+def process_pending_jobs():
+    jobs = get_pending_jobs()
+
+    print(f&quot;Processing {len(jobs)} jobs&quot;)
+
+    # Process in parallel
+    results = list(process_job.map(jobs))
+
+    successful = sum(1 for r in results if r[&quot;status&quot;] == &quot;success&quot;)
+    failed = len(results) - successful
+
+    print(f&quot;Completed: {successful} success, {failed} failed&quot;)
+
+    return {
+        &quot;total&quot;: len(jobs),
+        &quot;successful&quot;: successful,
+        &quot;failed&quot;: failed
+    }
+
+@app.function()
+def process_job(job):
+    try:
+        result = execute_job(job)
+        return {&quot;job_id&quot;: job[&quot;id&quot;], &quot;status&quot;: &quot;success&quot;}
+    except Exception as e:
+        return {&quot;job_id&quot;: job[&quot;id&quot;], &quot;status&quot;: &quot;failed&quot;, &quot;error&quot;: str(e)}</code></pre>
+<h2>Monitoring and Alerts</h2>
+<h3>Health Checks</h3>
+<p>Schedule health monitoring:</p>
+<pre><code class="lang-python">@app.function(schedule=modal.Period(minutes=5))
+def health_check():
+    services = [&quot;api&quot;, &quot;database&quot;, &quot;cache&quot;]
+    results = {}
+
+    for service in services:
+        try:
+            status = check_service(service)
+            results[service] = &quot;healthy&quot;
+        except Exception as e:
+            results[service] = f&quot;unhealthy: {e}&quot;
+            send_alert(f&quot;Service {service} is down: {e}&quot;)
+
+    return results
+
+def check_service(service_name):
+    # Ping service
+    pass
+
+def send_alert(message):
+    # Send to Slack, PagerDuty, etc.
+    pass</code></pre>
+<h3>Metric Collection</h3>
+<p>Collect metrics periodically:</p>
+<pre><code class="lang-python">@app.function(schedule=modal.Cron(&quot;*/5 * * * *&quot;))  # Every 5 min
+def collect_metrics():
+    metrics = {
+        &quot;timestamp&quot;: datetime.now().isoformat(),
+        &quot;cpu_usage&quot;: get_cpu_usage(),
+        &quot;memory_usage&quot;: get_memory_usage(),
+        &quot;active_users&quot;: count_active_users(),
+        &quot;request_count&quot;: get_request_count()
+    }
+
+    # Store in time-series database
+    store_metrics(metrics)
+
+    return metrics</code></pre>
+<h2>Data Cleanup</h2>
+<h3>Automated Cleanup</h3>
+<p>Schedule data cleanup tasks:</p>
+<pre><code class="lang-python">from datetime import datetime, timedelta
+
+@app.function(schedule=modal.Cron(&quot;0 2 * * *&quot;))  # 2 AM daily
+def cleanup_old_data():
+    cutoff_date = datetime.now() - timedelta(days=90)
+
+    # Delete old records
+    deleted_count = delete_records_before(cutoff_date)
+
+    # Clean up temporary files
+    temp_files_deleted = cleanup_temp_files()
+
+    # Archive old logs
+    logs_archived = archive_old_logs(cutoff_date)
+
+    return {
+        &quot;records_deleted&quot;: deleted_count,
+        &quot;temp_files_deleted&quot;: temp_files_deleted,
+        &quot;logs_archived&quot;: logs_archived
+    }</code></pre>
+<h3>Cache Warming</h3>
+<p>Pre-warm caches on schedule:</p>
+<pre><code class="lang-python">@app.function(schedule=modal.Cron(&quot;0 6 * * *&quot;))  # 6 AM daily
+def warm_caches():
+    # Pre-compute popular queries
+    popular_items = get_popular_items()
+
+    for item in popular_items:
+        cache_item_details(item)
+
+    print(f&quot;Warmed cache for {len(popular_items)} items&quot;)
+    return {&quot;items_cached&quot;: len(popular_items)}</code></pre>
+<h2>Backup and Archival</h2>
+<h3>Automated Backups</h3>
+<p>Schedule database backups:</p>
+<pre><code class="lang-python">@app.function(
+    schedule=modal.Cron(&quot;0 0 * * *&quot;),  # Midnight daily
+    timeout=3600
+)
+def backup_database():
+    import subprocess
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime(&quot;%Y%m%d_%H%M%S&quot;)
+    backup_file = f&quot;backup_{timestamp}.sql&quot;
+
+    # Create backup
+    subprocess.run([
+        &quot;pg_dump&quot;,
+        &quot;-h&quot;, DB_HOST,
+        &quot;-U&quot;, DB_USER,
+        &quot;-d&quot;, DB_NAME,
+        &quot;-f&quot;, backup_file
+    ])
+
+    # Upload to S3
+    upload_to_s3(backup_file, f&quot;backups/{backup_file}&quot;)
+
+    # Clean up local file
+    os.remove(backup_file)
+
+    return {&quot;backup_file&quot;: backup_file, &quot;status&quot;: &quot;complete&quot;}</code></pre>
+<h2>Retries and Error Handling</h2>
+<h3>Retry Failed Jobs</h3>
+<p>Handle failures gracefully:</p>
+<pre><code class="lang-python">@app.function(
+    schedule=modal.Period(hours=1),
+    retries=3  # Retry up to 3 times
+)
+def resilient_task():
+    try:
+        result = perform_task()
+        return {&quot;status&quot;: &quot;success&quot;, &quot;result&quot;: result}
+    except Exception as e:
+        print(f&quot;Task failed: {e}&quot;)
+        # Log error for monitoring
+        log_error(e)
+        raise  # Will trigger retry</code></pre>
+<h3>Error Notifications</h3>
+<p>Send alerts on failures:</p>
+<pre><code class="lang-python">@app.function(schedule=modal.Cron(&quot;0 * * * *&quot;))  # Hourly
+def monitored_task():
+    try:
+        result = critical_operation()
+        return {&quot;status&quot;: &quot;success&quot;}
+    except Exception as e:
+        # Send alert
+        send_slack_alert(f&quot;Hourly task failed: {e}&quot;)
+
+        # Log to monitoring service
+        log_to_datadog(&quot;task.failed&quot;, tags=[&quot;critical&quot;])
+
+        # Re-raise to show as failed in Modal dashboard
+        raise</code></pre>
+<h2>Conditional Execution</h2>
+<h3>Skip on Conditions</h3>
+<p>Run only when needed:</p>
+<pre><code class="lang-python">@app.function(schedule=modal.Cron(&quot;0 */4 * * *&quot;))  # Every 4 hours
+def conditional_sync():
+    # Check if sync is needed
+    if not should_sync():
+        print(&quot;Sync not needed, skipping&quot;)
+        return {&quot;status&quot;: &quot;skipped&quot;}
+
+    # Perform sync
+    result = sync_data()
+
+    return {&quot;status&quot;: &quot;completed&quot;, &quot;items&quot;: result}
+
+def should_sync():
+    # Check conditions (e.g., data staleness)
+    return check_data_age() &gt; 4 * 3600</code></pre>
+<h2>Chaining Scheduled Functions</h2>
+<h3>Sequential Processing</h3>
+<p>Chain multiple scheduled tasks:</p>
+<pre><code class="lang-python">@app.function(schedule=modal.Cron(&quot;0 1 * * *&quot;))  # 1 AM
+def step1_extract():
+    data = extract_data()
+    save_to_temp(data)
+    # Trigger next step
+    step2_transform.spawn()
+    return {&quot;status&quot;: &quot;extracted&quot;}
+
+@app.function()
+def step2_transform():
+    data = load_from_temp()
+    transformed = transform(data)
+    save_to_temp(transformed)
+    # Trigger next step
+    step3_load.spawn()
+
+@app.function()
+def step3_load():
+    data = load_from_temp()
+    load_to_warehouse(data)
+    cleanup_temp()</code></pre>
+<h2>Testing Scheduled Functions</h2>
+<h3>Manual Triggering</h3>
+<p>Test scheduled functions manually:</p>
+<pre><code class="lang-python">@app.function(schedule=modal.Cron(&quot;0 2 * * *&quot;))
+def scheduled_task():
+    return process_data()
+
+# Can still call directly for testing
+@app.local_entrypoint()
+def test():
+    result = scheduled_task.remote()
+    print(f&quot;Test result: {result}&quot;)</code></pre>
+<h2>Anti-Patterns to Avoid</h2>
+<p><strong>DON&#x27;T use short periods for expensive operations:</strong></p>
+<pre><code class="lang-python"># ❌ BAD - Expensive GPU task every minute
+@app.function(
+    schedule=modal.Period(minutes=1),
+    gpu=&quot;a100&quot;
+)
+def expensive_every_minute():
+    return train_model()  # Costs $8/hour constantly!
+
+# ✅ GOOD - Appropriate frequency
+@app.function(
+    schedule=modal.Period(hours=6),
+    gpu=&quot;a100&quot;
+)
+def reasonable_schedule():
+    return train_model()</code></pre>
+<p><strong>DON&#x27;T forget timeouts:</strong></p>
+<pre><code class="lang-python"># ❌ BAD - Could run forever
+@app.function(schedule=modal.Cron(&quot;0 0 * * *&quot;))
+def no_timeout():
+    while True:
+        process()
+
+# ✅ GOOD - Bounded execution
+@app.function(
+    schedule=modal.Cron(&quot;0 0 * * *&quot;),
+    timeout=3600  # 1 hour max
+)
+def with_timeout():
+    process_for_limited_time()</code></pre>
+<p><strong>DON&#x27;T ignore errors silently:</strong></p>
+<pre><code class="lang-python"># ❌ BAD - Swallows errors
+@app.function(schedule=modal.Period(hours=1))
+def silent_failures():
+    try:
+        critical_task()
+    except:
+        pass  # No one knows it failed!
+
+# ✅ GOOD - Log and alert
+@app.function(schedule=modal.Period(hours=1))
+def monitored():
+    try:
+        critical_task()
+    except Exception as e:
+        log_error(e)
+        send_alert(e)
+        raise</code></pre>
+<h2>Related Skills</h2>
+<ul><li><strong>modal-functions-basics.md</strong> - Basic Modal patterns</li><li><strong>modal-volumes-secrets.md</strong> - Persisting scheduled task data</li><li><strong>modal-web-endpoints.md</strong> - Triggering tasks via webhooks</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/modal-scheduling.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ebpf-tracing-observability</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ebpf-tracing-observability.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ebpf-tracing-observability.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ebpf-tracing-observability</h1><p class="lede">Using eBPF for tracing with bpftrace, kprobes, uprobes, tracepoints, and performance analysis</p><h1>eBPF Tracing and Observability</h1>
+<p><strong>Scope</strong>: System tracing with bpftrace, kprobes/uprobes, tracepoints, perf events, and latency analysis patterns <strong>Lines</strong>: ~360 <strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Analyzing system performance and latency issues</li><li>Tracing kernel function calls with kprobes</li><li>Tracing user-space function calls with uprobes</li><li>Using bpftrace for ad-hoc system analysis</li><li>Monitoring function call frequencies and durations</li><li>Debugging production issues with minimal overhead</li><li>Collecting stack traces for profiling</li><li>Creating custom observability tools</li></ul>
+<h2>Core Concepts</h2>
+<h3>Concept 1: bpftrace Language</h3>
+<p><strong>One-liners</strong>: Quick system insights</p>
+<pre><code class="lang-bash"># Trace all syscalls by process
+bpftrace -e &#x27;tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }&#x27;
+
+# Show file opens
+bpftrace -e &#x27;tracepoint:syscalls:sys_enter_openat { printf(&quot;%s: %s\n&quot;, comm, str(args-&gt;filename)); }&#x27;
+
+# Measure syscall latency
+bpftrace -e &#x27;tracepoint:raw_syscalls:sys_enter { @start[tid] = nsecs; }
+              tracepoint:raw_syscalls:sys_exit /@start[tid]/ {
+                @ns = hist(nsecs - @start[tid]);
+                delete(@start[tid]);
+              }&#x27;
+
+# Top processes by CPU
+bpftrace -e &#x27;profile:hz:99 { @[comm] = count(); }&#x27;
+
+# Block I/O size distribution
+bpftrace -e &#x27;tracepoint:block:block_rq_issue { @bytes = hist(args-&gt;bytes); }&#x27;</code></pre>
+<h3>Concept 2: kprobes and kretprobes</h3>
+<p><strong>kprobe</strong>: Trace kernel function entry <strong>kretprobe</strong>: Trace kernel function exit (return value)</p>
+<pre><code class="lang-bash"># bpftrace: Trace function entry
+bpftrace -e &#x27;kprobe:do_sys_open { printf(&quot;Process %s opening file\n&quot;, comm); }&#x27;
+
+# Trace function with arguments
+bpftrace -e &#x27;kprobe:do_sys_open {
+    printf(&quot;%s called do_sys_open(dfd=%d, filename=%s)\n&quot;,
+           comm, arg0, str(arg1));
+}&#x27;
+
+# Trace function return value
+bpftrace -e &#x27;kretprobe:do_sys_open {
+    printf(&quot;do_sys_open returned: %d\n&quot;, retval);
+}&#x27;
+
+# Measure function duration
+bpftrace -e &#x27;kprobe:vfs_read { @start[tid] = nsecs; }
+              kretprobe:vfs_read /@start[tid]/ {
+                @duration_us = hist((nsecs - @start[tid]) / 1000);
+                delete(@start[tid]);
+              }&#x27;</code></pre>
+<p><strong>C program</strong> (libbpf):</p>
+<pre><code class="lang-c">#include &lt;vmlinux.h&gt;
+#include &lt;bpf/bpf_helpers.h&gt;
+#include &lt;bpf/bpf_tracing.h&gt;
+
+SEC(&quot;kprobe/do_sys_open&quot;)
+int BPF_KPROBE(trace_open_entry, int dfd, const char __user *filename) {
+    char fname[256];
+    u32 pid = bpf_get_current_pid_tgid() &gt;&gt; 32;
+    char comm[16];
+
+    bpf_get_current_comm(&amp;comm, sizeof(comm));
+    bpf_probe_read_user_str(&amp;fname, sizeof(fname), filename);
+
+    bpf_printk(&quot;PID %d (%s) opening: %s\n&quot;, pid, comm, fname);
+    return 0;
+}
+
+SEC(&quot;kretprobe/do_sys_open&quot;)
+int BPF_KRETPROBE(trace_open_exit, int ret) {
+    u32 pid = bpf_get_current_pid_tgid() &gt;&gt; 32;
+    bpf_printk(&quot;PID %d open returned: %d\n&quot;, pid, ret);
+    return 0;
+}
+
+char LICENSE[] SEC(&quot;license&quot;) = &quot;GPL&quot;;</code></pre>
+<h3>Concept 3: uprobes for User-Space Tracing</h3>
+<p><strong>Purpose</strong>: Trace user-space functions (applications, libraries)</p>
+<pre><code class="lang-bash"># Trace malloc calls
+bpftrace -e &#x27;uprobe:/lib/x86_64-linux-gnu/libc.so.6:malloc {
+    printf(&quot;%s malloc(%d)\n&quot;, comm, arg0);
+}&#x27;
+
+# Trace application function
+bpftrace -e &#x27;uprobe:/usr/bin/python3.9:PyEval_EvalFrameEx {
+    printf(&quot;Python frame execution in %s\n&quot;, comm);
+}&#x27;
+
+# Trace with return value
+bpftrace -e &#x27;uretprobe:/lib/x86_64-linux-gnu/libc.so.6:malloc {
+    printf(&quot;malloc returned: %p\n&quot;, retval);
+}&#x27;
+
+# Trace custom application
+bpftrace -e &#x27;uprobe:./myapp:process_request {
+    printf(&quot;Request processing started\n&quot;);
+}
+uretprobe:./myapp:process_request {
+    printf(&quot;Request took: %d ns\n&quot;, retval);
+}&#x27;</code></pre>
+<p><strong>C program</strong> (libbpf):</p>
+<pre><code class="lang-c">SEC(&quot;uprobe/lib/x86_64-linux-gnu/libc.so.6:malloc&quot;)
+int BPF_KPROBE(trace_malloc, size_t size) {
+    u32 pid = bpf_get_current_pid_tgid() &gt;&gt; 32;
+    char comm[16];
+    bpf_get_current_comm(&amp;comm, sizeof(comm));
+
+    bpf_printk(&quot;PID %d (%s) malloc(%lu)\n&quot;, pid, comm, size);
+    return 0;
+}
+
+SEC(&quot;uretprobe/lib/x86_64-linux-gnu/libc.so.6:malloc&quot;)
+int BPF_KRETPROBE(trace_malloc_ret, void *ret) {
+    u32 pid = bpf_get_current_pid_tgid() &gt;&gt; 32;
+    bpf_printk(&quot;PID %d malloc returned: %p\n&quot;, pid, ret);
+    return 0;
+}</code></pre>
+<h3>Concept 4: Tracepoints - Stable ABI</h3>
+<p><strong>Advantages</strong>: Stable across kernel versions, no symbol lookup</p>
+<pre><code class="lang-bash"># List available tracepoints
+bpftrace -l &#x27;tracepoint:*&#x27; | grep syscalls
+
+# Trace syscall entry
+bpftrace -e &#x27;tracepoint:syscalls:sys_enter_write {
+    printf(&quot;write(%d, ..., %d)\n&quot;, args-&gt;fd, args-&gt;count);
+}&#x27;
+
+# Trace scheduler events
+bpftrace -e &#x27;tracepoint:sched:sched_switch {
+    printf(&quot;%s -&gt; %s\n&quot;, args-&gt;prev_comm, args-&gt;next_comm);
+}&#x27;
+
+# Trace network transmit
+bpftrace -e &#x27;tracepoint:net:netif_rx {
+    printf(&quot;RX %d bytes on %s\n&quot;, args-&gt;len, args-&gt;name);
+}&#x27;</code></pre>
+<p><strong>C program</strong>:</p>
+<pre><code class="lang-c">#include &lt;vmlinux.h&gt;
+#include &lt;bpf/bpf_helpers.h&gt;
+
+SEC(&quot;tracepoint/syscalls/sys_enter_openat&quot;)
+int trace_openat(struct trace_event_raw_sys_enter *ctx) {
+    char filename[256];
+    char comm[16];
+
+    bpf_get_current_comm(&amp;comm, sizeof(comm));
+    bpf_probe_read_user_str(&amp;filename, sizeof(filename),
+                            (void *)ctx-&gt;args[1]);
+
+    bpf_printk(&quot;%s opening: %s\n&quot;, comm, filename);
+    return 0;
+}
+
+SEC(&quot;tracepoint/sched/sched_process_exec&quot;)
+int trace_exec(struct trace_event_raw_sched_process_exec *ctx) {
+    char comm[16];
+    bpf_get_current_comm(&amp;comm, sizeof(comm));
+
+    bpf_printk(&quot;Exec: %s (PID %d)\n&quot;, comm, ctx-&gt;pid);
+    return 0;
+}
+
+char LICENSE[] SEC(&quot;license&quot;) = &quot;GPL&quot;;</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Latency Analysis</h3>
+<p><strong>When to use</strong>: Identify slow operations</p>
+<pre><code class="lang-bash"># Histogram of read() latency
+bpftrace -e &#x27;
+tracepoint:syscalls:sys_enter_read {
+    @start[tid] = nsecs;
+}
+
+tracepoint:syscalls:sys_exit_read /@start[tid]/ {
+    @latency_us = hist((nsecs - @start[tid]) / 1000);
+    delete(@start[tid]);
+}
+
+interval:s:5 {
+    print(@latency_us);
+    clear(@latency_us);
+}&#x27;</code></pre>
+<p><strong>C implementation</strong> (more control):</p>
+<pre><code class="lang-c">struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 10240);
+    __type(key, u32);
+    __type(value, u64);
+} start_times SEC(&quot;.maps&quot;);
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HISTOGRAM);
+    __uint(max_entries, 64);
+} latency_hist SEC(&quot;.maps&quot;);
+
+SEC(&quot;tracepoint/syscalls/sys_enter_read&quot;)
+int trace_read_enter(struct trace_event_raw_sys_enter *ctx) {
+    u32 tid = bpf_get_current_pid_tgid() &amp; 0xFFFFFFFF;
+    u64 ts = bpf_ktime_get_ns();
+    bpf_map_update_elem(&amp;start_times, &amp;tid, &amp;ts, BPF_ANY);
+    return 0;
+}
+
+SEC(&quot;tracepoint/syscalls/sys_exit_read&quot;)
+int trace_read_exit(struct trace_event_raw_sys_exit *ctx) {
+    u32 tid = bpf_get_current_pid_tgid() &amp; 0xFFFFFFFF;
+    u64 *tsp = bpf_map_lookup_elem(&amp;start_times, &amp;tid);
+
+    if (tsp) {
+        u64 delta_us = (bpf_ktime_get_ns() - *tsp) / 1000;
+        bpf_map_update_elem(&amp;latency_hist, &amp;delta_us, NULL, BPF_ANY);
+        bpf_map_delete_elem(&amp;start_times, &amp;tid);
+    }
+
+    return 0;
+}</code></pre>
+<h3>Pattern 2: Function Counting</h3>
+<p><strong>Use case</strong>: Find hot paths in code</p>
+<pre><code class="lang-bash"># Count kernel function calls
+bpftrace -e &#x27;kprobe:vfs_* { @[probe] = count(); }&#x27;
+
+# Count by process
+bpftrace -e &#x27;kprobe:tcp_sendmsg { @sends[comm] = count(); }&#x27;
+
+# Top 10 callers
+bpftrace -e &#x27;kprobe:do_sys_open { @[comm] = count(); }
+              interval:s:10 { print(@, 10); clear(@); }&#x27;</code></pre>
+<p><strong>C program</strong> (per-CPU for performance):</p>
+<pre><code class="lang-c">struct {
+    __uint(type, BPF_MAP_TYPE_PERCPU_HASH);
+    __uint(max_entries, 10240);
+    __type(key, char[16]);
+    __type(value, u64);
+} call_counts SEC(&quot;.maps&quot;);
+
+SEC(&quot;kprobe/tcp_sendmsg&quot;)
+int count_tcp_send(struct pt_regs *ctx) {
+    char comm[16];
+    u64 zero = 0, *count;
+
+    bpf_get_current_comm(&amp;comm, sizeof(comm));
+
+    count = bpf_map_lookup_elem(&amp;call_counts, &amp;comm);
+    if (count) {
+        __sync_fetch_and_add(count, 1);
+    } else {
+        bpf_map_update_elem(&amp;call_counts, &amp;comm, &amp;zero, BPF_NOEXIST);
+    }
+
+    return 0;
+}</code></pre>
+<h3>Pattern 3: Stack Trace Collection</h3>
+<p><strong>When to use</strong>: Profiling, identifying code paths</p>
+<pre><code class="lang-bash"># User stack traces
+bpftrace -e &#x27;profile:hz:99 /comm == &quot;myapp&quot;/ {
+    @[ustack] = count();
+}&#x27;
+
+# Kernel stack traces
+bpftrace -e &#x27;kprobe:tcp_sendmsg {
+    @[kstack] = count();
+}&#x27;
+
+# Combined user + kernel stacks
+bpftrace -e &#x27;profile:hz:99 {
+    @[ustack, kstack, comm] = count();
+}&#x27;</code></pre>
+<p><strong>C program</strong>:</p>
+<pre><code class="lang-c">struct {
+    __uint(type, BPF_MAP_TYPE_STACK_TRACE);
+    __uint(max_entries, 1024);
+    __uint(key_size, sizeof(u32));
+    __uint(value_size, PERF_MAX_STACK_DEPTH * sizeof(u64));
+} stack_traces SEC(&quot;.maps&quot;);
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 10240);
+    __type(key, u32);
+    __type(value, u64);
+} stack_counts SEC(&quot;.maps&quot;);
+
+SEC(&quot;kprobe/tcp_sendmsg&quot;)
+int trace_tcp_send(struct pt_regs *ctx) {
+    u32 stack_id = bpf_get_stackid(ctx, &amp;stack_traces, BPF_F_USER_STACK);
+    u64 *count, zero = 0;
+
+    count = bpf_map_lookup_elem(&amp;stack_counts, &amp;stack_id);
+    if (count) {
+        __sync_fetch_and_add(count, 1);
+    } else {
+        bpf_map_update_elem(&amp;stack_counts, &amp;stack_id, &amp;zero, BPF_ANY);
+    }
+
+    return 0;
+}</code></pre>
+<h3>Pattern 4: Argument Inspection</h3>
+<p><strong>Use case</strong>: Understand function inputs</p>
+<pre><code class="lang-bash"># Inspect syscall arguments
+bpftrace -e &#x27;tracepoint:syscalls:sys_enter_write {
+    printf(&quot;write(fd=%d, count=%d) by %s\n&quot;,
+           args-&gt;fd, args-&gt;count, comm);
+}&#x27;
+
+# String arguments
+bpftrace -e &#x27;tracepoint:syscalls:sys_enter_execve {
+    printf(&quot;exec: %s %s\n&quot;, comm, str(args-&gt;filename));
+}&#x27;
+
+# Struct arguments (kernel functions)
+bpftrace -e &#x27;kprobe:tcp_sendmsg {
+    printf(&quot;tcp_sendmsg: size=%d\n&quot;, ((struct msghdr *)arg1)-&gt;msg_iter.count);
+}&#x27;</code></pre>
+<h3>Pattern 5: Filtering by PID/Process</h3>
+<p><strong>Use case</strong>: Focus on specific application</p>
+<pre><code class="lang-bash"># Single PID
+bpftrace -e &#x27;tracepoint:syscalls:sys_enter_read /pid == 1234/ {
+    printf(&quot;Read by PID 1234\n&quot;);
+}&#x27;
+
+# Process name
+bpftrace -e &#x27;kprobe:vfs_read /comm == &quot;nginx&quot;/ {
+    @reads = count();
+}&#x27;
+
+# Multiple PIDs
+bpftrace -e &#x27;
+BEGIN { @pids[1234] = 1; @pids[5678] = 1; }
+
+kprobe:do_sys_open /@pids[pid]/ {
+    printf(&quot;Monitored PID %d opened file\n&quot;, pid);
+}&#x27;</code></pre>
+<p><strong>C program</strong>:</p>
+<pre><code class="lang-c">struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 1024);
+    __type(key, u32);
+    __type(value, u8);
+} filter_pids SEC(&quot;.maps&quot;);
+
+SEC(&quot;kprobe/do_sys_open&quot;)
+int trace_open_filtered(struct pt_regs *ctx) {
+    u32 pid = bpf_get_current_pid_tgid() &gt;&gt; 32;
+
+    if (!bpf_map_lookup_elem(&amp;filter_pids, &amp;pid))
+        return 0; // Skip if not in filter
+
+    char comm[16];
+    bpf_get_current_comm(&amp;comm, sizeof(comm));
+    bpf_printk(&quot;Filtered PID %d (%s) opening file\n&quot;, pid, comm);
+
+    return 0;
+}</code></pre>
+<h3>Pattern 6: Time-Based Sampling</h3>
+<p><strong>When to use</strong>: Reduce overhead for high-frequency events</p>
+<pre><code class="lang-bash"># Sample 1% of events
+bpftrace -e &#x27;kprobe:vfs_read /(rand() % 100) &lt; 1/ {
+    @sampled = count();
+}&#x27;
+
+# Sample every 100th event
+bpftrace -e &#x27;
+kprobe:tcp_sendmsg {
+    @count++;
+    if (@count % 100 == 0) {
+        printf(&quot;Sample: %s sent TCP\n&quot;, comm);
+    }
+}&#x27;</code></pre>
+<h3>Pattern 7: Multi-Function Correlation</h3>
+<p><strong>Use case</strong>: Track request flow across functions</p>
+<pre><code class="lang-bash">bpftrace -e &#x27;
+kprobe:tcp_sendmsg {
+    @start[tid] = nsecs;
+    printf(&quot;-&gt; tcp_sendmsg (%s)\n&quot;, comm);
+}
+
+kprobe:ip_queue_xmit /@start[tid]/ {
+    printf(&quot;  -&gt; ip_queue_xmit (+%d us)\n&quot;,
+           (nsecs - @start[tid]) / 1000);
+}
+
+kretprobe:tcp_sendmsg /@start[tid]/ {
+    printf(&quot;&lt;- tcp_sendmsg (total: %d us)\n&quot;,
+           (nsecs - @start[tid]) / 1000);
+    delete(@start[tid]);
+}&#x27;</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>bpftrace Probe Types</h3>
+<pre><code>Probe Type           | Syntax                        | Example
+---------------------|-------------------------------|---------------------------
+Tracepoint           | tracepoint:category:name      | tracepoint:syscalls:sys_enter_read
+kprobe               | kprobe:function               | kprobe:do_sys_open
+kretprobe            | kretprobe:function            | kretprobe:do_sys_open
+uprobe               | uprobe:path:function          | uprobe:/bin/bash:readline
+uretprobe            | uretprobe:path:function       | uretprobe:/lib/libc.so:malloc
+Software             | software:event:count          | software:page-faults:
+Hardware             | hardware:event:count          | hardware:cache-misses:
+Profile              | profile:hz:rate               | profile:hz:99
+Interval             | interval:s:seconds            | interval:s:5</code></pre>
+<h3>Common bpftrace Variables</h3>
+<pre><code>Variable  | Description
+----------|----------------------------------
+pid       | Process ID
+tid       | Thread ID
+uid       | User ID
+comm      | Process name
+nsecs     | Nanosecond timestamp
+arg0-argN | Function arguments (kprobe/uprobe)
+retval    | Return value (kretprobe/uretprobe)</code></pre>
+<h3>Key Guidelines</h3>
+<pre><code>✅ DO: Use tracepoints for stable production tracing
+✅ DO: Sample high-frequency events to reduce overhead
+✅ DO: Clean up maps after use (delete)
+✅ DO: Use filters to minimize data collection
+✅ DO: Test scripts on dev systems first
+
+❌ DON&#x27;T: Trace every event without filtering
+❌ DON&#x27;T: Forget to handle missing entries in maps
+❌ DON&#x27;T: Use kprobes on unstable kernel internals in production</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-bash"># ❌ NEVER: Trace everything without filtering
+bpftrace -e &#x27;kprobe:* { printf(&quot;Called: %s\n&quot;, probe); }&#x27;
+# Massive overhead, system slowdown
+
+# ✅ CORRECT: Filter to specific probes
+bpftrace -e &#x27;kprobe:vfs_* { @[probe] = count(); }&#x27;</code></pre>
+<p>❌ <strong>Unbounded tracing</strong>: System performance degradation ✅ <strong>Correct approach</strong>: Specific probes with filters</p>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-bash"># ❌ Don&#x27;t: Forget to clean up maps
+bpftrace -e &#x27;
+kprobe:do_sys_open { @start[tid] = nsecs; }
+kretprobe:do_sys_open { /* No delete! */ }&#x27;
+
+# ✅ Correct: Always clean up
+bpftrace -e &#x27;
+kprobe:do_sys_open { @start[tid] = nsecs; }
+kretprobe:do_sys_open /@start[tid]/ {
+    delete(@start[tid]);  # Prevent map growth
+}&#x27;</code></pre>
+<p>❌ <strong>Map bloat</strong>: Memory exhaustion over time ✅ <strong>Better</strong>: Delete entries after use</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>ebpf-fundamentals.md</code> - Core eBPF concepts and verifier</li><li><code>ebpf-networking.md</code> - Packet processing with XDP/TC</li><li><code>ebpf-security-monitoring.md</code> - Security observability</li><li><code>performance-tuning.md</code> - System performance optimization</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ebpf-tracing-observability.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

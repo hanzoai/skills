@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>debugging-core-dump-analysis</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/debugging-core-dump-analysis.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/debugging-core-dump-analysis.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>debugging-core-dump-analysis</h1><p class="lede">Core dump generation, GDB/LLDB analysis, crash reporting, and post-mortem debugging across platforms</p><h1>Core Dump Analysis</h1>
+<p><strong>Scope</strong>: Generating core dumps, analyzing with GDB/LLDB, symbol files, automated crash reporting (Sentry, Crashlytics) <strong>Lines</strong>: ~420 <strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Application crashed and left a core dump</li><li>Need post-mortem debugging of production crashes</li><li>Setting up automated crash reporting infrastructure</li><li>Analyzing segmentation faults or unexpected terminations</li><li>Investigating crashes from customer reports</li><li>Configuring core dump generation on Linux/macOS</li><li>Debugging Python crashes with faulthandler</li><li>Integrating Sentry, Crashlytics, or similar crash telemetry</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Concept 1: Core Dump Basics</h3>
+<p><strong>What is a Core Dump?</strong>:</p>
+<ul><li>Snapshot of process memory at crash time</li><li>Contains: stack, heap, registers, threads, open files</li><li>Platform-specific format: ELF core (Linux), Mach-O core (macOS), minidump (Windows)</li></ul>
+<p><strong>When Core Dumps Are Generated</strong>:</p>
+<ul><li>Segmentation fault (SIGSEGV)</li><li>Abort signal (SIGABRT)</li><li>Floating point exception (SIGFPE)</li><li>Illegal instruction (SIGILL)</li><li>Manual signal: <code>kill -ABRT &lt;pid&gt;</code></li></ul>
+<p><strong>Core Dump Location</strong>:</p>
+<pre><code class="lang-bash"># Linux: Check core pattern
+cat /proc/sys/kernel/core_pattern
+# Common values:
+# core                      → core in CWD
+# core.%p                   → core.&lt;pid&gt; in CWD
+# /var/crash/core.%p.%e     → systemd-coredump location
+
+# macOS: Core dumps in /cores/
+ls -lh /cores/
+
+# Set core size limit (0 = disabled)
+ulimit -c unlimited  # Enable unlimited core dumps
+ulimit -c 0          # Disable core dumps</code></pre>
+<h3>Concept 2: Debug Symbols</h3>
+<p><strong>Symbol Files</strong>:</p>
+<ul><li>Map binary addresses to source code locations</li><li>Contain function names, line numbers, variable names</li><li>Separate from binary (<code>.debug</code>, <code>.dSYM</code>, <code>.pdb</code>)</li></ul>
+<p><strong>Symbol Types</strong>:</p>
+<ul><li><strong>Full debug info</strong>: Compiled with <code>-g</code>, includes all symbols</li><li><strong>Stripped binaries</strong>: Release builds, symbols removed (smaller size)</li><li><strong>Separate debug info</strong>: Symbols in separate file, binary stripped</li></ul>
+<pre><code class="lang-bash"># Check if binary has symbols (Linux)
+file ./app
+# with debug: ELF 64-bit LSB executable, not stripped
+# without:    ELF 64-bit LSB executable, stripped
+
+# Extract debug info (Linux)
+objcopy --only-keep-debug app app.debug
+objcopy --strip-debug app
+objcopy --add-gnu-debuglink=app.debug app
+
+# macOS debug symbols (.dSYM)
+dsymutil app -o app.dSYM
+strip app  # Remove symbols from binary
+
+# Load symbols in GDB
+(gdb) symbol-file app.debug</code></pre>
+<h3>Concept 3: Stack Unwinding</h3>
+<p><strong>Call Stack Reconstruction</strong>:</p>
+<ul><li>Core dump preserves stack frames</li><li>Debugger unwinds stack to show call chain</li><li>Requires frame pointers or DWARF debug info</li></ul>
+<p><strong>Frame Pointer Optimization</strong>:</p>
+<pre><code class="lang-bash"># Compile with frame pointers (easier unwinding)
+gcc -fno-omit-frame-pointer -g app.c -o app
+
+# Without -fno-omit-frame-pointer, debugger may fail to unwind
+# (common in optimized builds: -O2, -O3)</code></pre>
+<p><strong>Inline Functions Challenge</strong>:</p>
+<ul><li>Optimized builds inline small functions</li><li>Stack traces show caller, not inlined function</li><li>Partial solution: <code>-Og</code> (optimize for debugging)</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Enabling Core Dumps on Linux</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Production servers (crash analysis)</li><li>Development environments (debugging crashes)</li><li>CI/CD for crash regression tests</li></ul>
+<pre><code class="lang-bash"># Enable core dumps for current shell session
+ulimit -c unlimited
+
+# Persist across reboots (systemd)
+sudo mkdir -p /etc/systemd/system.conf.d/
+cat &lt;&lt;EOF | sudo tee /etc/systemd/system.conf.d/coredump.conf
+[Manager]
+DefaultLimitCORE=infinity
+EOF
+
+sudo systemctl daemon-reexec
+
+# Configure core pattern (where cores are saved)
+echo &#x27;/var/crash/core.%e.%p.%t&#x27; | sudo tee /proc/sys/kernel/core_pattern
+
+# Explanation:
+# %e = executable name
+# %p = process ID
+# %t = timestamp (seconds since epoch)
+# %h = hostname
+# %s = signal number
+
+# Verify configuration
+ulimit -c
+# unlimited
+
+cat /proc/sys/kernel/core_pattern
+# /var/crash/core.%e.%p.%t</code></pre>
+<p><strong>Systemd-coredump Integration</strong>:</p>
+<pre><code class="lang-bash"># Modern systems use systemd-coredump
+coredumpctl list
+
+# Show specific core dump
+coredumpctl info 12345
+
+# Extract core dump
+coredumpctl dump 12345 &gt; core.12345
+
+# Debug directly
+coredumpctl debug 12345</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Automatic crash capture</li><li>Persistent configuration</li><li>Centralized crash storage</li></ul>
+<h3>Pattern 2: GDB Core Dump Analysis</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Analyzing core dumps from Linux crashes</li><li>Post-mortem debugging without live process</li><li>Extracting crash backtraces and variables</li></ul>
+<pre><code class="lang-bash"># Load core dump in GDB
+gdb /path/to/app /path/to/core
+
+# Alternative: attach core to matching binary
+gdb -c core ./app
+
+# Inside GDB session:
+(gdb) bt              # Show backtrace
+(gdb) bt full         # Show backtrace with local variables
+(gdb) frame 3         # Switch to frame 3
+(gdb) info locals     # Show local variables in current frame
+(gdb) info args       # Show function arguments
+(gdb) print var_name  # Print specific variable
+(gdb) x/20x $rsp      # Examine stack memory (20 hex values)
+
+# Multi-threaded crashes
+(gdb) info threads    # List all threads
+(gdb) thread 2        # Switch to thread 2
+(gdb) thread apply all bt  # Backtrace for all threads</code></pre>
+<p><strong>Example Analysis Session</strong>:</p>
+<pre><code class="lang-bash">$ gdb ./myapp core.12345
+
+Reading symbols from ./myapp...
+[New LWP 12345]
+Core was generated by `./myapp --config prod.conf&#x27;.
+Program terminated with signal SIGSEGV, Segmentation fault.
+#0  0x0000000000401234 in process_request (req=0x0) at server.c:142
+142         int status = req-&gt;status;  // ❌ req is NULL
+
+(gdb) bt
+#0  0x0000000000401234 in process_request (req=0x0) at server.c:142
+#1  0x0000000000401567 in handle_connection (conn=0x7f1234567890) at server.c:89
+#2  0x0000000000401890 in worker_thread (arg=0x601040) at server.c:56
+#3  0x00007f1234567890 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+
+(gdb) frame 1
+#1  0x0000000000401567 in handle_connection (conn=0x7f1234567890) at server.c:89
+89          process_request(conn-&gt;current_req);
+
+(gdb) print conn-&gt;current_req
+$1 = (Request *) 0x0  // ❌ NULL pointer, bug found!
+
+(gdb) print conn
+$2 = (Connection *) 0x7f1234567890
+
+(gdb) print *conn
+$3 = {socket_fd = 42, current_req = 0x0, state = CONNECTED}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Full access to crash state</li><li>Examine all variables and memory</li><li>Multi-threaded crash analysis</li></ul>
+<h3>Pattern 3: LLDB Core Dump Analysis (macOS)</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Analyzing macOS crash reports</li><li>Debugging core dumps from Mach-O binaries</li><li>Integration with Xcode crash logs</li></ul>
+<pre><code class="lang-bash"># macOS core dumps location
+ls -lh /cores/
+
+# Load core dump in LLDB
+lldb -c /cores/core.12345 ./app
+
+# LLDB commands (similar to GDB but different syntax)
+(lldb) bt                    # Backtrace
+(lldb) bt all                # All threads
+(lldb) frame select 2        # Switch to frame 2
+(lldb) frame variable        # Show local variables
+(lldb) frame variable var_name  # Show specific variable
+(lldb) thread list           # List threads
+(lldb) thread select 3       # Switch to thread 3
+(lldb) memory read $rsp      # Examine stack
+
+# Image (symbol) commands
+(lldb) image list            # Show loaded libraries
+(lldb) image lookup -a 0x401234  # Find symbol at address
+(lldb) image lookup -n main  # Find main function</code></pre>
+<p><strong>macOS Crash Reports</strong> (.crash files):</p>
+<pre><code class="lang-bash"># System crash reports
+ls ~/Library/Logs/DiagnosticReports/
+ls /Library/Logs/DiagnosticReports/
+
+# Symbolicate crash report (convert addresses to symbols)
+# Requires .dSYM file matching binary UUID
+symbolicatecrash crash.log app.dSYM &gt; symbolicated.log
+
+# Atos: Address to symbol translation
+atos -o app.dSYM/Contents/Resources/DWARF/app -arch x86_64 -l 0x100000000 0x100001234
+# Output: main (in app) (app.c:42)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Native macOS/iOS debugging</li><li>Integration with Xcode</li><li>Automatic crash report collection</li></ul>
+<h3>Pattern 4: Python Core Dumps with faulthandler</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Python segmentation faults (C extension crashes)</li><li>Debugging Python native extension issues</li><li>Production Python crash diagnostics</li></ul>
+<pre><code class="lang-python"># Enable faulthandler at startup
+import faulthandler
+faulthandler.enable(file=open(&#x27;/var/log/python_crashes.log&#x27;, &#x27;a&#x27;))
+
+# Dump traceback on SIGUSR1 signal
+import signal
+faulthandler.register(signal.SIGUSR1, file=open(&#x27;/tmp/backtrace.txt&#x27;, &#x27;w&#x27;))
+
+# Trigger backtrace from outside process
+# kill -SIGUSR1 &lt;python_pid&gt;
+
+# Dump traceback after timeout (detect hangs)
+faulthandler.dump_traceback_later(timeout=300, repeat=False, file=sys.stderr)
+
+# Example crash output:
+# Fatal Python error: Segmentation fault
+#
+# Current thread 0x00007f1234567890 (most recent call first):
+#   File &quot;mymodule.pyx&quot;, line 42 in mymodule.process_data
+#   File &quot;app.py&quot;, line 123 in main
+#   File &quot;app.py&quot;, line 156 in &lt;module&gt;</code></pre>
+<p><strong>PyStack</strong> (Python stack trace from core dump):</p>
+<pre><code class="lang-bash"># Install pystack
+pip install pystack
+
+# Analyze Python process core dump
+pystack core /path/to/python /path/to/core.12345
+
+# Attach to running Python process
+sudo pystack remote --pid 12345
+
+# Example output:
+# Thread 0x7f1234567890 (most recent call first):
+#     File &quot;app.py&quot;, line 42, in process_request
+#     File &quot;app.py&quot;, line 89, in handle_connection
+#     File &quot;threading.py&quot;, line 890, in run</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Catches crashes from C extensions</li><li>Works with native Python code</li><li>Lightweight (minimal overhead)</li></ul>
+<h3>Pattern 5: Automated Crash Reporting (Sentry)</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Production crash telemetry and aggregation</li><li>Multi-platform applications (Python, Node, Go, Rust, etc.)</li><li>Need dashboards and alerting for crashes</li></ul>
+<pre><code class="lang-python"># Install Sentry SDK
+# pip install sentry-sdk
+
+import sentry_sdk
+
+# Initialize Sentry
+sentry_sdk.init(
+    dsn=&quot;https://examplePublicKey@o0.ingest.sentry.io/0&quot;,
+    environment=&quot;production&quot;,
+    release=&quot;myapp@1.2.3&quot;,
+    traces_sample_rate=0.1,  # 10% of transactions traced
+)
+
+# Automatic crash reporting (unhandled exceptions)
+def main():
+    # Crashes automatically reported to Sentry
+    raise ValueError(&quot;Something went wrong!&quot;)
+
+# Manual error reporting
+try:
+    risky_operation()
+except Exception as e:
+    sentry_sdk.capture_exception(e)
+
+# Add context to crashes
+with sentry_sdk.configure_scope() as scope:
+    scope.set_user({&quot;id&quot;: &quot;12345&quot;, &quot;username&quot;: &quot;alice&quot;})
+    scope.set_tag(&quot;server_type&quot;, &quot;api&quot;)
+    scope.set_context(&quot;request&quot;, {&quot;url&quot;: &quot;/api/data&quot;, &quot;method&quot;: &quot;POST&quot;})
+
+# Breadcrumbs (events leading to crash)
+sentry_sdk.add_breadcrumb(
+    category=&quot;auth&quot;,
+    message=&quot;User authenticated&quot;,
+    level=&quot;info&quot;,
+)</code></pre>
+<p><strong>Sentry Features</strong>:</p>
+<ul><li>Automatic crash grouping by stack trace</li><li>Source context (shows code around crash)</li><li>Breadcrumbs (events before crash)</li><li>Release tracking and regression detection</li><li>Alerting (email, Slack, PagerDuty)</li></ul>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Centralized crash aggregation</li><li>Real-time alerting</li><li>Rich context (user, tags, breadcrumbs)</li><li>Multi-platform support</li></ul>
+<h3>Pattern 6: Crashlytics for Mobile Apps</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>iOS/Android crash reporting</li><li>Mobile app telemetry</li><li>Firebase integration</li></ul>
+<pre><code class="lang-swift">// iOS: Firebase Crashlytics
+import FirebaseCrashlytics
+
+// Enable Crashlytics
+FirebaseApp.configure()
+
+// Record non-fatal errors
+Crashlytics.crashlytics().record(error: error)
+
+// Set user identifier
+Crashlytics.crashlytics().setUserID(&quot;12345&quot;)
+
+// Custom keys (context)
+Crashlytics.crashlytics().setCustomValue(&quot;premium&quot;, forKey: &quot;user_tier&quot;)
+
+// Log messages (breadcrumbs)
+Crashlytics.crashlytics().log(&quot;User tapped checkout button&quot;)
+
+// Force crash for testing
+fatalError(&quot;Test crash&quot;)  // Reported to Crashlytics</code></pre>
+<pre><code class="lang-kotlin">// Android: Firebase Crashlytics
+import com.google.firebase.crashlytics.FirebaseCrashlytics
+
+// Get Crashlytics instance
+val crashlytics = FirebaseCrashlytics.getInstance()
+
+// Record non-fatal exceptions
+crashlytics.recordException(exception)
+
+// Set user ID
+crashlytics.setUserId(&quot;12345&quot;)
+
+// Custom keys
+crashlytics.setCustomKey(&quot;user_tier&quot;, &quot;premium&quot;)
+
+// Log messages
+crashlytics.log(&quot;User tapped checkout button&quot;)
+
+// Force crash (testing)
+throw RuntimeException(&quot;Test crash&quot;)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Automatic symbolication (dSYMs, ProGuard mappings)</li><li>Crash-free user rate metrics</li><li>Integration with Firebase ecosystem</li></ul>
+<h3>Pattern 7: Windows Minidumps</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Windows application crash analysis</li><li>Post-mortem debugging on Windows</li><li>Customer crash report collection</li></ul>
+<pre><code class="lang-c++">// Generate minidump on Windows crash
+#include &lt;windows.h&gt;
+#include &lt;dbghelp.h&gt;
+
+#pragma comment(lib, &quot;dbghelp.lib&quot;)
+
+LONG WINAPI UnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionInfo) {
+    HANDLE hFile = CreateFile(
+        L&quot;crash.dmp&quot;,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (hFile != INVALID_HANDLE_VALUE) {
+        MINIDUMP_EXCEPTION_INFORMATION mdei;
+        mdei.ThreadId = GetCurrentThreadId();
+        mdei.ExceptionPointers = exceptionInfo;
+        mdei.ClientPointers = FALSE;
+
+        MiniDumpWriteDump(
+            GetCurrentProcess(),
+            GetCurrentProcessId(),
+            hFile,
+            MiniDumpNormal,  // Or MiniDumpWithFullMemory for full dump
+            &amp;mdei,
+            NULL,
+            NULL
+        );
+
+        CloseHandle(hFile);
+    }
+
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+int main() {
+    SetUnhandledExceptionFilter(UnhandledExceptionFilter);
+    // Application code
+}</code></pre>
+<p><strong>Analyzing Minidumps</strong>:</p>
+<pre><code class="lang-bash"># Visual Studio: File &gt; Open &gt; Crash Dump
+# Set symbol path: Tools &gt; Options &gt; Debugging &gt; Symbols
+
+# WinDbg analysis
+windbg -z crash.dmp
+
+# WinDbg commands:
+# !analyze -v        # Automatic crash analysis
+# k                  # Stack trace
+# dv                 # Local variables
+# lm                 # Loaded modules</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Compact crash dumps (customizable size)</li><li>Integration with Windows debugging tools</li><li>Symbol server support (automatic symbol download)</li></ul>
+<h3>Pattern 8: Symbol Servers</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Deploying stripped binaries to production</li><li>Storing debug symbols separately</li><li>Team-wide symbol sharing</li></ul>
+<pre><code class="lang-bash"># Linux: GDB symbol server (debuginfod)
+export DEBUGINFOD_URLS=&quot;https://debuginfod.elfutils.org/&quot;
+gdb ./app core  # Automatically fetches symbols
+
+# macOS: Spotlight indexing for .dSYM
+# Xcode automatically finds .dSYM files in Spotlight index
+
+# Windows: Symbol server (Microsoft Symbol Server)
+# .sympath SRV*c:\symbols*https://msdl.microsoft.com/download/symbols
+# .reload /f  # Force symbol reload in WinDbg
+
+# Custom symbol server (HTTP-based)
+# Directory structure:
+# /symbols/app.debug/BUILDID/app.debug
+# /symbols/libfoo.so.debug/BUILDID/libfoo.so.debug
+
+# GDB configuration:
+(gdb) set debug-file-directory /path/to/symbols
+(gdb) set solib-search-path /path/to/libs</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Smaller production binaries</li><li>Centralized symbol storage</li><li>Version-matched symbols</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Core Dump Commands</h3>
+<pre><code>Platform   | Enable Cores         | Location                   | Analyzer
+-----------|----------------------|----------------------------|----------
+Linux      | ulimit -c unlimited  | /var/crash or CWD          | GDB
+macOS      | ulimit -c unlimited  | /cores/                    | LLDB
+Windows    | MiniDumpWriteDump()  | Custom (app-defined)       | WinDbg
+Python     | faulthandler.enable()| /var/log or custom         | PyStack</code></pre>
+<h3>GDB/LLDB Quick Commands</h3>
+<pre><code>Task                  | GDB Command            | LLDB Command
+----------------------|------------------------|-------------------------
+Load core dump        | gdb app core           | lldb -c core app
+Show backtrace        | bt                     | bt
+Backtrace all threads | thread apply all bt    | bt all
+Switch frame          | frame 3                | frame select 3
+Show locals           | info locals            | frame variable
+Print variable        | print var              | frame variable var
+Examine memory        | x/20x $rsp             | memory read $rsp
+List threads          | info threads           | thread list
+Switch thread         | thread 2               | thread select 2</code></pre>
+<h3>Key Guidelines</h3>
+<pre><code>✅ DO: Enable core dumps in dev and production (with size limits)
+✅ DO: Store symbols separately (stripped production binaries)
+✅ DO: Set up automated crash reporting (Sentry, Crashlytics)
+✅ DO: Preserve debug symbols for all releases
+✅ DO: Use systemd-coredump for centralized crash management
+✅ DO: Configure core_pattern to include PID and timestamp
+✅ DO: Test crash reporting in staging before production
+
+❌ DON&#x27;T: Ship full debug symbols to production (binary size)
+❌ DON&#x27;T: Ignore crashes without symbolicated stack traces
+❌ DON&#x27;T: Delete core dumps before analysis
+❌ DON&#x27;T: Rely on optimized builds for debugging (use -Og)
+❌ DON&#x27;T: Forget to set ulimit in production init scripts
+❌ DON&#x27;T: Ignore core dumps filling disk (set size limits)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-bash"># ❌ NEVER: Disable core dumps globally in production
+ulimit -c 0  # ❌ No crash analysis possible
+
+# ✅ CORRECT: Enable with size limit
+ulimit -c 102400  # Limit to 100MB per core
+echo &#x27;/var/crash/core.%e.%p.%t&#x27; | sudo tee /proc/sys/kernel/core_pattern</code></pre>
+<p>❌ <strong>Disabled core dumps</strong>: No post-mortem analysis, blind to crashes ✅ <strong>Correct approach</strong>: Enable with size limits and rotation</p>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-c++">// ❌ Don&#x27;t: Compile without debug symbols
+g++ -O2 app.cpp -o app  // ❌ No symbols, hard to debug
+
+// ✅ Correct: Keep symbols separate
+g++ -g -O2 app.cpp -o app
+objcopy --only-keep-debug app app.debug
+strip app
+# Deploy: app (stripped), store: app.debug (symbols)</code></pre>
+<p>❌ <strong>No debug symbols</strong>: Stack traces show addresses, not function names ✅ <strong>Better</strong>: Generate symbols, strip binary, store symbols separately</p>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Ignore Python C extension crashes
+# Crashes from C extensions produce no Python traceback
+
+# ✅ Correct: Enable faulthandler
+import faulthandler
+import sys
+
+faulthandler.enable(file=sys.stderr)
+# Now crashes from C extensions show Python stack</code></pre>
+<p>❌ <strong>No faulthandler</strong>: C extension crashes show no Python context ✅ <strong>Better</strong>: Enable faulthandler at startup, log to file</p>
+<pre><code class="lang-bash"># ❌ Don&#x27;t: Analyze core dump without matching symbols
+gdb app core.old  # ❌ Symbols don&#x27;t match binary version
+
+# ✅ Correct: Use matching binary and symbols
+gdb app.v1.2.3 core.v1.2.3.12345
+# Or load separate symbols:
+(gdb) symbol-file app.v1.2.3.debug</code></pre>
+<p>❌ <strong>Mismatched symbols</strong>: Wrong line numbers, missing variables ✅ <strong>Better</strong>: Archive binaries and symbols per release, match by build ID</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>debugging/crash-debugging.md</code> - Signal handling, crash reproduction strategies</li><li><code>observability/structured-logging.md</code> - Logs complement crash analysis</li><li><code>cicd/deployment-patterns.md</code> - Symbol archival in deployment pipelines</li><li><code>debugging/memory-leak-debugging.md</code> - Core dumps show heap state</li><li><code>debugging/concurrency-debugging.md</code> - Multi-threaded crash analysis</li><li><code>containers/docker-optimization.md</code> - Core dumps in containers</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/debugging-core-dump-analysis.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>database-postgres-schema-design</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/database-postgres-schema-design.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/database-postgres-schema-design.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>database-postgres-schema-design</h1><p class="lede">Designing new database schemas</p><h1>PostgreSQL Schema Design</h1>
+<p><strong>Scope</strong>: Table design, relationships, normalization, data types <strong>Lines</strong>: ~320 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Designing new database schemas</li><li>Modeling relationships (1:1, 1:N, N:M)</li><li>Deciding normalization levels</li><li>Choosing primary key strategies</li><li>Handling polymorphic associations</li><li>Planning for soft deletes or audit trails</li><li>Selecting appropriate data types</li></ul>
+<h2>Core Concepts</h2>
+<h3>Database Normalization</h3>
+<p><strong>Goal</strong>: Eliminate redundancy, maintain data integrity.</p>
+<h4>First Normal Form (1NF)</h4>
+<p><strong>Rule</strong>: Each column contains atomic values (no arrays, no repeated groups).</p>
+<pre><code class="lang-sql">-- ❌ VIOLATES 1NF: Multiple emails in one column
+CREATE TABLE users (
+    id INT PRIMARY KEY,
+    name VARCHAR(100),
+    emails VARCHAR(500)  -- &#x27;alice@example.com, alice@work.com&#x27;
+);
+
+-- ✅ 1NF: Atomic values
+CREATE TABLE users (
+    id INT PRIMARY KEY,
+    name VARCHAR(100)
+);
+
+CREATE TABLE user_emails (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    email VARCHAR(255)
+);</code></pre>
+<h4>Second Normal Form (2NF)</h4>
+<p><strong>Rule</strong>: 1NF + no partial dependencies (all non-key columns depend on entire primary key).</p>
+<pre><code class="lang-sql">-- ❌ VIOLATES 2NF: teacher_name depends only on teacher_id, not (student_id, teacher_id)
+CREATE TABLE enrollments (
+    student_id INT,
+    teacher_id INT,
+    teacher_name VARCHAR(100),  -- Partial dependency
+    PRIMARY KEY (student_id, teacher_id)
+);
+
+-- ✅ 2NF: Separate teacher data
+CREATE TABLE teachers (
+    id INT PRIMARY KEY,
+    name VARCHAR(100)
+);
+
+CREATE TABLE enrollments (
+    student_id INT,
+    teacher_id INT REFERENCES teachers(id),
+    PRIMARY KEY (student_id, teacher_id)
+);</code></pre>
+<h4>Third Normal Form (3NF)</h4>
+<p><strong>Rule</strong>: 2NF + no transitive dependencies (non-key columns don&#x27;t depend on other non-key columns).</p>
+<pre><code class="lang-sql">-- ❌ VIOLATES 3NF: country depends on city (transitive dependency)
+CREATE TABLE users (
+    id INT PRIMARY KEY,
+    name VARCHAR(100),
+    city VARCHAR(100),
+    country VARCHAR(100)  -- Depends on city, not id
+);
+
+-- ✅ 3NF: Separate city/country
+CREATE TABLE cities (
+    id INT PRIMARY KEY,
+    name VARCHAR(100),
+    country VARCHAR(100)
+);
+
+CREATE TABLE users (
+    id INT PRIMARY KEY,
+    name VARCHAR(100),
+    city_id INT REFERENCES cities(id)
+);</code></pre>
+<h3>When to Denormalize</h3>
+<p><strong>Reasons</strong>:</p>
+<ul><li>Read performance (avoid JOINs)</li><li>Analytics/reporting</li><li>Immutable data (historical snapshots)</li></ul>
+<p><strong>Example</strong>: Order totals</p>
+<pre><code class="lang-sql">-- Normalized (calculate on query)
+SELECT SUM(quantity * price) FROM order_items WHERE order_id = 123;
+
+-- Denormalized (store total on order)
+CREATE TABLE orders (
+    id INT PRIMARY KEY,
+    total DECIMAL(10,2)  -- Denormalized for performance
+);
+
+-- Update total when items change (trigger or application logic)</code></pre>
+<hr>
+<h2>Relationship Patterns</h2>
+<h3>One-to-One (1:1)</h3>
+<p><strong>Use case</strong>: Splitting tables for optional/large data.</p>
+<pre><code class="lang-sql">CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE user_profiles (
+    user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    bio TEXT,
+    avatar_url VARCHAR(500),
+    updated_at TIMESTAMP DEFAULT NOW()
+);</code></pre>
+<p><strong>Key points</strong>:</p>
+<ul><li><code>user_id</code> is both PRIMARY KEY and FOREIGN KEY</li><li><code>ON DELETE CASCADE</code> ensures orphan cleanup</li><li>Profile is optional (can have user without profile)</li></ul>
+<h3>One-to-Many (1:N)</h3>
+<p><strong>Use case</strong>: Most common relationship (users → posts, orders → items).</p>
+<pre><code class="lang-sql">CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL
+);
+
+CREATE TABLE posts (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_posts_user_id ON posts(user_id);</code></pre>
+<p><strong>Key points</strong>:</p>
+<ul><li>Foreign key on &quot;many&quot; side (posts.user_id)</li><li>Index on foreign key for JOIN performance</li><li><code>NOT NULL</code> if every post must have a user</li></ul>
+<h3>Many-to-Many (N:M)</h3>
+<p><strong>Use case</strong>: Tags, roles, followers.</p>
+<pre><code class="lang-sql">CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL
+);
+
+CREATE TABLE tags (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- Junction table
+CREATE TABLE user_tags (
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    tag_id INT REFERENCES tags(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (user_id, tag_id)
+);
+
+CREATE INDEX idx_user_tags_tag_id ON user_tags(tag_id);</code></pre>
+<p><strong>Key points</strong>:</p>
+<ul><li>Junction table with composite primary key</li><li>Indexes on both foreign keys</li><li>Can add extra columns (created_at, metadata)</li></ul>
+<h3>Self-Referencing (Hierarchical)</h3>
+<p><strong>Use case</strong>: Comments, org charts, file systems.</p>
+<pre><code class="lang-sql">CREATE TABLE comments (
+    id SERIAL PRIMARY KEY,
+    parent_id INT REFERENCES comments(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_comments_parent_id ON comments(parent_id);</code></pre>
+<p><strong>Querying hierarchies</strong>:</p>
+<pre><code class="lang-sql">-- Recursive CTE for threaded comments
+WITH RECURSIVE thread AS (
+    -- Base case: top-level comments
+    SELECT id, parent_id, content, 1 AS depth
+    FROM comments WHERE parent_id IS NULL
+
+    UNION ALL
+
+    -- Recursive case: child comments
+    SELECT c.id, c.parent_id, c.content, t.depth + 1
+    FROM comments c
+    JOIN thread t ON c.parent_id = t.id
+)
+SELECT * FROM thread ORDER BY depth, id;</code></pre>
+<hr>
+<h2>Primary Key Strategies</h2>
+<h3>Serial Integer (Auto-increment)</h3>
+<pre><code class="lang-sql">CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255)
+);</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Simple, compact (4 bytes)</li><li>Sequential, good for indexes</li><li>Human-readable</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Predictable (security concern for public IDs)</li><li>Doesn&#x27;t work well in distributed systems (ID conflicts)</li><li>Reveals record count</li></ul>
+<h3>UUID (Universally Unique Identifier)</h3>
+<pre><code class="lang-sql">CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255)
+);</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Globally unique (safe for distributed systems)</li><li>Unpredictable (better security)</li><li>Can generate client-side</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Larger (16 bytes vs 4)</li><li>Random (worse index performance)</li><li>Not human-readable</li></ul>
+<h3>ULID/KSUID (Sortable UUIDs)</h3>
+<pre><code class="lang-sql">-- Using ulid extension
+CREATE EXTENSION IF NOT EXISTS ulid;
+
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT ulid_to_uuid(ulid_generate()),
+    email VARCHAR(255)
+);</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Globally unique + sortable by time</li><li>Better index performance than pure UUID</li><li>Unpredictable</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Requires extension</li><li>Larger than integer</li></ul>
+<h3>Decision Tree</h3>
+<pre><code>Do you need distributed ID generation?
+├─ Yes → UUID or ULID
+│   └─ Need time-ordering? → ULID
+│       └─ Otherwise → UUID
+└─ No → Is predictability a security concern?
+    ├─ Yes → UUID
+    └─ No → SERIAL (simplest, best performance)</code></pre>
+<hr>
+<h2>Common Schema Patterns</h2>
+<h3>Timestamps (Audit Trail)</h3>
+<pre><code class="lang-sql">CREATE TABLE posts (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Trigger to auto-update updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_posts_updated_at
+BEFORE UPDATE ON posts
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();</code></pre>
+<h3>Soft Deletes</h3>
+<pre><code class="lang-sql">CREATE TABLE posts (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_posts_deleted_at ON posts(deleted_at) WHERE deleted_at IS NOT NULL;
+
+-- Query active posts
+SELECT * FROM posts WHERE deleted_at IS NULL;
+
+-- &quot;Delete&quot; a post
+UPDATE posts SET deleted_at = NOW() WHERE id = 123;</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Can recover deleted data</li><li>Audit trail of deletions</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Complicates queries (must filter deleted_at IS NULL)</li><li>UNIQUE constraints need to account for soft deletes</li><li>Table grows indefinitely (need archival strategy)</li></ul>
+<p><strong>Alternative</strong>: Archived tables</p>
+<pre><code class="lang-sql">-- Move to archive table on delete
+CREATE TABLE posts_archive (LIKE posts INCLUDING ALL);
+
+INSERT INTO posts_archive SELECT * FROM posts WHERE id = 123;
+DELETE FROM posts WHERE id = 123;</code></pre>
+<h3>Versioning/History</h3>
+<pre><code class="lang-sql">CREATE TABLE documents (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    version INT DEFAULT 1,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE document_versions (
+    id SERIAL PRIMARY KEY,
+    document_id INT REFERENCES documents(id) ON DELETE CASCADE,
+    version INT NOT NULL,
+    title VARCHAR(255),
+    content TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (document_id, version)
+);
+
+-- Save version on update (trigger or application logic)</code></pre>
+<h3>Polymorphic Associations (Multiple Types)</h3>
+<p><strong>Problem</strong>: Comments can belong to posts OR videos.</p>
+<p><strong>Option 1: Exclusive FKs (Best)</strong></p>
+<pre><code class="lang-sql">CREATE TABLE comments (
+    id SERIAL PRIMARY KEY,
+    post_id INT REFERENCES posts(id) ON DELETE CASCADE,
+    video_id INT REFERENCES videos(id) ON DELETE CASCADE,
+    content TEXT,
+    CHECK (
+        (post_id IS NOT NULL AND video_id IS NULL) OR
+        (post_id IS NULL AND video_id IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_comments_post_id ON comments(post_id) WHERE post_id IS NOT NULL;
+CREATE INDEX idx_comments_video_id ON comments(video_id) WHERE video_id IS NOT NULL;</code></pre>
+<p><strong>Pros</strong>: Type-safe, enforced by database <strong>Cons</strong>: Must add column for each new type</p>
+<p><strong>Option 2: Generic FK (Not Recommended)</strong></p>
+<pre><code class="lang-sql">CREATE TABLE comments (
+    id SERIAL PRIMARY KEY,
+    commentable_type VARCHAR(50),  -- &#x27;Post&#x27; or &#x27;Video&#x27;
+    commentable_id INT,             -- ID in posts or videos
+    content TEXT
+);
+
+CREATE INDEX idx_comments_polymorphic ON comments(commentable_type, commentable_id);</code></pre>
+<p><strong>Pros</strong>: Flexible, no schema changes for new types <strong>Cons</strong>: No foreign key constraint, can&#x27;t JOIN directly, error-prone</p>
+<p><strong>Option 3: Supertable (Inheritance)</strong></p>
+<pre><code class="lang-sql">CREATE TABLE commentables (
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE posts (
+    id INT PRIMARY KEY REFERENCES commentables(id)
+    title VARCHAR(255)
+);
+
+CREATE TABLE videos (
+    id INT PRIMARY KEY REFERENCES commentables(id),
+    url VARCHAR(500)
+);
+
+CREATE TABLE comments (
+    id SERIAL PRIMARY KEY,
+    commentable_id INT REFERENCES commentables(id),
+    content TEXT
+);</code></pre>
+<p><strong>Pros</strong>: Type-safe, can query all commentables <strong>Cons</strong>: Complex, requires joins for post/video data</p>
+<hr>
+<h2>Data Type Selection</h2>
+<h3>Text/String Types</h3>
+<p>| Type | Max Size | Use Case | |------|----------|----------| | <code>CHAR(n)</code> | n chars (fixed) | Fixed-length codes (e.g., country codes &#x27;US&#x27;) | | <code>VARCHAR(n)</code> | n chars | Most text (emails, names, titles) | | <code>TEXT</code> | Unlimited | Large text (blog posts, descriptions) |</p>
+<p><strong>Recommendation</strong>: Use <code>TEXT</code> or <code>VARCHAR(n)</code> (for validation), avoid <code>CHAR</code> unless fixed-length.</p>
+<h3>Numeric Types</h3>
+<p>| Type | Range | Storage | Use Case | |------|-------|---------|----------| | <code>INT</code> / <code>INTEGER</code> | ±2 billion | 4 bytes | Most integers | | <code>BIGINT</code> | ±9 quintillion | 8 bytes | Large counts (user IDs at scale) | | <code>SERIAL</code> | Auto-increment INT | 4 bytes | Primary keys | | <code>BIGSERIAL</code> | Auto-increment BIGINT | 8 bytes | Primary keys at scale | | <code>DECIMAL(p,s)</code> | Exact | Variable | Money, exact calculations | | <code>NUMERIC(p,s)</code> | Same as DECIMAL | Variable | Money, exact calculations | | <code>REAL</code> | 6 decimal digits | 4 bytes | Approximate (avoid for money) | | <code>DOUBLE PRECISION</code> | 15 decimal digits | 8 bytes | Scientific calculations |</p>
+<p><strong>Money</strong>: Always use <code>DECIMAL(10,2)</code> or store cents as <code>BIGINT</code>.</p>
+<pre><code class="lang-sql">CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    price DECIMAL(10,2) NOT NULL  -- $12,345,678.99
+);
+
+-- Or store cents as integer (avoids floating-point issues)
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    price_cents BIGINT NOT NULL  -- 1234567899 = $12,345,678.99
+);</code></pre>
+<h3>Date/Time Types</h3>
+<p>| Type | Range | Precision | Use Case | |------|-------|-----------|----------| | <code>DATE</code> | 4713 BC to 5874897 AD | Day | Birthdays, event dates | | <code>TIME</code> | 00:00:00 to 24:00:00 | Microsecond | Time of day | | <code>TIMESTAMP</code> | 4713 BC to 294276 AD | Microsecond | Most timestamps | | <code>TIMESTAMPTZ</code> | Same as TIMESTAMP | Microsecond | <strong>Recommended</strong> (timezone-aware) |</p>
+<p><strong>Always use <code>TIMESTAMPTZ</code></strong> for timestamps (stores UTC, displays in session timezone).</p>
+<pre><code class="lang-sql">CREATE TABLE events (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    starts_at TIMESTAMPTZ NOT NULL,
+    ends_at TIMESTAMPTZ
+);</code></pre>
+<h3>Boolean</h3>
+<pre><code class="lang-sql">CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    is_active BOOLEAN DEFAULT TRUE,
+    email_verified BOOLEAN DEFAULT FALSE
+);</code></pre>
+<h3>JSON/JSONB</h3>
+<pre><code class="lang-sql">CREATE TABLE events (
+    id SERIAL PRIMARY KEY,
+    metadata JSONB  -- Use JSONB (not JSON) for performance
+);
+
+-- Query JSONB
+SELECT * FROM events WHERE metadata @&gt; &#x27;{&quot;status&quot;: &quot;active&quot;}&#x27;;
+SELECT * FROM events WHERE metadata-&gt;&gt;&#x27;user_id&#x27; = &#x27;123&#x27;;
+
+-- Index JSONB
+CREATE INDEX idx_events_metadata_status ON events USING GIN ((metadata-&gt;&#x27;status&#x27;));</code></pre>
+<p><strong>JSONB vs JSON</strong>:</p>
+<ul><li><strong>JSONB</strong>: Binary format, supports indexing, faster queries, <strong>recommended</strong></li><li><strong>JSON</strong>: Text format, preserves formatting, slower</li></ul>
+<hr>
+<h2>Schema Design Checklist</h2>
+<pre><code>Primary Keys:
+[ ] Every table has a primary key
+[ ] Primary key type chosen (SERIAL vs UUID vs ULID)
+
+Foreign Keys:
+[ ] Foreign keys defined with REFERENCES
+[ ] ON DELETE behavior specified (CASCADE, SET NULL, RESTRICT)
+[ ] Indexes on foreign key columns
+
+Indexes:
+[ ] Foreign keys indexed
+[ ] Frequently queried columns indexed
+[ ] Composite indexes for multi-column queries
+[ ] UNIQUE constraints where appropriate
+
+Timestamps:
+[ ] created_at on all tables
+[ ] updated_at on mutable tables
+[ ] Trigger to auto-update updated_at
+
+Constraints:
+[ ] NOT NULL on required columns
+[ ] CHECK constraints for validation
+[ ] UNIQUE constraints for uniqueness
+
+Data Types:
+[ ] TIMESTAMPTZ (not TIMESTAMP) for dates
+[ ] DECIMAL (not FLOAT) for money
+[ ] TEXT or VARCHAR(n) for strings
+[ ] JSONB (not JSON) for JSON data
+
+Normalization:
+[ ] At least 3NF (unless intentionally denormalized)
+[ ] Denormalization justified with comments
+
+Soft Deletes (if applicable):
+[ ] deleted_at column
+[ ] Index on deleted_at
+[ ] UNIQUE constraints account for soft deletes</code></pre>
+<hr>
+<h2>Common Pitfalls</h2>
+<p>❌ <strong>Using TIMESTAMP without timezone</strong> - Causes timezone bugs ✅ Always use <code>TIMESTAMPTZ</code></p>
+<p>❌ <strong>No index on foreign keys</strong> - Slow JOINs ✅ Create index on every foreign key column</p>
+<p>❌ <strong>FLOAT/REAL for money</strong> - Floating-point errors ✅ Use <code>DECIMAL(10,2)</code> or store cents as <code>BIGINT</code></p>
+<p>❌ <strong>No primary key</strong> - Can&#x27;t update/delete reliably ✅ Every table must have a primary key</p>
+<p>❌ <strong>Generic polymorphic FKs</strong> - No referential integrity ✅ Use exclusive FKs or supertable pattern</p>
+<p>❌ <strong>VARCHAR without length</strong> - Behaves like TEXT (misleading) ✅ Use <code>TEXT</code> or <code>VARCHAR(n)</code> with explicit length</p>
+<p>❌ <strong>Not specifying ON DELETE</strong> - Orphaned rows ✅ Always specify <code>ON DELETE CASCADE</code> or <code>SET NULL</code> or <code>RESTRICT</code></p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>postgres-migrations.md</code> - Evolving schemas safely</li><li><code>postgres-query-optimization.md</code> - Index strategies for performance</li><li><code>orm-patterns.md</code> - ORM-specific schema patterns</li><li><code>database-selection.md</code> - When to use Postgres vs other databases</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/database-postgres-schema-design.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

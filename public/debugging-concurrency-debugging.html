@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>debugging-concurrency-debugging</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/debugging-concurrency-debugging.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/debugging-concurrency-debugging.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>debugging-concurrency-debugging</h1><p class="lede">Race condition detection, deadlock debugging, and data race analysis using ThreadSanitizer and specialized tools</p><h1>Concurrency Debugging</h1>
+<p><strong>Scope</strong>: Race condition detection, deadlock analysis, happens-before relationships, and lock-free debugging <strong>Lines</strong>: ~430 <strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Encountering non-deterministic bugs or flaky tests</li><li>Debugging race conditions or data races</li><li>Investigating deadlocks or livelocks</li><li>Validating thread safety in concurrent code</li><li>Analyzing lock contention or performance issues</li><li>Implementing lock-free data structures</li><li>Debugging Go goroutines or Rust async code</li><li>Using ThreadSanitizer, Helgrind, or Intel Inspector</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Concept 1: Race Conditions vs Data Races</h3>
+<p><strong>Definitions</strong>:</p>
+<ul><li><strong>Data race</strong>: Two threads access same memory, at least one writes, no synchronization</li><li><strong>Race condition</strong>: Behavior depends on timing/ordering of events (broader concept)</li><li><strong>Benign race</strong>: Data race that doesn&#x27;t cause bugs (rare, dangerous assumption)</li></ul>
+<p><strong>Key Distinction</strong>:</p>
+<pre><code class="lang-c">// Data race (undefined behavior in C/C++)
+int counter = 0;
+void thread1() { counter++; }  // Read-modify-write, not atomic
+void thread2() { counter++; }  // Race: both may read 0, write 1
+
+// Race condition but NOT data race (synchronized but buggy)
+std::mutex mtx;
+int balance = 100;
+
+void withdraw(int amount) {
+    mtx.lock();
+    int current = balance;
+    mtx.unlock();  // ❌ Released too early
+
+    if (current &gt;= amount) {
+        mtx.lock();
+        balance -= amount;  // ❌ Race: balance may have changed
+        mtx.unlock();
+    }
+}</code></pre>
+<p><strong>Detection</strong>:</p>
+<ul><li>Data races: ThreadSanitizer, Helgrind (automatic detection)</li><li>Race conditions: Manual analysis, invariant violations (harder to detect)</li></ul>
+<h3>Concept 2: Happens-Before Relationships</h3>
+<p><strong>Happens-Before Rules</strong> (memory ordering):</p>
+<ol><li><strong>Program order</strong>: A happens-before B if A comes before B in same thread</li><li><strong>Lock release/acquire</strong>: Unlock happens-before subsequent lock of same mutex</li><li><strong>Thread creation/join</strong>: Thread start happens-before thread body, body happens-before join</li><li><strong>Atomic operations</strong>: Release-acquire semantics create happens-before</li></ol>
+<p><strong>Visualization</strong>:</p>
+<pre><code>Thread 1:         Thread 2:
+  x = 42;
+  mutex.unlock();  →  mutex.lock();  // Happens-before edge
+                        y = x;       // Guaranteed to see x=42</code></pre>
+<p><strong>No Happens-Before = Race</strong>:</p>
+<pre><code class="lang-c++">// ❌ Data race: no happens-before relationship
+int data = 0;
+bool ready = false;
+
+// Thread 1
+data = 42;
+ready = true;  // Non-atomic write
+
+// Thread 2
+if (ready) {  // Non-atomic read
+    use(data);  // May see stale data (race)
+}
+
+// ✅ Fixed with atomics (acquire-release)
+std::atomic&lt;bool&gt; ready{false};
+
+// Thread 1
+data = 42;
+ready.store(true, std::memory_order_release);  // Synchronizes
+
+// Thread 2
+if (ready.load(std::memory_order_acquire)) {  // Synchronizes
+    use(data);  // Guaranteed to see data=42
+}</code></pre>
+<h3>Concept 3: Deadlock Detection</h3>
+<p><strong>Deadlock Conditions</strong> (all must hold):</p>
+<ol><li><strong>Mutual exclusion</strong>: Resources held exclusively</li><li><strong>Hold and wait</strong>: Thread holds resource while waiting for another</li><li><strong>No preemption</strong>: Resources can&#x27;t be forcibly taken</li><li><strong>Circular wait</strong>: Cycle of threads waiting for each other</li></ol>
+<p><strong>Classic Deadlock Example</strong>:</p>
+<pre><code class="lang-c++">std::mutex m1, m2;
+
+// Thread A
+void thread_a() {
+    m1.lock();
+    // ... context switch ...
+    m2.lock();  // Waits for m2 (held by B)
+    // ...
+    m2.unlock();
+    m1.unlock();
+}
+
+// Thread B
+void thread_b() {
+    m2.lock();
+    // ... context switch ...
+    m1.lock();  // Waits for m1 (held by A) → DEADLOCK
+    // ...
+    m1.unlock();
+    m2.unlock();
+}</code></pre>
+<p><strong>Deadlock Prevention</strong>:</p>
+<ul><li><strong>Lock ordering</strong>: Always acquire locks in same global order</li><li><strong>Timeouts</strong>: Try-lock with timeout, back off if failed</li><li><strong>Deadlock detection</strong>: Runtime cycle detection, automatic recovery</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: ThreadSanitizer (TSan) for C/C++/Go</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Detecting data races in C/C++ or Go code</li><li>Integration testing with race detection</li><li>CI/CD race detection pipelines</li></ul>
+<pre><code class="lang-bash"># C/C++: Compile with TSan
+clang++ -fsanitize=thread -g -O1 app.cpp -o app
+# or
+g++ -fsanitize=thread -g -O1 app.cpp -o app
+
+# Run instrumented binary
+./app
+
+# Example TSan report:
+# WARNING: ThreadSanitizer: data race (pid=12345)
+#   Write of size 4 at 0x7f1234567890 by thread T2:
+#     #0 increment_counter app.cpp:42
+#
+#   Previous read of size 4 at 0x7f1234567890 by thread T1:
+#     #0 read_counter app.cpp:38
+#
+# Thread T2 created by main thread at:
+#     #0 pthread_create
+#     #1 main app.cpp:56</code></pre>
+<p><strong>Go Race Detector</strong>:</p>
+<pre><code class="lang-bash"># Build and run with race detector
+go run -race main.go
+
+# Test with race detector
+go test -race ./...
+
+# Build with race detector for deployment (staging only)
+go build -race -o app
+
+# Example Go race report:
+# WARNING: DATA RACE
+# Write at 0x00c000012080 by goroutine 7:
+#   main.incrementCounter()
+#       /app/main.go:23 +0x44
+#
+# Previous read at 0x00c000012080 by goroutine 6:
+#   main.readCounter()
+#       /app/main.go:19 +0x38</code></pre>
+<p><strong>TSan Configuration</strong>:</p>
+<pre><code class="lang-bash"># Suppress false positives
+export TSAN_OPTIONS=&quot;suppressions=tsan.supp:history_size=7&quot;
+
+# tsan.supp file:
+# race:external_library_function
+# race:known_benign_race</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Detects races with high accuracy</li><li>Low false positive rate</li><li>Shows exact code locations and thread stacks</li></ul>
+<p><strong>Limitations</strong>:</p>
+<ul><li>5-15x slowdown (CI/staging only)</li><li>Cannot run with ASan simultaneously</li><li>May miss races in unexecuted code paths</li></ul>
+<h3>Pattern 2: Helgrind for Data Race Detection</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Alternative to TSan for C/C++ (no recompilation)</li><li>Debugging legacy code without build system changes</li><li>Validating lock-based synchronization</li></ul>
+<pre><code class="lang-bash"># Run with Helgrind
+valgrind --tool=helgrind ./app
+
+# Example Helgrind report:
+# ==12345== Possible data race during read of size 4 at 0x601040 by thread #2
+# ==12345== Locks held: none
+# ==12345==    at 0x400ABC: read_counter (app.cpp:42)
+# ==12345==
+# ==12345== This conflicts with a previous write of size 4 by thread #1
+# ==12345== Locks held: none
+# ==12345==    at 0x400DEF: write_counter (app.cpp:38)</code></pre>
+<p><strong>Helgrind Annotations</strong> (reduce false positives):</p>
+<pre><code class="lang-c++">#include &lt;valgrind/helgrind.h&gt;
+
+// Mark benign race (use sparingly!)
+ANNOTATE_BENIGN_RACE_SIZED(&amp;var, sizeof(var), &quot;Reason&quot;);
+
+// Happens-before annotation for custom synchronization
+ANNOTATE_HAPPENS_BEFORE(&amp;sync_point);
+ANNOTATE_HAPPENS_AFTER(&amp;sync_point);</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>No recompilation needed</li><li>Works with any C/C++ code</li><li>Detects lock-order violations</li></ul>
+<p><strong>Limitations</strong>:</p>
+<ul><li>High overhead (10-30x slowdown)</li><li>More false positives than TSan</li><li>Cannot detect atomics-based races</li></ul>
+<h3>Pattern 3: Intel Inspector for Concurrency Analysis</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Windows/Linux GUI-based race and deadlock detection</li><li>Need visual timeline and thread interaction diagrams</li><li>Enterprise C/C++ development</li></ul>
+<pre><code class="lang-bash"># Command-line data race detection
+inspxe-cl -collect ti2 -result-dir results -- ./app
+
+# Deadlock detection
+inspxe-cl -collect ti3 -result-dir results -- ./app
+
+# View results in GUI
+inspxe-gui results</code></pre>
+<p><strong>Inspector Analysis Types</strong>:</p>
+<ul><li><strong>ti1</strong>: Detect deadlocks only (fast)</li><li><strong>ti2</strong>: Detect deadlocks and data races (moderate)</li><li><strong>ti3</strong>: Comprehensive analysis (slow, high accuracy)</li></ul>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Visual timeline of thread interactions</li><li>Detects races, deadlocks, and lock contention</li><li>Lower false positive rate than Helgrind</li></ul>
+<p><strong>Limitations</strong>:</p>
+<ul><li>Commercial tool (license required)</li><li>Higher overhead than TSan</li><li>GUI-focused (less CI/CD friendly)</li></ul>
+<h3>Pattern 4: GDB Thread Debugging</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Investigating deadlocks in running/crashed processes</li><li>Manual inspection of thread states</li><li>No race detector available</li></ul>
+<pre><code class="lang-bash"># Attach to running process
+gdb -p 12345
+
+# Show all threads
+(gdb) info threads
+#   Id   Target Id         Frame
+# * 1    Thread 0x7f123... main () at app.cpp:42
+#   2    Thread 0x7f124... worker () at app.cpp:67
+#   3    Thread 0x7f125... 0x00007f... in pthread_cond_wait ()
+
+# Switch to thread
+(gdb) thread 2
+
+# Show backtrace for current thread
+(gdb) bt
+# #0  0x00007f1234567890 in __lll_lock_wait ()
+# #1  0x00007f1234567891 in pthread_mutex_lock ()
+# #2  0x0000000000400abc in acquire_lock () at app.cpp:23
+# #3  0x0000000000400def in worker () at app.cpp:67
+
+# Show backtraces for all threads
+(gdb) thread apply all bt
+
+# Detect potential deadlock (threads waiting on locks)
+(gdb) thread apply all bt | grep -E &quot;lock|wait&quot;</code></pre>
+<p><strong>Deadlock Analysis</strong>:</p>
+<pre><code class="lang-bash"># Find threads blocked on mutexes
+(gdb) thread apply all bt full
+# Look for frames containing:
+# - pthread_mutex_lock
+# - pthread_cond_wait
+# - __lll_lock_wait
+
+# Identify lock holders
+(gdb) p *(pthread_mutex_t*)0x601040  # Inspect mutex at address
+# Shows __lock field (0 = unlocked, non-zero = locked)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Works on live processes and core dumps</li><li>No recompilation or instrumentation</li><li>Detailed thread state inspection</li></ul>
+<h3>Pattern 5: Go Race Detector Best Practices</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>All Go concurrent code (goroutines, channels)</li><li>CI/CD integration for race detection</li><li>Identifying synchronization gaps</li></ul>
+<pre><code class="lang-go">// ❌ Data race: shared map access
+var cache = make(map[string]string)
+
+func set(key, value string) {
+    cache[key] = value  // Race if concurrent
+}
+
+func get(key string) string {
+    return cache[key]  // Race if concurrent
+}
+
+// ✅ Fixed: use sync.Map
+var cache sync.Map
+
+func set(key, value string) {
+    cache.Store(key, value)
+}
+
+func get(key string) string {
+    val, _ := cache.Load(key)
+    if val != nil {
+        return val.(string)
+    }
+    return &quot;&quot;
+}</code></pre>
+<p><strong>Race Detection in Tests</strong>:</p>
+<pre><code class="lang-go">func TestConcurrentAccess(t *testing.T) {
+    var counter int64
+    var wg sync.WaitGroup
+
+    // Spawn 100 goroutines incrementing counter
+    for i := 0; i &lt; 100; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            counter++  // ❌ Race detected by go test -race
+        }()
+    }
+    wg.Wait()
+
+    // Race detector will report:
+    // WARNING: DATA RACE
+    // Write at 0x00c000012080 by goroutine 7
+}
+
+// ✅ Fixed version
+func TestConcurrentAccessFixed(t *testing.T) {
+    var counter int64
+    var wg sync.WaitGroup
+
+    for i := 0; i &lt; 100; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            atomic.AddInt64(&amp;counter, 1)  // ✅ No race
+        }()
+    }
+    wg.Wait()
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Built into Go toolchain</li><li>Low overhead (2-10x slowdown)</li><li>Excellent CI integration</li></ul>
+<h3>Pattern 6: Lock-Order Enforcement</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Preventing deadlocks in complex locking scenarios</li><li>Systems with multiple locks that interact</li><li>Critical sections with nested locking</li></ul>
+<pre><code class="lang-c++">// Define global lock ordering
+enum LockOrder {
+    LOCK_DATABASE = 1,
+    LOCK_CACHE = 2,
+    LOCK_NETWORK = 3
+};
+
+class OrderedMutex {
+    std::mutex mtx;
+    LockOrder order;
+
+public:
+    OrderedMutex(LockOrder o) : order(o) {}
+
+    void lock() {
+        // Check thread&#x27;s current lock level
+        thread_local LockOrder current_level = LOCK_DATABASE;
+        if (order &lt;= current_level) {
+            throw std::runtime_error(&quot;Lock order violation!&quot;);
+        }
+        mtx.lock();
+        current_level = order;
+    }
+
+    void unlock() {
+        mtx.unlock();
+    }
+};
+
+// Usage
+OrderedMutex db_lock(LOCK_DATABASE);
+OrderedMutex cache_lock(LOCK_CACHE);
+
+void safe_function() {
+    db_lock.lock();     // ✅ OK: lowest level
+    cache_lock.lock();  // ✅ OK: higher level
+    // ...
+    cache_lock.unlock();
+    db_lock.unlock();
+}
+
+void unsafe_function() {
+    cache_lock.lock();  // Acquired first
+    db_lock.lock();     // ❌ EXCEPTION: violates ordering
+}</code></pre>
+<p><strong>Rust Lock Ordering</strong> (compile-time):</p>
+<pre><code class="lang-rust">// Use type system to enforce lock order
+struct DatabaseLock(Mutex&lt;Database&gt;);
+struct CacheLock&lt;&#x27;db&gt;(Mutex&lt;Cache&gt;, PhantomData&lt;&amp;&#x27;db DatabaseLock&gt;);
+
+// Lifetime ensures database locked before cache
+fn access_both&lt;&#x27;db&gt;(db: &amp;&#x27;db DatabaseLock) -&gt; CacheLock&lt;&#x27;db&gt; {
+    let db_guard = db.0.lock().unwrap();
+    // Can only create CacheLock if db is locked
+    CacheLock(Mutex::new(Cache::new()), PhantomData)
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Prevents deadlocks statically or at runtime</li><li>Clear documentation of lock hierarchy</li><li>Easier to reason about locking</li></ul>
+<h3>Pattern 7: Happens-Before Visualization</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Understanding complex synchronization patterns</li><li>Debugging subtle race conditions</li><li>Teaching concurrency concepts</li></ul>
+<pre><code class="lang-python"># Lamport timestamps for happens-before tracking
+import threading
+
+class LamportClock:
+    def __init__(self):
+        self.time = 0
+        self.lock = threading.Lock()
+
+    def increment(self):
+        with self.lock:
+            self.time += 1
+            return self.time
+
+    def update(self, received_time):
+        with self.lock:
+            self.time = max(self.time, received_time) + 1
+            return self.time
+
+# Usage in distributed system or multi-threaded app
+clock = LamportClock()
+
+def thread_a():
+    timestamp = clock.increment()
+    print(f&quot;Thread A event at time {timestamp}&quot;)
+    send_message(timestamp)
+
+def thread_b():
+    received_time = receive_message()
+    timestamp = clock.update(received_time)
+    print(f&quot;Thread B event at time {timestamp}&quot;)
+    # If timestamp_b &gt; timestamp_a, A happened-before B</code></pre>
+<p><strong>Visualization Tools</strong>:</p>
+<ul><li><strong>ThreadSanitizer reports</strong>: Show conflicting access backtraces</li><li><strong>Chrome Trace Viewer</strong>: JSON trace format for timeline visualization</li><li><strong>Perfetto</strong>: Advanced trace visualization for performance and concurrency</li></ul>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Makes implicit synchronization explicit</li><li>Helps identify missing synchronization</li><li>Useful for distributed systems debugging</li></ul>
+<h3>Pattern 8: Rust Async Concurrency Debugging</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Debugging Rust async/await code (Tokio, async-std)</li><li>Detecting data races in async contexts</li><li>Analyzing task scheduling issues</li></ul>
+<pre><code class="lang-rust">// ❌ Data race in async code
+use std::sync::Arc;
+
+async fn buggy_counter(counter: Arc&lt;i32&gt;) {
+    // ❌ Arc provides shared ownership, not synchronization
+    let val = *counter;
+    tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
+    // Race: multiple tasks may read/write simultaneously
+}
+
+// ✅ Fixed with Mutex
+use tokio::sync::Mutex;
+
+async fn safe_counter(counter: Arc&lt;Mutex&lt;i32&gt;&gt;) {
+    let mut val = counter.lock().await;
+    *val += 1;
+    // Lock released when `val` goes out of scope
+}</code></pre>
+<p><strong>Tokio Console</strong> (runtime inspection):</p>
+<pre><code class="lang-bash"># Add to Cargo.toml
+# [dependencies]
+# console-subscriber = &quot;0.1&quot;
+
+# In main.rs
+console_subscriber::init();
+
+# Run tokio-console
+tokio-console</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Real-time task inspection</li><li>Detects blocking in async contexts</li><li>Shows task spawn/completion timeline</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Tool Selection by Use Case</h3>
+<pre><code>Use Case                    | Tool                | Overhead  | Recompile | Platform
+----------------------------|---------------------|-----------|-----------|----------
+C/C++ race detection        | ThreadSanitizer     | 5-15x     | Yes       | All
+C/C++ no recompile          | Helgrind            | 10-30x    | No        | Linux
+Go race detection           | go run -race        | 2-10x     | No        | All
+Rust race detection         | cargo test          | &lt;2x       | No        | All
+Windows/Linux GUI           | Intel Inspector     | 10-20x    | No        | Win/Linux
+Deadlock analysis           | GDB, thread dumps   | N/A       | No        | All
+Async Rust debugging        | Tokio Console       | Low       | No        | All
+Lock ordering               | Custom framework    | Minimal   | Yes       | All</code></pre>
+<h3>Key Guidelines</h3>
+<pre><code>✅ DO: Use -race in all Go tests (go test -race)
+✅ DO: Enable TSan in CI for C/C++ projects
+✅ DO: Enforce global lock ordering to prevent deadlocks
+✅ DO: Use atomic operations for simple counters/flags
+✅ DO: Prefer channels/message-passing over shared memory
+✅ DO: Test concurrent code with thread count &gt; CPU cores
+✅ DO: Use happens-before annotations for custom sync primitives
+
+❌ DON&#x27;T: Ignore race warnings (even if tests pass)
+❌ DON&#x27;T: Use sleep() to &quot;fix&quot; race conditions
+❌ DON&#x27;T: Assume data races are benign
+❌ DON&#x27;T: Disable race detector to speed up tests
+❌ DON&#x27;T: Mix TSan and ASan (incompatible)
+❌ DON&#x27;T: Use raw atomics without understanding memory ordering
+❌ DON&#x27;T: Deploy race detector builds to production (overhead)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-c++">// ❌ NEVER: Use sleep to avoid races
+void broken_sync() {
+    shared_data = 42;
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    // ❌ Race: another thread may access before sleep completes
+}
+
+// ✅ CORRECT: Use proper synchronization
+std::mutex mtx;
+void correct_sync() {
+    std::lock_guard&lt;std::mutex&gt; lock(mtx);
+    shared_data = 42;  // Protected by mutex
+}</code></pre>
+<p>❌ <strong>Sleep-based synchronization</strong>: Hides races, doesn&#x27;t fix them ✅ <strong>Correct approach</strong>: Use mutexes, atomics, or channels</p>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-go">// ❌ Don&#x27;t: Ignore race detector warnings
+// $ go test -race
+// WARNING: DATA RACE
+// ... but tests pass, so ship it ❌
+
+// ✅ Correct: Fix all races before merge
+// Races are undefined behavior, may manifest in production</code></pre>
+<p>❌ <strong>Ignoring race warnings</strong>: &quot;Works on my machine&quot; until production ✅ <strong>Better</strong>: Treat race warnings as build failures</p>
+<pre><code class="lang-c++">// ❌ Don&#x27;t: Assume volatile fixes races
+volatile int flag = 0;  // ❌ Doesn&#x27;t prevent race
+
+void thread1() { flag = 1; }
+void thread2() { if (flag) { /* ... */ } }
+
+// ✅ Correct: Use std::atomic
+std::atomic&lt;int&gt; flag{0};
+
+void thread1() { flag.store(1, std::memory_order_release); }
+void thread2() {
+    if (flag.load(std::memory_order_acquire)) { /* ... */ }
+}</code></pre>
+<p>❌ <strong>Volatile for synchronization</strong>: Doesn&#x27;t provide atomicity or ordering ✅ <strong>Better</strong>: Use std::atomic with memory ordering semantics</p>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Assume Python GIL prevents all races
+shared_list = []
+
+def thread1():
+    shared_list.append(1)  # ❌ Not atomic despite GIL
+
+def thread2():
+    shared_list.append(2)  # ❌ Race on internal list state
+
+# ✅ Correct: Use thread-safe structures
+import queue
+shared_queue = queue.Queue()
+
+def thread1():
+    shared_queue.put(1)  # ✅ Thread-safe
+
+def thread2():
+    shared_queue.put(2)  # ✅ Thread-safe</code></pre>
+<p>❌ <strong>Assuming GIL prevents races</strong>: GIL doesn&#x27;t protect data structures ✅ <strong>Better</strong>: Use queue.Queue, threading.Lock, or concurrent.futures</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>testing/integration-testing.md</code> - Race detectors integrate into integration tests</li><li><code>observability/distributed-tracing.md</code> - Happens-before in distributed systems</li><li><code>plt/rust-memory-safety.md</code> - Rust ownership prevents many races at compile-time</li><li><code>debugging/memory-leak-debugging.md</code> - Races can cause memory leaks</li><li><code>debugging/crash-debugging.md</code> - Races often manifest as crashes</li><li><code>cicd/testing-strategy.md</code> - Enable race detection in CI pipelines</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/debugging-concurrency-debugging.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>debugging-network-debugging</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/debugging-network-debugging.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/debugging-network-debugging.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>debugging-network-debugging</h1><p class="lede">Network debugging with tcpdump, Wireshark, curl, DNS tools, SSL/TLS inspection, and network tracing utilities</p><h1>Network Debugging</h1>
+<p><strong>Scope</strong>: tcpdump, Wireshark, curl debugging, HTTP headers, SSL/TLS, DNS (dig, nslookup), strace, lsof, mtr, ping, traceroute</p>
+<p><strong>Lines</strong>: 420</p>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Debugging API connectivity issues</li><li>Analyzing HTTP request/response problems</li><li>Investigating SSL/TLS certificate errors</li><li>Troubleshooting DNS resolution failures</li><li>Diagnosing network latency or packet loss</li><li>Inspecting network traffic between services</li><li>Debugging websocket connections</li><li>Analyzing load balancer or proxy behavior</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Application logic debugging (use debuggers)</li><li>Simple HTTP client errors (check status codes first)</li><li>Known firewall blocks (check security groups first)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Network Debugging Layers</h3>
+<pre><code>Layer 7: Application (HTTP, gRPC, WebSocket)
+├─ curl, httpie, wget
+├─ Browser DevTools
+└─ API clients (Postman, Insomnia)
+
+Layer 4-6: Transport/Session (TCP, TLS)
+├─ openssl s_client
+├─ nmap
+└─ netcat (nc)
+
+Layer 3: Network (IP, routing)
+├─ ping, traceroute, mtr
+├─ ip route
+└─ tcpdump, Wireshark
+
+Layer 2: Data Link (DNS, ARP)
+├─ dig, nslookup, host
+├─ arp -a
+└─ Network packet inspection</code></pre>
+<h3>Common Network Issues</h3>
+<p>| Symptom | Likely Cause | Debug Tool | |---------|--------------|------------| | Connection refused | Service not listening, firewall | <code>netcat</code>, <code>telnet</code> | | Timeout | Network unreachable, slow route | <code>ping</code>, <code>mtr</code>, <code>traceroute</code> | | DNS error | Misconfigured DNS, missing record | <code>dig</code>, <code>nslookup</code> | | SSL error | Certificate invalid, expired | <code>openssl s_client</code> | | Slow requests | High latency, packet loss | <code>tcpdump</code>, <code>Wireshark</code> | | 404/503 errors | Wrong endpoint, service down | <code>curl -v</code> |</p>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: curl Debugging Flags</h3>
+<pre><code class="lang-bash"># 1. Basic verbose output
+curl -v https://api.example.com/users
+# Shows:
+# - Request headers
+# - Response headers
+# - SSL handshake
+# - HTTP version
+
+# 2. Show only headers (no body)
+curl -I https://api.example.com/users
+# HEAD request, shows response headers
+
+# 3. Include response headers in output
+curl -i https://api.example.com/users
+
+# 4. Trace ASCII (detailed protocol trace)
+curl --trace-ascii /tmp/trace.txt https://api.example.com/users
+cat /tmp/trace.txt
+# Shows hex dump of request/response
+
+# 5. Trace binary (full packet capture)
+curl --trace /tmp/trace.bin https://api.example.com/users
+
+# 6. Follow redirects
+curl -L https://example.com  # Follows 301/302 redirects
+
+# 7. Show timing information
+curl -w &quot;@curl-format.txt&quot; -o /dev/null -s https://api.example.com/users
+
+# curl-format.txt:
+#     time_namelookup:  %{time_namelookup}s\n
+#        time_connect:  %{time_connect}s\n
+#     time_appconnect:  %{time_appconnect}s\n
+#    time_pretransfer:  %{time_pretransfer}s\n
+#       time_redirect:  %{time_redirect}s\n
+#  time_starttransfer:  %{time_starttransfer}s\n
+#                     ----------\n
+#          time_total:  %{time_total}s\n
+
+# 8. Test with custom headers
+curl -H &quot;Authorization: Bearer token123&quot; \
+     -H &quot;Content-Type: application/json&quot; \
+     https://api.example.com/users
+
+# 9. Test POST request
+curl -X POST https://api.example.com/users \
+     -H &quot;Content-Type: application/json&quot; \
+     -d &#x27;{&quot;name&quot;:&quot;Alice&quot;,&quot;email&quot;:&quot;alice@example.com&quot;}&#x27; \
+     -v
+
+# 10. Test with specific TLS version
+curl --tlsv1.2 https://api.example.com/users
+curl --tls-max 1.2 https://api.example.com/users
+
+# 11. Ignore SSL certificate errors (testing only!)
+curl -k https://self-signed.example.com
+
+# 12. Use specific DNS server
+curl --dns-servers 8.8.8.8 https://api.example.com/users
+
+# 13. Resolve hostname to specific IP
+curl --resolve api.example.com:443:192.0.2.1 https://api.example.com/users
+
+# 14. Show only HTTP status code
+curl -o /dev/null -s -w &quot;%{http_code}\n&quot; https://api.example.com/users
+
+# 15. Test connection reuse
+curl -v https://api.example.com/users https://api.example.com/posts
+# Look for &quot;Re-using existing connection&quot;</code></pre>
+<h3>Pattern 2: tcpdump Packet Capture</h3>
+<pre><code class="lang-bash"># 1. Capture all traffic on interface
+sudo tcpdump -i eth0
+
+# 2. Capture traffic on any interface
+sudo tcpdump -i any
+
+# 3. Capture traffic to/from specific host
+sudo tcpdump host api.example.com
+
+# 4. Capture traffic on specific port
+sudo tcpdump port 443
+sudo tcpdump port 80 or port 443
+
+# 5. Capture HTTP traffic (port 80)
+sudo tcpdump -i any -A &#x27;tcp port 80&#x27;
+# -A: Print packets in ASCII
+
+# 6. Capture DNS queries
+sudo tcpdump -i any port 53
+
+# 7. Save capture to file (for Wireshark)
+sudo tcpdump -i any -w /tmp/capture.pcap
+
+# 8. Read from capture file
+tcpdump -r /tmp/capture.pcap
+
+# 9. Capture with timestamps
+sudo tcpdump -tttt -i any port 443
+
+# 10. Capture specific number of packets
+sudo tcpdump -c 100 -i any
+
+# 11. Verbose output (show TTL, IP options)
+sudo tcpdump -v -i any host api.example.com
+
+# 12. Filter by source/destination
+sudo tcpdump src 192.168.1.10
+sudo tcpdump dst 10.0.0.5
+
+# 13. Capture TCP SYN packets (connection attempts)
+sudo tcpdump &#x27;tcp[tcpflags] &amp; tcp-syn != 0&#x27;
+
+# 14. Capture TCP RST packets (connection resets)
+sudo tcpdump &#x27;tcp[tcpflags] &amp; tcp-rst != 0&#x27;
+
+# 15. Capture traffic between two hosts
+sudo tcpdump host 192.168.1.10 and host 10.0.0.5
+
+# 16. Exclude traffic from SSH (avoid clutter when SSH&#x27;d)
+sudo tcpdump -i any port not 22
+
+# 17. Capture with snaplen (full packet capture)
+sudo tcpdump -s 65535 -i any -w /tmp/full-capture.pcap
+
+# Example: Debug API call
+sudo tcpdump -i any -A &#x27;host api.example.com and port 443&#x27; -w /tmp/api-debug.pcap
+# In another terminal:
+curl https://api.example.com/users
+# Stop tcpdump (Ctrl+C), analyze in Wireshark:
+wireshark /tmp/api-debug.pcap</code></pre>
+<h3>Pattern 3: DNS Debugging</h3>
+<pre><code class="lang-bash"># 1. dig (recommended for debugging)
+dig api.example.com
+
+# Show only answer section
+dig api.example.com +short
+
+# Query specific record type
+dig api.example.com A      # IPv4 address
+dig api.example.com AAAA   # IPv6 address
+dig api.example.com CNAME  # Canonical name
+dig api.example.com MX     # Mail exchange
+dig api.example.com TXT    # Text records
+
+# Query specific DNS server
+dig @8.8.8.8 api.example.com
+dig @1.1.1.1 api.example.com
+
+# Trace DNS resolution path
+dig api.example.com +trace
+
+# Show TTL (time to live)
+dig api.example.com +noall +answer +ttlid
+
+# Reverse DNS lookup
+dig -x 93.184.216.34
+
+# 2. nslookup (simpler, cross-platform)
+nslookup api.example.com
+nslookup api.example.com 8.8.8.8
+
+# 3. host (concise output)
+host api.example.com
+host -t MX example.com
+
+# 4. Check /etc/hosts override
+cat /etc/hosts | grep api.example.com
+
+# 5. Check DNS resolver configuration
+cat /etc/resolv.conf
+
+# 6. Test DNS propagation
+# Query multiple DNS servers
+for ns in 8.8.8.8 1.1.1.1 208.67.222.222; do
+  echo &quot;DNS Server: $ns&quot;
+  dig @$ns api.example.com +short
+done
+
+# Example: Debug DNS issue
+# Step 1: Check system resolver
+dig api.example.com +short
+# Step 2: Check Google DNS
+dig @8.8.8.8 api.example.com +short
+# Step 3: Trace resolution
+dig api.example.com +trace
+# Step 4: Check if /etc/hosts override
+grep api.example.com /etc/hosts</code></pre>
+<h3>Pattern 4: SSL/TLS Debugging</h3>
+<pre><code class="lang-bash"># 1. Test SSL connection
+openssl s_client -connect api.example.com:443
+
+# 2. Show certificate details
+openssl s_client -connect api.example.com:443 -showcerts
+
+# 3. Test with SNI (Server Name Indication)
+openssl s_client -connect api.example.com:443 -servername api.example.com
+
+# 4. Test specific TLS version
+openssl s_client -connect api.example.com:443 -tls1_2
+openssl s_client -connect api.example.com:443 -tls1_3
+
+# 5. Check certificate expiration
+echo | openssl s_client -connect api.example.com:443 2&gt;/dev/null | \
+  openssl x509 -noout -dates
+
+# 6. Verify certificate chain
+echo | openssl s_client -connect api.example.com:443 -showcerts 2&gt;/dev/null | \
+  openssl x509 -noout -text
+
+# 7. Check certificate subject
+echo | openssl s_client -connect api.example.com:443 2&gt;/dev/null | \
+  openssl x509 -noout -subject
+
+# 8. Test cipher suites
+openssl s_client -connect api.example.com:443 -cipher &#x27;ECDHE-RSA-AES128-GCM-SHA256&#x27;
+
+# 9. Dump all supported ciphers
+nmap --script ssl-enum-ciphers -p 443 api.example.com
+
+# 10. Check OCSP stapling
+openssl s_client -connect api.example.com:443 -status
+
+# 11. Verify certificate against CA bundle
+echo | openssl s_client -connect api.example.com:443 2&gt;/dev/null | \
+  openssl x509 -out /tmp/cert.pem
+openssl verify -CAfile /etc/ssl/certs/ca-bundle.crt /tmp/cert.pem
+
+# Example: Debug SSL error
+# Step 1: Test connection
+openssl s_client -connect api.example.com:443 -servername api.example.com
+# Look for &quot;Verify return code: 0 (ok)&quot; or error message
+
+# Step 2: Check certificate dates
+echo | openssl s_client -connect api.example.com:443 2&gt;/dev/null | \
+  openssl x509 -noout -dates
+
+# Step 3: Check certificate chain
+curl -v https://api.example.com 2&gt;&amp;1 | grep -A 5 &quot;SSL certificate&quot;</code></pre>
+<h3>Pattern 5: Network Tracing (strace, lsof)</h3>
+<pre><code class="lang-bash"># 1. strace - Trace system calls (network operations)
+# Trace all syscalls for process
+strace -p &lt;pid&gt;
+
+# Trace only network syscalls
+strace -e trace=network -p &lt;pid&gt;
+# Shows: socket, connect, bind, listen, accept, send, recv
+
+# Trace with timestamps
+strace -tt -e trace=network -p &lt;pid&gt;
+
+# Save to file
+strace -e trace=network -o /tmp/strace.log -p &lt;pid&gt;
+
+# Trace new process from start
+strace -e trace=network python app.py
+
+# Example: Debug connection issue
+strace -e trace=network,open,stat python -c &quot;import requests; requests.get(&#x27;https://api.example.com&#x27;)&quot;
+# Look for connect() calls, check errno
+
+# 2. lsof - List open files (including sockets)
+# Show all network connections
+lsof -i
+
+# Show connections on specific port
+lsof -i :8080
+
+# Show connections for specific process
+lsof -p &lt;pid&gt;
+lsof -c python  # All python processes
+
+# Show listening ports
+lsof -i -sTCP:LISTEN
+
+# Show established connections
+lsof -i -sTCP:ESTABLISHED
+
+# Show connections to specific host
+lsof -i @api.example.com
+
+# Show IPv4 connections
+lsof -i 4
+
+# Continuous monitoring
+lsof -i -r 2  # Refresh every 2 seconds
+
+# Example: Find what&#x27;s using port 8080
+lsof -i :8080
+# Output: Shows PID, command, user
+kill &lt;pid&gt;  # If needed
+
+# 3. netstat (alternative to lsof)
+# Show all listening ports
+netstat -tuln
+
+# Show all connections with process info
+netstat -tunap
+
+# Show routing table
+netstat -r
+
+# 4. ss (modern alternative to netstat)
+# Show all TCP connections
+ss -t
+
+# Show listening sockets
+ss -tl
+
+# Show process using socket
+ss -tp
+
+# Show stats
+ss -s</code></pre>
+<h3>Pattern 6: Connectivity Testing (ping, traceroute, mtr)</h3>
+<pre><code class="lang-bash"># 1. ping - Basic connectivity test
+ping api.example.com
+ping -c 4 api.example.com  # Send 4 packets
+
+# Test with custom packet size
+ping -s 1000 api.example.com
+
+# Flood ping (requires root, testing only)
+sudo ping -f api.example.com
+
+# 2. traceroute - Show network path
+traceroute api.example.com
+
+# Use ICMP instead of UDP
+traceroute -I api.example.com
+
+# Show AS numbers
+traceroute -A api.example.com
+
+# Max hops
+traceroute -m 20 api.example.com
+
+# 3. mtr - Combined ping + traceroute
+mtr api.example.com
+
+# Run for 100 cycles
+mtr -c 100 api.example.com
+
+# Report mode (non-interactive)
+mtr -r -c 100 api.example.com
+
+# Show both hostnames and IPs
+mtr -b api.example.com
+
+# 4. netcat (nc) - Manual connection testing
+# Test TCP connection
+nc -zv api.example.com 443
+
+# Test port range
+nc -zv api.example.com 80-443
+
+# Send HTTP request manually
+echo -e &quot;GET / HTTP/1.1\r\nHost: api.example.com\r\n\r\n&quot; | nc api.example.com 80
+
+# Listen on port (server mode)
+nc -l 8080
+
+# Example: Debug intermittent connectivity
+# Terminal 1: Run mtr
+mtr -r -c 1000 api.example.com &gt; /tmp/mtr-report.txt
+
+# Terminal 2: Monitor connections
+watch -n 1 &#x27;ss -t | grep api.example.com&#x27;
+
+# Analyze results
+cat /tmp/mtr-report.txt | grep -E &#x27;Loss%|[0-9]+\.[0-9]+&#x27;</code></pre>
+<h3>Pattern 7: HTTP Header Inspection</h3>
+<pre><code class="lang-bash"># 1. Inspect request headers
+curl -v https://api.example.com/users 2&gt;&amp;1 | grep &#x27;^&gt;&#x27;
+
+# 2. Inspect response headers
+curl -v https://api.example.com/users 2&gt;&amp;1 | grep &#x27;^&lt;&#x27;
+
+# 3. Common headers to check
+# Content-Type
+curl -I https://api.example.com/users | grep -i content-type
+
+# Cache-Control
+curl -I https://api.example.com/users | grep -i cache-control
+
+# CORS headers
+curl -I https://api.example.com/users | grep -i access-control
+
+# Rate limiting
+curl -I https://api.example.com/users | grep -i rate-limit
+
+# 4. Test CORS preflight
+curl -X OPTIONS https://api.example.com/users \
+  -H &quot;Origin: https://example.com&quot; \
+  -H &quot;Access-Control-Request-Method: POST&quot; \
+  -H &quot;Access-Control-Request-Headers: Content-Type&quot; \
+  -v
+
+# 5. Check compression
+curl -H &quot;Accept-Encoding: gzip&quot; -I https://api.example.com/users | grep -i content-encoding
+
+# 6. Test authentication headers
+curl -H &quot;Authorization: Bearer token123&quot; -I https://api.example.com/users
+
+# 7. Custom User-Agent
+curl -A &quot;MyApp/1.0&quot; -I https://api.example.com/users</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Network Debugging Toolbox</h3>
+<pre><code class="lang-bash"># Install essential tools (Ubuntu/Debian)
+sudo apt-get update &amp;&amp; sudo apt-get install -y \
+  curl wget netcat-openbsd \
+  dnsutils net-tools iproute2 \
+  tcpdump wireshark-cli \
+  mtr traceroute nmap \
+  openssl
+
+# Install on macOS
+brew install curl wget netcat \
+  bind dnsutils \
+  tcpdump wireshark \
+  mtr nmap openssl</code></pre>
+<h3>Common curl Options</h3>
+<p>| Flag | Purpose | Example | |------|---------|---------| | <code>-v</code> | Verbose output | <code>curl -v https://api.example.com</code> | | <code>-I</code> | HEAD request only | <code>curl -I https://api.example.com</code> | | <code>-i</code> | Include headers | <code>curl -i https://api.example.com</code> | | <code>-L</code> | Follow redirects | <code>curl -L https://example.com</code> | | <code>-H</code> | Custom header | <code>curl -H &quot;Auth: token&quot; https://api.example.com</code> | | <code>-X</code> | HTTP method | <code>curl -X POST https://api.example.com</code> | | <code>-d</code> | Request data | <code>curl -d &#x27;{&quot;key&quot;:&quot;val&quot;}&#x27; https://api.example.com</code> | | <code>-k</code> | Ignore SSL errors | <code>curl -k https://self-signed.example.com</code> | | <code>-w</code> | Custom output format | <code>curl -w &quot;%{http_code}&quot; https://api.example.com</code> |</p>
+<h3>tcpdump Filters</h3>
+<pre><code class="lang-bash"># Protocol
+tcpdump tcp
+tcpdump udp
+tcpdump icmp
+
+# Host
+tcpdump host api.example.com
+tcpdump src 192.168.1.10
+tcpdump dst 10.0.0.5
+
+# Port
+tcpdump port 443
+tcpdump portrange 8000-9000
+
+# Combinations
+tcpdump &#x27;tcp and port 80&#x27;
+tcpdump &#x27;host api.example.com and (port 80 or port 443)&#x27;
+
+# Packet content
+tcpdump -A &#x27;tcp port 80&#x27;  # ASCII
+tcpdump -X &#x27;tcp port 80&#x27;  # Hex + ASCII</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Ignoring SSL Errors in Production</h3>
+<pre><code class="lang-bash"># WRONG: Disabling SSL verification
+curl -k https://api.example.com  # Security risk!
+
+# CORRECT: Fix certificate issue
+# Check cert: openssl s_client -connect api.example.com:443
+# Update CA bundle or fix certificate</code></pre>
+<h3>❌ Using ping for Application Health</h3>
+<pre><code class="lang-bash"># WRONG: ICMP may be blocked
+ping api.example.com  # Firewall may block ICMP
+
+# CORRECT: HTTP health check
+curl -f https://api.example.com/health</code></pre>
+<h3>❌ Capturing Too Much Data</h3>
+<pre><code class="lang-bash"># WRONG: Unbounded tcpdump
+sudo tcpdump -i any -w /tmp/capture.pcap  # Fills disk!
+
+# CORRECT: Limit capture
+sudo tcpdump -i any -c 1000 -w /tmp/capture.pcap  # 1000 packets
+sudo tcpdump -i any -G 60 -w /tmp/capture.pcap    # 60 seconds</code></pre>
+<h3>❌ Not Using SNI with openssl</h3>
+<pre><code class="lang-bash"># WRONG: Missing SNI
+openssl s_client -connect api.example.com:443
+
+# CORRECT: Include SNI
+openssl s_client -connect api.example.com:443 -servername api.example.com</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>debugging/container-debugging.md</strong> - Network debugging in containers</li><li><strong>debugging/distributed-systems-debugging.md</strong> - Multi-service network issues</li><li><strong>observability/distributed-tracing.md</strong> - Trace network calls across services</li><li><strong>api/rest-api-design.md</strong> - HTTP best practices</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/debugging-network-debugging.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

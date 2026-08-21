@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>operational-semantics</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/operational-semantics.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/operational-semantics.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>operational-semantics</h1><p class="lede">Operational semantics including small-step, big-step, evaluation strategies, and reduction systems</p><h1>Operational Semantics</h1>
+<p><strong>Scope</strong>: Small-step semantics, big-step semantics, evaluation strategies, reduction systems, contextual semantics <strong>Lines</strong>: ~420 <strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Defining formal semantics for programming languages</li><li>Proving properties of evaluation (determinism, confluence)</li><li>Understanding call-by-value vs call-by-name evaluation</li><li>Implementing interpreters with formal foundations</li><li>Reasoning about program equivalence</li><li>Designing abstract machines</li></ul>
+<h2>Core Concepts</h2>
+<h3>Small-Step Semantics</h3>
+<p><strong>Transition relation</strong>: e → e&#x27; (expression e steps to e&#x27;)</p>
+<pre><code class="lang-python">from dataclasses import dataclass
+from typing import Union, Optional
+
+# Language syntax
+@dataclass
+class IntLit:
+    value: int
+
+@dataclass
+class BoolLit:
+    value: bool
+
+@dataclass
+class Var:
+    name: str
+
+@dataclass
+class Add:
+    left: &#x27;Expr&#x27;
+    right: &#x27;Expr&#x27;
+
+@dataclass
+class If:
+    cond: &#x27;Expr&#x27;
+    then_branch: &#x27;Expr&#x27;
+    else_branch: &#x27;Expr&#x27;
+
+@dataclass
+class Abs:
+    &quot;&quot;&quot;λx. e&quot;&quot;&quot;
+    param: str
+    body: &#x27;Expr&#x27;
+
+@dataclass
+class App:
+    func: &#x27;Expr&#x27;
+    arg: &#x27;Expr&#x27;
+
+Expr = Union[IntLit, BoolLit, Var, Add, If, Abs, App]
+
+def is_value(expr: Expr) -&gt; bool:
+    &quot;&quot;&quot;Check if expression is a value (cannot step further)&quot;&quot;&quot;
+    return isinstance(expr, (IntLit, BoolLit, Abs))
+
+def substitute(expr: Expr, var: str, replacement: Expr) -&gt; Expr:
+    &quot;&quot;&quot;Capture-avoiding substitution: expr[var := replacement]&quot;&quot;&quot;
+    match expr:
+        case Var(name):
+            return replacement if name == var else expr
+        case Add(l, r):
+            return Add(substitute(l, var, replacement), substitute(r, var, replacement))
+        case If(c, t, e):
+            return If(substitute(c, var, replacement), 
+                     substitute(t, var, replacement),
+                     substitute(e, var, replacement))
+        case Abs(param, body):
+            if param == var:
+                return expr  # Variable shadowed
+            return Abs(param, substitute(body, var, replacement))
+        case App(f, a):
+            return App(substitute(f, var, replacement), substitute(a, var, replacement))
+        case _:
+            return expr
+
+def small_step(expr: Expr) -&gt; Optional[Expr]:
+    &quot;&quot;&quot;
+    Small-step reduction: e → e&#x27;
+    Returns None if no step possible (stuck or value)
+    &quot;&quot;&quot;
+    match expr:
+        # Values don&#x27;t step
+        case _ if is_value(expr):
+            return None
+        
+        # Arithmetic
+        case Add(IntLit(m), IntLit(n)):
+            return IntLit(m + n)
+        case Add(e1, e2) if not is_value(e1):
+            e1_stepped = small_step(e1)
+            return Add(e1_stepped, e2) if e1_stepped else None
+        case Add(e1, e2) if is_value(e1) and not is_value(e2):
+            e2_stepped = small_step(e2)
+            return Add(e1, e2_stepped) if e2_stepped else None
+        
+        # Conditionals
+        case If(BoolLit(True), then_branch, _):
+            return then_branch
+        case If(BoolLit(False), _, else_branch):
+            return else_branch
+        case If(cond, t, e) if not is_value(cond):
+            cond_stepped = small_step(cond)
+            return If(cond_stepped, t, e) if cond_stepped else None
+        
+        # Application (call-by-value)
+        case App(Abs(param, body), arg) if is_value(arg):
+            # β-reduction
+            return substitute(body, param, arg)
+        case App(func, arg) if not is_value(func):
+            # Evaluate function first
+            func_stepped = small_step(func)
+            return App(func_stepped, arg) if func_stepped else None
+        case App(func, arg) if is_value(func) and not is_value(arg):
+            # Then evaluate argument
+            arg_stepped = small_step(arg)
+            return App(func, arg_stepped) if arg_stepped else None
+        
+        case _:
+            return None  # Stuck
+
+def evaluate(expr: Expr, max_steps: int = 1000) -&gt; Expr:
+    &quot;&quot;&quot;
+    Multi-step evaluation: e →* v
+    Reduce to normal form
+    &quot;&quot;&quot;
+    for _ in range(max_steps):
+        stepped = small_step(expr)
+        if stepped is None:
+            break
+        expr = stepped
+    return expr
+
+# Example: (λx. x + 1) 5 →* 6
+term = App(Abs(&#x27;x&#x27;, Add(Var(&#x27;x&#x27;), IntLit(1))), IntLit(5))
+print(f&quot;Initial: {term}&quot;)
+
+step1 = small_step(term)
+print(f&quot;Step 1: {step1}&quot;)  # x + 1 [x := 5] = 5 + 1
+
+step2 = small_step(step1) if step1 else None
+print(f&quot;Step 2: {step2}&quot;)  # 6
+
+result = evaluate(term)
+print(f&quot;Result: {result}&quot;)  # IntLit(6)</code></pre>
+<h3>Big-Step Semantics</h3>
+<p><strong>Evaluation relation</strong>: e ⇓ v (expression e evaluates to value v)</p>
+<pre><code class="lang-python">def big_step(expr: Expr, env: dict = None) -&gt; Expr:
+    &quot;&quot;&quot;
+    Big-step evaluation: e ⇓ v
+    Directly evaluate to value (no intermediate steps)
+    &quot;&quot;&quot;
+    env = env or {}
+    
+    match expr:
+        # Values evaluate to themselves
+        case _ if is_value(expr):
+            return expr
+        
+        # Variables
+        case Var(name):
+            if name not in env:
+                raise NameError(f&quot;Unbound variable: {name}&quot;)
+            return env[name]
+        
+        # Arithmetic
+        case Add(e1, e2):
+            v1 = big_step(e1, env)
+            v2 = big_step(e2, env)
+            if isinstance(v1, IntLit) and isinstance(v2, IntLit):
+                return IntLit(v1.value + v2.value)
+            raise TypeError(&quot;Addition requires integers&quot;)
+        
+        # Conditionals
+        case If(cond, then_branch, else_branch):
+            cond_val = big_step(cond, env)
+            if isinstance(cond_val, BoolLit):
+                if cond_val.value:
+                    return big_step(then_branch, env)
+                else:
+                    return big_step(else_branch, env)
+            raise TypeError(&quot;Condition must be boolean&quot;)
+        
+        # Application
+        case App(func, arg):
+            func_val = big_step(func, env)
+            if isinstance(func_val, Abs):
+                arg_val = big_step(arg, env)
+                # Evaluate body with extended environment
+                new_env = env | {func_val.param: arg_val}
+                return big_step(func_val.body, new_env)
+            raise TypeError(&quot;Application requires function&quot;)
+        
+        case _:
+            raise ValueError(f&quot;Cannot evaluate: {expr}&quot;)
+
+# Example: if true then 1 + 2 else 3 + 4 ⇓ 3
+term = If(BoolLit(True), Add(IntLit(1), IntLit(2)), Add(IntLit(3), IntLit(4)))
+result = big_step(term)
+print(f&quot;{term} ⇓ {result}&quot;)  # IntLit(3)</code></pre>
+<h3>Evaluation Strategies</h3>
+<p><strong>Call-by-value (CBV)</strong>: Evaluate arguments before function application</p>
+<pre><code class="lang-python">def cbv_step(expr: Expr) -&gt; Optional[Expr]:
+    &quot;&quot;&quot;Call-by-value reduction&quot;&quot;&quot;
+    match expr:
+        case App(Abs(param, body), arg) if is_value(arg):
+            # Argument is value, reduce
+            return substitute(body, param, arg)
+        case App(func, arg) if not is_value(func):
+            # Reduce function first
+            func_stepped = cbv_step(func)
+            return App(func_stepped, arg) if func_stepped else None
+        case App(func, arg) if is_value(func):
+            # Function is value, reduce argument
+            arg_stepped = cbv_step(arg)
+            return App(func, arg_stepped) if arg_stepped else None
+        case _:
+            return None
+
+# Example: (λx. λy. x) ((λz. z) 1) 2
+# CBV: Reduce (λz. z) 1 first, then apply</code></pre>
+<p><strong>Call-by-name (CBN)</strong>: Substitute arguments without evaluating</p>
+<pre><code class="lang-python">def cbn_step(expr: Expr) -&gt; Optional[Expr]:
+    &quot;&quot;&quot;Call-by-name reduction&quot;&quot;&quot;
+    match expr:
+        case App(Abs(param, body), arg):
+            # Substitute immediately, don&#x27;t evaluate arg
+            return substitute(body, param, arg)
+        case App(func, arg):
+            # Reduce function only
+            func_stepped = cbn_step(func)
+            return App(func_stepped, arg) if func_stepped else None
+        case _:
+            return None
+
+# Example: (λx. 1) ((λy. y y) (λy. y y))
+# CBN: Return 1 without evaluating Ω = (λy. y y) (λy. y y)
+# CBV: Loop forever evaluating Ω</code></pre>
+<p><strong>Call-by-need (lazy evaluation)</strong>: CBN with memoization</p>
+<pre><code class="lang-python">class Thunk:
+    &quot;&quot;&quot;Delayed computation with memoization&quot;&quot;&quot;
+    def __init__(self, expr: Expr, env: dict):
+        self.expr = expr
+        self.env = env
+        self.value = None
+    
+    def force(self):
+        &quot;&quot;&quot;Evaluate thunk (memoized)&quot;&quot;&quot;
+        if self.value is None:
+            self.value = lazy_eval(self.expr, self.env)
+        return self.value
+
+def lazy_eval(expr: Expr, env: dict = None) -&gt; Expr:
+    &quot;&quot;&quot;Call-by-need evaluation&quot;&quot;&quot;
+    env = env or {}
+    
+    match expr:
+        case Var(name):
+            if name not in env:
+                raise NameError(f&quot;Unbound variable: {name}&quot;)
+            # Force thunk if necessary
+            val = env[name]
+            return val.force() if isinstance(val, Thunk) else val
+        
+        case App(func, arg):
+            func_val = lazy_eval(func, env)
+            if isinstance(func_val, Abs):
+                # Create thunk for argument
+                thunk = Thunk(arg, env)
+                new_env = env | {func_val.param: thunk}
+                return lazy_eval(func_val.body, new_env)
+        
+        case _ if is_value(expr):
+            return expr
+        
+        case _:
+            raise ValueError(f&quot;Cannot evaluate: {expr}&quot;)
+
+# Lazy evaluation allows working with infinite data structures</code></pre>
+<h3>Contextual Semantics</h3>
+<p><strong>Evaluation contexts</strong>: E ::= [] | E e | v E | ...</p>
+<pre><code class="lang-python">@dataclass
+class Hole:
+    &quot;&quot;&quot;Evaluation context hole []&quot;&quot;&quot;
+    pass
+
+@dataclass
+class CtxApp1:
+    &quot;&quot;&quot;E e (context in function position)&quot;&quot;&quot;
+    context: &#x27;Context&#x27;
+    arg: Expr
+
+@dataclass
+class CtxApp2:
+    &quot;&quot;&quot;v E (context in argument position, function is value)&quot;&quot;&quot;
+    func: Expr
+    context: &#x27;Context&#x27;
+
+Context = Union[Hole, CtxApp1, CtxApp2]
+
+def plug(ctx: Context, expr: Expr) -&gt; Expr:
+    &quot;&quot;&quot;Fill hole in context with expression: E[e]&quot;&quot;&quot;
+    match ctx:
+        case Hole():
+            return expr
+        case CtxApp1(inner_ctx, arg):
+            return App(plug(inner_ctx, expr), arg)
+        case CtxApp2(func, inner_ctx):
+            return App(func, plug(inner_ctx, expr))
+
+def decompose(expr: Expr) -&gt; Optional[tuple[Context, Expr]]:
+    &quot;&quot;&quot;
+    Decompose expression into context and redex: e = E[r]
+    Returns (E, r) where r is redex
+    &quot;&quot;&quot;
+    match expr:
+        case App(Abs(param, body), arg) if is_value(arg):
+            # Found redex
+            return (Hole(), expr)
+        case App(func, arg):
+            if not is_value(func):
+                # Decompose function
+                ctx, redex = decompose(func)
+                return (CtxApp1(ctx, arg), redex)
+            elif not is_value(arg):
+                # Decompose argument
+                ctx, redex = decompose(arg)
+                return (CtxApp2(func, ctx), redex)
+        case _:
+            return None
+
+# Context-based stepping
+def contextual_step(expr: Expr) -&gt; Optional[Expr]:
+    &quot;&quot;&quot;e = E[r] → E[r&#x27;] where r → r&#x27;&quot;&quot;&quot;
+    decomp = decompose(expr)
+    if decomp is None:
+        return None
+    
+    ctx, redex = decomp
+    redex_stepped = small_step(redex)
+    if redex_stepped is None:
+        return None
+    
+    return plug(ctx, redex_stepped)</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Determinism</h3>
+<pre><code class="lang-python">def is_deterministic(expr: Expr) -&gt; bool:
+    &quot;&quot;&quot;
+    Check if semantics is deterministic:
+    If e → e₁ and e → e₂, then e₁ = e₂
+    &quot;&quot;&quot;
+    # For our CBV semantics, this always holds
+    # Prove by induction on step relation
+    return True</code></pre>
+<h3>Pattern 2: Confluence</h3>
+<pre><code class="lang-python">def is_confluent(expr: Expr) -&gt; bool:
+    &quot;&quot;&quot;
+    Church-Rosser property:
+    If e →* e₁ and e →* e₂, then ∃e₃: e₁ →* e₃ and e₂ →* e₃
+    &quot;&quot;&quot;
+    # For pure λ-calculus, this holds
+    # For CBV, determinism implies confluence
+    return True</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Small-Step vs Big-Step</h3>
+<p>| Aspect | Small-Step | Big-Step | |--------|-----------|----------| | Notation | e → e&#x27; | e ⇓ v | | Granularity | One step at a time | Direct to value | | Non-termination | e → e&#x27; → ... (infinite) | No rule applies | | Intermediate steps | Explicit | Hidden |</p>
+<h3>Evaluation Strategies</h3>
+<p>| Strategy | Rule | Example | |----------|------|---------| | Call-by-value | (λx. e) v → e[x := v] | Strict languages (ML, Scheme) | | Call-by-name | (λx. e) e&#x27; → e[x := e&#x27;] | Algol, early languages | | Call-by-need | CBN + memoization | Haskell (lazy) |</p>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Confusing small-step and big-step</strong>: Different tools for different purposes ✅ Small-step for reasoning about steps, big-step for final results</p>
+<p>❌ <strong>Assuming all languages are deterministic</strong>: Non-deterministic concurrency exists ✅ Explicitly model non-determinism when needed</p>
+<p>❌ <strong>Ignoring evaluation order</strong>: CBV and CBN have different termination behavior ✅ Choose evaluation strategy based on language design goals</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>lambda-calculus.md</code> - β-reduction and normalization</li><li><code>type-systems.md</code> - Type soundness (progress + preservation)</li><li><code>curry-howard.md</code> - Proof normalization as program evaluation</li><li><code>program-verification.md</code> - Proving properties of evaluation</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/operational-semantics.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

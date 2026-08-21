@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>infrastructure-cost-optimization</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/infrastructure-cost-optimization.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/infrastructure-cost-optimization.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>infrastructure-cost-optimization</h1><p class="lede">Cloud costs are growing unexpectedly</p><h1>Cost Optimization</h1>
+<p><strong>Scope</strong>: Cloud cost optimization - Resource right-sizing, reserved instances, spot instances, monitoring <strong>Lines</strong>: 394 <strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p><strong>Activate when</strong>:</p>
+<ul><li>Cloud costs are growing unexpectedly</li><li>Planning infrastructure budgets</li><li>Optimizing existing workloads</li><li>Implementing cost-aware architectures</li><li>Setting up cost monitoring and alerts</li><li>Choosing between deployment options</li></ul>
+<p><strong>Prerequisites</strong>:</p>
+<ul><li>Access to cloud provider billing console</li><li>Understanding of current infrastructure</li><li>CloudWatch/monitoring access (AWS)</li><li>Billing reports enabled</li><li>Cost allocation tags implemented</li></ul>
+<p><strong>Common scenarios</strong>:</p>
+<ul><li>Monthly cost exceeded budget</li><li>Idle resources consuming budget</li><li>Over-provisioned instances</li><li>Inefficient storage patterns</li><li>Unoptimized database usage</li><li>Poor auto-scaling configuration</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>1. Resource Right-Sizing</h3>
+<pre><code class="lang-python"># AWS Lambda optimization
+# Problem: Over-provisioned memory
+
+# ❌ Expensive: 3008 MB memory
+def lambda_handler(event, context):
+    # Function uses ~512 MB
+    process_data(event)
+    return {&#x27;statusCode&#x27;: 200}
+
+# Memory: 3008 MB
+# Cost: ~$0.0000166667 per 100ms
+# Actual usage: 512 MB
+
+# ✅ Optimized: Right-sized memory
+def lambda_handler(event, context):
+    process_data(event)
+    return {&#x27;statusCode&#x27;: 200}
+
+# Memory: 512 MB
+# Cost: ~$0.0000008333 per 100ms
+# Savings: ~95% reduction
+
+# Testing different memory configurations
+import json
+
+def test_memory_configs():
+    &quot;&quot;&quot;Test Lambda with different memory configs&quot;&quot;&quot;
+    configs = [128, 256, 512, 1024, 2048, 3008]
+    results = {}
+
+    for memory_mb in configs:
+        # Update Lambda configuration
+        lambda_client.update_function_configuration(
+            FunctionName=&#x27;my-function&#x27;,
+            MemorySize=memory_mb
+        )
+
+        # Run performance test
+        execution_time, cost = run_test()
+        results[memory_mb] = {
+            &#x27;execution_time&#x27;: execution_time,
+            &#x27;cost&#x27;: cost,
+            &#x27;cost_per_invocation&#x27;: cost / 1000
+        }
+
+    return results</code></pre>
+<h3>2. EC2 Right-Sizing</h3>
+<pre><code class="lang-bash"># Analyze CloudWatch metrics for right-sizing
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/EC2 \
+  --metric-name CPUUtilization \
+  --dimensions Name=InstanceId,Value=i-1234567890abcdef0 \
+  --start-time 2024-01-01T00:00:00Z \
+  --end-time 2024-01-31T23:59:59Z \
+  --period 3600 \
+  --statistics Average,Maximum
+
+# If average CPU &lt; 30%, consider smaller instance type
+# If max memory &lt; 50%, consider less memory
+
+# Current: t3.xlarge (4 vCPU, 16 GB RAM) - $0.1664/hour
+# Average CPU: 20%, Memory: 6 GB
+# Recommendation: t3.large (2 vCPU, 8 GB RAM) - $0.0832/hour
+# Savings: ~50% reduction</code></pre>
+<h3>3. Reserved Instances and Savings Plans</h3>
+<pre><code class="lang-python"># Calculate savings with Reserved Instances
+def calculate_ri_savings(instance_type, hours_per_month=730):
+    &quot;&quot;&quot;
+    Calculate potential savings with Reserved Instances
+
+    Pricing examples (us-east-1):
+    t3.medium: $0.0416/hour on-demand
+    t3.medium: $0.0250/hour 1-year RI (40% savings)
+    t3.medium: $0.0166/hour 3-year RI (60% savings)
+    &quot;&quot;&quot;
+
+    on_demand_cost = {
+        &#x27;t3.micro&#x27;: 0.0104,
+        &#x27;t3.small&#x27;: 0.0208,
+        &#x27;t3.medium&#x27;: 0.0416,
+        &#x27;t3.large&#x27;: 0.0832,
+        &#x27;t3.xlarge&#x27;: 0.1664,
+    }
+
+    # 1-year Reserved Instance (40% discount)
+    ri_1yr_cost = on_demand_cost[instance_type] * 0.6
+
+    # 3-year Reserved Instance (60% discount)
+    ri_3yr_cost = on_demand_cost[instance_type] * 0.4
+
+    monthly_on_demand = on_demand_cost[instance_type] * hours_per_month
+    monthly_ri_1yr = ri_1yr_cost * hours_per_month
+    monthly_ri_3yr = ri_3yr_cost * hours_per_month
+
+    return {
+        &#x27;on_demand&#x27;: monthly_on_demand,
+        &#x27;ri_1yr&#x27;: monthly_ri_1yr,
+        &#x27;ri_3yr&#x27;: monthly_ri_3yr,
+        &#x27;savings_1yr&#x27;: monthly_on_demand - monthly_ri_1yr,
+        &#x27;savings_3yr&#x27;: monthly_on_demand - monthly_ri_3yr,
+        &#x27;savings_1yr_percent&#x27;: ((monthly_on_demand - monthly_ri_1yr) / monthly_on_demand) * 100,
+        &#x27;savings_3yr_percent&#x27;: ((monthly_on_demand - monthly_ri_3yr) / monthly_on_demand) * 100,
+    }
+
+# Example: 5 x t3.large instances running 24/7
+savings = calculate_ri_savings(&#x27;t3.large&#x27;, 730)
+print(f&quot;Monthly cost - On-Demand: ${savings[&#x27;on_demand&#x27;]:.2f}&quot;)
+print(f&quot;Monthly cost - 1-year RI: ${savings[&#x27;ri_1yr&#x27;]:.2f}&quot;)
+print(f&quot;Monthly savings with RI: ${savings[&#x27;savings_1yr&#x27;]:.2f} ({savings[&#x27;savings_1yr_percent&#x27;]:.1f}%)&quot;)</code></pre>
+<h3>4. Spot Instances</h3>
+<pre><code class="lang-python"># Use Spot Instances for fault-tolerant workloads
+import boto3
+
+ec2 = boto3.client(&#x27;ec2&#x27;)
+
+# Request Spot Instances
+response = ec2.request_spot_instances(
+    InstanceCount=5,
+    LaunchSpecification={
+        &#x27;ImageId&#x27;: &#x27;ami-0c55b159cbfafe1f0&#x27;,
+        &#x27;InstanceType&#x27;: &#x27;t3.medium&#x27;,
+        &#x27;KeyName&#x27;: &#x27;my-key&#x27;,
+        &#x27;SecurityGroupIds&#x27;: [&#x27;sg-12345678&#x27;],
+        &#x27;IamInstanceProfile&#x27;: {
+            &#x27;Arn&#x27;: &#x27;arn:aws:iam::123456789012:instance-profile/worker-role&#x27;
+        },
+        &#x27;UserData&#x27;: base64.b64encode(user_data.encode()).decode()
+    },
+    SpotPrice=&#x27;0.0200&#x27;,  # Max price (70% of on-demand)
+    Type=&#x27;one-time&#x27;
+)
+
+# Spot Instances savings:
+# t3.medium on-demand: $0.0416/hour
+# t3.medium spot (average): ~$0.0125/hour
+# Savings: ~70%
+
+# Use Cases:
+# - Batch processing
+# - CI/CD workers
+# - Data analysis
+# - Machine learning training
+# - Stateless web workers
+
+# NOT suitable for:
+# - Databases
+# - Long-running stateful services
+# - Time-critical applications</code></pre>
+<h3>5. Auto-Scaling Optimization</h3>
+<pre><code class="lang-python"># Auto Scaling policy for cost optimization
+import boto3
+
+autoscaling = boto3.client(&#x27;autoscaling&#x27;)
+
+# Target tracking scaling policy
+response = autoscaling.put_scaling_policy(
+    AutoScalingGroupName=&#x27;web-asg&#x27;,
+    PolicyName=&#x27;target-tracking-cpu&#x27;,
+    PolicyType=&#x27;TargetTrackingScaling&#x27;,
+    TargetTrackingConfiguration={
+        &#x27;PredefinedMetricSpecification&#x27;: {
+            &#x27;PredefinedMetricType&#x27;: &#x27;ASGAverageCPUUtilization&#x27;
+        },
+        &#x27;TargetValue&#x27;: 70.0,  # Target 70% CPU utilization
+        &#x27;ScaleInCooldown&#x27;: 300,  # Wait 5 min before scaling down
+        &#x27;ScaleOutCooldown&#x27;: 60   # Wait 1 min before scaling up
+    }
+)
+
+# Scheduled scaling for predictable patterns
+autoscaling.put_scheduled_action(
+    AutoScalingGroupName=&#x27;web-asg&#x27;,
+    ScheduledActionName=&#x27;scale-down-evening&#x27;,
+    Recurrence=&#x27;0 18 * * *&#x27;,  # 6 PM UTC
+    MinSize=2,
+    MaxSize=5,
+    DesiredCapacity=2
+)
+
+autoscaling.put_scheduled_action(
+    AutoScalingGroupName=&#x27;web-asg&#x27;,
+    ScheduledActionName=&#x27;scale-up-morning&#x27;,
+    Recurrence=&#x27;0 6 * * *&#x27;,  # 6 AM UTC
+    MinSize=5,
+    MaxSize=20,
+    DesiredCapacity=10
+)</code></pre>
+<h3>6. Storage Optimization</h3>
+<pre><code class="lang-python"># S3 Lifecycle policies for cost optimization
+import boto3
+
+s3 = boto3.client(&#x27;s3&#x27;)
+
+lifecycle_config = {
+    &#x27;Rules&#x27;: [
+        {
+            &#x27;Id&#x27;: &#x27;archive-old-logs&#x27;,
+            &#x27;Status&#x27;: &#x27;Enabled&#x27;,
+            &#x27;Prefix&#x27;: &#x27;logs/&#x27;,
+            &#x27;Transitions&#x27;: [
+                {
+                    &#x27;Days&#x27;: 30,
+                    &#x27;StorageClass&#x27;: &#x27;STANDARD_IA&#x27;  # Infrequent Access
+                },
+                {
+                    &#x27;Days&#x27;: 90,
+                    &#x27;StorageClass&#x27;: &#x27;GLACIER_IR&#x27;  # Glacier Instant Retrieval
+                },
+                {
+                    &#x27;Days&#x27;: 365,
+                    &#x27;StorageClass&#x27;: &#x27;DEEP_ARCHIVE&#x27;  # Deep Archive
+                }
+            ],
+            &#x27;Expiration&#x27;: {
+                &#x27;Days&#x27;: 2555  # Delete after 7 years
+            }
+        },
+        {
+            &#x27;Id&#x27;: &#x27;delete-temp-files&#x27;,
+            &#x27;Status&#x27;: &#x27;Enabled&#x27;,
+            &#x27;Prefix&#x27;: &#x27;temp/&#x27;,
+            &#x27;Expiration&#x27;: {
+                &#x27;Days&#x27;: 7
+            }
+        },
+        {
+            &#x27;Id&#x27;: &#x27;abort-incomplete-multipart&#x27;,
+            &#x27;Status&#x27;: &#x27;Enabled&#x27;,
+            &#x27;Prefix&#x27;: &#x27;&#x27;,
+            &#x27;AbortIncompleteMultipartUpload&#x27;: {
+                &#x27;DaysAfterInitiation&#x27;: 7
+            }
+        }
+    ]
+}
+
+s3.put_bucket_lifecycle_configuration(
+    Bucket=&#x27;my-bucket&#x27;,
+    LifecycleConfiguration=lifecycle_config
+)
+
+# S3 Storage Costs (per GB/month):
+# Standard: $0.023
+# Standard-IA: $0.0125 (45% savings)
+# Glacier Instant Retrieval: $0.004 (83% savings)
+# Glacier Flexible Retrieval: $0.0036 (84% savings)
+# Glacier Deep Archive: $0.00099 (96% savings)</code></pre>
+<h3>7. Database Cost Optimization</h3>
+<pre><code class="lang-python"># RDS optimization strategies
+
+# 1. Right-size instance
+# Current: db.r5.2xlarge (8 vCPU, 64 GB) - $1.344/hour
+# If CPU &lt; 30% and memory &lt; 40GB
+# Recommended: db.r5.xlarge (4 vCPU, 32 GB) - $0.672/hour
+# Savings: 50%
+
+# 2. Use Aurora Serverless v2 for variable workloads
+import boto3
+
+rds = boto3.client(&#x27;rds&#x27;)
+
+# Aurora Serverless v2
+response = rds.create_db_cluster(
+    DBClusterIdentifier=&#x27;my-cluster&#x27;,
+    Engine=&#x27;aurora-postgresql&#x27;,
+    EngineVersion=&#x27;14.6&#x27;,
+    ServerlessV2ScalingConfiguration={
+        &#x27;MinCapacity&#x27;: 0.5,  # Min ACUs (Aurora Capacity Units)
+        &#x27;MaxCapacity&#x27;: 16.0   # Max ACUs
+    }
+)
+
+# Savings example:
+# Traditional RDS: db.r5.large 24/7 = $0.336/hour * 730 = $245/month
+# Aurora Serverless v2: Average 2 ACU * $0.12/ACU/hour * 730 = $175/month
+# Savings: ~29%
+
+# 3. Schedule stop/start for dev/test databases
+def schedule_database_stop_start():
+    &quot;&quot;&quot;Stop dev databases outside business hours&quot;&quot;&quot;
+
+    # Stop at 6 PM
+    lambda_client.create_rule(
+        Name=&#x27;stop-dev-databases&#x27;,
+        ScheduleExpression=&#x27;cron(0 18 * * ? *)&#x27;,
+        State=&#x27;ENABLED&#x27;,
+        Targets=[{
+            &#x27;Arn&#x27;: &#x27;arn:aws:lambda:us-east-1:123456789012:function:stop-databases&#x27;,
+            &#x27;Id&#x27;: &#x27;stop-dev-dbs&#x27;
+        }]
+    )
+
+    # Start at 8 AM
+    lambda_client.create_rule(
+        Name=&#x27;start-dev-databases&#x27;,
+        ScheduleExpression=&#x27;cron(0 8 * * ? *)&#x27;,
+        State=&#x27;ENABLED&#x27;,
+        Targets=[{
+            &#x27;Arn&#x27;: &#x27;arn:aws:lambda:us-east-1:123456789012:function:start-databases&#x27;,
+            &#x27;Id&#x27;: &#x27;start-dev-dbs&#x27;
+        }]
+    )
+
+    # Savings: 14 hours/day * 5 days/week = ~40% reduction</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Cost Monitoring with CloudWatch</h3>
+<pre><code class="lang-python"># Set up billing alerts
+import boto3
+
+cloudwatch = boto3.client(&#x27;cloudwatch&#x27;, region_name=&#x27;us-east-1&#x27;)  # Must be us-east-1
+sns = boto3.client(&#x27;sns&#x27;)
+
+# Create SNS topic for alerts
+topic_response = sns.create_topic(Name=&#x27;billing-alerts&#x27;)
+topic_arn = topic_response[&#x27;TopicArn&#x27;]
+
+# Subscribe email
+sns.subscribe(
+    TopicArn=topic_arn,
+    Protocol=&#x27;email&#x27;,
+    Endpoint=&#x27;ops@example.com&#x27;
+)
+
+# Create billing alarm
+cloudwatch.put_metric_alarm(
+    AlarmName=&#x27;MonthlyBillingExceeds1000&#x27;,
+    AlarmDescription=&#x27;Alert when monthly bill exceeds $1000&#x27;,
+    ActionsEnabled=True,
+    AlarmActions=[topic_arn],
+    MetricName=&#x27;EstimatedCharges&#x27;,
+    Namespace=&#x27;AWS/Billing&#x27;,
+    Statistic=&#x27;Maximum&#x27;,
+    Dimensions=[
+        {
+            &#x27;Name&#x27;: &#x27;Currency&#x27;,
+            &#x27;Value&#x27;: &#x27;USD&#x27;
+        }
+    ],
+    Period=21600,  # 6 hours
+    EvaluationPeriods=1,
+    Threshold=1000.0,
+    ComparisonOperator=&#x27;GreaterThanThreshold&#x27;
+)</code></pre>
+<h3>Cost Allocation Tags</h3>
+<pre><code class="lang-python"># Implement comprehensive tagging strategy
+import boto3
+
+def tag_resources():
+    &quot;&quot;&quot;Apply cost allocation tags to all resources&quot;&quot;&quot;
+
+    ec2 = boto3.client(&#x27;ec2&#x27;)
+
+    # Tag EC2 instances
+    ec2.create_tags(
+        Resources=[&#x27;i-1234567890abcdef0&#x27;],
+        Tags=[
+            {&#x27;Key&#x27;: &#x27;Environment&#x27;, &#x27;Value&#x27;: &#x27;production&#x27;},
+            {&#x27;Key&#x27;: &#x27;Project&#x27;, &#x27;Value&#x27;: &#x27;web-app&#x27;},
+            {&#x27;Key&#x27;: &#x27;Team&#x27;, &#x27;Value&#x27;: &#x27;platform&#x27;},
+            {&#x27;Key&#x27;: &#x27;CostCenter&#x27;, &#x27;Value&#x27;: &#x27;12345&#x27;},
+            {&#x27;Key&#x27;: &#x27;Owner&#x27;, &#x27;Value&#x27;: &#x27;engineering@example.com&#x27;}
+        ]
+    )
+
+    # Enable cost allocation tags in AWS Billing Console
+    # This allows filtering and grouping costs by tag
+
+# Cost allocation reports by tag
+def generate_cost_report_by_tag(tag_key=&#x27;Project&#x27;):
+    &quot;&quot;&quot;Generate cost report grouped by tag&quot;&quot;&quot;
+
+    ce = boto3.client(&#x27;ce&#x27;)  # Cost Explorer
+
+    response = ce.get_cost_and_usage(
+        TimePeriod={
+            &#x27;Start&#x27;: &#x27;2024-01-01&#x27;,
+            &#x27;End&#x27;: &#x27;2024-01-31&#x27;
+        },
+        Granularity=&#x27;MONTHLY&#x27;,
+        Metrics=[&#x27;UnblendedCost&#x27;],
+        GroupBy=[
+            {
+                &#x27;Type&#x27;: &#x27;TAG&#x27;,
+                &#x27;Key&#x27;: tag_key
+            }
+        ]
+    )
+
+    return response[&#x27;ResultsByTime&#x27;]</code></pre>
+<h3>Lambda Cost Optimization</h3>
+<pre><code class="lang-python"># Optimize Lambda for cost
+def optimize_lambda_cost():
+    &quot;&quot;&quot;Best practices for Lambda cost optimization&quot;&quot;&quot;
+
+    # 1. Right-size memory (affects CPU allocation)
+    # Test different configurations to find optimal
+
+    # 2. Reduce package size
+    # - Use Lambda Layers for shared dependencies
+    # - Remove unused dependencies
+    # - Use tree-shaking for Node.js
+
+    # 3. Minimize cold starts
+    # - Keep functions warm with scheduled invocations (if cost-effective)
+    # - Use provisioned concurrency for critical functions
+
+    # 4. Connection reuse
+    # Initialize clients outside handler
+    dynamodb = boto3.resource(&#x27;dynamodb&#x27;)
+    table = dynamodb.Table(&#x27;users&#x27;)
+
+    def lambda_handler(event, context):
+        # Connection is reused across warm invocations
+        table.put_item(Item={&#x27;id&#x27;: &#x27;123&#x27;, &#x27;name&#x27;: &#x27;Alice&#x27;})
+
+    # 5. Batch operations
+    # Process multiple records per invocation
+    # Reduces number of invocations
+
+    # 6. Use appropriate timeout
+    # Don&#x27;t set timeout higher than needed
+    # Default: 3 seconds (adjust based on actual needs)
+
+# Lambda pricing:
+# $0.20 per 1M requests
+# $0.0000166667 per GB-second
+
+# Example savings:
+# 10M requests/month at 128 MB, 200ms avg
+# Current cost: 10M * $0.20/1M + 10M * 0.2s * 0.125GB * $0.0000166667/GB-s = $2 + $4.17 = $6.17
+# With optimization (100ms): $2 + $2.08 = $4.08
+# Savings: ~34%</code></pre>
+<h3>Multi-Region Cost Optimization</h3>
+<pre><code class="lang-python"># Choose cost-effective regions
+REGIONAL_PRICING = {
+    &#x27;us-east-1&#x27;: {  # N. Virginia (cheapest)
+        &#x27;ec2_t3_medium&#x27;: 0.0416,
+        &#x27;lambda_gb_second&#x27;: 0.0000166667,
+        &#x27;s3_standard&#x27;: 0.023
+    },
+    &#x27;us-west-2&#x27;: {  # Oregon
+        &#x27;ec2_t3_medium&#x27;: 0.0416,
+        &#x27;lambda_gb_second&#x27;: 0.0000166667,
+        &#x27;s3_standard&#x27;: 0.023
+    },
+    &#x27;eu-west-1&#x27;: {  # Ireland
+        &#x27;ec2_t3_medium&#x27;: 0.0456,  # ~10% more expensive
+        &#x27;lambda_gb_second&#x27;: 0.0000166667,
+        &#x27;s3_standard&#x27;: 0.023
+    },
+    &#x27;ap-southeast-1&#x27;: {  # Singapore
+        &#x27;ec2_t3_medium&#x27;: 0.0528,  # ~27% more expensive
+        &#x27;lambda_gb_second&#x27;: 0.0000185185,
+        &#x27;s3_standard&#x27;: 0.025
+    }
+}
+
+def calculate_regional_savings(instances_count, region_from, region_to):
+    &quot;&quot;&quot;Calculate savings by switching regions&quot;&quot;&quot;
+
+    current_cost = REGIONAL_PRICING[region_from][&#x27;ec2_t3_medium&#x27;] * 730 * instances_count
+    new_cost = REGIONAL_PRICING[region_to][&#x27;ec2_t3_medium&#x27;] * 730 * instances_count
+
+    savings = current_cost - new_cost
+    savings_percent = (savings / current_cost) * 100
+
+    return {
+        &#x27;current_monthly_cost&#x27;: current_cost,
+        &#x27;new_monthly_cost&#x27;: new_cost,
+        &#x27;monthly_savings&#x27;: savings,
+        &#x27;savings_percent&#x27;: savings_percent
+    }
+
+# Example: Moving 10 t3.medium instances from Singapore to N. Virginia
+savings = calculate_regional_savings(10, &#x27;ap-southeast-1&#x27;, &#x27;us-east-1&#x27;)
+print(f&quot;Monthly savings: ${savings[&#x27;monthly_savings&#x27;]:.2f} ({savings[&#x27;savings_percent&#x27;]:.1f}%)&quot;)</code></pre>
+<h3>Idle Resource Detection</h3>
+<pre><code class="lang-python"># Identify and terminate idle resources
+import boto3
+from datetime import datetime, timedelta
+
+def find_idle_resources():
+    &quot;&quot;&quot;Identify idle resources consuming costs&quot;&quot;&quot;
+
+    ec2 = boto3.client(&#x27;ec2&#x27;)
+    cloudwatch = boto3.client(&#x27;cloudwatch&#x27;)
+
+    # Find EC2 instances with low CPU usage
+    instances = ec2.describe_instances(
+        Filters=[{&#x27;Name&#x27;: &#x27;instance-state-name&#x27;, &#x27;Values&#x27;: [&#x27;running&#x27;]}]
+    )
+
+    idle_instances = []
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(days=7)
+
+    for reservation in instances[&#x27;Reservations&#x27;]:
+        for instance in reservation[&#x27;Instances&#x27;]:
+            instance_id = instance[&#x27;InstanceId&#x27;]
+
+            # Get average CPU over last 7 days
+            response = cloudwatch.get_metric_statistics(
+                Namespace=&#x27;AWS/EC2&#x27;,
+                MetricName=&#x27;CPUUtilization&#x27;,
+                Dimensions=[{&#x27;Name&#x27;: &#x27;InstanceId&#x27;, &#x27;Value&#x27;: instance_id}],
+                StartTime=start_time,
+                EndTime=end_time,
+                Period=86400,  # 1 day
+                Statistics=[&#x27;Average&#x27;]
+            )
+
+            if response[&#x27;Datapoints&#x27;]:
+                avg_cpu = sum(d[&#x27;Average&#x27;] for d in response[&#x27;Datapoints&#x27;]) / len(response[&#x27;Datapoints&#x27;])
+
+                if avg_cpu &lt; 5:  # Less than 5% CPU
+                    idle_instances.append({
+                        &#x27;instance_id&#x27;: instance_id,
+                        &#x27;avg_cpu&#x27;: avg_cpu,
+                        &#x27;instance_type&#x27;: instance[&#x27;InstanceType&#x27;],
+                        &#x27;tags&#x27;: {tag[&#x27;Key&#x27;]: tag[&#x27;Value&#x27;] for tag in instance.get(&#x27;Tags&#x27;, [])}
+                    })
+
+    return idle_instances
+
+# Find unused EBS volumes
+def find_unattached_volumes():
+    &quot;&quot;&quot;Find EBS volumes not attached to instances&quot;&quot;&quot;
+
+    ec2 = boto3.client(&#x27;ec2&#x27;)
+
+    volumes = ec2.describe_volumes(
+        Filters=[{&#x27;Name&#x27;: &#x27;status&#x27;, &#x27;Values&#x27;: [&#x27;available&#x27;]}]
+    )
+
+    unattached = []
+    for volume in volumes[&#x27;Volumes&#x27;]:
+        unattached.append({
+            &#x27;volume_id&#x27;: volume[&#x27;VolumeId&#x27;],
+            &#x27;size&#x27;: volume[&#x27;Size&#x27;],
+            &#x27;type&#x27;: volume[&#x27;VolumeType&#x27;],
+            &#x27;monthly_cost&#x27;: volume[&#x27;Size&#x27;] * 0.10  # ~$0.10/GB/month for gp3
+        })
+
+    return unattached</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>AWS Cost Optimization Checklist</h3>
+<pre><code>[ ] Right-size EC2 instances based on CloudWatch metrics
+[ ] Purchase Reserved Instances for steady-state workloads
+[ ] Use Spot Instances for fault-tolerant workloads
+[ ] Implement S3 lifecycle policies
+[ ] Delete unattached EBS volumes
+[ ] Delete old snapshots
+[ ] Use S3 Intelligent-Tiering for unpredictable access patterns
+[ ] Enable S3 Transfer Acceleration only when needed
+[ ] Use CloudFront for content delivery
+[ ] Optimize Lambda memory allocation
+[ ] Use DynamoDB On-Demand for unpredictable workloads
+[ ] Schedule stop/start for dev/test resources
+[ ] Set up billing alerts
+[ ] Implement cost allocation tags
+[ ] Review and delete unused resources monthly
+[ ] Use AWS Cost Explorer for analysis
+[ ] Enable AWS Compute Optimizer recommendations</code></pre>
+<h3>Quick Cost Comparison</h3>
+<pre><code>Compute:
+- Lambda: $0.20/1M requests + $0.0000166667/GB-second
+- Fargate: $0.04048/vCPU/hour + $0.004445/GB/hour
+- EC2 t3.medium: $0.0416/hour (on-demand), $0.025/hour (RI)
+- EC2 Spot: ~70% discount from on-demand
+
+Storage:
+- S3 Standard: $0.023/GB/month
+- S3 Intelligent-Tiering: $0.023/GB + $0.0025/1000 objects
+- S3 Glacier: $0.004/GB/month
+- EBS gp3: $0.08/GB/month
+
+Database:
+- RDS db.t3.medium: $0.068/hour
+- Aurora Serverless v2: $0.12/ACU/hour
+- DynamoDB: On-Demand $1.25/million writes, $0.25/million reads</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-python"># ❌ NEVER: Leave resources running 24/7 in dev/test
+# Cost: t3.medium * 730 hours = $30.37/month
+# If only used 8 hours/day, 5 days/week = ~$9/month
+# Waste: ~$21/month per instance
+
+# ✅ CORRECT: Schedule stop/start
+def lambda_handler(event, context):
+    ec2 = boto3.client(&#x27;ec2&#x27;)
+
+    if event[&#x27;action&#x27;] == &#x27;stop&#x27;:
+        ec2.stop_instances(InstanceIds=event[&#x27;instance_ids&#x27;])
+    elif event[&#x27;action&#x27;] == &#x27;start&#x27;:
+        ec2.start_instances(InstanceIds=event[&#x27;instance_ids&#x27;])</code></pre>
+<pre><code class="lang-python"># ❌ NEVER: Store everything in S3 Standard
+# If 1 TB of logs accessed once per month
+# S3 Standard: $23/month
+# S3 Glacier: $4/month + retrieval costs
+# Waste: ~$19/month
+
+# ✅ CORRECT: Use lifecycle policies
+# See Storage Optimization section above</code></pre>
+<pre><code class="lang-python"># ❌ NEVER: Over-provision Lambda memory
+# 3008 MB when function uses 512 MB
+# Waste: ~95% of memory cost
+
+# ✅ CORRECT: Use AWS Lambda Power Tuning
+# https://github.com/alexcasalboni/aws-lambda-power-tuning</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<p><strong>Infrastructure</strong>:</p>
+<ul><li><code>aws-serverless.md</code> - Lambda, DynamoDB cost optimization</li><li><code>terraform-patterns.md</code> - Infrastructure as Code for cost tracking</li><li><code>kubernetes-basics.md</code> - Resource requests/limits for cost control</li><li><code>cloudflare-workers.md</code> - Low-cost edge computing alternative</li></ul>
+<p><strong>Monitoring</strong>:</p>
+<ul><li>CloudWatch for metrics and billing alerts</li><li>AWS Cost Explorer for detailed analysis</li><li>AWS Budgets for spending limits</li></ul>
+<p><strong>Standards from CLAUDE.md</strong>:</p>
+<ul><li>Always define resource limits</li><li>Use cost allocation tags</li><li>Monitor costs proactively</li><li>Right-size before deploying</li><li>Use serverless when appropriate</li><li>Schedule dev/test resources</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/infrastructure-cost-optimization.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

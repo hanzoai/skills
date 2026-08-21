@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>shortest-path-algorithms</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/shortest-path-algorithms.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/shortest-path-algorithms.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>shortest-path-algorithms</h1><p class="lede">Dijkstra, Bellman-Ford, Floyd-Warshall, and A* algorithms for finding shortest paths in weighted graphs with various constraints</p><h1>Shortest Path Algorithms</h1>
+<p><strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p><strong>Activate when</strong>:</p>
+<ul><li>Finding shortest paths in weighted graphs</li><li>Route planning and navigation</li><li>Network routing protocols</li><li>Optimizing delivery routes</li><li>Handling negative edge weights</li><li>Computing all-pairs shortest paths</li><li>Using heuristics for faster pathfinding (A*)</li></ul>
+<p><strong>Prerequisites</strong>: <code>graph-theory-fundamentals.md</code>, <code>graph-data-structures.md</code>, <code>graph-traversal-algorithms.md</code></p>
+<p><strong>Related Skills</strong>: <code>minimum-spanning-tree.md</code>, <code>network-flow-algorithms.md</code>, <code>graph-applications.md</code></p>
+<hr>
+<h2>Core Algorithms</h2>
+<h3>1. Dijkstra&#x27;s Algorithm</h3>
+<p><strong>Concept</strong>: Greedy algorithm for single-source shortest paths with non-negative weights</p>
+<p><strong>Properties</strong>:</p>
+<ul><li><strong>Time</strong>: O((V + E) log V) with binary heap, O(V²) with array</li><li><strong>Space</strong>: O(V) for distances and priority queue</li><li><strong>Constraint</strong>: Requires non-negative edge weights</li><li><strong>Finds</strong>: Shortest paths from source to all vertices</li></ul>
+<pre><code class="lang-python">import heapq
+from typing import Dict, List, Tuple, Optional
+from dataclasses import dataclass
+import math
+
+@dataclass
+class DijkstraResult:
+    &quot;&quot;&quot;Results from Dijkstra&#x27;s algorithm&quot;&quot;&quot;
+    distances: Dict[int, float]
+    parents: Dict[int, Optional[int]]
+
+    def get_path(self, target: int) -&gt; Optional[List[int]]:
+        &quot;&quot;&quot;Reconstruct shortest path to target&quot;&quot;&quot;
+        if target not in self.parents:
+            return None
+
+        path = []
+        current = target
+
+        while current is not None:
+            path.append(current)
+            current = self.parents[current]
+
+        return list(reversed(path))
+
+def dijkstra(graph: &#x27;WeightedGraph&#x27;, source: int) -&gt; DijkstraResult:
+    &quot;&quot;&quot;
+    Dijkstra&#x27;s shortest path algorithm
+
+    Args:
+        graph: Weighted graph (adjacency list with weights)
+        source: Starting vertex
+
+    Returns:
+        DijkstraResult with distances and parent pointers
+    &quot;&quot;&quot;
+    # Initialize distances to infinity
+    distances = {v: math.inf for v in range(graph.num_vertices)}
+    distances[source] = 0
+
+    # Parent pointers for path reconstruction
+    parents = {source: None}
+
+    # Priority queue: (distance, vertex)
+    pq = [(0, source)]
+    visited = set()
+
+    while pq:
+        dist_u, u = heapq.heappop(pq)
+
+        if u in visited:
+            continue
+
+        visited.add(u)
+
+        # Relaxation: Update distances to neighbors
+        for edge in graph.adj[u]:
+            v = edge.dest
+            weight = edge.weight
+
+            if v in visited:
+                continue
+
+            new_dist = distances[u] + weight
+
+            if new_dist &lt; distances[v]:
+                distances[v] = new_dist
+                parents[v] = u
+                heapq.heappush(pq, (new_dist, v))
+
+    return DijkstraResult(distances, parents)
+
+# Example usage
+from graph_data_structures import WeightedGraph
+
+graph = WeightedGraph(5, directed=False)
+graph.add_edge(0, 1, 4)
+graph.add_edge(0, 2, 1)
+graph.add_edge(2, 1, 2)
+graph.add_edge(1, 3, 1)
+graph.add_edge(2, 3, 5)
+graph.add_edge(3, 4, 3)
+
+result = dijkstra(graph, source=0)
+path = result.get_path(4)
+print(f&quot;Shortest path 0→4: {path}&quot;)        # [0, 2, 1, 3, 4]
+print(f&quot;Distance: {result.distances[4]}&quot;)  # 7.0</code></pre>
+<p><strong>Optimized Dijkstra with Early Termination</strong>:</p>
+<pre><code class="lang-python">def dijkstra_single_target(graph: &#x27;WeightedGraph&#x27;,
+                          source: int,
+                          target: int) -&gt; Tuple[float, List[int]]:
+    &quot;&quot;&quot;
+    Dijkstra with early termination when target is reached
+
+    More efficient when only one shortest path is needed
+    &quot;&quot;&quot;
+    distances = {v: math.inf for v in range(graph.num_vertices)}
+    distances[source] = 0
+    parents = {source: None}
+
+    pq = [(0, source)]
+    visited = set()
+
+    while pq:
+        dist_u, u = heapq.heappop(pq)
+
+        # Early termination
+        if u == target:
+            path = []
+            current = target
+            while current is not None:
+                path.append(current)
+                current = parents[current]
+            return dist_u, list(reversed(path))
+
+        if u in visited:
+            continue
+
+        visited.add(u)
+
+        for edge in graph.adj[u]:
+            v = edge.dest
+            new_dist = distances[u] + edge.weight
+
+            if new_dist &lt; distances[v]:
+                distances[v] = new_dist
+                parents[v] = u
+                heapq.heappush(pq, (new_dist, v))
+
+    return math.inf, []  # Target not reachable</code></pre>
+<h3>2. Bellman-Ford Algorithm</h3>
+<p><strong>Concept</strong>: Dynamic programming approach that handles negative weights</p>
+<p><strong>Properties</strong>:</p>
+<ul><li><strong>Time</strong>: O(V × E)</li><li><strong>Space</strong>: O(V) for distances</li><li><strong>Constraint</strong>: Detects negative cycles</li><li><strong>Finds</strong>: Shortest paths even with negative weights</li></ul>
+<pre><code class="lang-python">@dataclass
+class BellmanFordResult:
+    &quot;&quot;&quot;Results from Bellman-Ford algorithm&quot;&quot;&quot;
+    distances: Dict[int, float]
+    parents: Dict[int, Optional[int]]
+    has_negative_cycle: bool
+
+    def get_path(self, target: int) -&gt; Optional[List[int]]:
+        &quot;&quot;&quot;Reconstruct path if no negative cycle&quot;&quot;&quot;
+        if self.has_negative_cycle:
+            return None
+
+        if target not in self.parents:
+            return None
+
+        path = []
+        current = target
+
+        while current is not None:
+            path.append(current)
+            current = self.parents[current]
+
+        return list(reversed(path))
+
+def bellman_ford(graph: &#x27;WeightedGraph&#x27;, source: int) -&gt; BellmanFordResult:
+    &quot;&quot;&quot;
+    Bellman-Ford shortest path algorithm
+
+    Handles negative edge weights and detects negative cycles
+    &quot;&quot;&quot;
+    # Initialize
+    distances = {v: math.inf for v in range(graph.num_vertices)}
+    distances[source] = 0
+    parents = {source: None}
+
+    # Relax all edges V-1 times
+    for _ in range(graph.num_vertices - 1):
+        for u in range(graph.num_vertices):
+            if distances[u] == math.inf:
+                continue
+
+            for edge in graph.adj[u]:
+                v = edge.dest
+                new_dist = distances[u] + edge.weight
+
+                if new_dist &lt; distances[v]:
+                    distances[v] = new_dist
+                    parents[v] = u
+
+    # Check for negative cycles
+    has_negative_cycle = False
+
+    for u in range(graph.num_vertices):
+        if distances[u] == math.inf:
+            continue
+
+        for edge in graph.adj[u]:
+            v = edge.dest
+            if distances[u] + edge.weight &lt; distances[v]:
+                has_negative_cycle = True
+                break
+
+        if has_negative_cycle:
+            break
+
+    return BellmanFordResult(distances, parents, has_negative_cycle)
+
+# Example with negative weights
+graph_neg = WeightedGraph(4, directed=True)
+graph_neg.add_edge(0, 1, 1)
+graph_neg.add_edge(1, 2, -2)
+graph_neg.add_edge(2, 3, 3)
+graph_neg.add_edge(0, 3, 5)
+
+result = bellman_ford(graph_neg, source=0)
+print(f&quot;Has negative cycle: {result.has_negative_cycle}&quot;)  # False
+print(f&quot;Distance to 3: {result.distances[3]}&quot;)              # 2.0</code></pre>
+<p><strong>SPFA (Shortest Path Faster Algorithm)</strong>:</p>
+<pre><code class="lang-python">from collections import deque
+
+def spfa(graph: &#x27;WeightedGraph&#x27;, source: int) -&gt; BellmanFordResult:
+    &quot;&quot;&quot;
+    SPFA: Queue-based optimization of Bellman-Ford
+
+    Average case: O(E), worst case: O(V × E)
+    Often faster in practice than standard Bellman-Ford
+    &quot;&quot;&quot;
+    distances = {v: math.inf for v in range(graph.num_vertices)}
+    distances[source] = 0
+    parents = {source: None}
+
+    queue = deque([source])
+    in_queue = {source}
+    relax_count = {v: 0 for v in range(graph.num_vertices)}
+
+    while queue:
+        u = queue.popleft()
+        in_queue.discard(u)
+
+        for edge in graph.adj[u]:
+            v = edge.dest
+            new_dist = distances[u] + edge.weight
+
+            if new_dist &lt; distances[v]:
+                distances[v] = new_dist
+                parents[v] = u
+
+                if v not in in_queue:
+                    queue.append(v)
+                    in_queue.add(v)
+
+                    relax_count[v] += 1
+
+                    # Negative cycle detection
+                    if relax_count[v] &gt;= graph.num_vertices:
+                        return BellmanFordResult({}, {}, True)
+
+    return BellmanFordResult(distances, parents, False)</code></pre>
+<h3>3. Floyd-Warshall Algorithm</h3>
+<p><strong>Concept</strong>: Dynamic programming for all-pairs shortest paths</p>
+<p><strong>Properties</strong>:</p>
+<ul><li><strong>Time</strong>: O(V³)</li><li><strong>Space</strong>: O(V²) for distance matrix</li><li><strong>Constraint</strong>: Can detect negative cycles</li><li><strong>Finds</strong>: Shortest paths between all pairs of vertices</li></ul>
+<pre><code class="lang-python">def floyd_warshall(graph: &#x27;WeightedGraph&#x27;) -&gt; Tuple[List[List[float]],
+                                                     List[List[Optional[int]]]]:
+    &quot;&quot;&quot;
+    Floyd-Warshall all-pairs shortest paths
+
+    Returns:
+        (dist, next) where:
+        - dist[i][j] = shortest distance from i to j
+        - next[i][j] = next vertex on shortest path from i to j
+    &quot;&quot;&quot;
+    n = graph.num_vertices
+
+    # Initialize distance matrix
+    dist = [[math.inf] * n for _ in range(n)]
+    next_vertex = [[None] * n for _ in range(n)]
+
+    # Distance from vertex to itself is 0
+    for i in range(n):
+        dist[i][i] = 0
+
+    # Initialize with direct edges
+    for u in range(n):
+        for edge in graph.adj[u]:
+            v = edge.dest
+            dist[u][v] = edge.weight
+            next_vertex[u][v] = v
+
+    # Floyd-Warshall: Try each intermediate vertex k
+    for k in range(n):
+        for i in range(n):
+            for j in range(n):
+                new_dist = dist[i][k] + dist[k][j]
+
+                if new_dist &lt; dist[i][j]:
+                    dist[i][j] = new_dist
+                    next_vertex[i][j] = next_vertex[i][k]
+
+    # Check for negative cycles
+    for i in range(n):
+        if dist[i][i] &lt; 0:
+            raise ValueError(&quot;Graph contains negative cycle&quot;)
+
+    return dist, next_vertex
+
+def reconstruct_path_fw(next_vertex: List[List[Optional[int]]],
+                       u: int, v: int) -&gt; Optional[List[int]]:
+    &quot;&quot;&quot;Reconstruct path from u to v using Floyd-Warshall next pointers&quot;&quot;&quot;
+    if next_vertex[u][v] is None:
+        return None
+
+    path = [u]
+    current = u
+
+    while current != v:
+        current = next_vertex[current][v]
+        path.append(current)
+
+    return path
+
+# Example usage
+graph = WeightedGraph(4, directed=True)
+graph.add_edge(0, 1, 3)
+graph.add_edge(0, 2, 8)
+graph.add_edge(1, 3, 1)
+graph.add_edge(2, 1, 4)
+graph.add_edge(3, 0, 2)
+graph.add_edge(3, 2, -5)
+
+dist, next_v = floyd_warshall(graph)
+path = reconstruct_path_fw(next_v, 0, 2)
+print(f&quot;Shortest path 0→2: {path}&quot;)     # [0, 1, 3, 2]
+print(f&quot;Distance: {dist[0][2]}&quot;)         # -1.0</code></pre>
+<h3>4. A* Algorithm</h3>
+<p><strong>Concept</strong>: Informed search using heuristic to guide exploration</p>
+<p><strong>Properties</strong>:</p>
+<ul><li><strong>Time</strong>: Depends on heuristic quality, often much better than Dijkstra</li><li><strong>Space</strong>: O(V) for open/closed sets</li><li><strong>Constraint</strong>: Requires admissible heuristic (never overestimates)</li><li><strong>Finds</strong>: Optimal path if heuristic is consistent</li></ul>
+<pre><code class="lang-python">from typing import Callable
+
+def a_star(graph: &#x27;WeightedGraph&#x27;,
+          source: int,
+          target: int,
+          heuristic: Callable[[int, int], float]) -&gt; Tuple[float, List[int]]:
+    &quot;&quot;&quot;
+    A* shortest path algorithm with heuristic
+
+    Args:
+        graph: Weighted graph
+        source: Start vertex
+        target: Goal vertex
+        heuristic: h(v, target) estimates distance from v to target
+
+    Returns:
+        (distance, path) from source to target
+
+    Heuristic must be admissible: h(v, target) ≤ true distance
+    &quot;&quot;&quot;
+    # g[v] = cost from source to v
+    g_score = {v: math.inf for v in range(graph.num_vertices)}
+    g_score[source] = 0
+
+    # f[v] = g[v] + h(v, target) = estimated total cost
+    f_score = {source: heuristic(source, target)}
+
+    parents = {source: None}
+
+    # Priority queue: (f_score, vertex)
+    open_set = [(f_score[source], source)]
+    closed_set = set()
+
+    while open_set:
+        _, current = heapq.heappop(open_set)
+
+        # Found target
+        if current == target:
+            path = []
+            node = current
+            while node is not None:
+                path.append(node)
+                node = parents[node]
+            return g_score[target], list(reversed(path))
+
+        if current in closed_set:
+            continue
+
+        closed_set.add(current)
+
+        # Explore neighbors
+        for edge in graph.adj[current]:
+            neighbor = edge.dest
+
+            if neighbor in closed_set:
+                continue
+
+            tentative_g = g_score[current] + edge.weight
+
+            if tentative_g &lt; g_score[neighbor]:
+                parents[neighbor] = current
+                g_score[neighbor] = tentative_g
+                f_score[neighbor] = tentative_g + heuristic(neighbor, target)
+
+                heapq.heappush(open_set, (f_score[neighbor], neighbor))
+
+    return math.inf, []  # No path found
+
+# Example: Grid graph with Manhattan distance heuristic
+class GridGraph:
+    &quot;&quot;&quot;2D grid represented as graph&quot;&quot;&quot;
+
+    def __init__(self, width: int, height: int):
+        self.width = width
+        self.height = height
+        self.graph = WeightedGraph(width * height, directed=False)
+
+        # Connect adjacent cells
+        for y in range(height):
+            for x in range(width):
+                u = y * width + x
+
+                # Right neighbor
+                if x + 1 &lt; width:
+                    v = y * width + (x + 1)
+                    self.graph.add_edge(u, v, 1)
+
+                # Down neighbor
+                if y + 1 &lt; height:
+                    v = (y + 1) * width + x
+                    self.graph.add_edge(u, v, 1)
+
+    def manhattan_heuristic(self, v: int, target: int) -&gt; float:
+        &quot;&quot;&quot;Manhattan distance on grid&quot;&quot;&quot;
+        v_x, v_y = v % self.width, v // self.width
+        t_x, t_y = target % self.width, target // self.width
+        return abs(v_x - t_x) + abs(v_y - t_y)
+
+# Find path in 10×10 grid
+grid = GridGraph(10, 10)
+source = 0  # Top-left
+target = 99  # Bottom-right
+
+dist, path = a_star(
+    grid.graph,
+    source,
+    target,
+    lambda v, t: grid.manhattan_heuristic(v, t)
+)
+
+print(f&quot;A* path length: {len(path)}&quot;)  # 19 (Manhattan distance = 18 + 1)
+print(f&quot;Distance: {dist}&quot;)              # 18.0</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Algorithm Selection</h3>
+<pre><code class="lang-python">def choose_shortest_path_algorithm(graph_info: dict) -&gt; str:
+    &quot;&quot;&quot;
+    Select optimal shortest path algorithm based on graph properties
+    &quot;&quot;&quot;
+    has_negative_weights = graph_info.get(&quot;has_negative_weights&quot;, False)
+    all_pairs = graph_info.get(&quot;all_pairs_needed&quot;, False)
+    has_heuristic = graph_info.get(&quot;has_heuristic&quot;, False)
+    num_vertices = graph_info[&quot;num_vertices&quot;]
+    num_edges = graph_info[&quot;num_edges&quot;]
+
+    if all_pairs:
+        if num_vertices &lt;= 400:
+            return &quot;Floyd-Warshall&quot;  # O(V³) acceptable
+        else:
+            return &quot;Multiple Dijkstra&quot;  # V × O(E log V)
+
+    if has_negative_weights:
+        if num_edges &lt; num_vertices * 10:
+            return &quot;SPFA&quot;  # Often faster for sparse graphs
+        else:
+            return &quot;Bellman-Ford&quot;
+
+    if has_heuristic:
+        return &quot;A*&quot;  # Best for single-target with good heuristic
+
+    return &quot;Dijkstra&quot;  # Default for non-negative weights</code></pre>
+<h3>Pattern 2: Path Reconstruction Helper</h3>
+<pre><code class="lang-python">class ShortestPathSolver:
+    &quot;&quot;&quot;Unified interface for shortest path algorithms&quot;&quot;&quot;
+
+    @staticmethod
+    def solve(graph: &#x27;WeightedGraph&#x27;,
+             source: int,
+             target: Optional[int] = None,
+             algorithm: str = &quot;auto&quot;) -&gt; Dict:
+        &quot;&quot;&quot;
+        Solve shortest path problem with automatic algorithm selection
+        &quot;&quot;&quot;
+        has_negative = any(
+            edge.weight &lt; 0
+            for u in range(graph.num_vertices)
+            for edge in graph.adj[u]
+        )
+
+        if algorithm == &quot;auto&quot;:
+            if has_negative:
+                algorithm = &quot;bellman-ford&quot;
+            elif target is not None:
+                algorithm = &quot;dijkstra-single&quot;
+            else:
+                algorithm = &quot;dijkstra&quot;
+
+        if algorithm == &quot;dijkstra&quot;:
+            result = dijkstra(graph, source)
+            return {
+                &quot;algorithm&quot;: &quot;Dijkstra&quot;,
+                &quot;distances&quot;: result.distances,
+                &quot;get_path&quot;: result.get_path
+            }
+
+        elif algorithm == &quot;dijkstra-single&quot;:
+            dist, path = dijkstra_single_target(graph, source, target)
+            return {
+                &quot;algorithm&quot;: &quot;Dijkstra (single-target)&quot;,
+                &quot;distance&quot;: dist,
+                &quot;path&quot;: path
+            }
+
+        elif algorithm == &quot;bellman-ford&quot;:
+            result = bellman_ford(graph, source)
+            return {
+                &quot;algorithm&quot;: &quot;Bellman-Ford&quot;,
+                &quot;distances&quot;: result.distances,
+                &quot;has_negative_cycle&quot;: result.has_negative_cycle,
+                &quot;get_path&quot;: result.get_path
+            }
+
+        else:
+            raise ValueError(f&quot;Unknown algorithm: {algorithm}&quot;)</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Algorithm Comparison</h3>
+<p>| Algorithm | Time | Space | Negative Weights | All Pairs | Best Use Case | |-----------|------|-------|------------------|-----------|---------------| | Dijkstra | O((V+E) log V) | O(V) | ❌ | ❌ | Non-negative, single-source | | Bellman-Ford | O(VE) | O(V) | ✅ | ❌ | Negative weights, cycle detection | | SPFA | O(E) avg | O(V) | ✅ | ❌ | Sparse graphs, negative weights | | Floyd-Warshall | O(V³) | O(V²) | ✅ | ✅ | Small graphs, all pairs | | A* | Heuristic-dependent | O(V) | ❌ | ❌ | Single target with heuristic |</p>
+<h3>When to Use Which</h3>
+<ul><li><strong>Dijkstra</strong>: Default for non-negative weights, best performance</li><li><strong>Bellman-Ford</strong>: Negative weights, need cycle detection</li><li><strong>SPFA</strong>: Optimization of Bellman-Ford for sparse graphs</li><li><strong>Floyd-Warshall</strong>: All-pairs distances, small graphs (V ≤ 400)</li><li><strong>A</strong>*: Single target, good heuristic available (games, robotics)</li></ul>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Using Dijkstra with Negative Weights</h3>
+<pre><code class="lang-python"># WRONG: Dijkstra fails with negative weights
+graph.add_edge(0, 1, -5)
+result = dijkstra(graph, 0)  # Incorrect results!
+
+# CORRECT: Use Bellman-Ford or SPFA
+result = bellman_ford(graph, 0)</code></pre>
+<h3>❌ Not Checking for Negative Cycles</h3>
+<pre><code class="lang-python"># WRONG: Assume result is valid
+result = bellman_ford(graph, 0)
+print(result.distances[target])  # May be incorrect!
+
+# CORRECT: Check for negative cycle
+result = bellman_ford(graph, 0)
+if result.has_negative_cycle:
+    print(&quot;No shortest path exists (negative cycle)&quot;)
+else:
+    print(result.distances[target])</code></pre>
+<h3>❌ Using Floyd-Warshall for Large Graphs</h3>
+<pre><code class="lang-python"># WRONG: O(V³) for 10,000 vertices = 10¹² operations
+large_graph = WeightedGraph(10000)
+dist, next_v = floyd_warshall(large_graph)  # Too slow!
+
+# CORRECT: Run Dijkstra from each vertex
+for source in range(large_graph.num_vertices):
+    result = dijkstra(large_graph, source)
+    # Process result</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<p><strong>Next Steps</strong>:</p>
+<ul><li><code>minimum-spanning-tree.md</code> → Kruskal and Prim algorithms</li><li><code>network-flow-algorithms.md</code> → Max flow, min cost flow</li><li><code>graph-applications.md</code> → Real-world routing and navigation</li></ul>
+<p><strong>Foundations</strong>:</p>
+<ul><li><code>graph-theory-fundamentals.md</code> → Basic graph concepts</li><li><code>graph-data-structures.md</code> → Efficient graph representations</li><li><code>graph-traversal-algorithms.md</code> → BFS and DFS basics</li></ul>
+<hr>
+<h2>Summary</h2>
+<p>Shortest path algorithms find optimal routes in weighted graphs:</p>
+<ul><li><strong>Dijkstra</strong>: Greedy algorithm for non-negative weights, O((V+E) log V)</li><li><strong>Bellman-Ford</strong>: DP for negative weights with cycle detection, O(VE)</li><li><strong>Floyd-Warshall</strong>: DP for all-pairs shortest paths, O(V³)</li><li><strong>A</strong>*: Informed search with heuristic guidance</li></ul>
+<p><strong>Key takeaways</strong>:</p>
+<ol><li>Dijkstra is fastest for non-negative weights</li><li>Bellman-Ford handles negative weights and detects negative cycles</li><li>Floyd-Warshall computes all-pairs distances but scales O(V³)</li><li>A* outperforms Dijkstra when good heuristic is available</li><li>Always validate graph properties before algorithm selection</li></ol>
+<p><strong>Next</strong>: Move to <code>minimum-spanning-tree.md</code> for MST algorithms.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/shortest-path-algorithms.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

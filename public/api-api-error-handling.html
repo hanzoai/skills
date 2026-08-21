@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>api-api-error-handling</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/api-api-error-handling.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/api-api-error-handling.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>api-api-error-handling</h1><p class="lede">Designing error responses for REST APIs</p><h1>API Error Handling</h1>
+<p><strong>Use this skill when:</strong></p>
+<ul><li>Designing error responses for REST APIs</li><li>Handling validation errors in API endpoints</li><li>Implementing consistent error formatting</li><li>Building user-friendly error messages</li><li>Setting up error logging and correlation</li><li>Choosing appropriate HTTP status codes</li></ul>
+<h2>Error Response Structure</h2>
+<h3>Standard Error Format</h3>
+<p>Design a consistent error response structure:</p>
+<pre><code class="lang-typescript">interface ErrorResponse {
+  code: string;              // Machine-readable error code
+  message: string;           // Human-readable message
+  details?: ErrorDetail[];   // Additional context
+  trace_id?: string;         // Request correlation ID
+  timestamp: string;         // ISO 8601 timestamp
+}
+
+interface ErrorDetail {
+  field?: string;            // Field name for validation errors
+  message: string;           // Specific error message
+  code?: string;             // Field-specific error code
+}
+
+// Example response
+{
+  &quot;code&quot;: &quot;VALIDATION_ERROR&quot;,
+  &quot;message&quot;: &quot;Request validation failed&quot;,
+  &quot;details&quot;: [
+    {
+      &quot;field&quot;: &quot;email&quot;,
+      &quot;message&quot;: &quot;Invalid email format&quot;,
+      &quot;code&quot;: &quot;INVALID_FORMAT&quot;
+    },
+    {
+      &quot;field&quot;: &quot;age&quot;,
+      &quot;message&quot;: &quot;Must be at least 18&quot;,
+      &quot;code&quot;: &quot;MIN_VALUE&quot;
+    }
+  ],
+  &quot;trace_id&quot;: &quot;a1b2c3d4-e5f6-7890&quot;,
+  &quot;timestamp&quot;: &quot;2025-10-18T10:30:00Z&quot;
+}</code></pre>
+<h3>Python/FastAPI Implementation</h3>
+<pre><code class="lang-python">from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, ValidationError
+from typing import Optional, List
+from datetime import datetime
+import uuid
+
+app = FastAPI()
+
+class ErrorDetail(BaseModel):
+    field: Optional[str] = None
+    message: str
+    code: Optional[str] = None
+
+class ErrorResponse(BaseModel):
+    code: str
+    message: str
+    details: Optional[List[ErrorDetail]] = None
+    trace_id: str
+    timestamp: str
+
+    @classmethod
+    def create(
+        cls,
+        code: str,
+        message: str,
+        details: Optional[List[ErrorDetail]] = None,
+        trace_id: Optional[str] = None
+    ):
+        return cls(
+            code=code,
+            message=message,
+            details=details,
+            trace_id=trace_id or str(uuid.uuid4()),
+            timestamp=datetime.utcnow().isoformat() + &quot;Z&quot;
+        )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError
+):
+    details = []
+    for error in exc.errors():
+        field = &quot;.&quot;.join(str(loc) for loc in error[&quot;loc&quot;][1:])
+        details.append(ErrorDetail(
+            field=field,
+            message=error[&quot;msg&quot;],
+            code=error[&quot;type&quot;].upper()
+        ))
+
+    error_response = ErrorResponse.create(
+        code=&quot;VALIDATION_ERROR&quot;,
+        message=&quot;Request validation failed&quot;,
+        details=details
+    )
+
+    return JSONResponse(
+        status_code=422,
+        content=error_response.model_dump()
+    )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    error_response = ErrorResponse.create(
+        code=get_error_code_for_status(exc.status_code),
+        message=exc.detail
+    )
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_response.model_dump()
+    )
+
+def get_error_code_for_status(status: int) -&gt; str:
+    &quot;&quot;&quot;Map HTTP status to error code&quot;&quot;&quot;
+    codes = {
+        400: &quot;BAD_REQUEST&quot;,
+        401: &quot;UNAUTHORIZED&quot;,
+        403: &quot;FORBIDDEN&quot;,
+        404: &quot;NOT_FOUND&quot;,
+        409: &quot;CONFLICT&quot;,
+        422: &quot;VALIDATION_ERROR&quot;,
+        429: &quot;RATE_LIMIT_EXCEEDED&quot;,
+        500: &quot;INTERNAL_ERROR&quot;,
+        503: &quot;SERVICE_UNAVAILABLE&quot;
+    }
+    return codes.get(status, &quot;UNKNOWN_ERROR&quot;)</code></pre>
+<h2>HTTP Status Code Selection</h2>
+<h3>Common Status Codes</h3>
+<p>Choose appropriate status codes for different errors:</p>
+<pre><code class="lang-python">from enum import IntEnum
+
+class HTTPStatus(IntEnum):
+    # 2xx Success
+    OK = 200                    # Request succeeded
+    CREATED = 201               # Resource created
+    NO_CONTENT = 204           # Success, no response body
+
+    # 4xx Client Errors
+    BAD_REQUEST = 400          # Invalid request format
+    UNAUTHORIZED = 401         # Missing/invalid authentication
+    FORBIDDEN = 403            # Authenticated but no permission
+    NOT_FOUND = 404            # Resource doesn&#x27;t exist
+    METHOD_NOT_ALLOWED = 405   # HTTP method not supported
+    CONFLICT = 409             # Resource state conflict
+    GONE = 410                 # Resource permanently deleted
+    UNPROCESSABLE_ENTITY = 422 # Validation error
+    TOO_MANY_REQUESTS = 429    # Rate limit exceeded
+
+    # 5xx Server Errors
+    INTERNAL_ERROR = 500       # Unexpected server error
+    NOT_IMPLEMENTED = 501      # Feature not implemented
+    SERVICE_UNAVAILABLE = 503  # Temporary unavailability
+    GATEWAY_TIMEOUT = 504      # Upstream timeout
+
+# Usage examples
+@app.post(&quot;/users&quot;)
+async def create_user(user: UserCreate):
+    if await user_exists(user.email):
+        raise HTTPException(
+            status_code=HTTPStatus.CONFLICT,
+            detail=&quot;User with this email already exists&quot;
+        )
+
+    return await create_user_record(user)
+
+@app.get(&quot;/users/{user_id}&quot;)
+async def get_user(user_id: str):
+    user = await find_user(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail=f&quot;User {user_id} not found&quot;
+        )
+
+    return user</code></pre>
+<h2>Validation Error Formatting</h2>
+<h3>Field-Level Validation</h3>
+<p>Format validation errors clearly:</p>
+<pre><code class="lang-python">from pydantic import BaseModel, Field, validator, EmailStr
+from typing import List
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=100)
+    age: int = Field(..., ge=18, le=120)
+    tags: List[str] = Field(default=[], max_items=10)
+
+    @validator(&quot;password&quot;)
+    def validate_password(cls, v):
+        if not any(c.isupper() for c in v):
+            raise ValueError(&quot;Password must contain uppercase letter&quot;)
+        if not any(c.isdigit() for c in v):
+            raise ValueError(&quot;Password must contain digit&quot;)
+        return v
+
+# Produces error like:
+{
+  &quot;code&quot;: &quot;VALIDATION_ERROR&quot;,
+  &quot;message&quot;: &quot;Request validation failed&quot;,
+  &quot;details&quot;: [
+    {
+      &quot;field&quot;: &quot;email&quot;,
+      &quot;message&quot;: &quot;value is not a valid email address&quot;,
+      &quot;code&quot;: &quot;VALUE_ERROR_EMAIL&quot;
+    },
+    {
+      &quot;field&quot;: &quot;password&quot;,
+      &quot;message&quot;: &quot;Password must contain uppercase letter&quot;,
+      &quot;code&quot;: &quot;VALUE_ERROR&quot;
+    },
+    {
+      &quot;field&quot;: &quot;age&quot;,
+      &quot;message&quot;: &quot;ensure this value is greater than or equal to 18&quot;,
+      &quot;code&quot;: &quot;VALUE_ERROR_NUMBER_GE&quot;
+    }
+  ],
+  &quot;trace_id&quot;: &quot;abc123&quot;,
+  &quot;timestamp&quot;: &quot;2025-10-18T10:30:00Z&quot;
+}</code></pre>
+<h3>Custom Validation Messages</h3>
+<p>Provide user-friendly validation messages:</p>
+<pre><code class="lang-python">class ErrorMessages:
+    &quot;&quot;&quot;Centralized error messages&quot;&quot;&quot;
+
+    EMAIL_INVALID = &quot;Please enter a valid email address&quot;
+    EMAIL_EXISTS = &quot;An account with this email already exists&quot;
+
+    PASSWORD_TOO_SHORT = &quot;Password must be at least 8 characters&quot;
+    PASSWORD_NO_UPPERCASE = &quot;Password must contain an uppercase letter&quot;
+    PASSWORD_NO_DIGIT = &quot;Password must contain a number&quot;
+
+    AGE_TOO_YOUNG = &quot;You must be at least 18 years old&quot;
+    AGE_INVALID = &quot;Please enter a valid age&quot;
+
+    REQUIRED_FIELD = &quot;{field} is required&quot;
+    FIELD_TOO_LONG = &quot;{field} must be at most {max} characters&quot;
+
+def format_validation_error(field: str, error_type: str, **context) -&gt; str:
+    &quot;&quot;&quot;Format validation errors with context&quot;&quot;&quot;
+    messages = {
+        &quot;email_invalid&quot;: ErrorMessages.EMAIL_INVALID,
+        &quot;password_too_short&quot;: ErrorMessages.PASSWORD_TOO_SHORT,
+        &quot;age_too_young&quot;: ErrorMessages.AGE_TOO_YOUNG.format(**context),
+        &quot;required&quot;: ErrorMessages.REQUIRED_FIELD.format(field=field),
+    }
+    return messages.get(error_type, f&quot;Validation failed for {field}&quot;)</code></pre>
+<h2>User-Friendly vs Developer-Friendly Errors</h2>
+<h3>Dual Error Messages</h3>
+<p>Provide different messages for different audiences:</p>
+<pre><code class="lang-python">class APIError(Exception):
+    def __init__(
+        self,
+        code: str,
+        user_message: str,
+        dev_message: Optional[str] = None,
+        status_code: int = 500,
+        details: Optional[List[ErrorDetail]] = None
+    ):
+        self.code = code
+        self.user_message = user_message
+        self.dev_message = dev_message or user_message
+        self.status_code = status_code
+        self.details = details
+        super().__init__(self.dev_message)
+
+@app.exception_handler(APIError)
+async def api_error_handler(request: Request, exc: APIError):
+    # Log developer message
+    logger.error(
+        f&quot;API Error: {exc.code}&quot;,
+        extra={
+            &quot;dev_message&quot;: exc.dev_message,
+            &quot;trace_id&quot;: request.state.trace_id,
+            &quot;path&quot;: request.url.path,
+        }
+    )
+
+    # Return user-friendly message
+    error_response = ErrorResponse.create(
+        code=exc.code,
+        message=exc.user_message,  # User sees this
+        details=exc.details,
+        trace_id=request.state.trace_id
+    )
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_response.model_dump()
+    )
+
+# Usage
+@app.get(&quot;/users/{user_id}&quot;)
+async def get_user(user_id: str):
+    try:
+        user = await db.get_user(user_id)
+    except DatabaseError as e:
+        raise APIError(
+            code=&quot;DATABASE_ERROR&quot;,
+            user_message=&quot;We&#x27;re having trouble retrieving your data. Please try again.&quot;,
+            dev_message=f&quot;Database query failed: {str(e)}&quot;,
+            status_code=500
+        )
+
+    if not user:
+        raise APIError(
+            code=&quot;USER_NOT_FOUND&quot;,
+            user_message=&quot;We couldn&#x27;t find a user with that ID&quot;,
+            dev_message=f&quot;User {user_id} not found in database&quot;,
+            status_code=404
+        )
+
+    return user</code></pre>
+<h2>Error Logging and Correlation</h2>
+<h3>Request Tracing</h3>
+<p>Implement trace IDs for error correlation:</p>
+<pre><code class="lang-python">from fastapi import Request
+import logging
+import uuid
+
+logger = logging.getLogger(__name__)
+
+@app.middleware(&quot;http&quot;)
+async def add_trace_id(request: Request, call_next):
+    # Generate or extract trace ID
+    trace_id = request.headers.get(&quot;X-Trace-ID&quot;) or str(uuid.uuid4())
+    request.state.trace_id = trace_id
+
+    response = await call_next(request)
+    response.headers[&quot;X-Trace-ID&quot;] = trace_id
+
+    return response
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    trace_id = getattr(request.state, &quot;trace_id&quot;, str(uuid.uuid4()))
+
+    # Log full error details
+    logger.exception(
+        f&quot;Unhandled exception: {type(exc).__name__}&quot;,
+        extra={
+            &quot;trace_id&quot;: trace_id,
+            &quot;path&quot;: request.url.path,
+            &quot;method&quot;: request.method,
+            &quot;user_agent&quot;: request.headers.get(&quot;user-agent&quot;),
+            &quot;client_ip&quot;: request.client.host,
+        }
+    )
+
+    # Return sanitized error to client
+    error_response = ErrorResponse.create(
+        code=&quot;INTERNAL_ERROR&quot;,
+        message=&quot;An unexpected error occurred. Please contact support with trace ID.&quot;,
+        trace_id=trace_id
+    )
+
+    return JSONResponse(
+        status_code=500,
+        content=error_response.model_dump()
+    )</code></pre>
+<h3>Structured Logging</h3>
+<p>Log errors with structured data:</p>
+<pre><code class="lang-python">import structlog
+
+logger = structlog.get_logger()
+
+async def log_error(
+    error: Exception,
+    trace_id: str,
+    request: Request,
+    user_id: Optional[str] = None
+):
+    &quot;&quot;&quot;Log error with full context&quot;&quot;&quot;
+    logger.error(
+        &quot;api_error&quot;,
+        error_type=type(error).__name__,
+        error_message=str(error),
+        trace_id=trace_id,
+        path=request.url.path,
+        method=request.method,
+        status_code=getattr(error, &quot;status_code&quot;, 500),
+        user_id=user_id,
+        user_agent=request.headers.get(&quot;user-agent&quot;),
+        referer=request.headers.get(&quot;referer&quot;),
+    )</code></pre>
+<h2>RFC 7807 Problem Details</h2>
+<h3>Standard Problem Format</h3>
+<p>Implement RFC 7807 for errors:</p>
+<pre><code class="lang-python">from pydantic import BaseModel, HttpUrl
+from typing import Optional, Dict, Any
+
+class ProblemDetail(BaseModel):
+    &quot;&quot;&quot;RFC 7807 Problem Details for HTTP APIs&quot;&quot;&quot;
+
+    type: str                           # URI reference identifying problem type
+    title: str                          # Short, human-readable summary
+    status: int                         # HTTP status code
+    detail: Optional[str] = None        # Human-readable explanation
+    instance: Optional[str] = None      # URI reference to specific occurrence
+    extensions: Optional[Dict[str, Any]] = None  # Additional context
+
+    class Config:
+        json_schema_extra = {
+            &quot;example&quot;: {
+                &quot;type&quot;: &quot;https://api.example.com/errors/validation&quot;,
+                &quot;title&quot;: &quot;Validation Error&quot;,
+                &quot;status&quot;: 422,
+                &quot;detail&quot;: &quot;The request body contains invalid fields&quot;,
+                &quot;instance&quot;: &quot;/users/create&quot;,
+                &quot;trace_id&quot;: &quot;abc-123&quot;,
+                &quot;invalid_fields&quot;: [&quot;email&quot;, &quot;age&quot;]
+            }
+        }
+
+@app.exception_handler(RequestValidationError)
+async def rfc7807_validation_handler(
+    request: Request,
+    exc: RequestValidationError
+):
+    invalid_fields = [
+        &quot;.&quot;.join(str(loc) for loc in error[&quot;loc&quot;][1:])
+        for error in exc.errors()
+    ]
+
+    problem = ProblemDetail(
+        type=&quot;https://api.example.com/errors/validation&quot;,
+        title=&quot;Validation Error&quot;,
+        status=422,
+        detail=&quot;The request contains invalid or missing fields&quot;,
+        instance=str(request.url.path),
+        extensions={
+            &quot;trace_id&quot;: request.state.trace_id,
+            &quot;invalid_fields&quot;: invalid_fields,
+            &quot;errors&quot;: exc.errors()
+        }
+    )
+
+    return JSONResponse(
+        status_code=422,
+        content=problem.model_dump(exclude_none=True),
+        headers={&quot;Content-Type&quot;: &quot;application/problem+json&quot;}
+    )</code></pre>
+<h2>Error Internationalization</h2>
+<h3>Multi-Language Errors</h3>
+<p>Support error messages in multiple languages:</p>
+<pre><code class="lang-python">from typing import Dict
+from enum import Enum
+
+class Language(str, Enum):
+    EN = &quot;en&quot;
+    ES = &quot;es&quot;
+    FR = &quot;fr&quot;
+
+ERROR_MESSAGES: Dict[str, Dict[Language, str]] = {
+    &quot;USER_NOT_FOUND&quot;: {
+        Language.EN: &quot;User not found&quot;,
+        Language.ES: &quot;Usuario no encontrado&quot;,
+        Language.FR: &quot;Utilisateur non trouvé&quot;
+    },
+    &quot;VALIDATION_ERROR&quot;: {
+        Language.EN: &quot;Request validation failed&quot;,
+        Language.ES: &quot;Error de validación de solicitud&quot;,
+        Language.FR: &quot;Échec de validation de la demande&quot;
+    },
+    &quot;UNAUTHORIZED&quot;: {
+        Language.EN: &quot;Authentication required&quot;,
+        Language.ES: &quot;Autenticación requerida&quot;,
+        Language.FR: &quot;Authentification requise&quot;
+    }
+}
+
+def get_error_message(code: str, lang: Language = Language.EN) -&gt; str:
+    &quot;&quot;&quot;Get localized error message&quot;&quot;&quot;
+    messages = ERROR_MESSAGES.get(code, {})
+    return messages.get(lang, messages.get(Language.EN, code))
+
+@app.middleware(&quot;http&quot;)
+async def add_language_context(request: Request, call_next):
+    # Extract language from header
+    accept_lang = request.headers.get(&quot;Accept-Language&quot;, &quot;en&quot;)
+    lang = accept_lang.split(&quot;,&quot;)[0].split(&quot;-&quot;)[0].lower()
+
+    try:
+        request.state.language = Language(lang)
+    except ValueError:
+        request.state.language = Language.EN
+
+    return await call_next(request)
+
+@app.exception_handler(HTTPException)
+async def localized_http_exception_handler(
+    request: Request,
+    exc: HTTPException
+):
+    lang = getattr(request.state, &quot;language&quot;, Language.EN)
+    code = get_error_code_for_status(exc.status_code)
+
+    error_response = ErrorResponse.create(
+        code=code,
+        message=get_error_message(code, lang)
+    )
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_response.model_dump()
+    )</code></pre>
+<h2>Best Practices</h2>
+<h3>Security Considerations</h3>
+<p>Avoid leaking sensitive information:</p>
+<pre><code class="lang-python"># ❌ BAD - Exposes internal details
+@app.get(&quot;/users/{user_id}&quot;)
+async def get_user(user_id: str):
+    try:
+        result = await db.execute(f&quot;SELECT * FROM users WHERE id = {user_id}&quot;)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f&quot;Database error: {str(e)}&quot;  # Leaks SQL details!
+        )
+
+# ✅ GOOD - Generic error, detailed logging
+@app.get(&quot;/users/{user_id}&quot;)
+async def get_user(user_id: str, request: Request):
+    try:
+        result = await db.execute(query, user_id=user_id)
+    except Exception as e:
+        # Log full details
+        logger.exception(&quot;Database query failed&quot;, extra={
+            &quot;trace_id&quot;: request.state.trace_id,
+            &quot;query&quot;: query,
+            &quot;user_id&quot;: user_id
+        })
+
+        # Return generic error
+        raise HTTPException(
+            status_code=500,
+            detail=&quot;An error occurred while retrieving user data&quot;
+        )</code></pre>
+<h3>Consistent Error Codes</h3>
+<p>Define error codes consistently:</p>
+<pre><code class="lang-python">class ErrorCode:
+    &quot;&quot;&quot;Centralized error code definitions&quot;&quot;&quot;
+
+    # Authentication &amp; Authorization
+    UNAUTHORIZED = &quot;UNAUTHORIZED&quot;
+    INVALID_CREDENTIALS = &quot;INVALID_CREDENTIALS&quot;
+    TOKEN_EXPIRED = &quot;TOKEN_EXPIRED&quot;
+    FORBIDDEN = &quot;FORBIDDEN&quot;
+
+    # Resource Errors
+    NOT_FOUND = &quot;NOT_FOUND&quot;
+    ALREADY_EXISTS = &quot;ALREADY_EXISTS&quot;
+    CONFLICT = &quot;CONFLICT&quot;
+
+    # Validation Errors
+    VALIDATION_ERROR = &quot;VALIDATION_ERROR&quot;
+    INVALID_FORMAT = &quot;INVALID_FORMAT&quot;
+    MISSING_FIELD = &quot;MISSING_FIELD&quot;
+
+    # Rate Limiting
+    RATE_LIMIT_EXCEEDED = &quot;RATE_LIMIT_EXCEEDED&quot;
+
+    # Server Errors
+    INTERNAL_ERROR = &quot;INTERNAL_ERROR&quot;
+    SERVICE_UNAVAILABLE = &quot;SERVICE_UNAVAILABLE&quot;
+    DATABASE_ERROR = &quot;DATABASE_ERROR&quot;</code></pre>
+<h3>Error Response Templates</h3>
+<p>Create reusable error responses:</p>
+<pre><code class="lang-python">class ErrorTemplates:
+    @staticmethod
+    def not_found(resource: str, identifier: str) -&gt; APIError:
+        return APIError(
+            code=ErrorCode.NOT_FOUND,
+            user_message=f&quot;{resource} not found&quot;,
+            dev_message=f&quot;{resource} with id &#x27;{identifier}&#x27; does not exist&quot;,
+            status_code=404
+        )
+
+    @staticmethod
+    def already_exists(resource: str, field: str, value: str) -&gt; APIError:
+        return APIError(
+            code=ErrorCode.ALREADY_EXISTS,
+            user_message=f&quot;{resource} already exists&quot;,
+            dev_message=f&quot;{resource} with {field}=&#x27;{value}&#x27; already exists&quot;,
+            status_code=409
+        )
+
+    @staticmethod
+    def unauthorized(reason: Optional[str] = None) -&gt; APIError:
+        return APIError(
+            code=ErrorCode.UNAUTHORIZED,
+            user_message=&quot;Authentication required&quot;,
+            dev_message=reason or &quot;No valid authentication credentials&quot;,
+            status_code=401
+        )
+
+# Usage
+@app.get(&quot;/users/{user_id}&quot;)
+async def get_user(user_id: str):
+    user = await db.get_user(user_id)
+    if not user:
+        raise ErrorTemplates.not_found(&quot;User&quot;, user_id)
+    return user
+
+@app.post(&quot;/users&quot;)
+async def create_user(user: UserCreate):
+    existing = await db.find_by_email(user.email)
+    if existing:
+        raise ErrorTemplates.already_exists(&quot;User&quot;, &quot;email&quot;, user.email)
+    return await db.create_user(user)</code></pre>
+<h2>Related Skills</h2>
+<ul><li><strong>modal-web-endpoints.md</strong> - Error handling in Modal APIs</li><li><strong>ios-networking.md</strong> - Client-side error handling</li><li><strong>network-resilience-patterns.md</strong> - Retry and timeout patterns</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/api-api-error-handling.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

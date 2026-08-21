@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ml-llm-dataset-preparation</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ml-llm-dataset-preparation.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ml-llm-dataset-preparation.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ml-llm-dataset-preparation</h1><p class="lede">Preparing training data for LLM fine-tuning</p><h1>LLM Dataset Preparation</h1>
+<p><strong>Scope</strong>: Dataset formatting, quality control, instruction tuning, chat templates, validation <strong>Lines</strong>: ~360 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Preparing training data for LLM fine-tuning</li><li>Converting datasets to instruction or chat format</li><li>Ensuring dataset quality before training</li><li>Creating custom training datasets from raw data</li><li>Debugging training issues related to data format</li><li>Splitting datasets for training and validation</li></ul>
+<h2>Core Concepts</h2>
+<h3>Dataset Quality Principles</h3>
+<p><strong>Quality over Quantity</strong>:</p>
+<ul><li>100 high-quality examples &gt; 10,000 low-quality examples</li><li>Clean, well-formatted data prevents training issues</li><li>Diverse examples improve generalization</li><li>Representative samples prevent bias</li></ul>
+<p><strong>Key Quality Metrics</strong>:</p>
+<ul><li>Correctness: Outputs are factually accurate</li><li>Consistency: Similar inputs have similar outputs</li><li>Completeness: Outputs fully address inputs</li><li>Diversity: Wide range of topics and styles</li><li>Length: Appropriate response length for task</li></ul>
+<h3>Common Dataset Formats</h3>
+<p><strong>Instruction Format</strong> (Alpaca):</p>
+<ul><li>Structured instruction-response pairs</li><li>Optional context/input field</li><li>Best for task-oriented fine-tuning</li></ul>
+<p><strong>Chat Format</strong> (ShareGPT/ChatML):</p>
+<ul><li>Multi-turn conversations</li><li>System, user, assistant roles</li><li>Best for conversational models</li></ul>
+<p><strong>Completion Format</strong>:</p>
+<ul><li>Simple text completion</li><li>Single text field</li><li>Best for domain adaptation</li></ul>
+<h3>Train/Validation Splits</h3>
+<p><strong>Standard Splits</strong>:</p>
+<ul><li>80/20 train/validation (small datasets &lt;1k)</li><li>90/10 train/validation (medium datasets 1k-10k)</li><li>95/5 train/validation (large datasets &gt;10k)</li></ul>
+<p><strong>Stratified Splitting</strong>:</p>
+<ul><li>Maintain label distribution</li><li>Balance topic diversity</li><li>Ensure edge cases in validation</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Alpaca Instruction Format</h3>
+<pre><code class="lang-python"># Single example structure
+alpaca_example = {
+    &quot;instruction&quot;: &quot;What is the capital of France?&quot;,
+    &quot;input&quot;: &quot;&quot;,  # Optional context
+    &quot;output&quot;: &quot;The capital of France is Paris.&quot;
+}
+
+# With context/input
+alpaca_with_context = {
+    &quot;instruction&quot;: &quot;Summarize the following text.&quot;,
+    &quot;input&quot;: &quot;Paris is the capital and most populous city of France...&quot;,
+    &quot;output&quot;: &quot;Paris is France&#x27;s capital and largest city.&quot;
+}
+
+# Format as training text
+alpaca_prompt = &quot;&quot;&quot;Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+{instruction}
+
+### Response:
+{output}&quot;&quot;&quot;
+
+# With input field
+alpaca_prompt_with_input = &quot;&quot;&quot;Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+
+### Instruction:
+{instruction}
+
+### Input:
+{input}
+
+### Response:
+{output}&quot;&quot;&quot;
+
+def format_alpaca(example):
+    &quot;&quot;&quot;Convert Alpaca dict to training text.&quot;&quot;&quot;
+    if example.get(&quot;input&quot;, &quot;&quot;).strip():
+        return alpaca_prompt_with_input.format(**example)
+    else:
+        return alpaca_prompt.format(**example)
+
+# Usage
+training_text = format_alpaca(alpaca_example)</code></pre>
+<h3>ShareGPT Chat Format</h3>
+<pre><code class="lang-python"># Multi-turn conversation structure
+sharegpt_example = {
+    &quot;conversations&quot;: [
+        {&quot;from&quot;: &quot;system&quot;, &quot;value&quot;: &quot;You are a helpful assistant.&quot;},
+        {&quot;from&quot;: &quot;human&quot;, &quot;value&quot;: &quot;What is Python?&quot;},
+        {&quot;from&quot;: &quot;gpt&quot;, &quot;value&quot;: &quot;Python is a high-level programming language known for its simplicity and versatility.&quot;},
+        {&quot;from&quot;: &quot;human&quot;, &quot;value&quot;: &quot;What are its main uses?&quot;},
+        {&quot;from&quot;: &quot;gpt&quot;, &quot;value&quot;: &quot;Python is commonly used for web development, data science, machine learning, automation, and scientific computing.&quot;}
+    ]
+}
+
+# Convert to training format
+def format_sharegpt(example, tokenizer):
+    &quot;&quot;&quot;Convert ShareGPT to training text with proper formatting.&quot;&quot;&quot;
+    conversation = example[&quot;conversations&quot;]
+
+    # Build conversation string
+    text = &quot;&quot;
+    for turn in conversation:
+        role = turn[&quot;from&quot;]
+        content = turn[&quot;value&quot;]
+
+        if role == &quot;system&quot;:
+            text += f&quot;&lt;|im_start|&gt;system\n{content}&lt;|im_end|&gt;\n&quot;
+        elif role == &quot;human&quot;:
+            text += f&quot;&lt;|im_start|&gt;user\n{content}&lt;|im_end|&gt;\n&quot;
+        elif role == &quot;gpt&quot;:
+            text += f&quot;&lt;|im_start|&gt;assistant\n{content}&lt;|im_end|&gt;\n&quot;
+
+    text += tokenizer.eos_token
+    return text</code></pre>
+<h3>ChatML Format (OpenAI-style)</h3>
+<pre><code class="lang-python"># Modern chat format
+chatml_example = {
+    &quot;messages&quot;: [
+        {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;You are a helpful assistant.&quot;},
+        {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;What is the capital of France?&quot;},
+        {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;The capital of France is Paris.&quot;}
+    ]
+}
+
+# Format for training
+def format_chatml(messages, tokenizer):
+    &quot;&quot;&quot;Convert ChatML messages to training text.&quot;&quot;&quot;
+    formatted = &quot;&quot;
+
+    for message in messages:
+        role = message[&quot;role&quot;]
+        content = message[&quot;content&quot;]
+        formatted += f&quot;&lt;|im_start|&gt;{role}\n{content}&lt;|im_end|&gt;\n&quot;
+
+    formatted += tokenizer.eos_token
+    return formatted
+
+# Validate message structure
+def validate_chatml(example):
+    &quot;&quot;&quot;Ensure ChatML format is valid.&quot;&quot;&quot;
+    messages = example.get(&quot;messages&quot;, [])
+
+    if not messages:
+        return False
+
+    # Check required fields
+    for msg in messages:
+        if &quot;role&quot; not in msg or &quot;content&quot; not in msg:
+            return False
+        if msg[&quot;role&quot;] not in [&quot;system&quot;, &quot;user&quot;, &quot;assistant&quot;]:
+            return False
+
+    return True</code></pre>
+<h3>Dataset Creation from Scratch</h3>
+<pre><code class="lang-python">from datasets import Dataset
+import json
+
+# Create dataset from list of examples
+examples = [
+    {
+        &quot;instruction&quot;: &quot;Explain what machine learning is.&quot;,
+        &quot;output&quot;: &quot;Machine learning is a subset of AI that enables systems to learn from data.&quot;
+    },
+    {
+        &quot;instruction&quot;: &quot;What is Python used for?&quot;,
+        &quot;output&quot;: &quot;Python is used for web development, data science, automation, and more.&quot;
+    },
+    # ... more examples
+]
+
+# Convert to Hugging Face Dataset
+dataset = Dataset.from_dict({
+    &quot;instruction&quot;: [ex[&quot;instruction&quot;] for ex in examples],
+    &quot;output&quot;: [ex[&quot;output&quot;] for ex in examples]
+})
+
+# Save to disk
+dataset.save_to_disk(&quot;./my_dataset&quot;)
+
+# Save as JSON
+with open(&quot;dataset.json&quot;, &quot;w&quot;) as f:
+    json.dump(examples, f, indent=2)
+
+# Save as JSONL (one example per line)
+with open(&quot;dataset.jsonl&quot;, &quot;w&quot;) as f:
+    for ex in examples:
+        f.write(json.dumps(ex) + &quot;\n&quot;)</code></pre>
+<h3>Data Cleaning Pipeline</h3>
+<pre><code class="lang-python">from datasets import load_dataset
+import re
+
+def clean_text(text):
+    &quot;&quot;&quot;Clean and normalize text.&quot;&quot;&quot;
+    # Remove excessive whitespace
+    text = re.sub(r&#x27;\s+&#x27;, &#x27; &#x27;, text)
+
+    # Remove special characters (keep basic punctuation)
+    text = re.sub(r&#x27;[^\w\s.,!?-]&#x27;, &#x27;&#x27;, text)
+
+    # Trim whitespace
+    text = text.strip()
+
+    return text
+
+def filter_quality(example, min_length=10, max_length=2048):
+    &quot;&quot;&quot;Filter out low-quality examples.&quot;&quot;&quot;
+    instruction = example.get(&quot;instruction&quot;, &quot;&quot;)
+    output = example.get(&quot;output&quot;, &quot;&quot;)
+
+    # Check minimum length
+    if len(output) &lt; min_length:
+        return False
+
+    # Check maximum length (prevent truncation)
+    if len(output) &gt; max_length:
+        return False
+
+    # Check for empty or placeholder text
+    if not instruction.strip() or not output.strip():
+        return False
+
+    # Check for common placeholder patterns
+    placeholders = [&quot;lorem ipsum&quot;, &quot;placeholder&quot;, &quot;TODO&quot;, &quot;xxx&quot;]
+    if any(p in output.lower() for p in placeholders):
+        return False
+
+    return True
+
+# Apply cleaning pipeline
+dataset = load_dataset(&quot;json&quot;, data_files=&quot;raw_data.json&quot;)
+dataset = dataset.map(lambda x: {
+    &quot;instruction&quot;: clean_text(x[&quot;instruction&quot;]),
+    &quot;output&quot;: clean_text(x[&quot;output&quot;])
+})
+dataset = dataset.filter(filter_quality)
+
+print(f&quot;Cleaned dataset: {len(dataset)} examples&quot;)</code></pre>
+<h3>Train/Validation Split</h3>
+<pre><code class="lang-python">from datasets import load_dataset, DatasetDict
+
+# Load dataset
+dataset = load_dataset(&quot;json&quot;, data_files=&quot;data.jsonl&quot;, split=&quot;train&quot;)
+
+# Simple split
+dataset_dict = dataset.train_test_split(test_size=0.1, seed=42)
+
+# Create DatasetDict with named splits
+final_dataset = DatasetDict({
+    &quot;train&quot;: dataset_dict[&quot;train&quot;],
+    &quot;validation&quot;: dataset_dict[&quot;test&quot;]
+})
+
+# Save splits
+final_dataset.save_to_disk(&quot;./dataset_with_splits&quot;)
+
+# Or save to Hub
+final_dataset.push_to_hub(&quot;username/dataset-name&quot;)
+
+# Stratified split (for classification)
+from sklearn.model_selection import train_test_split
+
+# Get labels
+labels = [ex[&quot;label&quot;] for ex in dataset]
+
+# Stratified split maintains label distribution
+train_idx, val_idx = train_test_split(
+    range(len(dataset)),
+    test_size=0.1,
+    stratify=labels,
+    random_state=42
+)
+
+train_dataset = dataset.select(train_idx)
+val_dataset = dataset.select(val_idx)</code></pre>
+<h3>Dataset Deduplication</h3>
+<pre><code class="lang-python">from datasets import load_dataset
+
+def deduplicate_dataset(dataset, key=&quot;text&quot;):
+    &quot;&quot;&quot;Remove duplicate examples.&quot;&quot;&quot;
+    seen = set()
+    unique_indices = []
+
+    for i, example in enumerate(dataset):
+        text = example[key]
+
+        # Use hash for memory efficiency
+        text_hash = hash(text)
+
+        if text_hash not in seen:
+            seen.add(text_hash)
+            unique_indices.append(i)
+
+    print(f&quot;Removed {len(dataset) - len(unique_indices)} duplicates&quot;)
+    return dataset.select(unique_indices)
+
+# Usage
+dataset = load_dataset(&quot;json&quot;, data_files=&quot;data.json&quot;)
+dataset = deduplicate_dataset(dataset[&quot;train&quot;], key=&quot;output&quot;)</code></pre>
+<h3>Converting Web Data to Training Format</h3>
+<pre><code class="lang-python">import requests
+from bs4 import BeautifulSoup
+
+def scrape_to_qa(url):
+    &quot;&quot;&quot;Convert FAQ page to Q&amp;A dataset.&quot;&quot;&quot;
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, &#x27;html.parser&#x27;)
+
+    qa_pairs = []
+
+    # Example: Find question-answer pairs
+    for qa in soup.find_all(&#x27;div&#x27;, class_=&#x27;faq-item&#x27;):
+        question = qa.find(&#x27;h3&#x27;, class_=&#x27;question&#x27;).get_text().strip()
+        answer = qa.find(&#x27;p&#x27;, class_=&#x27;answer&#x27;).get_text().strip()
+
+        qa_pairs.append({
+            &quot;instruction&quot;: question,
+            &quot;output&quot;: answer
+        })
+
+    return qa_pairs
+
+# Convert to Alpaca format
+faqs = scrape_to_qa(&quot;https://example.com/faq&quot;)
+dataset = Dataset.from_dict({
+    &quot;instruction&quot;: [qa[&quot;instruction&quot;] for qa in faqs],
+    &quot;output&quot;: [qa[&quot;output&quot;] for qa in faqs]
+})</code></pre>
+<h3>Data Augmentation</h3>
+<pre><code class="lang-python">import random
+
+def augment_instruction(instruction):
+    &quot;&quot;&quot;Create variations of instructions.&quot;&quot;&quot;
+    templates = [
+        &quot;{}&quot;,
+        &quot;Can you {}?&quot;,
+        &quot;Please {}&quot;,
+        &quot;I need help with: {}&quot;,
+        &quot;Explain: {}&quot;
+    ]
+
+    # Lowercase first word for some templates
+    inst_lower = instruction[0].lower() + instruction[1:]
+
+    return random.choice(templates).format(inst_lower)
+
+def augment_dataset(dataset, augmentation_factor=2):
+    &quot;&quot;&quot;Augment dataset by creating variations.&quot;&quot;&quot;
+    augmented = []
+
+    for example in dataset:
+        # Keep original
+        augmented.append(example)
+
+        # Create variations
+        for _ in range(augmentation_factor - 1):
+            augmented.append({
+                &quot;instruction&quot;: augment_instruction(example[&quot;instruction&quot;]),
+                &quot;output&quot;: example[&quot;output&quot;]
+            })
+
+    return Dataset.from_dict({
+        &quot;instruction&quot;: [ex[&quot;instruction&quot;] for ex in augmented],
+        &quot;output&quot;: [ex[&quot;output&quot;] for ex in augmented]
+    })</code></pre>
+<h3>Validation and Quality Checks</h3>
+<pre><code class="lang-python">def validate_dataset(dataset):
+    &quot;&quot;&quot;Comprehensive dataset validation.&quot;&quot;&quot;
+    issues = []
+
+    for i, example in enumerate(dataset):
+        # Check required fields
+        if &quot;text&quot; not in example and &quot;instruction&quot; not in example:
+            issues.append(f&quot;Example {i}: Missing text field&quot;)
+
+        # Check for empty content
+        text = example.get(&quot;text&quot;) or example.get(&quot;instruction&quot;, &quot;&quot;)
+        if not text.strip():
+            issues.append(f&quot;Example {i}: Empty text&quot;)
+
+        # Check length
+        if len(text) &lt; 10:
+            issues.append(f&quot;Example {i}: Text too short ({len(text)} chars)&quot;)
+
+        # Check encoding
+        try:
+            text.encode(&#x27;utf-8&#x27;)
+        except UnicodeEncodeError:
+            issues.append(f&quot;Example {i}: Invalid encoding&quot;)
+
+    if issues:
+        print(f&quot;Found {len(issues)} issues:&quot;)
+        for issue in issues[:10]:  # Show first 10
+            print(f&quot;  - {issue}&quot;)
+    else:
+        print(&quot;Dataset validation passed!&quot;)
+
+    return len(issues) == 0
+
+# Usage
+is_valid = validate_dataset(dataset)</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Dataset Format Summary</h3>
+<pre><code>Format        | Use Case              | Structure
+--------------|-----------------------|----------------------------
+Alpaca        | Instruction tuning    | instruction, input, output
+ShareGPT      | Multi-turn chat       | conversations (from, value)
+ChatML        | OpenAI-style chat     | messages (role, content)
+Completion    | Domain adaptation     | text
+Classification| Text classification   | text, label</code></pre>
+<h3>Minimum Dataset Sizes</h3>
+<pre><code>Task                    | Minimum Examples | Recommended
+------------------------|------------------|-------------
+Simple classification   | 100              | 1,000+
+Instruction tuning      | 500              | 5,000+
+Chat fine-tuning        | 1,000            | 10,000+
+Domain adaptation       | 10,000           | 100,000+</code></pre>
+<h3>Quality Checklist</h3>
+<pre><code>✅ No duplicate examples
+✅ No empty or null values
+✅ Consistent formatting across examples
+✅ Appropriate length (not too short or long)
+✅ Valid UTF-8 encoding
+✅ Train/validation split created
+✅ No placeholder or dummy text
+✅ Factually accurate outputs
+✅ Diverse topics and styles
+✅ Representative of target use case</code></pre>
+<h3>Common Cleaning Steps</h3>
+<pre><code class="lang-python"># 1. Remove duplicates
+dataset = deduplicate_dataset(dataset)
+
+# 2. Filter by length
+dataset = dataset.filter(lambda x: 10 &lt; len(x[&quot;text&quot;]) &lt; 2048)
+
+# 3. Clean text
+dataset = dataset.map(lambda x: {&quot;text&quot;: clean_text(x[&quot;text&quot;])})
+
+# 4. Remove placeholders
+dataset = dataset.filter(lambda x: &quot;TODO&quot; not in x[&quot;text&quot;])
+
+# 5. Split train/val
+dataset = dataset.train_test_split(test_size=0.1)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>No validation split</strong>: Can&#x27;t detect overfitting ✅ Always create validation split:</p>
+<pre><code class="lang-python">dataset = dataset.train_test_split(test_size=0.1)</code></pre>
+<p>❌ <strong>Inconsistent formatting</strong>: Training fails or poor results ✅ Validate format consistency before training:</p>
+<pre><code class="lang-python">validate_dataset(dataset)</code></pre>
+<p>❌ <strong>Including duplicates</strong>: Model memorizes instead of learning ✅ Deduplicate before training</p>
+<p>❌ <strong>Wrong prompt format for model</strong>: Model doesn&#x27;t follow instructions ✅ Use model&#x27;s native format (check model card):</p>
+<pre><code class="lang-python"># Check model card for correct format!
+# Llama 3: &lt;|begin_of_text|&gt;...&lt;|end_of_text|&gt;
+# ChatML: &lt;|im_start|&gt;...&lt;|im_end|&gt;</code></pre>
+<p>❌ <strong>Too much data cleaning</strong>: Lose important patterns ✅ Clean only obvious errors, preserve natural language variation</p>
+<p>❌ <strong>Ignoring dataset statistics</strong>: Miss data issues ✅ Analyze before training:</p>
+<pre><code class="lang-python">print(f&quot;Examples: {len(dataset)}&quot;)
+print(f&quot;Avg length: {sum(len(x[&#x27;text&#x27;]) for x in dataset) / len(dataset)}&quot;)
+print(f&quot;Max length: {max(len(x[&#x27;text&#x27;]) for x in dataset)}&quot;)</code></pre>
+<p>❌ <strong>No quality control</strong>: GIGO (garbage in, garbage out) ✅ Manually review random samples before training</p>
+<p>❌ <strong>Using raw web scraping without cleaning</strong>: Noise and errors ✅ Always clean and validate scraped data</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>unsloth-finetuning.md</code> - Fast fine-tuning with prepared datasets</li><li><code>huggingface-autotrain.md</code> - Automated training with datasets</li><li><code>lora-peft-techniques.md</code> - Efficient fine-tuning methods</li><li><code>data-validation.md</code> - Advanced validation techniques</li><li><code>text-preprocessing.md</code> - Text cleaning and normalization</li><li><code>huggingface-hub.md</code> - Uploading and managing datasets</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ml-llm-dataset-preparation.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

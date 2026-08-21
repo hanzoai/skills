@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ir-ranking-reranking</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ir-ranking-reranking.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ir-ranking-reranking.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ir-ranking-reranking</h1><p class="lede">Learning to rank, cross-encoder reranking, ranking features, and evaluation metrics (nDCG, MAP, MRR)</p><h1>Information Retrieval: Ranking and Reranking</h1>
+<p><strong>Scope</strong>: Learning to rank algorithms, cross-encoder reranking, ranking features, evaluation metrics, and two-stage retrieval <strong>Lines</strong>: ~320 <strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Improving search result quality beyond initial retrieval</li><li>Implementing two-stage retrieval (fast retrieve, accurate rerank)</li><li>Training custom ranking models with user feedback</li><li>Using cross-encoders for semantic reranking</li><li>Evaluating ranking quality with nDCG, MAP, or MRR</li><li>Combining multiple relevance signals into final ranking</li><li>Balancing retrieval speed vs ranking accuracy</li><li>Personalizing search results based on user behavior</li></ul>
+<h2>Core Concepts</h2>
+<h3>Concept 1: Learning to Rank (LTR)</h3>
+<p><strong>Three Approaches</strong>:</p>
+<p><strong>Pointwise</strong>: Predict relevance score for each document independently</p>
+<ul><li>Treat as regression/classification: predict score for (query, document)</li><li>Simple but ignores relative ordering</li></ul>
+<p><strong>Pairwise</strong>: Learn which document should rank higher</p>
+<ul><li>Classify pairs: is doc A &gt; doc B?</li><li>Examples: RankNet, LambdaRank</li><li>Better than pointwise for ranking tasks</li></ul>
+<p><strong>Listwise</strong>: Optimize entire ranking directly</p>
+<ul><li>Loss function considers full ranked list</li><li>Examples: LambdaMART, ListNet</li><li>Best performance but more complex</li></ul>
+<pre><code class="lang-python">from sklearn.ensemble import GradientBoostingRegressor
+import numpy as np
+
+# Pointwise LTR (regression)
+class PointwiseRanker:
+    def __init__(self):
+        self.model = GradientBoostingRegressor(n_estimators=100)
+
+    def train(self, features, relevance_scores):
+        &quot;&quot;&quot;
+        features: (n_samples, n_features) - query-doc features
+        relevance_scores: (n_samples,) - relevance labels (0-4)
+        &quot;&quot;&quot;
+        self.model.fit(features, relevance_scores)
+
+    def rank(self, query_features):
+        &quot;&quot;&quot;Predict scores and rank documents&quot;&quot;&quot;
+        scores = self.model.predict(query_features)
+        ranked_indices = np.argsort(scores)[::-1]
+        return ranked_indices, scores[ranked_indices]
+
+# Example features: BM25, embeddings similarity, freshness, etc.
+features = np.array([
+    [0.8, 0.6, 1.0],  # doc1: high BM25, medium semantic, fresh
+    [0.3, 0.9, 0.5],  # doc2: low BM25, high semantic, old
+    [0.9, 0.7, 0.8],  # doc3: high BM25, high semantic, recent
+])
+relevance = np.array([3, 2, 4])  # Ground truth ratings
+
+ranker = PointwiseRanker()
+ranker.train(features, relevance)
+ranked_indices, scores = ranker.rank(features)
+print(f&quot;Ranked order: {ranked_indices}&quot;)  # [2, 0, 1]</code></pre>
+<h3>Concept 2: Cross-Encoder Reranking</h3>
+<p><strong>Bi-encoder vs Cross-encoder</strong>:</p>
+<ul><li><strong>Bi-encoder</strong>: Separate encoders for query and document (fast, scalable)</li><li>Encode once, search millions of vectors</li><li>Example: sentence-transformers for vector search</li></ul>
+<ul><li><strong>Cross-encoder</strong>: Joint encoding of query + document (slow, accurate)</li><li>Process query and document together</li><li>Captures interaction between terms</li><li>10-100x slower but much better quality</li></ul>
+<p><strong>Two-Stage Retrieval</strong>:</p>
+<ol><li><strong>Stage 1</strong>: Bi-encoder retrieves top-k candidates (k=100-1000)</li><li><strong>Stage 2</strong>: Cross-encoder reranks top-n (n=10-50)</li></ol>
+<pre><code class="lang-python">from sentence_transformers import CrossEncoder
+
+# Load cross-encoder for reranking
+cross_encoder = CrossEncoder(&#x27;cross-encoder/ms-marco-MiniLM-L-6-v2&#x27;)
+
+def two_stage_retrieval(query, documents, bi_encoder, cross_encoder, top_k=100, rerank_top=10):
+    &quot;&quot;&quot;
+    Stage 1: Fast bi-encoder retrieval
+    Stage 2: Accurate cross-encoder reranking
+    &quot;&quot;&quot;
+    # Stage 1: Retrieve top_k with bi-encoder
+    query_emb = bi_encoder.encode(query, convert_to_tensor=True)
+    doc_embs = bi_encoder.encode(documents, convert_to_tensor=True)
+
+    from sentence_transformers import util
+    scores = util.cos_sim(query_emb, doc_embs)[0]
+    top_indices = scores.argsort(descending=True)[:top_k]
+
+    # Stage 2: Rerank top_k with cross-encoder
+    candidates = [documents[i] for i in top_indices]
+    pairs = [[query, doc] for doc in candidates]
+
+    cross_scores = cross_encoder.predict(pairs)
+    rerank_indices = np.argsort(cross_scores)[::-1][:rerank_top]
+
+    # Map back to original indices
+    final_indices = [top_indices[i] for i in rerank_indices]
+    final_scores = [cross_scores[i] for i in rerank_indices]
+
+    return final_indices, final_scores
+
+# Example
+from sentence_transformers import SentenceTransformer
+
+bi_encoder = SentenceTransformer(&#x27;all-MiniLM-L6-v2&#x27;)
+query = &quot;machine learning classification algorithms&quot;
+documents = [...]  # Large corpus
+
+top_docs, scores = two_stage_retrieval(query, documents, bi_encoder, cross_encoder)</code></pre>
+<h3>Concept 3: Ranking Features</h3>
+<p><strong>Categories</strong>:</p>
+<p><strong>Query-Document Features</strong>:</p>
+<ul><li>TF-IDF/BM25 score</li><li>Vector similarity (cosine, dot product)</li><li>Exact match signals (title, URL)</li><li>Proximity (terms close in document)</li></ul>
+<p><strong>Document Features</strong>:</p>
+<ul><li>PageRank, authority score</li><li>Freshness (recency)</li><li>Length (too short/long)</li><li>Click-through rate (CTR)</li><li>Engagement metrics (time on page, bounce rate)</li></ul>
+<p><strong>Query Features</strong>:</p>
+<ul><li>Query length</li><li>Query type (navigational, informational)</li><li>User history, personalization</li></ul>
+<pre><code class="lang-python">def extract_features(query, document, metadata):
+    &quot;&quot;&quot;Extract features for ranking&quot;&quot;&quot;
+    features = {}
+
+    # Lexical features
+    features[&#x27;bm25_score&#x27;] = compute_bm25(query, document)
+    features[&#x27;exact_match_title&#x27;] = int(query.lower() in document[&#x27;title&#x27;].lower())
+    features[&#x27;term_overlap&#x27;] = compute_term_overlap(query, document[&#x27;content&#x27;])
+
+    # Semantic features
+    query_emb = model.encode(query)
+    doc_emb = model.encode(document[&#x27;content&#x27;])
+    features[&#x27;semantic_similarity&#x27;] = cosine_similarity(query_emb, doc_emb)
+
+    # Document quality features
+    features[&#x27;page_rank&#x27;] = metadata.get(&#x27;page_rank&#x27;, 0)
+    features[&#x27;freshness_days&#x27;] = (today - metadata[&#x27;publish_date&#x27;]).days
+    features[&#x27;avg_time_on_page&#x27;] = metadata.get(&#x27;avg_time_on_page&#x27;, 0)
+    features[&#x27;ctr&#x27;] = metadata.get(&#x27;ctr&#x27;, 0)
+
+    # Document length
+    features[&#x27;doc_length&#x27;] = len(document[&#x27;content&#x27;].split())
+    features[&#x27;title_length&#x27;] = len(document[&#x27;title&#x27;].split())
+
+    # User personalization (if available)
+    features[&#x27;user_clicked_similar&#x27;] = check_user_history(query, document)
+
+    return list(features.values())</code></pre>
+<h3>Concept 4: Evaluation Metrics</h3>
+<p><strong>nDCG (Normalized Discounted Cumulative Gain)</strong>:</p>
+<ul><li>Considers both relevance and position</li><li>Discounts lower positions (log discount)</li><li>Range: 0 to 1 (1 = perfect ranking)</li></ul>
+<p><strong>MAP (Mean Average Precision)</strong>:</p>
+<ul><li>Average precision across queries</li><li>Emphasizes precision at each relevant item</li><li>Binary relevance (relevant vs not)</li></ul>
+<p><strong>MRR (Mean Reciprocal Rank)</strong>:</p>
+<ul><li>Inverse rank of first relevant result</li><li>Good for &quot;find one answer&quot; tasks</li><li>Range: 0 to 1</li></ul>
+<pre><code class="lang-python">import numpy as np
+
+def dcg_at_k(relevance_scores, k):
+    &quot;&quot;&quot;Discounted Cumulative Gain at rank k&quot;&quot;&quot;
+    relevance = np.array(relevance_scores)[:k]
+    gains = 2**relevance - 1
+    discounts = np.log2(np.arange(2, k + 2))
+    return np.sum(gains / discounts)
+
+def ndcg_at_k(predicted_order, ground_truth_scores, k):
+    &quot;&quot;&quot;Normalized DCG at rank k&quot;&quot;&quot;
+    # DCG for predicted ranking
+    predicted_relevance = [ground_truth_scores[i] for i in predicted_order[:k]]
+    dcg = dcg_at_k(predicted_relevance, k)
+
+    # IDCG (ideal ranking)
+    ideal_relevance = sorted(ground_truth_scores, reverse=True)
+    idcg = dcg_at_k(ideal_relevance, k)
+
+    return dcg / idcg if idcg &gt; 0 else 0.0
+
+def mean_average_precision(predicted_orders, ground_truth_binary):
+    &quot;&quot;&quot;MAP across queries (binary relevance)&quot;&quot;&quot;
+    aps = []
+    for predicted, relevant_indices in zip(predicted_orders, ground_truth_binary):
+        precisions = []
+        num_relevant = 0
+
+        for k, doc_id in enumerate(predicted, 1):
+            if doc_id in relevant_indices:
+                num_relevant += 1
+                precisions.append(num_relevant / k)
+
+        ap = np.mean(precisions) if precisions else 0.0
+        aps.append(ap)
+
+    return np.mean(aps)
+
+def mean_reciprocal_rank(predicted_orders, ground_truth_binary):
+    &quot;&quot;&quot;MRR across queries&quot;&quot;&quot;
+    rrs = []
+    for predicted, relevant_indices in zip(predicted_orders, ground_truth_binary):
+        for rank, doc_id in enumerate(predicted, 1):
+            if doc_id in relevant_indices:
+                rrs.append(1.0 / rank)
+                break
+        else:
+            rrs.append(0.0)
+
+    return np.mean(rrs)
+
+# Example evaluation
+predicted_order = [2, 0, 3, 1]  # doc IDs
+ground_truth_scores = [3, 1, 4, 2]  # relevance scores (0-4)
+
+ndcg = ndcg_at_k(predicted_order, ground_truth_scores, k=10)
+print(f&quot;nDCG@10: {ndcg:.4f}&quot;)</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Hybrid Ranking (Combine Multiple Signals)</h3>
+<p><strong>When to use</strong>: Multiple relevance signals available (BM25, semantic, popularity)</p>
+<pre><code class="lang-python">def hybrid_rank(query, documents, weights={&#x27;lexical&#x27;: 0.3, &#x27;semantic&#x27;: 0.5, &#x27;popularity&#x27;: 0.2}):
+    &quot;&quot;&quot;Combine multiple ranking signals&quot;&quot;&quot;
+    scores = np.zeros(len(documents))
+
+    # Lexical score (BM25)
+    bm25_scores = np.array([compute_bm25(query, doc) for doc in documents])
+    bm25_normalized = bm25_scores / bm25_scores.max() if bm25_scores.max() &gt; 0 else bm25_scores
+
+    # Semantic score (embeddings)
+    query_emb = model.encode(query)
+    doc_embs = model.encode([doc[&#x27;content&#x27;] for doc in documents])
+    semantic_scores = [cosine_similarity(query_emb, doc_emb) for doc_emb in doc_embs]
+    semantic_normalized = np.array(semantic_scores)
+
+    # Popularity score
+    popularity_scores = np.array([doc.get(&#x27;popularity&#x27;, 0) for doc in documents])
+    popularity_normalized = popularity_scores / popularity_scores.max() if popularity_scores.max() &gt; 0 else popularity_scores
+
+    # Weighted combination
+    scores = (
+        weights[&#x27;lexical&#x27;] * bm25_normalized +
+        weights[&#x27;semantic&#x27;] * semantic_normalized +
+        weights[&#x27;popularity&#x27;] * popularity_normalized
+    )
+
+    ranked_indices = np.argsort(scores)[::-1]
+    return ranked_indices, scores[ranked_indices]</code></pre>
+<h3>Pattern 2: LambdaMART Training with LightGBM</h3>
+<p><strong>Use case</strong>: Train listwise ranking model with user feedback data</p>
+<pre><code class="lang-python">import lightgbm as lgb
+
+# Prepare data in LightGBM ranking format
+# features: (n_samples, n_features)
+# labels: relevance scores (0-4)
+# qids: query IDs (group by query)
+
+train_data = lgb.Dataset(
+    features,
+    label=labels,
+    group=query_groups  # Number of docs per query
+)
+
+params = {
+    &#x27;objective&#x27;: &#x27;lambdarank&#x27;,
+    &#x27;metric&#x27;: &#x27;ndcg&#x27;,
+    &#x27;ndcg_eval_at&#x27;: [1, 3, 5, 10],
+    &#x27;learning_rate&#x27;: 0.1,
+    &#x27;num_leaves&#x27;: 31,
+    &#x27;min_data_in_leaf&#x27;: 50
+}
+
+ranker = lgb.train(
+    params,
+    train_data,
+    num_boost_round=100,
+    valid_sets=[valid_data],
+    callbacks=[lgb.early_stopping(10)]
+)
+
+# Predict and rank
+predictions = ranker.predict(test_features)
+ranked_indices = np.argsort(predictions)[::-1]</code></pre>
+<h3>Pattern 3: Personalized Ranking</h3>
+<p><strong>When to use</strong>: User history available for personalization</p>
+<pre><code class="lang-python">def personalized_rank(query, documents, user_profile, base_scores):
+    &quot;&quot;&quot;Adjust ranking based on user preferences&quot;&quot;&quot;
+    personalized_scores = base_scores.copy()
+
+    for i, doc in enumerate(documents):
+        # Boost based on user&#x27;s preferred categories
+        if doc[&#x27;category&#x27;] in user_profile.get(&#x27;preferred_categories&#x27;, []):
+            personalized_scores[i] *= 1.2
+
+        # Boost based on user&#x27;s interaction history
+        if doc[&#x27;id&#x27;] in user_profile.get(&#x27;clicked_docs&#x27;, []):
+            personalized_scores[i] *= 1.3
+
+        # Boost based on similar documents user engaged with
+        similarity = compute_user_doc_similarity(user_profile, doc)
+        personalized_scores[i] *= (1 + similarity * 0.5)
+
+        # Penalize recently viewed
+        if doc[&#x27;id&#x27;] in user_profile.get(&#x27;recent_views&#x27;, []):
+            personalized_scores[i] *= 0.8
+
+    ranked_indices = np.argsort(personalized_scores)[::-1]
+    return ranked_indices, personalized_scores[ranked_indices]</code></pre>
+<h3>Pattern 4: Diversity-Aware Ranking</h3>
+<p><strong>Use case</strong>: Avoid redundant results, show diverse perspectives</p>
+<pre><code class="lang-python">def diverse_rerank(candidates, scores, diversity_penalty=0.3):
+    &quot;&quot;&quot;Rerank to promote diversity (MMR-style)&quot;&quot;&quot;
+    ranked = []
+    remaining = list(range(len(candidates)))
+    doc_embeddings = model.encode([c[&#x27;content&#x27;] for c in candidates])
+
+    while remaining and len(ranked) &lt; 10:
+        best_idx = None
+        best_score = -float(&#x27;inf&#x27;)
+
+        for i in remaining:
+            # Original relevance score
+            relevance = scores[i]
+
+            # Diversity penalty: similarity to already ranked docs
+            if ranked:
+                ranked_embeddings = doc_embeddings[ranked]
+                similarities = [cosine_similarity(doc_embeddings[i], emb) for emb in ranked_embeddings]
+                diversity_penalty_value = max(similarities)
+            else:
+                diversity_penalty_value = 0
+
+            # MMR score: balance relevance and diversity
+            mmr_score = relevance - diversity_penalty * diversity_penalty_value
+
+            if mmr_score &gt; best_score:
+                best_score = mmr_score
+                best_idx = i
+
+        ranked.append(best_idx)
+        remaining.remove(best_idx)
+
+    return ranked</code></pre>
+<h3>Pattern 5: A/B Testing Ranking Models</h3>
+<p><strong>When to use</strong>: Validate ranking improvements with real users</p>
+<pre><code class="lang-python">import random
+
+def ab_test_ranker(query, documents, ranker_a, ranker_b, user_id):
+    &quot;&quot;&quot;Route user to control or test ranker&quot;&quot;&quot;
+    # Assign user to variant (deterministic based on user_id)
+    variant = &#x27;b&#x27; if hash(user_id) % 2 == 0 else &#x27;a&#x27;
+
+    if variant == &#x27;a&#x27;:
+        results = ranker_a.rank(query, documents)
+        variant_label = &#x27;control&#x27;
+    else:
+        results = ranker_b.rank(query, documents)
+        variant_label = &#x27;test&#x27;
+
+    # Log for analysis
+    log_experiment(
+        user_id=user_id,
+        query=query,
+        variant=variant_label,
+        results=results
+    )
+
+    return results
+
+# Analyze A/B test results
+def analyze_ab_test(logs):
+    &quot;&quot;&quot;Compare metrics between variants&quot;&quot;&quot;
+    control_ndcg = []
+    test_ndcg = []
+
+    for log in logs:
+        if log[&#x27;variant&#x27;] == &#x27;control&#x27;:
+            control_ndcg.append(log[&#x27;ndcg&#x27;])
+        else:
+            test_ndcg.append(log[&#x27;ndcg&#x27;])
+
+    print(f&quot;Control nDCG: {np.mean(control_ndcg):.4f}&quot;)
+    print(f&quot;Test nDCG: {np.mean(test_ndcg):.4f}&quot;)
+    print(f&quot;Lift: {(np.mean(test_ndcg) / np.mean(control_ndcg) - 1) * 100:.2f}%&quot;)</code></pre>
+<h3>Pattern 6: Real-Time Ranking with Caching</h3>
+<p><strong>When to use</strong>: Reduce latency for repeated queries</p>
+<pre><code class="lang-python">from functools import lru_cache
+import hashlib
+
+class CachedRanker:
+    def __init__(self, ranker, cache_size=1000):
+        self.ranker = ranker
+        self.cache = {}
+        self.cache_size = cache_size
+
+    def _cache_key(self, query, doc_ids):
+        &quot;&quot;&quot;Generate cache key from query and document set&quot;&quot;&quot;
+        key_str = f&quot;{query}:{sorted(doc_ids)}&quot;
+        return hashlib.md5(key_str.encode()).hexdigest()
+
+    def rank(self, query, documents):
+        &quot;&quot;&quot;Rank with caching&quot;&quot;&quot;
+        doc_ids = tuple(doc[&#x27;id&#x27;] for doc in documents)
+        cache_key = self._cache_key(query, doc_ids)
+
+        if cache_key in self.cache:
+            return self.cache[cache_key]
+
+        # Compute ranking
+        results = self.ranker.rank(query, documents)
+
+        # Cache results (LRU eviction if needed)
+        if len(self.cache) &gt;= self.cache_size:
+            # Remove oldest entry
+            oldest_key = next(iter(self.cache))
+            del self.cache[oldest_key]
+
+        self.cache[cache_key] = results
+        return results</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Ranking Approaches</h3>
+<pre><code>Approach      | Training Data              | Complexity | Quality
+--------------|----------------------------|------------|--------
+Pointwise     | (query, doc) → score       | Low        | Good
+Pairwise      | (query, docA, docB) → A&gt;B  | Medium     | Better
+Listwise      | (query, docs) → ranking    | High       | Best
+Cross-encoder | (query, doc) → score       | Very High  | Excellent</code></pre>
+<h3>Evaluation Metrics</h3>
+<pre><code>Metric   | Formula                          | Use Case
+---------|----------------------------------|----------
+nDCG@k   | DCG / IDCG (log discount)        | Graded relevance, position matters
+MAP      | Mean of Precision@k              | Binary relevance, all relevant items
+MRR      | 1 / rank of first relevant       | Single answer tasks
+P@k      | Relevant in top k / k            | Binary relevance, top-k quality</code></pre>
+<h3>Key Guidelines</h3>
+<pre><code>✅ DO: Use two-stage retrieval (fast retrieve, accurate rerank)
+✅ DO: Combine multiple signals (lexical, semantic, popularity)
+✅ DO: Evaluate with nDCG for graded relevance
+✅ DO: A/B test ranking changes with real users
+✅ DO: Cache ranking results for popular queries
+✅ DO: Promote diversity to avoid redundant results
+
+❌ DON&#x27;T: Use cross-encoder for initial retrieval (too slow)
+❌ DON&#x27;T: Ignore position in ranking evaluation
+❌ DON&#x27;T: Deploy ranking changes without A/B testing
+❌ DON&#x27;T: Use only lexical or only semantic (hybrid is better)
+❌ DON&#x27;T: Forget to normalize scores before combining</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-python"># ❌ NEVER: Use cross-encoder for full corpus search
+for doc in million_documents:
+    score = cross_encoder.predict([[query, doc[&#x27;content&#x27;]]])
+    # This takes hours!
+
+# ✅ CORRECT: Two-stage retrieval
+# Stage 1: Retrieve top 100 with bi-encoder (fast)
+candidates = bi_encoder_retrieve(query, million_documents, top_k=100)
+
+# Stage 2: Rerank with cross-encoder (accurate)
+reranked = cross_encoder_rerank(query, candidates, top_k=10)</code></pre>
+<p>❌ <strong>Cross-encoder on full corpus</strong>: Hours of compute, unacceptable latency ✅ <strong>Correct approach</strong>: Fast retrieval, then accurate reranking</p>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Combine scores without normalization
+combined_score = bm25_score + semantic_score + popularity_score
+# Problem: Scales differ (BM25: 0-100, semantic: 0-1, popularity: 0-1M)
+
+# ✅ Correct: Normalize before combining
+bm25_norm = bm25_score / max_bm25
+semantic_norm = semantic_score  # Already 0-1
+popularity_norm = popularity_score / max_popularity
+
+combined_score = 0.4 * bm25_norm + 0.4 * semantic_norm + 0.2 * popularity_norm</code></pre>
+<p>❌ <strong>Unnormalized score combination</strong>: Dominant signal overwhelms others ✅ <strong>Better</strong>: Normalize to same range, then weighted combination</p>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Ignore query groups in LTR training
+ranker.fit(features, labels)  # Treats as independent samples
+
+# ✅ Correct: Specify query groups
+ranker.fit(features, labels, group=query_groups)
+# Ensures ranking loss considers docs within same query</code></pre>
+<p>❌ <strong>Missing query groups</strong>: Model learns wrong objective ✅ <strong>Better</strong>: Always specify query groupings in LTR</p>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Use only top-1 accuracy
+accuracy = int(predicted_order[0] == best_doc_id)
+
+# ✅ Correct: Use ranking metrics
+ndcg = ndcg_at_k(predicted_order, ground_truth_scores, k=10)
+map_score = mean_average_precision([predicted_order], [relevant_docs])</code></pre>
+<p>❌ <strong>Top-1 only</strong>: Ignores quality of full ranking ✅ <strong>Better</strong>: Use nDCG, MAP, or MRR for ranking evaluation</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>ir-search-fundamentals.md</code> - BM25 and lexical features for ranking</li><li><code>ir-vector-search.md</code> - Bi-encoders for initial retrieval stage</li><li><code>ir-query-understanding.md</code> - Query expansion before ranking</li><li><code>ir-recommendation-systems.md</code> - Similar ranking techniques for recommendations</li><li><code>test-unit-testing.md</code> - Testing ranking models and metrics</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ir-ranking-reranking.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

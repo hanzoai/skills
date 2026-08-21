@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distributed-systems-partitioning-sharding</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/distributed-systems-partitioning-sharding.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/distributed-systems-partitioning-sharding.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>distributed-systems-partitioning-sharding</h1><p class="lede">Data partitioning and sharding strategies including hash-based, range-based, consistent hashing, and rebalancing</p><h1>Partitioning and Sharding</h1>
+<p><strong>Scope</strong>: Partitioning strategies, consistent hashing, rebalancing, hotspots, practical implementations <strong>Lines</strong>: ~280 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Scaling beyond single node</li><li>Distributing data across nodes</li><li>Load balancing requests</li><li>Understanding NoSQL databases</li><li>Implementing caching layers</li><li>Handling large datasets</li><li>Optimizing query performance</li><li>Planning database architecture</li></ul>
+<h2>Core Concepts</h2>
+<h3>Why Partition?</h3>
+<pre><code>Problem: Single node can&#x27;t handle all data/load
+
+Solution: Split data across multiple nodes
+
+Benefits:
+✅ Scalability (more nodes = more capacity)
+✅ Performance (parallel queries)
+✅ Fault isolation (failure affects subset)</code></pre>
+<h3>Partitioning vs Sharding</h3>
+<p><strong>Partitioning</strong>: General term for splitting data <strong>Sharding</strong>: Partitioning in distributed databases</p>
+<p><em>Often used interchangeably</em></p>
+<hr>
+<h2>Partitioning Strategies</h2>
+<h3>1. Hash Partitioning</h3>
+<p><strong>Approach</strong>: Hash key to determine partition</p>
+<pre><code class="lang-python">import hashlib
+
+class HashPartitioner:
+    &quot;&quot;&quot;Hash-based partitioning&quot;&quot;&quot;
+
+    def __init__(self, num_partitions):
+        self.num_partitions = num_partitions
+        self.partitions = [[] for _ in range(num_partitions)]
+
+    def get_partition(self, key):
+        &quot;&quot;&quot;Determine partition for key&quot;&quot;&quot;
+        hash_val = int(hashlib.md5(key.encode()).hexdigest(), 16)
+        return hash_val % self.num_partitions
+
+    def write(self, key, value):
+        &quot;&quot;&quot;Write to appropriate partition&quot;&quot;&quot;
+        partition_id = self.get_partition(key)
+        self.partitions[partition_id].append((key, value))
+
+    def read(self, key):
+        &quot;&quot;&quot;Read from appropriate partition&quot;&quot;&quot;
+        partition_id = self.get_partition(key)
+        for k, v in self.partitions[partition_id]:
+            if k == key:
+                return v
+        return None
+
+# Usage
+partitioner = HashPartitioner(num_partitions=4)
+partitioner.write(&#x27;user:123&#x27;, {&#x27;name&#x27;: &#x27;Alice&#x27;})
+partitioner.write(&#x27;user:456&#x27;, {&#x27;name&#x27;: &#x27;Bob&#x27;})
+
+print(partitioner.read(&#x27;user:123&#x27;))  # {&#x27;name&#x27;: &#x27;Alice&#x27;}</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Even distribution</li><li>Simple implementation</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Range queries difficult</li><li>Adding nodes requires rehashing</li></ul>
+<h3>2. Range Partitioning</h3>
+<p><strong>Approach</strong>: Assign key ranges to partitions</p>
+<pre><code class="lang-python">class RangePartitioner:
+    &quot;&quot;&quot;Range-based partitioning&quot;&quot;&quot;
+
+    def __init__(self, ranges):
+        # ranges = [(min, max, partition_id), ...]
+        self.ranges = sorted(ranges, key=lambda x: x[0])
+        self.partitions = {}
+
+    def get_partition(self, key):
+        &quot;&quot;&quot;Find partition for key&quot;&quot;&quot;
+        for min_key, max_key, partition_id in self.ranges:
+            if min_key &lt;= key &lt; max_key:
+                return partition_id
+        raise KeyError(f&quot;No partition for key {key}&quot;)
+
+    def range_query(self, start_key, end_key):
+        &quot;&quot;&quot;Query range of keys&quot;&quot;&quot;
+        results = []
+
+        # Find all relevant partitions
+        for min_key, max_key, partition_id in self.ranges:
+            if max_key &gt;= start_key and min_key &lt; end_key:
+                # This partition contains relevant data
+                results.extend(self._query_partition(partition_id, start_key, end_key))
+
+        return results
+
+# Usage
+partitioner = RangePartitioner([
+    (&#x27;A&#x27;, &#x27;G&#x27;, 0),  # Partition 0: A-F
+    (&#x27;G&#x27;, &#x27;M&#x27;, 1),  # Partition 1: G-L
+    (&#x27;M&#x27;, &#x27;S&#x27;, 2),  # Partition 2: M-R
+    (&#x27;S&#x27;, &#x27;Z&#x27;, 3),  # Partition 3: S-Z
+])</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Efficient range queries</li><li>Predictable data location</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Risk of hotspots (uneven distribution)</li><li>Manual range management</li></ul>
+<h3>3. Consistent Hashing</h3>
+<p><strong>Approach</strong>: Hash keys and nodes onto ring, walk clockwise</p>
+<pre><code class="lang-python">import hashlib
+import bisect
+
+class ConsistentHashing:
+    &quot;&quot;&quot;Consistent hashing with virtual nodes&quot;&quot;&quot;
+
+    def __init__(self, num_virtual_nodes=150):
+        self.num_virtual_nodes = num_virtual_nodes
+        self.ring = []  # Sorted list of (hash, node_id)
+        self.nodes = set()
+
+    def _hash(self, key):
+        &quot;&quot;&quot;Hash key to position on ring&quot;&quot;&quot;
+        return int(hashlib.md5(key.encode()).hexdigest(), 16)
+
+    def add_node(self, node_id):
+        &quot;&quot;&quot;Add node to ring&quot;&quot;&quot;
+        self.nodes.add(node_id)
+
+        # Add virtual nodes
+        for i in range(self.num_virtual_nodes):
+            virtual_key = f&quot;{node_id}:{i}&quot;
+            hash_val = self._hash(virtual_key)
+            bisect.insort(self.ring, (hash_val, node_id))
+
+    def remove_node(self, node_id):
+        &quot;&quot;&quot;Remove node from ring&quot;&quot;&quot;
+        self.nodes.discard(node_id)
+
+        # Remove virtual nodes
+        self.ring = [(h, n) for h, n in self.ring if n != node_id]
+
+    def get_node(self, key):
+        &quot;&quot;&quot;Find node responsible for key&quot;&quot;&quot;
+        if not self.ring:
+            return None
+
+        hash_val = self._hash(key)
+
+        # Find first node clockwise
+        idx = bisect.bisect_right(self.ring, (hash_val, &#x27;&#x27;))
+        if idx == len(self.ring):
+            idx = 0
+
+        return self.ring[idx][1]
+
+# Usage
+ch = ConsistentHashing()
+ch.add_node(&#x27;node1&#x27;)
+ch.add_node(&#x27;node2&#x27;)
+ch.add_node(&#x27;node3&#x27;)
+
+print(ch.get_node(&#x27;user:123&#x27;))  # node2
+print(ch.get_node(&#x27;user:456&#x27;))  # node1
+
+# Add node - minimal keys moved
+ch.add_node(&#x27;node4&#x27;)</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Minimal key movement when adding/removing nodes</li><li>Even distribution (with virtual nodes)</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>More complex</li><li>Range queries difficult</li></ul>
+<hr>
+<h2>Handling Hotspots</h2>
+<h3>Problem: Uneven Load</h3>
+<pre><code>Celebrity effect:
+User &quot;celebrity&quot; has 10M followers
+All queries for &quot;celebrity&quot; → Same partition → Overload</code></pre>
+<h3>Solution 1: Split Hot Partition</h3>
+<pre><code class="lang-python">class AdaptivePartitioner:
+    &quot;&quot;&quot;Split partitions that become hot&quot;&quot;&quot;
+
+    def __init__(self):
+        self.partitions = {}
+        self.access_counts = {}
+
+    def access(self, key):
+        self.access_counts[key] = self.access_counts.get(key, 0) + 1
+
+        # Split if too hot
+        if self.access_counts[key] &gt; 10000:
+            self._split_hot_key(key)
+
+    def _split_hot_key(self, key):
+        &quot;&quot;&quot;Replicate hot key to multiple partitions&quot;&quot;&quot;
+        # Create replicas
+        for i in range(3):
+            replica_key = f&quot;{key}:replica:{i}&quot;
+            self.partitions[replica_key] = self.partitions[key]</code></pre>
+<h3>Solution 2: Add Randomization</h3>
+<pre><code class="lang-python">def read_with_randomization(key):
+    &quot;&quot;&quot;Read from random replica of hot key&quot;&quot;&quot;
+    replicas = get_replicas(key)
+    replica = random.choice(replicas)
+    return replica.read(key)</code></pre>
+<hr>
+<h2>Rebalancing</h2>
+<h3>When to Rebalance</h3>
+<pre><code>Triggers:
+- Node added (scale out)
+- Node removed (failure or scale down)
+- Load imbalance detected</code></pre>
+<h3>Strategies</h3>
+<p><strong>1. Stop-the-World</strong> (simple but downtime):</p>
+<pre><code class="lang-python">def rebalance_stop_the_world(old_partitions, new_num_partitions):
+    &quot;&quot;&quot;Rebalance with downtime&quot;&quot;&quot;
+    # 1. Stop writes
+    stop_writes()
+
+    # 2. Redistribute data
+    new_partitions = redistribute(old_partitions, new_num_partitions)
+
+    # 3. Resume writes
+    resume_writes()
+
+    return new_partitions</code></pre>
+<p><strong>2. Online Rebalancing</strong> (no downtime):</p>
+<pre><code class="lang-python">class OnlineRebalancer:
+    &quot;&quot;&quot;Rebalance without downtime&quot;&quot;&quot;
+
+    def rebalance(self, target_partitions):
+        # 1. Create new partitions (in parallel with old)
+        new_partitions = self._create_partitions(target_partitions)
+
+        # 2. Start dual-writing (to both old and new)
+        self._enable_dual_write()
+
+        # 3. Copy existing data to new partitions
+        self._copy_data(new_partitions)
+
+        # 4. Switch reads to new partitions
+        self._switch_reads(new_partitions)
+
+        # 5. Stop dual-writing, remove old partitions
+        self._disable_dual_write()
+        self._remove_old_partitions()</code></pre>
+<hr>
+<h2>Secondary Indexes</h2>
+<h3>Problem: Queries by Non-Partition Key</h3>
+<pre><code>Partition by user_id, but want to query by email</code></pre>
+<h3>Solution 1: Local Index (Scatter-Gather)</h3>
+<pre><code class="lang-python">class LocalIndexPartitioner:
+    &quot;&quot;&quot;Local secondary index per partition&quot;&quot;&quot;
+
+    def __init__(self, num_partitions):
+        self.partitions = [
+            {&#x27;data&#x27;: {}, &#x27;email_index&#x27;: {}}
+            for _ in range(num_partitions)
+        ]
+
+    def write(self, user_id, email, data):
+        &quot;&quot;&quot;Write with local index&quot;&quot;&quot;
+        partition_id = hash(user_id) % len(self.partitions)
+        partition = self.partitions[partition_id]
+
+        partition[&#x27;data&#x27;][user_id] = data
+        partition[&#x27;email_index&#x27;][email] = user_id
+
+    def query_by_email(self, email):
+        &quot;&quot;&quot;Scatter-gather across all partitions&quot;&quot;&quot;
+        for partition in self.partitions:
+            if email in partition[&#x27;email_index&#x27;]:
+                user_id = partition[&#x27;email_index&#x27;][email]
+                return partition[&#x27;data&#x27;][user_id]
+
+        return None</code></pre>
+<h3>Solution 2: Global Index</h3>
+<pre><code class="lang-python">class GlobalIndexPartitioner:
+    &quot;&quot;&quot;Separate global secondary index&quot;&quot;&quot;
+
+    def __init__(self, num_partitions):
+        self.data_partitions = [{} for _ in range(num_partitions)]
+        self.global_email_index = {}  # email → (partition_id, user_id)
+
+    def write(self, user_id, email, data):
+        &quot;&quot;&quot;Write to data partition and global index&quot;&quot;&quot;
+        partition_id = hash(user_id) % len(self.data_partitions)
+        self.data_partitions[partition_id][user_id] = data
+        self.global_email_index[email] = (partition_id, user_id)
+
+    def query_by_email(self, email):
+        &quot;&quot;&quot;Direct lookup via global index&quot;&quot;&quot;
+        if email in self.global_email_index:
+            partition_id, user_id = self.global_email_index[email]
+            return self.data_partitions[partition_id][user_id]
+
+        return None</code></pre>
+<hr>
+<h2>Real-World Examples</h2>
+<h3>MongoDB Sharding</h3>
+<pre><code class="lang-javascript">// Enable sharding
+sh.enableSharding(&quot;mydb&quot;)
+
+// Shard collection by user_id (hash)
+sh.shardCollection(&quot;mydb.users&quot;, {user_id: &quot;hashed&quot;})
+
+// Or by range
+sh.shardCollection(&quot;mydb.orders&quot;, {order_date: 1})</code></pre>
+<h3>Cassandra Partitioning</h3>
+<pre><code class="lang-sql">-- Partition key determines data distribution
+CREATE TABLE users (
+    user_id UUID,
+    name TEXT,
+    PRIMARY KEY (user_id)  -- Partition key
+);
+
+-- Composite partition key
+CREATE TABLE user_posts (
+    user_id UUID,
+    post_date DATE,
+    post_id UUID,
+    content TEXT,
+    PRIMARY KEY ((user_id, post_date), post_id)  -- Partition key: (user_id, post_date)
+);</code></pre>
+<hr>
+<h2>Strategy Comparison</h2>
+<p>| Strategy | Distribution | Range Queries | Rebalancing | Hotspots | |----------|--------------|---------------|-------------|----------| | <strong>Hash</strong> | ✅ Even | ❌ Hard | ⚠️ Rehash all | ✅ Rare | | <strong>Range</strong> | ⚠️ Uneven | ✅ Easy | ✅ Easy | ❌ Common | | <strong>Consistent Hash</strong> | ✅ Even | ❌ Hard | ✅ Minimal | ✅ Rare |</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>distributed-systems-replication-strategies</code> - Data replication</li><li><code>distributed-systems-consensus-raft</code> - Consensus for configuration</li><li><code>distributed-systems-eventual-consistency</code> - Consistency models</li><li><code>distributed-systems-distributed-locks</code> - Coordination primitives</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/distributed-systems-partitioning-sharding.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

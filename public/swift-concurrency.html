@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>swift-concurrency</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/swift-concurrency.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/swift-concurrency.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>swift-concurrency</h1><p class="lede">Working with async/await in Swift</p><h1>Swift Concurrency Patterns</h1>
+<p><strong>Use this skill when:</strong></p>
+<ul><li>Working with async/await in Swift</li><li>Implementing actors for thread-safe state</li><li>Managing concurrent tasks and task groups</li><li>Migrating to Swift 6 strict concurrency checking</li><li>Building concurrent iOS/macOS applications</li></ul>
+<h2>Async/Await Fundamentals</h2>
+<h3>Basic Async Functions</h3>
+<p>Define async functions with <code>async</code> keyword:</p>
+<pre><code class="lang-swift">// Simple async function
+func fetchUser(id: UUID) async throws -&gt; User {
+    let url = URL(string: &quot;https://api.example.com/users/\(id)&quot;)!
+    let (data, _) = try await URLSession.shared.data(from: url)
+    return try JSONDecoder().decode(User.self, from: data)
+}
+
+// Calling async functions
+func loadUserData() async {
+    do {
+        let user = try await fetchUser(id: currentUserId)
+        print(&quot;Loaded user: \(user.name)&quot;)
+    } catch {
+        print(&quot;Failed to load user: \(error)&quot;)
+    }
+}</code></pre>
+<h3>Parallel Async Operations</h3>
+<p>Use <code>async let</code> for concurrent execution:</p>
+<pre><code class="lang-swift">func loadDashboardData() async throws -&gt; DashboardData {
+    // All three requests start simultaneously
+    async let user = fetchUser(id: currentUserId)
+    async let posts = fetchPosts(userId: currentUserId)
+    async let notifications = fetchNotifications()
+
+    // Wait for all to complete
+    return try await DashboardData(
+        user: user,
+        posts: posts,
+        notifications: notifications
+    )
+}</code></pre>
+<h3>Sequential vs Parallel Execution</h3>
+<p>Understand the difference:</p>
+<pre><code class="lang-swift">// Sequential - takes 6 seconds total
+func sequential() async throws {
+    let user1 = try await fetchUser(id: id1)      // 2 seconds
+    let user2 = try await fetchUser(id: id2)      // 2 seconds
+    let user3 = try await fetchUser(id: id3)      // 2 seconds
+}
+
+// Parallel - takes 2 seconds total
+func parallel() async throws {
+    async let user1 = fetchUser(id: id1)
+    async let user2 = fetchUser(id: id2)
+    async let user3 = fetchUser(id: id3)
+
+    let users = try await [user1, user2, user3]
+}</code></pre>
+<h2>Actors: Thread-Safe State Management</h2>
+<h3>Basic Actor Usage</h3>
+<p>Use actors for mutable state accessed from multiple contexts:</p>
+<pre><code class="lang-swift">actor UserCache {
+    private var cache: [UUID: User] = [:]
+
+    func getUser(id: UUID) -&gt; User? {
+        cache[id]
+    }
+
+    func setUser(_ user: User) {
+        cache[user.id] = user
+    }
+
+    func clear() {
+        cache.removeAll()
+    }
+}
+
+// Usage
+let cache = UserCache()
+
+// All access is automatically serialized
+await cache.setUser(user)
+let cachedUser = await cache.getUser(id: userId)</code></pre>
+<h3>Actor Isolation</h3>
+<p>Understand actor isolation rules:</p>
+<pre><code class="lang-swift">actor DatabaseManager {
+    private var connection: DatabaseConnection?
+
+    // Synchronous - can access actor state directly
+    private func isConnected() -&gt; Bool {
+        connection != nil
+    }
+
+    // Async - can be called from outside actor
+    func connect() async throws {
+        guard !isConnected() else { return }
+        connection = try await DatabaseConnection.establish()
+    }
+
+    func executeQuery(_ query: String) async throws -&gt; [Row] {
+        guard isConnected() else {
+            throw DatabaseError.notConnected
+        }
+        return try await connection!.execute(query)
+    }
+}</code></pre>
+<h3>Nonisolated Functions</h3>
+<p>Use <code>nonisolated</code> for functions that don&#x27;t need actor isolation:</p>
+<pre><code class="lang-swift">actor AnalyticsService {
+    private var events: [Event] = []
+
+    func track(_ event: Event) {
+        events.append(event)
+    }
+
+    // No await needed to call this
+    nonisolated func generateEventId() -&gt; UUID {
+        UUID()
+    }
+
+    // Computed property can be nonisolated
+    nonisolated var serviceVersion: String {
+        &quot;1.0.0&quot;
+    }
+}
+
+// Usage
+let analytics = AnalyticsService()
+let id = analytics.generateEventId()  // No await needed</code></pre>
+<h3>@MainActor for UI Updates</h3>
+<p>Use <code>@MainActor</code> to ensure UI updates on main thread:</p>
+<pre><code class="lang-swift">@MainActor
+final class UserProfileViewModel: ObservableObject {
+    @Published var user: User?
+    @Published var isLoading = false
+
+    // All methods run on main actor by default
+    func loadUser(id: UUID) async {
+        isLoading = true
+
+        do {
+            // This async call runs on background
+            user = try await UserService.shared.fetchUser(id: id)
+        } catch {
+            // Error handling still on main actor
+            showError(error)
+        }
+
+        isLoading = false
+    }
+
+    private func showError(_ error: Error) {
+        // UI update - guaranteed on main thread
+    }
+}</code></pre>
+<h3>Mixing MainActor and Background Work</h3>
+<p>Explicitly switch execution contexts:</p>
+<pre><code class="lang-swift">@MainActor
+final class ImageProcessor {
+    var processedImage: UIImage?
+
+    func processImage(_ image: UIImage) async {
+        // Start on MainActor
+        processedImage = nil
+
+        // Switch to background for heavy work
+        let processed = await Task.detached {
+            // Expensive image processing
+            return self.applyFilters(to: image)
+        }.value
+
+        // Back on MainActor for UI update
+        processedImage = processed
+    }
+
+    nonisolated private func applyFilters(to image: UIImage) -&gt; UIImage {
+        // CPU-intensive work
+        // Not on MainActor
+        return image
+    }
+}</code></pre>
+<h2>Task Management</h2>
+<h3>Creating Tasks</h3>
+<p>Use <code>Task</code> for unstructured concurrency:</p>
+<pre><code class="lang-swift">// Fire-and-forget task
+Task {
+    await performBackgroundWork()
+}
+
+// Task with priority
+Task(priority: .background) {
+    await syncData()
+}
+
+// Task with value
+let task = Task { () -&gt; String in
+    try await fetchData()
+    return &quot;Complete&quot;
+}
+let result = await task.value</code></pre>
+<h3>Task Cancellation</h3>
+<p>Check for cancellation in long-running tasks:</p>
+<pre><code class="lang-swift">func processLargeDataset(_ items: [Item]) async throws {
+    for item in items {
+        // Check if task was cancelled
+        try Task.checkCancellation()
+
+        await process(item)
+    }
+}
+
+// Alternative using isCancelled
+func continuousPolling() async {
+    while !Task.isCancelled {
+        await fetchUpdates()
+        try? await Task.sleep(for: .seconds(5))
+    }
+}
+
+// Cancel a task
+let task = Task {
+    await longRunningOperation()
+}
+
+// Later...
+task.cancel()</code></pre>
+<h3>Task Groups for Dynamic Concurrency</h3>
+<p>Use task groups for variable number of concurrent operations:</p>
+<pre><code class="lang-swift">func fetchAllUsers(ids: [UUID]) async throws -&gt; [User] {
+    try await withThrowingTaskGroup(of: User.self) { group in
+        // Add a task for each user ID
+        for id in ids {
+            group.addTask {
+                try await fetchUser(id: id)
+            }
+        }
+
+        // Collect results as they complete
+        var users: [User] = []
+        for try await user in group {
+            users.append(user)
+        }
+
+        return users
+    }
+}
+
+// Non-throwing variant
+func fetchImages(urls: [URL]) async -&gt; [UIImage?] {
+    await withTaskGroup(of: UIImage?.self) { group in
+        for url in urls {
+            group.addTask {
+                try? await downloadImage(from: url)
+            }
+        }
+
+        var images: [UIImage?] = []
+        for await image in group {
+            images.append(image)
+        }
+
+        return images
+    }
+}</code></pre>
+<h3>Task Group with Cancellation</h3>
+<p>Cancel remaining tasks when one succeeds:</p>
+<pre><code class="lang-swift">func fetchFromFastestMirror(mirrors: [URL]) async throws -&gt; Data {
+    try await withThrowingTaskGroup(of: Data.self) { group in
+        for mirror in mirrors {
+            group.addTask {
+                try await URLSession.shared.data(from: mirror).0
+            }
+        }
+
+        // Get first successful result
+        guard let data = try await group.next() else {
+            throw NetworkError.noMirrors
+        }
+
+        // Cancel remaining tasks
+        group.cancelAll()
+
+        return data
+    }
+}</code></pre>
+<h2>Swift 6 Concurrency Safety</h2>
+<h3>Sendable Types</h3>
+<p>Mark types as <code>Sendable</code> to allow safe cross-actor passing:</p>
+<pre><code class="lang-swift">// Value types are implicitly Sendable
+struct User: Sendable {
+    let id: UUID
+    let name: String
+}
+
+// Reference types need explicit conformance
+final class NetworkClient: Sendable {
+    let baseURL: URL
+    let session: URLSession  // URLSession is Sendable
+
+    init(baseURL: URL) {
+        self.baseURL = baseURL
+        self.session = URLSession.shared
+    }
+}
+
+// Use @unchecked Sendable carefully
+final class LegacyCache: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [String: Any] = [:]
+
+    func get(_ key: String) -&gt; Any? {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage[key]
+    }
+
+    func set(_ key: String, value: Any) {
+        lock.lock()
+        defer { lock.unlock() }
+        storage[key] = value
+    }
+}</code></pre>
+<h3>Avoiding Data Races</h3>
+<p>Eliminate data races with proper isolation:</p>
+<pre><code class="lang-swift">// ❌ BAD - Data race possible
+class BadCounter {
+    var count = 0
+
+    func increment() {
+        count += 1  // Not thread-safe!
+    }
+}
+
+// ✅ GOOD - Actor ensures safety
+actor GoodCounter {
+    var count = 0
+
+    func increment() {
+        count += 1  // Thread-safe
+    }
+
+    func getCount() -&gt; Int {
+        count
+    }
+}
+
+// ✅ ALSO GOOD - Immutable value type
+struct CounterState: Sendable {
+    let count: Int
+
+    func incremented() -&gt; CounterState {
+        CounterState(count: count + 1)
+    }
+}</code></pre>
+<h3>Global Actor Isolation</h3>
+<p>Create custom global actors for domain-specific isolation:</p>
+<pre><code class="lang-swift">@globalActor
+actor DatabaseActor {
+    static let shared = DatabaseActor()
+}
+
+@DatabaseActor
+func executeQuery(_ sql: String) async throws -&gt; [Row] {
+    // All calls to this function are serialized
+    return try await database.execute(sql)
+}
+
+@DatabaseActor
+final class DatabaseService {
+    // All methods isolated to DatabaseActor
+    private var connection: Connection?
+
+    func connect() async throws {
+        connection = try await Connection.establish()
+    }
+
+    func query(_ sql: String) async throws -&gt; [Row] {
+        try await connection!.execute(sql)
+    }
+}</code></pre>
+<h2>Common Patterns</h2>
+<h3>Network Service Actor</h3>
+<p>Build thread-safe network services:</p>
+<pre><code class="lang-swift">actor NetworkService {
+    private let session: URLSession
+    private var cache: [URL: CachedResponse] = [:]
+
+    init(session: URLSession = .shared) {
+        self.session = session
+    }
+
+    func fetch&lt;T: Decodable&gt;(_ url: URL) async throws -&gt; T {
+        // Check cache
+        if let cached = cache[url], !cached.isExpired {
+            if let data = cached.data as? T {
+                return data
+            }
+        }
+
+        // Fetch from network
+        let (data, response) = try await session.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+
+        let decoded = try JSONDecoder().decode(T.self, from: data)
+
+        // Update cache
+        cache[url] = CachedResponse(data: decoded, timestamp: Date())
+
+        return decoded
+    }
+
+    func clearCache() {
+        cache.removeAll()
+    }
+}</code></pre>
+<h3>Async Sequence Processing</h3>
+<p>Work with <code>AsyncSequence</code> for streaming data:</p>
+<pre><code class="lang-swift">func processNotifications() async {
+    let stream = NotificationCenter.default.notifications(
+        named: .dataUpdated
+    )
+
+    for await notification in stream {
+        await handleUpdate(notification)
+
+        if Task.isCancelled {
+            break
+        }
+    }
+}
+
+// Custom async sequence
+struct NumberSequence: AsyncSequence {
+    typealias Element = Int
+    let range: Range&lt;Int&gt;
+
+    struct AsyncIterator: AsyncIteratorProtocol {
+        var current: Int
+        let end: Int
+
+        mutating func next() async -&gt; Int? {
+            guard current &lt; end else { return nil }
+
+            try? await Task.sleep(for: .milliseconds(100))
+
+            defer { current += 1 }
+            return current
+        }
+    }
+
+    func makeAsyncIterator() -&gt; AsyncIterator {
+        AsyncIterator(current: range.lowerBound, end: range.upperBound)
+    }
+}
+
+// Usage
+for await number in NumberSequence(range: 0..&lt;10) {
+    print(number)
+}</code></pre>
+<h3>Combining Multiple Async Sequences</h3>
+<p>Merge multiple streams:</p>
+<pre><code class="lang-swift">func monitorAllSources() async {
+    await withTaskGroup(of: Void.self) { group in
+        group.addTask {
+            for await event in source1.events {
+                await handle(event)
+            }
+        }
+
+        group.addTask {
+            for await event in source2.events {
+                await handle(event)
+            }
+        }
+
+        group.addTask {
+            for await event in source3.events {
+                await handle(event)
+            }
+        }
+    }
+}</code></pre>
+<h2>Testing Async Code</h2>
+<h3>Testing Async Functions</h3>
+<p>Use async test functions:</p>
+<pre><code class="lang-swift">import Testing
+
+@Test
+func testUserFetch() async throws {
+    let service = UserService()
+    let user = try await service.fetchUser(id: testUserId)
+
+    #expect(user.name == &quot;Test User&quot;)
+}
+
+@Test
+func testConcurrentFetch() async throws {
+    let service = UserService()
+
+    // Test parallel execution
+    async let user1 = service.fetchUser(id: id1)
+    async let user2 = service.fetchUser(id: id2)
+
+    let users = try await [user1, user2]
+    #expect(users.count == 2)
+}</code></pre>
+<h3>Testing Actors</h3>
+<p>Test actor state changes:</p>
+<pre><code class="lang-swift">@Test
+func testCacheActor() async {
+    let cache = UserCache()
+
+    await cache.setUser(testUser)
+    let retrieved = await cache.getUser(id: testUser.id)
+
+    #expect(retrieved?.id == testUser.id)
+
+    await cache.clear()
+    let afterClear = await cache.getUser(id: testUser.id)
+    #expect(afterClear == nil)
+}</code></pre>
+<h2>Anti-Patterns to Avoid</h2>
+<p><strong>DON&#x27;T block async code:</strong></p>
+<pre><code class="lang-swift">// ❌ BAD - Blocking async context
+func bad() async {
+    Thread.sleep(forTimeInterval: 2)  // Blocks thread!
+}
+
+// ✅ GOOD
+func good() async throws {
+    try await Task.sleep(for: .seconds(2))
+}</code></pre>
+<p><strong>DON&#x27;T use DispatchQueue.main.async in async contexts:</strong></p>
+<pre><code class="lang-swift">// ❌ BAD
+func updateUI() async {
+    DispatchQueue.main.async {
+        self.label.text = &quot;Updated&quot;
+    }
+}
+
+// ✅ GOOD
+@MainActor
+func updateUI() {
+    label.text = &quot;Updated&quot;
+}</code></pre>
+<p><strong>DON&#x27;T create detached tasks unnecessarily:</strong></p>
+<pre><code class="lang-swift">// ❌ BAD - Loses task hierarchy
+Task.detached {
+    await someWork()
+}
+
+// ✅ GOOD - Inherits priority and cancellation
+Task {
+    await someWork()
+}</code></pre>
+<p><strong>DON&#x27;T ignore task cancellation:</strong></p>
+<pre><code class="lang-swift">// ❌ BAD - Keeps running after cancellation
+func processItems(_ items: [Item]) async {
+    for item in items {
+        await process(item)  // Never checks cancellation
+    }
+}
+
+// ✅ GOOD
+func processItems(_ items: [Item]) async throws {
+    for item in items {
+        try Task.checkCancellation()
+        await process(item)
+    }
+}</code></pre>
+<h2>Related Skills</h2>
+<ul><li><strong>swiftui-architecture.md</strong> - Using actors and async in view models</li><li><strong>ios-networking.md</strong> - Network service actors, async URLSession</li><li><strong>swiftdata-persistence.md</strong> - Async database operations</li><li><strong>ios-testing.md</strong> - Testing async code and actors</li><li><strong>swiftui-navigation.md</strong> - Async navigation flows</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/swift-concurrency.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

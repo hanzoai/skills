@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ml-unsloth-finetuning</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ml-unsloth-finetuning.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ml-unsloth-finetuning.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ml-unsloth-finetuning</h1><p class="lede">Fine-tuning LLMs (Llama, Mistral, Qwen) efficiently</p><h1>Unsloth Fine-Tuning</h1>
+<p><strong>Scope</strong>: Fast LLM fine-tuning with Unsloth, memory optimization, multi-GPU, Flash Attention <strong>Lines</strong>: ~350 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Fine-tuning LLMs (Llama, Mistral, Qwen) efficiently</li><li>Working in memory-constrained GPU environments</li><li>Needing 2-5x faster training than standard methods</li><li>Optimizing training costs with reduced memory usage</li><li>Requiring rapid iteration on fine-tuning experiments</li><li>Training with consumer GPUs (24GB VRAM or less)</li></ul>
+<h2>Core Concepts</h2>
+<h3>Unsloth Architecture</h3>
+<p><strong>Speed Optimizations</strong>:</p>
+<ul><li>Flash Attention 2 integration for 2x faster attention</li><li>Custom CUDA kernels for backward pass optimization</li><li>Optimized RoPE (Rotary Position Embeddings) computation</li><li>Fused layernorm and cross-entropy operations</li><li>4-bit quantization with minimal accuracy loss</li></ul>
+<p><strong>Memory Efficiency</strong>:</p>
+<ul><li>Reduces VRAM usage by 30-60% vs standard training</li><li>Enables larger batch sizes on same hardware</li><li>Supports gradient checkpointing out of the box</li><li>Efficient mixed precision (bfloat16) handling</li></ul>
+<p><strong>Compatibility</strong>:</p>
+<ul><li>Works with PEFT/LoRA for parameter-efficient training</li><li>Supports Hugging Face Transformers ecosystem</li><li>Compatible with Modal.com GPU workloads</li><li>Drop-in replacement for standard fine-tuning</li></ul>
+<h3>Supported Models</h3>
+<p><strong>Llama Family</strong>:</p>
+<ul><li>Llama 3.2 (1B, 3B), Llama 3.1 (8B, 70B, 405B)</li><li>Llama 3 (8B, 70B), Llama 2 (7B, 13B, 70B)</li></ul>
+<p><strong>Mistral Family</strong>:</p>
+<ul><li>Mistral 7B v0.3, Mixtral 8x7B, 8x22B</li><li>Mistral Small, Mistral NeMo</li></ul>
+<p><strong>Other Models</strong>:</p>
+<ul><li>Qwen 2.5 (0.5B - 72B), Qwen 2 (0.5B - 72B)</li><li>Gemma 2 (2B, 9B, 27B), Phi-3.5 (mini)</li><li>TinyLlama, OpenELM variants</li></ul>
+<h3>Quantization Strategies</h3>
+<p><strong>4-bit QLoRA</strong> (Recommended):</p>
+<ul><li>Uses NF4 (Normal Float 4) quantization</li><li>Maintains 99%+ of full precision performance</li><li>Reduces memory by 4x vs FP16</li><li>Allows fine-tuning 70B models on 48GB GPU</li></ul>
+<p><strong>16-bit Training</strong>:</p>
+<ul><li>Full bfloat16 precision for maximum quality</li><li>Requires 2-4x more VRAM</li><li>Recommended for models &lt;13B with sufficient VRAM</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Basic Llama 3 Fine-Tuning</h3>
+<pre><code class="lang-python">from unsloth import FastLanguageModel
+import torch
+
+# Load model with 4-bit quantization
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name=&quot;unsloth/llama-3-8b-bnb-4bit&quot;,
+    max_seq_length=2048,
+    dtype=None,  # Auto-detect (bfloat16 for Ampere+)
+    load_in_4bit=True,
+)
+
+# Configure LoRA
+model = FastLanguageModel.get_peft_model(
+    model,
+    r=16,  # LoRA rank
+    target_modules=[
+        &quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;, &quot;o_proj&quot;,
+        &quot;gate_proj&quot;, &quot;up_proj&quot;, &quot;down_proj&quot;
+    ],
+    lora_alpha=16,
+    lora_dropout=0,  # Optimized for 0 dropout
+    bias=&quot;none&quot;,
+    use_gradient_checkpointing=&quot;unsloth&quot;,  # Unsloth&#x27;s optimized checkpointing
+    random_state=3407,
+)</code></pre>
+<h3>Dataset Preparation</h3>
+<pre><code class="lang-python">from datasets import load_dataset
+
+# Load dataset (Alpaca format)
+dataset = load_dataset(&quot;yahma/alpaca-cleaned&quot;, split=&quot;train&quot;)
+
+# Format for instruction tuning
+alpaca_prompt = &quot;&quot;&quot;Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+{}
+
+### Response:
+{}&quot;&quot;&quot;
+
+def format_prompts(examples):
+    instructions = examples[&quot;instruction&quot;]
+    outputs = examples[&quot;output&quot;]
+    texts = []
+
+    for instruction, output in zip(instructions, outputs):
+        text = alpaca_prompt.format(instruction, output) + tokenizer.eos_token
+        texts.append(text)
+
+    return {&quot;text&quot;: texts}
+
+# Apply formatting
+dataset = dataset.map(format_prompts, batched=True)</code></pre>
+<h3>Training with SFTTrainer</h3>
+<pre><code class="lang-python">from trl import SFTTrainer
+from transformers import TrainingArguments
+
+trainer = SFTTrainer(
+    model=model,
+    tokenizer=tokenizer,
+    train_dataset=dataset,
+    dataset_text_field=&quot;text&quot;,
+    max_seq_length=2048,
+    dataset_num_proc=2,
+    packing=False,  # Can make training 5x faster for short sequences
+    args=TrainingArguments(
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=4,  # Effective batch size = 8
+        warmup_steps=5,
+        max_steps=60,  # Or num_train_epochs=1
+        learning_rate=2e-4,
+        fp16=not torch.cuda.is_bf16_supported(),
+        bf16=torch.cuda.is_bf16_supported(),
+        logging_steps=1,
+        optim=&quot;adamw_8bit&quot;,  # Reduced memory optimizer
+        weight_decay=0.01,
+        lr_scheduler_type=&quot;linear&quot;,
+        seed=3407,
+        output_dir=&quot;outputs&quot;,
+    ),
+)
+
+# Train
+trainer_stats = trainer.train()</code></pre>
+<h3>Multi-GPU Training</h3>
+<pre><code class="lang-python"># Use with torchrun or Modal multi-GPU
+import modal
+
+app = modal.App(&quot;unsloth-multi-gpu&quot;)
+
+image = (
+    modal.Image.debian_slim()
+    .pip_install(&quot;unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git&quot;)
+    .pip_install(&quot;xformers&quot;, &quot;trl&quot;, &quot;peft&quot;, &quot;accelerate&quot;)
+)
+
+@app.function(
+    gpu=&quot;a100:2&quot;,  # 2x A100
+    image=image,
+    timeout=7200
+)
+def multi_gpu_training():
+    from unsloth import FastLanguageModel
+    from accelerate import Accelerator
+
+    accelerator = Accelerator()
+
+    # Model automatically distributed across GPUs
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name=&quot;unsloth/llama-3-70b-bnb-4bit&quot;,
+        max_seq_length=4096,
+        dtype=None,
+        load_in_4bit=True,
+        device_map=&quot;auto&quot;  # Auto-distribute across GPUs
+    )
+
+    model = FastLanguageModel.get_peft_model(
+        model,
+        r=32,  # Higher rank for 70B model
+        target_modules=[&quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;, &quot;o_proj&quot;],
+        lora_alpha=32,
+    )
+
+    # Train with accelerate
+    # (SFTTrainer handles multi-GPU automatically)</code></pre>
+<h3>Saving and Loading</h3>
+<pre><code class="lang-python"># Save LoRA adapter only (small, ~100MB)
+model.save_pretrained(&quot;lora_model&quot;)
+tokenizer.save_pretrained(&quot;lora_model&quot;)
+
+# Save merged model (full weights)
+model.save_pretrained_merged(
+    &quot;merged_model&quot;,
+    tokenizer,
+    save_method=&quot;merged_16bit&quot;  # or &quot;lora&quot;, &quot;merged_4bit&quot;
+)
+
+# Push to Hugging Face Hub
+model.push_to_hub_merged(
+    &quot;username/model-name&quot;,
+    tokenizer,
+    save_method=&quot;merged_16bit&quot;,
+    token=&quot;hf_...&quot;
+)
+
+# Load for inference
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name=&quot;lora_model&quot;,
+    max_seq_length=2048,
+    dtype=None,
+    load_in_4bit=True,
+)
+FastLanguageModel.for_inference(model)  # Enable fast inference mode</code></pre>
+<h3>Inference After Training</h3>
+<pre><code class="lang-python"># Enable fast inference (disables dropout, etc.)
+FastLanguageModel.for_inference(model)
+
+# Generate
+inputs = tokenizer(
+    [alpaca_prompt.format(
+        &quot;What is the capital of France?&quot;,
+        &quot;&quot;  # Leave output empty for generation
+    )],
+    return_tensors=&quot;pt&quot;
+).to(&quot;cuda&quot;)
+
+outputs = model.generate(
+    **inputs,
+    max_new_tokens=128,
+    use_cache=True,
+    temperature=1.5,
+    min_p=0.1
+)
+
+print(tokenizer.batch_decode(outputs))</code></pre>
+<h3>Modal.com Deployment</h3>
+<pre><code class="lang-python">import modal
+
+app = modal.App(&quot;unsloth-finetune&quot;)
+
+image = (
+    modal.Image.debian_slim()
+    .pip_install(
+        &quot;unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git&quot;,
+        &quot;xformers&quot;,
+        &quot;trl&quot;,
+        &quot;peft&quot;
+    )
+)
+
+volume = modal.Volume.from_name(&quot;model-volume&quot;, create_if_missing=True)
+
+@app.function(
+    gpu=&quot;l40s&quot;,  # Recommended: great price/performance
+    image=image,
+    volumes={&quot;/models&quot;: volume},
+    timeout=3600
+)
+def finetune_llama(
+    dataset_name: str,
+    output_path: str = &quot;/models/finetuned&quot;
+):
+    from unsloth import FastLanguageModel
+    from trl import SFTTrainer
+    from transformers import TrainingArguments
+    from datasets import load_dataset
+
+    # Load model
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name=&quot;unsloth/llama-3-8b-bnb-4bit&quot;,
+        max_seq_length=2048,
+        dtype=None,
+        load_in_4bit=True,
+    )
+
+    # Apply LoRA
+    model = FastLanguageModel.get_peft_model(
+        model,
+        r=16,
+        target_modules=[&quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;, &quot;o_proj&quot;],
+        lora_alpha=16,
+    )
+
+    # Load dataset
+    dataset = load_dataset(dataset_name, split=&quot;train&quot;)
+
+    # Train
+    trainer = SFTTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        train_dataset=dataset,
+        dataset_text_field=&quot;text&quot;,
+        max_seq_length=2048,
+        args=TrainingArguments(
+            per_device_train_batch_size=2,
+            gradient_accumulation_steps=4,
+            warmup_steps=5,
+            max_steps=100,
+            learning_rate=2e-4,
+            fp16=not torch.cuda.is_bf16_supported(),
+            bf16=torch.cuda.is_bf16_supported(),
+            logging_steps=1,
+            optim=&quot;adamw_8bit&quot;,
+            output_dir=&quot;/tmp/output&quot;,
+        ),
+    )
+
+    trainer.train()
+
+    # Save to volume
+    model.save_pretrained(output_path)
+    tokenizer.save_pretrained(output_path)
+    volume.commit()
+
+    return {&quot;status&quot;: &quot;complete&quot;, &quot;path&quot;: output_path}
+
+@app.local_entrypoint()
+def main():
+    result = finetune_llama.remote(&quot;yahma/alpaca-cleaned&quot;)
+    print(result)</code></pre>
+<h3>Chat Template Fine-Tuning</h3>
+<pre><code class="lang-python"># ChatML format
+chat_template = &quot;&quot;&quot;&lt;|im_start|&gt;system
+{system}&lt;|im_end|&gt;
+&lt;|im_start|&gt;user
+{user}&lt;|im_end|&gt;
+&lt;|im_start|&gt;assistant
+{assistant}&lt;|im_end|&gt;&quot;&quot;&quot;
+
+def format_chat(examples):
+    texts = []
+    for system, user, assistant in zip(
+        examples[&quot;system&quot;],
+        examples[&quot;user&quot;],
+        examples[&quot;assistant&quot;]
+    ):
+        text = chat_template.format(
+            system=system,
+            user=user,
+            assistant=assistant
+        ) + tokenizer.eos_token
+        texts.append(text)
+    return {&quot;text&quot;: texts}
+
+dataset = dataset.map(format_chat, batched=True)</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>GPU Requirements by Model Size</h3>
+<pre><code>Model Size    | 4-bit VRAM | 16-bit VRAM | Recommended GPU
+--------------|------------|-------------|------------------
+1-3B          | 6-8 GB     | 12-16 GB    | T4, L4
+7-8B          | 12-16 GB   | 24-32 GB    | L40S
+13B           | 16-20 GB   | 32-40 GB    | L40S, A100
+70B           | 40-48 GB   | 140+ GB     | A100 80GB, H100</code></pre>
+<h3>Unsloth Installation</h3>
+<pre><code class="lang-bash"># Standard installation
+pip install &quot;unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git&quot;
+pip install xformers trl peft accelerate
+
+# For CUDA 11.8
+pip install &quot;unsloth[cu118-ampere-new] @ git+https://github.com/unslothai/unsloth.git&quot;
+
+# For CUDA 12.1+
+pip install &quot;unsloth[cu121-ampere-new] @ git+https://github.com/unslothai/unsloth.git&quot;</code></pre>
+<h3>Key Hyperparameters</h3>
+<pre><code class="lang-python"># LoRA Configuration
+r = 16                    # Rank: 8-64 (higher = more params, better quality)
+lora_alpha = 16           # Usually same as r
+lora_dropout = 0          # Unsloth optimized for 0
+target_modules = [        # All attention + MLP for best results
+    &quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;, &quot;o_proj&quot;,
+    &quot;gate_proj&quot;, &quot;up_proj&quot;, &quot;down_proj&quot;
+]
+
+# Training Configuration
+batch_size = 2            # Per device (increase for larger GPUs)
+gradient_accumulation = 4 # Effective batch = batch_size * accumulation
+learning_rate = 2e-4      # Standard for LoRA
+warmup_steps = 5          # 5-10% of total steps
+max_seq_length = 2048     # Model&#x27;s max (512-4096)</code></pre>
+<h3>Common Commands</h3>
+<pre><code class="lang-python"># Enable inference mode
+FastLanguageModel.for_inference(model)
+
+# Save adapter only
+model.save_pretrained(&quot;path&quot;)
+
+# Save merged 16-bit
+model.save_pretrained_merged(&quot;path&quot;, tokenizer, save_method=&quot;merged_16bit&quot;)
+
+# Save merged 4-bit (smallest)
+model.save_pretrained_merged(&quot;path&quot;, tokenizer, save_method=&quot;merged_4bit&quot;)
+
+# Push to Hub
+model.push_to_hub_merged(&quot;user/model&quot;, tokenizer, save_method=&quot;merged_16bit&quot;)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Using standard Transformers for fine-tuning</strong>: Slower and uses more memory ✅ Use Unsloth for 2-5x speedup with same results</p>
+<p>❌ <strong>Loading full precision models</strong>: Wastes VRAM on consumer GPUs ✅ Always use <code>load_in_4bit=True</code> for models &gt;7B</p>
+<p>❌ <strong>Wrong dtype for GPU architecture</strong>:</p>
+<pre><code class="lang-python"># ❌ Bad: Forces FP16 on Ampere+ GPUs
+args = TrainingArguments(fp16=True, bf16=False)
+
+# ✅ Good: Auto-detect best dtype
+args = TrainingArguments(
+    fp16=not torch.cuda.is_bf16_supported(),
+    bf16=torch.cuda.is_bf16_supported()
+)</code></pre>
+<p>❌ <strong>Tiny batch sizes without gradient accumulation</strong>: Unstable training ✅ Use <code>gradient_accumulation_steps</code> to increase effective batch size</p>
+<p>❌ <strong>Too many LoRA target modules</strong>: Wastes memory for marginal gains ✅ Start with attention layers only: <code>[&quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;, &quot;o_proj&quot;]</code></p>
+<p>❌ <strong>Ignoring sequence length</strong>: OOM errors or wasted compute ✅ Set <code>max_seq_length</code> to actual data length (analyze dataset first)</p>
+<p>❌ <strong>Not using gradient checkpointing</strong>: Runs out of VRAM ✅ Always use <code>use_gradient_checkpointing=&quot;unsloth&quot;</code> for large models</p>
+<p>❌ <strong>Saving full model every epoch</strong>: Wastes disk space ✅ Save LoRA adapter only (~100MB) or push merged model once at end</p>
+<p>❌ <strong>Using standard AdamW</strong>: Higher memory usage ✅ Use <code>optim=&quot;adamw_8bit&quot;</code> for 2x memory reduction</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>lora-peft-techniques.md</code> - LoRA configuration, rank selection, merging</li><li><code>llm-dataset-preparation.md</code> - Dataset formatting, quality, validation</li><li><code>modal-gpu-workloads.md</code> - GPU selection, cost optimization, deployment</li><li><code>huggingface-autotrain.md</code> - Alternative no-code fine-tuning approach</li><li><code>llm-inference-optimization.md</code> - Post-training inference optimization</li><li><code>model-evaluation.md</code> - Evaluating fine-tuned model quality</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ml-unsloth-finetuning.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

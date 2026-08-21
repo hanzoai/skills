@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distributed-systems-event-sourcing</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/distributed-systems-event-sourcing.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/distributed-systems-event-sourcing.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>distributed-systems-event-sourcing</h1><p class="lede">Event sourcing architecture, event design, CQRS, aggregates, projections, snapshots, and production implementations</p><h1>Event Sourcing</h1>
+<p><strong>Scope</strong>: Event sourcing fundamentals, event design, CQRS patterns, aggregates, projections, snapshots, saga patterns, temporal queries <strong>Lines</strong>: ~450 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Building event-driven systems</li><li>Implementing audit trails</li><li>Designing CQRS architectures</li><li>Creating temporal query capabilities</li><li>Working with distributed transactions</li><li>Building saga patterns</li><li>Implementing domain-driven design</li><li>Creating analytics from historical data</li><li>Debugging complex state transitions</li><li>Building collaborative systems</li></ul>
+<h2>Core Concepts</h2>
+<h3>Event Sourcing Overview</h3>
+<p><strong>Principle</strong>: Store all changes as immutable events instead of current state</p>
+<pre><code>Traditional:
+  users = {id: 1, name: &quot;Alice&quot;, status: &quot;active&quot;}
+
+Event Sourced:
+  events = [
+    UserCreated(id=1, name=&quot;Alice&quot;),
+    UserActivated(id=1)
+  ]
+  Current state = reduce(events, initial_state)</code></pre>
+<p><strong>Key benefits</strong>:</p>
+<ul><li>Complete audit trail</li><li>Temporal queries (state at any point in time)</li><li>Event replay for debugging</li><li>Multiple projections from same events</li><li>Natural fit for event-driven architectures</li></ul>
+<p><strong>Trade-offs</strong>:</p>
+<ul><li>Higher complexity</li><li>Storage growth (mitigated by snapshots)</li><li>Eventual consistency</li><li>Learning curve</li><li>Event versioning challenges</li></ul>
+<h3>Event Design</h3>
+<p><strong>Event naming</strong>: Past tense, specific facts</p>
+<pre><code class="lang-python"># Good: Past tense
+UserRegistered
+OrderPlaced
+PaymentProcessed
+EmailSent
+
+# Bad: Commands or present tense
+RegisterUser  # Command, not event
+PlaceOrder    # Command
+UpdateUser    # Too vague</code></pre>
+<p><strong>Event structure</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;eventId&quot;: &quot;uuid&quot;,
+  &quot;eventType&quot;: &quot;OrderPlaced&quot;,
+  &quot;aggregateId&quot;: &quot;order-123&quot;,
+  &quot;aggregateType&quot;: &quot;Order&quot;,
+  &quot;version&quot;: 1,
+  &quot;timestamp&quot;: &quot;2025-10-27T10:30:00Z&quot;,
+  &quot;data&quot;: {
+    &quot;orderId&quot;: &quot;order-123&quot;,
+    &quot;customerId&quot;: &quot;customer-456&quot;,
+    &quot;items&quot;: [...],
+    &quot;totalAmount&quot;: 99.99
+  },
+  &quot;metadata&quot;: {
+    &quot;causationId&quot;: &quot;command-789&quot;,
+    &quot;correlationId&quot;: &quot;request-012&quot;,
+    &quot;userId&quot;: &quot;admin-1&quot;
+  }
+}</code></pre>
+<p><strong>Required fields</strong>: eventId, eventType, aggregateId, version, timestamp, data</p>
+<p><strong>Recommended fields</strong>: aggregateType, metadata (causationId, correlationId, userId)</p>
+<hr>
+<h2>Aggregates</h2>
+<h3>Aggregate Pattern</h3>
+<p><strong>Aggregate</strong>: Consistency boundary that enforces invariants and produces events</p>
+<pre><code class="lang-python">class BankAccount:
+    &quot;&quot;&quot;Aggregate enforcing account invariants&quot;&quot;&quot;
+
+    def __init__(self, account_id):
+        self.account_id = account_id
+        self.balance = 0
+        self.status = &quot;pending&quot;
+        self.version = 0
+        self._uncommitted_events = []
+
+    def deposit(self, amount):
+        &quot;&quot;&quot;Command: Deposit money&quot;&quot;&quot;
+        if self.status != &quot;active&quot;:
+            raise AccountNotActiveError()
+        if amount &lt;= 0:
+            raise InvalidAmountError()
+
+        # Create and apply event
+        event = MoneyDeposited(
+            accountId=self.account_id,
+            amount=amount,
+            balanceAfter=self.balance + amount
+        )
+        self._apply_event(event)
+        self._uncommitted_events.append(event)
+
+    def _apply_event(self, event):
+        &quot;&quot;&quot;Event handler: Update state (NO business logic)&quot;&quot;&quot;
+        if isinstance(event, AccountOpened):
+            self.balance = event.initial_deposit
+            self.status = &quot;active&quot;
+        elif isinstance(event, MoneyDeposited):
+            self.balance = event.balance_after
+
+        self.version += 1</code></pre>
+<p><strong>Aggregate boundaries</strong>:</p>
+<ul><li>Small, focused aggregates (&lt; 100 events typical)</li><li>One aggregate per consistency boundary</li><li>Reference other aggregates by ID only</li><li>Use eventual consistency between aggregates</li></ul>
+<hr>
+<h2>Event Store</h2>
+<h3>Event Store Responsibilities</h3>
+<p><strong>Core operations</strong>:</p>
+<ul><li>Append events (with optimistic concurrency)</li><li>Read stream (all events for aggregate)</li><li>Stream events (for projections)</li><li>Save/load snapshots</li></ul>
+<p><strong>Schema (PostgreSQL)</strong>:</p>
+<pre><code class="lang-sql">CREATE TABLE events (
+    id BIGSERIAL PRIMARY KEY,
+    event_id UUID NOT NULL UNIQUE,
+    event_type VARCHAR(255) NOT NULL,
+    aggregate_id VARCHAR(255) NOT NULL,
+    aggregate_type VARCHAR(100) NOT NULL,
+    version INTEGER NOT NULL,
+    data JSONB NOT NULL,
+    metadata JSONB,
+    timestamp TIMESTAMPTZ NOT NULL,
+    UNIQUE (aggregate_id, version)
+);
+
+CREATE TABLE snapshots (
+    aggregate_id VARCHAR(255) NOT NULL,
+    version INTEGER NOT NULL,
+    data JSONB NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (aggregate_id, version)
+);</code></pre>
+<p><strong>Optimistic concurrency</strong>:</p>
+<pre><code class="lang-python">def append_events(aggregate_id, expected_version, events):
+    &quot;&quot;&quot;Append with concurrency control&quot;&quot;&quot;
+    # Lock and check version
+    current_version = get_stream_version(aggregate_id)
+
+    if current_version != expected_version:
+        raise ConcurrencyException(
+            f&quot;Expected {expected_version}, got {current_version}&quot;
+        )
+
+    # Append events
+    for i, event in enumerate(events):
+        version = expected_version + i + 1
+        insert_event(aggregate_id, version, event)
+
+    update_stream_version(aggregate_id, expected_version + len(events))</code></pre>
+<hr>
+<h2>Projections (Read Models)</h2>
+<h3>Projection Pattern</h3>
+<p><strong>Projection</strong>: Read model built by processing events</p>
+<pre><code>Event Stream → Projection Handler → Read Model</code></pre>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-python">class UserProjection:
+    &quot;&quot;&quot;Build user view from events&quot;&quot;&quot;
+
+    def handle(self, event):
+        if event.event_type == &quot;UserRegistered&quot;:
+            db.execute(
+                &quot;INSERT INTO user_view (user_id, email, status) &quot;
+                &quot;VALUES (%s, %s, %s)&quot;,
+                (event.data[&#x27;userId&#x27;], event.data[&#x27;email&#x27;], &#x27;pending&#x27;)
+            )
+
+        elif event.event_type == &quot;UserActivated&quot;:
+            db.execute(
+                &quot;UPDATE user_view SET status = &#x27;active&#x27; WHERE user_id = %s&quot;,
+                (event.data[&#x27;userId&#x27;],)
+            )</code></pre>
+<p><strong>Key properties</strong>:</p>
+<ul><li>Idempotent (processing same event twice = same result)</li><li>Eventually consistent with event store</li><li>Can be rebuilt from events</li><li>Optimized for queries</li></ul>
+<p><strong>Checkpoint management</strong>:</p>
+<pre><code class="lang-python"># Track last processed event
+checkpoint = get_checkpoint(&quot;user_view&quot;)
+
+# Process new events
+for event in stream_events(from_position=checkpoint):
+    projection.handle(event)
+    update_checkpoint(&quot;user_view&quot;, event.position)</code></pre>
+<hr>
+<h2>CQRS Integration</h2>
+<h3>Command Query Responsibility Segregation</h3>
+<p><strong>Principle</strong>: Separate write model (commands) from read model (queries)</p>
+<pre><code>Commands → Aggregate → Events → Event Store
+                         ↓
+                    Event Bus
+                         ↓
+            ┌────────────┼────────────┐
+            ▼            ▼            ▼
+      Projection 1  Projection 2  Projection 3
+            ↓            ↓            ↓
+      Read Model 1  Read Model 2  Read Model 3
+            ↑            ↑            ↑
+         Queries      Queries      Queries</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Scale reads and writes independently</li><li>Multiple read models from same events</li><li>Optimize each read model for its queries</li><li>Flexible schema evolution</li></ul>
+<hr>
+<h2>Snapshots</h2>
+<h3>Snapshot Strategy</h3>
+<p><strong>Purpose</strong>: Optimize aggregate loading by saving state periodically</p>
+<pre><code class="lang-python"># Without snapshot: Load 10,000 events
+aggregate = load_aggregate(&quot;account-123&quot;)  # Slow!
+
+# With snapshot: Load snapshot + recent events
+snapshot = load_snapshot(&quot;account-123&quot;)
+recent_events = load_events_after(snapshot.version)
+aggregate = apply_events(snapshot.state, recent_events)  # Fast!</code></pre>
+<p><strong>Snapshot frequency</strong>:</p>
+<ol><li><strong>Every N events</strong>: Snapshot every 100 events</li><li><strong>Time-based</strong>: Snapshot aggregates not snapshotted in 7 days</li><li><strong>On-demand</strong>: Create snapshot if loading takes &gt; 100ms</li></ol>
+<p><strong>Snapshot storage</strong>:</p>
+<pre><code class="lang-python">def save_snapshot(aggregate, event_store):
+    snapshot = {
+        &#x27;aggregateId&#x27;: aggregate.id,
+        &#x27;version&#x27;: aggregate.version,
+        &#x27;data&#x27;: {
+            &#x27;balance&#x27;: aggregate.balance,
+            &#x27;status&#x27;: aggregate.status
+        }
+    }
+    event_store.save_snapshot(snapshot)</code></pre>
+<hr>
+<h2>Saga Pattern</h2>
+<h3>Long-Running Processes</h3>
+<p><strong>Saga</strong>: Coordinate process across multiple aggregates/services</p>
+<p><strong>Example</strong>: Order fulfillment</p>
+<pre><code>1. Order submitted
+2. Reserve inventory → If fails: Cancel order
+3. Process payment   → If fails: Release inventory, cancel order
+4. Ship order        → If fails: Refund payment, release inventory, cancel
+5. Complete order</code></pre>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">class OrderFulfillmentSaga:
+    &quot;&quot;&quot;Coordinate order fulfillment&quot;&quot;&quot;
+
+    def handle_event(self, event):
+        if event.type == &quot;OrderSubmitted&quot;:
+            # Step 1: Reserve inventory
+            send_command(ReserveInventory(order_id, items))
+
+        elif event.type == &quot;InventoryReserved&quot;:
+            # Step 2: Process payment
+            send_command(ProcessPayment(order_id, amount))
+
+        elif event.type == &quot;PaymentFailed&quot;:
+            # Compensate: Release inventory
+            send_command(ReleaseInventory(order_id, items))
+            send_command(CancelOrder(order_id))</code></pre>
+<p><strong>Saga state persistence</strong> required for reliability</p>
+<hr>
+<h2>Event Versioning</h2>
+<h3>Schema Evolution</h3>
+<p><strong>Strategy 1: Weak schema (additive only)</strong></p>
+<pre><code class="lang-python"># V1
+{&quot;eventType&quot;: &quot;UserRegistered&quot;, &quot;userId&quot;: &quot;123&quot;, &quot;email&quot;: &quot;...&quot;}
+
+# V2: Add optional field
+{&quot;eventType&quot;: &quot;UserRegistered&quot;, &quot;userId&quot;: &quot;123&quot;, &quot;email&quot;: &quot;...&quot;, &quot;source&quot;: &quot;mobile&quot;}
+
+# Handler handles both
+def handle(event):
+    source = event.get(&#x27;source&#x27;, &#x27;unknown&#x27;)  # Default for old events</code></pre>
+<p><strong>Strategy 2: Explicit versioning</strong></p>
+<pre><code class="lang-python"># Event includes version
+{&quot;eventType&quot;: &quot;UserRegistered&quot;, &quot;version&quot;: 2, ...}
+
+# Handler routes by version
+if event[&#x27;version&#x27;] == 1:
+    handle_v1(event)
+elif event[&#x27;version&#x27;] == 2:
+    handle_v2(event)</code></pre>
+<p><strong>Strategy 3: Upcasting</strong></p>
+<pre><code class="lang-python">def upcast(event):
+    &quot;&quot;&quot;Convert old events to latest schema&quot;&quot;&quot;
+    if event[&#x27;version&#x27;] == 1:
+        event[&#x27;data&#x27;][&#x27;source&#x27;] = &#x27;unknown&#x27;
+        event[&#x27;version&#x27;] = 2
+    return event</code></pre>
+<hr>
+<h2>Temporal Queries</h2>
+<h3>Query Historical State</h3>
+<p><strong>Temporal query</strong>: State at specific point in time</p>
+<pre><code class="lang-python">def get_aggregate_at_time(aggregate_id, timestamp, event_store):
+    &quot;&quot;&quot;Rebuild aggregate as it was at timestamp&quot;&quot;&quot;
+    events = event_store.get_events_until(aggregate_id, timestamp)
+
+    aggregate = BankAccount(aggregate_id)
+    for event in events:
+        aggregate._apply_event(event)
+
+    return aggregate
+
+# Query yesterday&#x27;s balance
+account_yesterday = get_aggregate_at_time(&quot;account-123&quot;, yesterday, event_store)
+print(f&quot;Balance yesterday: {account_yesterday.balance}&quot;)</code></pre>
+<p><strong>Use cases</strong>:</p>
+<ul><li>Audit investigations</li><li>Regulatory reporting</li><li>&quot;What if&quot; analysis</li><li>Debugging production issues</li></ul>
+<hr>
+<h2>Production Implementations</h2>
+<h3>EventStoreDB</h3>
+<p><strong>Purpose-built event store</strong>:</p>
+<pre><code class="lang-bash">docker run -d -p 2113:2113 eventstore/eventstore:latest</code></pre>
+<pre><code class="lang-python">from esdbclient import EventStoreDBClient
+
+client = EventStoreDBClient(uri=&quot;esdb://localhost:2113?tls=false&quot;)
+
+# Append events
+client.append_to_stream(
+    stream_name=&quot;account-123&quot;,
+    events=[NewEvent(type=&quot;MoneyDeposited&quot;, data={...})]
+)
+
+# Read stream
+events = client.get_stream(&quot;account-123&quot;)</code></pre>
+<h3>PostgreSQL Event Store</h3>
+<p><strong>Advantages</strong>: No new infrastructure, familiar tooling, ACID</p>
+<pre><code class="lang-python">class PostgresEventStore:
+    def append_events(self, aggregate_id, expected_version, events):
+        # Optimistic concurrency control
+        # See REFERENCE.md for full implementation
+        pass</code></pre>
+<h3>Kafka as Event Store</h3>
+<p><strong>For distributed systems</strong>:</p>
+<pre><code class="lang-python">producer.send(
+    &#x27;user-events&#x27;,
+    key=aggregate_id,
+    value=event_data
+)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Common Mistakes</h3>
+<p><strong>1. Large events</strong>: Keep events focused</p>
+<pre><code class="lang-python"># Bad: Kitchen sink
+OrderUpdated(changes={...100 fields...})
+
+# Good: Specific events
+ItemAdded(productId, quantity, price)</code></pre>
+<p><strong>2. Missing idempotency</strong>:</p>
+<pre><code class="lang-python"># Bad
+def handle(event):
+    balance += event.amount  # Applying twice doubles amount!
+
+# Good
+def handle(event):
+    if event.id not in processed:
+        balance += event.amount
+        processed.add(event.id)</code></pre>
+<p><strong>3. Business logic in projections</strong>:</p>
+<pre><code class="lang-python"># Bad: Logic in projection
+def handle(event):
+    if event.total &gt; 1000:
+        discount = calculate_discount(event.total)  # Business logic!
+
+# Good: Logic in aggregate, event contains result
+# Event: OrderPlaced(total=1000, discount=100)</code></pre>
+<p><strong>4. No versioning strategy</strong>: Plan for schema evolution from day one</p>
+<p><strong>5. Synchronous projections</strong>: Projections should be asynchronous</p>
+<hr>
+<h2>Performance Optimization</h2>
+<h3>Key Optimizations</h3>
+<p><strong>1. Snapshots</strong>: Massive speedup for large aggregates</p>
+<p><strong>2. Indexing</strong>:</p>
+<pre><code class="lang-sql">CREATE INDEX idx_events_aggregate ON events(aggregate_id, version);
+CREATE INDEX idx_events_id ON events(id);
+CREATE INDEX idx_events_type ON events(event_type);</code></pre>
+<p><strong>3. Projection batching</strong>:</p>
+<pre><code class="lang-python"># Batch commit every 100 events
+batch = []
+for event in events:
+    projection.handle(event)
+    batch.append(event)
+    if len(batch) &gt;= 100:
+        db.commit()
+        batch = []</code></pre>
+<p><strong>4. Read model denormalization</strong>: Optimize for queries</p>
+<p><strong>5. Caching</strong>: Cache frequently-accessed aggregates</p>
+<hr>
+<h2>Testing Event-Sourced Systems</h2>
+<h3>Test Strategies</h3>
+<p><strong>1. Aggregate behavior</strong>:</p>
+<pre><code class="lang-python">def test_withdraw_reduces_balance():
+    account = BankAccount.open(&quot;account-123&quot;, &quot;Alice&quot;, 1000)
+    account.withdraw(200)
+    assert account.balance == 800</code></pre>
+<p><strong>2. Event production</strong>:</p>
+<pre><code class="lang-python">def test_withdraw_produces_event():
+    account.withdraw(200)
+    events = account.get_uncommitted_events()
+    assert events[-1].event_type == &quot;MoneyWithdrawn&quot;</code></pre>
+<p><strong>3. Event replay</strong>:</p>
+<pre><code class="lang-python">def test_rebuild_from_events():
+    events = [
+        AccountOpened(accountId=&quot;123&quot;, initialDeposit=1000),
+        MoneyDeposited(accountId=&quot;123&quot;, amount=500)
+    ]
+    account = BankAccount.from_events(&quot;123&quot;, events)
+    assert account.balance == 1500</code></pre>
+<p><strong>4. Projection correctness</strong>:</p>
+<pre><code class="lang-python">def test_projection_handles_event():
+    projection.handle(UserRegistered(userId=&quot;123&quot;, email=&quot;alice@example.com&quot;))
+    user = db.query(&quot;SELECT * FROM user_view WHERE user_id = &#x27;123&#x27;&quot;)
+    assert user[&#x27;email&#x27;] == &quot;alice@example.com&quot;</code></pre>
+<hr>
+<h2>Level 3: Resources</h2>
+<h3>Reference Documentation</h3>
+<p><strong>REFERENCE.md</strong> (2,378 lines): Comprehensive guide covering:</p>
+<ul><li>Event sourcing fundamentals</li><li>Event design patterns (naming, structure, granularity)</li><li>Aggregate design and lifecycle</li><li>Event store architecture (PostgreSQL schema, operations)</li><li>Projections and read models</li><li>Snapshot strategies (frequency, storage, loading)</li><li>CQRS integration patterns</li><li>Saga patterns for distributed transactions</li><li>Event versioning and schema evolution</li><li>Temporal queries and event replay</li><li>Production implementations (EventStoreDB, PostgreSQL, Kafka, Axon, Marten)</li><li>Common anti-patterns and solutions</li><li>Performance optimization techniques</li><li>Testing strategies (aggregates, projections, idempotency)</li></ul>
+<p>Location: <code>skills/distributed-systems/event-sourcing/resources/REFERENCE.md</code></p>
+<h3>Executable Scripts</h3>
+<p><strong>1. validate_events.py</strong> (16K, 575 lines)</p>
+<p>Validates event schemas and design patterns.</p>
+<pre><code class="lang-bash"># Validate event file
+./validate_events.py --file events.json
+
+# Validate directory
+./validate_events.py --directory ./events --json
+
+# Validate from event store
+./validate_events.py --stream postgres://localhost/events --aggregate-id account-123</code></pre>
+<p>Features:</p>
+<ul><li>Event naming validation (past tense)</li><li>Schema validation (required fields)</li><li>Idempotency checks</li><li>Payload size limits</li><li>Anti-pattern detection</li><li>JSON output support</li></ul>
+<p><strong>2. replay_events.py</strong> (17K, 600 lines)</p>
+<p>Replay events for debugging, temporal queries, and projection rebuilds.</p>
+<pre><code class="lang-bash"># Debug aggregate
+./replay_events.py --source postgres://localhost/events --aggregate account-123 --debug
+
+# Rebuild projection
+./replay_events.py --source postgres://localhost/events --projection user_view
+
+# Temporal query
+./replay_events.py --source postgres://localhost/events --temporal account-123 --until &quot;2025-10-01&quot;
+
+# Event store statistics
+./replay_events.py --source postgres://localhost/events --stats</code></pre>
+<p>Features:</p>
+<ul><li>Step-by-step aggregate debugging</li><li>Projection rebuilding</li><li>Temporal queries</li><li>Event comparison</li><li>Statistics analysis</li><li>File and database sources</li></ul>
+<p><strong>3. benchmark_eventstore.py</strong> (22K, 820 lines)</p>
+<p>Benchmark event store performance.</p>
+<pre><code class="lang-bash"># Write benchmark
+./benchmark_eventstore.py --store postgres://localhost/events --write --events 10000
+
+# Read benchmark
+./benchmark_eventstore.py --store postgres://localhost/events --read --aggregates 100
+
+# Concurrent writes
+./benchmark_eventstore.py --store postgres://localhost/events --concurrent 10
+
+# Full benchmark suite
+./benchmark_eventstore.py --store postgres://localhost/events --full --json</code></pre>
+<p>Features:</p>
+<ul><li>Single and batch writes</li><li>Aggregate reads</li><li>Concurrent operations</li><li>Event streaming</li><li>Latency percentiles (p95, p99)</li><li>Throughput measurement</li><li>JSON output</li></ul>
+<p>Location: <code>skills/distributed-systems/event-sourcing/resources/scripts/</code></p>
+<h3>Production-Ready Examples</h3>
+<p><strong>1. Bank Account Aggregate (Python)</strong> - Complete aggregate implementation with command handling, event production, and state reconstruction</p>
+<p><strong>2. PostgreSQL Event Store (Python)</strong> - Full event store with optimistic concurrency, snapshots, and connection pooling</p>
+<p><strong>3. User View Projection (Python)</strong> - Projection with checkpoint management and continuous processing</p>
+<p><strong>4. Order Aggregate (TypeScript)</strong> - Type-safe aggregate with strong typing and invariant enforcement</p>
+<p><strong>5. Event Schemas (JSON Schema)</strong> - Comprehensive event schema definitions with validation</p>
+<p><strong>6. Docker Compose Setup</strong> - Complete event sourcing stack (PostgreSQL, EventStoreDB, Kafka, Redis)</p>
+<p><strong>7. SQL Initialization</strong> - Event store database schema with indexes and triggers</p>
+<p><strong>8. Order Fulfillment Saga (Python)</strong> - Saga pattern with compensating transactions and state management</p>
+<p>Location: <code>skills/distributed-systems/event-sourcing/resources/examples/</code></p>
+<p>All examples are:</p>
+<ul><li>Production-ready with error handling</li><li>Fully documented with docstrings</li><li>Executable with example usage</li><li>Following best practices</li><li>Demonstrating key patterns</li></ul>
+<hr>
+<h2>Quick Decision Tree</h2>
+<pre><code>Need to track state changes?
+  ├─ Audit trail critical? → Event sourcing
+  ├─ Temporal queries needed? → Event sourcing
+  ├─ Multiple read models? → Event sourcing + CQRS
+  ├─ Simple CRUD? → Traditional persistence
+  └─ Team unfamiliar? → Start simple, migrate later
+
+Implementing event sourcing?
+  ├─ Design events (past tense, focused)
+  ├─ Create aggregates (enforce invariants)
+  ├─ Set up event store (PostgreSQL/EventStoreDB)
+  ├─ Build projections (asynchronous)
+  ├─ Add snapshots (for performance)
+  ├─ Plan versioning (additive changes)
+  └─ Test thoroughly (aggregates, replay, projections)</code></pre>
+<hr>
+<h2>References</h2>
+<p><strong>Books</strong>:</p>
+<ul><li>&quot;Domain-Driven Design&quot; by Eric Evans</li><li>&quot;Implementing Domain-Driven Design&quot; by Vaughn Vernon</li><li>&quot;Versioning in an Event Sourced System&quot; by Greg Young</li></ul>
+<p><strong>Online</strong>:</p>
+<ul><li>Martin Fowler: Event Sourcing pattern</li><li>Greg Young: CQRS and Event Sourcing talks</li><li>EventStoreDB documentation</li><li>Microsoft CQRS Journey</li></ul>
+<p><strong>Tools</strong>:</p>
+<ul><li>EventStoreDB: https://www.eventstore.com/</li><li>Marten (PostgreSQL): https://martendb.io/</li><li>Axon Framework (Java): https://axoniq.io/</li></ul>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/distributed-systems-event-sourcing.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

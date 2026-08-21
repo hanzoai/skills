@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>typed-holes-examples</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/typed-holes-examples.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/typed-holes-examples.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>typed-holes-examples</h1><p class="lede">Complete worked examples of typed holes refactoring including simple file reorganization and complex API consolidation scenarios with full test suites and constraint validation.</p><h1>Typed Holes Refactoring Examples</h1>
+<p>Complete worked examples demonstrating the methodology in action.</p>
+<h2>Table of Contents</h2>
+<ol><li><a href="#simple-example-file-reorganization">Simple Example: File Reorganization</a></li><li><a href="#detailed-example-api-parser-consolidation">Detailed Example: API Parser Consolidation</a></li></ol>
+<hr>
+<h2>Simple Example: File Reorganization</h2>
+<p><strong>Scenario</strong>: Reorganize a flat codebase into proper module structure.</p>
+<p><strong>Current State</strong>: All code in <code>src/</code> with no clear organization (15 files).</p>
+<h3>Phase 0: Discovery</h3>
+<pre><code class="lang-bash">git checkout -b refactor/typed-holes-v1
+python scripts/discover_holes.py</code></pre>
+<p><strong>Generated REFACTOR_IR.md (simplified)</strong>:</p>
+<pre><code class="lang-markdown">## Hole Catalog
+
+#### H0_architecture
+
+**Question**: What is the current module organization?
+
+**Dependencies**: None
+
+**Status**: pending
+
+**Resolution**: TBD
+
+#### R1_target_architecture
+
+**Question**: How should modules be organized?
+
+**Dependencies**: H0_architecture
+
+**Status**: pending
+
+**Resolution**: TBD
+
+#### R4_file_moves
+
+**Question**: Which files move to which modules?
+
+**Dependencies**: R1_target_architecture
+
+**Status**: pending
+
+**Resolution**: TBD</code></pre>
+<h3>Phase 1: Resolve H0 (Current State)</h3>
+<p><strong>Analysis</strong>:</p>
+<pre><code class="lang-python"># tests/characterization/test_current_imports.py
+def test_all_imports_work():
+    &quot;&quot;&quot;Capture current import structure&quot;&quot;&quot;
+    from src import parser, validator, config
+    from src import api_client, data_processor
+    # All imports succeed
+    assert True</code></pre>
+<p><strong>Resolution</strong>:</p>
+<ul><li>15 files in flat structure</li><li>3 categories: core logic (6), API clients (4), utilities (5)</li></ul>
+<p><strong>Mark H0 resolved</strong> in IR, commit.</p>
+<h3>Phase 2: Resolve R1 (Target Architecture)</h3>
+<p><strong>Decision</strong>:</p>
+<pre><code class="lang-python"># Proposed structure
+src/
+  core/        # Business logic
+  clients/     # API clients
+  utils/       # Utilities</code></pre>
+<p><strong>Validation</strong>:</p>
+<pre><code class="lang-python"># tests/refactor/test_r1_architecture.py
+def test_no_circular_dependencies():
+    &quot;&quot;&quot;Ensure clean dependency flow&quot;&quot;&quot;
+    # utils can&#x27;t import from core or clients
+    # core can&#x27;t import from clients
+    assert validate_architecture_rules()</code></pre>
+<p><strong>Mark R1 resolved</strong>, commit.</p>
+<h3>Phase 3: Resolve R4 (File Moves)</h3>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-bash">mkdir -p src/core src/clients src/utils
+git mv src/parser.py src/core/
+git mv src/validator.py src/core/
+# ... move remaining files</code></pre>
+<p><strong>Tests</strong>:</p>
+<pre><code class="lang-python"># tests/refactor/test_r4_moves.py
+def test_imports_still_work():
+    &quot;&quot;&quot;All old import paths still work via __init__.py&quot;&quot;&quot;
+    from src import parser  # Re-exported
+    from src.core import parser  # New location
+    assert True
+
+def test_no_broken_imports():
+    &quot;&quot;&quot;Run all modules to detect import errors&quot;&quot;&quot;
+    import_all_modules()  # Would fail if imports broken</code></pre>
+<p><strong>Result</strong>: All files moved, tests pass, commit.</p>
+<h3>Phase 4: Generate Report</h3>
+<pre><code class="lang-bash">python scripts/generate_report.py &gt; REFACTOR_REPORT.md</code></pre>
+<p><strong>Metrics</strong>:</p>
+<ul><li>Holes resolved: 3/3</li><li>Files reorganized: 15</li><li>All tests passing: ✓</li><li>Time: 2 hours</li></ul>
+<p><strong>Simple example complete!</strong></p>
+<hr>
+<h2>Detailed Example: API Parser Consolidation</h2>
+<p><strong>Scenario</strong>: Three similar API parsers (<code>parse_v1.py</code>, <code>parse_v2.py</code>, <code>parse_v3.py</code>) with 80% duplicate code. Consolidate into single unified parser.</p>
+<h3>Phase 0: Discovery &amp; Setup</h3>
+<pre><code class="lang-bash">git checkout -b refactor/typed-holes-parser-consolidation
+python scripts/discover_holes.py</code></pre>
+<p><strong>Initial Analysis</strong>:</p>
+<ul><li>3 parser files: 450, 520, 380 LOC</li><li>Duplication: ~75%</li><li>Differences: v1 (XML), v2 (JSON), v3 (JSON + validation)</li></ul>
+<h3>Generated REFACTOR_IR.md</h3>
+<pre><code class="lang-markdown"># Refactor Intermediate Representation
+
+## Executive Summary
+
+**Goal**: Consolidate 3 API parsers into single unified implementation
+
+**Total Holes**: 8
+**Pending**: 8
+**Resolved**: 0
+
+## Hole Catalog
+
+### Current State Holes
+
+#### H0_parser_differences
+
+**Question**: What are the exact differences between the 3 parsers?
+
+**Dependencies**: None
+
+**Status**: pending
+
+**Resolution**: TBD
+
+**Validation**: TBD
+
+---
+
+#### H0_test_coverage
+
+**Question**: What is current test coverage for parsers?
+
+**Dependencies**: None
+
+**Status**: pending
+
+**Resolution**: TBD
+
+---
+
+### Architecture Holes
+
+#### R1_unified_interface
+
+**Question**: What should the unified parser interface be?
+
+**Dependencies**: H0_parser_differences
+
+**Status**: pending
+
+**Resolution**: TBD
+
+---
+
+#### R2_format_handling
+
+**Question**: How to handle multiple formats (XML, JSON)?
+
+**Dependencies**: R1_unified_interface
+
+**Status**: pending
+
+**Resolution**: TBD
+
+---
+
+### Implementation Holes
+
+#### R4_consolidate_parsing
+
+**Question**: How to merge core parsing logic?
+
+**Dependencies**: R2_format_handling
+
+**Status**: pending
+
+**Resolution**: TBD
+
+---
+
+#### R5_validation_strategy
+
+**Question**: How to unify validation across formats?
+
+**Dependencies**: R4_consolidate_parsing
+
+**Status**: pending
+
+**Resolution**: TBD
+
+---
+
+### Quality Holes
+
+#### R7_test_strategy
+
+**Question**: How to ensure equivalence after consolidation?
+
+**Dependencies**: H0_test_coverage
+
+**Status**: pending
+
+**Resolution**: TBD
+
+---
+
+#### R8_migration_path
+
+**Question**: How to migrate existing code to use new parser?
+
+**Dependencies**: R4_consolidate_parsing, R5_validation_strategy
+
+**Status**: pending
+
+**Resolution**: TBD
+
+---
+
+## Constraints
+
+### Must Preserve
+- [x] C1: All current parsing behavior
+- [ ] C2: Backward compatible API
+- [ ] C3: Performance (no regression)
+
+### Must Improve
+- [ ] C5: Reduce duplication by &gt;60%
+- [ ] C6: Increase test coverage to &gt;85%
+- [ ] C7: Reduce total LOC by &gt;30%
+
+### Must Maintain
+- [ ] C9: Type safety (mypy clean)
+- [ ] C10: All error handling</code></pre>
+<h3>Sync with Beads</h3>
+<pre><code class="lang-bash">python scripts/holes_to_beads.py</code></pre>
+<p>Creates 8 bead issues with dependencies:</p>
+<pre><code>bd-1: H0_parser_differences (ready)
+bd-2: H0_test_coverage (ready)
+bd-3: R1_unified_interface (blocked by bd-1)
+bd-4: R2_format_handling (blocked by bd-3)
+...</code></pre>
+<h3>Phase 1: Resolve H0 Holes (Current State)</h3>
+<h4>H0_parser_differences</h4>
+<p><strong>Investigation</strong>:</p>
+<pre><code class="lang-python"># scripts/analyze_parsers.py
+import ast
+
+def compare_parsers():
+    v1_funcs = extract_functions(&quot;parse_v1.py&quot;)
+    v2_funcs = extract_functions(&quot;parse_v2.py&quot;)
+    v3_funcs = extract_functions(&quot;parse_v3.py&quot;)
+
+    common = set(v1_funcs) &amp; set(v2_funcs) &amp; set(v3_funcs)
+    # [&#x27;parse_header&#x27;, &#x27;parse_body&#x27;, &#x27;handle_error&#x27;]
+
+    unique_v1 = [&#x27;parse_xml&#x27;, &#x27;xml_to_dict&#x27;]
+    unique_v2 = [&#x27;parse_json&#x27;]
+    unique_v3 = [&#x27;validate_schema&#x27;, &#x27;check_required&#x27;]
+
+    return {
+        &quot;common&quot;: common,
+        &quot;unique&quot;: {&quot;v1&quot;: unique_v1, &quot;v2&quot;: unique_v2, &quot;v3&quot;: unique_v3}
+    }</code></pre>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-markdown">**Differences**:
+- Format handling: v1=XML, v2/v3=JSON
+- Validation: Only v3 has schema validation
+- Core logic: 75% identical (header, body, error handling)
+
+**Commonalities**:
+- Same API contract: `parse(data) -&gt; ParsedResult`
+- Same error handling strategy
+- Same result structure</code></pre>
+<p><strong>Update REFACTOR_IR.md</strong>: Mark H0_parser_differences as resolved.</p>
+<pre><code class="lang-bash">bd update bd-1 --status done --reason &quot;Analysis complete&quot;
+git add REFACTOR_IR.md
+git commit -m &quot;Resolve H0_parser_differences: Document parser variations&quot;</code></pre>
+<h4>H0_test_coverage</h4>
+<p><strong>Analysis</strong>:</p>
+<pre><code class="lang-python"># Run coverage
+pytest tests/ --cov=src/parsers --cov-report=term
+
+# Results:
+# parse_v1.py: 45%
+# parse_v2.py: 62%
+# parse_v3.py: 71%</code></pre>
+<p><strong>Resolution</strong>: Current coverage: 59% average, gaps in error handling.</p>
+<p><strong>Write Characterization Tests</strong>:</p>
+<pre><code class="lang-python"># tests/characterization/test_parser_v1_baseline.py
+import json
+
+def test_v1_valid_xml():
+    &quot;&quot;&quot;Capture v1 behavior on valid XML&quot;&quot;&quot;
+    xml = &#x27;&lt;data&gt;&lt;item&gt;test&lt;/item&gt;&lt;/data&gt;&#x27;
+    result = parse_v1(xml)
+    save_baseline(&quot;v1_valid&quot;, result)
+    assert result.success
+
+def test_v1_invalid_xml():
+    &quot;&quot;&quot;Capture v1 error handling&quot;&quot;&quot;
+    xml = &#x27;&lt;data&gt;&lt;unclosed&gt;&#x27;
+    result = parse_v1(xml)
+    save_baseline(&quot;v1_invalid&quot;, result)
+    assert not result.success
+    assert &quot;parse error&quot; in result.error.lower()
+
+# Similar for v2, v3...</code></pre>
+<p><strong>Mark H0_test_coverage resolved</strong>, commit.</p>
+<h3>Phase 2: Architecture Holes</h3>
+<h4>R1_unified_interface</h4>
+<p><strong>Design</strong>:</p>
+<pre><code class="lang-python"># src/parsers/unified.py
+from typing import Protocol, Union
+from dataclasses import dataclass
+
+@dataclass
+class ParseResult:
+    success: bool
+    data: dict
+    error: Optional[str] = None
+    format: str = &quot;&quot;
+
+class Parser(Protocol):
+    &quot;&quot;&quot;Unified parser interface&quot;&quot;&quot;
+    def parse(self, raw_data: Union[str, bytes]) -&gt; ParseResult:
+        ...
+
+    def validate(self, data: dict) -&gt; bool:
+        ...</code></pre>
+<p><strong>Validation Test</strong>:</p>
+<pre><code class="lang-python"># tests/refactor/test_r1_interface.py
+def test_unified_interface_defined():
+    &quot;&quot;&quot;Interface is well-formed&quot;&quot;&quot;
+    from src.parsers.unified import Parser, ParseResult
+    assert hasattr(Parser, &#x27;parse&#x27;)
+    assert hasattr(Parser, &#x27;validate&#x27;)
+
+def test_result_structure():
+    &quot;&quot;&quot;ParseResult has required fields&quot;&quot;&quot;
+    result = ParseResult(success=True, data={})
+    assert hasattr(result, &#x27;success&#x27;)
+    assert hasattr(result, &#x27;data&#x27;)</code></pre>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-markdown">Unified interface: Parser protocol with parse() and validate()
+Common result: ParseResult dataclass
+Type-safe: mypy compliant</code></pre>
+<p><strong>Update IR</strong>, mark R1 resolved, propagate constraints to R2, commit.</p>
+<pre><code class="lang-bash">bd update bd-3 --status done
+python scripts/propagate.py R1</code></pre>
+<h4>R2_format_handling</h4>
+<p><strong>Design</strong>:</p>
+<pre><code class="lang-python"># src/parsers/unified.py
+from enum import Enum
+
+class Format(Enum):
+    XML = &quot;xml&quot;
+    JSON = &quot;json&quot;
+
+class UnifiedParser:
+    def __init__(self, format: Format):
+        self.format = format
+        self._parser = self._get_parser(format)
+
+    def _get_parser(self, format: Format):
+        if format == Format.XML:
+            return XMLParser()
+        elif format == Format.JSON:
+            return JSONParser()
+
+    def parse(self, raw_data: Union[str, bytes]) -&gt; ParseResult:
+        &quot;&quot;&quot;Delegate to format-specific parser&quot;&quot;&quot;
+        return self._parser.parse(raw_data)</code></pre>
+<p><strong>Tests</strong>:</p>
+<pre><code class="lang-python"># tests/refactor/test_r2_formats.py
+def test_xml_format_supported():
+    parser = UnifiedParser(Format.XML)
+    result = parser.parse(&#x27;&lt;data&gt;&lt;item&gt;test&lt;/item&gt;&lt;/data&gt;&#x27;)
+    assert result.success
+
+def test_json_format_supported():
+    parser = UnifiedParser(Format.JSON)
+    result = parser.parse(&#x27;{&quot;item&quot;: &quot;test&quot;}&#x27;)
+    assert result.success
+
+def test_format_auto_detection():
+    &quot;&quot;&quot;Can detect format automatically&quot;&quot;&quot;
+    parser = UnifiedParser(Format.AUTO)
+    xml_result = parser.parse(&#x27;&lt;data/&gt;&#x27;)
+    json_result = parser.parse(&#x27;{}&#x27;)
+    assert xml_result.format == &quot;xml&quot;
+    assert json_result.format == &quot;json&quot;</code></pre>
+<p><strong>Mark R2 resolved</strong>, propagate to R4, commit.</p>
+<h3>Phase 3: Implementation Holes</h3>
+<h4>R4_consolidate_parsing</h4>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python"># src/parsers/unified.py
+class UnifiedParser:
+    def parse(self, raw_data: Union[str, bytes]) -&gt; ParseResult:
+        &quot;&quot;&quot;Unified parsing logic&quot;&quot;&quot;
+        try:
+            # Step 1: Parse format-specific data
+            parsed = self._parser.parse_raw(raw_data)
+
+            # Step 2: Normalize to common structure
+            normalized = self._normalize(parsed)
+
+            # Step 3: Extract common fields
+            header = self._parse_header(normalized)
+            body = self._parse_body(normalized)
+
+            return ParseResult(
+                success=True,
+                data={&quot;header&quot;: header, &quot;body&quot;: body},
+                format=self.format.value
+            )
+        except Exception as e:
+            return self._handle_error(e)
+
+    def _normalize(self, parsed):
+        &quot;&quot;&quot;Convert XML/JSON to common dict structure&quot;&quot;&quot;
+        # Consolidates logic from v1.py:xml_to_dict and v2.py:flatten_json
+        if self.format == Format.XML:
+            return xml_to_dict(parsed)
+        return parsed
+
+    def _parse_header(self, data: dict):
+        &quot;&quot;&quot;Extract header (was duplicated in all 3 parsers)&quot;&quot;&quot;
+        return {
+            &quot;timestamp&quot;: data.get(&quot;ts&quot;, data.get(&quot;timestamp&quot;)),
+            &quot;version&quot;: data.get(&quot;v&quot;, data.get(&quot;version&quot;, &quot;1.0&quot;)),
+        }
+
+    def _parse_body(self, data: dict):
+        &quot;&quot;&quot;Extract body (was duplicated in all 3 parsers)&quot;&quot;&quot;
+        return data.get(&quot;payload&quot;, data.get(&quot;body&quot;, {}))
+
+    def _handle_error(self, error: Exception) -&gt; ParseResult:
+        &quot;&quot;&quot;Unified error handling (was duplicated in all 3)&quot;&quot;&quot;
+        return ParseResult(
+            success=False,
+            data={},
+            error=f&quot;Parse error: {str(error)}&quot;,
+            format=self.format.value
+        )</code></pre>
+<p><strong>Equivalence Tests</strong>:</p>
+<pre><code class="lang-python"># tests/refactor/test_r4_equivalence.py
+import pytest
+
+@pytest.mark.parametrize(&quot;xml_input,expected&quot;, [
+    (&#x27;&lt;data&gt;&lt;item&gt;test&lt;/item&gt;&lt;/data&gt;&#x27;, {&quot;item&quot;: &quot;test&quot;}),
+    (&#x27;&lt;data&gt;&lt;/data&gt;&#x27;, {}),
+])
+def test_xml_parsing_equivalent_to_v1(xml_input, expected):
+    &quot;&quot;&quot;New parser produces same results as v1 for XML&quot;&quot;&quot;
+    old_result = parse_v1(xml_input)
+    new_result = UnifiedParser(Format.XML).parse(xml_input)
+
+    assert new_result.success == old_result.success
+    assert new_result.data == old_result.data
+
+@pytest.mark.parametrize(&quot;json_input,expected&quot;, [
+    (&#x27;{&quot;item&quot;: &quot;test&quot;}&#x27;, {&quot;item&quot;: &quot;test&quot;}),
+    (&#x27;{}&#x27;, {}),
+])
+def test_json_parsing_equivalent_to_v2(json_input, expected):
+    &quot;&quot;&quot;New parser produces same results as v2 for JSON&quot;&quot;&quot;
+    old_result = parse_v2(json_input)
+    new_result = UnifiedParser(Format.JSON).parse(json_input)
+
+    assert new_result.success == old_result.success
+    assert new_result.data == old_result.data</code></pre>
+<p><strong>Run characterization tests</strong>:</p>
+<pre><code class="lang-bash">pytest tests/characterization/ -v
+# All baseline tests pass - behavior preserved ✓</code></pre>
+<p><strong>Mark R4 resolved</strong>, commit.</p>
+<h4>R5_validation_strategy</h4>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python"># src/parsers/unified.py
+from jsonschema import validate, ValidationError
+
+class UnifiedParser:
+    def __init__(self, format: Format, schema: Optional[dict] = None):
+        self.format = format
+        self.schema = schema
+        self._parser = self._get_parser(format)
+
+    def validate(self, data: dict) -&gt; bool:
+        &quot;&quot;&quot;Unified validation (from v3)&quot;&quot;&quot;
+        if not self.schema:
+            return True  # No schema = always valid
+
+        try:
+            validate(instance=data, schema=self.schema)
+            return True
+        except ValidationError:
+            return False
+
+    def parse(self, raw_data, validate_result=True) -&gt; ParseResult:
+        result = self._parse_internal(raw_data)
+
+        if result.success and validate_result:
+            if not self.validate(result.data):
+                result.success = False
+                result.error = &quot;Validation failed&quot;
+
+        return result</code></pre>
+<p><strong>Tests</strong>:</p>
+<pre><code class="lang-python"># tests/refactor/test_r5_validation.py
+def test_validation_with_schema():
+    &quot;&quot;&quot;Validation works like v3&quot;&quot;&quot;
+    schema = {
+        &quot;type&quot;: &quot;object&quot;,
+        &quot;properties&quot;: {&quot;item&quot;: {&quot;type&quot;: &quot;string&quot;}},
+        &quot;required&quot;: [&quot;item&quot;]
+    }
+
+    parser = UnifiedParser(Format.JSON, schema=schema)
+
+    valid = parser.parse(&#x27;{&quot;item&quot;: &quot;test&quot;}&#x27;)
+    assert valid.success
+
+    invalid = parser.parse(&#x27;{&quot;other&quot;: &quot;test&quot;}&#x27;)
+    assert not invalid.success
+    assert &quot;validation&quot; in invalid.error.lower()
+
+def test_validation_optional():
+    &quot;&quot;&quot;Can parse without validation&quot;&quot;&quot;
+    parser = UnifiedParser(Format.JSON)  # No schema
+    result = parser.parse(&#x27;{&quot;anything&quot;: &quot;goes&quot;}&#x27;)
+    assert result.success</code></pre>
+<p><strong>Mark R5 resolved</strong>, commit.</p>
+<h3>Phase 4: Quality &amp; Migration</h3>
+<h4>R7_test_strategy</h4>
+<p><strong>Strategy</strong>:</p>
+<pre><code class="lang-markdown">1. Characterization tests: Capture all v1/v2/v3 behavior (DONE)
+2. Equivalence tests: New parser = old parsers for all cases
+3. Unit tests: Each method tested independently
+4. Integration tests: Full workflows
+5. Property tests: Random inputs don&#x27;t crash</code></pre>
+<p><strong>Additional tests</strong>:</p>
+<pre><code class="lang-python"># tests/refactor/test_r7_comprehensive.py
+from hypothesis import given, strategies as st
+
+@given(st.text())
+def test_parser_never_crashes(random_input):
+    &quot;&quot;&quot;Parser handles any input gracefully&quot;&quot;&quot;
+    parser = UnifiedParser(Format.JSON)
+    result = parser.parse(random_input)
+    # Should return result (success or error), never crash
+    assert isinstance(result, ParseResult)
+
+def test_integration_full_workflow():
+    &quot;&quot;&quot;End-to-end workflow&quot;&quot;&quot;
+    parser = UnifiedParser(Format.JSON, schema=get_api_schema())
+
+    # Fetch from API
+    raw_data = fetch_api_data()
+
+    # Parse
+    result = parser.parse(raw_data)
+    assert result.success
+
+    # Use parsed data
+    process_data(result.data)</code></pre>
+<p><strong>Coverage</strong>:</p>
+<pre><code class="lang-bash">pytest tests/ --cov=src/parsers --cov-report=html
+# unified.py: 91% coverage ✓</code></pre>
+<p><strong>Mark R7 resolved</strong>, commit.</p>
+<h4>R8_migration_path</h4>
+<p><strong>Migration</strong>:</p>
+<pre><code class="lang-python"># src/parsers/__init__.py
+&quot;&quot;&quot;
+Backward compatibility wrappers
+&quot;&quot;&quot;
+from .unified import UnifiedParser, Format, ParseResult
+
+def parse_v1(xml_data: str) -&gt; ParseResult:
+    &quot;&quot;&quot;Deprecated: Use UnifiedParser(Format.XML) instead&quot;&quot;&quot;
+    import warnings
+    warnings.warn(&quot;parse_v1 is deprecated&quot;, DeprecationWarning)
+    return UnifiedParser(Format.XML).parse(xml_data)
+
+def parse_v2(json_data: str) -&gt; ParseResult:
+    &quot;&quot;&quot;Deprecated: Use UnifiedParser(Format.JSON) instead&quot;&quot;&quot;
+    import warnings
+    warnings.warn(&quot;parse_v2 is deprecated&quot;, DeprecationWarning)
+    return UnifiedParser(Format.JSON).parse(json_data)
+
+# Export for backward compatibility
+__all__ = [&#x27;UnifiedParser&#x27;, &#x27;Format&#x27;, &#x27;ParseResult&#x27;, &#x27;parse_v1&#x27;, &#x27;parse_v2&#x27;]</code></pre>
+<p><strong>Migration Guide</strong>:</p>
+<pre><code class="lang-markdown"># MIGRATION.md
+
+## Migrating from old parsers to UnifiedParser
+
+### Before:</code></pre>
+<p>from src.parsers import parse_v1, parse_v2</p>
+<p>result = parse_v2(json_data)</p>
+<pre><code>
+### After:</code></pre>
+<p>from src.parsers import UnifiedParser, Format</p>
+<p>parser = UnifiedParser(Format.JSON) result = parser.parse(json_data)</p>
+<pre><code>
+### Timeline:
+- Week 1: Deploy with backward compatibility
+- Week 2-4: Migrate all call sites
+- Week 5: Remove old functions</code></pre>
+<p><strong>Mark R8 resolved</strong>, commit.</p>
+<h3>Phase 5: Final Validation</h3>
+<pre><code class="lang-bash">python scripts/check_completeness.py</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code>============================================================
+  TYPED HOLES REFACTORING - PROGRESS DASHBOARD
+============================================================
+
+📊 Overall Progress: 8/8 holes (100.0%)
+[██████████████████████████████████████████████████] 100.0%
+
+🎯 Current Phase: Phase 5: Complete (ready for deployment)
+
+📋 Next Steps:
+  • Generate final report: python scripts/generate_report.py
+  • Review all constraints satisfied
+  • Prepare PR for review</code></pre>
+<h3>Generate Final Report</h3>
+<pre><code class="lang-bash">python scripts/generate_report.py &gt; REFACTOR_REPORT.md</code></pre>
+<p><strong>REFACTOR_REPORT.md</strong>:</p>
+<pre><code class="lang-markdown"># Refactor Report: API Parser Consolidation
+
+## Executive Summary
+
+Successfully consolidated 3 duplicate API parsers into single unified implementation.
+
+**Duration**: 3 days
+**Holes Resolved**: 8/8 (100%)
+**All Gates Passed**: ✓
+
+## Hole Resolution Summary
+
+| Hole ID | Description | Status | Validation |
+|---------|-------------|--------|------------|
+| H0_parser_differences | Analyzed parser variations | ✓ | Manual analysis |
+| H0_test_coverage | Measured coverage | ✓ | pytest --cov |
+| R1_unified_interface | Designed Protocol interface | ✓ | Type checker |
+| R2_format_handling | Multi-format support | ✓ | Format tests |
+| R4_consolidate_parsing | Merged core logic | ✓ | Equivalence tests |
+| R5_validation_strategy | Unified validation | ✓ | Schema tests |
+| R7_test_strategy | Comprehensive testing | ✓ | 91% coverage |
+| R8_migration_path | Backward compatibility | ✓ | Migration guide |
+
+## Metrics Delta
+
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| Total LOC | 1,350 | 420 | -69% ✓ |
+| Duplication | 75% | 5% | -70% ✓ |
+| Test Coverage | 59% | 91% | +32% ✓ |
+| Complexity (avg) | 12.4 | 6.2 | -50% ✓ |
+| Files | 3 | 1 | -67% ✓ |
+
+## Behavioral Analysis
+
+**Intentional Changes**:
+- None - all behavior preserved
+
+**Equivalence Validation**:
+- 147 characterization tests: ✓ All pass
+- 68 equivalence tests: ✓ All pass
+- Property tests (1000 random inputs): ✓ All handled
+
+## Constraint Validation
+
+### Must Preserve
+- [x] C1: All current parsing behavior - VERIFIED
+- [x] C2: Backward compatible API - VERIFIED
+- [x] C3: Performance (no regression) - VERIFIED (3% faster)
+
+### Must Improve
+- [x] C5: Reduce duplication by &gt;60% - ACHIEVED (70%)
+- [x] C6: Increase test coverage to &gt;85% - ACHIEVED (91%)
+- [x] C7: Reduce total LOC by &gt;30% - ACHIEVED (69%)
+
+### Must Maintain
+- [x] C9: Type safety (mypy clean) - VERIFIED
+- [x] C10: All error handling - VERIFIED
+
+**All constraints satisfied!**
+
+## Migration Guide
+
+See MIGRATION.md for step-by-step migration from old parsers.
+
+## Risk Assessment
+
+**Risk Level**: LOW
+
+**Mitigation**:
+- Backward compatibility maintained
+- Comprehensive test coverage
+- Gradual migration strategy
+- Can revert instantly if issues found
+
+## Recommendation
+
+✅ **APPROVED FOR MERGE**
+
+All validation gates passed, constraints satisfied, comprehensive testing complete.</code></pre>
+<h3>Create Pull Request</h3>
+<pre><code class="lang-bash">git push -u origin refactor/typed-holes-parser-consolidation
+gh pr create \
+  --title &quot;Consolidate API parsers using typed holes methodology&quot; \
+  --body &quot;$(cat REFACTOR_REPORT.md)&quot;</code></pre>
+<p><strong>Detailed example complete!</strong></p>
+<hr>
+<h2>Summary: Key Takeaways</h2>
+<h3>Simple Example (File Reorganization)</h3>
+<ul><li><strong>Time</strong>: 2 hours</li><li><strong>Holes</strong>: 3</li><li><strong>Value</strong>: Clear organization, 0 regressions</li></ul>
+<h3>Complex Example (Parser Consolidation)</h3>
+<ul><li><strong>Time</strong>: 3 days</li><li><strong>Holes</strong>: 8</li><li><strong>Value</strong>: -69% LOC, -70% duplication, +32% coverage, 0 regressions</li></ul>
+<h3>Universal Patterns</h3>
+<ol><li><strong>Always start with characterization tests</strong> - Safety net before changes</li><li><strong>Resolve current state holes first</strong> - Understand before changing</li><li><strong>Architecture holes before implementation</strong> - Design then build</li><li><strong>Test each hole resolution independently</strong> - Incremental validation</li><li><strong>Track progress with beads</strong> - Never lose state across sessions</li><li><strong>Generate final report</strong> - Document decisions and outcomes</li></ol>
+<h3>When to Use This Methodology</h3>
+<p><strong>Use for</strong>:</p>
+<ul><li>Refactoring &gt;5 files</li><li>Consolidating duplicate code</li><li>Architectural changes</li><li>Any refactor with &gt;3 distinct steps</li></ul>
+<p><strong>Skip for</strong>:</p>
+<ul><li>Single file changes</li><li>Simple renames</li><li>Adding new features (not refactoring)</li><li>Time pressure situations</li></ul>
+<hr>
+<p><strong>Questions?</strong> See <a href="../SKILL.md">SKILL.md</a> for full methodology or <a href="../SKILL.md#troubleshooting">TROUBLESHOOTING.md</a> for common issues.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/typed-holes-examples.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

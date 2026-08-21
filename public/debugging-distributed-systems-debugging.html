@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>debugging-distributed-systems-debugging</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/debugging-distributed-systems-debugging.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/debugging-distributed-systems-debugging.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>debugging-distributed-systems-debugging</h1><p class="lede">Debugging distributed systems with trace correlation, cross-service workflows, request replay, clock skew handling, and chaos engineering</p><h1>Distributed Systems Debugging</h1>
+<p><strong>Scope</strong>: Distributed tracing correlation, cross-service debugging, request replay, traffic shadowing, clock skew, chaos engineering, cascading failures</p>
+<p><strong>Lines</strong>: 440</p>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Debugging failures that span multiple services</li><li>Investigating request flows across microservices</li><li>Tracking down distributed deadlocks or race conditions</li><li>Analyzing cascading failures or circuit breaker trips</li><li>Debugging eventual consistency issues</li><li>Troubleshooting distributed transactions (saga patterns)</li><li>Investigating clock skew or time synchronization problems</li><li>Using chaos engineering to reproduce production issues</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Single-service debugging (use standard debugging)</li><li>Monolithic applications (use IDE debuggers)</li><li>Local development (use breakpoints)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Distributed Systems Debugging Challenges</h3>
+<p><strong>Unique challenges</strong>:</p>
+<ol><li><strong>No global state</strong>: Each service has partial view</li><li><strong>Asynchronous communication</strong>: Request/response not always paired</li><li><strong>Network unreliability</strong>: Packets drop, timeout, reorder</li><li><strong>Clock skew</strong>: Timestamps from different hosts diverge</li><li><strong>Emergent behavior</strong>: Bugs appear only under specific interaction patterns</li><li><strong>Partial failures</strong>: Some services succeed, others fail</li><li><strong>Cascading failures</strong>: One slow service affects entire system</li></ol>
+<h3>Debugging Layers in Distributed Systems</h3>
+<pre><code>Layer 1: Request Tracing (follow single request)
+├─ Trace ID correlation across services
+├─ Span hierarchy (parent-child relationships)
+└─ Timing analysis (latency breakdown)
+
+Layer 2: Cross-Service Analysis (multi-request patterns)
+├─ Request replay/shadowing
+├─ Dependency mapping
+└─ Circuit breaker states
+
+Layer 3: System-Wide Behavior (emergent issues)
+├─ Clock skew detection
+├─ Distributed deadlock analysis
+└─ Cascading failure patterns
+
+Layer 4: Chaos Engineering (controlled failure injection)
+├─ Network partition simulation
+├─ Latency injection
+└─ Service failure scenarios</code></pre>
+<h3>Common Distributed Failure Patterns</h3>
+<p>| Pattern | Symptom | Debugging Approach | |---------|---------|-------------------| | <strong>Cascading failure</strong> | One slow service causes timeouts everywhere | Trace latency, check circuit breakers | | <strong>Distributed deadlock</strong> | Services waiting on each other indefinitely | Analyze request dependencies, check for cycles | | <strong>Split brain</strong> | Multiple nodes think they&#x27;re leader | Check consensus logs, clock skew | | <strong>Thundering herd</strong> | Simultaneous requests overwhelm service | Analyze request timestamps, check for jitter | | <strong>Data inconsistency</strong> | Different services see different data | Check event ordering, compare timestamps |</p>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Trace ID Correlation Across Services</h3>
+<pre><code class="lang-python">import uuid
+from opentelemetry import trace
+from opentelemetry.propagate import inject, extract
+from fastapi import FastAPI, Request, HTTPException
+import httpx
+import structlog
+
+app = FastAPI()
+tracer = trace.get_tracer(__name__)
+logger = structlog.get_logger()
+
+# Service A: Gateway
+@app.post(&quot;/api/orders&quot;)
+async def create_order(request: Request, order_data: dict):
+    # Extract trace context from incoming request (if exists)
+    ctx = extract(request.headers)
+
+    with tracer.start_as_current_span(&quot;create_order&quot;, context=ctx) as span:
+        # Get trace ID for logging
+        trace_id = format(span.get_span_context().trace_id, &#x27;032x&#x27;)
+        span_id = format(span.get_span_context().span_id, &#x27;016x&#x27;)
+
+        log = logger.bind(trace_id=trace_id, span_id=span_id)
+        log.info(&quot;Order creation started&quot;, order_data=order_data)
+
+        # Propagate trace context to downstream services
+        headers = {}
+        inject(headers)  # Injects traceparent, tracestate headers
+
+        try:
+            # Call Service B (Inventory)
+            async with httpx.AsyncClient() as client:
+                inventory_response = await client.post(
+                    &quot;http://inventory-service/api/reserve&quot;,
+                    json={&quot;product_id&quot;: order_data[&quot;product_id&quot;]},
+                    headers=headers  # Propagate trace context
+                )
+
+                if inventory_response.status_code != 200:
+                    log.error(
+                        &quot;Inventory reservation failed&quot;,
+                        status_code=inventory_response.status_code,
+                        response=inventory_response.text
+                    )
+                    raise HTTPException(
+                        status_code=503,
+                        detail=&quot;Inventory service unavailable&quot;
+                    )
+
+                # Call Service C (Payment)
+                payment_response = await client.post(
+                    &quot;http://payment-service/api/charge&quot;,
+                    json={&quot;amount&quot;: order_data[&quot;amount&quot;]},
+                    headers=headers  # Same trace context
+                )
+
+                if payment_response.status_code != 200:
+                    # Compensating transaction: release inventory
+                    await client.post(
+                        &quot;http://inventory-service/api/release&quot;,
+                        json={&quot;product_id&quot;: order_data[&quot;product_id&quot;]},
+                        headers=headers
+                    )
+                    log.error(&quot;Payment failed, inventory released&quot;)
+                    raise HTTPException(
+                        status_code=402,
+                        detail=&quot;Payment processing failed&quot;
+                    )
+
+                log.info(&quot;Order created successfully&quot;, trace_id=trace_id)
+                return {
+                    &quot;order_id&quot;: str(uuid.uuid4()),
+                    &quot;trace_id&quot;: trace_id,
+                    &quot;status&quot;: &quot;success&quot;
+                }
+
+        except httpx.RequestError as e:
+            log.error(&quot;HTTP request failed&quot;, error=str(e), exc_info=True)
+            span.record_exception(e)
+            raise HTTPException(status_code=503, detail=&quot;Service unavailable&quot;)
+
+# Service B: Inventory Service
+@app.post(&quot;/api/reserve&quot;)
+async def reserve_inventory(request: Request, data: dict):
+    # Extract trace context from upstream service
+    ctx = extract(request.headers)
+
+    with tracer.start_as_current_span(&quot;reserve_inventory&quot;, context=ctx) as span:
+        trace_id = format(span.get_span_context().trace_id, &#x27;032x&#x27;)
+        log = logger.bind(trace_id=trace_id, service=&quot;inventory&quot;)
+
+        log.info(&quot;Inventory reservation&quot;, product_id=data[&quot;product_id&quot;])
+
+        # Simulate inventory check
+        if data[&quot;product_id&quot;] == &quot;out-of-stock&quot;:
+            log.error(&quot;Product out of stock&quot;, product_id=data[&quot;product_id&quot;])
+            return {&quot;status&quot;: &quot;out_of_stock&quot;}, 409
+
+        log.info(&quot;Inventory reserved&quot;, product_id=data[&quot;product_id&quot;])
+        return {&quot;status&quot;: &quot;reserved&quot;}
+
+# Service C: Payment Service
+@app.post(&quot;/api/charge&quot;)
+async def charge_payment(request: Request, data: dict):
+    ctx = extract(request.headers)
+
+    with tracer.start_as_current_span(&quot;charge_payment&quot;, context=ctx) as span:
+        trace_id = format(span.get_span_context().trace_id, &#x27;032x&#x27;)
+        log = logger.bind(trace_id=trace_id, service=&quot;payment&quot;)
+
+        log.info(&quot;Payment processing&quot;, amount=data[&quot;amount&quot;])
+
+        # Simulate payment processing
+        if data[&quot;amount&quot;] &gt; 10000:
+            log.error(&quot;Payment amount exceeds limit&quot;, amount=data[&quot;amount&quot;])
+            return {&quot;status&quot;: &quot;declined&quot;}, 402
+
+        log.info(&quot;Payment successful&quot;, amount=data[&quot;amount&quot;])
+        return {&quot;status&quot;: &quot;charged&quot;}</code></pre>
+<p><strong>Query traces across services</strong> (Grafana Tempo):</p>
+<pre><code class="lang-promql"># Find all spans for trace ID
+{trace_id=&quot;a1b2c3d4e5f6g7h8&quot;}
+
+# Find traces with errors in any service
+{status.code=&quot;ERROR&quot;}
+
+# Find slow traces (&gt;1s)
+{duration &gt; 1s}
+
+# Find traces involving specific service
+{service.name=&quot;payment-service&quot;}</code></pre>
+<h3>Pattern 2: Request Replay for Debugging</h3>
+<pre><code class="lang-python">import json
+import asyncio
+from typing import Dict, Any
+from datetime import datetime
+import httpx
+
+class RequestRecorder:
+    &quot;&quot;&quot;
+    Record requests for later replay.
+    &quot;&quot;&quot;
+
+    def __init__(self, storage_path: str = &quot;/tmp/requests.jsonl&quot;):
+        self.storage_path = storage_path
+
+    async def record_request(
+        self,
+        method: str,
+        url: str,
+        headers: Dict[str, str],
+        body: Any,
+        response_status: int,
+        response_body: Any
+    ):
+        &quot;&quot;&quot;
+        Record request/response for replay.
+        &quot;&quot;&quot;
+        record = {
+            &quot;timestamp&quot;: datetime.utcnow().isoformat(),
+            &quot;request&quot;: {
+                &quot;method&quot;: method,
+                &quot;url&quot;: url,
+                &quot;headers&quot;: dict(headers),
+                &quot;body&quot;: body
+            },
+            &quot;response&quot;: {
+                &quot;status&quot;: response_status,
+                &quot;body&quot;: response_body
+            }
+        }
+
+        with open(self.storage_path, &quot;a&quot;) as f:
+            f.write(json.dumps(record) + &quot;\n&quot;)
+
+class RequestReplayer:
+    &quot;&quot;&quot;
+    Replay recorded requests against test environment.
+    &quot;&quot;&quot;
+
+    def __init__(self, storage_path: str = &quot;/tmp/requests.jsonl&quot;):
+        self.storage_path = storage_path
+
+    async def replay_all(self, target_url: str):
+        &quot;&quot;&quot;
+        Replay all recorded requests.
+        &quot;&quot;&quot;
+        with open(self.storage_path, &quot;r&quot;) as f:
+            for line in f:
+                record = json.loads(line)
+                await self.replay_request(record, target_url)
+
+    async def replay_request(self, record: Dict, target_url: str):
+        &quot;&quot;&quot;
+        Replay single request.
+        &quot;&quot;&quot;
+        req = record[&quot;request&quot;]
+
+        # Replace production URL with target URL
+        url = req[&quot;url&quot;].replace(&quot;https://api.example.com&quot;, target_url)
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.request(
+                    method=req[&quot;method&quot;],
+                    url=url,
+                    headers=req[&quot;headers&quot;],
+                    json=req[&quot;body&quot;]
+                )
+
+                # Compare response with recorded response
+                original_status = record[&quot;response&quot;][&quot;status&quot;]
+                if response.status_code != original_status:
+                    print(f&quot;MISMATCH: Expected {original_status}, got {response.status_code}&quot;)
+                    print(f&quot;URL: {url}&quot;)
+                    print(f&quot;Response: {response.text}&quot;)
+
+            except Exception as e:
+                print(f&quot;ERROR replaying request: {e}&quot;)
+                print(f&quot;URL: {url}&quot;)
+
+# Middleware to record requests
+from fastapi import Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware
+
+recorder = RequestRecorder()
+
+class RecordingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Record request
+        body = await request.body()
+
+        response = await call_next(request)
+
+        # Record response
+        response_body = b&quot;&quot;
+        async for chunk in response.body_iterator:
+            response_body += chunk
+
+        await recorder.record_request(
+            method=request.method,
+            url=str(request.url),
+            headers=request.headers,
+            body=body.decode() if body else None,
+            response_status=response.status_code,
+            response_body=response_body.decode()
+        )
+
+        return Response(
+            content=response_body,
+            status_code=response.status_code,
+            headers=dict(response.headers)
+        )
+
+# Usage
+app.add_middleware(RecordingMiddleware)
+
+# Replay requests in test environment
+# python replay.py --target http://localhost:8000</code></pre>
+<h3>Pattern 3: Traffic Shadowing (Dark Traffic)</h3>
+<pre><code class="lang-yaml"># Kubernetes: Shadow traffic to debug environment
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+spec:
+  selector:
+    app: api
+  ports:
+  - port: 80
+    targetPort: 8080
+
+---
+# Envoy/Istio: Mirror traffic to debug instance
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api-service
+spec:
+  hosts:
+  - api-service
+  http:
+  - match:
+    - headers:
+        x-debug:
+          exact: &quot;true&quot;
+    route:
+    - destination:
+        host: api-service
+        subset: production
+      weight: 100
+    mirror:
+      host: api-service
+      subset: debug  # Mirror to debug instance
+    mirrorPercentage:
+      value: 100  # Mirror 100% of matching requests
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: api-service
+spec:
+  host: api-service
+  subsets:
+  - name: production
+    labels:
+      version: v1
+  - name: debug
+    labels:
+      version: debug</code></pre>
+<p><strong>Application-level traffic shadowing</strong>:</p>
+<pre><code class="lang-python">from fastapi import Request, BackgroundTasks
+import httpx
+
+@app.post(&quot;/api/orders&quot;)
+async def create_order(
+    request: Request,
+    order_data: dict,
+    background_tasks: BackgroundTasks
+):
+    # Process request normally
+    result = await process_order(order_data)
+
+    # Shadow request to debug environment (async)
+    if should_shadow_request(request):
+        background_tasks.add_task(
+            shadow_request,
+            method=request.method,
+            url=str(request.url),
+            headers=dict(request.headers),
+            body=order_data
+        )
+
+    return result
+
+async def shadow_request(method: str, url: str, headers: dict, body: dict):
+    &quot;&quot;&quot;
+    Send request to debug environment in background.
+    &quot;&quot;&quot;
+    # Replace production URL with debug URL
+    debug_url = url.replace(&quot;api.example.com&quot;, &quot;debug.example.com&quot;)
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.request(
+                method=method,
+                url=debug_url,
+                headers=headers,
+                json=body,
+                timeout=5.0  # Don&#x27;t block production traffic
+            )
+
+            # Log differences
+            logger.info(
+                &quot;Shadow request completed&quot;,
+                status_code=response.status_code,
+                url=debug_url
+            )
+
+        except Exception as e:
+            # Don&#x27;t fail production traffic
+            logger.error(&quot;Shadow request failed&quot;, error=str(e))
+
+def should_shadow_request(request: Request) -&gt; bool:
+    &quot;&quot;&quot;
+    Determine if request should be shadowed.
+    &quot;&quot;&quot;
+    # Shadow 10% of traffic
+    import random
+    return random.random() &lt; 0.10
+
+    # Or shadow specific users
+    # user_id = request.headers.get(&quot;X-User-ID&quot;)
+    # return user_id in [&quot;debug_user_1&quot;, &quot;debug_user_2&quot;]</code></pre>
+<h3>Pattern 4: Clock Skew Detection and Handling</h3>
+<pre><code class="lang-python">import time
+from datetime import datetime, timedelta
+import structlog
+
+logger = structlog.get_logger()
+
+class ClockSkewDetector:
+    &quot;&quot;&quot;
+    Detect and handle clock skew in distributed systems.
+    &quot;&quot;&quot;
+
+    def __init__(self, max_skew_seconds: int = 300):  # 5 minutes
+        self.max_skew_seconds = max_skew_seconds
+
+    def check_timestamp(
+        self,
+        remote_timestamp: str,
+        service_name: str
+    ) -&gt; bool:
+        &quot;&quot;&quot;
+        Check if remote timestamp is within acceptable range.
+        &quot;&quot;&quot;
+        try:
+            remote_time = datetime.fromisoformat(remote_timestamp)
+            local_time = datetime.utcnow()
+            skew = abs((remote_time - local_time).total_seconds())
+
+            if skew &gt; self.max_skew_seconds:
+                logger.warning(
+                    &quot;Clock skew detected&quot;,
+                    service=service_name,
+                    remote_timestamp=remote_timestamp,
+                    local_timestamp=local_time.isoformat(),
+                    skew_seconds=skew
+                )
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error(&quot;Invalid timestamp format&quot;, error=str(e))
+            return False
+
+    def sync_with_ntp(self):
+        &quot;&quot;&quot;
+        Sync local clock with NTP server.
+        &quot;&quot;&quot;
+        import ntplib
+        from datetime import datetime
+
+        ntp_client = ntplib.NTPClient()
+
+        try:
+            response = ntp_client.request(&#x27;pool.ntp.org&#x27;, version=3)
+            local_time = time.time()
+            ntp_time = response.tx_time
+            offset = ntp_time - local_time
+
+            logger.info(
+                &quot;NTP sync completed&quot;,
+                offset_ms=offset * 1000,
+                ntp_server=&quot;pool.ntp.org&quot;
+            )
+
+            return offset
+
+        except Exception as e:
+            logger.error(&quot;NTP sync failed&quot;, error=str(e))
+            return None
+
+# Middleware to check clock skew
+from fastapi import Request, HTTPException
+
+clock_detector = ClockSkewDetector()
+
+@app.middleware(&quot;http&quot;)
+async def check_clock_skew(request: Request, call_next):
+    # Check if request has timestamp header
+    remote_timestamp = request.headers.get(&quot;X-Timestamp&quot;)
+
+    if remote_timestamp:
+        if not clock_detector.check_timestamp(
+            remote_timestamp,
+            request.headers.get(&quot;X-Service-Name&quot;, &quot;unknown&quot;)
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=&quot;Clock skew detected. Check NTP sync.&quot;
+            )
+
+    response = await call_next(request)
+    return response</code></pre>
+<p><strong>NTP sync commands</strong>:</p>
+<pre><code class="lang-bash"># Check NTP status
+timedatectl status
+
+# Sync with NTP server (Linux)
+sudo ntpdate pool.ntp.org
+
+# Enable NTP sync (systemd)
+sudo timedatectl set-ntp true
+
+# Check clock offset
+ntpq -p</code></pre>
+<h3>Pattern 5: Chaos Engineering for Debugging</h3>
+<pre><code class="lang-python">import random
+import asyncio
+from fastapi import HTTPException
+
+class ChaosMonkey:
+    &quot;&quot;&quot;
+    Inject controlled failures for debugging.
+    &quot;&quot;&quot;
+
+    def __init__(self, enabled: bool = False):
+        self.enabled = enabled
+
+    async def inject_latency(
+        self,
+        min_ms: int = 100,
+        max_ms: int = 1000,
+        probability: float = 0.1
+    ):
+        &quot;&quot;&quot;
+        Inject random latency.
+        &quot;&quot;&quot;
+        if not self.enabled:
+            return
+
+        if random.random() &lt; probability:
+            delay = random.randint(min_ms, max_ms) / 1000
+            logger.warning(&quot;CHAOS: Injecting latency&quot;, delay_seconds=delay)
+            await asyncio.sleep(delay)
+
+    def inject_error(
+        self,
+        probability: float = 0.05,
+        error_code: int = 503
+    ):
+        &quot;&quot;&quot;
+        Inject random errors.
+        &quot;&quot;&quot;
+        if not self.enabled:
+            return
+
+        if random.random() &lt; probability:
+            logger.warning(&quot;CHAOS: Injecting error&quot;, error_code=error_code)
+            raise HTTPException(
+                status_code=error_code,
+                detail=&quot;Chaos engineering: simulated failure&quot;
+            )
+
+    def inject_timeout(
+        self,
+        probability: float = 0.05,
+        timeout_seconds: int = 30
+    ):
+        &quot;&quot;&quot;
+        Inject timeout by sleeping indefinitely.
+        &quot;&quot;&quot;
+        if not self.enabled:
+            return
+
+        if random.random() &lt; probability:
+            logger.warning(&quot;CHAOS: Injecting timeout&quot;, timeout_seconds=timeout_seconds)
+            import time
+            time.sleep(timeout_seconds)
+
+# Enable chaos in specific environment
+import os
+chaos = ChaosMonkey(enabled=os.getenv(&quot;CHAOS_ENABLED&quot;) == &quot;true&quot;)
+
+@app.get(&quot;/api/users&quot;)
+async def get_users():
+    # Inject chaos
+    await chaos.inject_latency(probability=0.1)
+    chaos.inject_error(probability=0.05)
+
+    users = await db.get_users()
+    return users</code></pre>
+<p><strong>Using Chaos Mesh</strong> (Kubernetes):</p>
+<pre><code class="lang-yaml">apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay
+spec:
+  action: delay
+  mode: one
+  selector:
+    namespaces:
+      - production
+    labelSelectors:
+      app: api-service
+  delay:
+    latency: &quot;100ms&quot;
+    jitter: &quot;50ms&quot;
+  duration: &quot;30s&quot;
+
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-failure
+spec:
+  action: pod-failure
+  mode: one
+  selector:
+    namespaces:
+      - production
+    labelSelectors:
+      app: payment-service
+  duration: &quot;60s&quot;</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Distributed Debugging Checklist</h3>
+<pre><code class="lang-markdown">## Step 1: Identify Trace
+- [ ] Extract trace ID from error logs
+- [ ] Find all spans in trace (Grafana Tempo, Jaeger)
+- [ ] Identify failed span and service
+
+## Step 2: Analyze Dependencies
+- [ ] Check which services were called
+- [ ] Verify trace context propagation
+- [ ] Look for missing spans (broken propagation)
+
+## Step 3: Check Timing
+- [ ] Compare timestamps across services
+- [ ] Look for clock skew (&gt;5min difference)
+- [ ] Identify slow spans (&gt;1s)
+
+## Step 4: Correlate with Infrastructure
+- [ ] Check CPU/memory on affected services
+- [ ] Review network metrics (latency, packet loss)
+- [ ] Check for recent deployments
+
+## Step 5: Reproduce
+- [ ] Replay request in staging
+- [ ] Use traffic shadowing
+- [ ] Inject chaos (latency, errors)</code></pre>
+<h3>Trace Correlation Queries</h3>
+<pre><code class="lang-promql"># Grafana Loki + Tempo
+
+# Find logs for trace
+{app=&quot;api-service&quot;} | json | trace_id=&quot;abc123&quot;
+
+# Find errors in trace
+{trace_id=&quot;abc123&quot;} | json | level=&quot;error&quot;
+
+# Find slow requests
+{app=&quot;api-service&quot;} | json | duration_ms &gt; 1000 | trace_id!=&quot;&quot;</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Not Propagating Trace Context</h3>
+<pre><code class="lang-python"># WRONG: Breaks trace chain
+requests.get(&quot;http://service-b/api/data&quot;)
+
+# CORRECT: Propagate trace context
+headers = {}
+inject(headers)
+requests.get(&quot;http://service-b/api/data&quot;, headers=headers)</code></pre>
+<h3>❌ Using Local Timestamps</h3>
+<pre><code class="lang-python"># WRONG: Clock skew causes issues
+event_time = datetime.now()  # Local clock!
+
+# CORRECT: Use monotonic clock or logical timestamps
+event_time = time.monotonic()  # Monotonic clock
+# Or: Use Lamport/Vector clocks for ordering</code></pre>
+<h3>❌ Ignoring Compensating Transactions</h3>
+<pre><code class="lang-python"># WRONG: Leaves system in inconsistent state
+await reserve_inventory()
+await charge_payment()  # Fails, but inventory not released!
+
+# CORRECT: Compensate on failure
+try:
+    await reserve_inventory()
+    await charge_payment()
+except:
+    await release_inventory()  # Compensating transaction
+    raise</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>observability/distributed-tracing.md</strong> - Trace context propagation</li><li><strong>debugging/production-debugging.md</strong> - Non-intrusive debugging</li><li><strong>testing/chaos-engineering.md</strong> - Controlled failure injection</li><li><strong>database/distributed-transactions.md</strong> - Saga patterns</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/debugging-distributed-systems-debugging.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

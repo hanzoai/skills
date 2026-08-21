@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ml-huggingface-autotrain</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ml-huggingface-autotrain.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ml-huggingface-autotrain.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ml-huggingface-autotrain</h1><p class="lede">Need quick fine-tuning without writing training code</p><h1>HuggingFace AutoTrain</h1>
+<p><strong>Scope</strong>: No-code/low-code LLM fine-tuning with AutoTrain, CLI, web UI, deployment <strong>Lines</strong>: ~330 <strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Need quick fine-tuning without writing training code</li><li>Working with non-technical team members</li><li>Prototyping models rapidly before custom implementation</li><li>Standardizing fine-tuning workflows across team</li><li>Training multiple models with different hyperparameters</li><li>Limited ML engineering resources available</li></ul>
+<h2>Core Concepts</h2>
+<h3>AutoTrain Overview</h3>
+<p><strong>What is AutoTrain</strong>:</p>
+<ul><li>Hugging Face&#x27;s automated training platform</li><li>Web UI and CLI for model fine-tuning</li><li>Supports LLMs, vision, tabular, and more</li><li>Automatic hyperparameter optimization</li><li>Built-in experiment tracking</li></ul>
+<p><strong>Key Features</strong>:</p>
+<ul><li>Zero-code web interface option</li><li>One-command CLI training</li><li>Automatic data validation</li><li>Multi-task support (text classification, NER, LLM, etc.)</li><li>Direct Hub integration for models and datasets</li></ul>
+<p><strong>Supported Tasks</strong>:</p>
+<ul><li>LLM fine-tuning (instruction tuning, chat)</li><li>Text classification (binary, multi-class, multi-label)</li><li>Named Entity Recognition (NER)</li><li>Question Answering</li><li>Summarization</li><li>Translation</li><li>Image classification</li><li>Tabular (classification, regression)</li></ul>
+<h3>Pricing and Compute</h3>
+<p><strong>Free Tier</strong>:</p>
+<ul><li>Community GPU access (limited availability)</li><li>CPU training for small datasets</li><li>Public model hosting on Hub</li></ul>
+<p><strong>Paid Spaces</strong>:</p>
+<ul><li>Dedicated GPU instances (A10G, A100)</li><li>Priority queue access</li><li>Private training runs</li><li>~$0.60-$4/hour depending on GPU</li></ul>
+<p><strong>Enterprise</strong>:</p>
+<ul><li>Custom compute configurations</li><li>SSO and compliance features</li><li>Volume discounts</li></ul>
+<h3>Workflow</h3>
+<p><strong>Standard Flow</strong>:</p>
+<ol><li>Prepare dataset (CSV, JSON, or Hub dataset)</li><li>Upload to Hugging Face Hub or local file</li><li>Configure task and hyperparameters</li><li>Launch training (web UI or CLI)</li><li>Monitor progress and metrics</li><li>Download or deploy model</li></ol>
+<hr>
+<h2>Patterns</h2>
+<h3>CLI Installation</h3>
+<pre><code class="lang-bash"># Install AutoTrain
+pip install autotrain-advanced
+
+# Verify installation
+autotrain --version
+
+# Login to Hugging Face
+huggingface-cli login
+# Paste your token from https://huggingface.co/settings/tokens</code></pre>
+<h3>LLM Fine-Tuning (CLI)</h3>
+<pre><code class="lang-bash"># Basic LLM fine-tuning
+autotrain llm \
+  --train \
+  --model meta-llama/Llama-3.2-3B \
+  --data-path /path/to/dataset \
+  --text-column text \
+  --lr 2e-4 \
+  --batch-size 2 \
+  --epochs 3 \
+  --trainer sft \
+  --peft \
+  --quantization int4 \
+  --project-name llama-3-finetuned \
+  --push-to-hub \
+  --username your-username
+
+# Advanced options
+autotrain llm \
+  --train \
+  --model mistralai/Mistral-7B-v0.3 \
+  --data-path dataset.csv \
+  --text-column text \
+  --lr 2e-4 \
+  --batch-size 4 \
+  --epochs 3 \
+  --block-size 1024 \
+  --warmup-ratio 0.1 \
+  --lora-r 16 \
+  --lora-alpha 32 \
+  --lora-dropout 0.05 \
+  --weight-decay 0.01 \
+  --gradient-accumulation 4 \
+  --mixed-precision fp16 \
+  --project-name mistral-custom \
+  --log wandb</code></pre>
+<h3>Dataset Formats</h3>
+<p><strong>Text/LLM Format</strong> (CSV):</p>
+<pre><code class="lang-csv">text
+&quot;Below is an instruction...\n\n### Instruction:\nWhat is Python?\n\n### Response:\nPython is a programming language.&quot;
+&quot;Below is an instruction...\n\n### Instruction:\nExplain AI\n\n### Response:\nAI stands for Artificial Intelligence.&quot;</code></pre>
+<p><strong>Text/LLM Format</strong> (JSON):</p>
+<pre><code class="lang-json">[
+  {
+    &quot;text&quot;: &quot;Below is an instruction...\n\n### Instruction:\nWhat is Python?\n\n### Response:\nPython is a programming language.&quot;
+  },
+  {
+    &quot;text&quot;: &quot;Below is an instruction...\n\n### Instruction:\nExplain AI\n\n### Response:\nAI stands for Artificial Intelligence.&quot;
+  }
+]</code></pre>
+<p><strong>Chat Format</strong> (JSON):</p>
+<pre><code class="lang-json">[
+  {
+    &quot;messages&quot;: [
+      {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;You are a helpful assistant.&quot;},
+      {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;What is Python?&quot;},
+      {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;Python is a programming language.&quot;}
+    ]
+  },
+  {
+    &quot;messages&quot;: [
+      {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;You are a helpful assistant.&quot;},
+      {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Explain AI&quot;},
+      {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;AI stands for Artificial Intelligence.&quot;}
+    ]
+  }
+]</code></pre>
+<p><strong>Classification Format</strong> (CSV):</p>
+<pre><code class="lang-csv">text,label
+&quot;This product is amazing!&quot;,positive
+&quot;Terrible experience&quot;,negative
+&quot;It&#x27;s okay&quot;,neutral</code></pre>
+<h3>Text Classification</h3>
+<pre><code class="lang-bash">autotrain text-classification \
+  --train \
+  --model distilbert-base-uncased \
+  --data-path data.csv \
+  --text-column text \
+  --target-column label \
+  --lr 2e-5 \
+  --batch-size 16 \
+  --epochs 5 \
+  --project-name sentiment-classifier \
+  --push-to-hub \
+  --username your-username</code></pre>
+<h3>Using Hub Datasets</h3>
+<pre><code class="lang-bash"># Use dataset from Hugging Face Hub
+autotrain llm \
+  --train \
+  --model meta-llama/Llama-3.2-3B \
+  --data-path username/dataset-name \
+  --text-column text \
+  --lr 2e-4 \
+  --batch-size 2 \
+  --epochs 3 \
+  --project-name llama-finetuned
+
+# Specify dataset split
+autotrain llm \
+  --train \
+  --model meta-llama/Llama-3.2-3B \
+  --data-path username/dataset-name \
+  --train-split train \
+  --valid-split validation \
+  --text-column text \
+  --lr 2e-4 \
+  --epochs 3</code></pre>
+<h3>Modal.com Deployment</h3>
+<pre><code class="lang-python">import modal
+
+app = modal.App(&quot;autotrain-finetune&quot;)
+
+image = (
+    modal.Image.debian_slim()
+    .pip_install(&quot;autotrain-advanced&quot;, &quot;huggingface_hub&quot;)
+)
+
+volume = modal.Volume.from_name(&quot;autotrain-volume&quot;, create_if_missing=True)
+
+@app.function(
+    gpu=&quot;l40s&quot;,
+    image=image,
+    volumes={&quot;/data&quot;: volume},
+    secrets=[modal.Secret.from_name(&quot;huggingface-secret&quot;)],
+    timeout=7200
+)
+def run_autotrain(
+    model_name: str,
+    dataset_path: str,
+    project_name: str,
+    push_to_hub: bool = True
+):
+    import subprocess
+    import os
+
+    # Build autotrain command
+    cmd = [
+        &quot;autotrain&quot;, &quot;llm&quot;,
+        &quot;--train&quot;,
+        &quot;--model&quot;, model_name,
+        &quot;--data-path&quot;, dataset_path,
+        &quot;--text-column&quot;, &quot;text&quot;,
+        &quot;--lr&quot;, &quot;2e-4&quot;,
+        &quot;--batch-size&quot;, &quot;2&quot;,
+        &quot;--epochs&quot;, &quot;3&quot;,
+        &quot;--trainer&quot;, &quot;sft&quot;,
+        &quot;--peft&quot;,
+        &quot;--quantization&quot;, &quot;int4&quot;,
+        &quot;--project-name&quot;, project_name,
+        &quot;--log&quot;, &quot;tensorboard&quot;
+    ]
+
+    if push_to_hub:
+        cmd.extend([
+            &quot;--push-to-hub&quot;,
+            &quot;--username&quot;, os.environ[&quot;HF_USERNAME&quot;]
+        ])
+
+    # Run training
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        raise Exception(f&quot;Training failed: {result.stderr}&quot;)
+
+    return {
+        &quot;status&quot;: &quot;complete&quot;,
+        &quot;project&quot;: project_name,
+        &quot;output&quot;: result.stdout
+    }
+
+@app.local_entrypoint()
+def main(model: str = &quot;meta-llama/Llama-3.2-3B&quot;):
+    result = run_autotrain.remote(
+        model_name=model,
+        dataset_path=&quot;/data/training.jsonl&quot;,
+        project_name=&quot;llama-finetuned&quot;
+    )
+    print(result)</code></pre>
+<h3>Python API Usage</h3>
+<pre><code class="lang-python">from autotrain.trainers.clm.params import LLMTrainingParams
+from autotrain.trainers.clm import train as llm_train
+
+# Configure training parameters
+params = LLMTrainingParams(
+    model=&quot;meta-llama/Llama-3.2-3B&quot;,
+    data_path=&quot;/path/to/data&quot;,
+    text_column=&quot;text&quot;,
+    lr=2e-4,
+    batch_size=2,
+    epochs=3,
+    block_size=1024,
+    warmup_ratio=0.1,
+    lora_r=16,
+    lora_alpha=32,
+    lora_dropout=0.05,
+    trainer=&quot;sft&quot;,
+    use_peft=True,
+    quantization=&quot;int4&quot;,
+    project_name=&quot;llama-finetuned&quot;,
+    log=&quot;tensorboard&quot;,
+    push_to_hub=True,
+    username=&quot;your-username&quot;,
+)
+
+# Run training
+llm_train(params)</code></pre>
+<h3>Hyperparameter Tuning</h3>
+<pre><code class="lang-bash"># Try multiple learning rates
+for lr in 1e-4 2e-4 5e-4; do
+  autotrain llm \
+    --train \
+    --model meta-llama/Llama-3.2-3B \
+    --data-path data.jsonl \
+    --text-column text \
+    --lr $lr \
+    --batch-size 2 \
+    --epochs 3 \
+    --project-name &quot;llama-lr-${lr}&quot;
+done
+
+# Grid search with different LoRA ranks
+for rank in 8 16 32; do
+  autotrain llm \
+    --train \
+    --model mistralai/Mistral-7B-v0.3 \
+    --data-path data.jsonl \
+    --text-column text \
+    --lr 2e-4 \
+    --lora-r $rank \
+    --lora-alpha $((rank * 2)) \
+    --project-name &quot;mistral-r${rank}&quot;
+done</code></pre>
+<h3>Monitoring and Logs</h3>
+<pre><code class="lang-bash"># View TensorBoard logs
+tensorboard --logdir outputs/llama-finetuned
+
+# Stream logs during training
+tail -f outputs/llama-finetuned/training.log
+
+# Check Weights &amp; Biases (if enabled)
+# Training metrics automatically logged to wandb.ai</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Common Commands</h3>
+<pre><code class="lang-bash"># List available tasks
+autotrain --help
+
+# LLM fine-tuning
+autotrain llm --train --model MODEL --data-path DATA
+
+# Text classification
+autotrain text-classification --train --model MODEL --data-path DATA
+
+# Token classification (NER)
+autotrain token-classification --train --model MODEL --data-path DATA
+
+# Check training status
+ls -lah outputs/
+
+# Test trained model
+autotrain llm --infer --model outputs/llama-finetuned --text &quot;Hello, how are you?&quot;</code></pre>
+<h3>Key Parameters</h3>
+<pre><code>Parameter              | Default    | Description
+-----------------------|------------|----------------------------------
+--model                | Required   | Base model from Hub
+--data-path            | Required   | Path to dataset (local or Hub)
+--text-column          | &quot;text&quot;     | Column name for text data
+--lr                   | 5e-5       | Learning rate
+--batch-size           | 8          | Training batch size per device
+--epochs               | 3          | Number of training epochs
+--block-size           | 1024       | Max sequence length
+--warmup-ratio         | 0.1        | Warmup ratio of total steps
+--lora-r               | 16         | LoRA rank
+--lora-alpha           | 32         | LoRA alpha
+--quantization         | None       | &quot;int4&quot;, &quot;int8&quot;, or None
+--project-name         | Required   | Output directory name
+--push-to-hub          | False      | Push to Hugging Face Hub
+--log                  | None       | &quot;tensorboard&quot; or &quot;wandb&quot;</code></pre>
+<h3>Dataset Validation Checklist</h3>
+<pre><code>✅ Dataset has required columns (text, label, etc.)
+✅ No missing values in required columns
+✅ Text is properly formatted (no binary data)
+✅ Labels are valid (for classification)
+✅ Dataset is not empty
+✅ Train/validation split if provided
+✅ File encoding is UTF-8
+✅ JSON is valid (if using JSON format)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Not validating dataset format</strong>: Training fails halfway through ✅ Validate dataset format before starting training:</p>
+<pre><code class="lang-bash"># Check CSV
+head data.csv
+wc -l data.csv
+
+# Validate JSON
+python -m json.tool data.json &gt; /dev/null &amp;&amp; echo &quot;Valid JSON&quot;</code></pre>
+<p>❌ <strong>Using web UI for production workflows</strong>: Not reproducible ✅ Use CLI or Python API for production, version control configs</p>
+<p>❌ <strong>Ignoring validation metrics</strong>: Overfitting not detected ✅ Always provide validation split:</p>
+<pre><code class="lang-bash">autotrain llm \
+  --train \
+  --model MODEL \
+  --data-path data \
+  --train-split train \
+  --valid-split validation  # Important!</code></pre>
+<p>❌ <strong>Default hyperparameters for all tasks</strong>: Suboptimal results ✅ Tune learning rate, batch size, and LoRA rank per task</p>
+<p>❌ <strong>Not monitoring training</strong>: Miss errors or early stopping ✅ Enable logging and monitor:</p>
+<pre><code class="lang-bash">autotrain llm --train --log tensorboard ...
+# In another terminal:
+tensorboard --logdir outputs/</code></pre>
+<p>❌ <strong>Forgetting to save/push model</strong>: Lose trained weights ✅ Always use <code>--push-to-hub</code> or save outputs/</p>
+<pre><code class="lang-bash">autotrain llm --train --push-to-hub --username USER ...</code></pre>
+<p>❌ <strong>Wrong quantization for GPU</strong>: OOM or slow training ✅ Match quantization to GPU VRAM:</p>
+<ul><li>48GB+: No quantization or int8</li><li>24GB: int4 for 7B+ models</li><li>&lt;24GB: int4 required for 7B+ models</li></ul>
+<p>❌ <strong>Single experiment without comparison</strong>: Can&#x27;t assess quality ✅ Run multiple experiments with different hyperparameters</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>ml/unsloth-finetuning.md</code> - Faster alternative with custom code</li><li><code>ml/llm-dataset-preparation.md</code> - Preparing high-quality datasets</li><li><code>ml/lora-peft-techniques.md</code> - Understanding LoRA parameters</li><li><code>modal/modal-gpu-workloads.md</code> - GPU selection and deployment</li><li><code>ml/huggingface/huggingface-hub.md</code> - Managing models and datasets on Hub</li><li><code>ml/huggingface/huggingface-transformers.md</code> - Loading and using models</li><li><code>ml/huggingface/huggingface-datasets.md</code> - Working with datasets</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ml-huggingface-autotrain.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>debugging-production-debugging</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/debugging-production-debugging.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/debugging-production-debugging.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>debugging-production-debugging</h1><p class="lede">Non-intrusive debugging in production environments with feature flags, dynamic logging, and observability correlation</p><h1>Production Debugging</h1>
+<p><strong>Scope</strong>: Non-intrusive debugging, dynamic logging, feature flags, sampling profilers, trace correlation, production debugging checklist</p>
+<p><strong>Lines</strong>: 430</p>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Debugging issues that only occur in production</li><li>Investigating intermittent failures or race conditions</li><li>Analyzing performance degradation in live systems</li><li>Troubleshooting issues without disrupting users</li><li>Correlating application behavior with infrastructure metrics</li><li>Debugging third-party integrations or external dependencies</li><li>Investigating issues in high-traffic or mission-critical systems</li><li>Collecting diagnostic data without deploying code changes</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Local development debugging (use IDE debuggers)</li><li>Pre-production testing (use breakpoints, step debugging)</li><li>Controlled environments with low traffic (standard debugging tools work)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Non-Intrusive Debugging Principles</h3>
+<p><strong>Why</strong>: Production systems require debugging without:</p>
+<ul><li>Service restarts or downtime</li><li>User-facing disruptions</li><li>Performance degradation</li><li>Breaking SLAs or SLOs</li></ul>
+<p><strong>Key Principles</strong>:</p>
+<ol><li><strong>Minimal overhead</strong>: Use sampling, not continuous monitoring</li><li><strong>Dynamic control</strong>: Enable/disable debugging without deploys</li><li><strong>Targeted investigation</strong>: Debug specific users, requests, or code paths</li><li><strong>Correlation</strong>: Link application logs to traces, metrics, infrastructure events</li><li><strong>Safe rollback</strong>: Disable debugging immediately if issues arise</li></ol>
+<h3>Production Debugging Layers</h3>
+<pre><code>Layer 1: Observability (always-on)
+├─ Structured logs with trace IDs
+├─ Metrics (RED: Rate, Errors, Duration)
+└─ Distributed traces (sampled)
+
+Layer 2: Dynamic Debugging (on-demand)
+├─ Feature flags for debug mode
+├─ Dynamic log level changes
+├─ Sampling profilers (CPU, memory)
+└─ Targeted verbose logging
+
+Layer 3: Advanced Diagnostics (rare)
+├─ Traffic shadowing/replay
+├─ Core dumps (post-crash analysis)
+└─ Heap dumps (memory leaks)</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Feature Flags for Debug Mode</h3>
+<pre><code class="lang-python">from launchdarkly import LDClient, Config, Context
+from opentelemetry import trace
+import logging
+
+# Initialize LaunchDarkly client
+ld_client = LDClient(sdk_key=&quot;your-sdk-key&quot;)
+
+# Get tracer
+tracer = trace.get_tracer(__name__)
+
+@app.get(&quot;/api/orders/{order_id}&quot;)
+async def get_order(order_id: str, user_id: str):
+    # Create context for feature flag
+    context = Context.builder(user_id).set(&quot;order_id&quot;, order_id).build()
+
+    # Check if debug mode enabled for this user
+    debug_enabled = ld_client.variation(
+        &quot;debug-mode&quot;,
+        context,
+        False  # Default: disabled
+    )
+
+    with tracer.start_as_current_span(&quot;get_order&quot;) as span:
+        span.set_attribute(&quot;debug_enabled&quot;, debug_enabled)
+
+        if debug_enabled:
+            # Enhanced logging for debugging
+            logging.info(
+                &quot;DEBUG: Fetching order&quot;,
+                extra={
+                    &quot;order_id&quot;: order_id,
+                    &quot;user_id&quot;: user_id,
+                    &quot;trace_id&quot;: span.get_span_context().trace_id,
+                }
+            )
+
+        try:
+            order = await fetch_order(order_id, debug=debug_enabled)
+
+            if debug_enabled:
+                # Log intermediate state
+                logging.debug(
+                    &quot;DEBUG: Order fetched successfully&quot;,
+                    extra={
+                        &quot;order&quot;: order.dict(),
+                        &quot;cache_hit&quot;: order.from_cache,
+                    }
+                )
+
+            return order
+
+        except Exception as e:
+            if debug_enabled:
+                # Detailed error context
+                logging.error(
+                    &quot;DEBUG: Order fetch failed&quot;,
+                    extra={
+                        &quot;order_id&quot;: order_id,
+                        &quot;error&quot;: str(e),
+                        &quot;stack_trace&quot;: traceback.format_exc(),
+                    },
+                    exc_info=True
+                )
+            raise</code></pre>
+<p><strong>Feature Flag Configuration</strong> (LaunchDarkly):</p>
+<pre><code class="lang-json">{
+  &quot;key&quot;: &quot;debug-mode&quot;,
+  &quot;name&quot;: &quot;Production Debug Mode&quot;,
+  &quot;variations&quot;: [true, false],
+  &quot;defaultVariation&quot;: false,
+  &quot;rules&quot;: [
+    {
+      &quot;clauses&quot;: [
+        {&quot;attribute&quot;: &quot;email&quot;, &quot;op&quot;: &quot;contains&quot;, &quot;values&quot;: [&quot;@yourcompany.com&quot;]}
+      ],
+      &quot;variation&quot;: true
+    },
+    {
+      &quot;clauses&quot;: [
+        {&quot;attribute&quot;: &quot;user_id&quot;, &quot;op&quot;: &quot;in&quot;, &quot;values&quot;: [&quot;user_123&quot;, &quot;user_456&quot;]}
+      ],
+      &quot;variation&quot;: true
+    }
+  ]
+}</code></pre>
+<h3>Pattern 2: Dynamic Log Level Changes</h3>
+<pre><code class="lang-python">import logging
+import structlog
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+app = FastAPI()
+
+# Configure structured logging
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.processors.TimeStamper(fmt=&quot;iso&quot;),
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.JSONRenderer()
+    ],
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
+
+logger = structlog.get_logger()
+
+class LogLevelUpdate(BaseModel):
+    module: str
+    level: str  # DEBUG, INFO, WARNING, ERROR
+
+@app.post(&quot;/admin/log-level&quot;)
+async def update_log_level(update: LogLevelUpdate, admin_token: str):
+    &quot;&quot;&quot;
+    Dynamically change log level without restart.
+    Protected by admin token.
+    &quot;&quot;&quot;
+    if admin_token != os.getenv(&quot;ADMIN_TOKEN&quot;):
+        raise HTTPException(status_code=403, detail=&quot;Unauthorized&quot;)
+
+    # Validate log level
+    level = getattr(logging, update.level.upper(), None)
+    if level is None:
+        raise HTTPException(status_code=400, detail=&quot;Invalid log level&quot;)
+
+    # Update logger level
+    target_logger = logging.getLogger(update.module)
+    target_logger.setLevel(level)
+
+    logger.info(
+        &quot;Log level updated&quot;,
+        module=update.module,
+        new_level=update.level,
+        admin=True
+    )
+
+    return {
+        &quot;module&quot;: update.module,
+        &quot;level&quot;: update.level,
+        &quot;message&quot;: f&quot;Log level for {update.module} set to {update.level}&quot;
+    }
+
+# Usage example
+@app.get(&quot;/api/users&quot;)
+async def list_users():
+    # This will only log if module level &gt;= DEBUG
+    logger.debug(&quot;Fetching users from database&quot;, cache_check=True)
+
+    users = await db.get_users()
+
+    logger.info(&quot;Users fetched&quot;, count=len(users))
+
+    return users</code></pre>
+<p><strong>Dynamic log level via curl</strong>:</p>
+<pre><code class="lang-bash"># Enable DEBUG logging for specific module
+curl -X POST http://api.example.com/admin/log-level \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#x27;{&quot;module&quot;: &quot;app.services.user&quot;, &quot;level&quot;: &quot;DEBUG&quot;}&#x27; \
+  --header &quot;admin_token: secret&quot;
+
+# Revert to INFO after debugging
+curl -X POST http://api.example.com/admin/log-level \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#x27;{&quot;module&quot;: &quot;app.services.user&quot;, &quot;level&quot;: &quot;INFO&quot;}&#x27; \
+  --header &quot;admin_token: secret&quot;</code></pre>
+<h3>Pattern 3: Sampling Profiler (Minimal Overhead)</h3>
+<pre><code class="lang-python">import cProfile
+import pstats
+from py_spy import SpyProfiler
+import asyncio
+from datetime import datetime, timedelta
+
+class ProductionProfiler:
+    &quot;&quot;&quot;
+    Sampling profiler with minimal overhead.
+    Use py-spy (sampling) instead of cProfile (instrumentation).
+    &quot;&quot;&quot;
+
+    def __init__(self, sample_rate_hz: int = 100):
+        self.sample_rate_hz = sample_rate_hz
+        self.profiler = None
+        self.profiling_active = False
+
+    async def start_profiling(self, duration_seconds: int = 30):
+        &quot;&quot;&quot;
+        Profile for a limited duration.
+        &quot;&quot;&quot;
+        if self.profiling_active:
+            raise RuntimeError(&quot;Profiling already active&quot;)
+
+        self.profiling_active = True
+
+        # Use py-spy for sampling (low overhead)
+        # Install: pip install py-spy
+        # Run: py-spy record -o profile.svg --pid &lt;pid&gt; --duration 30
+
+        # For in-process profiling (higher overhead):
+        profiler = cProfile.Profile()
+        profiler.enable()
+
+        try:
+            # Profile for duration
+            await asyncio.sleep(duration_seconds)
+        finally:
+            profiler.disable()
+            self.profiling_active = False
+
+            # Save profile data
+            timestamp = datetime.now().strftime(&quot;%Y%m%d_%H%M%S&quot;)
+            filename = f&quot;/tmp/profile_{timestamp}.pstats&quot;
+            profiler.dump_stats(filename)
+
+            # Generate human-readable report
+            stats = pstats.Stats(filename)
+            stats.sort_stats(&#x27;cumulative&#x27;)
+            stats.print_stats(50)  # Top 50 functions
+
+            return filename
+
+# FastAPI endpoint for on-demand profiling
+from fastapi import BackgroundTasks
+
+profiler = ProductionProfiler()
+
+@app.post(&quot;/admin/profile&quot;)
+async def start_profiling(
+    duration: int = 30,
+    admin_token: str = None,
+    background_tasks: BackgroundTasks = None
+):
+    &quot;&quot;&quot;
+    Start profiling for specified duration.
+    Returns profile file location.
+    &quot;&quot;&quot;
+    if admin_token != os.getenv(&quot;ADMIN_TOKEN&quot;):
+        raise HTTPException(status_code=403)
+
+    if profiler.profiling_active:
+        return {&quot;status&quot;: &quot;already_profiling&quot;}
+
+    # Run profiling in background
+    background_tasks.add_task(profiler.start_profiling, duration)
+
+    return {
+        &quot;status&quot;: &quot;profiling_started&quot;,
+        &quot;duration_seconds&quot;: duration,
+        &quot;message&quot;: &quot;Profile data will be available in /tmp/&quot;
+    }</code></pre>
+<p><strong>Using py-spy externally</strong> (recommended for production):</p>
+<pre><code class="lang-bash"># Install py-spy
+pip install py-spy
+
+# Profile running Python process (by PID)
+py-spy record -o profile.svg --pid 12345 --duration 30
+
+# Profile with higher sample rate
+py-spy record -o profile.svg --pid 12345 --rate 200 --duration 30
+
+# Profile specific subprocesses
+py-spy record -o profile.svg --pid 12345 --subprocesses --duration 30
+
+# Generate flamegraph
+py-spy record -o flamegraph.svg --format flamegraph --pid 12345 --duration 30</code></pre>
+<h3>Pattern 4: Correlation with Observability Data</h3>
+<pre><code class="lang-python">from opentelemetry import trace
+from opentelemetry.trace import SpanKind
+import structlog
+import httpx
+
+# Configure structured logging with trace correlation
+structlog.configure(
+    processors=[
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt=&quot;iso&quot;),
+        structlog.processors.JSONRenderer()
+    ]
+)
+
+logger = structlog.get_logger()
+tracer = trace.get_tracer(__name__)
+
+@app.get(&quot;/api/process&quot;)
+async def process_request(request_id: str):
+    # Create span
+    with tracer.start_as_current_span(
+        &quot;process_request&quot;,
+        kind=SpanKind.SERVER
+    ) as span:
+        # Get trace context
+        trace_id = format(span.get_span_context().trace_id, &#x27;032x&#x27;)
+        span_id = format(span.get_span_context().span_id, &#x27;016x&#x27;)
+
+        # Add trace context to all logs
+        log = logger.bind(
+            trace_id=trace_id,
+            span_id=span_id,
+            request_id=request_id
+        )
+
+        log.info(&quot;Processing request started&quot;)
+
+        try:
+            # Call external service
+            with tracer.start_as_current_span(&quot;external_api_call&quot;) as child_span:
+                external_trace_id = format(
+                    child_span.get_span_context().trace_id, &#x27;032x&#x27;
+                )
+
+                log.debug(
+                    &quot;Calling external API&quot;,
+                    external_trace_id=external_trace_id
+                )
+
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        &quot;https://api.example.com/data&quot;,
+                        headers={
+                            &quot;X-Request-ID&quot;: request_id,
+                            &quot;X-Trace-ID&quot;: trace_id
+                        }
+                    )
+
+                child_span.set_attribute(&quot;http.status_code&quot;, response.status_code)
+
+                log.info(
+                    &quot;External API response&quot;,
+                    status_code=response.status_code,
+                    response_time_ms=child_span.get_attribute(&quot;duration_ms&quot;)
+                )
+
+            log.info(&quot;Processing completed successfully&quot;)
+            return {&quot;status&quot;: &quot;success&quot;, &quot;trace_id&quot;: trace_id}
+
+        except Exception as e:
+            log.error(
+                &quot;Processing failed&quot;,
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True
+            )
+            span.record_exception(e)
+            raise</code></pre>
+<p><strong>Correlation Query</strong> (Grafana Loki + Tempo):</p>
+<pre><code class="lang-promql"># Find all logs for a specific trace
+{app=&quot;api-service&quot;} | json | trace_id=&quot;a1b2c3d4e5f6g7h8&quot;
+
+# Find errors with trace context
+{app=&quot;api-service&quot;} | json | level=&quot;error&quot; | trace_id!=&quot;&quot;
+
+# Correlate slow requests (logs + traces)
+{app=&quot;api-service&quot;} | json | duration_ms &gt; 1000</code></pre>
+<h3>Pattern 5: Production Debugging Checklist</h3>
+<pre><code class="lang-python">import asyncio
+from typing import Dict, Any
+from datetime import datetime
+from opentelemetry import trace
+import structlog
+
+logger = structlog.get_logger()
+tracer = trace.get_tracer(__name__)
+
+class ProductionDebugger:
+    &quot;&quot;&quot;
+    Comprehensive production debugging toolkit.
+    &quot;&quot;&quot;
+
+    def __init__(self):
+        self.debug_sessions = {}
+
+    async def debug_request(
+        self,
+        request_id: str,
+        user_id: str = None,
+        enable_verbose: bool = False
+    ) -&gt; Dict[str, Any]:
+        &quot;&quot;&quot;
+        Debug a specific request with full context.
+        &quot;&quot;&quot;
+        with tracer.start_as_current_span(&quot;debug_session&quot;) as span:
+            trace_id = format(span.get_span_context().trace_id, &#x27;032x&#x27;)
+
+            log = logger.bind(
+                trace_id=trace_id,
+                request_id=request_id,
+                user_id=user_id,
+                debug_session=True
+            )
+
+            debug_data = {
+                &quot;trace_id&quot;: trace_id,
+                &quot;request_id&quot;: request_id,
+                &quot;timestamp&quot;: datetime.utcnow().isoformat(),
+                &quot;checks&quot;: {}
+            }
+
+            # Check 1: Database connectivity
+            try:
+                await db.execute(&quot;SELECT 1&quot;)
+                debug_data[&quot;checks&quot;][&quot;database&quot;] = &quot;OK&quot;
+                log.info(&quot;Database check passed&quot;)
+            except Exception as e:
+                debug_data[&quot;checks&quot;][&quot;database&quot;] = f&quot;FAILED: {str(e)}&quot;
+                log.error(&quot;Database check failed&quot;, error=str(e))
+
+            # Check 2: Cache connectivity
+            try:
+                await redis.ping()
+                debug_data[&quot;checks&quot;][&quot;cache&quot;] = &quot;OK&quot;
+                log.info(&quot;Cache check passed&quot;)
+            except Exception as e:
+                debug_data[&quot;checks&quot;][&quot;cache&quot;] = f&quot;FAILED: {str(e)}&quot;
+                log.error(&quot;Cache check failed&quot;, error=str(e))
+
+            # Check 3: External API reachability
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        &quot;https://api.example.com/health&quot;,
+                        timeout=5.0
+                    )
+                    debug_data[&quot;checks&quot;][&quot;external_api&quot;] = {
+                        &quot;status&quot;: &quot;OK&quot;,
+                        &quot;status_code&quot;: response.status_code,
+                        &quot;latency_ms&quot;: response.elapsed.total_seconds() * 1000
+                    }
+                    log.info(&quot;External API check passed&quot;)
+            except Exception as e:
+                debug_data[&quot;checks&quot;][&quot;external_api&quot;] = f&quot;FAILED: {str(e)}&quot;
+                log.error(&quot;External API check failed&quot;, error=str(e))
+
+            # Check 4: Feature flag status
+            if user_id:
+                debug_data[&quot;feature_flags&quot;] = await get_user_flags(user_id)
+                log.info(&quot;Feature flags retrieved&quot;, flags=debug_data[&quot;feature_flags&quot;])
+
+            # Check 5: Recent errors for this user
+            if user_id:
+                recent_errors = await get_recent_errors(user_id, limit=5)
+                debug_data[&quot;recent_errors&quot;] = recent_errors
+                log.info(&quot;Recent errors retrieved&quot;, count=len(recent_errors))
+
+            if enable_verbose:
+                # Additional verbose checks
+                debug_data[&quot;system&quot;] = {
+                    &quot;cpu_percent&quot;: psutil.cpu_percent(),
+                    &quot;memory_percent&quot;: psutil.virtual_memory().percent,
+                    &quot;disk_usage&quot;: psutil.disk_usage(&#x27;/&#x27;).percent
+                }
+                log.debug(&quot;System metrics collected&quot;, system=debug_data[&quot;system&quot;])
+
+            return debug_data</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Production Debugging Checklist</h3>
+<pre><code class="lang-markdown">## Pre-Investigation
+- [ ] Identify trace ID from error logs
+- [ ] Check if issue is user-specific or global
+- [ ] Verify recent deployments or config changes
+- [ ] Check infrastructure metrics (CPU, memory, network)
+
+## Investigation
+- [ ] Enable debug logging for specific user/request
+- [ ] Correlate logs with distributed traces
+- [ ] Check for errors in dependent services
+- [ ] Review recent alerts or anomalies
+- [ ] Compare current behavior to baseline
+
+## Data Collection
+- [ ] Capture trace IDs for failed requests
+- [ ] Export relevant log entries
+- [ ] Collect profiling data (if performance issue)
+- [ ] Screenshot error state in monitoring dashboards
+
+## Debugging Actions
+- [ ] Enable feature flag for targeted users
+- [ ] Increase log level for specific modules
+- [ ] Run sampling profiler for 30-60 seconds
+- [ ] Replay request in staging (if possible)
+
+## Resolution
+- [ ] Disable debug mode after investigation
+- [ ] Revert log level changes
+- [ ] Document findings in incident report
+- [ ] Create follow-up tasks for permanent fixes</code></pre>
+<h3>Feature Flag Providers</h3>
+<p>| Provider | Use Case | Integration | |----------|----------|-------------| | <strong>LaunchDarkly</strong> | Enterprise, full-featured | Python, Go, Node.js SDKs | | <strong>Split.io</strong> | A/B testing + feature flags | All major languages | | <strong>Unleash</strong> | Open source, self-hosted | Docker, Kubernetes | | <strong>Flagsmith</strong> | Open source, SaaS option | REST API, SDKs |</p>
+<h3>Sampling Profilers by Language</h3>
+<pre><code class="lang-bash"># Python: py-spy (recommended)
+py-spy record -o flamegraph.svg --pid &lt;pid&gt; --duration 30
+
+# Go: pprof (built-in)
+go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
+
+# Node.js: 0x
+npx 0x --output-dir ./profile node server.js
+
+# Rust: perf + flamegraph
+perf record -F 99 -p &lt;pid&gt; -g -- sleep 30
+perf script | stackcollapse-perf.pl | flamegraph.pl &gt; flamegraph.svg</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Using Breakpoints in Production</h3>
+<pre><code class="lang-python"># WRONG: Breakpoint stops production server
+import pdb; pdb.set_trace()  # NEVER in production!
+
+# CORRECT: Use logging and tracing
+logger.debug(&quot;Debugging checkpoint&quot;, state=current_state)</code></pre>
+<h3>❌ Enabling Verbose Logging Globally</h3>
+<pre><code class="lang-python"># WRONG: Global DEBUG logging kills performance
+logging.basicConfig(level=logging.DEBUG)  # Generates GB of logs!
+
+# CORRECT: Targeted debug logging
+if debug_enabled_for_user(user_id):
+    logger.debug(&quot;User-specific debug info&quot;, user_id=user_id)</code></pre>
+<h3>❌ Profiling Without Time Limits</h3>
+<pre><code class="lang-python"># WRONG: Profiler runs indefinitely
+profiler.enable()
+# No stop condition!
+
+# CORRECT: Time-limited profiling
+profiler.enable()
+await asyncio.sleep(30)  # Profile for 30 seconds
+profiler.disable()</code></pre>
+<h3>❌ Forgetting Trace Correlation</h3>
+<pre><code class="lang-python"># WRONG: Logs without trace context
+logger.error(&quot;Request failed&quot;)  # Can&#x27;t correlate with trace!
+
+# CORRECT: Include trace ID in logs
+logger.error(
+    &quot;Request failed&quot;,
+    trace_id=trace_id,
+    span_id=span_id
+)</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>observability/distributed-tracing.md</strong> - Trace context and correlation</li><li><strong>observability/structured-logging.md</strong> - Production-ready logging</li><li><strong>testing/performance-testing.md</strong> - Load testing to reproduce issues</li><li><strong>debugging/distributed-systems-debugging.md</strong> - Cross-service debugging</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/debugging-production-debugging.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

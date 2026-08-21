@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cicd-cd-deployment-patterns</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/cicd-cd-deployment-patterns.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/cicd-cd-deployment-patterns.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>cicd-cd-deployment-patterns</h1><p class="lede">Implementing zero-downtime deployment strategies</p><h1>CD Deployment Patterns</h1>
+<p><strong>Scope</strong>: Blue-green deployments, canary releases, rolling updates, rollback strategies, and environment promotion patterns</p>
+<p><strong>Lines</strong>: 395</p>
+<p><strong>Last Updated</strong>: 2025-10-18</p>
+<p><strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Implementing zero-downtime deployment strategies</li><li>Setting up blue-green or canary deployments</li><li>Configuring rolling updates for Kubernetes/container orchestration</li><li>Designing rollback mechanisms</li><li>Managing environment promotion (dev → staging → prod)</li><li>Implementing feature flags for gradual rollouts</li><li>Setting up deployment approvals and gates</li><li>Automating database migrations with deployments</li></ul>
+<p>Don&#x27;t use this skill for:</p>
+<ul><li>Basic workflow configuration (see <code>github-actions-workflows.md</code>)</li><li>Testing strategies (see <code>ci-testing-strategy.md</code>)</li><li>Pipeline optimization (see <code>ci-optimization.md</code>)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Deployment Strategies</h3>
+<ol><li><strong>Blue-Green</strong>: Two identical environments, switch traffic atomically</li><li><strong>Canary</strong>: Gradual rollout to subset of users</li><li><strong>Rolling</strong>: Sequential update of instances</li><li><strong>Recreate</strong>: Stop old, start new (downtime acceptable)</li><li><strong>Shadow</strong>: Run new version alongside old without serving traffic</li></ol>
+<h3>Risk vs Speed Trade-offs</h3>
+<pre><code>Strategy      | Speed | Safety | Complexity | Rollback Speed
+──────────────|──────|───────|───────────|───────────────
+Recreate      | ★★★★ | ★     | ★          | ★★
+Rolling       | ★★★  | ★★    | ★★         | ★★
+Blue-Green    | ★★★★ | ★★★★  | ★★★        | ★★★★★
+Canary        | ★★   | ★★★★★ | ★★★★       | ★★★★</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Blue-Green Deployment</h3>
+<pre><code class="lang-yaml">name: Blue-Green Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build new version
+      - name: Build Docker image
+        run: |
+          docker build -t myapp:${{ github.sha }} .
+          docker tag myapp:${{ github.sha }} myapp:green
+
+      # Deploy to green environment
+      - name: Deploy to green
+        run: |
+          # Deploy to inactive environment
+          kubectl apply -f k8s/deployment-green.yaml
+          kubectl set image deployment/myapp-green myapp=myapp:${{ github.sha }}
+          kubectl rollout status deployment/myapp-green
+
+      # Run smoke tests on green
+      - name: Smoke test green environment
+        run: |
+          ./scripts/smoke-test.sh https://green.myapp.com
+
+      # Switch traffic to green
+      - name: Switch traffic
+        run: |
+          # Update service to point to green
+          kubectl patch service myapp -p &#x27;{&quot;spec&quot;:{&quot;selector&quot;:{&quot;version&quot;:&quot;green&quot;}}}&#x27;
+
+      # Monitor for issues
+      - name: Monitor new deployment
+        run: |
+          sleep 300  # Monitor for 5 minutes
+          ./scripts/check-metrics.sh
+
+      # Rollback if needed
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          kubectl patch service myapp -p &#x27;{&quot;spec&quot;:{&quot;selector&quot;:{&quot;version&quot;:&quot;blue&quot;}}}&#x27;
+          kubectl delete deployment myapp-green
+
+      # Make green the new blue
+      - name: Promote green to blue
+        if: success()
+        run: |
+          kubectl delete deployment myapp-blue
+          kubectl apply -f k8s/deployment-blue.yaml
+          kubectl set image deployment/myapp-blue myapp=myapp:${{ github.sha }}</code></pre>
+<h3>Canary Deployment</h3>
+<pre><code class="lang-yaml">name: Canary Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-canary:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy canary (10%)
+        run: |
+          # Deploy canary with 10% traffic
+          kubectl apply -f k8s/canary-deployment.yaml
+          kubectl set image deployment/myapp-canary myapp=myapp:${{ github.sha }}
+
+          # Configure traffic split
+          kubectl apply -f - &lt;&lt;EOF
+          apiVersion: networking.istio.io/v1beta1
+          kind: VirtualService
+          metadata:
+            name: myapp
+          spec:
+            hosts:
+            - myapp.com
+            http:
+            - match:
+              - headers:
+                  canary:
+                    exact: &quot;true&quot;
+              route:
+              - destination:
+                  host: myapp-canary
+            - route:
+              - destination:
+                  host: myapp-stable
+                weight: 90
+              - destination:
+                  host: myapp-canary
+                weight: 10
+          EOF
+
+      - name: Monitor canary metrics
+        run: |
+          ./scripts/monitor-canary.sh --duration=600 --threshold=5
+
+      - name: Gradually increase traffic
+        if: success()
+        run: |
+          # 25%
+          ./scripts/adjust-traffic.sh --canary=25 --stable=75
+          sleep 300
+
+          # 50%
+          ./scripts/adjust-traffic.sh --canary=50 --stable=50
+          sleep 300
+
+          # 100%
+          ./scripts/adjust-traffic.sh --canary=100 --stable=0
+
+      - name: Promote canary to stable
+        if: success()
+        run: |
+          kubectl set image deployment/myapp-stable myapp=myapp:${{ github.sha }}
+          kubectl delete deployment myapp-canary
+
+      - name: Rollback canary
+        if: failure()
+        run: |
+          kubectl delete deployment myapp-canary
+          ./scripts/alert-slack.sh &quot;Canary rollback triggered&quot;</code></pre>
+<h3>Rolling Deployment (Kubernetes)</h3>
+<pre><code class="lang-yaml">name: Rolling Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update Kubernetes deployment
+        run: |
+          kubectl set image deployment/myapp \
+            myapp=myapp:${{ github.sha }} \
+            --record
+
+          # Configure rolling update strategy
+          kubectl patch deployment myapp -p &#x27;{
+            &quot;spec&quot;: {
+              &quot;strategy&quot;: {
+                &quot;type&quot;: &quot;RollingUpdate&quot;,
+                &quot;rollingUpdate&quot;: {
+                  &quot;maxSurge&quot;: 1,
+                  &quot;maxUnavailable&quot;: 0
+                }
+              }
+            }
+          }&#x27;
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/myapp --timeout=600s
+
+      - name: Verify deployment
+        run: |
+          # Check pod health
+          kubectl get pods -l app=myapp
+
+          # Run health checks
+          ./scripts/health-check.sh
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          kubectl rollout undo deployment/myapp
+          kubectl rollout status deployment/myapp</code></pre>
+<h3>Environment Promotion Pipeline</h3>
+<pre><code class="lang-yaml">name: Environment Promotion
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    environment: development
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to dev
+        run: ./scripts/deploy.sh dev
+
+      - name: Run smoke tests
+        run: ./scripts/smoke-test.sh https://dev.myapp.com
+
+  deploy-staging:
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to staging
+        run: ./scripts/deploy.sh staging
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+  deploy-prod:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://myapp.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Manual approval via environment protection rules
+      - name: Deploy to production
+        run: ./scripts/deploy.sh production
+
+      - name: Verify deployment
+        run: ./scripts/verify-prod.sh
+
+      - name: Notify team
+        if: always()
+        run: |
+          ./scripts/notify-slack.sh \
+            &quot;Production deployment: ${{ job.status }}&quot; \
+            &quot;Version: ${{ github.sha }}&quot;</code></pre>
+<h3>Database Migration with Deployment</h3>
+<pre><code class="lang-yaml">name: Deploy with Migrations
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Backup database before migration
+      - name: Backup database
+        run: |
+          ./scripts/backup-db.sh production
+          echo &quot;BACKUP_ID=$(date +%s)&quot; &gt;&gt; $GITHUB_ENV
+
+      # Run forward migrations
+      - name: Run migrations
+        run: |
+          # Test migrations on copy first
+          ./scripts/test-migration.sh
+
+          # Apply to production
+          npm run migrate:up
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+
+      # Deploy application
+      - name: Deploy application
+        run: |
+          kubectl set image deployment/myapp myapp=myapp:${{ github.sha }}
+          kubectl rollout status deployment/myapp
+
+      # Verify deployment
+      - name: Verify deployment
+        run: ./scripts/health-check.sh
+
+      # Rollback on failure
+      - name: Rollback deployment and database
+        if: failure()
+        run: |
+          # Rollback application
+          kubectl rollout undo deployment/myapp
+
+          # Rollback database
+          npm run migrate:down
+          ./scripts/restore-db.sh production ${{ env.BACKUP_ID }}</code></pre>
+<h3>Feature Flag Deployment</h3>
+<pre><code class="lang-yaml">name: Feature Flag Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Deploy with feature disabled
+      - name: Deploy with feature flag off
+        run: |
+          kubectl set image deployment/myapp myapp=myapp:${{ github.sha }}
+          kubectl rollout status deployment/myapp
+
+      # Enable feature for internal users (0%)
+      - name: Enable for internal
+        run: |
+          curl -X PATCH https://api.launchdarkly.com/api/v2/flags/default/new-feature \
+            -H &quot;Authorization: ${{ secrets.LAUNCHDARKLY_TOKEN }}&quot; \
+            -d &#x27;{&quot;instructions&quot;: [{&quot;kind&quot;: &quot;updateTargets&quot;, &quot;values&quot;: {&quot;targets&quot;: [&quot;internal&quot;]}}]}&#x27;
+
+      # Gradual rollout
+      - name: Gradual rollout
+        run: |
+          # 5%
+          ./scripts/update-flag.sh new-feature --percentage=5
+          sleep 600
+
+          # 25%
+          ./scripts/update-flag.sh new-feature --percentage=25
+          sleep 600
+
+          # 50%
+          ./scripts/update-flag.sh new-feature --percentage=50
+          sleep 600
+
+          # 100%
+          ./scripts/update-flag.sh new-feature --percentage=100
+
+      - name: Monitor metrics
+        run: |
+          ./scripts/check-error-rate.sh --flag=new-feature --threshold=1.0
+
+      - name: Rollback feature
+        if: failure()
+        run: |
+          ./scripts/update-flag.sh new-feature --percentage=0</code></pre>
+<h3>Multi-Region Deployment</h3>
+<pre><code class="lang-yaml">name: Multi-Region Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-primary:
+    runs-on: ubuntu-latest
+    environment: production-us-east
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to us-east-1
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name prod-cluster
+          kubectl set image deployment/myapp myapp=myapp:${{ github.sha }}
+          kubectl rollout status deployment/myapp
+
+      - name: Verify primary region
+        run: ./scripts/health-check.sh us-east-1
+
+  deploy-secondary:
+    needs: deploy-primary
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        region: [us-west-2, eu-west-1, ap-southeast-1]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to ${{ matrix.region }}
+        run: |
+          aws eks update-kubeconfig --region ${{ matrix.region }} --name prod-cluster
+          kubectl set image deployment/myapp myapp=myapp:${{ github.sha }}
+          kubectl rollout status deployment/myapp
+
+      - name: Verify region
+        run: ./scripts/health-check.sh ${{ matrix.region }}
+
+      - name: Update global load balancer
+        run: |
+          aws route53 change-resource-record-sets \
+            --hosted-zone-id ${{ secrets.HOSTED_ZONE_ID }} \
+            --change-batch file://dns-update-${{ matrix.region }}.json</code></pre>
+<h3>Deployment with Health Checks</h3>
+<pre><code class="lang-yaml">name: Deploy with Health Checks
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy application
+        run: |
+          kubectl set image deployment/myapp myapp=myapp:${{ github.sha }}
+
+      - name: Wait for pods to be ready
+        run: |
+          kubectl rollout status deployment/myapp --timeout=600s
+
+      - name: Health check - HTTP endpoints
+        run: |
+          for i in {1..30}; do
+            if curl -f https://myapp.com/health; then
+              echo &quot;Health check passed&quot;
+              break
+            fi
+            echo &quot;Attempt $i failed, retrying...&quot;
+            sleep 10
+          done
+
+      - name: Health check - Database connectivity
+        run: |
+          kubectl exec deployment/myapp -- npm run db:ping
+
+      - name: Health check - Dependencies
+        run: |
+          ./scripts/check-dependencies.sh \
+            --redis \
+            --postgres \
+            --s3
+
+      - name: Monitor error rates
+        run: |
+          ./scripts/monitor-errors.sh --duration=300 --threshold=0.5
+
+      - name: Automated rollback
+        if: failure()
+        run: |
+          echo &quot;Health checks failed, rolling back&quot;
+          kubectl rollout undo deployment/myapp
+          kubectl rollout status deployment/myapp
+
+          # Notify team
+          ./scripts/notify-slack.sh \
+            &quot;Deployment rolled back due to health check failure&quot; \
+            &quot;SHA: ${{ github.sha }}&quot;</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Deployment Strategy Selection</h3>
+<pre><code class="lang-yaml">Use Case                          → Strategy
+─────────────────────────────────────────────────
+Zero downtime required           → Blue-Green or Rolling
+High-risk changes                → Canary
+Limited resources                → Rolling
+Fast rollback critical           → Blue-Green
+Gradual validation needed        → Canary
+Simple app, downtime OK          → Recreate
+A/B testing                      → Feature Flags + Canary</code></pre>
+<h3>Kubernetes Rolling Update Config</h3>
+<pre><code class="lang-yaml">spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # Extra pods during rollout
+      maxUnavailable: 0  # Minimum availability
+  minReadySeconds: 30    # Wait before marking ready
+  progressDeadlineSeconds: 600  # Timeout</code></pre>
+<h3>Rollback Commands</h3>
+<pre><code class="lang-bash"># Kubernetes
+kubectl rollout undo deployment/myapp
+kubectl rollout undo deployment/myapp --to-revision=2
+
+# Docker
+docker service update --rollback myapp
+
+# AWS ECS
+aws ecs update-service --cluster prod --service myapp --force-new-deployment
+
+# Vercel
+vercel rollback</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ No Automated Rollback</h3>
+<pre><code class="lang-yaml"># WRONG: Manual intervention required
+- name: Deploy
+  run: ./deploy.sh
+# [If it fails, ops team manually fixes]</code></pre>
+<pre><code class="lang-yaml"># CORRECT: Automated rollback
+- name: Deploy
+  run: ./deploy.sh
+
+- name: Health check
+  run: ./health-check.sh
+
+- name: Rollback on failure
+  if: failure()
+  run: ./rollback.sh</code></pre>
+<h3>❌ Deploying Without Health Checks</h3>
+<pre><code class="lang-yaml"># WRONG: Assume deployment succeeded
+- run: kubectl apply -f deployment.yaml</code></pre>
+<pre><code class="lang-yaml"># CORRECT: Verify deployment health
+- run: kubectl apply -f deployment.yaml
+- run: kubectl rollout status deployment/myapp
+- run: ./smoke-test.sh</code></pre>
+<h3>❌ No Database Backup Before Migration</h3>
+<pre><code class="lang-yaml"># WRONG: Risky migration
+- run: npm run migrate:up
+- run: ./deploy.sh</code></pre>
+<pre><code class="lang-yaml"># CORRECT: Backup first
+- run: ./backup-db.sh
+- run: npm run migrate:up
+- run: ./deploy.sh
+- if: failure()
+  run: ./restore-db.sh</code></pre>
+<h3>❌ Deploying to All Regions Simultaneously</h3>
+<pre><code class="lang-yaml"># WRONG: All regions at once
+jobs:
+  deploy:
+    strategy:
+      matrix:
+        region: [us, eu, asia]
+    steps: [deploy]</code></pre>
+<pre><code class="lang-yaml"># CORRECT: Staged rollout
+jobs:
+  deploy-primary:
+    steps: [deploy to us-east-1]
+  deploy-secondary:
+    needs: deploy-primary
+    strategy:
+      matrix:
+        region: [us-west-2, eu-west-1]</code></pre>
+<h3>❌ No Monitoring Period After Deployment</h3>
+<pre><code class="lang-yaml"># WRONG: Deploy and forget
+- run: ./deploy.sh</code></pre>
+<pre><code class="lang-yaml"># CORRECT: Monitor post-deployment
+- run: ./deploy.sh
+- run: sleep 300  # 5 minute soak period
+- run: ./check-metrics.sh</code></pre>
+<h3>❌ Skipping Canary for High-Risk Changes</h3>
+<pre><code class="lang-yaml"># WRONG: Direct to production
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy-prod:
+    steps: [deploy 100%]</code></pre>
+<pre><code class="lang-yaml"># CORRECT: Canary for risky changes
+jobs:
+  deploy-canary:
+    if: contains(github.event.head_commit.message, &#x27;[high-risk]&#x27;)
+    steps: [deploy 10%, monitor, gradual rollout]</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>github-actions-workflows.md</code> - Workflow configuration basics</li><li><code>ci-testing-strategy.md</code> - Pre-deployment testing</li><li><code>ci-optimization.md</code> - Deployment speed optimization</li><li><code>ci-security.md</code> - Secure deployment practices</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18</p>
+<p><strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/cicd-cd-deployment-patterns.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>proxies-envoy-proxy</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/proxies-envoy-proxy.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/proxies-envoy-proxy.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>proxies-envoy-proxy</h1><p class="lede">Envoy proxy architecture including filters, clusters, listeners, service mesh patterns, observability, and advanced load balancing</p><h1>Envoy Proxy</h1>
+<p><strong>Scope</strong>: Envoy architecture, configuration, filters, clusters, observability <strong>Lines</strong>: ~390 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Building service mesh architectures</li><li>Implementing advanced load balancing</li><li>Setting up distributed tracing</li><li>Configuring L7 (application layer) proxying</li><li>Working with gRPC services</li><li>Implementing circuit breakers and retries</li><li>Building API gateways with Envoy</li><li>Integrating observability (metrics, tracing, logging)</li></ul>
+<h2>Core Concepts</h2>
+<h3>Envoy Architecture</h3>
+<pre><code>Downstream Client → Listener → Filter Chain → Cluster → Upstream Service
+                     (Port)     (Transform)   (Pool)     (Backend)</code></pre>
+<p><strong>Key Components</strong>:</p>
+<ul><li><strong>Listeners</strong>: Listen on ports, accept connections</li><li><strong>Filter Chains</strong>: Process requests/responses</li><li><strong>Clusters</strong>: Define upstream service pools</li><li><strong>Routes</strong>: Match requests to clusters</li><li><strong>Endpoints</strong>: Individual backend instances</li></ul>
+<h3>Envoy Threading Model</h3>
+<pre><code>Main Thread → Worker Threads (# of CPUs)
+              └─ Each handles connections independently
+              └─ No shared state, lock-free architecture</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>High performance</li><li>Predictable latency</li><li>Scales with CPU cores</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Basic HTTP Proxy</h3>
+<p><strong>Use Case</strong>: Simple reverse proxy configuration</p>
+<pre><code class="lang-yaml"># envoy.yaml
+static_resources:
+  listeners:
+    - name: listener_0
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 10000
+
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                &quot;@type&quot;: type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ingress_http
+                codec_type: AUTO
+
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: backend
+                      domains: [&quot;*&quot;]
+                      routes:
+                        - match:
+                            prefix: &quot;/&quot;
+                          route:
+                            cluster: backend_cluster
+
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      &quot;@type&quot;: type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+    - name: backend_cluster
+      connect_timeout: 0.25s
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: backend_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: backend.local
+                      port_value: 8080</code></pre>
+<h3>Pattern 2: Advanced Load Balancing with Health Checks</h3>
+<p><strong>Use Case</strong>: Production-ready cluster configuration</p>
+<pre><code class="lang-yaml">clusters:
+  - name: backend_cluster
+    connect_timeout: 1s
+    type: STRICT_DNS
+
+    # Load balancing policy
+    lb_policy: LEAST_REQUEST
+    least_request_lb_config:
+      choice_count: 2
+
+    # Circuit breaker
+    circuit_breakers:
+      thresholds:
+        - priority: DEFAULT
+          max_connections: 1024
+          max_pending_requests: 1024
+          max_requests: 1024
+          max_retries: 3
+
+    # Outlier detection (passive health check)
+    outlier_detection:
+      consecutive_5xx: 5
+      interval: 10s
+      base_ejection_time: 30s
+      max_ejection_percent: 50
+      enforcing_consecutive_5xx: 100
+
+    # Active health check
+    health_checks:
+      - timeout: 1s
+        interval: 10s
+        unhealthy_threshold: 3
+        healthy_threshold: 2
+        http_health_check:
+          path: &quot;/health&quot;
+          expected_statuses:
+            - start: 200
+              end: 299
+
+    # Connection pool
+    max_requests_per_connection: 100
+
+    load_assignment:
+      cluster_name: backend_cluster
+      endpoints:
+        - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: backend1.local
+                    port_value: 8080
+            - endpoint:
+                address:
+                  socket_address:
+                    address: backend2.local
+                    port_value: 8080
+            - endpoint:
+                address:
+                  socket_address:
+                    address: backend3.local
+                    port_value: 8080</code></pre>
+<h3>Pattern 3: Path-Based Routing with Retries</h3>
+<p><strong>Use Case</strong>: Route different paths to different services</p>
+<pre><code class="lang-yaml">route_config:
+  name: local_route
+  virtual_hosts:
+    - name: services
+      domains: [&quot;example.com&quot;, &quot;*.example.com&quot;]
+
+      routes:
+        # API v1 with retry policy
+        - match:
+            prefix: &quot;/api/v1/&quot;
+          route:
+            cluster: api_v1_cluster
+            retry_policy:
+              retry_on: &quot;5xx,reset,connect-failure,refused-stream&quot;
+              num_retries: 3
+              per_try_timeout: 2s
+
+        # API v2 with timeout
+        - match:
+            prefix: &quot;/api/v2/&quot;
+          route:
+            cluster: api_v2_cluster
+            timeout: 5s
+
+        # gRPC service
+        - match:
+            prefix: &quot;/grpc/&quot;
+            grpc: {}
+          route:
+            cluster: grpc_cluster
+
+        # Static content with caching
+        - match:
+            prefix: &quot;/static/&quot;
+          route:
+            cluster: cdn_cluster
+          response_headers_to_add:
+            - header:
+                key: &quot;Cache-Control&quot;
+                value: &quot;public, max-age=3600&quot;
+
+        # Default fallback
+        - match:
+            prefix: &quot;/&quot;
+          route:
+            cluster: web_cluster</code></pre>
+<hr>
+<h2>Filter Configuration</h2>
+<h3>HTTP Filters</h3>
+<pre><code class="lang-yaml">http_filters:
+  # Rate limiting
+  - name: envoy.filters.http.ratelimit
+    typed_config:
+      &quot;@type&quot;: type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
+      domain: api_ratelimit
+      failure_mode_deny: true
+      rate_limit_service:
+        grpc_service:
+          envoy_grpc:
+            cluster_name: ratelimit_cluster
+
+  # JWT authentication
+  - name: envoy.filters.http.jwt_authn
+    typed_config:
+      &quot;@type&quot;: type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+      providers:
+        auth0:
+          issuer: &quot;https://example.auth0.com/&quot;
+          audiences:
+            - &quot;api.example.com&quot;
+          remote_jwks:
+            http_uri:
+              uri: &quot;https://example.auth0.com/.well-known/jwks.json&quot;
+              cluster: auth0_jwks_cluster
+              timeout: 5s
+            cache_duration:
+              seconds: 300
+      rules:
+        - match:
+            prefix: &quot;/api/&quot;
+          requires:
+            provider_name: &quot;auth0&quot;
+
+  # CORS
+  - name: envoy.filters.http.cors
+    typed_config:
+      &quot;@type&quot;: type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+
+  # gRPC Web
+  - name: envoy.filters.http.grpc_web
+    typed_config:
+      &quot;@type&quot;: type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+
+  # Compression
+  - name: envoy.filters.http.compressor
+    typed_config:
+      &quot;@type&quot;: type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+      response_direction_config:
+        common_config:
+          enabled:
+            default_value: true
+          min_content_length: 100
+        disable_on_etag_header: true
+      compressor_library:
+        name: text_optimized
+        typed_config:
+          &quot;@type&quot;: type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+          compression_level: BEST_COMPRESSION
+
+  # Router (must be last)
+  - name: envoy.filters.http.router
+    typed_config:
+      &quot;@type&quot;: type.googleapis.com/envoy.extensions.filters.http.router.v3.Router</code></pre>
+<hr>
+<h2>Observability Configuration</h2>
+<h3>Access Logging</h3>
+<pre><code class="lang-yaml">access_log:
+  - name: envoy.access_loggers.file
+    typed_config:
+      &quot;@type&quot;: type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      path: /var/log/envoy/access.log
+      log_format:
+        json_format:
+          start_time: &quot;%START_TIME%&quot;
+          method: &quot;%REQ(:METHOD)%&quot;
+          path: &quot;%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%&quot;
+          protocol: &quot;%PROTOCOL%&quot;
+          response_code: &quot;%RESPONSE_CODE%&quot;
+          duration: &quot;%DURATION%&quot;
+          bytes_sent: &quot;%BYTES_SENT%&quot;
+          bytes_received: &quot;%BYTES_RECEIVED%&quot;
+          upstream_host: &quot;%UPSTREAM_HOST%&quot;
+          x_forwarded_for: &quot;%REQ(X-FORWARDED-FOR)%&quot;
+          user_agent: &quot;%REQ(USER-AGENT)%&quot;
+          request_id: &quot;%REQ(X-REQUEST-ID)%&quot;</code></pre>
+<h3>Distributed Tracing</h3>
+<pre><code class="lang-yaml">tracing:
+  http:
+    name: envoy.tracers.zipkin
+    typed_config:
+      &quot;@type&quot;: type.googleapis.com/envoy.config.trace.v3.ZipkinConfig
+      collector_cluster: zipkin_cluster
+      collector_endpoint: &quot;/api/v2/spans&quot;
+      collector_endpoint_version: HTTP_JSON
+
+# Or Jaeger
+tracing:
+  http:
+    name: envoy.tracers.opencensus
+    typed_config:
+      &quot;@type&quot;: type.googleapis.com/envoy.config.trace.v3.OpenCensusConfig
+      trace_config:
+        probability: 1.0
+      jaeger_exporter_config:
+        collector_endpoint: &quot;jaeger-collector:14268&quot;
+        service_name: &quot;envoy-proxy&quot;</code></pre>
+<h3>Metrics (Prometheus)</h3>
+<pre><code class="lang-yaml">admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901
+
+stats_sinks:
+  - name: envoy.stat_sinks.prometheus
+    typed_config:
+      &quot;@type&quot;: type.googleapis.com/envoy.extensions.stat_sinks.metrics_service.v3.MetricsServiceConfig
+      grpc_service:
+        envoy_grpc:
+          cluster_name: prometheus_cluster
+
+# Access metrics at http://localhost:9901/stats/prometheus</code></pre>
+<hr>
+<h2>Service Mesh Pattern</h2>
+<h3>Sidecar Configuration</h3>
+<pre><code class="lang-yaml"># Envoy as sidecar proxy
+node:
+  id: service-v1
+  cluster: service-cluster
+
+static_resources:
+  listeners:
+    # Inbound listener (accept traffic to this service)
+    - name: inbound_listener
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 15001
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                &quot;@type&quot;: type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: inbound_http
+                route_config:
+                  name: inbound_route
+                  virtual_hosts:
+                    - name: inbound_service
+                      domains: [&quot;*&quot;]
+                      routes:
+                        - match:
+                            prefix: &quot;/&quot;
+                          route:
+                            cluster: local_service
+                http_filters:
+                  - name: envoy.filters.http.router
+
+    # Outbound listener (proxy traffic to other services)
+    - name: outbound_listener
+      address:
+        socket_address:
+          address: 127.0.0.1
+          port_value: 15000
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                &quot;@type&quot;: type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: outbound_http
+                route_config:
+                  name: outbound_route
+                  virtual_hosts:
+                    - name: backend_services
+                      domains: [&quot;*&quot;]
+                      routes:
+                        - match:
+                            prefix: &quot;/api/&quot;
+                          route:
+                            cluster: api_service
+                        - match:
+                            prefix: &quot;/data/&quot;
+                          route:
+                            cluster: data_service
+
+  clusters:
+    # Local service
+    - name: local_service
+      connect_timeout: 0.25s
+      type: STATIC
+      load_assignment:
+        cluster_name: local_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 8080
+
+    # Remote services (service discovery)
+    - name: api_service
+      connect_timeout: 1s
+      type: EDS
+      eds_cluster_config:
+        eds_config:
+          api_config_source:
+            api_type: GRPC
+            grpc_services:
+              - envoy_grpc:
+                  cluster_name: xds_cluster
+
+    - name: data_service
+      connect_timeout: 1s
+      type: EDS
+      eds_cluster_config:
+        eds_config:
+          api_config_source:
+            api_type: GRPC
+            grpc_services:
+              - envoy_grpc:
+                  cluster_name: xds_cluster
+
+    # Control plane
+    - name: xds_cluster
+      connect_timeout: 1s
+      type: STRICT_DNS
+      http2_protocol_options: {}
+      load_assignment:
+        cluster_name: xds_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: control-plane.local
+                      port_value: 18000</code></pre>
+<hr>
+<h2>Python Envoy Control Plane</h2>
+<pre><code class="lang-python">import grpc
+from concurrent import futures
+from envoy.service.discovery.v3 import discovery_pb2_grpc
+from envoy.config.endpoint.v3 import endpoint_pb2
+from envoy.config.cluster.v3 import cluster_pb2
+
+class EnvoyControlPlane(discovery_pb2_grpc.AggregatedDiscoveryServiceServicer):
+    def __init__(self):
+        self.version_info = &quot;1&quot;
+        self.endpoints = {}
+
+    def StreamAggregatedResources(self, request_iterator, context):
+        &quot;&quot;&quot;Handle xDS requests from Envoy&quot;&quot;&quot;
+        for request in request_iterator:
+            if request.type_url == &quot;type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment&quot;:
+                response = self.build_endpoint_response(request)
+                yield response
+
+    def build_endpoint_response(self, request):
+        &quot;&quot;&quot;Build EDS response with endpoints&quot;&quot;&quot;
+        resources = []
+
+        for cluster_name in request.resource_names:
+            if cluster_name in self.endpoints:
+                cla = endpoint_pb2.ClusterLoadAssignment(
+                    cluster_name=cluster_name,
+                    endpoints=[
+                        endpoint_pb2.LocalityLbEndpoints(
+                            lb_endpoints=[
+                                endpoint_pb2.LbEndpoint(
+                                    endpoint=endpoint_pb2.Endpoint(
+                                        address=endpoint_pb2.Address(
+                                            socket_address=endpoint_pb2.SocketAddress(
+                                                address=ep[&quot;address&quot;],
+                                                port_value=ep[&quot;port&quot;]
+                                            )
+                                        )
+                                    )
+                                )
+                                for ep in self.endpoints[cluster_name]
+                            ]
+                        )
+                    ]
+                )
+                resources.append(cla)
+
+        response = discovery_pb2.DiscoveryResponse(
+            version_info=self.version_info,
+            resources=[r.SerializeToString() for r in resources],
+            type_url=&quot;type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment&quot;
+        )
+        return response
+
+    def register_endpoints(self, cluster: str, endpoints: list):
+        &quot;&quot;&quot;Register endpoints for a cluster&quot;&quot;&quot;
+        self.endpoints[cluster] = endpoints
+        self.version_info = str(int(self.version_info) + 1)
+
+def serve():
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    control_plane = EnvoyControlPlane()
+
+    # Register some endpoints
+    control_plane.register_endpoints(&quot;api_service&quot;, [
+        {&quot;address&quot;: &quot;10.0.1.10&quot;, &quot;port&quot;: 8080},
+        {&quot;address&quot;: &quot;10.0.1.11&quot;, &quot;port&quot;: 8080}
+    ])
+
+    discovery_pb2_grpc.add_AggregatedDiscoveryServiceServicer_to_server(
+        control_plane, server
+    )
+
+    server.add_insecure_port(&#x27;[::]:18000&#x27;)
+    server.start()
+    server.wait_for_termination()
+
+if __name__ == &#x27;__main__&#x27;:
+    serve()</code></pre>
+<hr>
+<h2>Best Practices</h2>
+<h3>1. Use Connection Pooling</h3>
+<pre><code class="lang-yaml">clusters:
+  - name: backend_cluster
+    # ... other config
+    http2_protocol_options:
+      max_concurrent_streams: 100
+    max_requests_per_connection: 100</code></pre>
+<h3>2. Configure Timeouts</h3>
+<pre><code class="lang-yaml">route:
+  cluster: backend_cluster
+  timeout: 15s
+  idle_timeout: 60s
+  retry_policy:
+    retry_on: &quot;5xx&quot;
+    num_retries: 3
+    per_try_timeout: 5s</code></pre>
+<h3>3. Enable Observability</h3>
+<pre><code class="lang-yaml"># Always enable tracing, metrics, and logging
+tracing:
+  http:
+    name: envoy.tracers.zipkin
+
+stats_sinks:
+  - name: envoy.stat_sinks.prometheus
+
+access_log:
+  - name: envoy.access_loggers.file</code></pre>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Issue 1: High Latency</h3>
+<p><strong>Debug Steps</strong>:</p>
+<pre><code class="lang-bash"># Check Envoy admin interface
+curl http://localhost:9901/stats | grep upstream
+
+# Check cluster health
+curl http://localhost:9901/clusters
+
+# Enable debug logging
+curl -X POST http://localhost:9901/logging?level=debug</code></pre>
+<p><strong>Common Solutions</strong>:</p>
+<ul><li>Increase connection pool size</li><li>Tune timeout values</li><li>Check upstream health</li><li>Enable connection reuse</li></ul>
+<h3>Issue 2: Circuit Breaker Triggered</h3>
+<p><strong>Symptoms</strong>: <code>upstream_rq_pending_overflow</code> counter increasing</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-yaml">circuit_breakers:
+  thresholds:
+    - priority: DEFAULT
+      max_connections: 2048  # Increase
+      max_pending_requests: 2048  # Increase</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>proxies-reverse-proxy</code> - Reverse proxy patterns</li><li><code>proxies-nginx-configuration</code> - Nginx configuration</li><li><code>distributed-systems-service-mesh</code> - Service mesh architecture</li><li><code>observability-distributed-tracing</code> - Distributed tracing</li><li><code>protocols-grpc</code> - gRPC protocol</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/proxies-envoy-proxy.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

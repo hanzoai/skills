@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>engineering-pair-programming</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/engineering-pair-programming.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/engineering-pair-programming.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>engineering-pair-programming</h1><p class="lede">Pair programming techniques, driver-navigator roles, mob programming, remote pairing tools and best practices</p><h1>Pair Programming &amp; Mob Programming</h1>
+<p><strong>Scope</strong>: Comprehensive guide to pair programming, mob programming, remote pairing, and collaborative coding practices <strong>Lines</strong>: ~280 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Onboarding new team members</li><li>Solving complex problems</li><li>Sharing knowledge across team</li><li>Establishing coding standards</li><li>Reviewing critical code live</li><li>Learning new technologies</li><li>Breaking through development blockers</li><li>Building team cohesion</li></ul>
+<h2>Core Concepts</h2>
+<h3>Concept 1: Driver-Navigator Pattern</h3>
+<p><strong>Driver</strong>: Person typing/coding</p>
+<ul><li>Focus on tactical implementation</li><li>Write code, run tests</li><li>Think about syntax and details</li></ul>
+<p><strong>Navigator</strong>: Person guiding</p>
+<ul><li>Focus on strategic direction</li><li>Think about design and architecture</li><li>Catch errors and suggest improvements</li></ul>
+<p><strong>Switch Roles</strong>: Every 15-25 minutes</p>
+<pre><code>┌─────────────────────────────────────┐
+│ Navigator: &quot;Let&#x27;s extract this      │
+│ validation logic into a function&quot;   │
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────┐
+│ Driver: *types function extraction* │
+│ &quot;Like this?&quot;                        │
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────┐
+│ Navigator: &quot;Yes, but let&#x27;s make it  │
+│ return early on invalid input&quot;      │
+└─────────────────────────────────────┘</code></pre>
+<hr>
+<h3>Concept 2: Pairing Styles</h3>
+<p><strong>Ping-Pong Pairing</strong> (with TDD):</p>
+<pre><code>1. Person A: Write failing test
+2. Person B: Make test pass
+3. Person B: Refactor
+4. Person B: Write next failing test
+5. Person A: Make test pass
+6. Repeat...</code></pre>
+<p><strong>Strong-Style Pairing</strong>:</p>
+<blockquote><p>&quot;For an idea to go from your head to the computer, it must go through someone else&#x27;s hands&quot;</p></blockquote>
+<ul><li>Navigator has idea</li><li>Driver implements (doesn&#x27;t think independently)</li><li>Forces clear communication</li><li>Great for teaching</li></ul>
+<p><strong>Unstructured Pairing</strong>:</p>
+<ul><li>Fluid role switching</li><li>Both contribute equally</li><li>Works well for experienced pairs</li></ul>
+<hr>
+<h3>Concept 3: Mob Programming</h3>
+<p><strong>Definition</strong>: Entire team works on same code at same time</p>
+<p><strong>Setup</strong>:</p>
+<ul><li>One driver, multiple navigators</li><li>Rotate driver every 10-15 minutes</li><li>Large screen visible to all</li><li>Timer for rotations</li></ul>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Maximum knowledge sharing</li><li>Real-time code review</li><li>No handoffs or context switching</li><li>Team alignment</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Effective Pairing Session</h3>
+<p><strong>Before Session</strong>:</p>
+<pre><code class="lang-markdown">1. Define goal (30 seconds)
+   &quot;We&#x27;re implementing user authentication&quot;
+
+2. Agree on approach (2 minutes)
+   &quot;Let&#x27;s use JWT tokens and bcrypt for passwords&quot;
+
+3. Set time box (1-2 hours)
+   &quot;Let&#x27;s pair until lunch&quot;
+
+4. Choose roles
+   &quot;I&#x27;ll drive first, you navigate&quot;</code></pre>
+<p><strong>During Session</strong>:</p>
+<ul><li>Switch roles every 15-25 min</li><li>Take breaks together</li><li>Communicate constantly</li><li>Think out loud</li></ul>
+<p><strong>After Session</strong>:</p>
+<ul><li>Commit and push code</li><li>Reflect on what worked</li><li>Document learnings</li></ul>
+<hr>
+<h3>Pattern 2: Communication Patterns</h3>
+<p><strong>Good Communication</strong>:</p>
+<pre><code>Navigator: &quot;Let&#x27;s add error handling for the null case&quot;
+Driver: &quot;Good catch. Like this?&quot; *types*
+Navigator: &quot;Yes, but we should also log the error&quot;
+Driver: &quot;Makes sense&quot; *adds logging*</code></pre>
+<p><strong>Bad Communication</strong>:</p>
+<pre><code>Navigator: &quot;That&#x27;s wrong&quot;
+Driver: &quot;Why?&quot;
+Navigator: &quot;Just change it&quot;
+Driver: &quot;To what?&quot;
+Navigator: *grabs keyboard* &quot;Like this!&quot; ← Anti-pattern!</code></pre>
+<p><strong>Best Practices</strong>:</p>
+<ul><li>Be specific: &quot;Let&#x27;s extract lines 45-50 into a function&quot;</li><li>Ask questions: &quot;What if the user is null?&quot;</li><li>Acknowledge: &quot;Good idea, let&#x27;s try that&quot;</li><li>Never grab keyboard without permission</li></ul>
+<hr>
+<h3>Pattern 3: Remote Pairing Setup</h3>
+<p><strong>Tools</strong>:</p>
+<pre><code>Screen Sharing:
+- VS Code Live Share (best for coding)
+- Tuple (low latency, great for pairing)
+- Zoom/Google Meet (screen share + audio)
+
+Code Collaboration:
+- VS Code Live Share: Real-time editing
+- JetBrains Code With Me: IntelliJ pairing
+- tmux: Terminal multiplexing
+
+Communication:
+- Discord: Low latency voice
+- Slack huddle: Quick screen share
+- Tuple: Built-in voice chat</code></pre>
+<p><strong>VS Code Live Share Example</strong>:</p>
+<pre><code class="lang-bash"># Host starts session
+# Share link with pair
+
+# Guest joins
+# Both can edit, run terminal, debug
+
+# Benefits:
+# - No lag (local editing)
+# - Each person uses own setup
+# - Shared terminal and debugger</code></pre>
+<hr>
+<h3>Pattern 4: Pairing with Skill Gaps</h3>
+<p><strong>Expert + Novice</strong>:</p>
+<pre><code>Strong-Style Pairing:
+- Novice drives (hands on keyboard)
+- Expert navigates (teaches)
+- Forces expert to explain clearly
+- Novice learns by doing
+
+Example:
+Expert: &quot;Let&#x27;s create a new function called validate_email&quot;
+Novice: *types function signature*
+Expert: &quot;Good, now add a parameter for the email string&quot;
+Novice: *adds parameter*
+Expert: &quot;What should we check first?&quot;
+Novice: &quot;If it contains an @ symbol?&quot;
+Expert: &quot;Exactly! Go ahead and write that&quot;</code></pre>
+<p><strong>Two Experts</strong>:</p>
+<pre><code>Unstructured Pairing:
+- Fluid role switching
+- Both contribute ideas equally
+- Quick knowledge exchange
+- Focus on hard problems</code></pre>
+<hr>
+<h3>Pattern 5: Mob Programming Session</h3>
+<p><strong>Roles</strong>:</p>
+<ul><li><strong>Driver</strong>: Types code (hands, not brain)</li><li><strong>Navigator</strong>: Guides driver (thinks strategically)</li><li><strong>Mob</strong>: Suggests ideas to navigator</li></ul>
+<p><strong>Rotation</strong>:</p>
+<pre><code>Every 10 minutes:
+Driver → Mob (rest)
+Navigator → Driver (implement)
+Mob member → Navigator (think)</code></pre>
+<p><strong>Example Session</strong>:</p>
+<pre><code>10:00 - Alice drives, Bob navigates, team suggests
+10:10 - Bob drives, Carol navigates, team suggests
+10:20 - Carol drives, Dave navigates, team suggests
+10:30 - Dave drives, Alice navigates, team suggests
+10:40 - Break (5 min)</code></pre>
+<hr>
+<h2>Best Practices</h2>
+<h3>Pairing Etiquette</h3>
+<p><strong>Do&#x27;s</strong>:</p>
+<ul><li>Be present (no phone, no email)</li><li>Communicate constantly</li><li>Think out loud</li><li>Take breaks together</li><li>Switch roles regularly</li><li>Be patient and respectful</li><li>Ask &quot;why&quot; not &quot;what&quot;</li></ul>
+<p><strong>Don&#x27;ts</strong>:</p>
+<ul><li>Don&#x27;t grab keyboard</li><li>Don&#x27;t work in silence</li><li>Don&#x27;t dominate session</li><li>Don&#x27;t check phone/email</li><li>Don&#x27;t skip breaks</li><li>Don&#x27;t criticize personally</li><li>Don&#x27;t pair for 8 hours straight</li></ul>
+<hr>
+<h3>When to Pair</h3>
+<p><strong>Good Times to Pair</strong>:</p>
+<ul><li>Critical features (auth, payments)</li><li>Complex algorithms</li><li>Unfamiliar codebases</li><li>Onboarding new engineers</li><li>Breaking through blockers</li><li>Establishing patterns</li></ul>
+<p><strong>Bad Times to Pair</strong>:</p>
+<ul><li>Trivial tasks (simple bug fixes)</li><li>Routine work (updating docs)</li><li>Deep research (exploring options)</li><li>Individual learning time</li><li>When tired or unfocused</li></ul>
+<hr>
+<h3>Optimal Pairing Duration</h3>
+<pre><code>Session Length: 1-2 hours
+Break: 5-10 minutes
+Daily Pairing: 4-6 hours max
+
+Schedule Example:
+09:00-10:30: Pair session 1
+10:30-10:40: Break
+10:40-12:00: Pair session 2
+12:00-13:00: Lunch (separate)
+13:00-14:30: Pair session 3
+14:30-16:00: Solo work
+
+Don&#x27;t pair 100% of time - solo work is valuable!</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Common Pairing Mistakes</h3>
+<pre><code>❌ Watch-the-Master
+→ One person codes, other watches silently
+✅ Active navigation and communication
+
+❌ Keyboard Hogging
+→ Driver refuses to switch
+✅ Time-box rotations (15-25 min)
+
+❌ Back-seat Driving
+→ Navigator dictates every keystroke
+✅ Navigate strategically, not tactically
+
+❌ Pairing 8 Hours Straight
+→ Exhausting and ineffective
+✅ 4-6 hours max, with breaks
+
+❌ Pairing on Everything
+→ Waste time on trivial tasks
+✅ Pair on complex, critical work
+
+❌ Silent Pairing
+→ No communication, no collaboration
+✅ Think out loud, discuss constantly
+
+❌ Unequal Participation
+→ One person dominates
+✅ Equal time as driver/navigator</code></pre>
+<hr>
+<h2>Remote Pairing Tips</h2>
+<h3>Making Remote Pairing Effective</h3>
+<p><strong>Technical Setup</strong>:</p>
+<pre><code class="lang-bash"># High-quality audio crucial
+- Use headphones (reduce echo)
+- Use quality mic (not laptop mic)
+- Test audio before session
+
+# Screen sharing
+- Share entire screen (not just window)
+- Increase font size (18-20pt)
+- Use high-contrast theme
+- Hide distracting notifications
+
+# Collaboration tools
+- VS Code Live Share: Shared editing
+- Shared terminal: Both can type
+- Shared debugger: Both can step through</code></pre>
+<p><strong>Communication</strong>:</p>
+<pre><code># Over-communicate (no body language)
+&quot;I&#x27;m thinking...&quot; (when silent)
+&quot;Let me drive next&quot; (before grabbing control)
+&quot;Can you try...?&quot; (instead of just doing it)
+
+# Use video when possible
+- See facial expressions
+- Read body language
+- Build rapport</code></pre>
+<hr>
+<h2>Measuring Success</h2>
+<h3>Pairing Effectiveness Metrics</h3>
+<p><strong>Qualitative</strong>:</p>
+<ul><li>Knowledge shared between team members</li><li>Fewer bugs in production</li><li>Faster onboarding</li><li>Improved code quality</li><li>Team cohesion</li></ul>
+<p><strong>Quantitative</strong>:</p>
+<ul><li>Defect rate (should decrease)</li><li>Code review time (should decrease)</li><li>Time to production (may increase initially)</li><li>Bus factor (should increase)</li></ul>
+<p><strong>Team Surveys</strong>:</p>
+<pre><code class="lang-markdown">Weekly Pairing Retrospective:
+1. What worked well?
+2. What could improve?
+3. Did you learn something new?
+4. Was pairing time well spent?
+5. Would you pair on this task again?</code></pre>
+<hr>
+<h2>Code Example: Pairing Session</h2>
+<p><strong>Ping-Pong TDD Session</strong>:</p>
+<pre><code class="lang-python"># Person A: Write failing test
+def test_calculate_discount_for_vip():
+    customer = Customer(type=&quot;VIP&quot;)
+    discount = calculate_discount(customer, purchase_amount=100)
+    assert discount == 20  # 20% discount for VIP
+
+# Test fails (function doesn&#x27;t exist)
+
+# Person B: Make test pass (minimal implementation)
+def calculate_discount(customer, purchase_amount):
+    if customer.type == &quot;VIP&quot;:
+        return purchase_amount * 0.20
+    return 0
+
+# Test passes!
+
+# Person B: Refactor
+def calculate_discount(customer, purchase_amount):
+    VIP_DISCOUNT_RATE = 0.20
+    if customer.is_vip():  # Better abstraction
+        return purchase_amount * VIP_DISCOUNT_RATE
+    return 0
+
+# Person B: Write next failing test
+def test_calculate_discount_for_regular():
+    customer = Customer(type=&quot;REGULAR&quot;)
+    discount = calculate_discount(customer, purchase_amount=100)
+    assert discount == 10  # 10% discount for regular
+
+# Test fails (returns 0)
+
+# Person A: Make test pass
+def calculate_discount(customer, purchase_amount):
+    VIP_DISCOUNT_RATE = 0.20
+    REGULAR_DISCOUNT_RATE = 0.10
+
+    if customer.is_vip():
+        return purchase_amount * VIP_DISCOUNT_RATE
+    return purchase_amount * REGULAR_DISCOUNT_RATE
+
+# Tests pass! Continue...</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>engineering-code-review</strong>: Pair programming is live code review</li><li><strong>engineering-test-driven-development</strong>: Ping-pong pairing with TDD</li><li><strong>engineering-refactoring-patterns</strong>: Pair on refactoring</li><li><strong>engineering-domain-driven-design</strong>: Pair to model domain</li></ul>
+<hr>
+<h2>References</h2>
+<ul><li><a href="https://www.amazon.com/Pair-Programming-Illuminated-Laurie-Williams/dp/0201745763">Pair Programming Illuminated by Laurie Williams</a></li><li><a href="https://www.agilealliance.org/resources/experience-reports/mob-programming-agile2014/">Mob Programming by Woody Zuill</a></li><li><a href="https://llewellynfalco.blogspot.com/2014/06/llewellyns-strong-style-pairing.html">Strong-Style Pairing</a></li><li><a href="https://martinfowler.com/articles/remote-or-co-located.html">Remote Pairing by Joe Moore</a></li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/engineering-pair-programming.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>build-systems-build-optimization</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/build-systems-build-optimization.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/build-systems-build-optimization.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>build-systems-build-optimization</h1><p class="lede">Incremental builds, dependency tracking, build caching (ccache, sccache, Bazel), parallel builds, build time profiling, and CI/CD optimization strategies.</p><h1>Build Optimization</h1>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Build times are slowing down development velocity</li><li>CI/CD pipelines are taking too long</li><li>Incremental builds are slower than expected</li><li>Team is wasting time waiting for builds</li><li>Large codebase (&gt;10k files) requires optimization</li><li>Remote teams need shared build cache</li></ul>
+<p><strong>Prerequisites</strong>: Understanding of build systems (Make, CMake, Gradle, Bazel), profiling tools</p>
+<h2>Core Concepts</h2>
+<h3>Build Performance Hierarchy</h3>
+<pre><code>Impact (High → Low):
+1. Incremental builds (only rebuild changed files)
+2. Parallel builds (use all CPU cores)
+3. Build caching (local + remote)
+4. Precompiled headers (C/C++)
+5. Link-time optimization (balance speed vs size)
+6. Dependency reduction (fewer deps = faster)
+7. Compiler optimization flags (balance speed vs debuggability)</code></pre>
+<h3>Build Time Breakdown</h3>
+<pre><code>Typical C++ build (100k LOC):
+├── Preprocessing:    10% (includes, macros)
+├── Parsing:          15% (syntax tree)
+├── Template inst:    20% (C++ templates)
+├── Optimization:     25% (code generation)
+├── Linking:          20% (combine objects)
+└── Other:            10% (I/O, overhead)
+
+Python/Java build:
+├── Dependency res:   30% (Maven/Gradle)
+├── Compilation:      40% (javac, etc.)
+├── Testing:          20% (unit tests)
+└── Packaging:        10% (JAR/wheel)</code></pre>
+<h2>Incremental Builds</h2>
+<h3>Dependency Tracking</h3>
+<h4>Make Dependency Generation</h4>
+<pre><code class="lang-makefile"># Makefile - Automatic dependency tracking
+CC := gcc
+CFLAGS := -Wall -O2
+DEPFLAGS = -MMD -MP
+
+SOURCES := $(wildcard *.c)
+OBJECTS := $(SOURCES:.c=.o)
+DEPS := $(OBJECTS:.o=.d)
+
+program: $(OBJECTS)
+	$(CC) $^ -o $@
+
+# Compile with dependency generation
+%.o: %.c
+	$(CC) $(CFLAGS) $(DEPFLAGS) -c $&lt; -o $@
+
+# Include generated dependencies
+-include $(DEPS)
+
+clean:
+	rm -f $(OBJECTS) $(DEPS) program</code></pre>
+<h4>CMake Dependency Tracking</h4>
+<pre><code class="lang-cmake"># CMakeLists.txt - Built-in dependency tracking
+add_executable(myapp
+    main.cpp
+    utils.cpp
+    config.cpp
+)
+
+# CMake automatically tracks:
+# - Source file changes
+# - Header file changes (via compiler dependency generation)
+# - CMakeLists.txt changes
+
+# Enable faster dependency scanning (CMake 3.16+)
+set(CMAKE_DEPENDS_USE_COMPILER TRUE)</code></pre>
+<h4>Gradle Incremental Compilation</h4>
+<pre><code class="lang-kotlin">// build.gradle.kts - Up-to-date checks
+tasks.compileJava {
+    // Gradle automatically tracks:
+    inputs.files(sourceSets.main.get().allSource)
+    outputs.dir(sourceSets.main.get().java.classesDirectory)
+
+    // Enable incremental compilation (default in Gradle 7+)
+    options.isIncremental = true
+}
+
+// Custom task with inputs/outputs
+tasks.register&lt;Copy&gt;(&quot;processResources&quot;) {
+    from(&quot;src/resources&quot;)
+    into(&quot;$buildDir/resources&quot;)
+
+    // Declare inputs/outputs for incremental builds
+    inputs.dir(&quot;src/resources&quot;)
+    outputs.dir(&quot;$buildDir/resources&quot;)
+}</code></pre>
+<h3>Build Avoidance</h3>
+<pre><code class="lang-bash"># Make - Only rebuild if changed
+make                  # Builds only if sources newer than target
+
+# CMake - Detects changes automatically
+cmake --build build   # Rebuilds only changed files
+
+# Gradle - Task up-to-date checking
+./gradlew build       # Skips up-to-date tasks
+
+# Bazel - Fine-grained caching
+bazel build //app     # Rebuilds only affected actions</code></pre>
+<h2>Parallel Builds</h2>
+<h3>Make Parallel Builds</h3>
+<pre><code class="lang-bash"># Use -j flag for parallel jobs
+make -j              # Use all CPU cores
+make -j8             # Use 8 parallel jobs
+make -j$(nproc)      # Use number of CPU cores
+
+# Load average limit
+make -j8 -l4         # Max 8 jobs, load average &lt; 4.0</code></pre>
+<pre><code class="lang-makefile"># Makefile - Optimize for parallelism
+# Avoid recursive make (breaks parallelism)
+
+# WRONG: Recursive make
+subdirs:
+	$(MAKE) -C src
+	$(MAKE) -C tests
+
+# CORRECT: Include sub-makefiles
+include src/Makefile
+include tests/Makefile</code></pre>
+<h3>CMake Parallel Builds</h3>
+<pre><code class="lang-bash"># Parallel build with CMake
+cmake --build build -j8          # 8 parallel jobs
+cmake --build build --parallel   # Use all cores
+
+# Ninja (faster than Make)
+cmake -G Ninja ..
+ninja -j8</code></pre>
+<pre><code class="lang-cmake"># CMakeLists.txt - Optimize for parallelism
+# Use OBJECT libraries to avoid rebuilding common code
+add_library(common OBJECT common.cpp utils.cpp)
+
+add_executable(app1 app1.cpp)
+target_link_libraries(app1 PRIVATE common)
+
+add_executable(app2 app2.cpp)
+target_link_libraries(app2 PRIVATE common)
+
+# common.cpp compiled once, linked into both executables</code></pre>
+<h3>Gradle Parallel Builds</h3>
+<pre><code class="lang-bash"># Enable parallel execution
+./gradlew build --parallel
+
+# Configure max workers
+./gradlew build --max-workers=8</code></pre>
+<pre><code class="lang-properties"># gradle.properties - Enable by default
+org.gradle.parallel=true
+org.gradle.workers.max=8</code></pre>
+<h3>Bazel Parallel Builds</h3>
+<pre><code class="lang-bash"># Bazel parallelizes automatically
+bazel build //...
+
+# Control parallelism
+bazel build //... --jobs=8
+bazel build //... --local_ram_resources=4096  # MB
+bazel build //... --local_cpu_resources=8</code></pre>
+<h2>Build Caching</h2>
+<h3>ccache (C/C++)</h3>
+<pre><code class="lang-bash"># Install ccache
+sudo apt install ccache         # Linux
+brew install ccache             # macOS
+
+# Configure
+ccache --max-size=10G
+ccache --set-config=compression=true
+
+# Use with Make
+export CC=&quot;ccache gcc&quot;
+export CXX=&quot;ccache g++&quot;
+make
+
+# Use with CMake
+cmake -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+      -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
+
+# Stats
+ccache -s
+ccache --show-stats
+
+# Clean cache
+ccache --clear</code></pre>
+<pre><code class="lang-cmake"># CMakeLists.txt - Automatic ccache detection
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set(CMAKE_C_COMPILER_LAUNCHER &quot;${CCACHE_PROGRAM}&quot;)
+    set(CMAKE_CXX_COMPILER_LAUNCHER &quot;${CCACHE_PROGRAM}&quot;)
+    message(STATUS &quot;Using ccache: ${CCACHE_PROGRAM}&quot;)
+endif()</code></pre>
+<h3>sccache (Multi-Language)</h3>
+<pre><code class="lang-bash"># Install sccache (Rust-based, supports C++, Rust, Python)
+cargo install sccache
+
+# Configure
+export SCCACHE_DIR=~/.cache/sccache
+export SCCACHE_CACHE_SIZE=&quot;10G&quot;
+
+# Use with CMake
+export CMAKE_C_COMPILER_LAUNCHER=sccache
+export CMAKE_CXX_COMPILER_LAUNCHER=sccache
+
+# Use with Cargo
+export RUSTC_WRAPPER=sccache
+
+# Remote cache (S3, Redis, etc.)
+export SCCACHE_BUCKET=my-build-cache
+export SCCACHE_REGION=us-west-2
+
+# Stats
+sccache --show-stats</code></pre>
+<h3>Gradle Build Cache</h3>
+<pre><code class="lang-bash"># Enable build cache
+./gradlew build --build-cache</code></pre>
+<pre><code class="lang-properties"># gradle.properties - Enable by default
+org.gradle.caching=true</code></pre>
+<pre><code class="lang-kotlin">// build.gradle.kts - Remote build cache
+buildCache {
+    local {
+        isEnabled = true
+        directory = file(&quot;$rootDir/.gradle/build-cache&quot;)
+    }
+
+    remote&lt;HttpBuildCache&gt; {
+        url = uri(&quot;https://cache.example.com&quot;)
+        isPush = System.getenv(&quot;CI&quot;) == &quot;true&quot;  // Only push from CI
+        credentials {
+            username = System.getenv(&quot;CACHE_USER&quot;)
+            password = System.getenv(&quot;CACHE_PASS&quot;)
+        }
+    }
+}</code></pre>
+<h3>Bazel Remote Cache</h3>
+<pre><code class="lang-bash"># Local disk cache
+bazel build //... --disk_cache=~/.cache/bazel</code></pre>
+<pre><code class="lang-bash"># .bazelrc - Remote cache configuration
+build --remote_cache=https://cache.example.com
+build --remote_upload_local_results=true
+
+# Google Cloud Storage
+build --remote_cache=https://storage.googleapis.com/my-bazel-cache
+build --google_default_credentials
+
+# Authentication
+build --remote_header=Authorization=Bearer TOKEN</code></pre>
+<h3>Remote Build Execution</h3>
+<pre><code class="lang-bash"># Bazel remote execution (BuildBarn, BuildBuddy, etc.)
+bazel build //... \
+    --remote_executor=grpcs://remotebuildexecution.googleapis.com \
+    --remote_instance_name=projects/my-project/instances/default
+
+# BuildBuddy (open source)
+bazel build //... --remote_cache=grpcs://remote.buildbuddy.io \
+    --remote_header=x-buildbuddy-api-key=YOUR_KEY</code></pre>
+<h2>Precompiled Headers (C/C++)</h2>
+<h3>CMake Precompiled Headers</h3>
+<pre><code class="lang-cmake"># CMakeLists.txt - Precompiled headers (CMake 3.16+)
+add_library(mylib src/lib.cpp)
+
+# Add precompiled headers
+target_precompile_headers(mylib PRIVATE
+    &lt;vector&gt;
+    &lt;string&gt;
+    &lt;iostream&gt;
+    &lt;algorithm&gt;
+    &quot;common.h&quot;
+    &quot;utils.h&quot;
+)
+
+# Reuse across targets
+add_executable(myapp main.cpp)
+target_precompile_headers(myapp REUSE_FROM mylib)</code></pre>
+<p><strong>Impact</strong>: 20-40% faster builds for header-heavy C++ projects</p>
+<h3>Manual Precompiled Headers</h3>
+<pre><code class="lang-bash"># GCC/Clang - Generate PCH
+g++ -x c++-header common.h -o common.h.gch
+
+# Use PCH
+g++ main.cpp -include common.h -o main</code></pre>
+<h2>Link-Time Optimization (LTO)</h2>
+<h3>CMake LTO Configuration</h3>
+<pre><code class="lang-cmake"># CMakeLists.txt - Enable LTO
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+# Or per-target
+add_executable(myapp main.cpp)
+set_target_properties(myapp PROPERTIES
+    INTERPROCEDURAL_OPTIMIZATION TRUE
+)
+
+# Or per-configuration
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)</code></pre>
+<p><strong>Trade-off</strong>: 10-20% smaller binaries, 2-3x slower link time</p>
+<h3>Selective LTO</h3>
+<pre><code class="lang-cmake"># Enable LTO only for Release builds
+if(CMAKE_BUILD_TYPE STREQUAL &quot;Release&quot;)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()</code></pre>
+<h2>Build Time Profiling</h2>
+<h3>CMake Build Time Analysis</h3>
+<pre><code class="lang-bash"># Verbose build output
+cmake --build build --verbose
+
+# Time individual commands
+cmake --build build -- VERBOSE=1 2&gt;&amp;1 | ts -i &#x27;%.s&#x27;
+
+# Ninja build time trace
+cmake -G Ninja ..
+ninja -d stats       # Build statistics
+ninja -d explain     # Explain why targets rebuild</code></pre>
+<h3>Gradle Build Profiling</h3>
+<pre><code class="lang-bash"># Generate build profile
+./gradlew build --profile
+
+# Output: build/reports/profile/profile-&lt;timestamp&gt;.html
+
+# Build scan (detailed insights)
+./gradlew build --scan</code></pre>
+<h3>Bazel Build Profiling</h3>
+<pre><code class="lang-bash"># Generate profile
+bazel build //... --profile=profile.json
+
+# Analyze profile
+bazel analyze-profile profile.json
+
+# JSON output for custom analysis
+bazel analyze-profile profile.json --dump=json &gt; analysis.json</code></pre>
+<pre><code class="lang-python"># analyze_bazel_profile.py
+import json
+
+with open(&#x27;profile.json&#x27;) as f:
+    profile = json.load(f)
+
+# Find slow actions
+actions = [(event[&#x27;dur&#x27;], event[&#x27;name&#x27;])
+           for event in profile[&#x27;traceEvents&#x27;]
+           if event.get(&#x27;ph&#x27;) == &#x27;X&#x27;]
+
+slowest = sorted(actions, reverse=True)[:10]
+for duration, name in slowest:
+    print(f&quot;{duration/1000:.2f}ms - {name}&quot;)</code></pre>
+<h3>Clang Build Time Tracing</h3>
+<pre><code class="lang-bash"># Clang -ftime-trace (Clang 9+)
+clang++ -ftime-trace main.cpp -o main
+
+# Generates main.json (Chrome trace format)
+# View in chrome://tracing</code></pre>
+<h2>CI/CD Optimization</h2>
+<h3>GitHub Actions Build Optimization</h3>
+<pre><code class="lang-yaml"># .github/workflows/optimized.yml
+name: Optimized Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Cache dependencies
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles(&#x27;**/*.gradle*&#x27;) }}
+
+      # ccache for C/C++
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: ${{ runner.os }}-ccache
+
+      # Parallel build
+      - name: Build
+        run: |
+          cmake -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ..
+          cmake --build . --parallel
+
+      # Upload build artifacts (for dependent jobs)
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: build/</code></pre>
+<h3>Docker Build Optimization</h3>
+<pre><code class="lang-dockerfile"># Dockerfile - Multi-stage builds with caching
+FROM rust:1.75 AS builder
+
+# Cache dependencies separately (changes less often)
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src &amp;&amp; echo &quot;fn main() {}&quot; &gt; src/main.rs &amp;&amp; \
+    cargo build --release &amp;&amp; \
+    rm -rf src  # Safe: cleaning temporary build directory
+
+# Build actual code (changes more often)
+COPY src ./src
+RUN touch src/main.rs &amp;&amp; cargo build --release
+
+# Final image (minimal)
+FROM debian:bookworm-slim
+COPY --from=builder /app/target/release/myapp /usr/local/bin/
+CMD [&quot;myapp&quot;]</code></pre>
+<pre><code class="lang-bash"># Use BuildKit for better caching
+DOCKER_BUILDKIT=1 docker build -t myapp .
+
+# Remote cache
+docker buildx build \
+    --cache-from type=registry,ref=myregistry/cache \
+    --cache-to type=registry,ref=myregistry/cache,mode=max \
+    -t myapp .</code></pre>
+<h3>Bazel Remote Cache in CI</h3>
+<pre><code class="lang-yaml"># .github/workflows/bazel-ci.yml
+- name: Build with Bazel
+  run: |
+    bazel build //... \
+      --remote_cache=https://storage.googleapis.com/${{ secrets.GCS_BUCKET }} \
+      --google_default_credentials \
+      --jobs=8</code></pre>
+<h2>Dependency Optimization</h2>
+<h3>Reduce Header Dependencies (C/C++)</h3>
+<pre><code class="lang-cpp">// WRONG: Include entire header in .h file
+// mylib.h
+#include &lt;vector&gt;
+#include &lt;string&gt;
+#include &lt;map&gt;
+
+class MyLib {
+    std::vector&lt;std::string&gt; data;
+    std::map&lt;int, std::string&gt; lookup;
+};
+
+// CORRECT: Forward declarations in .h, includes in .cpp
+// mylib.h
+#include &lt;iosfwd&gt;  // Forward declarations for std streams
+
+class MyLib {
+    class Impl;  // Pimpl idiom
+    Impl* pimpl;
+};
+
+// mylib.cpp
+#include &quot;mylib.h&quot;
+#include &lt;vector&gt;
+#include &lt;string&gt;
+#include &lt;map&gt;
+
+// Full implementation with includes</code></pre>
+<p><strong>Impact</strong>: 30-50% faster incremental builds (fewer recompilations)</p>
+<h3>Gradle Dependency Analysis</h3>
+<pre><code class="lang-bash"># Find unused dependencies
+./gradlew dependencies --configuration compileClasspath
+
+# Dependency insight
+./gradlew dependencyInsight --dependency guava
+
+# Build scan shows dependency resolution time
+./gradlew build --scan</code></pre>
+<h2>Compiler Optimization Flags</h2>
+<h3>Development vs Production Builds</h3>
+<pre><code class="lang-cmake"># CMakeLists.txt - Build type flags
+set(CMAKE_CXX_FLAGS_DEBUG &quot;-g -O0&quot;)           # Fast compile, slow runtime
+set(CMAKE_CXX_FLAGS_RELEASE &quot;-O3 -DNDEBUG&quot;)   # Slow compile, fast runtime
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO &quot;-O2 -g&quot;)  # Balanced</code></pre>
+<pre><code class="lang-makefile"># Makefile - Conditional optimization
+DEBUG ?= 0
+
+ifeq ($(DEBUG), 1)
+    CFLAGS = -g -O0              # Fast build
+else
+    CFLAGS = -O2 -DNDEBUG        # Optimized
+endif</code></pre>
+<h3>Distributed Compilation</h3>
+<h4>distcc (C/C++)</h4>
+<pre><code class="lang-bash"># Setup distcc
+sudo apt install distcc
+
+# Configure
+export DISTCC_HOSTS=&quot;localhost/8 remote1/4 remote2/4&quot;
+export CC=&quot;distcc gcc&quot;
+export CXX=&quot;distcc g++&quot;
+
+# Build
+make -j16  # More jobs than local cores</code></pre>
+<h4>icecc (icecream)</h4>
+<pre><code class="lang-bash"># Install icecc
+sudo apt install icecc
+
+# Use with CMake
+export CC=&quot;icecc gcc&quot;
+export CXX=&quot;icecc g++&quot;
+
+cmake -DCMAKE_C_COMPILER_LAUNCHER=icecc \
+      -DCMAKE_CXX_COMPILER_LAUNCHER=icecc ..</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>❌ Not Using Build Cache</h3>
+<pre><code class="lang-bash"># WRONG: Clean build every time in CI
+./gradlew clean build  # Wastes 90% of build time
+
+# CORRECT: Incremental build with cache
+./gradlew build --build-cache</code></pre>
+<h3>❌ Sequential Builds</h3>
+<pre><code class="lang-bash"># WRONG: Single-threaded build
+make
+
+# CORRECT: Parallel build
+make -j$(nproc)</code></pre>
+<h3>❌ Overly Aggressive Optimization in Development</h3>
+<pre><code class="lang-cmake"># WRONG: Always use -O3 (slow compilation)
+set(CMAKE_CXX_FLAGS &quot;-O3&quot;)
+
+# CORRECT: Use -O0 or -O1 for development
+if(CMAKE_BUILD_TYPE STREQUAL &quot;Debug&quot;)
+    set(CMAKE_CXX_FLAGS &quot;-O0 -g&quot;)
+endif()</code></pre>
+<h3>❌ Not Profiling Builds</h3>
+<pre><code class="lang-bash"># WRONG: Blindly add optimizations without measuring
+# &quot;I think this will help&quot;
+
+# CORRECT: Profile first, optimize second
+bazel build //... --profile=profile.json
+bazel analyze-profile profile.json
+# Identify actual bottlenecks, then optimize</code></pre>
+<h2>Quick Reference</h2>
+<h3>Build Optimization Checklist</h3>
+<pre><code>[ ] Enable incremental builds (dependency tracking)
+[ ] Use parallel builds (-j flag)
+[ ] Enable build cache (ccache, sccache, Gradle, Bazel)
+[ ] Use precompiled headers (C/C++)
+[ ] Reduce header dependencies (forward declarations)
+[ ] Profile build times (identify bottlenecks)
+[ ] Use faster build generator (Ninja vs Make)
+[ ] Enable remote caching (team/CI)
+[ ] Optimize CI (cache dependencies, parallel jobs)
+[ ] Use LTO only for release builds
+[ ] Consider distributed compilation (large teams)</code></pre>
+<h3>Expected Speedups</h3>
+<p>| Optimization | Speedup (Incremental) | Speedup (Clean) | |--------------|----------------------|-----------------| | Parallel builds (8 cores) | 2-4x | 4-6x | | ccache/sccache | 10-50x | 5-10x | | Precompiled headers | 1.2-1.4x | 1.2-1.4x | | Ninja vs Make | 1.1-1.3x | 1.1-1.3x | | Remote cache (Bazel) | 10-100x | 5-20x | | Dependency reduction | 1.5-3x | 1.1-1.2x |</p>
+<h3>Build Tool Performance (2024)</h3>
+<p><strong>C/C++ Build Systems</strong> (100k LOC project):</p>
+<ul><li>Make (single-thread): 120s</li><li>Make (-j8): 30s</li><li>CMake + Ninja (-j8): 25s</li><li>CMake + Ninja + ccache: 5s (incremental)</li><li>Bazel + remote cache: 2s (incremental, cache hit)</li></ul>
+<p><strong>JVM Build Systems</strong> (50k LOC project):</p>
+<ul><li>Maven: 90s</li><li>Gradle: 60s (cold)</li><li>Gradle (daemon + cache): 10s (incremental)</li><li>Bazel + remote cache: 5s (incremental)</li></ul>
+<h2>Python Integration Example</h2>
+<pre><code class="lang-python"># build_profiler.py - Analyze build performance
+import json
+import sys
+from collections import defaultdict
+
+def analyze_build_profile(profile_path):
+    &quot;&quot;&quot;Analyze Bazel build profile JSON.&quot;&quot;&quot;
+    with open(profile_path) as f:
+        profile = json.load(f)
+
+    # Aggregate by action type
+    by_type = defaultdict(lambda: {&#x27;count&#x27;: 0, &#x27;total_ms&#x27;: 0})
+
+    for event in profile[&#x27;traceEvents&#x27;]:
+        if event.get(&#x27;ph&#x27;) == &#x27;X&#x27;:  # Duration event
+            name = event.get(&#x27;name&#x27;, &#x27;unknown&#x27;)
+            duration_ms = event.get(&#x27;dur&#x27;, 0) / 1000
+
+            # Extract action type (e.g., &quot;CppCompile&quot;)
+            action_type = name.split()[0] if &#x27; &#x27; in name else name
+
+            by_type[action_type][&#x27;count&#x27;] += 1
+            by_type[action_type][&#x27;total_ms&#x27;] += duration_ms
+
+    # Sort by total time
+    sorted_types = sorted(by_type.items(),
+                          key=lambda x: x[1][&#x27;total_ms&#x27;],
+                          reverse=True)
+
+    print(&quot;Build Performance Summary&quot;)
+    print(&quot;=&quot; * 60)
+    for action_type, stats in sorted_types[:10]:
+        avg_ms = stats[&#x27;total_ms&#x27;] / stats[&#x27;count&#x27;]
+        print(f&quot;{action_type:20s} | {stats[&#x27;count&#x27;]:5d} actions | &quot;
+              f&quot;{stats[&#x27;total_ms&#x27;]:8.1f}ms total | {avg_ms:6.1f}ms avg&quot;)
+
+if __name__ == &#x27;__main__&#x27;:
+    analyze_build_profile(sys.argv[1])
+
+# Usage: python build_profiler.py profile.json</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>make-fundamentals.md</code> - Make parallelization and optimization</li><li><code>cmake-patterns.md</code> - CMake precompiled headers and caching</li><li><code>gradle-jvm-builds.md</code> - Gradle build cache and optimization</li><li><code>bazel-monorepos.md</code> - Bazel remote caching and execution</li><li><code>cicd/ci-optimization.md</code> - CI/CD build optimization strategies</li></ul>
+<h2>Summary</h2>
+<p>Build optimization is critical for developer productivity and CI/CD efficiency:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ol><li><strong>Incremental builds</strong> - Only rebuild what changed (biggest impact)</li><li><strong>Parallel builds</strong> - Use all CPU cores with <code>-j</code> flag</li><li><strong>Build caching</strong> - Local (ccache) and remote (Bazel, Gradle)</li><li><strong>Precompiled headers</strong> - 20-40% faster C++ builds</li><li><strong>Profile first</strong> - Measure before optimizing</li><li><strong>Dependency reduction</strong> - Fewer includes = faster incremental builds</li><li><strong>CI optimization</strong> - Cache dependencies, use build cache, parallelize</li><li><strong>Development speed</strong> - Use <code>-O0</code> or <code>-O1</code> for faster iteration</li></ol>
+<p><strong>2024 Best Practices</strong>:</p>
+<ul><li><strong>C/C++</strong>: CMake + Ninja + ccache/sccache + PCH</li><li><strong>Java</strong>: Gradle with build cache + parallel execution</li><li><strong>Rust</strong>: Cargo with sccache</li><li><strong>Monorepo</strong>: Bazel with remote cache/execution</li></ul>
+<p><strong>Impact</strong>: Proper build optimization can reduce build times from hours to minutes, dramatically improving developer velocity and CI/CD efficiency.</p>
+<p><strong>ROI</strong>: For a 10-person team waiting 10 minutes/day for builds, optimization to 1 minute saves ~750 hours/year.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/build-systems-build-optimization.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

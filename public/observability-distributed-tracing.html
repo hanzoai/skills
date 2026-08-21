@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>observability-distributed-tracing</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/observability-distributed-tracing.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/observability-distributed-tracing.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>observability-distributed-tracing</h1><p class="lede">Debugging latency issues in microservices</p><h1>Distributed Tracing</h1>
+<p><strong>Scope</strong>: OpenTelemetry, spans, trace context, sampling, Jaeger, Zipkin, trace propagation</p>
+<p><strong>Lines</strong>: 381</p>
+<p><strong>Last Updated</strong>: 2025-10-18</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Debugging latency issues in microservices</li><li>Understanding request flows across multiple services</li><li>Identifying bottlenecks in distributed systems</li><li>Tracking dependencies between services</li><li>Measuring end-to-end latency percentiles</li><li>Debugging intermittent errors in complex workflows</li><li>Implementing service mesh observability</li><li>Analyzing cascading failures</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Simple monolithic applications (logs + metrics sufficient)</li><li>Non-request-based workloads (batch jobs, cron tasks)</li><li>Systems with &lt;3 services (overhead not justified)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Trace, Span, Context</h3>
+<p><strong>Trace</strong>: Complete journey of a request through the system</p>
+<ul><li>Unique Trace ID (e.g., <code>a1b2c3d4e5f6g7h8</code>)</li><li>Contains multiple spans</li><li>Represents end-to-end flow</li></ul>
+<p><strong>Span</strong>: Single operation within a trace</p>
+<ul><li>Unique Span ID</li><li>Parent Span ID (for hierarchy)</li><li>Start time, end time, duration</li><li>Operation name (e.g., <code>GET /api/users</code>)</li><li>Attributes (metadata: <code>http.method</code>, <code>db.statement</code>)</li><li>Events (logs within span)</li><li>Status (OK, ERROR)</li></ul>
+<p><strong>Context</strong>: Propagated metadata</p>
+<ul><li>Trace ID, Span ID, Parent Span ID</li><li>Sampling decision</li><li>Baggage (custom key-value pairs)</li></ul>
+<h3>Trace Hierarchy</h3>
+<pre><code>Trace: User purchases product
+├─ Span 1: API Gateway (100ms)
+│  ├─ Span 2: Auth Service (20ms)
+│  │  └─ Span 3: Database query (5ms)
+│  ├─ Span 4: Product Service (50ms)
+│  │  ├─ Span 5: Database query (10ms)
+│  │  └─ Span 6: Cache lookup (5ms)
+│  └─ Span 7: Payment Service (30ms)
+│     └─ Span 8: External API call (25ms)</code></pre>
+<h3>Sampling</h3>
+<p><strong>Why</strong>: Reduce data volume and cost (storing 100% traces is expensive)</p>
+<p><strong>Strategies</strong>:</p>
+<ol><li><strong>Head-based sampling</strong> (decision at trace start):</li></ol>
+<ul><li>Probabilistic: 1% of traces</li><li>Rate limiting: Max 100 traces/second</li><li>Always sample errors</li></ul>
+<ol><li><strong>Tail-based sampling</strong> (decision after trace complete):</li></ol>
+<ul><li>Sample slow requests (&gt;1s)</li><li>Sample errors</li><li>Sample rare endpoints</li></ul>
+<h3>OpenTelemetry (OTel)</h3>
+<p><strong>Why OpenTelemetry</strong>: Vendor-neutral, unified API for traces, metrics, logs</p>
+<p><strong>Components</strong>:</p>
+<ul><li><strong>SDK</strong>: Instrumentation in your code</li><li><strong>API</strong>: Interface for creating spans</li><li><strong>Exporter</strong>: Send data to backend (Jaeger, Zipkin, Tempo)</li><li><strong>Collector</strong>: Centralized agent for receiving/processing/exporting</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: OpenTelemetry Setup (Python)</h3>
+<pre><code class="lang-python">from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from fastapi import FastAPI
+
+# Initialize tracer provider
+provider = TracerProvider()
+trace.set_tracer_provider(provider)
+
+# Configure exporter (send to OTel Collector or Jaeger)
+otlp_exporter = OTLPSpanExporter(
+    endpoint=&quot;http://localhost:4317&quot;,  # gRPC endpoint
+    insecure=True
+)
+
+# Add span processor
+provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
+
+# Get tracer
+tracer = trace.get_tracer(__name__)
+
+# Auto-instrument FastAPI
+app = FastAPI()
+FastAPIInstrumentor.instrument_app(app)
+
+# Auto-instrument HTTP requests
+RequestsInstrumentor().instrument()
+
+# Auto-instrument SQLAlchemy
+SQLAlchemyInstrumentor().instrument()
+
+# Manual span creation
+@app.get(&quot;/api/users/{user_id}&quot;)
+async def get_user(user_id: str):
+    # Parent span created automatically by FastAPI instrumentation
+
+    # Create child span for business logic
+    with tracer.start_as_current_span(&quot;get_user_logic&quot;) as span:
+        span.set_attribute(&quot;user_id&quot;, user_id)
+        span.set_attribute(&quot;service&quot;, &quot;user-service&quot;)
+
+        try:
+            # Database call (auto-instrumented)
+            user = await db.get_user(user_id)
+
+            # Add event
+            span.add_event(&quot;user_fetched&quot;, {&quot;user_id&quot;: user_id})
+
+            # Create nested span for external API
+            with tracer.start_as_current_span(&quot;fetch_user_preferences&quot;):
+                prefs = await external_api.get_preferences(user_id)
+
+            span.set_status(trace.Status(trace.StatusCode.OK))
+            return {&quot;user&quot;: user, &quot;preferences&quot;: prefs}
+
+        except Exception as e:
+            span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+            span.record_exception(e)
+            raise</code></pre>
+<h3>Pattern 2: OpenTelemetry Setup (Go)</h3>
+<pre><code class="lang-go">package main
+
+import (
+    &quot;context&quot;
+    &quot;log&quot;
+    &quot;time&quot;
+
+    &quot;go.opentelemetry.io/otel&quot;
+    &quot;go.opentelemetry.io/otel/attribute&quot;
+    &quot;go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc&quot;
+    &quot;go.opentelemetry.io/otel/sdk/resource&quot;
+    sdktrace &quot;go.opentelemetry.io/otel/sdk/trace&quot;
+    semconv &quot;go.opentelemetry.io/otel/semconv/v1.4.0&quot;
+    &quot;go.opentelemetry.io/otel/trace&quot;
+)
+
+func initTracer() (*sdktrace.TracerProvider, error) {
+    // Create OTLP exporter
+    exporter, err := otlptracegrpc.New(
+        context.Background(),
+        otlptracegrpc.WithEndpoint(&quot;localhost:4317&quot;),
+        otlptracegrpc.WithInsecure(),
+    )
+    if err != nil {
+        return nil, err
+    }
+
+    // Create resource (service metadata)
+    res, err := resource.New(
+        context.Background(),
+        resource.WithAttributes(
+            semconv.ServiceNameKey.String(&quot;api-service&quot;),
+            semconv.ServiceVersionKey.String(&quot;1.0.0&quot;),
+            semconv.DeploymentEnvironmentKey.String(&quot;production&quot;),
+        ),
+    )
+    if err != nil {
+        return nil, err
+    }
+
+    // Create tracer provider
+    tp := sdktrace.NewTracerProvider(
+        sdktrace.WithBatcher(exporter),
+        sdktrace.WithResource(res),
+        sdktrace.WithSampler(sdktrace.AlwaysSample()),
+    )
+
+    otel.SetTracerProvider(tp)
+
+    return tp, nil
+}
+
+func main() {
+    tp, err := initTracer()
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer func() {
+        if err := tp.Shutdown(context.Background()); err != nil {
+            log.Fatal(err)
+        }
+    }()
+
+    // Get tracer
+    tracer := otel.Tracer(&quot;api-service&quot;)
+
+    // Create root span
+    ctx, span := tracer.Start(context.Background(), &quot;handle_request&quot;)
+    defer span.End()
+
+    span.SetAttributes(
+        attribute.String(&quot;http.method&quot;, &quot;GET&quot;),
+        attribute.String(&quot;http.route&quot;, &quot;/api/users/:id&quot;),
+    )
+
+    // Create child span
+    processUser(ctx, tracer, &quot;user_123&quot;)
+
+    span.SetStatus(trace.StatusCode(200), &quot;OK&quot;)
+}
+
+func processUser(ctx context.Context, tracer trace.Tracer, userID string) {
+    ctx, span := tracer.Start(ctx, &quot;process_user&quot;)
+    defer span.End()
+
+    span.SetAttributes(attribute.String(&quot;user_id&quot;, userID))
+
+    // Simulate work
+    time.Sleep(50 * time.Millisecond)
+
+    // Nested span
+    fetchFromDB(ctx, tracer, userID)
+}
+
+func fetchFromDB(ctx context.Context, tracer trace.Tracer, userID string) {
+    ctx, span := tracer.Start(ctx, &quot;database_query&quot;)
+    defer span.End()
+
+    span.SetAttributes(
+        attribute.String(&quot;db.system&quot;, &quot;postgresql&quot;),
+        attribute.String(&quot;db.statement&quot;, &quot;SELECT * FROM users WHERE id = ?&quot;),
+    )
+
+    // Simulate query
+    time.Sleep(10 * time.Millisecond)
+}</code></pre>
+<h3>Pattern 3: Trace Context Propagation (HTTP)</h3>
+<pre><code class="lang-python">from opentelemetry import trace
+from opentelemetry.propagate import inject, extract
+import requests
+
+tracer = trace.get_tracer(__name__)
+
+# Service A: Outgoing request
+def call_service_b():
+    with tracer.start_as_current_span(&quot;call_service_b&quot;) as span:
+        headers = {}
+
+        # Inject trace context into HTTP headers
+        inject(headers)
+
+        # Headers now contain:
+        # traceparent: 00-&lt;trace_id&gt;-&lt;span_id&gt;-01
+        # tracestate: ...
+
+        response = requests.get(
+            &quot;http://service-b/api/data&quot;,
+            headers=headers
+        )
+
+        return response.json()
+
+# Service B: Incoming request
+from fastapi import FastAPI, Request
+
+app = FastAPI()
+
+@app.get(&quot;/api/data&quot;)
+async def get_data(request: Request):
+    # Extract trace context from incoming headers
+    ctx = extract(request.headers)
+
+    # Continue trace from Service A
+    with tracer.start_as_current_span(&quot;get_data&quot;, context=ctx) as span:
+        span.set_attribute(&quot;service&quot;, &quot;service-b&quot;)
+
+        data = await fetch_data()
+        return {&quot;data&quot;: data}</code></pre>
+<h3>Pattern 4: Custom Span Attributes</h3>
+<pre><code class="lang-python">from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
+
+tracer = trace.get_tracer(__name__)
+
+@app.post(&quot;/api/orders&quot;)
+async def create_order(order: Order):
+    with tracer.start_as_current_span(&quot;create_order&quot;) as span:
+        # Standard semantic conventions
+        span.set_attribute(&quot;http.method&quot;, &quot;POST&quot;)
+        span.set_attribute(&quot;http.route&quot;, &quot;/api/orders&quot;)
+        span.set_attribute(&quot;http.status_code&quot;, 201)
+
+        # Custom business attributes
+        span.set_attribute(&quot;order.id&quot;, order.id)
+        span.set_attribute(&quot;order.total&quot;, order.total)
+        span.set_attribute(&quot;order.items_count&quot;, len(order.items))
+        span.set_attribute(&quot;customer.id&quot;, order.customer_id)
+        span.set_attribute(&quot;payment.method&quot;, order.payment_method)
+
+        # Add events (logs within span)
+        span.add_event(&quot;order_validated&quot;, {
+            &quot;validation_duration_ms&quot;: 10
+        })
+
+        try:
+            result = await process_order(order)
+
+            span.add_event(&quot;payment_processed&quot;, {
+                &quot;transaction_id&quot;: result.transaction_id
+            })
+
+            span.set_status(Status(StatusCode.OK))
+            return result
+
+        except PaymentError as e:
+            span.set_status(Status(StatusCode.ERROR, &quot;Payment failed&quot;))
+            span.record_exception(e)
+
+            # Add error attributes
+            span.set_attribute(&quot;error&quot;, True)
+            span.set_attribute(&quot;error.type&quot;, &quot;PaymentError&quot;)
+            span.set_attribute(&quot;error.message&quot;, str(e))
+
+            raise</code></pre>
+<h3>Pattern 5: Sampling Configuration</h3>
+<pre><code class="lang-python">from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.sampling import (
+    TraceIdRatioBased,
+    ParentBased,
+    ALWAYS_ON,
+    ALWAYS_OFF
+)
+
+# 1. Probabilistic sampling (1% of traces)
+sampler = TraceIdRatioBased(0.01)
+
+# 2. Parent-based sampling (respect parent&#x27;s decision)
+sampler = ParentBased(root=TraceIdRatioBased(0.1))
+
+# 3. Always sample (development)
+sampler = ALWAYS_ON
+
+# 4. Never sample (disabled)
+sampler = ALWAYS_OFF
+
+# 5. Custom sampling (sample errors and slow requests)
+class CustomSampler:
+    def should_sample(self, context, trace_id, name, attributes):
+        # Always sample if error
+        if attributes.get(&quot;http.status_code&quot;, 0) &gt;= 500:
+            return ALWAYS_ON.should_sample(context, trace_id, name, attributes)
+
+        # Always sample if slow
+        if attributes.get(&quot;duration_ms&quot;, 0) &gt; 1000:
+            return ALWAYS_ON.should_sample(context, trace_id, name, attributes)
+
+        # Otherwise 1% sampling
+        return TraceIdRatioBased(0.01).should_sample(
+            context, trace_id, name, attributes
+        )
+
+provider = TracerProvider(sampler=CustomSampler())</code></pre>
+<h3>Pattern 6: Database Tracing</h3>
+<pre><code class="lang-python">from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from sqlalchemy import create_engine
+
+# Auto-instrument SQLAlchemy
+engine = create_engine(&quot;postgresql://localhost/mydb&quot;)
+SQLAlchemyInstrumentor().instrument(engine=engine)
+
+# Manual span for complex queries
+with tracer.start_as_current_span(&quot;complex_query&quot;) as span:
+    span.set_attribute(&quot;db.system&quot;, &quot;postgresql&quot;)
+    span.set_attribute(&quot;db.name&quot;, &quot;mydb&quot;)
+    span.set_attribute(&quot;db.operation&quot;, &quot;SELECT&quot;)
+    span.set_attribute(&quot;db.statement&quot;, &quot;SELECT * FROM users WHERE status = ?&quot;)
+
+    results = session.execute(query)
+
+    span.set_attribute(&quot;db.rows_returned&quot;, len(results))</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>OpenTelemetry Libraries</h3>
+<pre><code class="lang-bash"># Python
+pip install opentelemetry-api opentelemetry-sdk
+pip install opentelemetry-exporter-otlp
+pip install opentelemetry-instrumentation-fastapi
+pip install opentelemetry-instrumentation-requests
+pip install opentelemetry-instrumentation-sqlalchemy
+
+# Go
+go get go.opentelemetry.io/otel
+go get go.opentelemetry.io/otel/sdk
+go get go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
+
+# Node.js
+npm install @opentelemetry/api @opentelemetry/sdk-node
+npm install @opentelemetry/exporter-trace-otlp-grpc
+npm install @opentelemetry/auto-instrumentations-node</code></pre>
+<h3>Trace Backend Options</h3>
+<p>| Backend | Description | Use Case | |---------|-------------|----------| | <strong>Jaeger</strong> | CNCF project, full-featured | Self-hosted, open source | | <strong>Zipkin</strong> | Twitter origin, simple | Lightweight, easy setup | | <strong>Tempo</strong> | Grafana Labs, S3-compatible | Cost-effective, high volume | | <strong>Datadog APM</strong> | Commercial SaaS | Enterprise, full stack | | <strong>New Relic</strong> | Commercial SaaS | Enterprise, full stack |</p>
+<h3>Span Semantic Conventions</h3>
+<pre><code class="lang-python"># HTTP
+span.set_attribute(&quot;http.method&quot;, &quot;GET&quot;)
+span.set_attribute(&quot;http.url&quot;, &quot;https://api.example.com/users&quot;)
+span.set_attribute(&quot;http.status_code&quot;, 200)
+span.set_attribute(&quot;http.route&quot;, &quot;/users/:id&quot;)
+
+# Database
+span.set_attribute(&quot;db.system&quot;, &quot;postgresql&quot;)
+span.set_attribute(&quot;db.name&quot;, &quot;mydb&quot;)
+span.set_attribute(&quot;db.statement&quot;, &quot;SELECT * FROM users&quot;)
+span.set_attribute(&quot;db.operation&quot;, &quot;SELECT&quot;)
+
+# RPC
+span.set_attribute(&quot;rpc.system&quot;, &quot;grpc&quot;)
+span.set_attribute(&quot;rpc.service&quot;, &quot;UserService&quot;)
+span.set_attribute(&quot;rpc.method&quot;, &quot;GetUser&quot;)
+
+# Messaging
+span.set_attribute(&quot;messaging.system&quot;, &quot;rabbitmq&quot;)
+span.set_attribute(&quot;messaging.destination&quot;, &quot;orders_queue&quot;)
+span.set_attribute(&quot;messaging.operation&quot;, &quot;publish&quot;)</code></pre>
+<h3>Trace Context Headers</h3>
+<pre><code># W3C Trace Context (standard)
+traceparent: 00-&lt;trace_id&gt;-&lt;span_id&gt;-&lt;flags&gt;
+tracestate: vendor1=value1,vendor2=value2
+
+# Example
+traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Creating Too Many Spans</h3>
+<pre><code class="lang-python"># WRONG: Span for every function call
+with tracer.start_as_current_span(&quot;add_numbers&quot;):  # Too granular!
+    result = a + b
+
+# CORRECT: Span for meaningful operations
+with tracer.start_as_current_span(&quot;calculate_order_total&quot;):
+    total = sum(item.price for item in order.items)
+    total += calculate_tax(total)
+    total += calculate_shipping(order)</code></pre>
+<h3>❌ Missing Trace Context Propagation</h3>
+<pre><code class="lang-python"># WRONG: No trace context in HTTP call
+requests.get(&quot;http://service-b/api/data&quot;)  # Breaks trace!
+
+# CORRECT: Inject trace context
+headers = {}
+inject(headers)
+requests.get(&quot;http://service-b/api/data&quot;, headers=headers)</code></pre>
+<h3>❌ Forgetting to Close Spans</h3>
+<pre><code class="lang-python"># WRONG: Span never closed
+span = tracer.start_span(&quot;operation&quot;)
+do_work()
+# span.end() missing!
+
+# CORRECT: Use context manager
+with tracer.start_as_current_span(&quot;operation&quot;):
+    do_work()</code></pre>
+<h3>❌ High-Cardinality Attributes</h3>
+<pre><code class="lang-python"># WRONG: User ID in span name (high cardinality)
+span = tracer.start_as_current_span(f&quot;get_user_{user_id}&quot;)
+
+# CORRECT: User ID as attribute
+span = tracer.start_as_current_span(&quot;get_user&quot;)
+span.set_attribute(&quot;user_id&quot;, user_id)</code></pre>
+<h3>❌ Sampling Before Instrumentation</h3>
+<pre><code class="lang-python"># WRONG: Sample before seeing attributes
+sampler = TraceIdRatioBased(0.01)  # Can&#x27;t see if request is slow/error
+
+# CORRECT: Use tail-based sampling or custom sampler
+class TailBasedSampler:
+    def should_sample(self, context, trace_id, name, attributes):
+        if attributes.get(&quot;http.status_code&quot;, 0) &gt;= 500:
+            return ALWAYS_ON
+        return TraceIdRatioBased(0.01).should_sample(...)</code></pre>
+<h3>❌ Blocking Operations in Spans</h3>
+<pre><code class="lang-python"># WRONG: Synchronous sleep in async span
+with tracer.start_as_current_span(&quot;wait&quot;):
+    time.sleep(10)  # Blocks event loop!
+
+# CORRECT: Async sleep
+with tracer.start_as_current_span(&quot;wait&quot;):
+    await asyncio.sleep(10)</code></pre>
+<hr>
+<h2>Level 3: Resources</h2>
+<p><strong>Location</strong>: <code>skills/observability/distributed-tracing/resources/</code></p>
+<h3>Comprehensive Reference</h3>
+<p><strong><code>REFERENCE.md</code></strong> (800+ lines): Deep-dive reference covering:</p>
+<ul><li>Distributed tracing fundamentals (traces, spans, context propagation)</li><li>OpenTelemetry specification and architecture (API, SDK, Collector, OTLP)</li><li>Trace context propagation formats (W3C Trace Context, B3, Jaeger, X-Ray)</li><li>Sampling strategies (head-based, tail-based, adaptive sampling)</li><li>Tracing backends comparison (Jaeger, Zipkin, Tempo, Honeycomb, Datadog)</li><li>Instrumentation patterns (auto-instrumentation vs manual spans)</li><li>Performance overhead analysis and optimization techniques</li><li>Correlation with logs and metrics (exemplars, unified queries)</li><li>Production patterns (service mesh integration, multi-tenant tracing, error tracking)</li><li>Common anti-patterns and troubleshooting guide</li></ul>
+<h3>Executable Scripts</h3>
+<p><strong><code>scripts/analyze_traces.py</code></strong></p>
+<ul><li>Parse and analyze trace data from JSON files (OTLP, Jaeger, Zipkin formats)</li><li>Identify slow spans exceeding configurable threshold</li><li>Detect error spans and analyze failure patterns</li><li>Calculate critical path and total duration</li><li>Service breakdown and span statistics</li><li>Supports filtering by service, trace ID</li><li>Output as human-readable report or JSON for automation</li></ul>
+<p><strong><code>scripts/visualize_trace.py</code></strong></p>
+<ul><li>Generate HTML Gantt chart visualizations of traces</li><li>Create SVG flame graphs for performance analysis</li><li>Interactive visualizations with zoom, pan, and tooltips</li><li>Show span hierarchy and timing relationships</li><li>Color-coded by span status (OK, ERROR, UNSET)</li><li>Support for multiple trace formats</li></ul>
+<p><strong><code>scripts/test_propagation.sh</code></strong></p>
+<ul><li>Test trace context propagation across HTTP services</li><li>Validate W3C Trace Context, B3, Jaeger, and X-Ray header formats</li><li>Multi-hop propagation testing (service A → B → C)</li><li>Verify trace ID preservation across boundaries</li><li>JSON output for CI/CD integration</li><li>Configurable propagation format and target URLs</li></ul>
+<h3>Working Examples</h3>
+<p><strong><code>examples/python/otel_fastapi_tracing.py</code></strong></p>
+<ul><li>Complete FastAPI service with OpenTelemetry instrumentation</li><li>Auto-instrumentation for HTTP, database, and external calls</li><li>Manual span creation for business logic</li><li>Error handling and exception recording</li><li>Span attributes, events, and status management</li><li>OTLP exporter configuration</li></ul>
+<p><strong><code>examples/python/otel_manual_spans.py</code></strong></p>
+<ul><li>Comprehensive manual span creation patterns</li><li>Nested spans and parent-child relationships</li><li>Different span kinds (CLIENT, SERVER, PRODUCER, CONSUMER, INTERNAL)</li><li>Async context propagation with asyncio</li><li>Span links for cross-trace references</li><li>Batch processing patterns</li><li>Error handling and retry logic</li></ul>
+<p><strong><code>examples/typescript/otel_express_tracing.ts</code></strong></p>
+<ul><li>Express.js service with OpenTelemetry auto-instrumentation</li><li>Manual span creation for complex operations</li><li>Trace context propagation to downstream services</li><li>Multi-step operations (order fulfillment workflow)</li><li>Event tracking within spans</li><li>Error handling middleware with tracing</li></ul>
+<p><strong><code>examples/go/otel_http_tracing.go</code></strong></p>
+<ul><li>Go HTTP server with OpenTelemetry instrumentation</li><li>otelhttp middleware for automatic span creation</li><li>Manual span creation for business logic</li><li>OTLP gRPC exporter configuration</li><li>Span attributes using semantic conventions</li><li>Producer spans for message publishing</li></ul>
+<p><strong><code>examples/docker/jaeger-compose.yml</code></strong></p>
+<ul><li>Complete Docker Compose setup for distributed tracing</li><li>Jaeger all-in-one (collector + query + UI)</li><li>OpenTelemetry Collector with advanced processing</li><li>Example microservices with tracing enabled</li><li>Network configuration for inter-service communication</li></ul>
+<p><strong><code>examples/docker/otel-collector-config.yaml</code></strong></p>
+<ul><li>Production-ready OpenTelemetry Collector configuration</li><li>OTLP and Jaeger receivers</li><li>Tail sampling processor for smart sampling</li><li>Memory limiter and batch processing</li><li>Resource detection and attribute processing</li><li>Multiple exporters (Jaeger, OTLP, logging, Prometheus)</li><li>Health check and diagnostics extensions</li></ul>
+<h3>Usage Examples</h3>
+<pre><code class="lang-bash"># Analyze traces for slow operations
+./scripts/analyze_traces.py --file traces.json --slow-threshold 500
+
+# Generate interactive trace visualization
+./scripts/visualize_trace.py --file traces.json --interactive --output trace.html
+
+# Test trace propagation
+./scripts/test_propagation.sh --url http://localhost:8000 --format w3c
+
+# Run example services
+python examples/python/otel_fastapi_tracing.py
+ts-node examples/typescript/otel_express_tracing.ts
+go run examples/go/otel_http_tracing.go
+
+# Start tracing infrastructure
+docker-compose -f examples/docker/jaeger-compose.yml up -d
+# Access Jaeger UI: http://localhost:16686</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>structured-logging.md</strong> - Correlate logs with trace IDs</li><li><strong>metrics-instrumentation.md</strong> - Complementary metrics (RED method)</li><li><strong>dashboard-design.md</strong> - Visualize traces in Grafana</li><li><strong>alerting-strategy.md</strong> - Alert on trace error rates and latency</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/observability-distributed-tracing.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

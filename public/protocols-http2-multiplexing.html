@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>protocols-http2-multiplexing</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/protocols-http2-multiplexing.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/protocols-http2-multiplexing.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>protocols-http2-multiplexing</h1><p class="lede">HTTP/2 protocol with multiplexing, server push, header compression, and stream prioritization</p><h1>HTTP/2 Multiplexing</h1>
+<p><strong>Scope</strong>: HTTP/2 binary protocol, multiplexing, server push, header compression (HPACK) <strong>Lines</strong>: ~360 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Optimizing website performance with HTTP/2</li><li>Implementing HTTP/2 servers or clients</li><li>Debugging HTTP/2 connection issues</li><li>Understanding multiplexing and streams</li><li>Configuring server push</li><li>Reducing header overhead with HPACK</li><li>Migrating from HTTP/1.1 to HTTP/2</li><li>Troubleshooting stream prioritization</li></ul>
+<h2>Core Concepts</h2>
+<h3>HTTP/2 vs HTTP/1.1</h3>
+<p><strong>HTTP/1.1 Issues</strong>:</p>
+<ul><li>Head-of-line blocking (one request at a time per connection)</li><li>Multiple connections needed for parallel requests</li><li>Redundant header data in every request</li><li>No request prioritization</li></ul>
+<p><strong>HTTP/2 Solutions</strong>:</p>
+<ul><li>Binary framing layer</li><li>Multiplexed streams (many requests over one connection)</li><li>Header compression (HPACK)</li><li>Server push</li><li>Stream prioritization</li></ul>
+<p><strong>Connection Model</strong>:</p>
+<pre><code>HTTP/1.1:          HTTP/2:
+┌─────┐            ┌─────────────┐
+│Req 1│───────────&gt;│Stream 1 ────┤
+└─────┘            │Stream 2 ────┤
+┌─────┐            │Stream 3 ────┼──&gt; Single TCP Connection
+│Req 2│───────────&gt;│Stream 4 ────┤
+└─────┘            │Stream 5 ────┤
+ (sequential)      └─────────────┘
+                    (multiplexed)</code></pre>
+<h3>Binary Framing Layer</h3>
+<p><strong>Frame Types</strong>:</p>
+<ul><li><strong>DATA</strong>: Carries request/response body</li><li><strong>HEADERS</strong>: Carries HTTP headers</li><li><strong>PRIORITY</strong>: Stream priority information</li><li><strong>RST_STREAM</strong>: Stream termination</li><li><strong>SETTINGS</strong>: Connection configuration</li><li><strong>PUSH_PROMISE</strong>: Server push notification</li><li><strong>PING</strong>: Connection liveness check</li><li><strong>GOAWAY</strong>: Graceful connection shutdown</li><li><strong>WINDOW_UPDATE</strong>: Flow control</li><li><strong>CONTINUATION</strong>: Continue header block</li></ul>
+<p><strong>Frame Structure</strong>:</p>
+<pre><code>+-----------------------------------------------+
+|                 Length (24)                   |
++---------------+---------------+---------------+
+|   Type (8)    |   Flags (8)   |
++-+-------------+---------------+-------------------------------+
+|R|                 Stream Identifier (31)                      |
++=+=============================================================+
+|                   Frame Payload (0...)                      ...
++---------------------------------------------------------------+</code></pre>
+<h3>Multiplexing</h3>
+<p><strong>Single Connection, Multiple Streams</strong>:</p>
+<pre><code class="lang-python"># HTTP/1.1 - requires 6 connections
+conn1.request(&#x27;GET&#x27;, &#x27;/style.css&#x27;)
+conn2.request(&#x27;GET&#x27;, &#x27;/script.js&#x27;)
+conn3.request(&#x27;GET&#x27;, &#x27;/image1.png&#x27;)
+conn4.request(&#x27;GET&#x27;, &#x27;/image2.png&#x27;)
+conn5.request(&#x27;GET&#x27;, &#x27;/image3.png&#x27;)
+conn6.request(&#x27;GET&#x27;, &#x27;/data.json&#x27;)
+
+# HTTP/2 - single connection
+h2_conn = h2.connection.H2Connection()
+h2_conn.send_headers(stream_id=1, headers=[(&#x27;:path&#x27;, &#x27;/style.css&#x27;)])
+h2_conn.send_headers(stream_id=3, headers=[(&#x27;:path&#x27;, &#x27;/script.js&#x27;)])
+h2_conn.send_headers(stream_id=5, headers=[(&#x27;:path&#x27;, &#x27;/image1.png&#x27;)])
+h2_conn.send_headers(stream_id=7, headers=[(&#x27;:path&#x27;, &#x27;/image2.png&#x27;)])
+h2_conn.send_headers(stream_id=9, headers=[(&#x27;:path&#x27;, &#x27;/image3.png&#x27;)])
+h2_conn.send_headers(stream_id=11, headers=[(&#x27;:path&#x27;, &#x27;/data.json&#x27;)])</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>No connection overhead</li><li>Better connection utilization</li><li>Reduced latency</li><li>No TCP slow start penalty</li></ul>
+<h3>Server Push</h3>
+<p><strong>Concept</strong>: Server proactively sends resources client will need</p>
+<pre><code>Client                              Server
+  |                                    |
+  |-- GET /index.html ---------------&gt;|
+  |                                    |
+  |&lt;-- PUSH_PROMISE /style.css -------|
+  |&lt;-- PUSH_PROMISE /script.js -------|
+  |                                    |
+  |&lt;-- HEADERS (index.html) -----------|
+  |&lt;-- DATA (index.html content) ------|
+  |                                    |
+  |&lt;-- HEADERS (style.css) ------------|
+  |&lt;-- DATA (style.css content) -------|
+  |                                    |
+  |&lt;-- HEADERS (script.js) ------------|
+  |&lt;-- DATA (script.js content) -------|</code></pre>
+<p><strong>Nginx Configuration</strong>:</p>
+<pre><code class="lang-nginx">server {
+    listen 443 ssl http2;
+    server_name example.com;
+
+    location = /index.html {
+        http2_push /css/style.css;
+        http2_push /js/script.js;
+        http2_push /images/logo.png;
+    }
+}</code></pre>
+<p><strong>Node.js Implementation</strong>:</p>
+<pre><code class="lang-javascript">const http2 = require(&#x27;http2&#x27;);
+const fs = require(&#x27;fs&#x27;);
+
+const server = http2.createSecureServer({
+    key: fs.readFileSync(&#x27;server-key.pem&#x27;),
+    cert: fs.readFileSync(&#x27;server-cert.pem&#x27;)
+});
+
+server.on(&#x27;stream&#x27;, (stream, headers) =&gt; {
+    if (headers[&#x27;:path&#x27;] === &#x27;/&#x27;) {
+        // Push CSS before sending HTML
+        stream.pushStream({ &#x27;:path&#x27;: &#x27;/style.css&#x27; }, (err, pushStream) =&gt; {
+            pushStream.respond({ &#x27;:status&#x27;: 200, &#x27;content-type&#x27;: &#x27;text/css&#x27; });
+            pushStream.end(fs.readFileSync(&#x27;style.css&#x27;));
+        });
+
+        // Send HTML
+        stream.respond({ &#x27;:status&#x27;: 200, &#x27;content-type&#x27;: &#x27;text/html&#x27; });
+        stream.end(&#x27;&lt;html&gt;&lt;link rel=&quot;stylesheet&quot; href=&quot;/style.css&quot;&gt;&lt;/html&gt;&#x27;);
+    }
+});
+
+server.listen(8443);</code></pre>
+<h3>Header Compression (HPACK)</h3>
+<p><strong>Problem</strong>: HTTP/1.1 headers are redundant</p>
+<pre><code class="lang-http"># Request 1
+GET /api/users/1 HTTP/1.1
+Host: api.example.com
+User-Agent: Mozilla/5.0 ...
+Accept: application/json
+Authorization: Bearer token123
+
+# Request 2 - same headers repeated!
+GET /api/users/2 HTTP/1.1
+Host: api.example.com
+User-Agent: Mozilla/5.0 ...
+Accept: application/json
+Authorization: Bearer token123</code></pre>
+<p><strong>HPACK Solution</strong>:</p>
+<ul><li>Static table (common headers pre-indexed)</li><li>Dynamic table (connection-specific compression)</li><li>Huffman encoding</li></ul>
+<p><strong>Example Encoding</strong>:</p>
+<pre><code>First request:
+:method: GET             -&gt; Index 2 (static table)
+:path: /api/users/1      -&gt; Literal, added to dynamic table (index 62)
+host: api.example.com    -&gt; Literal, added to dynamic table (index 63)
+authorization: Bearer... -&gt; Literal, added to dynamic table (index 64)
+
+Second request:
+:method: GET             -&gt; Index 2
+:path: /api/users/2      -&gt; Literal (path changed)
+host: api.example.com    -&gt; Index 63 (dynamic table)
+authorization: Bearer... -&gt; Index 64 (dynamic table)</code></pre>
+<p><strong>Compression Ratio</strong>: 85-95% size reduction typical</p>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Prioritization</h3>
+<p><strong>Use Case</strong>: Critical resources load first</p>
+<pre><code class="lang-javascript">// Node.js HTTP/2 client
+const http2 = require(&#x27;http2&#x27;);
+
+const client = http2.connect(&#x27;https://example.com&#x27;);
+
+// High priority - CSS (weight 256)
+const cssStream = client.request({
+    &#x27;:path&#x27;: &#x27;/critical.css&#x27;
+}, { weight: 256 });
+
+// Medium priority - JavaScript (weight 128)
+const jsStream = client.request({
+    &#x27;:path&#x27;: &#x27;/app.js&#x27;
+}, { weight: 128 });
+
+// Low priority - Images (weight 64)
+const imgStream = client.request({
+    &#x27;:path&#x27;: &#x27;/background.jpg&#x27;
+}, { weight: 64 });</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Critical resources load faster</li><li>Better perceived performance</li><li>Optimal resource utilization</li></ul>
+<h3>Pattern 2: Conditional Server Push</h3>
+<p><strong>Use Case</strong>: Only push if client doesn&#x27;t have cached resource</p>
+<pre><code class="lang-javascript">server.on(&#x27;stream&#x27;, (stream, headers) =&gt; {
+    const cookieHeader = headers[&#x27;cookie&#x27;] || &#x27;&#x27;;
+    const hasCache = cookieHeader.includes(&#x27;has_css=1&#x27;);
+
+    if (!hasCache) {
+        // Push CSS only if client doesn&#x27;t have it
+        stream.pushStream({ &#x27;:path&#x27;: &#x27;/style.css&#x27; }, (err, pushStream) =&gt; {
+            pushStream.respond({
+                &#x27;:status&#x27;: 200,
+                &#x27;content-type&#x27;: &#x27;text/css&#x27;,
+                &#x27;cache-control&#x27;: &#x27;public, max-age=31536000&#x27;
+            });
+            pushStream.end(cssContent);
+        });
+
+        // Set cookie to indicate client has CSS
+        stream.respond({
+            &#x27;:status&#x27;: 200,
+            &#x27;set-cookie&#x27;: &#x27;has_css=1; Max-Age=31536000&#x27;
+        });
+    }
+
+    stream.end(htmlContent);
+});</code></pre>
+<h3>Pattern 3: Flow Control</h3>
+<p><strong>Use Case</strong>: Prevent overwhelming slow clients</p>
+<pre><code class="lang-python"># Python HTTP/2 with flow control
+import h2.connection
+import h2.events
+
+conn = h2.connection.H2Connection()
+conn.initiate_connection()
+
+# Set initial window size
+conn.update_settings({
+    h2.settings.SettingCodes.INITIAL_WINDOW_SIZE: 65535
+})
+
+# Send data respecting flow control
+stream_id = 1
+data = b&quot;Large payload...&quot;
+
+while data:
+    # Check how much we can send
+    max_send = min(len(data), conn.local_settings.initial_window_size)
+
+    # Send chunk
+    conn.send_data(stream_id, data[:max_send])
+    data = data[max_send:]
+
+    # Wait for WINDOW_UPDATE if needed
+    if len(data) &gt; 0:
+        events = conn.receive_data(socket.recv(4096))
+        for event in events:
+            if isinstance(event, h2.events.WindowUpdated):
+                # Can send more data now
+                pass</code></pre>
+<hr>
+<h2>Implementation Examples</h2>
+<h3>Go HTTP/2 Server</h3>
+<pre><code class="lang-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;log&quot;
+    &quot;net/http&quot;
+)
+
+func main() {
+    mux := http.NewServeMux()
+
+    mux.HandleFunc(&quot;/&quot;, func(w http.ResponseWriter, r *http.Request) {
+        // Check if HTTP/2
+        if r.ProtoMajor == 2 {
+            fmt.Printf(&quot;HTTP/2 request: %s\n&quot;, r.URL.Path)
+        }
+
+        // Server push
+        if pusher, ok := w.(http.Pusher); ok {
+            // Push CSS before HTML
+            if err := pusher.Push(&quot;/style.css&quot;, nil); err != nil {
+                log.Printf(&quot;Failed to push: %v&quot;, err)
+            }
+        }
+
+        w.Header().Set(&quot;Content-Type&quot;, &quot;text/html&quot;)
+        w.Write([]byte(&quot;&lt;html&gt;&lt;link rel=&#x27;stylesheet&#x27; href=&#x27;/style.css&#x27;&gt;&lt;/html&gt;&quot;))
+    })
+
+    mux.HandleFunc(&quot;/style.css&quot;, func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set(&quot;Content-Type&quot;, &quot;text/css&quot;)
+        w.Header().Set(&quot;Cache-Control&quot;, &quot;public, max-age=31536000&quot;)
+        w.Write([]byte(&quot;body { font-family: sans-serif; }&quot;))
+    })
+
+    log.Fatal(http.ListenAndServeTLS(&quot;:8443&quot;, &quot;cert.pem&quot;, &quot;key.pem&quot;, mux))
+}</code></pre>
+<h3>Rust HTTP/2 Client (hyper)</h3>
+<pre><code class="lang-rust">use hyper::{Body, Client, Request};
+use hyper::client::HttpConnector;
+use hyper_tls::HttpsConnector;
+
+#[tokio::main]
+async fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    // Create HTTP/2 client
+    let https = HttpsConnector::new();
+    let client = Client::builder()
+        .http2_only(true)
+        .build::&lt;_, Body&gt;(https);
+
+    // Make multiple concurrent requests (multiplexed)
+    let urls = vec![
+        &quot;https://example.com/api/users/1&quot;,
+        &quot;https://example.com/api/users/2&quot;,
+        &quot;https://example.com/api/users/3&quot;,
+    ];
+
+    let futures: Vec&lt;_&gt; = urls.into_iter()
+        .map(|url| {
+            let req = Request::get(url).body(Body::empty()).unwrap();
+            client.request(req)
+        })
+        .collect();
+
+    // All requests use same connection
+    let responses = futures::future::join_all(futures).await;
+
+    for response in responses {
+        println!(&quot;Status: {}&quot;, response?.status());
+    }
+
+    Ok(())
+}</code></pre>
+<hr>
+<h2>Best Practices</h2>
+<h3>1. Enable HTTP/2 Everywhere</h3>
+<pre><code class="lang-nginx"># ✅ Good: Enable HTTP/2
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+}</code></pre>
+<h3>2. Don&#x27;t Over-Push</h3>
+<pre><code class="lang-javascript">// ❌ Bad: Pushing everything
+stream.pushStream({ &#x27;:path&#x27;: &#x27;/rarely-used-library.js&#x27; }, ...);
+
+// ✅ Good: Only push critical resources
+stream.pushStream({ &#x27;:path&#x27;: &#x27;/critical.css&#x27; }, ...);</code></pre>
+<h3>3. Use Connection Coalescing</h3>
+<pre><code># Same IP, same certificate -&gt; reuse connection
+https://example.com (IP: 1.2.3.4)
+https://www.example.com (IP: 1.2.3.4)
+https://api.example.com (IP: 1.2.3.4)
+└─&gt; All use same HTTP/2 connection</code></pre>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Issue 1: HTTP/2 Not Working</h3>
+<p><strong>Check Protocol</strong>:</p>
+<pre><code class="lang-bash">curl -I --http2 https://example.com
+# Look for: HTTP/2 200
+
+# Or
+openssl s_client -connect example.com:443 -alpn h2
+# Look for: ALPN protocol: h2</code></pre>
+<h3>Issue 2: Server Push Ignored</h3>
+<p><strong>Symptom</strong>: Pushed resources not cached <strong>Solution</strong>: Check browser support and cache headers</p>
+<pre><code class="lang-javascript">// Ensure proper cache headers on pushed resources
+pushStream.respond({
+    &#x27;:status&#x27;: 200,
+    &#x27;cache-control&#x27;: &#x27;public, max-age=31536000&#x27;,
+    &#x27;content-type&#x27;: &#x27;text/css&#x27;
+});</code></pre>
+<hr>
+<h2>Level 3 Resources</h2>
+<p>This skill includes executable scripts, reference documentation, and configuration examples in the <code>resources/</code> directory.</p>
+<h3>Scripts (<code>resources/scripts/</code>)</h3>
+<p><strong>benchmark_http2.py</strong>: Compare HTTP/1.1 and HTTP/2 performance</p>
+<pre><code class="lang-bash"># Benchmark 50 requests
+python resources/scripts/benchmark_http2.py --url https://example.com --requests 50
+
+# JSON output
+python resources/scripts/benchmark_http2.py --url https://example.com --json results.json</code></pre>
+<p><strong>analyze_hpack.py</strong>: Analyze HPACK header compression efficiency</p>
+<pre><code class="lang-bash"># Demo with sample requests
+python resources/scripts/analyze_hpack.py --demo
+
+# Analyze custom headers
+python resources/scripts/analyze_hpack.py --requests headers.txt --verbose</code></pre>
+<p><strong>test_server_push.sh</strong>: Test HTTP/2 server push functionality</p>
+<pre><code class="lang-bash"># Test server push support
+./resources/scripts/test_server_push.sh --url https://example.com
+
+# Detailed analysis with nghttp
+./resources/scripts/test_server_push.sh --url https://example.com --verbose</code></pre>
+<h3>Reference Documentation (<code>resources/REFERENCE.md</code>)</h3>
+<ul><li>RFC 7540: HTTP/2 protocol specification</li><li>Binary framing layer details</li><li>HPACK compression algorithm (RFC 7541)</li><li>Flow control mechanisms</li><li>Stream prioritization</li><li>Performance benchmarks</li></ul>
+<h3>Configuration Examples (<code>resources/examples/</code>)</h3>
+<p><strong>Nginx</strong> (<code>resources/examples/nginx/http2.conf</code>):</p>
+<ul><li>Basic HTTP/2 setup</li><li>Server push configuration</li><li>Performance tuning</li><li>Multiple domain coalescing</li></ul>
+<p><strong>Node.js</strong> (<code>resources/examples/node/http2-server.js</code>):</p>
+<ul><li>Server push implementation</li><li>Stream prioritization</li><li>Flow control</li><li>API server example</li></ul>
+<p><strong>Python</strong> (<code>resources/examples/python/http2_client.py</code>):</p>
+<ul><li>HTTP/2 client with httpx</li><li>Multiplexed concurrent requests</li><li>Low-level h2 library usage</li><li>API client with authentication</li></ul>
+<p>See <code>resources/scripts/README.md</code> for complete documentation.</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>protocols-http-fundamentals</code> - HTTP/1.1 basics</li><li><code>protocols-http3-quic</code> - HTTP/3 and QUIC</li><li><code>proxies-nginx-configuration</code> - Nginx HTTP/2 setup</li><li><code>proxies-envoy-proxy</code> - Envoy HTTP/2 configuration</li><li><code>frontend-performance</code> - Front-end performance optimization</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/protocols-http2-multiplexing.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

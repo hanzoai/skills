@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>frontend-browser-concurrency</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/frontend-browser-concurrency.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/frontend-browser-concurrency.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>frontend-browser-concurrency</h1><p class="lede">Service Workers, SharedWorkers, Worklets, and multi-threading patterns for advanced browser concurrency</p><h1>Browser Concurrency</h1>
+<p><strong>Scope</strong>: Service Workers, SharedWorkers, Worklets, OffscreenCanvas, multi-threading patterns, concurrent JavaScript <strong>Lines</strong>: ~400 <strong>Last Updated</strong>: 2025-10-27</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Implementing offline functionality and PWAs</li><li>Building shared worker pools across tabs</li><li>Creating audio/animation worklets</li><li>Managing background sync and push notifications</li><li>Implementing advanced caching strategies</li><li>Building real-time collaborative applications</li><li>Need coordination between multiple browser contexts</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Browser Concurrency Model</h3>
+<p><strong>Thread Types</strong>:</p>
+<ol><li><strong>Main Thread</strong> - UI rendering, DOM manipulation</li><li><strong>Web Workers</strong> - Dedicated background threads (see <code>web-workers.md</code>)</li><li><strong>Service Workers</strong> - Network proxy, offline support, background sync</li><li><strong>SharedWorkers</strong> - Shared thread across multiple tabs/windows</li><li><strong>Worklets</strong> - Lightweight workers for rendering pipeline (Audio, Paint, Animation)</li></ol>
+<p><strong>Context Types</strong>:</p>
+<ul><li><strong>Window</strong> - Main browser tab context</li><li><strong>Worker</strong> - Dedicated worker global scope</li><li><strong>ServiceWorkerGlobalScope</strong> - Service worker context</li><li><strong>SharedWorkerGlobalScope</strong> - Shared worker context</li><li><strong>WorkletGlobalScope</strong> - Worklet context</li></ul>
+<hr>
+<h2>Service Workers</h2>
+<h3>PWA and Offline Support</h3>
+<p><strong>Lifecycle</strong>: Install → Activate → Fetch</p>
+<p><strong>service-worker.ts</strong>:</p>
+<pre><code class="lang-typescript">/// &lt;reference lib=&quot;webworker&quot; /&gt;
+
+declare const self: ServiceWorkerGlobalScope;
+
+const CACHE_NAME = &#x27;app-cache-v1&#x27;;
+const ASSETS = [
+  &#x27;/&#x27;,
+  &#x27;/index.html&#x27;,
+  &#x27;/styles.css&#x27;,
+  &#x27;/app.js&#x27;,
+  &#x27;/manifest.json&#x27;
+];
+
+// Install: Cache assets
+self.addEventListener(&#x27;install&#x27;, (event: ExtendableEvent) =&gt; {
+  console.log(&#x27;[SW] Installing...&#x27;);
+
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =&gt; {
+      console.log(&#x27;[SW] Caching assets&#x27;);
+      return cache.addAll(ASSETS);
+    })
+  );
+
+  // Take control immediately
+  self.skipWaiting();
+});
+
+// Activate: Clean old caches
+self.addEventListener(&#x27;activate&#x27;, (event: ExtendableEvent) =&gt; {
+  console.log(&#x27;[SW] Activating...&#x27;);
+
+  event.waitUntil(
+    caches.keys().then((cacheNames) =&gt; {
+      return Promise.all(
+        cacheNames
+          .filter((name) =&gt; name !== CACHE_NAME)
+          .map((name) =&gt; caches.delete(name))
+      );
+    })
+  );
+
+  // Take control of all clients
+  self.clients.claim();
+});
+
+// Fetch: Cache-first strategy
+self.addEventListener(&#x27;fetch&#x27;, (event: FetchEvent) =&gt; {
+  const { request } = event;
+
+  event.respondWith(
+    caches.match(request).then((cached) =&gt; {
+      if (cached) {
+        console.log(&#x27;[SW] Cache hit:&#x27;, request.url);
+        return cached;
+      }
+
+      console.log(&#x27;[SW] Fetching:&#x27;, request.url);
+      return fetch(request).then((response) =&gt; {
+        // Cache successful responses
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) =&gt; {
+            cache.put(request, clone);
+          });
+        }
+
+        return response;
+      });
+    })
+  );
+});</code></pre>
+<p><strong>Register service worker</strong>:</p>
+<pre><code class="lang-typescript">// main.ts
+async function registerServiceWorker(): Promise&lt;ServiceWorkerRegistration | null&gt; {
+  if (&#x27;serviceWorker&#x27; in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register(&#x27;/sw.js&#x27;, {
+        scope: &#x27;/&#x27;
+      });
+
+      console.log(&#x27;SW registered:&#x27;, registration.scope);
+
+      // Listen for updates
+      registration.addEventListener(&#x27;updatefound&#x27;, () =&gt; {
+        const newWorker = registration.installing;
+        console.log(&#x27;SW update found&#x27;);
+
+        newWorker?.addEventListener(&#x27;statechange&#x27;, () =&gt; {
+          if (newWorker.state === &#x27;installed&#x27; &amp;&amp; navigator.serviceWorker.controller) {
+            // New version available
+            console.log(&#x27;New SW installed, please reload&#x27;);
+          }
+        });
+      });
+
+      return registration;
+    } catch (error) {
+      console.error(&#x27;SW registration failed:&#x27;, error);
+      return null;
+    }
+  }
+
+  return null;
+}
+
+// Initialize
+registerServiceWorker();</code></pre>
+<hr>
+<h2>Caching Strategies</h2>
+<h3>1. Cache First (Offline-First)</h3>
+<pre><code class="lang-typescript">self.addEventListener(&#x27;fetch&#x27;, (event: FetchEvent) =&gt; {
+  event.respondWith(
+    caches.match(event.request).then((cached) =&gt; {
+      return cached || fetch(event.request);
+    })
+  );
+});</code></pre>
+<h3>2. Network First (Fresh Content Priority)</h3>
+<pre><code class="lang-typescript">self.addEventListener(&#x27;fetch&#x27;, (event: FetchEvent) =&gt; {
+  event.respondWith(
+    fetch(event.request)
+      .then((response) =&gt; {
+        // Cache successful response
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) =&gt; {
+          cache.put(event.request, clone);
+        });
+        return response;
+      })
+      .catch(() =&gt; {
+        // Fallback to cache on network failure
+        return caches.match(event.request);
+      })
+  );
+});</code></pre>
+<h3>3. Stale-While-Revalidate</h3>
+<pre><code class="lang-typescript">self.addEventListener(&#x27;fetch&#x27;, (event: FetchEvent) =&gt; {
+  event.respondWith(
+    caches.open(CACHE_NAME).then((cache) =&gt; {
+      return cache.match(event.request).then((cached) =&gt; {
+        const fetchPromise = fetch(event.request).then((response) =&gt; {
+          cache.put(event.request, response.clone());
+          return response;
+        });
+
+        // Return cached immediately, update in background
+        return cached || fetchPromise;
+      });
+    })
+  );
+});</code></pre>
+<h3>4. Cache with Network Fallback and Timeout</h3>
+<pre><code class="lang-typescript">async function fetchWithTimeout(
+  request: Request,
+  timeout: number = 3000
+): Promise&lt;Response&gt; {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() =&gt; controller.abort(), timeout);
+
+  try {
+    const response = await fetch(request, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+self.addEventListener(&#x27;fetch&#x27;, (event: FetchEvent) =&gt; {
+  event.respondWith(
+    caches.match(event.request).then((cached) =&gt; {
+      if (cached) return cached;
+
+      return fetchWithTimeout(event.request, 3000).catch(() =&gt; {
+        return new Response(&#x27;Offline&#x27;, { status: 503 });
+      });
+    })
+  );
+});</code></pre>
+<hr>
+<h2>Background Sync</h2>
+<h3>Reliable Network Requests</h3>
+<p><strong>service-worker.ts</strong>:</p>
+<pre><code class="lang-typescript">// Register sync event
+self.addEventListener(&#x27;sync&#x27;, (event: SyncEvent) =&gt; {
+  if (event.tag === &#x27;sync-messages&#x27;) {
+    event.waitUntil(syncMessages());
+  }
+});
+
+async function syncMessages(): Promise&lt;void&gt; {
+  const cache = await caches.open(&#x27;pending-requests&#x27;);
+  const requests = await cache.keys();
+
+  for (const request of requests) {
+    try {
+      const response = await fetch(request);
+      if (response.ok) {
+        await cache.delete(request);
+        console.log(&#x27;Synced:&#x27;, request.url);
+      }
+    } catch (error) {
+      console.error(&#x27;Sync failed:&#x27;, error);
+    }
+  }
+}</code></pre>
+<p><strong>Client-side request</strong>:</p>
+<pre><code class="lang-typescript">async function sendMessage(message: string): Promise&lt;void&gt; {
+  try {
+    const response = await fetch(&#x27;/api/messages&#x27;, {
+      method: &#x27;POST&#x27;,
+      headers: { &#x27;Content-Type&#x27;: &#x27;application/json&#x27; },
+      body: JSON.stringify({ message })
+    });
+
+    if (!response.ok) throw new Error(&#x27;Network error&#x27;);
+  } catch (error) {
+    // Save for background sync
+    const cache = await caches.open(&#x27;pending-requests&#x27;);
+    await cache.put(
+      new Request(&#x27;/api/messages&#x27;, {
+        method: &#x27;POST&#x27;,
+        headers: { &#x27;Content-Type&#x27;: &#x27;application/json&#x27; },
+        body: JSON.stringify({ message })
+      }),
+      new Response()
+    );
+
+    // Register sync
+    const registration = await navigator.serviceWorker.ready;
+    await registration.sync.register(&#x27;sync-messages&#x27;);
+  }
+}</code></pre>
+<hr>
+<h2>Push Notifications</h2>
+<h3>Real-Time Updates</h3>
+<p><strong>service-worker.ts</strong>:</p>
+<pre><code class="lang-typescript">// Listen for push events
+self.addEventListener(&#x27;push&#x27;, (event: PushEvent) =&gt; {
+  const data = event.data?.json() ?? { title: &#x27;Notification&#x27;, body: &#x27;New message&#x27; };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: &#x27;/icon.png&#x27;,
+      badge: &#x27;/badge.png&#x27;,
+      tag: &#x27;notification-1&#x27;,
+      requireInteraction: false,
+      actions: [
+        { action: &#x27;open&#x27;, title: &#x27;Open&#x27; },
+        { action: &#x27;close&#x27;, title: &#x27;Close&#x27; }
+      ]
+    })
+  );
+});
+
+// Handle notification clicks
+self.addEventListener(&#x27;notificationclick&#x27;, (event: NotificationEvent) =&gt; {
+  event.notification.close();
+
+  if (event.action === &#x27;open&#x27;) {
+    event.waitUntil(
+      self.clients.openWindow(&#x27;/&#x27;)
+    );
+  }
+});</code></pre>
+<p><strong>Subscribe to push</strong>:</p>
+<pre><code class="lang-typescript">async function subscribeToPush(): Promise&lt;PushSubscription | null&gt; {
+  const registration = await navigator.serviceWorker.ready;
+
+  try {
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+    });
+
+    // Send subscription to server
+    await fetch(&#x27;/api/push/subscribe&#x27;, {
+      method: &#x27;POST&#x27;,
+      headers: { &#x27;Content-Type&#x27;: &#x27;application/json&#x27; },
+      body: JSON.stringify(subscription)
+    });
+
+    return subscription;
+  } catch (error) {
+    console.error(&#x27;Push subscription failed:&#x27;, error);
+    return null;
+  }
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = &#x27;=&#x27;.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, &#x27;+&#x27;).replace(/_/g, &#x27;/&#x27;);
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((char) =&gt; char.charCodeAt(0)));
+}</code></pre>
+<hr>
+<h2>SharedWorkers</h2>
+<h3>Cross-Tab Communication</h3>
+<p><strong>shared-worker.ts</strong>:</p>
+<pre><code class="lang-typescript">/// &lt;reference lib=&quot;webworker&quot; /&gt;
+
+declare const self: SharedWorkerGlobalScope;
+
+// Track all connected ports
+const ports = new Set&lt;MessagePort&gt;();
+let sharedState = { count: 0, users: [] as string[] };
+
+self.addEventListener(&#x27;connect&#x27;, (event: MessageEvent) =&gt; {
+  const port = event.ports[0];
+  ports.add(port);
+
+  console.log(&#x27;Client connected. Total:&#x27;, ports.size);
+
+  // Send current state to new client
+  port.postMessage({
+    type: &#x27;STATE&#x27;,
+    payload: sharedState
+  });
+
+  port.addEventListener(&#x27;message&#x27;, (e: MessageEvent) =&gt; {
+    const { type, payload } = e.data;
+
+    switch (type) {
+      case &#x27;INCREMENT&#x27;:
+        sharedState.count++;
+        broadcast({ type: &#x27;STATE&#x27;, payload: sharedState });
+        break;
+
+      case &#x27;ADD_USER&#x27;:
+        sharedState.users.push(payload);
+        broadcast({ type: &#x27;STATE&#x27;, payload: sharedState });
+        break;
+
+      case &#x27;RESET&#x27;:
+        sharedState = { count: 0, users: [] };
+        broadcast({ type: &#x27;STATE&#x27;, payload: sharedState });
+        break;
+    }
+  });
+
+  port.start();
+});
+
+function broadcast(message: any): void {
+  ports.forEach((port) =&gt; {
+    port.postMessage(message);
+  });
+}</code></pre>
+<p><strong>Client usage</strong>:</p>
+<pre><code class="lang-typescript">const sharedWorker = new SharedWorker(
+  new URL(&#x27;./shared-worker.ts&#x27;, import.meta.url),
+  { type: &#x27;module&#x27; }
+);
+
+sharedWorker.port.addEventListener(&#x27;message&#x27;, (event: MessageEvent) =&gt; {
+  const { type, payload } = event.data;
+
+  if (type === &#x27;STATE&#x27;) {
+    console.log(&#x27;Shared state:&#x27;, payload);
+    updateUI(payload);
+  }
+});
+
+sharedWorker.port.start();
+
+// Send messages
+function increment(): void {
+  sharedWorker.port.postMessage({ type: &#x27;INCREMENT&#x27; });
+}
+
+function addUser(name: string): void {
+  sharedWorker.port.postMessage({ type: &#x27;ADD_USER&#x27;, payload: name });
+}</code></pre>
+<hr>
+<h2>React Integration with SharedWorker</h2>
+<p><strong>useSharedWorker.ts</strong>:</p>
+<pre><code class="lang-typescript">import { useEffect, useState, useRef } from &#x27;react&#x27;;
+
+export function useSharedWorker&lt;T&gt;(workerUrl: string) {
+  const [state, setState] = useState&lt;T | null&gt;(null);
+  const workerRef = useRef&lt;SharedWorker | null&gt;(null);
+
+  useEffect(() =&gt; {
+    const worker = new SharedWorker(new URL(workerUrl, import.meta.url), {
+      type: &#x27;module&#x27;
+    });
+    workerRef.current = worker;
+
+    worker.port.addEventListener(&#x27;message&#x27;, (event: MessageEvent) =&gt; {
+      const { type, payload } = event.data;
+
+      if (type === &#x27;STATE&#x27;) {
+        setState(payload);
+      }
+    });
+
+    worker.port.start();
+
+    return () =&gt; {
+      worker.port.close();
+    };
+  }, [workerUrl]);
+
+  const postMessage = (message: any) =&gt; {
+    if (workerRef.current) {
+      workerRef.current.port.postMessage(message);
+    }
+  };
+
+  return { state, postMessage };
+}</code></pre>
+<p><strong>Component</strong>:</p>
+<pre><code class="lang-typescript">function SharedCounter() {
+  const { state, postMessage } = useSharedWorker&lt;{ count: number }&gt;(&#x27;./shared-worker.ts&#x27;);
+
+  return (
+    &lt;div&gt;
+      &lt;p&gt;Count (shared across tabs): {state?.count ?? 0}&lt;/p&gt;
+      &lt;button onClick={() =&gt; postMessage({ type: &#x27;INCREMENT&#x27; })}&gt;
+        Increment
+      &lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+<hr>
+<h2>Worklets</h2>
+<h3>Audio Worklet (High-Performance Audio)</h3>
+<p><strong>audio-processor.ts</strong>:</p>
+<pre><code class="lang-typescript">/// &lt;reference lib=&quot;webworker&quot; /&gt;
+
+class WhiteNoiseProcessor extends AudioWorkletProcessor {
+  process(
+    inputs: Float32Array[][],
+    outputs: Float32Array[][],
+    parameters: Record&lt;string, Float32Array&gt;
+  ): boolean {
+    const output = outputs[0];
+
+    for (let channel = 0; channel &lt; output.length; channel++) {
+      const outputChannel = output[channel];
+
+      for (let i = 0; i &lt; outputChannel.length; i++) {
+        // Generate white noise
+        outputChannel[i] = Math.random() * 2 - 1;
+      }
+    }
+
+    // Return true to keep processor alive
+    return true;
+  }
+}
+
+registerProcessor(&#x27;white-noise-processor&#x27;, WhiteNoiseProcessor);</code></pre>
+<p><strong>Using the worklet</strong>:</p>
+<pre><code class="lang-typescript">async function playWhiteNoise(): Promise&lt;void&gt; {
+  const audioContext = new AudioContext();
+
+  // Load worklet module
+  await audioContext.audioWorklet.addModule(&#x27;./audio-processor.ts&#x27;);
+
+  // Create worklet node
+  const whiteNoiseNode = new AudioWorkletNode(audioContext, &#x27;white-noise-processor&#x27;);
+
+  // Connect to destination
+  whiteNoiseNode.connect(audioContext.destination);
+
+  // Start playback
+  await audioContext.resume();
+}</code></pre>
+<hr>
+<h2>OffscreenCanvas</h2>
+<h3>Rendering in Workers</h3>
+<p><strong>canvas-worker.ts</strong>:</p>
+<pre><code class="lang-typescript">self.addEventListener(&#x27;message&#x27;, (event: MessageEvent) =&gt; {
+  const { type, canvas } = event.data;
+
+  if (type === &#x27;INIT&#x27; &amp;&amp; canvas instanceof OffscreenCanvas) {
+    const ctx = canvas.getContext(&#x27;2d&#x27;)!;
+    let frame = 0;
+
+    function animate(): void {
+      // Clear canvas
+      ctx.fillStyle = &#x27;black&#x27;;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw animation
+      ctx.fillStyle = &#x27;white&#x27;;
+      ctx.beginPath();
+      ctx.arc(
+        canvas.width / 2 + Math.cos(frame / 50) * 100,
+        canvas.height / 2 + Math.sin(frame / 50) * 100,
+        20,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      frame++;
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  }
+});</code></pre>
+<p><strong>Main thread</strong>:</p>
+<pre><code class="lang-typescript">const canvas = document.getElementById(&#x27;canvas&#x27;) as HTMLCanvasElement;
+const offscreen = canvas.transferControlToOffscreen();
+
+const worker = new Worker(new URL(&#x27;./canvas-worker.ts&#x27;, import.meta.url), {
+  type: &#x27;module&#x27;
+});
+
+worker.postMessage({ type: &#x27;INIT&#x27;, canvas: offscreen }, [offscreen]);</code></pre>
+<hr>
+<h2>Communication Patterns</h2>
+<h3>1. Broadcast Channel (Cross-Tab)</h3>
+<pre><code class="lang-typescript">// Create channel
+const channel = new BroadcastChannel(&#x27;app-channel&#x27;);
+
+// Listen for messages
+channel.addEventListener(&#x27;message&#x27;, (event: MessageEvent) =&gt; {
+  console.log(&#x27;Received:&#x27;, event.data);
+  updateUI(event.data);
+});
+
+// Send message to all tabs
+channel.postMessage({ type: &#x27;UPDATE&#x27;, payload: { count: 42 } });
+
+// Cleanup
+channel.close();</code></pre>
+<h3>2. MessageChannel (Point-to-Point)</h3>
+<pre><code class="lang-typescript">// Create channel
+const channel = new MessageChannel();
+
+// Send port to worker
+worker.postMessage({ port: channel.port2 }, [channel.port2]);
+
+// Communicate through port
+channel.port1.addEventListener(&#x27;message&#x27;, (event: MessageEvent) =&gt; {
+  console.log(&#x27;Response:&#x27;, event.data);
+});
+
+channel.port1.start();
+channel.port1.postMessage({ type: &#x27;REQUEST&#x27;, payload: &#x27;data&#x27; });</code></pre>
+<hr>
+<h2>Performance Considerations</h2>
+<h3>Worker Overhead</h3>
+<p><strong>Creation cost</strong>:</p>
+<ul><li>Web Worker: ~5-10ms</li><li>Service Worker: ~10-20ms (first activation)</li><li>SharedWorker: ~10-15ms</li><li>Worklet: ~1-5ms</li></ul>
+<p><strong>Message passing cost</strong>:</p>
+<ul><li>Simple object: &lt;1ms</li><li>Large object (1MB): 5-20ms</li><li>Transferable (1MB): &lt;1ms</li></ul>
+<p><strong>Best Practices</strong>:</p>
+<ul><li>Reuse workers (don&#x27;t create per-task)</li><li>Use transferable objects for large data</li><li>Batch messages when possible</li><li>Use SharedWorker for cross-tab state</li><li>Use Worklets for real-time audio/animation</li></ul>
+<hr>
+<h2>Anti-Patterns</h2>
+<p><strong>Bad: Creating service worker per request</strong></p>
+<pre><code class="lang-typescript">❌ async function fetchData() {
+  await navigator.serviceWorker.register(&#x27;/sw.js&#x27;);
+  return fetch(&#x27;/api/data&#x27;);
+}</code></pre>
+<p><strong>Good: Register once at app start</strong></p>
+<pre><code class="lang-typescript">✅ // Register on app initialization
+navigator.serviceWorker.register(&#x27;/sw.js&#x27;);
+
+// Use normally
+async function fetchData() {
+  return fetch(&#x27;/api/data&#x27;); // Service worker intercepts
+}</code></pre>
+<p><strong>Bad: SharedWorker without cleanup</strong></p>
+<pre><code class="lang-typescript">❌ const worker = new SharedWorker(&#x27;./worker.js&#x27;);
+// Never closed, leaks resources</code></pre>
+<p><strong>Good: Cleanup on unmount</strong></p>
+<pre><code class="lang-typescript">✅ useEffect(() =&gt; {
+  const worker = new SharedWorker(&#x27;./worker.js&#x27;);
+  worker.port.start();
+
+  return () =&gt; {
+    worker.port.close(); // Cleanup
+  };
+}, []);</code></pre>
+<hr>
+<h2>Browser Compatibility</h2>
+<p>| Feature | Chrome | Firefox | Safari | Edge | |---------|--------|---------|--------|------| | Service Workers | 40+ | 44+ | 11.1+ | 17+ | | SharedWorkers | 4+ | 29+ | 16.4+ | 79+ | | BroadcastChannel | 54+ | 38+ | 15.4+ | 79+ | | Audio Worklet | 66+ | 76+ | 14.1+ | 79+ | | OffscreenCanvas | 69+ | 105+ | 16.4+ | 79+ | | Background Sync | 49+ | ❌ | ❌ | 79+ | | Push API | 50+ | 44+ | 16.4+ | 79+ |</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>web-workers.md</strong> - Dedicated Web Workers fundamentals</li><li><strong>frontend-performance.md</strong> - Overall performance optimization</li><li><strong>react-state-management.md</strong> - State management patterns</li><li><strong>nextjs-app-router.md</strong> - Next.js PWA configuration</li></ul>
+<hr>
+<h2>Summary</h2>
+<p>Browser concurrency enables powerful multi-threaded web applications:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ul><li>Service Workers for offline support and PWAs</li><li>SharedWorkers for cross-tab state sharing</li><li>Worklets for real-time audio/animation</li><li>BroadcastChannel for simple cross-tab messaging</li><li>Choose the right worker type for your use case</li><li>Handle lifecycle and cleanup properly</li><li>Test across browsers for compatibility</li></ul>
+<p><strong>Decision Tree</strong>:</p>
+<ul><li><strong>Offline/PWA</strong> → Service Worker</li><li><strong>Cross-tab state</strong> → SharedWorker or BroadcastChannel</li><li><strong>CPU-intensive</strong> → Web Worker (see web-workers.md)</li><li><strong>Audio processing</strong> → Audio Worklet</li><li><strong>Canvas in background</strong> → OffscreenCanvas + Web Worker</li><li><strong>Simple messaging</strong> → BroadcastChannel</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/frontend-browser-concurrency.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

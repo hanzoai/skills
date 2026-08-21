@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cryptography-signing-verification</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/cryptography-signing-verification.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/cryptography-signing-verification.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>cryptography-signing-verification</h1><p class="lede">Digital signature creation, verification, and chain of trust for documents, code, and artifacts</p><h1>Digital Signing and Verification</h1>
+<p><strong>Scope</strong>: Digital signatures, code signing, artifact verification, chain of trust, timestamping, HSM integration <strong>Lines</strong>: ~450 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Signing code, documents, containers, or artifacts</li><li>Verifying digital signatures and authenticity</li><li>Implementing code signing workflows (Apple, Microsoft, Android)</li><li>Using Sigstore/cosign for container signing</li><li>Managing signing keys and certificates</li><li>Implementing timestamping for long-term verification</li><li>Integrating HSM for signing operations</li><li>Meeting compliance requirements (FIPS 186-4, eIDAS, Common Criteria)</li><li>Building trust chains and certificate verification</li><li>Detecting tampering or unauthorized modifications</li></ul>
+<h2>Core Concepts</h2>
+<h3>What are Digital Signatures?</h3>
+<p><strong>Digital signatures</strong> provide:</p>
+<ul><li><strong>Authentication</strong>: Proof of signer identity</li><li><strong>Integrity</strong>: Proof data hasn&#x27;t been modified</li><li><strong>Non-repudiation</strong>: Signer cannot deny signing</li></ul>
+<p><strong>How it works</strong>:</p>
+<pre><code>1. Hash the data → SHA-256 hash
+2. Encrypt hash with private key → Digital signature
+3. Distribute data + signature + public key
+
+Verification:
+1. Hash the received data
+2. Decrypt signature with public key → Original hash
+3. Compare hashes → Match = authentic, Mismatch = tampered</code></pre>
+<h3>Signature Algorithms</h3>
+<p>| Algorithm | Key Type | Security | Use Case | |-----------|----------|----------|----------| | <strong>RSA-PSS</strong> | RSA (2048-4096 bit) | High | General purpose, FIPS compliance | | <strong>ECDSA</strong> | ECC (P-256, P-384) | High | Mobile, embedded, space-constrained | | <strong>EdDSA (Ed25519)</strong> | Curve25519 | Highest | Modern applications, performance | | <strong>RSA-PKCS#1 v1.5</strong> | RSA | Moderate | Legacy (vulnerable to attacks) | | <strong>DSA</strong> | Discrete Log | Low | Deprecated (use ECDSA instead) |</p>
+<p><strong>Recommendations</strong>:</p>
+<ul><li>✅ <strong>EdDSA (Ed25519)</strong>: Modern, fast, secure (recommended)</li><li>✅ <strong>ECDSA P-256</strong>: FIPS-approved, widely supported</li><li>✅ <strong>RSA-PSS 3072+</strong>: FIPS-approved, future-proof</li><li>❌ <strong>RSA-PKCS#1 v1.5</strong>: Vulnerable to attacks</li><li>❌ <strong>DSA</strong>: Deprecated</li></ul>
+<hr>
+<h2>Signature Formats</h2>
+<h3>PKCS#7 / CMS (Cryptographic Message Syntax)</h3>
+<p><strong>Standard</strong>: RFC 5652 <strong>Use case</strong>: Document signing, S/MIME email</p>
+<pre><code class="lang-bash"># Sign file with PKCS#7
+openssl smime -sign -in document.txt \
+    -out document.p7s \
+    -signer cert.pem \
+    -inkey private.key
+
+# Verify PKCS#7 signature
+openssl smime -verify -in document.p7s \
+    -CAfile ca-cert.pem \
+    -out document.txt</code></pre>
+<h3>JWS (JSON Web Signature)</h3>
+<p><strong>Standard</strong>: RFC 7515 <strong>Use case</strong>: API tokens, JSON data signing</p>
+<pre><code class="lang-python">import jwt
+
+# Sign JSON data
+payload = {&quot;user&quot;: &quot;alice&quot;, &quot;role&quot;: &quot;admin&quot;}
+token = jwt.encode(payload, private_key, algorithm=&#x27;RS256&#x27;)
+
+# Verify signature
+decoded = jwt.decode(token, public_key, algorithms=[&#x27;RS256&#x27;])</code></pre>
+<h3>XML-DSig (XML Digital Signature)</h3>
+<p><strong>Standard</strong>: W3C Recommendation <strong>Use case</strong>: SAML, SOAP, XML documents</p>
+<pre><code class="lang-xml">&lt;Signature xmlns=&quot;http://www.w3.org/2000/09/xmldsig#&quot;&gt;
+  &lt;SignedInfo&gt;
+    &lt;CanonicalizationMethod Algorithm=&quot;...&quot;/&gt;
+    &lt;SignatureMethod Algorithm=&quot;http://www.w3.org/2001/04/xmldsig-more#rsa-sha256&quot;/&gt;
+    &lt;Reference URI=&quot;&quot;&gt;
+      &lt;DigestMethod Algorithm=&quot;http://www.w3.org/2001/04/xmlenc#sha256&quot;/&gt;
+      &lt;DigestValue&gt;...&lt;/DigestValue&gt;
+    &lt;/Reference&gt;
+  &lt;/SignedInfo&gt;
+  &lt;SignatureValue&gt;...&lt;/SignatureValue&gt;
+  &lt;KeyInfo&gt;...&lt;/KeyInfo&gt;
+&lt;/Signature&gt;</code></pre>
+<h3>Detached vs Embedded Signatures</h3>
+<p><strong>Detached</strong> (separate file):</p>
+<pre><code class="lang-bash"># Create detached signature
+gpg --detach-sign --armor file.tar.gz
+# Produces: file.tar.gz.asc
+
+# Verify
+gpg --verify file.tar.gz.asc file.tar.gz</code></pre>
+<p><strong>Embedded</strong> (within file):</p>
+<pre><code class="lang-bash"># Create embedded signature
+gpg --sign file.tar.gz
+# Produces: file.tar.gz.gpg (contains both data and signature)
+
+# Verify and extract
+gpg file.tar.gz.gpg</code></pre>
+<hr>
+<h2>Code Signing</h2>
+<h3>macOS / iOS (Apple Developer)</h3>
+<p><strong>Requirements</strong>:</p>
+<ul><li>Apple Developer account</li><li>Code signing certificate from Apple</li><li>Xcode or <code>codesign</code> tool</li></ul>
+<p><strong>Sign application</strong>:</p>
+<pre><code class="lang-bash"># Sign app bundle
+codesign --sign &quot;Developer ID Application: Your Name&quot; \
+    --deep \
+    --force \
+    --options runtime \
+    --timestamp \
+    YourApp.app
+
+# Verify signature
+codesign --verify --verbose=4 YourApp.app
+
+# Display signature details
+codesign --display --verbose=4 YourApp.app
+
+# Notarize (required for macOS 10.15+)
+xcrun notarytool submit YourApp.zip \
+    --apple-id &quot;your@email.com&quot; \
+    --password &quot;app-specific-password&quot; \
+    --team-id &quot;TEAM_ID&quot;</code></pre>
+<h3>Windows (Authenticode)</h3>
+<p><strong>Requirements</strong>:</p>
+<ul><li>Code signing certificate (from CA like DigiCert)</li><li><code>signtool.exe</code> (Windows SDK)</li></ul>
+<p><strong>Sign executable</strong>:</p>
+<pre><code class="lang-cmd"># Sign with timestamp
+signtool sign /f certificate.pfx /p password /fd SHA256 \
+    /tr http://timestamp.digicert.com /td SHA256 \
+    application.exe
+
+# Verify signature
+signtool verify /pa application.exe
+
+# Display signature details
+signtool verify /v /pa application.exe</code></pre>
+<h3>Android (APK Signing)</h3>
+<p><strong>V1 (JAR signing)</strong> - Legacy:</p>
+<pre><code class="lang-bash">jarsigner -keystore my-release-key.jks \
+    -signedjar app-signed.apk \
+    app-unsigned.apk \
+    my-key-alias</code></pre>
+<p><strong>V2/V3/V4 (APK Signature Scheme)</strong> - Modern:</p>
+<pre><code class="lang-bash"># Sign with apksigner (recommended)
+apksigner sign --ks my-release-key.jks \
+    --ks-key-alias my-key-alias \
+    --out app-signed.apk \
+    app-unsigned.apk
+
+# Verify
+apksigner verify --verbose app-signed.apk</code></pre>
+<hr>
+<h2>Container Signing (Sigstore / Cosign)</h2>
+<h3>Sigstore</h3>
+<p><strong>Sigstore</strong> provides:</p>
+<ul><li>Keyless signing (OIDC-based, no key management)</li><li>Transparency log (Rekor) for audit</li><li>Certificate authority (Fulcio) for ephemeral certificates</li></ul>
+<p><strong>Install cosign</strong>:</p>
+<pre><code class="lang-bash"># macOS
+brew install cosign
+
+# Linux
+wget https://github.com/sigstore/cosign/releases/download/v2.2.0/cosign-linux-amd64
+chmod +x cosign-linux-amd64
+sudo mv cosign-linux-amd64 /usr/local/bin/cosign</code></pre>
+<h3>Keyless Signing (OIDC)</h3>
+<p><strong>Sign container image</strong>:</p>
+<pre><code class="lang-bash"># Sign with OIDC (Google, GitHub, Microsoft)
+cosign sign ghcr.io/myorg/myapp:v1.0.0
+
+# Interactive OIDC flow opens browser
+# Ephemeral keys generated and certificate issued by Fulcio
+# Signature recorded in Rekor transparency log</code></pre>
+<p><strong>Verify</strong>:</p>
+<pre><code class="lang-bash"># Verify with certificate identity
+cosign verify ghcr.io/myorg/myapp:v1.0.0 \
+    --certificate-identity=user@example.com \
+    --certificate-oidc-issuer=https://accounts.google.com</code></pre>
+<h3>Key-Based Signing</h3>
+<p><strong>Generate signing key</strong>:</p>
+<pre><code class="lang-bash"># Generate key pair
+cosign generate-key-pair
+
+# Produces:
+# - cosign.key (private key, encrypted)
+# - cosign.pub (public key)</code></pre>
+<p><strong>Sign and verify</strong>:</p>
+<pre><code class="lang-bash"># Sign with key
+cosign sign --key cosign.key ghcr.io/myorg/myapp:v1.0.0
+
+# Verify with public key
+cosign verify --key cosign.pub ghcr.io/myorg/myapp:v1.0.0</code></pre>
+<h3>Sign Artifacts (Not Containers)</h3>
+<p><strong>Sign files</strong>:</p>
+<pre><code class="lang-bash"># Sign arbitrary file
+cosign sign-blob --key cosign.key file.tar.gz &gt; file.tar.gz.sig
+
+# Verify
+cosign verify-blob --key cosign.pub \
+    --signature file.tar.gz.sig \
+    file.tar.gz</code></pre>
+<hr>
+<h2>Timestamping</h2>
+<h3>Why Timestamp Signatures?</h3>
+<p><strong>Problem</strong>: Signatures become invalid when signing certificate expires.</p>
+<p><strong>Solution</strong>: Timestamp Authority (TSA) provides proof that signature existed at specific time.</p>
+<p><strong>Timestamping flow</strong>:</p>
+<pre><code>1. Sign document with private key
+2. Send signature to TSA
+3. TSA signs signature with timestamp
+4. Signature valid even after certificate expires (as long as it was valid at signing time)</code></pre>
+<h3>RFC 3161 Timestamp Protocol</h3>
+<p><strong>Request timestamp</strong>:</p>
+<pre><code class="lang-bash"># Sign with timestamp (OpenSSL)
+openssl ts -query -data document.txt -sha256 -cert -out request.tsq
+
+# Send to TSA
+curl -H &quot;Content-Type: application/timestamp-query&quot; \
+    --data-binary @request.tsq \
+    http://timestamp.digicert.com &gt; response.tsr
+
+# Verify timestamp
+openssl ts -verify -data document.txt -in response.tsr \
+    -CAfile tsa-cert.pem</code></pre>
+<p><strong>Popular TSAs</strong>:</p>
+<ul><li>DigiCert: <code>http://timestamp.digicert.com</code></li><li>Sectigo: <code>http://timestamp.sectigo.com</code></li><li>FreeTSA: <code>https://freetsa.org/tsr</code></li></ul>
+<hr>
+<h2>GPG / PGP Signing</h2>
+<h3>Generate Key Pair</h3>
+<pre><code class="lang-bash"># Generate GPG key
+gpg --full-generate-key
+# Choose: RSA and RSA (default), 4096 bits, expires in 1 year
+
+# List keys
+gpg --list-keys
+gpg --list-secret-keys</code></pre>
+<h3>Sign Files</h3>
+<pre><code class="lang-bash"># Detached ASCII signature
+gpg --detach-sign --armor file.tar.gz
+# Creates: file.tar.gz.asc
+
+# Verify
+gpg --verify file.tar.gz.asc file.tar.gz
+
+# Embedded signature
+gpg --sign file.tar.gz
+# Creates: file.tar.gz.gpg
+
+# Clear-sign (text with inline signature)
+gpg --clearsign message.txt</code></pre>
+<h3>Git Commit Signing</h3>
+<p><strong>Configure Git</strong>:</p>
+<pre><code class="lang-bash"># Set signing key
+git config --global user.signingkey YOUR_KEY_ID
+
+# Enable signing by default
+git config --global commit.gpgsign true
+git config --global tag.gpgsign true</code></pre>
+<p><strong>Sign commits</strong>:</p>
+<pre><code class="lang-bash"># Sign commit
+git commit -S -m &quot;Signed commit&quot;
+
+# Sign tag
+git tag -s v1.0.0 -m &quot;Signed release&quot;
+
+# Verify
+git verify-commit HEAD
+git verify-tag v1.0.0</code></pre>
+<hr>
+<h2>Certificate Chains and Trust</h2>
+<h3>Chain of Trust</h3>
+<pre><code>┌─────────────────────┐
+│ Root CA             │ ← Self-signed, offline, highly trusted
+└──────────┬──────────┘
+           │ signs
+┌──────────▼──────────┐
+│ Intermediate CA     │ ← Operational CA
+└──────────┬──────────┘
+           │ signs
+┌──────────▼──────────┐
+│ Code Signing Cert   │ ← End-entity certificate
+└─────────────────────┘
+           │
+           ▼
+      Signed Code</code></pre>
+<h3>Verify Certificate Chain</h3>
+<p><strong>OpenSSL</strong>:</p>
+<pre><code class="lang-bash"># Verify certificate chain
+openssl verify -CAfile root.pem -untrusted intermediate.pem cert.pem
+
+# Extract certificate from signed binary
+openssl pkcs7 -inform DER -in signature.p7s -print_certs -out cert.pem
+
+# Check certificate validity
+openssl x509 -in cert.pem -noout -dates
+openssl x509 -in cert.pem -noout -subject -issuer</code></pre>
+<h3>Certificate Revocation</h3>
+<p><strong>Check revocation status</strong>:</p>
+<p><strong>CRL (Certificate Revocation List)</strong>:</p>
+<pre><code class="lang-bash"># Download CRL
+wget http://crl.example.com/revoked.crl
+
+# Check if certificate is revoked
+openssl crl -inform DER -in revoked.crl -noout -text | grep -A1 &quot;Serial Number&quot;</code></pre>
+<p><strong>OCSP (Online Certificate Status Protocol)</strong>:</p>
+<pre><code class="lang-bash"># Query OCSP responder
+openssl ocsp -issuer intermediate.pem \
+    -cert cert.pem \
+    -url http://ocsp.example.com \
+    -CAfile root.pem</code></pre>
+<hr>
+<h2>HSM Integration</h2>
+<h3>Why Use HSM for Signing?</h3>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Private keys never leave HSM (tamper-proof)</li><li>FIPS 140-2 Level 3+ compliance</li><li>Audit logging of all signing operations</li><li>Prevents key extraction</li></ul>
+<h3>PKCS#11 Interface</h3>
+<p><strong>Sign with HSM (PKCS#11)</strong>:</p>
+<pre><code class="lang-python">from PyKCS11 import *
+
+pkcs11 = PyKCS11Lib()
+pkcs11.load(&#x27;/usr/lib/softhsm/libsofthsm2.so&#x27;)  # HSM library
+
+# Open session
+session = pkcs11.openSession(slot)
+session.login(&#x27;user_pin&#x27;)
+
+# Find signing key
+key = session.findObjects([(CKA_CLASS, CKO_PRIVATE_KEY)])[0]
+
+# Sign data
+mechanism = Mechanism(CKM_RSA_PKCS, None)
+signature = session.sign(key, data, mechanism)
+
+session.logout()</code></pre>
+<p><strong>AWS CloudHSM</strong>:</p>
+<pre><code class="lang-bash"># Configure CloudHSM
+/opt/cloudhsm/bin/configure -a &lt;cluster-ip&gt;
+
+# Sign with pkcs11-tool
+pkcs11-tool --module /opt/cloudhsm/lib/libcloudhsm_pkcs11.so \
+    --login --pin &lt;user-pin&gt; \
+    --sign --mechanism RSA-PKCS \
+    --input-file data.bin \
+    --output-file signature.bin</code></pre>
+<hr>
+<h2>Compliance</h2>
+<h3>FIPS 186-4 (Digital Signature Standard)</h3>
+<p><strong>Approved algorithms</strong>:</p>
+<ul><li>RSA-PSS (2048, 3072 bits)</li><li>ECDSA (P-256, P-384, P-521)</li><li>DSA (deprecated)</li></ul>
+<p><strong>Requirements</strong>:</p>
+<ul><li>Use FIPS-approved RNG for key generation</li><li>Use SHA-256 or stronger for hashing</li><li>Validate all signatures</li><li>Protect private keys (HSM recommended)</li></ul>
+<h3>eIDAS (EU Electronic Identification and Trust Services)</h3>
+<p><strong>Signature levels</strong>:</p>
+<ul><li><strong>Simple</strong>: Basic digital signature</li><li><strong>Advanced</strong>: Linked to signer, detects tampering</li><li><strong>Qualified</strong>: Equivalent to handwritten signature</li></ul>
+<p><strong>Requirements</strong>:</p>
+<ul><li>Qualified Trust Service Provider (QTSP)</li><li>Qualified certificate</li><li>Secure Signature Creation Device (SSCD)</li></ul>
+<h3>Common Criteria</h3>
+<p><strong>Evaluation Assurance Levels (EAL)</strong>:</p>
+<ul><li>EAL4+: Commercial applications</li><li>EAL5+: High-security environments</li><li>EAL7: Formal verification</li></ul>
+<hr>
+<h2>Best Practices</h2>
+<h3>1. Signature Algorithm Selection</h3>
+<pre><code class="lang-bash"># ✅ Good: Modern, secure algorithms
+EdDSA (Ed25519)
+ECDSA P-256
+RSA-PSS 3072+
+
+# ❌ Bad: Deprecated or weak
+RSA-PKCS#1 v1.5
+DSA
+MD5 hashing</code></pre>
+<h3>2. Always Timestamp Signatures</h3>
+<pre><code class="lang-bash"># ✅ Good: Include timestamp
+codesign --timestamp --sign &quot;Developer ID&quot; app.app
+signtool sign /tr http://timestamp.digicert.com /td SHA256 app.exe
+
+# ❌ Bad: No timestamp (signature expires with certificate)
+codesign --sign &quot;Developer ID&quot; app.app</code></pre>
+<h3>3. Verify Signatures Before Use</h3>
+<pre><code class="lang-bash"># ✅ Good: Always verify before execution
+cosign verify --key cosign.pub image:tag
+gpg --verify file.tar.gz.asc file.tar.gz
+
+# ❌ Bad: Trust without verification
+docker run unverified-image
+tar -xzf unsigned-archive.tar.gz</code></pre>
+<h3>4. Protect Private Keys</h3>
+<pre><code class="lang-bash"># ✅ Good: Use HSM, encrypted keys, access control
+- Store signing keys in HSM
+- Encrypt private keys (gpg, openssl)
+- Require authentication for signing
+- Audit all signing operations
+
+# ❌ Bad: Unprotected keys
+- Private key in Git repository
+- Unencrypted key on disk
+- Shared signing credentials</code></pre>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Issue 1: Signature Verification Fails</h3>
+<p><strong>Check</strong>:</p>
+<pre><code class="lang-bash"># Certificate expired?
+openssl x509 -in cert.pem -noout -dates
+
+# Wrong public key?
+openssl x509 -in cert.pem -pubkey -noout &gt; pubkey.pem
+
+# Certificate revoked?
+openssl ocsp -issuer ca.pem -cert cert.pem -url http://ocsp.example.com
+
+# Data modified after signing?
+sha256sum file.tar.gz  # Compare with original hash</code></pre>
+<h3>Issue 2: Code Signing Rejected by OS</h3>
+<p><strong>macOS Gatekeeper</strong>:</p>
+<pre><code class="lang-bash"># Check notarization status
+spctl --assess --verbose=4 YourApp.app
+
+# Check signature
+codesign --verify --deep --strict --verbose=2 YourApp.app</code></pre>
+<p><strong>Windows SmartScreen</strong>:</p>
+<pre><code class="lang-bash"># Verify certificate chain
+signtool verify /pa /v application.exe
+
+# Check timestamp
+signtool verify /pa /tw application.exe</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>cryptography-key-management</code> - Managing signing keys</li><li><code>cryptography-certificate-management</code> - Certificate lifecycle</li><li><code>cryptography-pki-fundamentals</code> - PKI and trust chains</li><li><code>cryptography-crypto-best-practices</code> - Cryptographic guidelines</li></ul>
+<hr>
+<h2>Level 3: Resources</h2>
+<p><strong>Location</strong>: <code>~/.hanzo/skills/cryptography/signing-verification/resources/</code></p>
+<p>This skill includes comprehensive Level 3 resources for production signing and verification implementations.</p>
+<h3>REFERENCE.md (~3,500 lines)</h3>
+<p>Comprehensive technical reference covering:</p>
+<ul><li><strong>Digital Signature Fundamentals</strong>: Cryptographic primitives, hash-then-sign, signature schemes</li><li><strong>Signature Algorithms</strong>: RSA-PSS, ECDSA, EdDSA, algorithm comparison, security analysis</li><li><strong>Signature Formats</strong>: PKCS#7/CMS, JWS, XML-DSig, detached vs embedded, format conversion</li><li><strong>Code Signing Platforms</strong>: Apple (macOS/iOS), Microsoft (Authenticode), Android (APK), Java (JAR)</li><li><strong>Container Signing</strong>: Sigstore architecture, cosign usage, keyless signing, Rekor transparency</li><li><strong>GPG/PGP</strong>: Key management, signing workflows, web of trust, Git integration</li><li><strong>Timestamping</strong>: RFC 3161 protocol, timestamp authorities, long-term verification</li><li><strong>Certificate Chains</strong>: Trust models, chain validation, revocation (CRL/OCSP)</li><li><strong>HSM Integration</strong>: PKCS#11, CloudHSM, YubiHSM, key protection</li><li><strong>Compliance</strong>: FIPS 186-4, eIDAS, Common Criteria, industry requirements</li><li><strong>Security Best Practices</strong>: Key protection, algorithm selection, signature verification</li><li><strong>Attack Vectors</strong>: Signature forgery, key compromise, replay attacks, timing attacks</li><li><strong>Real-world implementations</strong>: Production examples, integration patterns</li></ul>
+<h3>Scripts (3 production-ready tools)</h3>
+<p><strong>validate_signatures.py</strong> (650+ lines) - Multi-format signature validator</p>
+<ul><li>Validates PKCS#7, CMS, JWS, XML-DSig signatures</li><li>Certificate chain verification and revocation checking (OCSP/CRL)</li><li>Supports RSA-PSS, ECDSA, EdDSA algorithms</li><li>Timestamp validation (RFC 3161)</li><li>Batch validation from file lists</li><li>Compliance checking (FIPS 186-4, eIDAS)</li><li>JSON output for automation</li><li>Detailed reporting with severity levels</li><li>Usage: <code>./validate_signatures.py --file document.p7s --check-revocation --json</code></li></ul>
+<p><strong>sign_artifacts.py</strong> (750+ lines) - Universal artifact signing tool</p>
+<ul><li>Signs files, code, containers with RSA/ECDSA/EdDSA</li><li>Supports multiple backends: local keys, AWS KMS, CloudHSM, PKCS#11</li><li>Generates detached and embedded signatures</li><li>Timestamp integration with configurable TSAs</li><li>Batch signing with progress tracking</li><li>HSM integration for key protection</li><li>Multiple output formats (PKCS#7, JWS, raw signatures)</li><li>Pre/post signing hooks</li><li>Usage: <code>./sign_artifacts.py --file app.tar.gz --key signing.key --format pkcs7 --timestamp --json</code></li></ul>
+<p><strong>audit_signing_keys.py</strong> (600+ lines) - Signing key lifecycle auditor</p>
+<ul><li>Audits signing key usage and access patterns</li><li>Detects weak algorithms (RSA-1024, SHA-1, DSA)</li><li>Tracks key lifecycle (creation, expiration, rotation)</li><li>Identifies expiring keys with configurable thresholds</li><li>Certificate validation and chain verification</li><li>Compliance checking (FIPS 186-4, algorithm requirements)</li><li>Usage metrics and anomaly detection</li><li>JSON reporting for monitoring integration</li><li>Usage: <code>./audit_signing_keys.py --keystore ./keys --compliance FIPS --threshold-warning 90 --json</code></li></ul>
+<h3>Examples (8 production-ready implementations)</h3>
+<p><strong>python/rsa_pss_signing.py</strong> - RSA-PSS document signing</p>
+<ul><li>RSA-PSS signature generation and verification</li><li>PKCS#1 PSS padding scheme</li><li>Multiple hash algorithms (SHA-256, SHA-384, SHA-512)</li><li>Key generation and management</li><li>PEM/DER format handling</li><li>Compliance with FIPS 186-4</li></ul>
+<p><strong>python/ecdsa_signing.py</strong> - ECDSA code signing with verification</p>
+<ul><li>ECDSA signing with P-256, P-384, P-521 curves</li><li>Signature generation and verification</li><li>Key serialization (PEM, DER, JWK)</li><li>Multiple signature formats</li><li>Nonce generation best practices</li></ul>
+<p><strong>go/ed25519_artifacts.go</strong> - EdDSA artifact signing</p>
+<ul><li>Ed25519 signing and verification</li><li>High-performance implementation</li><li>Batch signing support</li><li>Detached signature generation</li><li>JSON metadata integration</li></ul>
+<p><strong>python/sigstore_cosign.py</strong> - Sigstore cosign integration</p>
+<ul><li>Keyless signing with OIDC</li><li>Key-based signing with cosign</li><li>Container image verification</li><li>Rekor transparency log integration</li><li>Policy enforcement</li></ul>
+<p><strong>python/hsm_signing.py</strong> - HSM-backed signing (PKCS#11)</p>
+<ul><li>PKCS#11 interface for HSM integration</li><li>SoftHSM, CloudHSM, YubiHSM support</li><li>RSA and ECDSA signing via HSM</li><li>Key generation in HSM</li><li>Session management and error handling</li></ul>
+<p><strong>python/timestamp_authority.py</strong> - Timestamp authority integration</p>
+<ul><li>RFC 3161 timestamp requests</li><li>TSA client implementation</li><li>Timestamp verification</li><li>Multiple TSA support (DigiCert, Sectigo, FreeTSA)</li><li>Long-term signature validation</li></ul>
+<p><strong>docker-compose/signing-infrastructure.yml</strong> - Container signing infrastructure</p>
+<ul><li>Sigstore stack (Fulcio, Rekor, Cosign)</li><li>Private timestamp authority</li><li>Certificate authority setup</li><li>HSM simulator (SoftHSM)</li><li>Complete signing pipeline</li></ul>
+<p><strong>config/compliance-validation.yaml</strong> - Compliance policy configuration</p>
+<ul><li>FIPS 186-4 algorithm policies</li><li>eIDAS signature level requirements</li><li>Key strength requirements</li><li>Certificate validation rules</li><li>Audit logging configuration</li></ul>
+<h3>Quick Start</h3>
+<pre><code class="lang-bash"># Validate signature
+cd ~/.hanzo/skills/cryptography/signing-verification/resources/scripts
+./validate_signatures.py --file document.p7s --check-chain --check-revocation
+
+# Sign artifact with timestamp
+./sign_artifacts.py --file release.tar.gz --key signing.key --timestamp --format pkcs7
+
+# Audit signing keys
+./audit_signing_keys.py --keystore /etc/pki/signing --compliance FIPS --json
+
+# Run Python examples
+cd ../examples/python
+pip install cryptography PyKCS11 jwt sigstore
+python rsa_pss_signing.py sign document.txt
+python ecdsa_signing.py verify signature.bin
+python sigstore_cosign.py keyless-sign myimage:v1.0.0
+
+# View comprehensive reference
+cd ../
+less REFERENCE.md</code></pre>
+<h3>Integration Notes</h3>
+<p><strong>CI/CD Integration</strong>:</p>
+<pre><code class="lang-yaml"># .github/workflows/sign-release.yml
+- name: Sign Release Artifacts
+  run: |
+    ./scripts/sign_artifacts.py \
+      --batch-file artifacts.txt \
+      --key ${{ secrets.SIGNING_KEY }} \
+      --timestamp \
+      --json</code></pre>
+<p><strong>Verification in Deployment</strong>:</p>
+<pre><code class="lang-bash"># Verify signatures before deployment
+./scripts/validate_signatures.py \
+  --batch-file production-artifacts.txt \
+  --check-revocation \
+  --compliance FIPS \
+  --fail-on-error</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<pre><code class="lang-bash"># OpenSSL signing
+openssl dgst -sha256 -sign private.key -out signature.bin file.txt
+openssl dgst -sha256 -verify public.key -signature signature.bin file.txt
+
+# GPG signing
+gpg --detach-sign --armor file.tar.gz
+gpg --verify file.tar.gz.asc file.tar.gz
+
+# Cosign (container)
+cosign sign --key cosign.key image:tag
+cosign verify --key cosign.pub image:tag
+
+# Code signing (macOS)
+codesign --sign &quot;Developer ID&quot; --timestamp app.app
+codesign --verify --verbose=4 app.app
+
+# Code signing (Windows)
+signtool sign /f cert.pfx /p password /tr http://timestamp.digicert.com /td SHA256 app.exe
+signtool verify /pa app.exe</code></pre>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/cryptography-signing-verification.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

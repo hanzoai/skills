@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>api-rest-api-design</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/api-rest-api-design.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/api-rest-api-design.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>api-rest-api-design</h1><p class="lede">Designing RESTful APIs from scratch</p><h1>REST API Design</h1>
+<p><strong>Scope</strong>: RESTful resource modeling, HTTP semantics, URL conventions, status codes <strong>Lines</strong>: ~280 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Designing RESTful APIs from scratch</li><li>Modeling resources and relationships</li><li>Choosing appropriate HTTP methods</li><li>Structuring API endpoints and URLs</li><li>Selecting correct HTTP status codes</li><li>Implementing API versioning strategies</li><li>Handling errors and validation</li><li>Optimizing for idempotency and caching</li></ul>
+<h2>Core Concepts</h2>
+<h3>RESTful Principles</h3>
+<p><strong>REST</strong> (Representational State Transfer): Architectural style for distributed systems.</p>
+<p><strong>Key principles</strong>:</p>
+<ul><li><strong>Stateless</strong>: Each request contains all needed information</li><li><strong>Resource-based</strong>: URLs identify resources (nouns, not verbs)</li><li><strong>HTTP methods</strong>: Use standard methods (GET, POST, PUT, DELETE)</li><li><strong>Uniform interface</strong>: Consistent patterns across API</li><li><strong>Self-descriptive</strong>: Responses include metadata (Content-Type, status codes)</li></ul>
+<hr>
+<h2>Resource Modeling</h2>
+<h3>Resources are Nouns, Not Verbs</h3>
+<p><strong>❌ Wrong</strong> (verb-based):</p>
+<pre><code>POST /createUser
+POST /getUserById
+POST /updateUserEmail
+POST /deleteUser</code></pre>
+<p><strong>✅ Correct</strong> (resource-based):</p>
+<pre><code>POST   /users          # Create user
+GET    /users/:id      # Get user
+PUT    /users/:id      # Update user
+DELETE /users/:id      # Delete user</code></pre>
+<h3>Resource Naming Conventions</h3>
+<p><strong>Use plural nouns</strong>:</p>
+<pre><code>GET /users          # ✅ Consistent plural
+GET /user           # ❌ Singular (inconsistent)</code></pre>
+<p><strong>Lowercase with hyphens</strong> (not underscores or camelCase):</p>
+<pre><code>GET /user-profiles       # ✅ Kebab-case
+GET /user_profiles       # ❌ Snake_case (harder to read in URLs)
+GET /userProfiles        # ❌ camelCase (inconsistent)</code></pre>
+<p><strong>Hierarchy for relationships</strong>:</p>
+<pre><code>GET /users/:id/posts              # User&#x27;s posts
+GET /users/:id/posts/:postId      # Specific post by user
+GET /posts/:id/comments           # Comments on post</code></pre>
+<p><strong>Collections vs Singular Resources</strong>:</p>
+<pre><code>GET /users           # Collection (returns array)
+GET /users/42        # Singular resource (returns object)
+GET /users/me        # Special singular (current user)</code></pre>
+<hr>
+<h2>HTTP Method Semantics</h2>
+<h3>GET - Retrieve Resources</h3>
+<p><strong>Purpose</strong>: Fetch data without side effects</p>
+<p><strong>Characteristics</strong>:</p>
+<ul><li><strong>Safe</strong>: Doesn&#x27;t modify state</li><li><strong>Idempotent</strong>: Multiple identical requests = same result</li><li><strong>Cacheable</strong>: Can be cached by intermediaries</li></ul>
+<p><strong>Examples</strong>:</p>
+<pre><code>GET /users                    # List all users
+GET /users?page=2&amp;limit=20    # Paginated list
+GET /users/42                 # Get user by ID
+GET /users/42/posts           # Get user&#x27;s posts
+GET /posts?author=alice       # Filtered list</code></pre>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">// Single resource
+{
+  &quot;id&quot;: 42,
+  &quot;email&quot;: &quot;alice@example.com&quot;,
+  &quot;name&quot;: &quot;Alice&quot;
+}
+
+// Collection
+{
+  &quot;data&quot;: [
+    {&quot;id&quot;: 1, &quot;name&quot;: &quot;Alice&quot;},
+    {&quot;id&quot;: 2, &quot;name&quot;: &quot;Bob&quot;}
+  ],
+  &quot;meta&quot;: {
+    &quot;total&quot;: 100,
+    &quot;page&quot;: 1,
+    &quot;per_page&quot;: 20
+  }
+}</code></pre>
+<h3>POST - Create Resources</h3>
+<p><strong>Purpose</strong>: Create new resource or trigger action</p>
+<p><strong>Characteristics</strong>:</p>
+<ul><li><strong>Not safe</strong>: Modifies state</li><li><strong>Not idempotent</strong>: Multiple requests create multiple resources</li><li><strong>Not cacheable</strong></li></ul>
+<p><strong>Examples</strong>:</p>
+<pre><code>POST /users              # Create new user
+POST /posts              # Create new post
+POST /posts/42/publish   # Action (publish post)</code></pre>
+<p><strong>Request</strong>:</p>
+<pre><code class="lang-json">POST /users
+Content-Type: application/json
+
+{
+  &quot;email&quot;: &quot;alice@example.com&quot;,
+  &quot;name&quot;: &quot;Alice&quot;,
+  &quot;password&quot;: &quot;secret123&quot;
+}</code></pre>
+<p><strong>Response</strong> (201 Created):</p>
+<pre><code class="lang-json">HTTP/1.1 201 Created
+Location: /users/42
+Content-Type: application/json
+
+{
+  &quot;id&quot;: 42,
+  &quot;email&quot;: &quot;alice@example.com&quot;,
+  &quot;name&quot;: &quot;Alice&quot;,
+  &quot;created_at&quot;: &quot;2025-10-18T12:00:00Z&quot;
+}</code></pre>
+<p><strong>Use POST for non-idempotent actions</strong>:</p>
+<pre><code>POST /orders/42/payments    # Process payment (not idempotent)
+POST /users/42/send-email   # Send email (side effect)</code></pre>
+<h3>PUT - Replace Resource</h3>
+<p><strong>Purpose</strong>: Replace entire resource (or create if doesn&#x27;t exist)</p>
+<p><strong>Characteristics</strong>:</p>
+<ul><li><strong>Not safe</strong>: Modifies state</li><li><strong>Idempotent</strong>: Multiple identical requests = same result</li><li><strong>Not cacheable</strong></li></ul>
+<p><strong>Examples</strong>:</p>
+<pre><code>PUT /users/42            # Replace entire user
+PUT /posts/123           # Replace entire post</code></pre>
+<p><strong>Request</strong> (must include all fields):</p>
+<pre><code class="lang-json">PUT /users/42
+Content-Type: application/json
+
+{
+  &quot;email&quot;: &quot;alice@example.com&quot;,
+  &quot;name&quot;: &quot;Alice Cooper&quot;,  // Updated
+  &quot;bio&quot;: &quot;Developer&quot;       // All fields required
+}</code></pre>
+<p><strong>Response</strong> (200 OK):</p>
+<pre><code class="lang-json">HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  &quot;id&quot;: 42,
+  &quot;email&quot;: &quot;alice@example.com&quot;,
+  &quot;name&quot;: &quot;Alice Cooper&quot;,
+  &quot;bio&quot;: &quot;Developer&quot;,
+  &quot;updated_at&quot;: &quot;2025-10-18T12:00:00Z&quot;
+}</code></pre>
+<p><strong>PUT for upsert</strong> (create if not exists):</p>
+<pre><code>PUT /users/alice@example.com   # Create or replace by email</code></pre>
+<h3>PATCH - Partial Update</h3>
+<p><strong>Purpose</strong>: Partially update resource (modify specific fields)</p>
+<p><strong>Characteristics</strong>:</p>
+<ul><li><strong>Not safe</strong>: Modifies state</li><li><strong>Not idempotent</strong> (depends on implementation)</li><li><strong>Not cacheable</strong></li></ul>
+<p><strong>Examples</strong>:</p>
+<pre><code>PATCH /users/42          # Update specific fields
+PATCH /posts/123         # Update subset of post</code></pre>
+<p><strong>Request</strong> (only modified fields):</p>
+<pre><code class="lang-json">PATCH /users/42
+Content-Type: application/json
+
+{
+  &quot;name&quot;: &quot;Alice Cooper&quot;   // Only update name
+}</code></pre>
+<p><strong>Response</strong> (200 OK):</p>
+<pre><code class="lang-json">HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  &quot;id&quot;: 42,
+  &quot;email&quot;: &quot;alice@example.com&quot;,
+  &quot;name&quot;: &quot;Alice Cooper&quot;,      // Updated
+  &quot;bio&quot;: &quot;Developer&quot;,          // Unchanged
+  &quot;updated_at&quot;: &quot;2025-10-18T12:00:00Z&quot;
+}</code></pre>
+<p><strong>PUT vs PATCH</strong>:</p>
+<pre><code>PUT /users/42       # Replace entire user (all fields required)
+PATCH /users/42     # Update specific fields (partial update)</code></pre>
+<h3>DELETE - Remove Resource</h3>
+<p><strong>Purpose</strong>: Delete resource</p>
+<p><strong>Characteristics</strong>:</p>
+<ul><li><strong>Not safe</strong>: Modifies state</li><li><strong>Idempotent</strong>: Deleting twice = same result (404 second time)</li><li><strong>Not cacheable</strong></li></ul>
+<p><strong>Examples</strong>:</p>
+<pre><code>DELETE /users/42         # Delete user
+DELETE /posts/123        # Delete post</code></pre>
+<p><strong>Response</strong> (204 No Content):</p>
+<pre><code>HTTP/1.1 204 No Content</code></pre>
+<p><strong>Or</strong> (200 OK with body):</p>
+<pre><code class="lang-json">HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  &quot;message&quot;: &quot;User deleted successfully&quot;,
+  &quot;id&quot;: 42
+}</code></pre>
+<p><strong>Soft delete</strong> (use PATCH instead):</p>
+<pre><code>PATCH /users/42
+{&quot;deleted_at&quot;: &quot;2025-10-18T12:00:00Z&quot;}</code></pre>
+<hr>
+<h2>HTTP Status Codes</h2>
+<h3>Success Codes (2xx)</h3>
+<p><strong>200 OK</strong>: Standard success response (GET, PUT, PATCH)</p>
+<pre><code>GET /users/42           → 200 OK + user object
+PUT /users/42           → 200 OK + updated user
+PATCH /users/42         → 200 OK + updated user</code></pre>
+<p><strong>201 Created</strong>: Resource created successfully (POST)</p>
+<pre><code>POST /users             → 201 Created + new user
+Location: /users/42</code></pre>
+<p><strong>204 No Content</strong>: Success with no response body (DELETE)</p>
+<pre><code>DELETE /users/42        → 204 No Content</code></pre>
+<p><strong>206 Partial Content</strong>: Partial resource (range requests)</p>
+<pre><code>GET /videos/123
+Range: bytes=0-1024     → 206 Partial Content</code></pre>
+<h3>Redirection Codes (3xx)</h3>
+<p><strong>301 Moved Permanently</strong>: Resource permanently moved</p>
+<pre><code>GET /old-endpoint       → 301 Moved Permanently
+Location: /new-endpoint</code></pre>
+<p><strong>304 Not Modified</strong>: Cached version is still valid</p>
+<pre><code>GET /users/42
+If-None-Match: &quot;abc123&quot; → 304 Not Modified</code></pre>
+<h3>Client Error Codes (4xx)</h3>
+<p><strong>400 Bad Request</strong>: Invalid request (validation failed)</p>
+<pre><code class="lang-json">POST /users
+{&quot;email&quot;: &quot;invalid&quot;}    → 400 Bad Request
+{
+  &quot;error&quot;: &quot;Validation failed&quot;,
+  &quot;details&quot;: {
+    &quot;email&quot;: [&quot;Must be valid email address&quot;]
+  }
+}</code></pre>
+<p><strong>401 Unauthorized</strong>: Authentication required or failed</p>
+<pre><code>GET /users/me           → 401 Unauthorized
+{
+  &quot;error&quot;: &quot;Authentication required&quot;,
+  &quot;message&quot;: &quot;Missing or invalid token&quot;
+}</code></pre>
+<p><strong>403 Forbidden</strong>: Authenticated but not authorized</p>
+<pre><code>DELETE /users/99        → 403 Forbidden
+{
+  &quot;error&quot;: &quot;Forbidden&quot;,
+  &quot;message&quot;: &quot;You don&#x27;t have permission to delete this user&quot;
+}</code></pre>
+<p><strong>404 Not Found</strong>: Resource doesn&#x27;t exist</p>
+<pre><code>GET /users/99999        → 404 Not Found
+{
+  &quot;error&quot;: &quot;Not found&quot;,
+  &quot;message&quot;: &quot;User not found&quot;
+}</code></pre>
+<p><strong>409 Conflict</strong>: Request conflicts with current state</p>
+<pre><code>POST /users
+{&quot;email&quot;: &quot;alice@example.com&quot;}  → 409 Conflict
+{
+  &quot;error&quot;: &quot;Conflict&quot;,
+  &quot;message&quot;: &quot;User with this email already exists&quot;
+}</code></pre>
+<p><strong>422 Unprocessable Entity</strong>: Valid syntax, but semantic errors</p>
+<pre><code>POST /orders
+{&quot;product_id&quot;: 999}     → 422 Unprocessable Entity
+{
+  &quot;error&quot;: &quot;Unprocessable entity&quot;,
+  &quot;message&quot;: &quot;Product not found&quot;
+}</code></pre>
+<p><strong>429 Too Many Requests</strong>: Rate limit exceeded</p>
+<pre><code>GET /users              → 429 Too Many Requests
+Retry-After: 60
+{
+  &quot;error&quot;: &quot;Rate limit exceeded&quot;,
+  &quot;message&quot;: &quot;Try again in 60 seconds&quot;
+}</code></pre>
+<h3>Server Error Codes (5xx)</h3>
+<p><strong>500 Internal Server Error</strong>: Unexpected server error</p>
+<pre><code>GET /users              → 500 Internal Server Error
+{
+  &quot;error&quot;: &quot;Internal server error&quot;,
+  &quot;message&quot;: &quot;An unexpected error occurred&quot;
+}</code></pre>
+<p><strong>502 Bad Gateway</strong>: Upstream server error (proxy/gateway)</p>
+<pre><code>GET /users              → 502 Bad Gateway
+{
+  &quot;error&quot;: &quot;Bad gateway&quot;,
+  &quot;message&quot;: &quot;Upstream service unavailable&quot;
+}</code></pre>
+<p><strong>503 Service Unavailable</strong>: Server temporarily unavailable</p>
+<pre><code>GET /users              → 503 Service Unavailable
+Retry-After: 120
+{
+  &quot;error&quot;: &quot;Service unavailable&quot;,
+  &quot;message&quot;: &quot;Server is under maintenance&quot;
+}</code></pre>
+<hr>
+<h2>URL Structure Best Practices</h2>
+<h3>Hierarchical Resource Relationships</h3>
+<pre><code>GET /users/:userId/posts                    # User&#x27;s posts
+GET /users/:userId/posts/:postId            # Specific post
+GET /users/:userId/posts/:postId/comments   # Post&#x27;s comments</code></pre>
+<p><strong>Limit nesting to 2-3 levels</strong>:</p>
+<pre><code>✅ GET /posts/:postId/comments/:commentId
+❌ GET /users/:userId/posts/:postId/comments/:commentId/replies/:replyId</code></pre>
+<h3>Query Parameters for Filtering</h3>
+<p><strong>Filtering</strong>:</p>
+<pre><code>GET /posts?status=published&amp;author=alice
+GET /users?role=admin&amp;verified=true</code></pre>
+<p><strong>Sorting</strong>:</p>
+<pre><code>GET /posts?sort=created_at:desc
+GET /users?sort=-created_at              # Descending (- prefix)
+GET /products?sort=price:asc,name:asc    # Multi-field</code></pre>
+<p><strong>Pagination</strong>:</p>
+<pre><code>GET /posts?page=2&amp;limit=20               # Page-based
+GET /posts?offset=20&amp;limit=20            # Offset-based
+GET /posts?cursor=abc123&amp;limit=20        # Cursor-based (best for large datasets)</code></pre>
+<p><strong>Field selection</strong> (sparse fieldsets):</p>
+<pre><code>GET /users?fields=id,email,name          # Only return specified fields
+GET /posts?include=author,comments       # Include related resources</code></pre>
+<h3>Action Endpoints (Non-CRUD)</h3>
+<p><strong>Use verbs for actions</strong> (not CRUD):</p>
+<pre><code>POST /posts/:id/publish       # Publish post
+POST /users/:id/send-reset    # Send password reset
+POST /orders/:id/cancel       # Cancel order
+POST /carts/:id/checkout      # Checkout cart</code></pre>
+<p><strong>Alternative: Use status changes</strong>:</p>
+<pre><code>PATCH /posts/:id              # { &quot;status&quot;: &quot;published&quot; }
+PATCH /orders/:id             # { &quot;status&quot;: &quot;cancelled&quot; }</code></pre>
+<hr>
+<h2>Idempotency</h2>
+<h3>Idempotent Methods</h3>
+<p><strong>Safe + Idempotent</strong>: GET, HEAD, OPTIONS <strong>Idempotent (not safe)</strong>: PUT, DELETE</p>
+<p><strong>GET</strong>: Multiple requests return same data</p>
+<pre><code>GET /users/42       # Always returns same user (if unchanged)</code></pre>
+<p><strong>PUT</strong>: Multiple identical requests = same result</p>
+<pre><code>PUT /users/42
+{&quot;name&quot;: &quot;Alice&quot;}   # Setting name to &quot;Alice&quot; multiple times = same result</code></pre>
+<p><strong>DELETE</strong>: Multiple deletes = same result</p>
+<pre><code>DELETE /users/42    # First: 204 No Content
+DELETE /users/42    # Second: 404 Not Found (idempotent result)</code></pre>
+<h3>Non-Idempotent Methods</h3>
+<p><strong>POST</strong>: Multiple requests create multiple resources</p>
+<pre><code>POST /orders        # Creates new order each time
+POST /payments      # Processes payment each time (dangerous!)</code></pre>
+<p><strong>Making POST idempotent</strong> (idempotency keys):</p>
+<pre><code>POST /payments
+Idempotency-Key: abc123
+{&quot;amount&quot;: 100}
+
+# Second request with same key returns original response (no duplicate charge)
+POST /payments
+Idempotency-Key: abc123
+{&quot;amount&quot;: 100}     # Returns 200 OK with original payment (no new charge)</code></pre>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-python">def create_payment(request):
+    idempotency_key = request.headers.get(&#x27;Idempotency-Key&#x27;)
+
+    # Check if already processed
+    existing = db.query(&quot;SELECT * FROM payments WHERE idempotency_key = %s&quot;, [idempotency_key])
+    if existing:
+        return 200, existing  # Return original result
+
+    # Process new payment
+    payment = process_payment(request.body)
+    payment.idempotency_key = idempotency_key
+    db.save(payment)
+
+    return 201, payment</code></pre>
+<hr>
+<h2>REST Maturity Model (Richardson)</h2>
+<h3>Level 0: The Swamp of POX (Plain Old XML)</h3>
+<p><strong>Single endpoint, single method</strong>:</p>
+<pre><code>POST /api
+{&quot;method&quot;: &quot;getUser&quot;, &quot;id&quot;: 42}
+{&quot;method&quot;: &quot;createUser&quot;, &quot;data&quot;: {...}}</code></pre>
+<p>❌ Not RESTful</p>
+<h3>Level 1: Resources</h3>
+<p><strong>Multiple endpoints (resources)</strong>:</p>
+<pre><code>GET /users/42
+POST /users</code></pre>
+<p>✅ Resource-based, but not using HTTP methods correctly</p>
+<h3>Level 2: HTTP Verbs</h3>
+<p><strong>Proper use of HTTP methods</strong>:</p>
+<pre><code>GET    /users/42      # Retrieve
+POST   /users         # Create
+PUT    /users/42      # Update
+DELETE /users/42      # Delete</code></pre>
+<p>✅ RESTful, uses HTTP semantics</p>
+<h3>Level 3: Hypermedia (HATEOAS)</h3>
+<p><strong>Hypermedia As The Engine Of Application State</strong>:</p>
+<p>Responses include links to related resources:</p>
+<pre><code class="lang-json">GET /users/42
+
+{
+  &quot;id&quot;: 42,
+  &quot;name&quot;: &quot;Alice&quot;,
+  &quot;email&quot;: &quot;alice@example.com&quot;,
+  &quot;_links&quot;: {
+    &quot;self&quot;: {&quot;href&quot;: &quot;/users/42&quot;},
+    &quot;posts&quot;: {&quot;href&quot;: &quot;/users/42/posts&quot;},
+    &quot;followers&quot;: {&quot;href&quot;: &quot;/users/42/followers&quot;},
+    &quot;edit&quot;: {&quot;href&quot;: &quot;/users/42&quot;, &quot;method&quot;: &quot;PUT&quot;},
+    &quot;delete&quot;: {&quot;href&quot;: &quot;/users/42&quot;, &quot;method&quot;: &quot;DELETE&quot;}
+  }
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Self-documenting API</li><li>Clients discover actions dynamically</li><li>Server can change URLs without breaking clients</li></ul>
+<p><strong>Trade-offs</strong>:</p>
+<ul><li>Increased response size</li><li>More complex client implementation</li><li>Rarely fully implemented in practice</li></ul>
+<hr>
+<h2>Content Negotiation</h2>
+<h3>Request Content Type</h3>
+<p><strong>Client specifies format</strong>:</p>
+<pre><code>POST /users
+Content-Type: application/json
+
+{&quot;name&quot;: &quot;Alice&quot;}</code></pre>
+<p><strong>Server validates</strong>:</p>
+<pre><code>415 Unsupported Media Type (if Content-Type not supported)</code></pre>
+<h3>Response Content Type</h3>
+<p><strong>Client requests format</strong>:</p>
+<pre><code>GET /users/42
+Accept: application/json         # Request JSON</code></pre>
+<p><strong>Server responds</strong>:</p>
+<pre><code>HTTP/1.1 200 OK
+Content-Type: application/json
+
+{&quot;id&quot;: 42, &quot;name&quot;: &quot;Alice&quot;}</code></pre>
+<p><strong>Multiple formats supported</strong>:</p>
+<pre><code>GET /users/42
+Accept: application/xml          # Request XML
+
+HTTP/1.1 200 OK
+Content-Type: application/xml
+
+&lt;user&gt;&lt;id&gt;42&lt;/id&gt;&lt;name&gt;Alice&lt;/name&gt;&lt;/user&gt;</code></pre>
+<p><strong>Versioning via content type</strong>:</p>
+<pre><code>Accept: application/vnd.myapi.v2+json</code></pre>
+<hr>
+<h2>API Versioning Strategies</h2>
+<h3>URL Versioning (Most Common)</h3>
+<pre><code>GET /v1/users/42
+GET /v2/users/42</code></pre>
+<p><strong>Pros</strong>: Simple, explicit, easy to route <strong>Cons</strong>: URL pollution, hard to migrate</p>
+<h3>Header Versioning</h3>
+<pre><code>GET /users/42
+Accept: application/vnd.myapi.v2+json</code></pre>
+<p><strong>Pros</strong>: Clean URLs, RESTful <strong>Cons</strong>: Harder to test (can&#x27;t use browser directly)</p>
+<h3>Query Parameter Versioning</h3>
+<pre><code>GET /users/42?version=2</code></pre>
+<p><strong>Pros</strong>: Simple, easy to test <strong>Cons</strong>: Less RESTful, query params should be for filtering</p>
+<p><strong>Recommendation</strong>: URL versioning (<code>/v1/</code>, <code>/v2/</code>) for simplicity</p>
+<hr>
+<h2>HTTP Status Code Quick Reference</h2>
+<p>| Code | Name | Use Case | |------|------|----------| | <strong>200</strong> | OK | Successful GET, PUT, PATCH | | <strong>201</strong> | Created | Successful POST (resource created) | | <strong>204</strong> | No Content | Successful DELETE or PUT with no response | | <strong>400</strong> | Bad Request | Validation error, malformed request | | <strong>401</strong> | Unauthorized | Authentication required or failed | | <strong>403</strong> | Forbidden | Authenticated but not authorized | | <strong>404</strong> | Not Found | Resource doesn&#x27;t exist | | <strong>409</strong> | Conflict | Resource already exists, version conflict | | <strong>422</strong> | Unprocessable Entity | Valid syntax, semantic error | | <strong>429</strong> | Too Many Requests | Rate limit exceeded | | <strong>500</strong> | Internal Server Error | Unexpected server error | | <strong>502</strong> | Bad Gateway | Upstream service error | | <strong>503</strong> | Service Unavailable | Server under maintenance |</p>
+<hr>
+<h2>REST API Checklist</h2>
+<pre><code>Resource Modeling:
+[ ] Resources are nouns (not verbs)
+[ ] Plural nouns for collections (/users, /posts)
+[ ] Kebab-case for multi-word resources (/user-profiles)
+[ ] Hierarchical relationships (/users/:id/posts)
+
+HTTP Methods:
+[ ] GET for retrieval (safe, idempotent)
+[ ] POST for creation (non-idempotent)
+[ ] PUT for full replacement (idempotent)
+[ ] PATCH for partial updates
+[ ] DELETE for removal (idempotent)
+
+Status Codes:
+[ ] 200 for successful GET/PUT/PATCH
+[ ] 201 for successful POST (with Location header)
+[ ] 204 for successful DELETE
+[ ] 400 for validation errors
+[ ] 401 for authentication errors
+[ ] 403 for authorization errors
+[ ] 404 for not found
+[ ] 500 for server errors
+
+Idempotency:
+[ ] GET, PUT, DELETE are idempotent
+[ ] POST uses idempotency keys for critical operations
+[ ] PATCH operations are designed to be repeatable
+
+Response Format:
+[ ] Consistent error structure
+[ ] Pagination metadata for collections
+[ ] Timestamps in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)
+[ ] Snake_case or camelCase (consistent across API)
+
+Security:
+[ ] Authentication required for sensitive endpoints
+[ ] Authorization checks before operations
+[ ] Rate limiting implemented
+[ ] Input validation on all endpoints</code></pre>
+<hr>
+<h2>Common REST Anti-Patterns</h2>
+<p>❌ <strong>Verbs in URLs</strong>: <code>/getUser</code>, <code>/createPost</code> ✅ Use nouns + HTTP methods: <code>GET /users</code>, <code>POST /posts</code></p>
+<p>❌ <strong>Using GET for actions</strong>: <code>GET /users/42/delete</code> ✅ Use DELETE: <code>DELETE /users/42</code></p>
+<p>❌ <strong>Returning 200 for errors</strong>: <code>200 OK {&quot;error&quot;: &quot;User not found&quot;}</code> ✅ Use proper status codes: <code>404 Not Found {&quot;error&quot;: &quot;User not found&quot;}</code></p>
+<p>❌ <strong>Inconsistent naming</strong>: <code>/users</code>, <code>/post</code>, <code>/getComments</code> ✅ Consistent plural nouns: <code>/users</code>, <code>/posts</code>, <code>/comments</code></p>
+<p>❌ <strong>Deep nesting</strong>: <code>/orgs/:id/teams/:id/users/:id/posts/:id/comments/:id</code> ✅ Limit to 2-3 levels: <code>/posts/:id/comments</code> or <code>/comments?post_id=:id</code></p>
+<p>❌ <strong>Ignoring idempotency</strong>: <code>POST /payments</code> (no idempotency key) ✅ Implement idempotency: <code>Idempotency-Key</code> header</p>
+<p>❌ <strong>Exposing internal IDs</strong>: <code>/users/42</code> (auto-increment) ✅ Use UUIDs or obfuscated IDs: <code>/users/550e8400-e29b-41d4-a716-446655440000</code></p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>http-caching-strategies.md</code> - Cache headers, ETags, conditional requests</li><li><code>api-authentication.md</code> - JWT, OAuth2, API keys</li><li><code>api-rate-limiting.md</code> - Rate limiting strategies</li><li><code>graphql-vs-rest.md</code> - When to use GraphQL vs REST</li><li><code>openapi-documentation.md</code> - Documenting APIs with OpenAPI/Swagger</li></ul>
+<hr>
+<h2>Level 3: Resources</h2>
+<p>This skill includes comprehensive Level 3 resources in the <code>/resources/</code> directory:</p>
+<h3>Reference Material (<code>resources/REFERENCE.md</code>)</h3>
+<p>Comprehensive 1,800+ line reference covering:</p>
+<ul><li>REST principles (stateless, resource-based, uniform interface)</li><li>HTTP methods (GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD)</li><li>Status codes (proper usage for 2xx, 3xx, 4xx, 5xx)</li><li>URL design and resource naming</li><li>Request/response formats (JSON, content negotiation)</li><li>Pagination strategies (offset, cursor, page-based)</li><li>Filtering, sorting, and searching</li><li>Versioning strategies (URI, header, content negotiation)</li><li>Error handling and problem details (RFC 7807)</li><li>HATEOAS and hypermedia</li><li>Rate limiting and throttling</li><li>Caching (ETags, Cache-Control, conditional requests)</li><li>Authentication and authorization</li><li>CORS</li><li>API documentation (OpenAPI/Swagger)</li><li>Security best practices</li><li>Performance optimization</li><li>Testing strategies</li><li>Common patterns and anti-patterns</li></ul>
+<h3>Executable Scripts (<code>resources/scripts/</code>)</h3>
+<p><strong>validate_api.py</strong>:</p>
+<ul><li>Validate REST API design against best practices</li><li>Check resource naming conventions, HTTP method usage, status codes</li><li>Validate response format consistency, security headers, rate limiting</li><li>Support for OpenAPI specs and custom formats</li><li>JSON output for CI/CD integration</li></ul>
+<p><strong>generate_openapi.py</strong>:</p>
+<ul><li>Generate OpenAPI specs from Python (FastAPI, Flask) or JavaScript (Express) code</li><li>Convert Swagger 2.0 to OpenAPI 3.0</li><li>Generate client code (Python, JavaScript, TypeScript) from OpenAPI specs</li><li>Automatic endpoint detection and schema generation</li></ul>
+<p><strong>test_api.sh</strong>:</p>
+<ul><li>Test REST API endpoints with various scenarios</li><li>CRUD operations, error handling, authentication</li><li>Pagination, filtering, sorting, caching</li><li>Rate limiting, CORS, content negotiation</li><li>Save responses and generate JSON reports</li></ul>
+<h3>Complete Examples (<code>resources/examples/</code>)</h3>
+<p><strong>python/fastapi_rest.py</strong>:</p>
+<ul><li>Complete REST API with FastAPI</li><li>Resource-based endpoints, proper HTTP methods and status codes</li><li>Pagination, filtering, sorting</li><li>Authentication with Bearer tokens</li><li>Rate limiting, caching headers</li><li>Error handling with RFC 7807 format</li><li>Request validation with Pydantic</li></ul>
+<p><strong>node/express_rest.js</strong>:</p>
+<ul><li>Complete REST API with Express.js</li><li>Middleware for authentication, rate limiting, validation</li><li>Error handling and logging</li><li>Security headers with Helmet</li><li>Request ID tracking</li></ul>
+<p><strong>openapi/petstore.yaml</strong>:</p>
+<ul><li>Complete OpenAPI 3.0 specification</li><li>User management API example</li><li>Components, schemas, responses</li><li>Security schemes (Bearer auth)</li><li>Pagination, filtering, error responses</li></ul>
+<p><strong>typescript/api_client.ts</strong>:</p>
+<ul><li>Type-safe API client</li><li>Request/response interceptors</li><li>Retry logic and error handling</li><li>Caching with ETags</li><li>TypeScript interfaces for all models</li></ul>
+<p><strong>curl/test_requests.sh</strong>:</p>
+<ul><li>Comprehensive curl examples</li><li>CRUD operations, filtering, sorting, pagination</li><li>Error handling, authentication, conditional requests</li><li>CORS preflight, rate limiting, compression</li><li>Bulk operations and async patterns</li></ul>
+<h3>Usage</h3>
+<pre><code class="lang-bash"># Validate API design
+./resources/scripts/validate_api.py openapi.json --type spec --json
+
+# Generate OpenAPI from code
+./resources/scripts/generate_openapi.py from-code api.py --framework fastapi -o openapi.json
+
+# Test API endpoints
+./resources/scripts/test_api.sh --url https://api.example.com --api-key TOKEN --verbose
+
+# Run curl examples
+cd resources/examples/curl &amp;&amp; ./test_requests.sh
+
+# Run FastAPI example
+cd resources/examples/python &amp;&amp; python fastapi_rest.py
+
+# Run Express example
+cd resources/examples/node &amp;&amp; node express_rest.js</code></pre>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/api-rest-api-design.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distributed-systems-distributed-locks</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/distributed-systems-distributed-locks.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/distributed-systems-distributed-locks.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>distributed-systems-distributed-locks</h1><p class="lede">Distributed locking patterns including Redis Redlock, ZooKeeper locks, lease-based locking, and fencing tokens</p><h1>Distributed Locks</h1>
+<p><strong>Scope</strong>: Distributed mutual exclusion, Redlock, ZooKeeper locks, leases, fencing tokens <strong>Lines</strong>: ~230 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Coordinating distributed processes</li><li>Preventing concurrent resource access</li><li>Implementing leader election</li><li>Building job schedulers</li><li>Ensuring exactly-once processing</li><li>Understanding Redis, ZooKeeper patterns</li><li>Implementing critical sections</li><li>Handling distributed coordination</li></ul>
+<h2>Core Concepts</h2>
+<h3>Why Distributed Locks?</h3>
+<pre><code>Problem: Multiple processes accessing shared resource
+
+Process A ─┐
+           ├─→ Shared Resource (database, file, etc.)
+Process B ─┘
+
+Without lock: Race conditions, data corruption
+With lock: Only one process accesses at a time</code></pre>
+<h3>Properties</h3>
+<pre><code>Safety: At most one process holds lock
+Liveness: Eventually can acquire lock
+Deadlock-free: No circular waiting
+Fault tolerance: Works despite failures</code></pre>
+<hr>
+<h2>Lock Implementations</h2>
+<h3>1. Redis-based Lock (Simple)</h3>
+<pre><code class="lang-python">import redis
+import time
+import uuid
+
+class RedisLock:
+    &quot;&quot;&quot;Simple Redis-based distributed lock&quot;&quot;&quot;
+
+    def __init__(self, redis_client, lock_name, ttl=10):
+        self.redis = redis_client
+        self.lock_name = f&quot;lock:{lock_name}&quot;
+        self.ttl = ttl
+        self.token = str(uuid.uuid4())
+
+    def acquire(self, blocking=True, timeout=None):
+        &quot;&quot;&quot;Acquire lock&quot;&quot;&quot;
+        start_time = time.time()
+
+        while True:
+            # SET if not exists with expiration
+            acquired = self.redis.set(
+                self.lock_name,
+                self.token,
+                nx=True,  # Only set if not exists
+                ex=self.ttl  # Expire after TTL
+            )
+
+            if acquired:
+                return True
+
+            if not blocking:
+                return False
+
+            if timeout and (time.time() - start_time) &gt; timeout:
+                return False
+
+            time.sleep(0.01)
+
+    def release(self):
+        &quot;&quot;&quot;Release lock (only if we own it)&quot;&quot;&quot;
+        # Lua script for atomic check-and-delete
+        lua_script = &quot;&quot;&quot;
+        if redis.call(&quot;get&quot;, KEYS[1]) == ARGV[1] then
+            return redis.call(&quot;del&quot;, KEYS[1])
+        else
+            return 0
+        end
+        &quot;&quot;&quot;
+
+        self.redis.eval(lua_script, 1, self.lock_name, self.token)
+
+# Usage
+redis_client = redis.Redis()
+lock = RedisLock(redis_client, &quot;my_resource&quot;)
+
+if lock.acquire(timeout=5):
+    try:
+        # Critical section
+        process_resource()
+    finally:
+        lock.release()</code></pre>
+<h3>2. Redlock Algorithm (Multi-Redis)</h3>
+<pre><code class="lang-python">import redis
+import time
+
+class Redlock:
+    &quot;&quot;&quot;Redlock algorithm across multiple Redis instances&quot;&quot;&quot;
+
+    def __init__(self, redis_instances):
+        self.redis_instances = redis_instances
+        self.quorum = len(redis_instances) // 2 + 1
+
+    def acquire(self, resource, ttl=10000):
+        &quot;&quot;&quot;Acquire lock on majority of instances&quot;&quot;&quot;
+        token = str(uuid.uuid4())
+        start_time = time.time()
+
+        # Try to acquire on all instances
+        acquired_count = 0
+        for redis_client in self.redis_instances:
+            try:
+                if redis_client.set(f&quot;lock:{resource}&quot;, token, nx=True, px=ttl):
+                    acquired_count += 1
+            except:
+                pass
+
+        elapsed = (time.time() - start_time) * 1000  # ms
+
+        # Check if acquired on majority and within validity time
+        validity_time = ttl - elapsed - 100  # drift
+
+        if acquired_count &gt;= self.quorum and validity_time &gt; 0:
+            return token, validity_time
+
+        # Failed - release locks
+        self.release(resource, token)
+        return None, 0
+
+    def release(self, resource, token):
+        &quot;&quot;&quot;Release lock on all instances&quot;&quot;&quot;
+        for redis_client in self.redis_instances:
+            try:
+                lua = &quot;&quot;&quot;
+                if redis.call(&quot;get&quot;, KEYS[1]) == ARGV[1] then
+                    return redis.call(&quot;del&quot;, KEYS[1])
+                end
+                &quot;&quot;&quot;
+                redis_client.eval(lua, 1, f&quot;lock:{resource}&quot;, token)
+            except:
+                pass</code></pre>
+<h3>3. ZooKeeper Lock</h3>
+<pre><code class="lang-python">from kazoo.client import KazooClient
+from kazoo.recipe.lock import Lock
+
+class ZooKeeperLock:
+    &quot;&quot;&quot;Distributed lock using ZooKeeper&quot;&quot;&quot;
+
+    def __init__(self, zk_hosts, lock_path):
+        self.zk = KazooClient(hosts=zk_hosts)
+        self.zk.start()
+        self.lock = Lock(self.zk, lock_path)
+
+    def acquire(self, blocking=True, timeout=None):
+        &quot;&quot;&quot;Acquire lock&quot;&quot;&quot;
+        return self.lock.acquire(blocking=blocking, timeout=timeout)
+
+    def release(self):
+        &quot;&quot;&quot;Release lock&quot;&quot;&quot;
+        self.lock.release()
+
+# Usage
+zk_lock = ZooKeeperLock(&quot;localhost:2181&quot;, &quot;/locks/my_resource&quot;)
+
+with zk_lock:
+    # Critical section
+    process_resource()</code></pre>
+<hr>
+<h2>Fencing Tokens</h2>
+<h3>Problem: Lock Timeout</h3>
+<pre><code>Client A acquires lock
+Client A pauses (GC, network delay)
+Lock expires
+Client B acquires lock
+Client A resumes, thinks it still has lock!</code></pre>
+<h3>Solution: Fencing Tokens</h3>
+<pre><code class="lang-python">class FencedLock:
+    &quot;&quot;&quot;Lock with monotonically increasing fencing token&quot;&quot;&quot;
+
+    def __init__(self):
+        self.current_token = 0
+        self.lock_holder = None
+
+    def acquire(self, client_id):
+        &quot;&quot;&quot;Acquire lock with fencing token&quot;&quot;&quot;
+        if self.lock_holder is None:
+            self.current_token += 1
+            self.lock_holder = (client_id, self.current_token)
+            return self.current_token
+
+        return None
+
+    def release(self, client_id, token):
+        &quot;&quot;&quot;Release lock if token matches&quot;&quot;&quot;
+        if self.lock_holder and self.lock_holder == (client_id, token):
+            self.lock_holder = None
+            return True
+
+        return False
+
+# Resource checks fencing token
+class FencedResource:
+    &quot;&quot;&quot;Resource that validates fencing tokens&quot;&quot;&quot;
+
+    def __init__(self):
+        self.highest_token_seen = 0
+
+    def write(self, data, fencing_token):
+        &quot;&quot;&quot;Write only if token is higher than any seen&quot;&quot;&quot;
+        if fencing_token &gt; self.highest_token_seen:
+            self.highest_token_seen = fencing_token
+            self._do_write(data)
+        else:
+            raise FencingTokenError(&quot;Stale token&quot;)</code></pre>
+<hr>
+<h2>Lease-Based Locking</h2>
+<pre><code class="lang-python">import time
+
+class LeaseLock:
+    &quot;&quot;&quot;Lock with lease (time-based ownership)&quot;&quot;&quot;
+
+    def __init__(self, ttl=10):
+        self.ttl = ttl
+        self.lease_end = 0
+        self.holder = None
+
+    def acquire(self, client_id):
+        &quot;&quot;&quot;Acquire lease&quot;&quot;&quot;
+        now = time.time()
+
+        # Check if current lease expired
+        if now &gt; self.lease_end:
+            self.holder = client_id
+            self.lease_end = now + self.ttl
+            return True
+
+        return False
+
+    def renew(self, client_id):
+        &quot;&quot;&quot;Renew lease (keep-alive)&quot;&quot;&quot;
+        now = time.time()
+
+        if self.holder == client_id and now &lt;= self.lease_end:
+            self.lease_end = now + self.ttl
+            return True
+
+        return False
+
+    def release(self, client_id):
+        &quot;&quot;&quot;Explicitly release lease&quot;&quot;&quot;
+        if self.holder == client_id:
+            self.lease_end = 0
+            self.holder = None
+            return True
+
+        return False
+
+# Client with keep-alive
+class LeaseClient:
+    def __init__(self, lock, client_id):
+        self.lock = lock
+        self.client_id = client_id
+        self.keep_alive_thread = None
+
+    def acquire_with_keepalive(self):
+        &quot;&quot;&quot;Acquire and automatically renew&quot;&quot;&quot;
+        if self.lock.acquire(self.client_id):
+            self._start_keepalive()
+            return True
+
+        return False
+
+    def _start_keepalive(self):
+        &quot;&quot;&quot;Background thread to renew lease&quot;&quot;&quot;
+        def renew_loop():
+            while True:
+                time.sleep(self.lock.ttl / 2)
+                if not self.lock.renew(self.client_id):
+                    break
+
+        self.keep_alive_thread = threading.Thread(target=renew_loop, daemon=True)
+        self.keep_alive_thread.start()</code></pre>
+<hr>
+<h2>Best Practices</h2>
+<h3>1. Always Use Timeouts</h3>
+<pre><code class="lang-python"># ✅ Good: Timeout to prevent deadlock
+if lock.acquire(timeout=30):
+    try:
+        work()
+    finally:
+        lock.release()
+
+# ❌ Bad: Infinite wait
+lock.acquire()  # Could hang forever</code></pre>
+<h3>2. Use Try-Finally</h3>
+<pre><code class="lang-python"># ✅ Good: Always release
+try:
+    lock.acquire()
+    work()
+finally:
+    lock.release()
+
+# ❌ Bad: Exception leaves lock held
+lock.acquire()
+work()  # Exception → lock never released!
+lock.release()</code></pre>
+<h3>3. Set Appropriate TTL</h3>
+<pre><code class="lang-python"># ✅ Good: TTL longer than max work time
+lock = RedisLock(redis_client, &quot;resource&quot;, ttl=60)  # 60s for 30s job
+
+# ❌ Bad: TTL too short
+lock = RedisLock(redis_client, &quot;resource&quot;, ttl=1)  # Expires during work!</code></pre>
+<hr>
+<h2>When NOT to Use Locks</h2>
+<pre><code>❌ Don&#x27;t use locks when:
+- CRDTs or conflict-free operations possible
+- Optimistic concurrency control sufficient
+- Idempotent operations
+- Performance critical path
+
+✅ Do use locks when:
+- True mutual exclusion required
+- Coordination needed
+- Non-idempotent operations
+- Simplifies application logic</code></pre>
+<hr>
+<h2>Real-World Examples</h2>
+<h3>etcd Lock</h3>
+<pre><code class="lang-python">import etcd3
+
+etcd = etcd3.client()
+
+with etcd.lock(&#x27;my-lock&#x27;, ttl=60):
+    # Critical section
+    process_resource()</code></pre>
+<h3>Consul Lock</h3>
+<pre><code class="lang-python">import consul
+
+c = consul.Consul()
+
+session = c.session.create(ttl=60)
+
+if c.kv.put(&#x27;locks/my-resource&#x27;, &#x27;holder&#x27;, acquire=session):
+    try:
+        # Critical section
+        process_resource()
+    finally:
+        c.kv.put(&#x27;locks/my-resource&#x27;, &#x27;&#x27;, release=session)</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>distributed-systems-leader-election</code> - Leader election patterns</li><li><code>distributed-systems-consensus-raft</code> - Consensus algorithms</li><li><code>distributed-systems-eventual-consistency</code> - Consistency models</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/distributed-systems-distributed-locks.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

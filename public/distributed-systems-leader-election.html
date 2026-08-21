@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distributed-systems-leader-election</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/distributed-systems-leader-election.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/distributed-systems-leader-election.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>distributed-systems-leader-election</h1><p class="lede">Leader election algorithms including bully algorithm, ring algorithm, and consensus-based election with RAFT/Paxos</p><h1>Leader Election</h1>
+<p><strong>Scope</strong>: Leader election algorithms, bully, ring, consensus-based, practical implementations <strong>Lines</strong>: ~220 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Coordinating distributed services</li><li>Implementing active-passive failover</li><li>Building distributed databases</li><li>Managing cluster coordination</li><li>Implementing job schedulers</li><li>Understanding etcd, ZooKeeper patterns</li><li>Handling failover scenarios</li><li>Building high-availability systems</li></ul>
+<h2>Core Concepts</h2>
+<h3>Why Leader Election?</h3>
+<pre><code>Problem: Who coordinates distributed operations?
+
+Solutions requiring leader:
+- Single point for writes (primary-backup)
+- Job scheduling (avoid duplicate work)
+- Configuration management
+- Distributed transactions coordination</code></pre>
+<h3>Properties</h3>
+<pre><code>Safety: At most one leader at a time
+Liveness: Eventually elects leader
+Termination: Election completes in finite time</code></pre>
+<hr>
+<h2>Election Algorithms</h2>
+<h3>1. Bully Algorithm</h3>
+<p><strong>Approach</strong>: Highest ID becomes leader</p>
+<pre><code class="lang-python">import time
+import threading
+
+class BullyElection:
+    &quot;&quot;&quot;Bully algorithm for leader election&quot;&quot;&quot;
+
+    def __init__(self, node_id, all_nodes):
+        self.node_id = node_id
+        self.all_nodes = sorted(all_nodes)
+        self.leader = None
+        self.is_leader = False
+
+    def start_election(self):
+        &quot;&quot;&quot;Initiate election&quot;&quot;&quot;
+        print(f&quot;Node {self.node_id} starting election&quot;)
+
+        # Send ELECTION message to higher IDs
+        higher_nodes = [n for n in self.all_nodes if n &gt; self.node_id]
+
+        if not higher_nodes:
+            # No higher nodes - I&#x27;m the leader
+            self.become_leader()
+            return
+
+        # Wait for responses from higher nodes
+        responses = []
+        for node in higher_nodes:
+            response = self.send_election_message(node)
+            if response:
+                responses.append(node)
+
+        if responses:
+            # Higher node responded - they&#x27;ll handle election
+            pass
+        else:
+            # No higher nodes responded - I&#x27;m the leader
+            self.become_leader()
+
+    def become_leader(self):
+        &quot;&quot;&quot;Declare self as leader&quot;&quot;&quot;
+        self.is_leader = True
+        self.leader = self.node_id
+        print(f&quot;Node {self.node_id} is now LEADER&quot;)
+
+        # Broadcast COORDINATOR message to all lower nodes
+        for node in self.all_nodes:
+            if node &lt; self.node_id:
+                self.send_coordinator_message(node)
+
+    def on_election_message(self, sender_id):
+        &quot;&quot;&quot;Handle ELECTION message from lower node&quot;&quot;&quot;
+        if sender_id &lt; self.node_id:
+            # Respond OK and start own election
+            self.start_election()
+            return &quot;OK&quot;
+
+        return None
+
+    def on_coordinator_message(self, leader_id):
+        &quot;&quot;&quot;Handle COORDINATOR message&quot;&quot;&quot;
+        self.leader = leader_id
+        self.is_leader = False
+        print(f&quot;Node {self.node_id} acknowledges {leader_id} as leader&quot;)
+
+# Simulation
+nodes = [BullyElection(i, [1, 2, 3, 4, 5]) for i in range(1, 6)]
+
+# Node 3 starts election
+nodes[2].start_election()  # Node 5 becomes leader
+
+# Node 5 crashes, Node 4 detects and starts election
+nodes[3].start_election()  # Node 4 becomes leader</code></pre>
+<p><strong>Pros</strong>: Simple, eventually elects highest ID <strong>Cons</strong>: Many messages, not fault-tolerant during election</p>
+<h3>2. Ring Algorithm</h3>
+<p><strong>Approach</strong>: Pass election message around ring</p>
+<pre><code class="lang-python">class RingElection:
+    &quot;&quot;&quot;Ring-based leader election&quot;&quot;&quot;
+
+    def __init__(self, node_id, next_node):
+        self.node_id = node_id
+        self.next_node = next_node  # Next node in ring
+        self.leader = None
+        self.participating = False
+
+    def start_election(self):
+        &quot;&quot;&quot;Start election by sending message with own ID&quot;&quot;&quot;
+        self.participating = True
+        self.send_election_message([self.node_id])
+
+    def on_election_message(self, id_list):
+        &quot;&quot;&quot;Handle election message&quot;&quot;&quot;
+        if self.node_id in id_list:
+            # Message completed circle - elect leader
+            leader_id = max(id_list)
+            self.announce_leader(leader_id)
+        else:
+            # Add self and forward
+            id_list.append(self.node_id)
+            self.send_election_message(id_list)
+
+    def announce_leader(self, leader_id):
+        &quot;&quot;&quot;Announce elected leader&quot;&quot;&quot;
+        self.leader = leader_id
+        self.send_coordinator_message(leader_id)
+
+    def on_coordinator_message(self, leader_id):
+        &quot;&quot;&quot;Acknowledge leader&quot;&quot;&quot;
+        self.leader = leader_id
+
+        # Forward if not completed circle
+        if not self.participating:
+            self.send_coordinator_message(leader_id)
+        else:
+            self.participating = False</code></pre>
+<p><strong>Pros</strong>: Fewer messages than bully <strong>Cons</strong>: Slow if ring is large, depends on ring structure</p>
+<h3>3. Consensus-Based (RAFT, ZooKeeper)</h3>
+<pre><code class="lang-python"># Using etcd (RAFT-based)
+import etcd3
+import time
+
+class ConsensusLeaderElection:
+    &quot;&quot;&quot;Leader election using etcd&quot;&quot;&quot;
+
+    def __init__(self, node_id):
+        self.node_id = node_id
+        self.etcd = etcd3.client()
+        self.lease = None
+        self.is_leader = False
+
+    def campaign(self):
+        &quot;&quot;&quot;Attempt to become leader&quot;&quot;&quot;
+        # Create lease
+        self.lease = self.etcd.lease(ttl=60)
+
+        # Try to create leader key with our ID
+        success, _ = self.etcd.transaction(
+            compare=[
+                self.etcd.transactions.version(&#x27;/leader&#x27;) == 0
+            ],
+            success=[
+                self.etcd.transactions.put(&#x27;/leader&#x27;, self.node_id, lease=self.lease)
+            ],
+            failure=[]
+        )
+
+        if success:
+            self.is_leader = True
+            self._start_keepalive()
+            return True
+
+        return False
+
+    def _start_keepalive(self):
+        &quot;&quot;&quot;Keep lease alive&quot;&quot;&quot;
+        def keepalive_loop():
+            while self.is_leader:
+                self.lease.refresh()
+                time.sleep(20)
+
+        threading.Thread(target=keepalive_loop, daemon=True).start()
+
+    def resign(self):
+        &quot;&quot;&quot;Resign from leadership&quot;&quot;&quot;
+        if self.is_leader and self.lease:
+            self.lease.revoke()
+            self.is_leader = False
+
+    def watch_leader(self, callback):
+        &quot;&quot;&quot;Watch for leader changes&quot;&quot;&quot;
+        watch_id = self.etcd.add_watch_callback(&#x27;/leader&#x27;, callback)
+        return watch_id
+
+# Usage
+election = ConsensusLeaderElection(&#x27;node1&#x27;)
+
+if election.campaign():
+    print(&quot;I am the leader!&quot;)
+    try:
+        # Do leader work
+        while True:
+            lead()
+            time.sleep(1)
+    except KeyboardInterrupt:
+        election.resign()
+else:
+    # Watch for leader changes
+    election.watch_leader(lambda event: print(f&quot;New leader: {event.value}&quot;))</code></pre>
+<hr>
+<h2>Split-Brain Prevention</h2>
+<h3>Problem</h3>
+<pre><code>Network partition:
+[Node A] | [Node B, C]
+
+Both sides elect leader → Two leaders!</code></pre>
+<h3>Solution: Quorum</h3>
+<pre><code class="lang-python">class QuorumElection:
+    &quot;&quot;&quot;Elect leader only with majority quorum&quot;&quot;&quot;
+
+    def __init__(self, node_id, all_nodes):
+        self.node_id = node_id
+        self.all_nodes = all_nodes
+        self.quorum_size = len(all_nodes) // 2 + 1
+
+    def campaign(self):
+        &quot;&quot;&quot;Campaign with quorum requirement&quot;&quot;&quot;
+        votes = {self.node_id}  # Vote for self
+
+        # Request votes from others
+        for node in self.all_nodes:
+            if node != self.node_id:
+                if self.request_vote(node):
+                    votes.add(node)
+
+        # Become leader only if quorum
+        if len(votes) &gt;= self.quorum_size:
+            self.become_leader()
+            return True
+
+        return False
+
+# Guarantees at most one leader per term</code></pre>
+<hr>
+<h2>Practical Patterns</h2>
+<h3>Pattern 1: Active-Passive Failover</h3>
+<pre><code class="lang-python">class ActivePassiveService:
+    &quot;&quot;&quot;Service with leader election&quot;&quot;&quot;
+
+    def __init__(self, node_id):
+        self.node_id = node_id
+        self.election = ConsensusLeaderElection(node_id)
+
+    def run(self):
+        &quot;&quot;&quot;Run service with leadership&quot;&quot;&quot;
+        while True:
+            if self.election.campaign():
+                # I&#x27;m the leader - do active work
+                self.do_leader_work()
+            else:
+                # I&#x27;m a follower - standby
+                self.do_follower_work()
+
+    def do_leader_work(self):
+        &quot;&quot;&quot;Active work (only leader)&quot;&quot;&quot;
+        while self.election.is_leader:
+            process_jobs()
+            time.sleep(1)
+
+    def do_follower_work(self):
+        &quot;&quot;&quot;Passive work (followers)&quot;&quot;&quot;
+        time.sleep(5)  # Wait for potential leadership</code></pre>
+<h3>Pattern 2: Distributed Cron</h3>
+<pre><code class="lang-python">class DistributedCron:
+    &quot;&quot;&quot;Only leader executes scheduled jobs&quot;&quot;&quot;
+
+    def __init__(self, node_id, schedule):
+        self.election = ConsensusLeaderElection(node_id)
+        self.schedule = schedule
+
+    def run(self):
+        while True:
+            if self.election.is_leader:
+                for job in self.schedule.due_jobs():
+                    self.execute(job)
+
+            time.sleep(1)
+
+    def execute(self, job):
+        &quot;&quot;&quot;Execute job (leader only)&quot;&quot;&quot;
+        print(f&quot;Leader executing: {job}&quot;)
+        job.run()</code></pre>
+<hr>
+<h2>Best Practices</h2>
+<h3>1. Use Fencing Tokens</h3>
+<pre><code class="lang-python"># Leader includes generation/term number
+class FencedLeader:
+    def __init__(self):
+        self.generation = 0
+
+    def become_leader(self):
+        self.generation += 1
+        return self.generation
+
+    def perform_action(self, action, generation):
+        &quot;&quot;&quot;Resource validates generation&quot;&quot;&quot;
+        if generation &lt; self.last_generation:
+            raise StaleLeaderError()</code></pre>
+<h3>2. Handle Leadership Loss</h3>
+<pre><code class="lang-python">class GracefulLeader:
+    def do_leader_work(self):
+        while self.is_leader:
+            try:
+                work()
+            except LeadershipLostError:
+                self.cleanup()
+                break</code></pre>
+<h3>3. Lease-Based Leadership</h3>
+<pre><code class="lang-python"># Lease expires if leader crashes
+# Prevents indefinite wait for crashed leader</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>distributed-systems-consensus-raft</code> - RAFT consensus</li><li><code>distributed-systems-distributed-locks</code> - Distributed locking</li><li><code>distributed-systems-eventual-consistency</code> - Consistency models</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/distributed-systems-leader-election.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

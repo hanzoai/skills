@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>proxies-forward-proxy</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/proxies-forward-proxy.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/proxies-forward-proxy.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>proxies-forward-proxy</h1><p class="lede">Forward proxy fundamentals including HTTP CONNECT, SOCKS protocols, authentication, and use cases for privacy, security, and access control</p><h1>Forward Proxy</h1>
+<p><strong>Scope</strong>: Forward proxy concepts, HTTP CONNECT method, SOCKS protocol, use cases <strong>Lines</strong>: ~350 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Implementing client-side proxy functionality</li><li>Building corporate network access control</li><li>Adding privacy/anonymity layers</li><li>Debugging proxy connection issues</li><li>Configuring applications to use proxies</li><li>Implementing HTTP CONNECT tunneling</li><li>Working with SOCKS4/SOCKS5 protocols</li><li>Setting up proxy authentication</li></ul>
+<h2>Core Concepts</h2>
+<h3>Forward Proxy vs Reverse Proxy</h3>
+<p><strong>Forward Proxy</strong> (this skill):</p>
+<pre><code>Client → Forward Proxy → Internet → Server
+         [client&#x27;s agent]</code></pre>
+<ul><li>Acts on behalf of clients</li><li>Clients explicitly configure proxy</li><li>Used for: access control, caching, anonymity</li><li>Examples: Corporate proxies, Squid, proxy.py</li></ul>
+<p><strong>Reverse Proxy</strong> (see <code>proxies-reverse-proxy</code>):</p>
+<pre><code>Client → Internet → Reverse Proxy → Backend Servers
+                    [server&#x27;s agent]</code></pre>
+<ul><li>Acts on behalf of servers</li><li>Clients unaware of proxy</li><li>Used for: load balancing, SSL termination, caching</li></ul>
+<h3>HTTP CONNECT Method</h3>
+<p><strong>Purpose</strong>: Tunnel TCP connections through HTTP proxy</p>
+<pre><code class="lang-http">CONNECT example.com:443 HTTP/1.1
+Host: example.com:443
+Proxy-Authorization: Basic dXNlcjpwYXNz
+
+HTTP/1.1 200 Connection Established
+
+[TLS handshake begins]
+[Encrypted data flows]</code></pre>
+<p><strong>Use Cases</strong>:</p>
+<ul><li>HTTPS through HTTP proxy</li><li>WebSocket connections</li><li>SSH tunneling</li><li>Any TCP-based protocol</li></ul>
+<h3>SOCKS Protocol</h3>
+<p><strong>SOCKS4</strong> (older, IPv4 only):</p>
+<pre><code>1. Client → SOCKS: Connect request
+2. SOCKS → Server: TCP connection
+3. SOCKS → Client: Success/Failure
+4. Data flows transparently</code></pre>
+<p><strong>SOCKS5</strong> (modern, recommended):</p>
+<ul><li>IPv6 support</li><li>UDP support</li><li>Authentication methods</li><li>DNS resolution at proxy</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: HTTP Proxy with Authentication</h3>
+<p><strong>Use Case</strong>: Corporate proxy requiring credentials</p>
+<pre><code class="lang-python"># ❌ Bad: Credentials in URL
+import requests
+
+response = requests.get(
+    &#x27;http://api.example.com/data&#x27;,
+    proxies={
+        &#x27;http&#x27;: &#x27;http://user:pass@proxy.corp.com:8080&#x27;,
+        &#x27;https&#x27;: &#x27;http://user:pass@proxy.corp.com:8080&#x27;
+    }
+)</code></pre>
+<pre><code class="lang-python"># ✅ Good: Secure credential handling
+import requests
+import os
+
+proxies = {
+    &#x27;http&#x27;: f&#x27;http://{os.environ[&quot;PROXY_HOST&quot;]}:{os.environ[&quot;PROXY_PORT&quot;]}&#x27;,
+    &#x27;https&#x27;: f&#x27;http://{os.environ[&quot;PROXY_HOST&quot;]}:{os.environ[&quot;PROXY_PORT&quot;]}&#x27;
+}
+
+auth = (os.environ[&#x27;PROXY_USER&#x27;], os.environ[&#x27;PROXY_PASS&#x27;])
+
+response = requests.get(
+    &#x27;http://api.example.com/data&#x27;,
+    proxies=proxies,
+    auth=auth
+)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Credentials not in code/version control</li><li>Centralized credential management</li><li>Easier credential rotation</li></ul>
+<h3>Pattern 2: SOCKS5 with DNS Resolution</h3>
+<p><strong>Use Case</strong>: Route all traffic through SOCKS proxy</p>
+<pre><code class="lang-python"># ❌ Bad: DNS leaks
+import requests
+
+proxies = {
+    &#x27;http&#x27;: &#x27;socks5://localhost:1080&#x27;,
+    &#x27;https&#x27;: &#x27;socks5://localhost:1080&#x27;
+}
+
+response = requests.get(&#x27;http://api.example.com/data&#x27;, proxies=proxies)
+# DNS resolution happens locally, leaking information</code></pre>
+<pre><code class="lang-python"># ✅ Good: DNS through SOCKS proxy
+import requests
+
+proxies = {
+    &#x27;http&#x27;: &#x27;socks5h://localhost:1080&#x27;,  # &#x27;h&#x27; = DNS through proxy
+    &#x27;https&#x27;: &#x27;socks5h://localhost:1080&#x27;
+}
+
+response = requests.get(&#x27;http://api.example.com/data&#x27;, proxies=proxies)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>No DNS leaks</li><li>True anonymity</li><li>Bypass DNS-based blocks</li></ul>
+<hr>
+<h2>Implementation Examples</h2>
+<h3>Python HTTP Forward Proxy Server</h3>
+<pre><code class="lang-python">import socket
+import threading
+from typing import Tuple
+
+class ForwardProxy:
+    def __init__(self, host: str = &#x27;0.0.0.0&#x27;, port: int = 8888):
+        self.host = host
+        self.port = port
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    def start(self):
+        self.server.bind((self.host, self.port))
+        self.server.listen(100)
+        print(f&quot;[*] Proxy listening on {self.host}:{self.port}&quot;)
+
+        while True:
+            client_socket, addr = self.server.accept()
+            print(f&quot;[*] Connection from {addr}&quot;)
+            thread = threading.Thread(target=self.handle_client, args=(client_socket,))
+            thread.daemon = True
+            thread.start()
+
+    def handle_client(self, client_socket: socket.socket):
+        try:
+            request = client_socket.recv(4096)
+
+            # Parse request line
+            first_line = request.split(b&#x27;\r\n&#x27;)[0]
+            method, url, version = first_line.split(b&#x27; &#x27;)
+
+            if method == b&#x27;CONNECT&#x27;:
+                self.handle_connect(client_socket, url)
+            else:
+                self.handle_http(client_socket, request, url)
+        except Exception as e:
+            print(f&quot;[!] Error: {e}&quot;)
+        finally:
+            client_socket.close()
+
+    def handle_connect(self, client_socket: socket.socket, url: bytes):
+        &quot;&quot;&quot;Handle HTTPS CONNECT tunnel&quot;&quot;&quot;
+        host, port = url.decode().split(&#x27;:&#x27;)
+
+        try:
+            # Connect to target
+            remote = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            remote.connect((host, int(port)))
+
+            # Send success response
+            client_socket.send(b&#x27;HTTP/1.1 200 Connection Established\r\n\r\n&#x27;)
+
+            # Bidirectional forwarding
+            client_socket.setblocking(False)
+            remote.setblocking(False)
+
+            while True:
+                # Client → Server
+                try:
+                    data = client_socket.recv(4096)
+                    if data:
+                        remote.sendall(data)
+                except BlockingIOError:
+                    pass
+
+                # Server → Client
+                try:
+                    data = remote.recv(4096)
+                    if data:
+                        client_socket.sendall(data)
+                except BlockingIOError:
+                    pass
+        except Exception as e:
+            print(f&quot;[!] CONNECT error: {e}&quot;)
+            client_socket.send(b&#x27;HTTP/1.1 502 Bad Gateway\r\n\r\n&#x27;)
+
+    def handle_http(self, client_socket: socket.socket, request: bytes, url: bytes):
+        &quot;&quot;&quot;Handle plain HTTP requests&quot;&quot;&quot;
+        try:
+            # Extract host and path
+            host_line = [l for l in request.split(b&#x27;\r\n&#x27;) if l.startswith(b&#x27;Host:&#x27;)][0]
+            host = host_line.split(b&#x27;: &#x27;)[1].decode()
+
+            # Connect to target
+            remote = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            remote.connect((host, 80))
+
+            # Forward request
+            remote.sendall(request)
+
+            # Forward response
+            while True:
+                data = remote.recv(4096)
+                if not data:
+                    break
+                client_socket.sendall(data)
+
+            remote.close()
+        except Exception as e:
+            print(f&quot;[!] HTTP error: {e}&quot;)
+
+if __name__ == &#x27;__main__&#x27;:
+    proxy = ForwardProxy(port=8888)
+    proxy.start()</code></pre>
+<h3>Go SOCKS5 Proxy Client</h3>
+<pre><code class="lang-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;golang.org/x/net/proxy&quot;
+    &quot;io&quot;
+    &quot;net&quot;
+    &quot;net/http&quot;
+    &quot;time&quot;
+)
+
+func main() {
+    // Create SOCKS5 dialer
+    dialer, err := proxy.SOCKS5(&quot;tcp&quot;, &quot;localhost:1080&quot;,
+        &amp;proxy.Auth{
+            User:     &quot;username&quot;,
+            Password: &quot;password&quot;,
+        },
+        proxy.Direct,
+    )
+    if err != nil {
+        panic(err)
+    }
+
+    // Use SOCKS5 for HTTP client
+    httpTransport := &amp;http.Transport{
+        Dial: dialer.Dial,
+    }
+
+    httpClient := &amp;http.Client{
+        Transport: httpTransport,
+        Timeout:   10 * time.Second,
+    }
+
+    // Make request through SOCKS5
+    resp, err := httpClient.Get(&quot;https://api.example.com/data&quot;)
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+
+    body, _ := io.ReadAll(resp.Body)
+    fmt.Printf(&quot;Response: %s\n&quot;, body)
+}
+
+// Direct TCP connection through SOCKS5
+func tcpThroughSocks5() {
+    dialer, _ := proxy.SOCKS5(&quot;tcp&quot;, &quot;localhost:1080&quot;, nil, proxy.Direct)
+
+    conn, err := dialer.Dial(&quot;tcp&quot;, &quot;example.com:80&quot;)
+    if err != nil {
+        panic(err)
+    }
+    defer conn.Close()
+
+    // Use connection
+    conn.Write([]byte(&quot;GET / HTTP/1.1\r\nHost: example.com\r\n\r\n&quot;))
+
+    buffer := make([]byte, 4096)
+    n, _ := conn.Read(buffer)
+    fmt.Printf(&quot;Response: %s\n&quot;, buffer[:n])
+}</code></pre>
+<h3>JavaScript/TypeScript Proxy Configuration</h3>
+<pre><code class="lang-typescript">// Node.js HTTP request through proxy
+import https from &#x27;https&#x27;;
+import { HttpsProxyAgent } from &#x27;https-proxy-agent&#x27;;
+
+const proxyAgent = new HttpsProxyAgent({
+  host: &#x27;proxy.example.com&#x27;,
+  port: 8080,
+  auth: &#x27;user:password&#x27;
+});
+
+const options = {
+  hostname: &#x27;api.example.com&#x27;,
+  path: &#x27;/data&#x27;,
+  method: &#x27;GET&#x27;,
+  agent: proxyAgent
+};
+
+const req = https.request(options, (res) =&gt; {
+  let data = &#x27;&#x27;;
+
+  res.on(&#x27;data&#x27;, (chunk) =&gt; {
+    data += chunk;
+  });
+
+  res.on(&#x27;end&#x27;, () =&gt; {
+    console.log(&#x27;Response:&#x27;, data);
+  });
+});
+
+req.on(&#x27;error&#x27;, (error) =&gt; {
+  console.error(&#x27;Error:&#x27;, error);
+});
+
+req.end();</code></pre>
+<pre><code class="lang-typescript">// Axios with proxy
+import axios from &#x27;axios&#x27;;
+
+const response = await axios.get(&#x27;https://api.example.com/data&#x27;, {
+  proxy: {
+    protocol: &#x27;http&#x27;,
+    host: &#x27;proxy.example.com&#x27;,
+    port: 8080,
+    auth: {
+      username: process.env.PROXY_USER!,
+      password: process.env.PROXY_PASS!
+    }
+  }
+});
+
+console.log(response.data);</code></pre>
+<hr>
+<h2>Configuration Examples</h2>
+<h3>System-Wide Proxy (Linux/macOS)</h3>
+<pre><code class="lang-bash"># Environment variables
+export http_proxy=&quot;http://proxy.example.com:8080&quot;
+export https_proxy=&quot;http://proxy.example.com:8080&quot;
+export no_proxy=&quot;localhost,127.0.0.1,*.local&quot;
+
+# With authentication
+export http_proxy=&quot;http://user:pass@proxy.example.com:8080&quot;
+export https_proxy=&quot;http://user:pass@proxy.example.com:8080&quot;
+
+# SOCKS5
+export ALL_PROXY=&quot;socks5://localhost:1080&quot;</code></pre>
+<h3>Git Through Proxy</h3>
+<pre><code class="lang-bash"># HTTP proxy
+git config --global http.proxy http://proxy.example.com:8080
+git config --global https.proxy http://proxy.example.com:8080
+
+# SOCKS5
+git config --global http.proxy socks5://localhost:1080
+git config --global https.proxy socks5://localhost:1080
+
+# Unset proxy
+git config --global --unset http.proxy
+git config --global --unset https.proxy</code></pre>
+<h3>Docker Through Proxy</h3>
+<pre><code class="lang-json">// ~/.docker/config.json
+{
+  &quot;proxies&quot;: {
+    &quot;default&quot;: {
+      &quot;httpProxy&quot;: &quot;http://proxy.example.com:8080&quot;,
+      &quot;httpsProxy&quot;: &quot;http://proxy.example.com:8080&quot;,
+      &quot;noProxy&quot;: &quot;localhost,127.0.0.1&quot;
+    }
+  }
+}</code></pre>
+<hr>
+<h2>Best Practices</h2>
+<h3>1. Handle Proxy Errors Gracefully</h3>
+<pre><code class="lang-python"># ✅ Good: Fallback and retry logic
+import requests
+from requests.exceptions import ProxyError, Timeout
+
+def fetch_with_proxy(url: str, proxies: dict, retries: int = 3):
+    for attempt in range(retries):
+        try:
+            response = requests.get(url, proxies=proxies, timeout=10)
+            return response
+        except ProxyError:
+            print(f&quot;Proxy error, attempt {attempt + 1}/{retries}&quot;)
+            if attempt == retries - 1:
+                # Fallback to direct connection
+                return requests.get(url, timeout=10)
+        except Timeout:
+            print(f&quot;Timeout, attempt {attempt + 1}/{retries}&quot;)
+
+    raise Exception(&quot;Failed after all retries&quot;)</code></pre>
+<h3>2. Use Proxy Auto-Config (PAC)</h3>
+<pre><code class="lang-javascript">// PAC file for smart proxy routing
+function FindProxyForURL(url, host) {
+  // Direct for local addresses
+  if (isPlainHostName(host) ||
+      shExpMatch(host, &quot;*.local&quot;) ||
+      isInNet(host, &quot;10.0.0.0&quot;, &quot;255.0.0.0&quot;) ||
+      isInNet(host, &quot;172.16.0.0&quot;, &quot;255.240.0.0&quot;) ||
+      isInNet(host, &quot;192.168.0.0&quot;, &quot;255.255.0.0&quot;)) {
+    return &quot;DIRECT&quot;;
+  }
+
+  // Use proxy for everything else
+  return &quot;PROXY proxy.example.com:8080; DIRECT&quot;;
+}</code></pre>
+<h3>3. Validate Proxy Health</h3>
+<pre><code class="lang-python"># ✅ Good: Health check before use
+import requests
+
+def is_proxy_healthy(proxy_url: str) -&gt; bool:
+    try:
+        response = requests.get(
+            &#x27;http://httpbin.org/ip&#x27;,
+            proxies={&#x27;http&#x27;: proxy_url, &#x27;https&#x27;: proxy_url},
+            timeout=5
+        )
+        return response.status_code == 200
+    except:
+        return False
+
+proxy = &quot;http://proxy.example.com:8080&quot;
+if is_proxy_healthy(proxy):
+    # Use proxy
+    pass
+else:
+    # Use alternative or direct
+    pass</code></pre>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Issue 1: Proxy Authentication Failures</h3>
+<p><strong>Symptoms</strong>: 407 Proxy Authentication Required <strong>Common Causes</strong>:</p>
+<ul><li>Wrong credentials</li><li>Expired credentials</li><li>Special characters in password not URL-encoded</li></ul>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-python">from urllib.parse import quote
+
+username = &quot;user@domain&quot;  # Example - use actual credentials from environment
+password = &quot;p@ss:word&quot;  # Example - use actual credentials from environment
+
+proxy = f&quot;http://{quote(username)}:{quote(password)}@proxy.example.com:8080&quot;</code></pre>
+<h3>Issue 2: SSL/TLS Errors Through Proxy</h3>
+<p><strong>Symptoms</strong>: Certificate verification failures <strong>Common Causes</strong>:</p>
+<ul><li>Proxy doing SSL inspection</li><li>Missing intermediate certificates</li></ul>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-python"># Add proxy&#x27;s CA certificate
+import requests
+
+response = requests.get(
+    &#x27;https://api.example.com/data&#x27;,
+    proxies={&#x27;https&#x27;: &#x27;http://proxy.example.com:8080&#x27;},
+    verify=&#x27;/path/to/proxy-ca-bundle.crt&#x27;
+)</code></pre>
+<h3>Issue 3: Slow Proxy Connections</h3>
+<p><strong>Symptoms</strong>: High latency through proxy <strong>Common Causes</strong>:</p>
+<ul><li>Proxy overloaded</li><li>No connection pooling</li><li>DNS resolution delays</li></ul>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-python"># Use connection pooling
+import requests
+from requests.adapters import HTTPAdapter
+
+session = requests.Session()
+adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20)
+session.mount(&#x27;http://&#x27;, adapter)
+session.mount(&#x27;https://&#x27;, adapter)
+
+session.proxies = {
+    &#x27;http&#x27;: &#x27;http://proxy.example.com:8080&#x27;,
+    &#x27;https&#x27;: &#x27;http://proxy.example.com:8080&#x27;
+}
+
+# Reuse session for multiple requests
+for url in urls:
+    response = session.get(url)</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>proxies-reverse-proxy</code> - Reverse proxy patterns and use cases</li><li><code>proxies-nginx-configuration</code> - Nginx as forward/reverse proxy</li><li><code>protocols-http-fundamentals</code> - HTTP protocol basics</li><li><code>networking-tls-troubleshooting</code> - SSL/TLS debugging</li><li><code>containers-docker-networking</code> - Container proxy configuration</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/proxies-forward-proxy.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>engineering-refactoring-patterns</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/engineering-refactoring-patterns.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/engineering-refactoring-patterns.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>engineering-refactoring-patterns</h1><p class="lede">Refactoring techniques, when to refactor, safe refactoring strategies, and code improvement patterns</p><h1>Refactoring Patterns &amp; Techniques</h1>
+<p><strong>Scope</strong>: Comprehensive guide to refactoring techniques, when to refactor, safe strategies, and systematic code improvement <strong>Lines</strong>: ~380 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Improving existing code without changing behavior</li><li>Reducing technical debt in legacy systems</li><li>Preparing code for new features</li><li>Simplifying complex code for maintainability</li><li>Eliminating code smells and anti-patterns</li><li>Standardizing inconsistent codebases</li><li>Making code more testable</li><li>Improving performance through structural changes</li></ul>
+<h2>Core Concepts</h2>
+<h3>Concept 1: When to Refactor</h3>
+<p><strong>The Rule of Three</strong></p>
+<blockquote><p>First time: Just write it Second time: Duplicate it (note the duplication) Third time: Refactor it (extract the pattern)</p></blockquote>
+<p><strong>Refactor When</strong>:</p>
+<ul><li>Adding a feature and code is hard to modify</li><li>Fixing a bug reveals underlying design issues</li><li>Code review identifies improvement opportunities</li><li>Tests are difficult to write</li><li>Making similar changes in multiple places</li><li>Code fails quality checks (complexity, coverage)</li></ul>
+<p><strong>Don&#x27;t Refactor When</strong>:</p>
+<ul><li>No tests exist (write tests first!)</li><li>Under tight deadline (plan it for later)</li><li>Code is working and rarely changes</li><li>Rewrite would be faster than refactoring</li><li>You don&#x27;t understand what the code does</li></ul>
+<hr>
+<h3>Concept 2: Safe Refactoring Process</h3>
+<p><strong>The Refactoring Workflow</strong>:</p>
+<pre><code>1. Ensure tests exist and pass
+   ↓
+2. Make small, incremental change
+   ↓
+3. Run tests
+   ↓
+4. Commit if tests pass
+   ↓
+5. Repeat until complete</code></pre>
+<p><strong>Critical Rules</strong>:</p>
+<ul><li>Never refactor without tests</li><li>Make one change at a time</li><li>Run tests after each change</li><li>Commit frequently</li><li>Don&#x27;t mix refactoring with new features</li></ul>
+<hr>
+<h3>Concept 3: Common Refactoring Patterns</h3>
+<p><strong>Extract Method/Function</strong></p>
+<blockquote><p>Replace code fragment with a named function</p></blockquote>
+<p><strong>Inline Function</strong></p>
+<blockquote><p>Replace function call with function body (when function is trivial)</p></blockquote>
+<p><strong>Extract Variable</strong></p>
+<blockquote><p>Put complex expression result in self-explanatory variable</p></blockquote>
+<p><strong>Inline Variable</strong></p>
+<blockquote><p>Remove variable that&#x27;s just as clear as expression</p></blockquote>
+<p><strong>Rename</strong></p>
+<blockquote><p>Change name to better reveal intent</p></blockquote>
+<p><strong>Move Function</strong></p>
+<blockquote><p>Move function to class that uses it most</p></blockquote>
+<p><strong>Replace Conditional with Polymorphism</strong></p>
+<blockquote><p>Replace type code with subclasses/interfaces</p></blockquote>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Extract Method</h3>
+<p><strong>Before</strong>:</p>
+<pre><code class="lang-python">def print_owing(invoice):
+    print(&quot;***********************&quot;)
+    print(&quot;**** Customer Owes ****&quot;)
+    print(&quot;***********************&quot;)
+
+    outstanding = 0.0
+    for order in invoice.orders:
+        outstanding += order.amount
+
+    print(f&quot;Name: {invoice.customer}&quot;)
+    print(f&quot;Amount: {outstanding}&quot;)</code></pre>
+<p><strong>After</strong>:</p>
+<pre><code class="lang-python">def print_owing(invoice):
+    print_banner()
+    outstanding = calculate_outstanding(invoice)
+    print_details(invoice, outstanding)
+
+def print_banner():
+    print(&quot;***********************&quot;)
+    print(&quot;**** Customer Owes ****&quot;)
+    print(&quot;***********************&quot;)
+
+def calculate_outstanding(invoice):
+    return sum(order.amount for order in invoice.orders)
+
+def print_details(invoice, outstanding):
+    print(f&quot;Name: {invoice.customer}&quot;)
+    print(f&quot;Amount: {outstanding}&quot;)</code></pre>
+<p><strong>Benefits</strong>: Each function has single responsibility, easier to test, reusable</p>
+<hr>
+<h3>Pattern 2: Replace Magic Numbers with Constants</h3>
+<p><strong>Before</strong>:</p>
+<pre><code class="lang-typescript">function calculatePrice(quantity: number): number {
+  return quantity * 29.99 * 1.08;  // What are these?
+}
+
+function checkStock(quantity: number): boolean {
+  return quantity &lt; 100;  // What does 100 mean?
+}</code></pre>
+<p><strong>After</strong>:</p>
+<pre><code class="lang-typescript">const PRICE_PER_ITEM = 29.99;
+const TAX_RATE = 1.08;
+const LOW_STOCK_THRESHOLD = 100;
+
+function calculatePrice(quantity: number): number {
+  return quantity * PRICE_PER_ITEM * TAX_RATE;
+}
+
+function checkStock(quantity: number): boolean {
+  return quantity &lt; LOW_STOCK_THRESHOLD;
+}</code></pre>
+<hr>
+<h3>Pattern 3: Replace Nested Conditionals with Guard Clauses</h3>
+<p><strong>Before</strong>:</p>
+<pre><code class="lang-go">func GetPayAmount(employee Employee) (float64, error) {
+    var result float64
+    if employee.IsSeparated {
+        result = 0
+    } else {
+        if employee.IsRetired {
+            result = employee.Pension
+        } else {
+            result = employee.Salary
+        }
+    }
+    return result, nil
+}</code></pre>
+<p><strong>After</strong>:</p>
+<pre><code class="lang-go">func GetPayAmount(employee Employee) (float64, error) {
+    if employee.IsSeparated {
+        return 0, nil
+    }
+    if employee.IsRetired {
+        return employee.Pension, nil
+    }
+    return employee.Salary, nil
+}</code></pre>
+<p><strong>Benefits</strong>: Reduces cognitive load, clarifies special cases, easier to read</p>
+<hr>
+<h3>Pattern 4: Extract Class (Split Large Class)</h3>
+<p><strong>Before</strong>:</p>
+<pre><code class="lang-python">class User:
+    def __init__(self, name, email, address, city, state, zip_code):
+        self.name = name
+        self.email = email
+        self.address = address
+        self.city = city
+        self.state = state
+        self.zip_code = zip_code
+
+    def get_full_address(self):
+        return f&quot;{self.address}, {self.city}, {self.state} {self.zip_code}&quot;
+
+    def validate_address(self):
+        # Complex address validation logic
+        pass
+
+    def format_address_for_label(self):
+        # Complex formatting logic
+        pass</code></pre>
+<p><strong>After</strong>:</p>
+<pre><code class="lang-python">class Address:
+    def __init__(self, street, city, state, zip_code):
+        self.street = street
+        self.city = city
+        self.state = state
+        self.zip_code = zip_code
+
+    def get_full_address(self):
+        return f&quot;{self.street}, {self.city}, {self.state} {self.zip_code}&quot;
+
+    def validate(self):
+        # Validation logic
+        pass
+
+    def format_for_label(self):
+        # Formatting logic
+        pass
+
+class User:
+    def __init__(self, name, email, address: Address):
+        self.name = name
+        self.email = email
+        self.address = address</code></pre>
+<p><strong>Benefits</strong>: Single responsibility, address logic encapsulated, reusable</p>
+<hr>
+<h3>Pattern 5: Replace Type Code with Polymorphism</h3>
+<p><strong>Before</strong>:</p>
+<pre><code class="lang-typescript">class Employee {
+  type: string;  // &quot;engineer&quot;, &quot;manager&quot;, &quot;salesperson&quot;
+
+  getBonus(): number {
+    if (this.type === &quot;engineer&quot;) {
+      return this.salary * 0.10;
+    } else if (this.type === &quot;manager&quot;) {
+      return this.salary * 0.20;
+    } else if (this.type === &quot;salesperson&quot;) {
+      return this.salary * 0.15 + this.commission;
+    }
+    return 0;
+  }
+}</code></pre>
+<p><strong>After</strong>:</p>
+<pre><code class="lang-typescript">abstract class Employee {
+  constructor(protected salary: number) {}
+  abstract getBonus(): number;
+}
+
+class Engineer extends Employee {
+  getBonus(): number {
+    return this.salary * 0.10;
+  }
+}
+
+class Manager extends Employee {
+  getBonus(): number {
+    return this.salary * 0.20;
+  }
+}
+
+class Salesperson extends Employee {
+  constructor(salary: number, private commission: number) {
+    super(salary);
+  }
+
+  getBonus(): number {
+    return this.salary * 0.15 + this.commission;
+  }
+}</code></pre>
+<p><strong>Benefits</strong>: Open/closed principle, easier to add new types, type-safe</p>
+<hr>
+<h3>Pattern 6: Introduce Parameter Object</h3>
+<p><strong>Before</strong>:</p>
+<pre><code class="lang-python">def create_invoice(customer_name, customer_email, customer_address,
+                  item_name, item_price, item_quantity,
+                  tax_rate, discount_rate):
+    # 8 parameters is too many!
+    pass</code></pre>
+<p><strong>After</strong>:</p>
+<pre><code class="lang-python">from dataclasses import dataclass
+
+@dataclass
+class Customer:
+    name: str
+    email: str
+    address: str
+
+@dataclass
+class LineItem:
+    name: str
+    price: float
+    quantity: int
+
+@dataclass
+class InvoiceOptions:
+    tax_rate: float
+    discount_rate: float
+
+def create_invoice(customer: Customer, item: LineItem, options: InvoiceOptions):
+    # Much cleaner!
+    pass</code></pre>
+<hr>
+<h3>Pattern 7: Replace Conditional with Strategy Pattern</h3>
+<p><strong>Before</strong>:</p>
+<pre><code class="lang-go">func CalculateShipping(order Order, method string) float64 {
+    if method == &quot;standard&quot; {
+        return order.Weight * 0.50
+    } else if method == &quot;express&quot; {
+        return order.Weight * 1.50 + 10.00
+    } else if method == &quot;overnight&quot; {
+        return order.Weight * 3.00 + 25.00
+    }
+    return 0
+}</code></pre>
+<p><strong>After</strong>:</p>
+<pre><code class="lang-go">type ShippingStrategy interface {
+    Calculate(order Order) float64
+}
+
+type StandardShipping struct{}
+func (s StandardShipping) Calculate(order Order) float64 {
+    return order.Weight * 0.50
+}
+
+type ExpressShipping struct{}
+func (e ExpressShipping) Calculate(order Order) float64 {
+    return order.Weight * 1.50 + 10.00
+}
+
+type OvernightShipping struct{}
+func (o OvernightShipping) Calculate(order Order) float64 {
+    return order.Weight * 3.00 + 25.00
+}
+
+func CalculateShipping(order Order, strategy ShippingStrategy) float64 {
+    return strategy.Calculate(order)
+}</code></pre>
+<hr>
+<h3>Pattern 8: Remove Dead Code</h3>
+<p><strong>Before</strong>:</p>
+<pre><code class="lang-python">def process_payment(amount):
+    # Old implementation - keeping just in case
+    # def old_process_payment():
+    #     charge_credit_card(amount)
+    #     send_receipt()
+
+    # Current implementation
+    result = payment_gateway.process(amount)
+    if result.success:
+        send_receipt()
+    return result
+
+# Unused function - was replaced 6 months ago
+def legacy_process_payment(amount):
+    pass</code></pre>
+<p><strong>After</strong>:</p>
+<pre><code class="lang-python">def process_payment(amount):
+    result = payment_gateway.process(amount)
+    if result.success:
+        send_receipt()
+    return result
+
+# Old code deleted - it&#x27;s in git history if needed!</code></pre>
+<hr>
+<h2>Refactoring Techniques</h2>
+<h3>Simplifying Expressions</h3>
+<p><strong>Decompose Conditional</strong>:</p>
+<pre><code class="lang-python"># Before
+if date.before(SUMMER_START) or date.after(SUMMER_END):
+    charge = quantity * winter_rate + winter_service_charge
+else:
+    charge = quantity * summer_rate
+
+# After
+if is_winter(date):
+    charge = winter_charge(quantity)
+else:
+    charge = summer_charge(quantity)</code></pre>
+<p><strong>Consolidate Duplicate Conditional Fragments</strong>:</p>
+<pre><code class="lang-typescript">// Before
+if (isSpecialDeal()) {
+  total = price * 0.95;
+  send();
+} else {
+  total = price * 0.98;
+  send();
+}
+
+// After
+if (isSpecialDeal()) {
+  total = price * 0.95;
+} else {
+  total = price * 0.98;
+}
+send();  // Extracted from both branches</code></pre>
+<hr>
+<h3>Simplifying Method Calls</h3>
+<p><strong>Replace Parameter with Method Call</strong>:</p>
+<pre><code class="lang-python"># Before
+base_price = quantity * item_price
+discount = get_discount(base_price, season)
+
+# After
+discount = get_discount(quantity, item_price, season)
+
+def get_discount(quantity, item_price, season):
+    base_price = quantity * item_price
+    # Calculate discount</code></pre>
+<p><strong>Preserve Whole Object</strong>:</p>
+<pre><code class="lang-go">// Before
+low := daysTempRange.GetLow()
+high := daysTempRange.GetHigh()
+withinPlan := plan.WithinRange(low, high)
+
+// After
+withinPlan := plan.WithinRange(daysTempRange)</code></pre>
+<hr>
+<h3>Organizing Data</h3>
+<p><strong>Replace Array with Object</strong>:</p>
+<pre><code class="lang-typescript">// Before
+const row = [&quot;Liverpool&quot;, 15];
+const name = row[0];
+const wins = row[1];
+
+// After
+interface Team {
+  name: string;
+  wins: number;
+}
+
+const team: Team = { name: &quot;Liverpool&quot;, wins: 15 };
+const name = team.name;
+const wins = team.wins;</code></pre>
+<p><strong>Encapsulate Field</strong>:</p>
+<pre><code class="lang-python"># Before
+class Person:
+    name: str  # Public field
+
+person.name = &quot;John&quot;
+
+# After
+class Person:
+    def __init__(self):
+        self._name: str = &quot;&quot;
+
+    @property
+    def name(self) -&gt; str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        if not value:
+            raise ValueError(&quot;Name cannot be empty&quot;)
+        self._name = value
+
+person.name = &quot;John&quot;</code></pre>
+<hr>
+<h2>Best Practices</h2>
+<h3>Refactoring Checklist</h3>
+<p><strong>Before Starting</strong>:</p>
+<ul><li>[ ] Tests exist and pass</li><li>[ ] Create feature branch</li><li>[ ] Understand what code does</li><li>[ ] Identify specific smell/issue</li><li>[ ] Plan the refactoring steps</li></ul>
+<p><strong>During Refactoring</strong>:</p>
+<ul><li>[ ] Make one small change at a time</li><li>[ ] Run tests after each change</li><li>[ ] Commit after each successful change</li><li>[ ] Don&#x27;t add new features</li><li>[ ] Don&#x27;t change behavior</li></ul>
+<p><strong>After Completing</strong>:</p>
+<ul><li>[ ] All tests still pass</li><li>[ ] Code is more readable</li><li>[ ] Complexity reduced</li><li>[ ] Documentation updated</li><li>[ ] Create PR with &quot;refactor:&quot; prefix</li></ul>
+<hr>
+<h3>Refactoring in Legacy Code</h3>
+<p><strong>The Legacy Code Dilemma</strong>:</p>
+<blockquote><p>&quot;We need tests to refactor safely, but we need to refactor to make code testable&quot;</p></blockquote>
+<p><strong>Solution: Characterization Tests</strong></p>
+<pre><code class="lang-python"># Step 1: Write tests that capture current behavior (even if wrong)
+def test_legacy_payment_calculation():
+    # Document current behavior, even if buggy
+    result = calculate_payment(100, &quot;premium&quot;)
+    assert result == 95  # Current output (may be wrong!)
+
+# Step 2: Now you can refactor safely
+def calculate_payment(amount, tier):
+    # Refactor with confidence - tests will catch breaks
+    pass
+
+# Step 3: Fix bugs in separate commits
+def test_legacy_payment_calculation():
+    result = calculate_payment(100, &quot;premium&quot;)
+    assert result == 90  # Fixed bug</code></pre>
+<p><strong>Strangler Fig Pattern</strong>:</p>
+<pre><code>1. Identify module to replace
+2. Create new implementation alongside old
+3. Route new requests to new code
+4. Gradually migrate existing data
+5. Remove old code when fully migrated</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Refactoring Mistakes</h3>
+<pre><code>❌ Big Bang Refactoring
+→ Rewrite entire system at once (high risk!)
+✅ Incremental refactoring (continuous improvement)
+
+❌ Refactoring Without Tests
+→ No safety net, likely to break things
+✅ Write tests first, then refactor
+
+❌ Mixing Refactoring and Features
+→ Hard to review, hard to revert
+✅ Separate commits: refactor, then feature
+
+❌ Premature Optimization
+→ Refactoring for imaginary performance issues
+✅ Profile first, optimize hot paths only
+
+❌ Over-Engineering
+→ Introducing unnecessary abstractions
+✅ Simplest thing that works
+
+❌ Refactoring Under Deadline
+→ Rushed refactoring introduces bugs
+✅ Plan refactoring time explicitly</code></pre>
+<hr>
+<h2>Tools &amp; Automation</h2>
+<h3>IDE Refactoring Tools</h3>
+<p><strong>PyCharm / VS Code</strong>:</p>
+<ul><li>Rename (Shift+F6)</li><li>Extract Method (Ctrl+Alt+M)</li><li>Extract Variable (Ctrl+Alt+V)</li><li>Inline (Ctrl+Alt+N)</li><li>Move (F6)</li></ul>
+<p><strong>Automated Refactoring</strong>:</p>
+<pre><code class="lang-bash"># Python: Rename symbol across codebase
+rope --refactor rename old_name new_name
+
+# Python: Extract method
+rope --refactor extract_method
+
+# Go: Rename
+gopls rename -w old_name new_name
+
+# TypeScript: Automated refactorings
+npx ts-migrate rename old_name new_name</code></pre>
+<hr>
+<h3>Testing During Refactoring</h3>
+<p><strong>Mutation Testing</strong> (verify tests actually test):</p>
+<pre><code class="lang-bash"># Python
+pip install mutmut
+mutmut run
+
+# Check if tests catch intentional bugs
+# If mutation score is low, tests are weak!</code></pre>
+<p><strong>Snapshot Testing</strong> (ensure output unchanged):</p>
+<pre><code class="lang-python">def test_invoice_output_unchanged(snapshot):
+    invoice = create_test_invoice()
+    output = render_invoice(invoice)
+    snapshot.assert_match(output)  # Fails if output changes</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>engineering-code-quality</strong>: Identifying code smells to refactor</li><li><strong>engineering-code-review</strong>: Reviewing refactorings safely</li><li><strong>engineering-test-driven-development</strong>: Tests enable safe refactoring</li><li><strong>engineering-technical-debt</strong>: Prioritizing refactoring work</li><li><strong>engineering-design-patterns</strong>: Refactoring toward patterns</li></ul>
+<hr>
+<h2>References</h2>
+<ul><li><a href="https://refactoring.com/">Refactoring by Martin Fowler</a></li><li><a href="https://www.amazon.com/Working-Effectively-Legacy-Michael-Feathers/dp/0131177052">Working Effectively with Legacy Code by Michael Feathers</a></li><li><a href="https://refactoring.guru/refactoring/catalog">Refactoring Catalog</a></li><li><a href="https://refactoring.com/catalog/extractFunction.html">Extract Method</a></li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/engineering-refactoring-patterns.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>database-elasticsearch-search</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/database-elasticsearch-search.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/database-elasticsearch-search.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>database-elasticsearch-search</h1><p class="lede">Full-text search and relevance optimization with Elasticsearch</p><h1>Elasticsearch Search</h1>
+<p><strong>Scope</strong>: Full-text search, Query DSL, aggregations, relevance tuning, performance optimization <strong>Lines</strong>: ~450 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Building full-text search functionality</li><li>Implementing autocomplete or typeahead</li><li>Designing faceted search with filters</li><li>Optimizing search relevance and scoring</li><li>Creating analytics dashboards with aggregations</li><li>Debugging slow Elasticsearch queries</li><li>Planning index mappings and analyzers</li><li>Implementing search-as-you-type features</li><li>Building recommendation systems</li><li>Analyzing search patterns and user behavior</li></ul>
+<h2>Core Concepts</h2>
+<h3>Inverted Index</h3>
+<p>Elasticsearch uses <strong>inverted indexes</strong> for fast full-text search.</p>
+<p><strong>How it works</strong>:</p>
+<pre><code>Documents:
+  Doc 1: &quot;Elasticsearch is fast&quot;
+  Doc 2: &quot;Elasticsearch is scalable&quot;
+
+Inverted Index:
+  Term           → Document IDs
+  elasticsearch  → [1, 2]
+  fast           → [1]
+  scalable       → [2]</code></pre>
+<p><strong>Search Process</strong>:</p>
+<ol><li>Query analyzed → terms extracted</li><li>Look up terms in inverted index → get document IDs</li><li>Score and rank documents by relevance</li><li>Return top results</li></ol>
+<h3>Mapping and Analyzers</h3>
+<p><strong>Mapping</strong> defines field types and how they&#x27;re indexed.</p>
+<p><strong>Text vs Keyword</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;mappings&quot;: {
+    &quot;properties&quot;: {
+      &quot;title&quot;: {
+        &quot;type&quot;: &quot;text&quot;,
+        &quot;fields&quot;: {
+          &quot;keyword&quot;: {&quot;type&quot;: &quot;keyword&quot;}
+        }
+      }
+    }
+  }
+}</code></pre>
+<ul><li><code>text</code>: Full-text search, analyzed, tokenized</li><li><code>keyword</code>: Exact matching, aggregations, sorting</li></ul>
+<p><strong>Analyzer</strong> processes text during indexing and searching:</p>
+<pre><code>Input: &quot;The QUICK Brown Fox&quot;
+  ↓ Standard Tokenizer
+[&quot;The&quot;, &quot;QUICK&quot;, &quot;Brown&quot;, &quot;Fox&quot;]
+  ↓ Lowercase Filter
+[&quot;the&quot;, &quot;quick&quot;, &quot;brown&quot;, &quot;fox&quot;]
+  ↓ Stop Words Filter
+[&quot;quick&quot;, &quot;brown&quot;, &quot;fox&quot;]</code></pre>
+<h3>Query Types</h3>
+<p><strong>Match Query</strong> (full-text):</p>
+<pre><code class="lang-json">{
+  &quot;query&quot;: {
+    &quot;match&quot;: {
+      &quot;description&quot;: {
+        &quot;query&quot;: &quot;gaming laptop&quot;,
+        &quot;operator&quot;: &quot;and&quot;
+      }
+    }
+  }
+}</code></pre>
+<p><strong>Term Query</strong> (exact match):</p>
+<pre><code class="lang-json">{
+  &quot;query&quot;: {
+    &quot;term&quot;: {
+      &quot;status.keyword&quot;: &quot;published&quot;
+    }
+  }
+}</code></pre>
+<p><strong>Bool Query</strong> (combine queries):</p>
+<pre><code class="lang-json">{
+  &quot;query&quot;: {
+    &quot;bool&quot;: {
+      &quot;must&quot;: [{&quot;match&quot;: {&quot;title&quot;: &quot;laptop&quot;}}],
+      &quot;filter&quot;: [
+        {&quot;term&quot;: {&quot;category&quot;: &quot;electronics&quot;}},
+        {&quot;range&quot;: {&quot;price&quot;: {&quot;gte&quot;: 500}}}
+      ],
+      &quot;should&quot;: [{&quot;term&quot;: {&quot;brand&quot;: &quot;Apple&quot;}}],
+      &quot;must_not&quot;: [{&quot;term&quot;: {&quot;status&quot;: &quot;discontinued&quot;}}]
+    }
+  }
+}</code></pre>
+<ul><li><code>must</code>: Must match, affects score</li><li><code>filter</code>: Must match, no scoring (cached, faster)</li><li><code>should</code>: Optional, boosts score</li><li><code>must_not</code>: Must not match (filter)</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Multi-Field Search with Boosting</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Search across multiple fields (title, description, tags)</li><li>Prioritize matches in certain fields (title &gt; description)</li></ul>
+<pre><code class="lang-json">{
+  &quot;query&quot;: {
+    &quot;multi_match&quot;: {
+      &quot;query&quot;: &quot;gaming laptop&quot;,
+      &quot;fields&quot;: [&quot;title^3&quot;, &quot;description^1.5&quot;, &quot;tags&quot;],
+      &quot;type&quot;: &quot;best_fields&quot;,
+      &quot;fuzziness&quot;: &quot;AUTO&quot;
+    }
+  }
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Searches multiple fields in one query</li><li>Field boosting (<code>^3</code>) increases relevance for title matches</li><li><code>fuzziness</code> handles typos</li><li><code>best_fields</code> uses highest-scoring field</li></ul>
+<h3>Pattern 2: Filtered Search (Performance)</h3>
+<p><strong>Use case</strong>: Exact filters + full-text search</p>
+<pre><code class="lang-json">// ❌ Bad: Everything in must (slower, scoring overhead)
+{
+  &quot;query&quot;: {
+    &quot;bool&quot;: {
+      &quot;must&quot;: [
+        {&quot;match&quot;: {&quot;description&quot;: &quot;laptop&quot;}},
+        {&quot;term&quot;: {&quot;status&quot;: &quot;published&quot;}},
+        {&quot;range&quot;: {&quot;price&quot;: {&quot;gte&quot;: 500}}}
+      ]
+    }
+  }
+}
+
+// ✅ Good: Use filter for exact matches (faster, cached)
+{
+  &quot;query&quot;: {
+    &quot;bool&quot;: {
+      &quot;must&quot;: [{&quot;match&quot;: {&quot;description&quot;: &quot;laptop&quot;}}],
+      &quot;filter&quot;: [
+        {&quot;term&quot;: {&quot;status&quot;: &quot;published&quot;}},
+        {&quot;range&quot;: {&quot;price&quot;: {&quot;gte&quot;: 500}}}
+      ]
+    }
+  }
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Filters are cached by Elasticsearch</li><li>No scoring overhead for exact matches</li><li>2-5x faster for filtered queries</li></ul>
+<h3>Pattern 3: Autocomplete with Completion Suggester</h3>
+<p><strong>Use case</strong>: Fast typeahead suggestions</p>
+<p><strong>Mapping</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;mappings&quot;: {
+    &quot;properties&quot;: {
+      &quot;suggest&quot;: {
+        &quot;type&quot;: &quot;completion&quot;,
+        &quot;contexts&quot;: [
+          {&quot;name&quot;: &quot;category&quot;, &quot;type&quot;: &quot;category&quot;}
+        ]
+      }
+    }
+  }
+}</code></pre>
+<p><strong>Index</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;Gaming Laptop&quot;,
+  &quot;suggest&quot;: {
+    &quot;input&quot;: [&quot;gaming laptop&quot;, &quot;laptop gaming&quot;, &quot;gaming&quot;],
+    &quot;weight&quot;: 10,
+    &quot;contexts&quot;: {&quot;category&quot;: &quot;electronics&quot;}
+  }
+}</code></pre>
+<p><strong>Query</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;suggest&quot;: {
+    &quot;product_suggest&quot;: {
+      &quot;prefix&quot;: &quot;gam&quot;,
+      &quot;completion&quot;: {
+        &quot;field&quot;: &quot;suggest&quot;,
+        &quot;size&quot;: 10,
+        &quot;contexts&quot;: {&quot;category&quot;: &quot;electronics&quot;},
+        &quot;fuzzy&quot;: {&quot;fuzziness&quot;: &quot;AUTO&quot;}
+      }
+    }
+  }
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Extremely fast (optimized data structure)</li><li>Context-aware filtering</li><li>Fuzzy matching for typos</li><li>Sub-millisecond response time</li></ul>
+<h3>Pattern 4: Faceted Search</h3>
+<p><strong>Use case</strong>: E-commerce filters (category, price, brand)</p>
+<pre><code class="lang-json">{
+  &quot;query&quot;: {
+    &quot;match&quot;: {&quot;title&quot;: &quot;laptop&quot;}
+  },
+  &quot;aggs&quot;: {
+    &quot;categories&quot;: {
+      &quot;terms&quot;: {&quot;field&quot;: &quot;category.keyword&quot;, &quot;size&quot;: 10}
+    },
+    &quot;price_ranges&quot;: {
+      &quot;range&quot;: {
+        &quot;field&quot;: &quot;price&quot;,
+        &quot;ranges&quot;: [
+          {&quot;to&quot;: 500},
+          {&quot;from&quot;: 500, &quot;to&quot;: 1500},
+          {&quot;from&quot;: 1500}
+        ]
+      }
+    },
+    &quot;brands&quot;: {
+      &quot;terms&quot;: {&quot;field&quot;: &quot;brand.keyword&quot;, &quot;size&quot;: 20}
+    }
+  }
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Single query returns results + facets</li><li>Users can refine search with filters</li><li>Shows distribution across categories/prices</li></ul>
+<h3>Pattern 5: Pagination with search_after</h3>
+<p><strong>Use case</strong>: Deep pagination (page 100+)</p>
+<pre><code class="lang-json">// ❌ Bad: from/size for deep pagination (expensive)
+GET /products/_search?from=10000&amp;size=10
+
+// ✅ Good: search_after (efficient, stateless)
+{
+  &quot;query&quot;: {&quot;match_all&quot;: {}},
+  &quot;size&quot;: 10,
+  &quot;sort&quot;: [
+    {&quot;created_at&quot;: &quot;desc&quot;},
+    {&quot;_id&quot;: &quot;desc&quot;}
+  ],
+  &quot;search_after&quot;: [&quot;2025-10-27T00:00:00Z&quot;, &quot;prod_123&quot;]
+}</code></pre>
+<p><strong>Why search_after?</strong></p>
+<ul><li>No deep pagination overhead</li><li>Constant memory usage</li><li>Scales to any page depth</li></ul>
+<p><strong>Trade-off</strong>: Can&#x27;t jump to arbitrary pages (sequential only)</p>
+<h3>Pattern 6: Custom Scoring with function_score</h3>
+<p><strong>Use case</strong>: Boost results by multiple factors</p>
+<pre><code class="lang-json">{
+  &quot;query&quot;: {
+    &quot;function_score&quot;: {
+      &quot;query&quot;: {&quot;match&quot;: {&quot;title&quot;: &quot;laptop&quot;}},
+      &quot;functions&quot;: [
+        {
+          &quot;filter&quot;: {&quot;term&quot;: {&quot;is_premium&quot;: true}},
+          &quot;weight&quot;: 2
+        },
+        {
+          &quot;field_value_factor&quot;: {
+            &quot;field&quot;: &quot;rating&quot;,
+            &quot;factor&quot;: 1.5,
+            &quot;modifier&quot;: &quot;sqrt&quot;
+          }
+        },
+        {
+          &quot;gauss&quot;: {
+            &quot;created_at&quot;: {
+              &quot;origin&quot;: &quot;now&quot;,
+              &quot;scale&quot;: &quot;30d&quot;,
+              &quot;decay&quot;: 0.5
+            }
+          }
+        }
+      ],
+      &quot;score_mode&quot;: &quot;sum&quot;,
+      &quot;boost_mode&quot;: &quot;multiply&quot;
+    }
+  }
+}</code></pre>
+<p><strong>Factors</strong>:</p>
+<ul><li>Premium products: 2x boost</li><li>Rating: Square root boosting</li><li>Recency: Decay over 30 days</li></ul>
+<h3>Pattern 7: Aggregations with Nested Buckets</h3>
+<p><strong>Use case</strong>: Multi-level analytics</p>
+<pre><code class="lang-json">{
+  &quot;size&quot;: 0,
+  &quot;aggs&quot;: {
+    &quot;categories&quot;: {
+      &quot;terms&quot;: {&quot;field&quot;: &quot;category.keyword&quot;},
+      &quot;aggs&quot;: {
+        &quot;brands&quot;: {
+          &quot;terms&quot;: {&quot;field&quot;: &quot;brand.keyword&quot;},
+          &quot;aggs&quot;: {
+            &quot;avg_price&quot;: {&quot;avg&quot;: {&quot;field&quot;: &quot;price&quot;}},
+            &quot;avg_rating&quot;: {&quot;avg&quot;: {&quot;field&quot;: &quot;rating&quot;}}
+          }
+        }
+      }
+    }
+  }
+}</code></pre>
+<p><strong>Result Structure</strong>:</p>
+<pre><code>Electronics
+├── Apple: avg_price: $1200, avg_rating: 4.5
+├── Dell: avg_price: $800, avg_rating: 4.2
+Books
+├── Penguin: avg_price: $15, avg_rating: 4.7</code></pre>
+<h3>Pattern 8: Highlighting Matches</h3>
+<p><strong>Use case</strong>: Show matching text snippets</p>
+<pre><code class="lang-json">{
+  &quot;query&quot;: {&quot;match&quot;: {&quot;description&quot;: &quot;gaming&quot;}},
+  &quot;highlight&quot;: {
+    &quot;fields&quot;: {
+      &quot;description&quot;: {
+        &quot;fragment_size&quot;: 150,
+        &quot;number_of_fragments&quot;: 3
+      }
+    },
+    &quot;pre_tags&quot;: [&quot;&lt;mark&gt;&quot;],
+    &quot;post_tags&quot;: [&quot;&lt;/mark&gt;&quot;]
+  }
+}</code></pre>
+<p><strong>Result</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;highlight&quot;: {
+    &quot;description&quot;: [
+      &quot;High performance &lt;mark&gt;gaming&lt;/mark&gt; laptop...&quot;,
+      &quot;Ideal for &lt;mark&gt;gaming&lt;/mark&gt; and content creation...&quot;
+    ]
+  }
+}</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Query Types</h3>
+<pre><code>Type              | Use Case                    | Analyzed
+------------------|-----------------------------|---------
+match             | Full-text search            | Yes
+term              | Exact match                 | No
+range             | Numeric/date ranges         | No
+bool              | Combine queries             | N/A
+multi_match       | Multi-field search          | Yes
+prefix            | Prefix matching             | No
+wildcard          | Pattern matching            | No
+fuzzy             | Typo tolerance              | Yes
+match_phrase      | Exact phrase                | Yes</code></pre>
+<h3>Aggregation Types</h3>
+<pre><code>Type              | Purpose
+------------------|----------------------------------
+terms             | Group by field value
+range             | Group by ranges
+date_histogram    | Group by time intervals
+avg/min/max/sum   | Calculate metrics
+cardinality       | Unique count (approximate)
+percentiles       | Distribution percentiles
+top_hits          | Top documents per bucket</code></pre>
+<h3>Mapping Types</h3>
+<pre><code>Type              | Use Case
+------------------|----------------------------------
+text              | Full-text search
+keyword           | Exact match, aggregations
+integer/long      | Whole numbers
+float/double      | Decimals
+date              | Dates/timestamps
+boolean           | true/false
+nested            | Array of objects
+geo_point         | Lat/lon coordinates
+completion        | Autocomplete</code></pre>
+<hr>
+<h2>Common Pitfalls</h2>
+<p>❌ <strong>Using term query on text fields</strong></p>
+<pre><code class="lang-json">{&quot;term&quot;: {&quot;title&quot;: &quot;Quick&quot;}}  // Won&#x27;t match (analyzed as &quot;quick&quot;)</code></pre>
+<p>✅ Use <code>match</code> or query <code>title.keyword</code></p>
+<p>❌ <strong>Deep pagination with from/size</strong></p>
+<pre><code class="lang-json">GET /products/_search?from=10000&amp;size=10  // Expensive</code></pre>
+<p>✅ Use <code>search_after</code> for deep pagination</p>
+<p>❌ <strong>Large terms aggregations</strong></p>
+<pre><code class="lang-json">{&quot;aggs&quot;: {&quot;all_users&quot;: {&quot;terms&quot;: {&quot;size&quot;: 100000}}}}</code></pre>
+<p>✅ Use composite aggregation or limit size</p>
+<p>❌ <strong>Not using filters for exact matches</strong></p>
+<pre><code class="lang-json">{&quot;bool&quot;: {&quot;must&quot;: [{&quot;term&quot;: {&quot;status&quot;: &quot;active&quot;}}]}}</code></pre>
+<p>✅ Move to <code>filter</code> for caching and performance</p>
+<p>❌ <strong>Leading wildcards</strong></p>
+<pre><code class="lang-json">{&quot;wildcard&quot;: {&quot;name&quot;: &quot;*smith&quot;}}  // Extremely slow</code></pre>
+<p>✅ Use reverse field + prefix or full-text search</p>
+<p>❌ <strong>Over-sharding</strong></p>
+<pre><code class="lang-json">{&quot;settings&quot;: {&quot;number_of_shards&quot;: 100}}  // For 10GB index</code></pre>
+<p>✅ Target 10-50 GB per shard (2-3 shards for 10GB)</p>
+<hr>
+<h2>Level 3: Resources</h2>
+<p>This skill includes Level 3 Resources (executable tools, reference materials, examples):</p>
+<h3>Comprehensive Reference</h3>
+<p><strong><code>resources/REFERENCE.md</code></strong> (3,500+ lines)</p>
+<p>Deep dive covering:</p>
+<ul><li>Elasticsearch architecture (nodes, shards, segments, inverted index internals)</li><li>Complete Query DSL reference with examples (match, term, bool, nested, function_score)</li><li>Mapping types and analyzers (text, keyword, custom analyzers, token filters)</li><li>Full-text search patterns (relevance scoring, TF-IDF, BM25, boosting)</li><li>Aggregations (bucket, metric, pipeline aggregations with nested examples)</li><li>Performance optimization (query optimization, indexing strategies, shard sizing)</li><li>Index management (aliases, reindexing, ILM, rollover)</li><li>Common search patterns (autocomplete, fuzzy search, faceted search, geo search)</li><li>Anti-patterns and fixes (deep pagination, mapping explosion, expensive queries)</li><li>Production best practices (monitoring, capacity planning, security, backups)</li></ul>
+<h3>Executable Scripts</h3>
+<p><strong><code>resources/scripts/analyze_queries.py</code></strong></p>
+<p>Analyzes Elasticsearch Query DSL queries for performance issues:</p>
+<pre><code class="lang-bash"># Analyze query file
+./analyze_queries.py --query-file queries.json
+
+# Analyze single query
+./analyze_queries.py --query &#x27;{&quot;query&quot;: {&quot;match&quot;: {&quot;field&quot;: &quot;value&quot;}}}&#x27;
+
+# JSON output
+./analyze_queries.py --query-file queries.json --json
+
+# With Elasticsearch endpoint
+./analyze_queries.py --query-file queries.json --endpoint http://localhost:9200</code></pre>
+<p>Features:</p>
+<ul><li>Detects expensive operations (leading wildcards, deep pagination, large aggregations)</li><li>Identifies anti-patterns (term on text fields, missing filters, scoring overhead)</li><li>Suggests optimizations (use filters, reduce page size, optimize aggregations)</li><li>Scores queries (0-100) and assesses complexity (low, medium, high)</li><li>JSON output for CI/CD integration</li></ul>
+<p><strong><code>resources/scripts/optimize_indexes.py</code></strong></p>
+<p>Analyzes indices and provides optimization recommendations:</p>
+<pre><code class="lang-bash"># Analyze single index
+./optimize_indexes.py --index products --endpoint http://localhost:9200
+
+# Analyze all indices
+./optimize_indexes.py --all-indices
+
+# JSON output
+./optimize_indexes.py --index products --json</code></pre>
+<p>Features:</p>
+<ul><li>Shard sizing analysis (recommends optimal shard count for data size)</li><li>Mapping optimization (detects mapping explosion, missing multi-fields)</li><li>Settings recommendations (refresh_interval, replicas, codecs)</li><li>Index health score (0-100)</li><li>Actionable implementation steps</li></ul>
+<p><strong><code>resources/scripts/benchmark_search.py</code></strong></p>
+<p>Benchmarks query performance with statistical analysis:</p>
+<pre><code class="lang-bash"># Benchmark query file
+./benchmark_search.py --query-file queries.json --index products
+
+# Custom iterations and concurrency
+./benchmark_search.py --query-file queries.json --iterations 500 --concurrent-requests 10
+
+# JSON output
+./benchmark_search.py --query-file queries.json --json</code></pre>
+<p>Features:</p>
+<ul><li>Measures latency (min, max, mean, median, p95, p99, stddev)</li><li>Calculates throughput (queries/sec)</li><li>Concurrent execution support</li><li>Warmup iterations</li><li>Performance assessment (excellent, good, acceptable, poor)</li></ul>
+<h3>Examples</h3>
+<p><strong>Mappings</strong>:</p>
+<ul><li><code>examples/mappings/product-index.json</code> - Complete product index with custom analyzers, multi-fields, nested objects, completion suggester</li></ul>
+<p><strong>Queries</strong>:</p>
+<ul><li><code>examples/queries/full-text-search.json</code> - 10+ full-text search patterns (match, multi_match, bool, fuzzy, boosting, nested, highlighting, pagination)</li><li><code>examples/queries/aggregations.json</code> - 12+ aggregation examples (terms, range, date_histogram, nested, pipeline, bucket_script)</li><li><code>examples/queries/autocomplete.json</code> - 10+ autocomplete patterns (completion suggester, match_bool_prefix, edge n-grams, phrase suggester)</li></ul>
+<p><strong>Python</strong>:</p>
+<ul><li><code>examples/python/elasticsearch-client.py</code> - Comprehensive client examples (CRUD, search, aggregations, updates, highlighting)</li><li><code>examples/python/bulk-indexer.py</code> - Production-ready bulk indexer (streaming, parallel, error handling, progress tracking)</li></ul>
+<p><strong>Node.js</strong>:</p>
+<ul><li><code>examples/nodejs/search-service.js</code> - Search service class (full-text search, autocomplete, faceted search, custom scoring, pagination)</li></ul>
+<p><strong>Docker</strong>:</p>
+<ul><li><code>examples/docker/docker-compose.yml</code> - Single-node and multi-node Elasticsearch + Kibana setup</li></ul>
+<h3>Quick Start</h3>
+<pre><code class="lang-bash"># Start Elasticsearch + Kibana
+cd resources/examples/docker &amp;&amp; docker-compose up -d
+
+# Analyze query performance
+./resources/scripts/analyze_queries.py --query-file my-queries.json
+
+# Get index optimization recommendations
+./resources/scripts/optimize_indexes.py --index products
+
+# Benchmark queries
+./resources/scripts/benchmark_search.py --query-file queries.json --index products
+
+# Run Python examples
+cd resources/examples/python
+pip install elasticsearch
+python elasticsearch-client.py
+
+# Bulk index test data
+python bulk-indexer.py --generate-test-data 10000 --index products</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>postgres-query-optimization.md</code> - Query optimization concepts applicable to Elasticsearch</li><li><code>redis-data-structures.md</code> - Caching Elasticsearch results</li><li><code>api-rate-limiting.md</code> - Rate limiting search APIs</li><li><code>database-selection.md</code> - When to use Elasticsearch vs other databases</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/database-elasticsearch-search.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

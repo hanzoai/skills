@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>caching-http-caching</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/caching-http-caching.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/caching-http-caching.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>caching-http-caching</h1><p class="lede">Browser and HTTP cache layer optimization using cache headers, conditional requests, and validation strategies</p><h1>HTTP Caching</h1>
+<p><strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p><strong>Activate when</strong>:</p>
+<ul><li>Optimizing web application performance</li><li>Reducing server load and bandwidth costs</li><li>Implementing proper cache headers for static assets</li><li>Debugging browser caching issues</li><li>Designing API caching strategies</li><li>Implementing conditional requests (ETags, Last-Modified)</li><li>Configuring CDN caching behavior</li></ul>
+<p><strong>Prerequisites</strong>: <code>caching-fundamentals.md</code>, basic HTTP knowledge</p>
+<p><strong>Related Skills</strong>: <code>cdn-edge-caching.md</code>, <code>service-worker-caching.md</code>, <code>frontend-performance.md</code></p>
+<hr>
+<h2>Core Concepts</h2>
+<h3>HTTP Cache Flow</h3>
+<pre><code>Browser Request
+    ↓
+1. Check browser cache
+    ↓
+2. Is cached? Is fresh?
+    ├─ Yes (HIT) → Return from cache
+    ├─ Expired → Revalidate with server
+    └─ No (MISS) → Request from server
+         ↓
+3. Server response with cache headers
+    ↓
+4. Store in cache (if cacheable)
+    ↓
+5. Return to application</code></pre>
+<h3>Cache Headers Overview</h3>
+<pre><code class="lang-python">from dataclasses import dataclass
+from typing import Optional
+from datetime import datetime, timedelta
+
+@dataclass
+class HTTPCacheHeaders:
+    &quot;&quot;&quot;HTTP caching headers reference&quot;&quot;&quot;
+
+    # Modern (HTTP/1.1)
+    cache_control: str  # Primary caching directive
+    etag: Optional[str] = None  # Entity tag for validation
+    last_modified: Optional[str] = None  # Last modification time
+
+    # Legacy (HTTP/1.0)
+    expires: Optional[str] = None  # Absolute expiration time
+    pragma: Optional[str] = None  # Legacy no-cache
+
+    # Additional
+    vary: Optional[str] = None  # Vary cache by headers
+    age: Optional[int] = None  # Time in cache (seconds)
+
+class CacheDirectives:
+    &quot;&quot;&quot;Cache-Control directive meanings&quot;&quot;&quot;
+
+    DIRECTIVES = {
+        # Cacheability
+        &quot;public&quot;: &quot;Cacheable by any cache (browsers, CDNs)&quot;,
+        &quot;private&quot;: &quot;Cacheable by browser only, not CDNs&quot;,
+        &quot;no-cache&quot;: &quot;Must revalidate before use (NOT &#x27;don&#x27;t cache&#x27;)&quot;,
+        &quot;no-store&quot;: &quot;Don&#x27;t cache at all (sensitive data)&quot;,
+
+        # Expiration
+        &quot;max-age=&lt;seconds&gt;&quot;: &quot;Fresh for N seconds from response time&quot;,
+        &quot;s-maxage=&lt;seconds&gt;&quot;: &quot;Shared cache (CDN) max age, overrides max-age&quot;,
+        &quot;stale-while-revalidate=&lt;seconds&gt;&quot;: &quot;Serve stale while updating&quot;,
+        &quot;stale-if-error=&lt;seconds&gt;&quot;: &quot;Serve stale if origin errors&quot;,
+
+        # Revalidation
+        &quot;must-revalidate&quot;: &quot;Must not serve stale without revalidation&quot;,
+        &quot;proxy-revalidate&quot;: &quot;Shared caches must revalidate&quot;,
+        &quot;immutable&quot;: &quot;Never revalidate (content won&#x27;t change)&quot;,
+    }</code></pre>
+<hr>
+<h2>Cache-Control Header</h2>
+<h3>Basic Examples</h3>
+<pre><code class="lang-python">class CacheControlExamples:
+    &quot;&quot;&quot;Common Cache-Control configurations&quot;&quot;&quot;
+
+    @staticmethod
+    def static_assets():
+        &quot;&quot;&quot;
+        Static assets with fingerprinting (e.g., app.abc123.js)
+
+        Pattern: Long cache with immutable
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Cache-Control&quot;,
+            &quot;value&quot;: &quot;public, max-age=31536000, immutable&quot;,
+            &quot;explanation&quot;: &quot;Cache for 1 year, never revalidate&quot;,
+            &quot;use_for&quot;: [&quot;JS/CSS with hash&quot;, &quot;Versioned images&quot;]
+        }
+
+    @staticmethod
+    def html_pages():
+        &quot;&quot;&quot;
+        HTML pages (dynamic content)
+
+        Pattern: No caching or short TTL with revalidation
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Cache-Control&quot;,
+            &quot;value&quot;: &quot;public, max-age=0, must-revalidate&quot;,
+            &quot;explanation&quot;: &quot;Always revalidate before serving&quot;,
+            &quot;use_for&quot;: [&quot;HTML pages&quot;, &quot;API HTML responses&quot;]
+        }
+
+    @staticmethod
+    def api_responses():
+        &quot;&quot;&quot;
+        API responses (read-heavy endpoints)
+
+        Pattern: Short TTL with private caching
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Cache-Control&quot;,
+            &quot;value&quot;: &quot;private, max-age=300&quot;,
+            &quot;explanation&quot;: &quot;Cache in browser for 5 minutes&quot;,
+            &quot;use_for&quot;: [&quot;User-specific API data&quot;, &quot;Dashboard APIs&quot;]
+        }
+
+    @staticmethod
+    def cdn_assets():
+        &quot;&quot;&quot;
+        CDN-delivered assets
+
+        Pattern: Long browser cache, longer CDN cache
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Cache-Control&quot;,
+            &quot;value&quot;: &quot;public, max-age=3600, s-maxage=86400&quot;,
+            &quot;explanation&quot;: &quot;Browser: 1 hour, CDN: 24 hours&quot;,
+            &quot;use_for&quot;: [&quot;Images&quot;, &quot;Fonts&quot;, &quot;Public assets&quot;]
+        }
+
+    @staticmethod
+    def no_caching():
+        &quot;&quot;&quot;
+        Sensitive or always-fresh data
+
+        Pattern: Complete cache prevention
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Cache-Control&quot;,
+            &quot;value&quot;: &quot;no-store, no-cache, must-revalidate, private&quot;,
+            &quot;explanation&quot;: &quot;Never cache, always fetch fresh&quot;,
+            &quot;use_for&quot;: [&quot;Sensitive data&quot;, &quot;Real-time data&quot;]
+        }
+
+    @staticmethod
+    def stale_while_revalidate():
+        &quot;&quot;&quot;
+        Serve stale content while updating (2024 pattern)
+
+        Pattern: Balance freshness and performance
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Cache-Control&quot;,
+            &quot;value&quot;: &quot;public, max-age=60, stale-while-revalidate=300&quot;,
+            &quot;explanation&quot;: &quot;Serve stale for 5min while revalidating&quot;,
+            &quot;use_for&quot;: [&quot;News feeds&quot;, &quot;Social media timelines&quot;]
+        }
+
+# Implementation examples
+def set_cache_headers_flask():
+    &quot;&quot;&quot;Flask example&quot;&quot;&quot;
+    from flask import make_response
+
+    @app.route(&#x27;/api/data&#x27;)
+    def api_data():
+        response = make_response({&quot;data&quot;: &quot;value&quot;})
+        response.headers[&#x27;Cache-Control&#x27;] = &#x27;private, max-age=300&#x27;
+        return response
+
+def set_cache_headers_express():
+    &quot;&quot;&quot;Express.js example&quot;&quot;&quot;
+    # JavaScript
+    &quot;&quot;&quot;
+    app.get(&#x27;/api/data&#x27;, (req, res) =&gt; {
+      res.set(&#x27;Cache-Control&#x27;, &#x27;private, max-age=300&#x27;);
+      res.json({ data: &#x27;value&#x27; });
+    });
+    &quot;&quot;&quot;
+
+def set_cache_headers_fastapi():
+    &quot;&quot;&quot;FastAPI example&quot;&quot;&quot;
+    from fastapi import Response
+
+    @app.get(&quot;/api/data&quot;)
+    async def api_data(response: Response):
+        response.headers[&quot;Cache-Control&quot;] = &quot;private, max-age=300&quot;
+        return {&quot;data&quot;: &quot;value&quot;}</code></pre>
+<h3>Modern Directives (2024)</h3>
+<pre><code class="lang-python">class ModernCacheDirectives:
+    &quot;&quot;&quot;2024 caching best practices&quot;&quot;&quot;
+
+    @staticmethod
+    def immutable_pattern():
+        &quot;&quot;&quot;
+        Immutable directive (Chrome 54+, Firefox 49+)
+
+        Prevents revalidation even on reload
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Cache-Control: public, max-age=31536000, immutable&quot;,
+            &quot;benefit&quot;: &quot;No revalidation on refresh (F5)&quot;,
+            &quot;use_case&quot;: &quot;Fingerprinted assets (app.[hash].js)&quot;,
+            &quot;support&quot;: &quot;All modern browsers (2024)&quot;
+        }
+
+    @staticmethod
+    def stale_while_revalidate_pattern():
+        &quot;&quot;&quot;
+        Serve stale while updating in background
+
+        Chrome 75+, Firefox 68+
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Cache-Control: max-age=60, stale-while-revalidate=86400&quot;,
+            &quot;behavior&quot;: [
+                &quot;&lt; 60s: Serve from cache (fresh)&quot;,
+                &quot;60s - 24h: Serve stale, revalidate async&quot;,
+                &quot;&gt; 24h: Block until revalidated&quot;
+            ],
+            &quot;benefit&quot;: &quot;Instant responses + background updates&quot;,
+            &quot;support&quot;: &quot;Chrome, Firefox, Safari 16+&quot;
+        }
+
+    @staticmethod
+    def stale_if_error_pattern():
+        &quot;&quot;&quot;
+        Serve stale on server errors
+
+        Resilience pattern for high availability
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Cache-Control: max-age=3600, stale-if-error=86400&quot;,
+            &quot;behavior&quot;: &quot;Serve stale up to 24h if origin returns 5xx&quot;,
+            &quot;benefit&quot;: &quot;Graceful degradation during outages&quot;,
+            &quot;use_case&quot;: &quot;Critical APIs, high-availability content&quot;
+        }</code></pre>
+<hr>
+<h2>Conditional Requests</h2>
+<h3>ETag (Entity Tag)</h3>
+<p><strong>Concept</strong>: Hash/version of content for validation</p>
+<pre><code class="lang-python">import hashlib
+from typing import Optional
+
+class ETagHandler:
+    &quot;&quot;&quot;ETag generation and validation&quot;&quot;&quot;
+
+    @staticmethod
+    def generate_etag(content: str) -&gt; str:
+        &quot;&quot;&quot;
+        Generate ETag from content
+
+        Strong ETag: byte-for-byte match required
+        Weak ETag: semantic equivalence (W/&quot;...&quot;)
+        &quot;&quot;&quot;
+        # Strong ETag
+        hash_value = hashlib.sha256(content.encode()).hexdigest()[:16]
+        return f&#x27;&quot;{hash_value}&quot;&#x27;
+
+    @staticmethod
+    def generate_weak_etag(content: str) -&gt; str:
+        &quot;&quot;&quot;
+        Weak ETag for semantic equivalence
+
+        Use when minor differences acceptable (whitespace, formatting)
+        &quot;&quot;&quot;
+        hash_value = hashlib.sha256(content.encode()).hexdigest()[:16]
+        return f&#x27;W/&quot;{hash_value}&quot;&#x27;
+
+    @staticmethod
+    def validate_etag(request_etag: str, current_etag: str) -&gt; bool:
+        &quot;&quot;&quot;Check if ETags match&quot;&quot;&quot;
+        # Strip W/ prefix for weak comparison
+        req = request_etag.replace(&#x27;W/&#x27;, &#x27;&#x27;)
+        cur = current_etag.replace(&#x27;W/&#x27;, &#x27;&#x27;)
+        return req == cur
+
+# Flask implementation
+def etag_example_flask():
+    from flask import Flask, request, make_response
+
+    app = Flask(__name__)
+
+    @app.route(&#x27;/api/data&#x27;)
+    def api_data():
+        content = get_current_data()  # {&quot;data&quot;: &quot;value&quot;}
+        content_str = json.dumps(content, sort_keys=True)
+
+        # Generate ETag
+        etag = ETagHandler.generate_etag(content_str)
+
+        # Check If-None-Match header
+        if_none_match = request.headers.get(&#x27;If-None-Match&#x27;)
+
+        if if_none_match == etag:
+            # Content unchanged - return 304 Not Modified
+            response = make_response(&#x27;&#x27;, 304)
+            response.headers[&#x27;ETag&#x27;] = etag
+            return response
+
+        # Content changed - return 200 with data
+        response = make_response(content)
+        response.headers[&#x27;ETag&#x27;] = etag
+        response.headers[&#x27;Cache-Control&#x27;] = &#x27;private, max-age=300&#x27;
+        return response
+
+# FastAPI implementation
+from fastapi import FastAPI, Request, Response, status
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
+
+@app.get(&quot;/api/data&quot;)
+async def api_data(request: Request):
+    content = {&quot;data&quot;: &quot;value&quot;}
+    content_str = json.dumps(content, sort_keys=True)
+
+    # Generate ETag
+    etag = ETagHandler.generate_etag(content_str)
+
+    # Check If-None-Match
+    if_none_match = request.headers.get(&quot;if-none-match&quot;)
+
+    if if_none_match == etag:
+        # Not modified
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers={&quot;ETag&quot;: etag})
+
+    # Return data with ETag
+    return JSONResponse(
+        content=content,
+        headers={
+            &quot;ETag&quot;: etag,
+            &quot;Cache-Control&quot;: &quot;private, max-age=300&quot;
+        }
+    )</code></pre>
+<h3>Last-Modified / If-Modified-Since</h3>
+<pre><code class="lang-python">from datetime import datetime
+from email.utils import formatdate, parsedate_to_datetime
+
+class LastModifiedHandler:
+    &quot;&quot;&quot;Last-Modified header handling&quot;&quot;&quot;
+
+    @staticmethod
+    def format_http_date(dt: datetime) -&gt; str:
+        &quot;&quot;&quot;Convert datetime to HTTP date format&quot;&quot;&quot;
+        # HTTP date: Wed, 21 Oct 2015 07:28:00 GMT
+        return formatdate(dt.timestamp(), usegmt=True)
+
+    @staticmethod
+    def parse_http_date(date_str: str) -&gt; datetime:
+        &quot;&quot;&quot;Parse HTTP date string to datetime&quot;&quot;&quot;
+        return parsedate_to_datetime(date_str)
+
+    @staticmethod
+    def is_modified_since(last_modified: datetime, if_modified_since: Optional[str]) -&gt; bool:
+        &quot;&quot;&quot;
+        Check if content was modified since given time
+
+        Returns: True if modified (send full response)
+        &quot;&quot;&quot;
+        if not if_modified_since:
+            return True  # No conditional request
+
+        try:
+            client_time = LastModifiedHandler.parse_http_date(if_modified_since)
+            # Compare (truncate to seconds, HTTP dates have 1s precision)
+            return last_modified.timestamp() &gt; client_time.timestamp()
+        except Exception:
+            return True  # Parse error, send full response
+
+# Flask example
+@app.route(&#x27;/api/document/&lt;int:doc_id&gt;&#x27;)
+def get_document(doc_id):
+    doc = get_document_from_db(doc_id)  # Returns {content, updated_at}
+
+    last_modified = doc[&#x27;updated_at&#x27;]
+    last_modified_str = LastModifiedHandler.format_http_date(last_modified)
+
+    # Check If-Modified-Since
+    if_modified_since = request.headers.get(&#x27;If-Modified-Since&#x27;)
+
+    if not LastModifiedHandler.is_modified_since(last_modified, if_modified_since):
+        # Not modified
+        response = make_response(&#x27;&#x27;, 304)
+        response.headers[&#x27;Last-Modified&#x27;] = last_modified_str
+        return response
+
+    # Modified - return full document
+    response = make_response(doc[&#x27;content&#x27;])
+    response.headers[&#x27;Last-Modified&#x27;] = last_modified_str
+    response.headers[&#x27;Cache-Control&#x27;] = &#x27;private, max-age=300&#x27;
+    return response</code></pre>
+<hr>
+<h2>Vary Header</h2>
+<p><strong>Purpose</strong>: Vary cache by request headers (e.g., Accept-Encoding, User-Agent)</p>
+<pre><code class="lang-python">class VaryHeaderExamples:
+    &quot;&quot;&quot;Vary header patterns&quot;&quot;&quot;
+
+    @staticmethod
+    def vary_by_encoding():
+        &quot;&quot;&quot;
+        Vary by Accept-Encoding
+
+        Cache separate versions for gzip, br, etc.
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Vary: Accept-Encoding&quot;,
+            &quot;use_case&quot;: &quot;Compressed responses&quot;,
+            &quot;example&quot;: &quot;Same content, different compression&quot;
+        }
+
+    @staticmethod
+    def vary_by_auth():
+        &quot;&quot;&quot;
+        Vary by Authorization
+
+        Prevent caching of authenticated content
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Vary: Authorization&quot;,
+            &quot;use_case&quot;: &quot;User-specific content&quot;,
+            &quot;warning&quot;: &quot;Often better to use Cache-Control: private&quot;
+        }
+
+    @staticmethod
+    def vary_by_multiple():
+        &quot;&quot;&quot;
+        Vary by multiple headers
+
+        Cache multiplied by combinations
+        &quot;&quot;&quot;
+        return {
+            &quot;header&quot;: &quot;Vary: Accept-Encoding, Accept-Language&quot;,
+            &quot;use_case&quot;: &quot;i18n content with compression&quot;,
+            &quot;warning&quot;: &quot;Cache fragmentation (many variants)&quot;
+        }
+
+# Implementation
+@app.route(&#x27;/api/content&#x27;)
+def get_content():
+    accept_encoding = request.headers.get(&#x27;Accept-Encoding&#x27;, &#x27;&#x27;)
+    accept_language = request.headers.get(&#x27;Accept-Language&#x27;, &#x27;en&#x27;)
+
+    # Generate appropriate content
+    content = get_localized_content(accept_language)
+
+    response = make_response(content)
+    response.headers[&#x27;Vary&#x27;] = &#x27;Accept-Encoding, Accept-Language&#x27;
+    response.headers[&#x27;Cache-Control&#x27;] = &#x27;public, max-age=3600&#x27;
+
+    return response</code></pre>
+<hr>
+<h2>Cache Busting Strategies</h2>
+<h3>1. Fingerprinting / Hashing</h3>
+<p><strong>Best Practice</strong>: Include content hash in filename</p>
+<pre><code class="lang-python">import hashlib
+import os
+
+class CacheBusting:
+    &quot;&quot;&quot;Cache busting strategies&quot;&quot;&quot;
+
+    @staticmethod
+    def fingerprint_filename(filepath: str) -&gt; str:
+        &quot;&quot;&quot;
+        Add content hash to filename
+
+        Example: app.js → app.a1b2c3d4.js
+        &quot;&quot;&quot;
+        with open(filepath, &#x27;rb&#x27;) as f:
+            content = f.read()
+
+        # Generate hash
+        hash_value = hashlib.md5(content).hexdigest()[:8]
+
+        # Insert hash before extension
+        name, ext = os.path.splitext(filepath)
+        return f&quot;{name}.{hash_value}{ext}&quot;
+
+    @staticmethod
+    def query_string_versioning(url: str, version: str) -&gt; str:
+        &quot;&quot;&quot;
+        Add version query parameter
+
+        Less ideal (some caches ignore query params)
+        &quot;&quot;&quot;
+        separator = &#x27;&amp;&#x27; if &#x27;?&#x27; in url else &#x27;?&#x27;
+        return f&quot;{url}{separator}v={version}&quot;
+
+# Build tool integration (example)
+&quot;&quot;&quot;
+# Webpack/Vite automatically handles this:
+
+// webpack.config.js
+module.exports = {
+  output: {
+    filename: &#x27;[name].[contenthash].js&#x27;,
+  },
+};
+
+// Results in: main.a1b2c3d4.js
+// HTML references updated automatically
+&quot;&quot;&quot;
+
+# HTML generation
+def generate_asset_url(asset_path: str, version: Optional[str] = None) -&gt; str:
+    &quot;&quot;&quot;
+    Generate versioned asset URL
+
+    Development: /static/app.js
+    Production: /static/app.a1b2c3d4.js
+    &quot;&quot;&quot;
+    if os.environ.get(&#x27;ENV&#x27;) == &#x27;production&#x27;:
+        return CacheBusting.fingerprint_filename(asset_path)
+    else:
+        return asset_path</code></pre>
+<h3>2. Immutable Assets</h3>
+<pre><code class="lang-html">&lt;!-- Immutable pattern with long cache --&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;/static/app.a1b2c3d4.css&quot;&gt;
+&lt;!-- Server sends: Cache-Control: public, max-age=31536000, immutable --&gt;
+
+&lt;!-- Non-fingerprinted assets: short cache --&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;/static/app.css&quot;&gt;
+&lt;!-- Server sends: Cache-Control: public, max-age=300 --&gt;</code></pre>
+<hr>
+<h2>Testing Cache Headers</h2>
+<h3>Using curl</h3>
+<pre><code class="lang-bash"># Check response headers
+curl -I https://example.com/api/data
+
+# Check with If-None-Match (ETag validation)
+curl -H &quot;If-None-Match: \&quot;abc123\&quot;&quot; -I https://example.com/api/data
+
+# Check with If-Modified-Since
+curl -H &quot;If-Modified-Since: Wed, 21 Oct 2015 07:28:00 GMT&quot; -I \
+  https://example.com/api/data
+
+# Verbose output
+curl -v https://example.com/api/data</code></pre>
+<h3>Browser DevTools</h3>
+<pre><code class="lang-javascript">// Chrome DevTools Network tab:
+// 1. Open DevTools (F12)
+// 2. Network tab
+// 3. Disable cache checkbox (for testing)
+// 4. Look at &quot;Size&quot; column:
+//    - &quot;(disk cache)&quot; = from disk cache
+//    - &quot;(memory cache)&quot; = from memory cache
+//    - &quot;304 Not Modified&quot; = conditional request successful
+//    - File size = fresh request
+
+// Inspect headers
+fetch(&#x27;/api/data&#x27;)
+  .then(response =&gt; {
+    console.log(&#x27;Cache-Control:&#x27;, response.headers.get(&#x27;cache-control&#x27;));
+    console.log(&#x27;ETag:&#x27;, response.headers.get(&#x27;etag&#x27;));
+    console.log(&#x27;Age:&#x27;, response.headers.get(&#x27;age&#x27;));
+  });</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Static Asset Pipeline</h3>
+<pre><code class="lang-python">class StaticAssetCaching:
+    &quot;&quot;&quot;Optimal caching for static assets&quot;&quot;&quot;
+
+    @staticmethod
+    def configure_asset_caching():
+        &quot;&quot;&quot;
+        Different strategies for different asset types
+        &quot;&quot;&quot;
+        return {
+            &quot;fingerprinted_assets&quot;: {
+                &quot;pattern&quot;: &quot;*.{hash}.{js,css,png,jpg}&quot;,
+                &quot;cache_control&quot;: &quot;public, max-age=31536000, immutable&quot;,
+                &quot;explanation&quot;: &quot;Content-addressed, never changes&quot;
+            },
+            &quot;fonts&quot;: {
+                &quot;pattern&quot;: &quot;*.{woff,woff2,ttf}&quot;,
+                &quot;cache_control&quot;: &quot;public, max-age=31536000, immutable&quot;,
+                &quot;explanation&quot;: &quot;Fonts rarely change&quot;
+            },
+            &quot;images_without_hash&quot;: {
+                &quot;pattern&quot;: &quot;*.{png,jpg,svg}&quot;,
+                &quot;cache_control&quot;: &quot;public, max-age=2592000&quot;,  # 30 days
+                &quot;explanation&quot;: &quot;Long but not immutable&quot;
+            },
+            &quot;html&quot;: {
+                &quot;pattern&quot;: &quot;*.html&quot;,
+                &quot;cache_control&quot;: &quot;public, max-age=0, must-revalidate&quot;,
+                &quot;explanation&quot;: &quot;Always check for updates&quot;
+            }
+        }
+
+# Nginx configuration
+&quot;&quot;&quot;
+# Fingerprinted assets
+location ~* \.[\da-f]{8}\.(js|css)$ {
+    add_header Cache-Control &quot;public, max-age=31536000, immutable&quot;;
+}
+
+# Fonts
+location ~* \.(woff|woff2|ttf)$ {
+    add_header Cache-Control &quot;public, max-age=31536000, immutable&quot;;
+}
+
+# HTML
+location ~* \.html$ {
+    add_header Cache-Control &quot;public, max-age=0, must-revalidate&quot;;
+}
+&quot;&quot;&quot;</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ No Cache Headers</h3>
+<pre><code class="lang-python"># WRONG: Missing cache headers
+@app.route(&#x27;/api/data&#x27;)
+def api_data():
+    return {&quot;data&quot;: &quot;value&quot;}
+# Browser uses heuristic caching (unpredictable)
+
+# CORRECT: Explicit cache headers
+@app.route(&#x27;/api/data&#x27;)
+def api_data():
+    response = make_response({&quot;data&quot;: &quot;value&quot;})
+    response.headers[&#x27;Cache-Control&#x27;] = &#x27;private, max-age=300&#x27;
+    return response</code></pre>
+<h3>❌ Confusing no-cache and no-store</h3>
+<pre><code class="lang-python"># WRONG: Using no-cache to prevent caching
+response.headers[&#x27;Cache-Control&#x27;] = &#x27;no-cache&#x27;
+# &quot;no-cache&quot; means &quot;revalidate before use&quot;, NOT &quot;don&#x27;t cache&quot;
+
+# CORRECT: Use no-store to prevent caching
+response.headers[&#x27;Cache-Control&#x27;] = &#x27;no-store&#x27;</code></pre>
+<h3>❌ Caching Personalized Content</h3>
+<pre><code class="lang-python"># WRONG: Public cache for user-specific data
+@app.route(&#x27;/api/user/profile&#x27;)
+def user_profile():
+    response = make_response(get_user_data())
+    response.headers[&#x27;Cache-Control&#x27;] = &#x27;public, max-age=3600&#x27;
+    # CDN will cache and serve to wrong users!
+    return response
+
+# CORRECT: Private cache only
+@app.route(&#x27;/api/user/profile&#x27;)
+def user_profile():
+    response = make_response(get_user_data())
+    response.headers[&#x27;Cache-Control&#x27;] = &#x27;private, max-age=300&#x27;
+    return response</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Cache-Control Directives</h3>
+<p>| Directive | Meaning | Use Case | |-----------|---------|----------| | public | Any cache can store | Static assets, public APIs | | private | Browser only, no CDN | User-specific data | | no-cache | Revalidate before use | HTML, frequently updated | | no-store | Don&#x27;t cache | Sensitive data | | max-age=N | Fresh for N seconds | All cacheable content | | s-maxage=N | CDN max age | CDN-delivered content | | immutable | Never revalidate | Fingerprinted assets | | stale-while-revalidate=N | Serve stale while updating | Balance freshness/performance |</p>
+<h3>Status Codes</h3>
+<p>| Code | Meaning | Use Case | |------|---------|----------| | 200 OK | Full response | Normal response | | 304 Not Modified | Content unchanged | Successful conditional request | | 412 Precondition Failed | Condition not met | Failed conditional request |</p>
+<hr>
+<h2>Related Skills</h2>
+<p><strong>Next Steps</strong>:</p>
+<ul><li><code>cdn-edge-caching.md</code> → CDN configuration and optimization</li><li><code>service-worker-caching.md</code> → Progressive Web App caching</li><li><code>cache-performance-monitoring.md</code> → Measuring cache effectiveness</li></ul>
+<p><strong>Foundations</strong>:</p>
+<ul><li><code>caching-fundamentals.md</code> → Core caching concepts</li><li><code>frontend-performance.md</code> → Overall web performance</li></ul>
+<hr>
+<h2>Summary</h2>
+<p>HTTP caching optimizes web performance through browser and intermediate caches:</p>
+<ul><li><strong>Cache-Control</strong>: Modern directive for caching behavior (public, private, max-age, immutable)</li><li><strong>Conditional Requests</strong>: ETags and Last-Modified for validation</li><li><strong>Vary</strong>: Cache variations based on request headers</li><li><strong>Cache Busting</strong>: Fingerprinting for immutable assets</li></ul>
+<p><strong>Key takeaways</strong>:</p>
+<ol><li>Use Cache-Control (not Expires) for modern caching</li><li>Fingerprint assets for long-term caching with immutable</li><li>Implement ETags for efficient revalidation</li><li>Use private for user-specific, public for shared content</li><li>Test cache behavior with curl and browser DevTools</li></ol>
+<p><strong>Next</strong>: Move to <code>cdn-edge-caching.md</code> for CDN optimization.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/caching-http-caching.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

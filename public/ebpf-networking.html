@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ebpf-networking</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ebpf-networking.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ebpf-networking.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ebpf-networking</h1><p class="lede">Fast packet processing with XDP, TC filtering, socket programs, load balancing, and Cilium networking</p><h1>eBPF Networking</h1>
+<p><strong>Scope</strong>: XDP packet processing, TC filtering, socket programs, L4/L7 load balancing, and Cilium for Kubernetes <strong>Lines</strong>: ~340 <strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Building high-performance packet filters or firewalls</li><li>Implementing custom load balancers at L4 or L7</li><li>Processing packets at line rate with XDP</li><li>Modifying packets with TC (Traffic Control)</li><li>Creating per-socket filtering rules</li><li>Using Cilium for Kubernetes networking and security</li><li>Mitigating DDoS attacks at the kernel level</li><li>Optimizing network performance with zero-copy packet access</li></ul>
+<h2>Core Concepts</h2>
+<h3>Concept 1: XDP (eXpress Data Path)</h3>
+<p><strong>Actions</strong>: XDP_PASS, XDP_DROP, XDP_TX, XDP_REDIRECT, XDP_ABORTED</p>
+<p><strong>Execution point</strong>: Earliest possible (before SKB allocation)</p>
+<pre><code class="lang-c">#include &lt;linux/bpf.h&gt;
+#include &lt;linux/if_ether.h&gt;
+#include &lt;linux/ip.h&gt;
+#include &lt;linux/icmp.h&gt;
+#include &lt;bpf/bpf_helpers.h&gt;
+
+SEC(&quot;xdp&quot;)
+int xdp_firewall(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx-&gt;data_end;
+    void *data = (void *)(long)ctx-&gt;data;
+
+    // Parse Ethernet header
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) &gt; data_end)
+        return XDP_DROP;
+
+    // Only process IP packets
+    if (eth-&gt;h_proto != htons(ETH_P_IP))
+        return XDP_PASS;
+
+    // Parse IP header
+    struct iphdr *ip = (void *)(eth + 1);
+    if ((void *)(ip + 1) &gt; data_end)
+        return XDP_DROP;
+
+    // Drop ICMP packets (simple firewall)
+    if (ip-&gt;protocol == IPPROTO_ICMP)
+        return XDP_DROP;
+
+    // Drop packets from specific IP
+    __u32 blocked_ip = 0x0a000001; // 10.0.0.1
+    if (ip-&gt;saddr == htonl(blocked_ip))
+        return XDP_DROP;
+
+    return XDP_PASS;
+}
+
+char LICENSE[] SEC(&quot;license&quot;) = &quot;GPL&quot;;</code></pre>
+<p><strong>XDP modes</strong>:</p>
+<ul><li>Native: Driver support required (fastest)</li><li>Offload: NIC hardware execution (rare)</li><li>Generic: Software fallback (slower, no special driver)</li></ul>
+<h3>Concept 2: TC (Traffic Control)</h3>
+<p><strong>Hook points</strong>: Ingress (incoming), Egress (outgoing)</p>
+<p><strong>Capabilities</strong>: Packet modification, redirection, drop, pass</p>
+<pre><code class="lang-c">#include &lt;linux/bpf.h&gt;
+#include &lt;linux/pkt_cls.h&gt;
+#include &lt;linux/if_ether.h&gt;
+#include &lt;linux/ip.h&gt;
+#include &lt;linux/tcp.h&gt;
+#include &lt;bpf/bpf_helpers.h&gt;
+
+SEC(&quot;tc&quot;)
+int tc_modify_port(struct __sk_buff *skb) {
+    void *data_end = (void *)(long)skb-&gt;data_end;
+    void *data = (void *)(long)skb-&gt;data;
+
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) &gt; data_end)
+        return TC_ACT_OK;
+
+    if (eth-&gt;h_proto != htons(ETH_P_IP))
+        return TC_ACT_OK;
+
+    struct iphdr *ip = (void *)(eth + 1);
+    if ((void *)(ip + 1) &gt; data_end)
+        return TC_ACT_OK;
+
+    if (ip-&gt;protocol != IPPROTO_TCP)
+        return TC_ACT_OK;
+
+    struct tcphdr *tcp = (void *)(ip + 1);
+    if ((void *)(tcp + 1) &gt; data_end)
+        return TC_ACT_OK;
+
+    // Redirect port 80 traffic to port 8080
+    if (tcp-&gt;dest == htons(80)) {
+        __u16 new_port = htons(8080);
+
+        // Recalculate TCP checksum
+        __u32 csum = tcp-&gt;check;
+        csum = bpf_csum_diff(&amp;tcp-&gt;dest, sizeof(__u16),
+                             &amp;new_port, sizeof(__u16), ~csum);
+        tcp-&gt;check = csum_fold(csum);
+
+        tcp-&gt;dest = new_port;
+    }
+
+    return TC_ACT_OK;
+}
+
+char LICENSE[] SEC(&quot;license&quot;) = &quot;GPL&quot;;</code></pre>
+<h3>Concept 3: Socket Programs</h3>
+<p><strong>Types</strong>: Socket filter, sockops, sk_msg, sk_skb</p>
+<p><strong>Use case</strong>: Per-socket policy, connection steering</p>
+<pre><code class="lang-c">// Socket filter: Drop packets for specific socket
+SEC(&quot;socket&quot;)
+int socket_filter(struct __sk_buff *skb) {
+    // Access socket info
+    __u32 protocol = load_byte(skb, offsetof(struct iphdr, protocol));
+
+    if (protocol == IPPROTO_UDP)
+        return 0; // Drop UDP
+
+    return -1; // Pass others
+}
+
+// Sockops: Attach to socket operations
+SEC(&quot;sockops&quot;)
+int sockops_prog(struct bpf_sock_ops *skops) {
+    __u32 op = skops-&gt;op;
+
+    switch (op) {
+    case BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB:
+    case BPF_SOCK_OPS_ACTIVE_ESTABLISHED_CB:
+        // Socket established
+        bpf_sock_ops_cb_flags_set(skops, BPF_SOCK_OPS_ALL_CB_FLAGS);
+        break;
+
+    case BPF_SOCK_OPS_RTO_CB:
+        // Retransmit timeout
+        bpf_printk(&quot;RTO event\n&quot;);
+        break;
+    }
+
+    return 1;
+}
+
+char LICENSE[] SEC(&quot;license&quot;) = &quot;GPL&quot;;</code></pre>
+<h3>Concept 4: Packet Redirection</h3>
+<p><strong>XDP_REDIRECT</strong>: Send packet to another interface or CPU</p>
+<pre><code class="lang-c">struct {
+    __uint(type, BPF_MAP_TYPE_DEVMAP);
+    __uint(max_entries, 256);
+    __type(key, __u32);
+    __type(value, __u32);
+} tx_port SEC(&quot;.maps&quot;);
+
+SEC(&quot;xdp&quot;)
+int xdp_redirect(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx-&gt;data_end;
+    void *data = (void *)(long)ctx-&gt;data;
+
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) &gt; data_end)
+        return XDP_DROP;
+
+    // Redirect to interface in map
+    __u32 key = 0;
+    return bpf_redirect_map(&amp;tx_port, key, 0);
+}
+
+// User space setup
+int main() {
+    int map_fd = bpf_map__fd(tx_port);
+    __u32 key = 0;
+    __u32 ifindex = if_nametoindex(&quot;eth1&quot;); // Target interface
+
+    bpf_map_update_elem(map_fd, &amp;key, &amp;ifindex, BPF_ANY);
+    // Packets now redirect to eth1
+}</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: DDoS Mitigation</h3>
+<p><strong>When to use</strong>: Protect against network floods</p>
+<pre><code class="lang-c">struct {
+    __uint(type, BPF_MAP_TYPE_LRU_HASH);
+    __uint(max_entries, 1000000);
+    __type(key, __u32);    // Source IP
+    __type(value, __u64);  // Packet count
+} rate_limit SEC(&quot;.maps&quot;);
+
+SEC(&quot;xdp&quot;)
+int xdp_rate_limit(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx-&gt;data_end;
+    void *data = (void *)(long)ctx-&gt;data;
+
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) &gt; data_end)
+        return XDP_DROP;
+
+    if (eth-&gt;h_proto != htons(ETH_P_IP))
+        return XDP_PASS;
+
+    struct iphdr *ip = (void *)(eth + 1);
+    if ((void *)(ip + 1) &gt; data_end)
+        return XDP_DROP;
+
+    __u32 src_ip = ip-&gt;saddr;
+    __u64 *count = bpf_map_lookup_elem(&amp;rate_limit, &amp;src_ip);
+
+    if (count) {
+        // Limit: 10,000 packets per second
+        if (*count &gt; 10000)
+            return XDP_DROP;
+
+        __sync_fetch_and_add(count, 1);
+    } else {
+        __u64 init = 1;
+        bpf_map_update_elem(&amp;rate_limit, &amp;src_ip, &amp;init, BPF_ANY);
+    }
+
+    return XDP_PASS;
+}
+
+// User space: Reset counts every second
+void reset_counters(int map_fd) {
+    while (1) {
+        sleep(1);
+        // LRU automatically evicts old entries
+    }
+}</code></pre>
+<h3>Pattern 2: L4 Load Balancer</h3>
+<p><strong>Use case</strong>: Distribute connections across backends</p>
+<pre><code class="lang-c">struct backend {
+    __u32 ip;
+    __u16 port;
+};
+
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(max_entries, 4);
+    __type(key, __u32);
+    __type(value, struct backend);
+} backends SEC(&quot;.maps&quot;);
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 100000);
+    __type(key, __u64);      // Connection hash
+    __type(value, __u32);    // Backend index
+} conn_table SEC(&quot;.maps&quot;);
+
+SEC(&quot;xdp&quot;)
+int xdp_lb(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx-&gt;data_end;
+    void *data = (void *)(long)ctx-&gt;data;
+
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) &gt; data_end)
+        return XDP_DROP;
+
+    if (eth-&gt;h_proto != htons(ETH_P_IP))
+        return XDP_PASS;
+
+    struct iphdr *ip = (void *)(eth + 1);
+    if ((void *)(ip + 1) &gt; data_end)
+        return XDP_DROP;
+
+    if (ip-&gt;protocol != IPPROTO_TCP)
+        return XDP_PASS;
+
+    struct tcphdr *tcp = (void *)(ip + 1);
+    if ((void *)(tcp + 1) &gt; data_end)
+        return XDP_DROP;
+
+    // Hash connection
+    __u64 conn_hash = ((__u64)ip-&gt;saddr &lt;&lt; 32) | ip-&gt;daddr;
+    conn_hash ^= ((__u64)tcp-&gt;source &lt;&lt; 16) | tcp-&gt;dest;
+
+    // Lookup existing connection
+    __u32 *backend_idx = bpf_map_lookup_elem(&amp;conn_table, &amp;conn_hash);
+    __u32 idx;
+
+    if (!backend_idx) {
+        // New connection: Round-robin selection
+        idx = (conn_hash % 4); // 4 backends
+        bpf_map_update_elem(&amp;conn_table, &amp;conn_hash, &amp;idx, BPF_ANY);
+    } else {
+        idx = *backend_idx;
+    }
+
+    // Get backend
+    struct backend *be = bpf_map_lookup_elem(&amp;backends, &amp;idx);
+    if (!be)
+        return XDP_DROP;
+
+    // Rewrite destination IP and port
+    ip-&gt;daddr = be-&gt;ip;
+    tcp-&gt;dest = htons(be-&gt;port);
+
+    // Recalculate checksums
+    ip-&gt;check = 0;
+    ip-&gt;check = ip_checksum(ip);
+
+    return XDP_TX; // Send back out same interface
+}</code></pre>
+<h3>Pattern 3: Packet Sampling</h3>
+<p><strong>When to use</strong>: Network monitoring with low overhead</p>
+<pre><code class="lang-c">struct {
+    __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+} events SEC(&quot;.maps&quot;);
+
+struct packet_sample {
+    __u32 src_ip;
+    __u32 dst_ip;
+    __u16 src_port;
+    __u16 dst_port;
+    __u8 protocol;
+    __u32 len;
+};
+
+SEC(&quot;xdp&quot;)
+int xdp_sample(struct xdp_md *ctx) {
+    // Sample 1 out of 1000 packets
+    if ((bpf_get_prandom_u32() % 1000) != 0)
+        return XDP_PASS;
+
+    void *data_end = (void *)(long)ctx-&gt;data_end;
+    void *data = (void *)(long)ctx-&gt;data;
+
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) &gt; data_end)
+        return XDP_PASS;
+
+    if (eth-&gt;h_proto != htons(ETH_P_IP))
+        return XDP_PASS;
+
+    struct iphdr *ip = (void *)(eth + 1);
+    if ((void *)(ip + 1) &gt; data_end)
+        return XDP_PASS;
+
+    struct packet_sample sample = {
+        .src_ip = ip-&gt;saddr,
+        .dst_ip = ip-&gt;daddr,
+        .protocol = ip-&gt;protocol,
+        .len = ctx-&gt;data_end - ctx-&gt;data,
+    };
+
+    if (ip-&gt;protocol == IPPROTO_TCP) {
+        struct tcphdr *tcp = (void *)(ip + 1);
+        if ((void *)(tcp + 1) &lt;= data_end) {
+            sample.src_port = tcp-&gt;source;
+            sample.dst_port = tcp-&gt;dest;
+        }
+    }
+
+    bpf_perf_event_output(ctx, &amp;events, BPF_F_CURRENT_CPU,
+                          &amp;sample, sizeof(sample));
+
+    return XDP_PASS;
+}</code></pre>
+<h3>Pattern 4: Cilium Network Policy</h3>
+<p><strong>Use case</strong>: Kubernetes networking with eBPF</p>
+<pre><code class="lang-yaml"># Cilium NetworkPolicy
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-frontend
+spec:
+  endpointSelector:
+    matchLabels:
+      app: backend
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app: frontend
+    toPorts:
+    - ports:
+      - port: &quot;8080&quot;
+        protocol: TCP</code></pre>
+<p><strong>Under the hood</strong>: Cilium generates eBPF programs</p>
+<pre><code class="lang-c">// Simplified Cilium-style policy enforcement
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 10000);
+    __type(key, __u32);    // Identity
+    __type(value, __u8);   // Allowed
+} policy_map SEC(&quot;.maps&quot;);
+
+SEC(&quot;from-container&quot;)
+int enforce_egress(struct __sk_buff *skb) {
+    __u32 src_identity = skb-&gt;cb[0]; // Cilium sets this
+    __u32 dst_identity = skb-&gt;cb[1];
+
+    struct policy_key {
+        __u32 src;
+        __u32 dst;
+    } key = {
+        .src = src_identity,
+        .dst = dst_identity,
+    };
+
+    // Lookup policy
+    __u8 *allowed = bpf_map_lookup_elem(&amp;policy_map, &amp;key);
+    if (!allowed || *allowed == 0)
+        return TC_ACT_SHOT; // Drop
+
+    return TC_ACT_OK; // Allow
+}</code></pre>
+<h3>Pattern 5: Connection Tracking</h3>
+<p><strong>Use case</strong>: Stateful firewalling</p>
+<pre><code class="lang-c">struct conn_key {
+    __u32 src_ip;
+    __u32 dst_ip;
+    __u16 src_port;
+    __u16 dst_port;
+    __u8 protocol;
+};
+
+struct conn_state {
+    __u64 packets;
+    __u64 bytes;
+    __u64 last_seen;
+    __u8 state; // NEW, ESTABLISHED, etc.
+};
+
+struct {
+    __uint(type, BPF_MAP_TYPE_LRU_HASH);
+    __uint(max_entries, 1000000);
+    __type(key, struct conn_key);
+    __type(value, struct conn_state);
+} conntrack SEC(&quot;.maps&quot;);
+
+SEC(&quot;xdp&quot;)
+int xdp_conntrack(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx-&gt;data_end;
+    void *data = (void *)(long)ctx-&gt;data;
+
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) &gt; data_end)
+        return XDP_DROP;
+
+    if (eth-&gt;h_proto != htons(ETH_P_IP))
+        return XDP_PASS;
+
+    struct iphdr *ip = (void *)(eth + 1);
+    if ((void *)(ip + 1) &gt; data_end)
+        return XDP_DROP;
+
+    if (ip-&gt;protocol != IPPROTO_TCP)
+        return XDP_PASS;
+
+    struct tcphdr *tcp = (void *)(ip + 1);
+    if ((void *)(tcp + 1) &gt; data_end)
+        return XDP_DROP;
+
+    struct conn_key key = {
+        .src_ip = ip-&gt;saddr,
+        .dst_ip = ip-&gt;daddr,
+        .src_port = tcp-&gt;source,
+        .dst_port = tcp-&gt;dest,
+        .protocol = ip-&gt;protocol,
+    };
+
+    struct conn_state *state = bpf_map_lookup_elem(&amp;conntrack, &amp;key);
+
+    if (!state) {
+        // New connection
+        if (!(tcp-&gt;syn &amp;&amp; !tcp-&gt;ack))
+            return XDP_DROP; // Must start with SYN
+
+        struct conn_state new_state = {
+            .packets = 1,
+            .bytes = ctx-&gt;data_end - ctx-&gt;data,
+            .last_seen = bpf_ktime_get_ns(),
+            .state = 0, // NEW
+        };
+        bpf_map_update_elem(&amp;conntrack, &amp;key, &amp;new_state, BPF_ANY);
+    } else {
+        // Existing connection
+        __sync_fetch_and_add(&amp;state-&gt;packets, 1);
+        __sync_fetch_and_add(&amp;state-&gt;bytes, ctx-&gt;data_end - ctx-&gt;data);
+        state-&gt;last_seen = bpf_ktime_get_ns();
+    }
+
+    return XDP_PASS;
+}</code></pre>
+<h3>Pattern 6: Zero-Copy Packet Modification</h3>
+<p><strong>When to use</strong>: High-performance packet rewriting</p>
+<pre><code class="lang-c">SEC(&quot;xdp&quot;)
+int xdp_rewrite_mac(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx-&gt;data_end;
+    void *data = (void *)(long)ctx-&gt;data;
+
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) &gt; data_end)
+        return XDP_DROP;
+
+    // Rewrite MAC addresses in-place (zero-copy)
+    __u8 src_mac[6] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55};
+    __u8 dst_mac[6] = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+
+    __builtin_memcpy(eth-&gt;h_source, src_mac, 6);
+    __builtin_memcpy(eth-&gt;h_dest, dst_mac, 6);
+
+    return XDP_TX; // Transmit modified packet
+}</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>XDP Actions</h3>
+<pre><code>Action         | Description                    | Use Case
+---------------|--------------------------------|------------------
+XDP_PASS       | Pass to kernel stack           | Normal processing
+XDP_DROP       | Drop packet                    | Firewall, DDoS
+XDP_TX         | Bounce back same interface     | Reflection
+XDP_REDIRECT   | Redirect to another interface  | Forwarding, LB
+XDP_ABORTED    | Drop + trace event             | Error handling</code></pre>
+<h3>TC Actions</h3>
+<pre><code>Action       | Description
+-------------|----------------------------------
+TC_ACT_OK    | Pass packet
+TC_ACT_SHOT  | Drop packet
+TC_ACT_STOLEN| Consumed, don&#x27;t process further
+TC_ACT_REDIRECT | Redirect to another device</code></pre>
+<h3>Loading Commands</h3>
+<pre><code class="lang-bash"># XDP
+ip link set dev eth0 xdp obj program.o sec xdp
+
+# TC ingress
+tc qdisc add dev eth0 clsact
+tc filter add dev eth0 ingress bpf da obj program.o sec tc
+
+# Cilium
+cilium install
+kubectl apply -f policy.yaml</code></pre>
+<h3>Key Guidelines</h3>
+<pre><code>✅ DO: Use XDP for earliest packet processing
+✅ DO: Validate all packet bounds before access
+✅ DO: Use LRU maps for connection tracking
+✅ DO: Test with different packet sizes and types
+✅ DO: Measure performance impact
+
+❌ DON&#x27;T: Modify packets without checksum updates
+❌ DON&#x27;T: Access packet data without bounds checking
+❌ DON&#x27;T: Use XDP for complex packet inspection (use TC)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-c">// ❌ NEVER: Access packet data without bounds check
+SEC(&quot;xdp&quot;)
+int bad_xdp(struct xdp_md *ctx) {
+    struct ethhdr *eth = (void *)(long)ctx-&gt;data;
+    __u16 proto = eth-&gt;h_proto; // REJECTED - no bounds check
+    return XDP_PASS;
+}
+
+// ✅ CORRECT: Always validate bounds
+SEC(&quot;xdp&quot;)
+int good_xdp(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx-&gt;data_end;
+    void *data = (void *)(long)ctx-&gt;data;
+
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) &gt; data_end)
+        return XDP_DROP;
+
+    __u16 proto = eth-&gt;h_proto; // ACCEPTED
+    return XDP_PASS;
+}</code></pre>
+<p>❌ <strong>No bounds checking</strong>: Verifier rejection, crashes ✅ <strong>Correct approach</strong>: Validate before every access</p>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-c">// ❌ Don&#x27;t: Modify checksums without recalculation
+tcp-&gt;dest = htons(8080);
+// Checksum now invalid! Packet will be dropped
+
+// ✅ Correct: Recalculate checksums
+__u16 old_port = tcp-&gt;dest;
+__u16 new_port = htons(8080);
+
+tcp-&gt;check = bpf_csum_diff(&amp;old_port, sizeof(old_port),
+                           &amp;new_port, sizeof(new_port),
+                           ~tcp-&gt;check);
+tcp-&gt;dest = new_port;</code></pre>
+<p>❌ <strong>Invalid checksums</strong>: Packets dropped by receivers ✅ <strong>Better</strong>: Always update checksums when modifying headers</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>ebpf-fundamentals.md</code> - Core eBPF concepts and verifier</li><li><code>ebpf-tracing-observability.md</code> - Network observability</li><li><code>network-protocols.md</code> - Understanding TCP/IP stack</li><li><code>kubernetes-networking.md</code> - Container networking</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ebpf-networking.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

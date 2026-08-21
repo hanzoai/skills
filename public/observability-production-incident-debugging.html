@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>observability-production-incident-debugging</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/observability-production-incident-debugging.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/observability-production-incident-debugging.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>observability-production-incident-debugging</h1><p class="lede">Debugging production incidents using observability data (logs, metrics, traces)</p><h1>Production Incident Debugging</h1>
+<p><strong>Scope</strong>: Incident triage workflow, root cause analysis, distributed tracing for debugging, correlation IDs, runbook creation, blameless postmortems</p>
+<p><strong>Lines</strong>: 440</p>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Triaging production incidents with observability data</li><li>Performing root cause analysis (RCA) for system failures</li><li>Debugging distributed systems with multiple microservices</li><li>Correlating logs, metrics, and traces to diagnose issues</li><li>Creating runbooks from past incidents</li><li>Conducting blameless postmortems</li><li>Implementing time-travel debugging with distributed tracing</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Local development debugging (use IDE debugger)</li><li>Performance optimization (use profiling tools)</li><li>Security incident response (use security-specific tools)</li></ul>
+<p><strong>Context</strong>:</p>
+<ul><li><strong>Mean Time to Detect (MTTD)</strong>: Average 15-30 minutes for mature teams</li><li><strong>Mean Time to Resolve (MTTR)</strong>: Reduced by 50% with proper observability</li><li><strong>Root cause accuracy</strong>: 80%+ with correlated telemetry vs 40% with logs alone</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Incident Triage Workflow</h3>
+<pre><code>1. DETECT: Alert fires or user reports issue
+   ↓
+2. ASSESS: Check dashboards (RED metrics: Rate, Errors, Duration)
+   ↓
+3. INVESTIGATE: Logs → Metrics → Traces (in that order)
+   ↓
+4. ISOLATE: Identify failing component/service
+   ↓
+5. MITIGATE: Rollback, scale, or patch
+   ↓
+6. RESOLVE: Fix root cause
+   ↓
+7. LEARN: Postmortem, runbook updates</code></pre>
+<h3>RED Method (Request-Driven Systems)</h3>
+<p><strong>Rate</strong>: Requests per second</p>
+<ul><li>Sudden drop? Upstream failure or routing issue</li><li>Sudden spike? Traffic surge or DDoS</li></ul>
+<p><strong>Errors</strong>: Error rate (percentage)</p>
+<ul><li>Increase in 5xx errors? Backend failure</li><li>Increase in 4xx errors? Client or API contract issue</li></ul>
+<p><strong>Duration</strong>: Latency (p50, p95, p99)</p>
+<ul><li>Increased latency? Database slow, network congestion, resource exhaustion</li></ul>
+<h3>USE Method (Resource-Driven Systems)</h3>
+<p><strong>Utilization</strong>: % time resource is busy <strong>Saturation</strong>: Degree of queued work <strong>Errors</strong>: Error count</p>
+<h3>The Three Pillars</h3>
+<p><strong>Logs</strong> → What happened?</p>
+<ul><li>Discrete events with context</li><li>Use: Error messages, stack traces, business events</li></ul>
+<p><strong>Metrics</strong> → How much/many?</p>
+<ul><li>Aggregated measurements</li><li>Use: Trends, thresholds, alerting</li></ul>
+<p><strong>Traces</strong> → Where is the bottleneck?</p>
+<ul><li>Request flows across services</li><li>Use: Latency breakdown, dependency mapping</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Incident Triage with RED Metrics</h3>
+<pre><code class="lang-promql"># 1. CHECK RATE: Sudden drop or spike?
+sum(rate(http_requests_total[5m])) by (service)
+
+# 2. CHECK ERRORS: Error rate increase?
+sum(rate(http_requests_total{status=~&quot;5..&quot;}[5m])) by (service)
+/
+sum(rate(http_requests_total[5m])) by (service)
+* 100  # Percentage
+
+# 3. CHECK DURATION: Latency spike?
+histogram_quantile(0.95,
+  sum by (le, service) (
+    rate(http_request_duration_seconds_bucket[5m])
+  )
+)
+
+# 4. IDENTIFY FAILING SERVICE
+# Look for:
+# - Service with highest error rate
+# - Service with highest latency increase
+# - Service with rate drop (if upstream)</code></pre>
+<h3>Pattern 2: Logs → Metrics → Traces Workflow</h3>
+<p><strong>Step 1: Start with Logs (What happened?)</strong></p>
+<pre><code class="lang-bash"># Find errors around incident time
+kubectl logs -l app=order-service --since=30m | grep -i error
+
+# Example output:
+# 2025-10-26 10:15:32 ERROR [trace_id=abc123] Database connection timeout
+# 2025-10-26 10:15:45 ERROR [trace_id=def456] Payment gateway unreachable
+# 2025-10-26 10:16:12 ERROR [trace_id=ghi789] Order processing failed</code></pre>
+<p><strong>Step 2: Check Metrics (How widespread?)</strong></p>
+<pre><code class="lang-promql"># How many errors?
+sum(rate(logs_total{level=&quot;error&quot;, service=&quot;order-service&quot;}[5m]))
+
+# Which endpoint?
+sum by (endpoint) (rate(http_requests_total{status=&quot;500&quot;, service=&quot;order-service&quot;}[5m]))
+
+# When did it start?
+delta(http_requests_total{status=&quot;500&quot;, service=&quot;order-service&quot;}[1h])</code></pre>
+<p><strong>Step 3: Trace Deep Dive (Where is the bottleneck?)</strong></p>
+<pre><code># Use trace_id from logs (abc123)
+# Open Jaeger/Tempo UI → Search trace_id=abc123
+
+Trace View:
+order-service           [200ms]
+  ├─ validate-order      [10ms]
+  ├─ check-inventory     [50ms]
+  ├─ process-payment     [5000ms]  ← SLOW!
+  │   ├─ call-payment-gateway [4950ms] ← BOTTLENECK!
+  │   └─ update-ledger   [50ms]
+  └─ send-confirmation   [20ms]</code></pre>
+<p><strong>Diagnosis</strong>: Payment gateway timeout (4950ms vs expected 100ms)</p>
+<h3>Pattern 3: Correlation IDs for Request Tracking</h3>
+<pre><code class="lang-python">import uuid
+import logging
+from flask import Flask, request, g
+
+app = Flask(__name__)
+
+@app.before_request
+def set_correlation_id():
+    # Extract or generate correlation ID
+    correlation_id = request.headers.get(&#x27;X-Correlation-ID&#x27;) or str(uuid.uuid4())
+    g.correlation_id = correlation_id
+
+@app.after_request
+def add_correlation_header(response):
+    response.headers[&#x27;X-Correlation-ID&#x27;] = g.correlation_id
+    return response
+
+# Configure logger with correlation ID
+class CorrelationFilter(logging.Filter):
+    def filter(self, record):
+        record.correlation_id = getattr(g, &#x27;correlation_id&#x27;, &#x27;N/A&#x27;)
+        return True
+
+logging.basicConfig(
+    format=&#x27;%(asctime)s [correlation_id=%(correlation_id)s] %(levelname)s %(message)s&#x27;
+)
+logger = logging.getLogger(__name__)
+logger.addFilter(CorrelationFilter())
+
+@app.route(&#x27;/api/orders&#x27;, methods=[&#x27;POST&#x27;])
+def create_order():
+    logger.info(&quot;Creating order&quot;)
+
+    # Pass correlation ID to downstream services
+    headers = {&#x27;X-Correlation-ID&#x27;: g.correlation_id}
+    response = requests.post(&#x27;http://inventory-service/check&#x27;, headers=headers)
+
+    logger.info(&quot;Order created successfully&quot;)
+    return {&quot;order_id&quot;: &quot;12345&quot;}
+
+# Log output:
+# 2025-10-26 10:30:15 [correlation_id=abc-123-def] INFO Creating order
+# 2025-10-26 10:30:16 [correlation_id=abc-123-def] INFO Order created successfully</code></pre>
+<h3>Pattern 4: Time-Travel Debugging with Traces</h3>
+<p><strong>Scenario</strong>: User reports checkout failed at 10:15 AM</p>
+<pre><code>1. Find user&#x27;s trace:
+   - Search by user_id in Jaeger: user_id=user_789 timestamp&gt;2025-10-26T10:10:00
+   - Or search by correlation_id if logged
+
+2. Examine trace timeline:
+   checkout-service    [10:15:32 - 10:15:37]  5s
+     ├─ cart-service   [10:15:32 - 10:15:33]  1s
+     ├─ payment        [10:15:33 - 10:15:38]  5s  ← TIMEOUT!
+     └─ inventory      [not reached]
+
+3. Drill into payment span:
+   - Status: ERROR
+   - Error message: &quot;Connection refused: payment-gateway:8080&quot;
+   - Attributes:
+     - payment.amount: 99.99
+     - payment.method: credit_card
+     - retry.count: 3
+
+4. Cross-reference with logs:
+   grep &quot;correlation_id=trace_xyz&quot; logs/payment-service.log
+   → &quot;2025-10-26 10:15:33 ERROR Failed to connect to payment gateway after 3 retries&quot;
+
+5. Check metrics at 10:15:
+   - payment_gateway_connections{state=&quot;failed&quot;} → spike at 10:15
+   - payment_gateway_health → DOWN at 10:14
+
+6. Root cause: Payment gateway crash at 10:14, user checkout at 10:15 failed</code></pre>
+<h3>Pattern 5: Database Query Debugging</h3>
+<pre><code class="lang-python">import logging
+from opentelemetry import trace
+from sqlalchemy import event, create_engine
+
+tracer = trace.get_tracer(__name__)
+logger = logging.getLogger(__name__)
+
+engine = create_engine(&#x27;postgresql://localhost/mydb&#x27;)
+
+@event.listens_for(engine, &quot;before_cursor_execute&quot;)
+def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    # Start span for SQL query
+    span = tracer.start_span(&quot;db.query&quot;)
+    span.set_attribute(&quot;db.statement&quot;, statement)
+    span.set_attribute(&quot;db.system&quot;, &quot;postgresql&quot;)
+    context._span = span
+    context._query_start_time = time.time()
+
+@event.listens_for(engine, &quot;after_cursor_execute&quot;)
+def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    duration = time.time() - context._query_start_time
+    context._span.set_attribute(&quot;db.duration_ms&quot;, duration * 1000)
+    context._span.end()
+
+    # Log slow queries
+    if duration &gt; 1.0:
+        logger.warning(f&quot;Slow query ({duration:.2f}s): {statement[:100]}&quot;)
+
+# Usage
+with tracer.start_as_current_span(&quot;get_user_orders&quot;):
+    user = session.query(User).filter_by(id=user_id).first()  # Auto-traced
+    orders = session.query(Order).filter_by(user_id=user_id).all()  # Auto-traced
+
+# Trace shows:
+# get_user_orders [150ms]
+#   ├─ db.query [10ms] &quot;SELECT * FROM users WHERE id = ?&quot;
+#   └─ db.query [140ms] &quot;SELECT * FROM orders WHERE user_id = ?&quot;  ← SLOW!</code></pre>
+<h3>Pattern 6: Runbook Creation from Incidents</h3>
+<p><strong>Runbook Template</strong>:</p>
+<pre><code class="lang-markdown"># Incident: Payment Gateway Timeout (2025-10-26)
+
+## Symptoms
+- Users unable to complete checkout
+- Error: &quot;Payment processing failed, please try again&quot;
+- Alert: `payment_errors_rate &gt; 5%`
+
+## Detection
+- Alert fired: `payment_gateway_health == 0`
+- Dashboard: RED metrics show 50% error rate on `/api/checkout`
+
+## Investigation
+1. Check RED metrics:
+   ```promql
+   sum(rate(http_requests_total{service=&quot;payment&quot;, status=&quot;500&quot;}[5m]))
+   ```
+
+2. Find failing requests in logs:
+   ```bash
+   kubectl logs -l app=payment-service --since=30m | grep ERROR
+   ```
+
+3. Trace sample failed request:
+   - Search Jaeger: service=payment status=error time&gt;now-30m
+   - Identify span with error
+
+## Diagnosis
+- Payment gateway connection timeout (5s)
+- Root cause: Payment gateway service crash
+
+## Mitigation (Immediate)
+1. Check payment gateway health:
+   ```bash
+   kubectl get pods -l app=payment-gateway
+   ```
+
+2. Restart payment gateway:
+   ```bash
+   kubectl rollout restart deployment/payment-gateway
+   ```
+
+3. Monitor recovery:
+   ```promql
+   payment_gateway_health
+   ```
+
+## Resolution (Long-term)
+- Implement circuit breaker pattern
+- Add retry with exponential backoff
+- Set up redundant payment gateway instances
+- Add alerting for payment gateway health
+
+## Prevention
+- Deploy Istio circuit breaker config
+- Add PodDisruptionBudget for payment gateway
+- Implement graceful degradation (queue payments for retry)
+
+## Related Incidents
+- [2025-09-15] Payment gateway timeout (similar root cause)
+- [2025-08-22] Database connection pool exhaustion
+
+## Postmortem
+- [Link to postmortem doc]</code></pre>
+<h3>Pattern 7: Blameless Postmortem</h3>
+<p><strong>Postmortem Template</strong>:</p>
+<pre><code class="lang-markdown"># Postmortem: Payment Gateway Outage (2025-10-26)
+
+## Incident Summary
+- **Date**: 2025-10-26 10:14 - 10:45 UTC
+- **Duration**: 31 minutes
+- **Severity**: SEV-2 (Revenue impact)
+- **Impact**: 15% of checkout attempts failed (~$50k revenue at risk)
+
+## Timeline
+- **10:14**: Payment gateway pod crash (OOM)
+- **10:15**: First user reports checkout failure
+- **10:16**: Alert fired: `payment_errors_rate &gt; 5%`
+- **10:18**: On-call engineer paged
+- **10:22**: Investigation started
+- **10:28**: Payment gateway restarted
+- **10:30**: Health check passed
+- **10:35**: Error rate returned to normal
+- **10:45**: Incident marked resolved
+
+## Root Cause
+Payment gateway pod exceeded memory limit (2GB) due to connection leak in payment provider SDK v1.2.3. Under high load, SDK failed to close idle connections, leading to OOM crash.
+
+## What Went Well
+- Alert fired within 2 minutes of first error
+- Correlation IDs enabled quick trace lookup
+- Distributed tracing pinpointed exact failing span
+- Runbook had clear mitigation steps
+
+## What Went Wrong
+- No memory usage alerting for payment gateway
+- Single replica of payment gateway (no redundancy)
+- Circuit breaker not configured (cascading failures)
+- SDK version not pinned (auto-updated to buggy version)
+
+## Action Items
+1. **[P0]** Add memory usage alerts for all critical services (Owner: @alice, Due: 2025-10-28)
+2. **[P0]** Scale payment gateway to 3 replicas with PDB (Owner: @bob, Due: 2025-10-27)
+3. **[P1]** Implement circuit breaker with 10s timeout (Owner: @charlie, Due: 2025-11-02)
+4. **[P1]** Pin SDK versions in requirements.txt (Owner: @alice, Due: 2025-10-27)
+5. **[P2]** Add integration tests for payment flow (Owner: @bob, Due: 2025-11-10)
+6. **[P2]** Update runbook with memory debugging steps (Owner: @charlie, Due: 2025-10-30)
+
+## Lessons Learned
+- **Observability gap**: Missing memory metrics for critical services
+- **Architecture gap**: Single point of failure (payment gateway)
+- **Process gap**: SDK updates without testing
+
+## Follow-up
+- Review all critical services for similar gaps
+- Implement mandatory testing for dependency updates</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Incident Response Commands</h3>
+<pre><code class="lang-bash"># Check pod health
+kubectl get pods -l app=service-name
+
+# View recent logs
+kubectl logs -l app=service-name --since=30m --tail=100
+
+# Stream logs
+kubectl logs -f -l app=service-name
+
+# Get pod metrics
+kubectl top pods -l app=service-name
+
+# Describe pod (events)
+kubectl describe pod service-name-abc123
+
+# Execute into pod
+kubectl exec -it service-name-abc123 -- /bin/bash
+
+# Port forward for debugging
+kubectl port-forward service-name-abc123 8080:8080</code></pre>
+<h3>Useful PromQL Queries</h3>
+<pre><code class="lang-promql"># Error rate (percentage)
+sum(rate(http_requests_total{status=~&quot;5..&quot;}[5m])) by (service)
+/
+sum(rate(http_requests_total[5m])) by (service)
+* 100
+
+# Latency increase (current vs 1h ago)
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+/
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m] offset 1h))
+
+# Request rate change
+sum(rate(http_requests_total[5m])) by (service)
+/
+sum(rate(http_requests_total[5m] offset 1h)) by (service)
+
+# Memory usage
+container_memory_usage_bytes{pod=~&quot;service-.*&quot;} / 1024 / 1024  # MB
+
+# CPU usage
+rate(container_cpu_usage_seconds_total{pod=~&quot;service-.*&quot;}[5m]) * 100  # %</code></pre>
+<h3>Jaeger Search Queries</h3>
+<pre><code># By service and status
+service=order-service status=error
+
+# By tag
+http.status_code=500
+user_id=user_789
+
+# By time range
+service=payment minDuration=1s maxDuration=10s
+
+# By operation
+service=checkout operation=/api/checkout</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Starting with Traces Instead of Metrics</h3>
+<pre><code># WRONG: Jump straight to traces
+1. Alert fires → 2. Search traces for errors
+
+# CORRECT: Follow workflow
+1. Alert fires → 2. Check RED metrics → 3. Find pattern → 4. Sample traces</code></pre>
+<h3>❌ No Correlation IDs</h3>
+<pre><code class="lang-python"># WRONG: No request tracking across services
+def call_service_a():
+    requests.post(&#x27;http://service-a/api&#x27;)
+
+def call_service_b():
+    requests.post(&#x27;http://service-b/api&#x27;)
+
+# CORRECT: Propagate correlation ID
+def call_service(url):
+    headers = {&#x27;X-Correlation-ID&#x27;: g.correlation_id}
+    requests.post(url, headers=headers)</code></pre>
+<h3>❌ Blaming Individuals in Postmortems</h3>
+<pre><code class="lang-markdown"># WRONG: Blame-focused
+## Root Cause
+Bob deployed buggy code without testing.
+
+# CORRECT: System-focused
+## Root Cause
+Deployment pipeline lacked integration tests, allowing buggy SDK update to reach production.
+
+## Action Items
+- Add integration tests to CI/CD pipeline
+- Implement mandatory code review for dependency updates</code></pre>
+<h3>❌ No Follow-up on Action Items</h3>
+<pre><code class="lang-markdown"># WRONG: No ownership or deadlines
+## Action Items
+- Add alerts
+- Fix bug
+- Update runbook
+
+# CORRECT: Clear ownership and deadlines
+## Action Items
+1. **[P0]** Add memory alerts (Owner: @alice, Due: 2025-10-28)
+2. **[P1]** Fix connection leak (Owner: @bob, Due: 2025-11-02)
+3. **[P2]** Update runbook (Owner: @charlie, Due: 2025-10-30)</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>distributed-tracing.md</strong> - Deep dive into distributed tracing</li><li><strong>metrics-instrumentation.md</strong> - Setting up RED metrics</li><li><strong>structured-logging.md</strong> - Effective log formatting for debugging</li><li><strong>opentelemetry-integration.md</strong> - Correlating traces, metrics, logs</li><li><strong>alerting-strategy.md</strong> - Setting up effective alerts</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/observability-production-incident-debugging.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

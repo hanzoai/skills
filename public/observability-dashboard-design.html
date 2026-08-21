@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>observability-dashboard-design</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/observability-dashboard-design.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/observability-dashboard-design.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>observability-dashboard-design</h1><p class="lede">Building Grafana dashboards for service monitoring</p><h1>Dashboard Design</h1>
+<p><strong>Scope</strong>: Grafana, visualization types, SLO dashboards, troubleshooting views, panel best practices</p>
+<p><strong>Lines</strong>: 376</p>
+<p><strong>Last Updated</strong>: 2025-10-18</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Building Grafana dashboards for service monitoring</li><li>Designing SLO/SLI dashboards for stakeholders</li><li>Creating troubleshooting views for on-call engineers</li><li>Visualizing metrics from Prometheus, Loki, or other data sources</li><li>Implementing RED (Rate, Errors, Duration) dashboards</li><li>Building executive dashboards showing business metrics</li><li>Designing real-time operational dashboards</li><li>Creating custom alerting views</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Static reports (use BI tools like Tableau, Looker)</li><li>Ad-hoc data exploration (use Jupyter notebooks)</li><li>Long-term trend analysis (use dedicated analytics platforms)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Dashboard Types</h3>
+<p><strong>1. Service Dashboard</strong> (Operational)</p>
+<ul><li>Target audience: Engineers, on-call</li><li>Focus: System health, errors, latency</li><li>Update frequency: Real-time (5s-30s)</li><li>Metrics: RED (Rate, Errors, Duration)</li></ul>
+<p><strong>2. SLO Dashboard</strong> (Business)</p>
+<ul><li>Target audience: Managers, stakeholders</li><li>Focus: Reliability targets, error budgets</li><li>Update frequency: Hourly/daily</li><li>Metrics: Availability, latency percentiles, error budget burn</li></ul>
+<p><strong>3. Troubleshooting Dashboard</strong> (Diagnostic)</p>
+<ul><li>Target audience: On-call engineers</li><li>Focus: Detailed system state, dependencies</li><li>Update frequency: Real-time (1s-5s)</li><li>Metrics: Resource usage, request flow, errors by endpoint</li></ul>
+<p><strong>4. Executive Dashboard</strong> (Strategic)</p>
+<ul><li>Target audience: Leadership</li><li>Focus: High-level KPIs, trends</li><li>Update frequency: Daily/weekly</li><li>Metrics: Uptime, revenue, active users</li></ul>
+<h3>Visualization Types</h3>
+<p><strong>Time Series Graph</strong>: Trends over time</p>
+<ul><li>Use for: Latency, throughput, error rate</li><li>Best for: Spotting patterns, anomalies</li></ul>
+<p><strong>Gauge</strong>: Single value with thresholds</p>
+<ul><li>Use for: Current status (CPU, memory, disk)</li><li>Best for: At-a-glance health checks</li></ul>
+<p><strong>Stat Panel</strong>: Single metric value</p>
+<ul><li>Use for: Totals, percentages, counts</li><li>Best for: KPIs, summary metrics</li></ul>
+<p><strong>Heatmap</strong>: Distribution over time</p>
+<ul><li>Use for: Latency distribution, bucket histograms</li><li>Best for: Identifying percentile outliers</li></ul>
+<p><strong>Table</strong>: Multi-dimensional data</p>
+<ul><li>Use for: Service list, error breakdown</li><li>Best for: Detailed comparisons</li></ul>
+<p><strong>Bar Chart</strong>: Compare categories</p>
+<ul><li>Use for: Error counts by endpoint, requests by region</li><li>Best for: Top-N comparisons</li></ul>
+<h3>RED Method</h3>
+<p><strong>Rate</strong>: Requests per second</p>
+<pre><code class="lang-promql">rate(http_requests_total[5m])</code></pre>
+<p><strong>Errors</strong>: Error percentage</p>
+<pre><code class="lang-promql">sum(rate(http_requests_total{status=~&quot;5..&quot;}[5m]))
+/
+sum(rate(http_requests_total[5m]))
+* 100</code></pre>
+<p><strong>Duration</strong>: Latency percentiles</p>
+<pre><code class="lang-promql">histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))</code></pre>
+<h3>USE Method (Resources)</h3>
+<p><strong>Utilization</strong>: % time resource busy</p>
+<pre><code class="lang-promql">cpu_usage_percent
+memory_usage_percent</code></pre>
+<p><strong>Saturation</strong>: Degree of queuing/waiting</p>
+<pre><code class="lang-promql">queue_depth
+connection_pool_waiting</code></pre>
+<p><strong>Errors</strong>: Error count/rate</p>
+<pre><code class="lang-promql">rate(disk_errors_total[5m])
+rate(network_errors_total[5m])</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Service Overview Dashboard (Grafana JSON)</h3>
+<pre><code class="lang-json">{
+  &quot;dashboard&quot;: {
+    &quot;title&quot;: &quot;API Service Overview&quot;,
+    &quot;tags&quot;: [&quot;service&quot;, &quot;api&quot;],
+    &quot;timezone&quot;: &quot;browser&quot;,
+    &quot;panels&quot;: [
+      {
+        &quot;title&quot;: &quot;Request Rate&quot;,
+        &quot;type&quot;: &quot;graph&quot;,
+        &quot;gridPos&quot;: {&quot;x&quot;: 0, &quot;y&quot;: 0, &quot;w&quot;: 12, &quot;h&quot;: 8},
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;sum(rate(http_requests_total{service=\&quot;api\&quot;}[5m]))&quot;,
+            &quot;legendFormat&quot;: &quot;Total Requests/sec&quot;
+          }
+        ],
+        &quot;yaxes&quot;: [
+          {&quot;format&quot;: &quot;reqps&quot;, &quot;label&quot;: &quot;Requests/sec&quot;}
+        ]
+      },
+      {
+        &quot;title&quot;: &quot;Error Rate&quot;,
+        &quot;type&quot;: &quot;graph&quot;,
+        &quot;gridPos&quot;: {&quot;x&quot;: 12, &quot;y&quot;: 0, &quot;w&quot;: 12, &quot;h&quot;: 8},
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;sum(rate(http_requests_total{service=\&quot;api\&quot;,status=~\&quot;5..\&quot;}[5m])) / sum(rate(http_requests_total{service=\&quot;api\&quot;}[5m])) * 100&quot;,
+            &quot;legendFormat&quot;: &quot;Error Rate %&quot;
+          }
+        ],
+        &quot;alert&quot;: {
+          &quot;conditions&quot;: [
+            {
+              &quot;evaluator&quot;: {&quot;type&quot;: &quot;gt&quot;, &quot;params&quot;: [1]},
+              &quot;operator&quot;: {&quot;type&quot;: &quot;and&quot;},
+              &quot;query&quot;: {&quot;params&quot;: [&quot;A&quot;, &quot;5m&quot;, &quot;now&quot;]},
+              &quot;type&quot;: &quot;query&quot;
+            }
+          ]
+        }
+      },
+      {
+        &quot;title&quot;: &quot;Latency (P50, P95, P99)&quot;,
+        &quot;type&quot;: &quot;graph&quot;,
+        &quot;gridPos&quot;: {&quot;x&quot;: 0, &quot;y&quot;: 8, &quot;w&quot;: 24, &quot;h&quot;: 8},
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{service=\&quot;api\&quot;}[5m])) by (le))&quot;,
+            &quot;legendFormat&quot;: &quot;P50&quot;
+          },
+          {
+            &quot;expr&quot;: &quot;histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\&quot;api\&quot;}[5m])) by (le))&quot;,
+            &quot;legendFormat&quot;: &quot;P95&quot;
+          },
+          {
+            &quot;expr&quot;: &quot;histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=\&quot;api\&quot;}[5m])) by (le))&quot;,
+            &quot;legendFormat&quot;: &quot;P99&quot;
+          }
+        ],
+        &quot;yaxes&quot;: [
+          {&quot;format&quot;: &quot;s&quot;, &quot;label&quot;: &quot;Latency&quot;}
+        ]
+      }
+    ]
+  }
+}</code></pre>
+<h3>Pattern 2: SLO Dashboard</h3>
+<pre><code class="lang-json">{
+  &quot;dashboard&quot;: {
+    &quot;title&quot;: &quot;SLO Dashboard - 99.9% Availability&quot;,
+    &quot;panels&quot;: [
+      {
+        &quot;title&quot;: &quot;Availability (30d)&quot;,
+        &quot;type&quot;: &quot;stat&quot;,
+        &quot;gridPos&quot;: {&quot;x&quot;: 0, &quot;y&quot;: 0, &quot;w&quot;: 6, &quot;h&quot;: 4},
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;sum(rate(http_requests_total{status!~\&quot;5..\&quot;}[30d])) / sum(rate(http_requests_total[30d])) * 100&quot;
+          }
+        ],
+        &quot;options&quot;: {
+          &quot;colorMode&quot;: &quot;background&quot;,
+          &quot;graphMode&quot;: &quot;none&quot;,
+          &quot;textMode&quot;: &quot;value_and_name&quot;
+        },
+        &quot;fieldConfig&quot;: {
+          &quot;defaults&quot;: {
+            &quot;unit&quot;: &quot;percent&quot;,
+            &quot;thresholds&quot;: {
+              &quot;mode&quot;: &quot;absolute&quot;,
+              &quot;steps&quot;: [
+                {&quot;value&quot;: 0, &quot;color&quot;: &quot;red&quot;},
+                {&quot;value&quot;: 99, &quot;color&quot;: &quot;yellow&quot;},
+                {&quot;value&quot;: 99.9, &quot;color&quot;: &quot;green&quot;}
+              ]
+            }
+          }
+        }
+      },
+      {
+        &quot;title&quot;: &quot;Error Budget Remaining (30d)&quot;,
+        &quot;type&quot;: &quot;gauge&quot;,
+        &quot;gridPos&quot;: {&quot;x&quot;: 6, &quot;y&quot;: 0, &quot;w&quot;: 6, &quot;h&quot;: 4},
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;(0.001 - (1 - sum(rate(http_requests_total{status!~\&quot;5..\&quot;}[30d])) / sum(rate(http_requests_total[30d])))) / 0.001 * 100&quot;
+          }
+        ],
+        &quot;options&quot;: {
+          &quot;showThresholdLabels&quot;: true,
+          &quot;showThresholdMarkers&quot;: true
+        },
+        &quot;fieldConfig&quot;: {
+          &quot;defaults&quot;: {
+            &quot;unit&quot;: &quot;percent&quot;,
+            &quot;min&quot;: 0,
+            &quot;max&quot;: 100,
+            &quot;thresholds&quot;: {
+              &quot;mode&quot;: &quot;absolute&quot;,
+              &quot;steps&quot;: [
+                {&quot;value&quot;: 0, &quot;color&quot;: &quot;red&quot;},
+                {&quot;value&quot;: 25, &quot;color&quot;: &quot;yellow&quot;},
+                {&quot;value&quot;: 50, &quot;color&quot;: &quot;green&quot;}
+              ]
+            }
+          }
+        }
+      },
+      {
+        &quot;title&quot;: &quot;Error Budget Burn Rate&quot;,
+        &quot;type&quot;: &quot;graph&quot;,
+        &quot;gridPos&quot;: {&quot;x&quot;: 0, &quot;y&quot;: 4, &quot;w&quot;: 24, &quot;h&quot;: 8},
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;(sum(rate(http_requests_total{status=~\&quot;5..\&quot;}[1h])) / sum(rate(http_requests_total[1h]))) / 0.001&quot;,
+            &quot;legendFormat&quot;: &quot;1h burn rate (1.0 = on track)&quot;
+          },
+          {
+            &quot;expr&quot;: &quot;(sum(rate(http_requests_total{status=~\&quot;5..\&quot;}[6h])) / sum(rate(http_requests_total[6h]))) / 0.001&quot;,
+            &quot;legendFormat&quot;: &quot;6h burn rate&quot;
+          }
+        ],
+        &quot;alert&quot;: {
+          &quot;conditions&quot;: [
+            {
+              &quot;evaluator&quot;: {&quot;type&quot;: &quot;gt&quot;, &quot;params&quot;: [10]},
+              &quot;query&quot;: {&quot;params&quot;: [&quot;A&quot;, &quot;5m&quot;, &quot;now&quot;]}
+            }
+          ],
+          &quot;name&quot;: &quot;Error budget burning 10x faster&quot;
+        }
+      }
+    ]
+  }
+}</code></pre>
+<h3>Pattern 3: Troubleshooting Dashboard</h3>
+<pre><code class="lang-json">{
+  &quot;dashboard&quot;: {
+    &quot;title&quot;: &quot;Troubleshooting - API Service&quot;,
+    &quot;panels&quot;: [
+      {
+        &quot;title&quot;: &quot;Requests by Endpoint (Top 10)&quot;,
+        &quot;type&quot;: &quot;table&quot;,
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;topk(10, sum by (endpoint) (rate(http_requests_total{service=\&quot;api\&quot;}[5m])))&quot;,
+            &quot;format&quot;: &quot;table&quot;,
+            &quot;instant&quot;: true
+          }
+        ]
+      },
+      {
+        &quot;title&quot;: &quot;Errors by Endpoint&quot;,
+        &quot;type&quot;: &quot;bargauge&quot;,
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;sum by (endpoint) (rate(http_requests_total{service=\&quot;api\&quot;,status=~\&quot;5..\&quot;}[5m]))&quot;
+          }
+        ],
+        &quot;options&quot;: {
+          &quot;orientation&quot;: &quot;horizontal&quot;,
+          &quot;displayMode&quot;: &quot;gradient&quot;
+        }
+      },
+      {
+        &quot;title&quot;: &quot;Latency Heatmap&quot;,
+        &quot;type&quot;: &quot;heatmap&quot;,
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;sum(rate(http_request_duration_seconds_bucket{service=\&quot;api\&quot;}[5m])) by (le)&quot;,
+            &quot;format&quot;: &quot;heatmap&quot;
+          }
+        ],
+        &quot;heatmap&quot;: {
+          &quot;yAxis&quot;: {&quot;format&quot;: &quot;s&quot;, &quot;decimals&quot;: 2}
+        }
+      },
+      {
+        &quot;title&quot;: &quot;Database Connection Pool&quot;,
+        &quot;type&quot;: &quot;graph&quot;,
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;database_connections{state=\&quot;active\&quot;}&quot;,
+            &quot;legendFormat&quot;: &quot;Active&quot;
+          },
+          {
+            &quot;expr&quot;: &quot;database_connections{state=\&quot;idle\&quot;}&quot;,
+            &quot;legendFormat&quot;: &quot;Idle&quot;
+          },
+          {
+            &quot;expr&quot;: &quot;database_connections_max&quot;,
+            &quot;legendFormat&quot;: &quot;Max&quot;
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+<h3>Pattern 4: Resource Usage Dashboard</h3>
+<pre><code class="lang-json">{
+  &quot;dashboard&quot;: {
+    &quot;title&quot;: &quot;Resource Usage&quot;,
+    &quot;panels&quot;: [
+      {
+        &quot;title&quot;: &quot;CPU Usage by Instance&quot;,
+        &quot;type&quot;: &quot;graph&quot;,
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\&quot;idle\&quot;}[5m])) * 100)&quot;,
+            &quot;legendFormat&quot;: &quot;{{ instance }}&quot;
+          }
+        ],
+        &quot;yaxes&quot;: [
+          {&quot;format&quot;: &quot;percent&quot;, &quot;max&quot;: 100}
+        ]
+      },
+      {
+        &quot;title&quot;: &quot;Memory Usage by Instance&quot;,
+        &quot;type&quot;: &quot;graph&quot;,
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100&quot;,
+            &quot;legendFormat&quot;: &quot;{{ instance }}&quot;
+          }
+        ],
+        &quot;yaxes&quot;: [
+          {&quot;format&quot;: &quot;percent&quot;, &quot;max&quot;: 100}
+        ]
+      },
+      {
+        &quot;title&quot;: &quot;Disk I/O&quot;,
+        &quot;type&quot;: &quot;graph&quot;,
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;rate(node_disk_read_bytes_total[5m])&quot;,
+            &quot;legendFormat&quot;: &quot;Read - {{ device }}&quot;
+          },
+          {
+            &quot;expr&quot;: &quot;rate(node_disk_written_bytes_total[5m])&quot;,
+            &quot;legendFormat&quot;: &quot;Write - {{ device }}&quot;
+          }
+        ],
+        &quot;yaxes&quot;: [
+          {&quot;format&quot;: &quot;Bps&quot;}
+        ]
+      }
+    ]
+  }
+}</code></pre>
+<h3>Pattern 5: Business Metrics Dashboard</h3>
+<pre><code class="lang-json">{
+  &quot;dashboard&quot;: {
+    &quot;title&quot;: &quot;Business Metrics&quot;,
+    &quot;panels&quot;: [
+      {
+        &quot;title&quot;: &quot;Revenue (Last 24h)&quot;,
+        &quot;type&quot;: &quot;stat&quot;,
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;sum(increase(revenue_total_dollars[24h]))&quot;
+          }
+        ],
+        &quot;fieldConfig&quot;: {
+          &quot;defaults&quot;: {
+            &quot;unit&quot;: &quot;currencyUSD&quot;,
+            &quot;decimals&quot;: 2
+          }
+        }
+      },
+      {
+        &quot;title&quot;: &quot;Orders by Product Category&quot;,
+        &quot;type&quot;: &quot;piechart&quot;,
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;sum by (product_category) (increase(orders_total[24h]))&quot;
+          }
+        ]
+      },
+      {
+        &quot;title&quot;: &quot;Active Users (Last 30 days)&quot;,
+        &quot;type&quot;: &quot;graph&quot;,
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;count(count by (user_id) (increase(user_activity_total[24h])))&quot;
+          }
+        ]
+      },
+      {
+        &quot;title&quot;: &quot;Cart Abandonment Rate&quot;,
+        &quot;type&quot;: &quot;gauge&quot;,
+        &quot;targets&quot;: [
+          {
+            &quot;expr&quot;: &quot;sum(increase(cart_abandonment_total[24h])) / sum(increase(cart_created_total[24h])) * 100&quot;
+          }
+        ],
+        &quot;fieldConfig&quot;: {
+          &quot;defaults&quot;: {
+            &quot;unit&quot;: &quot;percent&quot;,
+            &quot;thresholds&quot;: {
+              &quot;steps&quot;: [
+                {&quot;value&quot;: 0, &quot;color&quot;: &quot;green&quot;},
+                {&quot;value&quot;: 50, &quot;color&quot;: &quot;yellow&quot;},
+                {&quot;value&quot;: 70, &quot;color&quot;: &quot;red&quot;}
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Dashboard Design Principles</h3>
+<ol><li><strong>Most important metrics first</strong> (top-left)</li><li><strong>Logical grouping</strong> (related panels together)</li><li><strong>Consistent time ranges</strong> (use dashboard-level variable)</li><li><strong>Clear titles</strong> (action-oriented: &quot;Check latency&quot; not &quot;Latency&quot;)</li><li><strong>Appropriate colors</strong> (red for errors, green for success)</li><li><strong>Thresholds</strong> (visual indicators for good/bad states)</li><li><strong>Legends</strong> (concise, meaningful labels)</li></ol>
+<h3>Panel Layout Guidelines</h3>
+<pre><code>+------------------------------------------+
+|  Critical KPIs (Stats/Gauges)            |  ← Row 1: 4 panels
++------------------------------------------+
+|  Trends (Time Series)                    |  ← Row 2: 2-3 panels
++------------------------------------------+
+|  Detailed Breakdown (Tables/Bar Charts)  |  ← Row 3: 1-2 panels
++------------------------------------------+
+|  Resource Usage (Graphs)                 |  ← Row 4: 2-3 panels
++------------------------------------------+</code></pre>
+<h3>Common PromQL Patterns</h3>
+<pre><code class="lang-promql"># Rate (requests/sec)
+rate(metric_total[5m])
+
+# Error rate (%)
+sum(rate(errors[5m])) / sum(rate(requests[5m])) * 100
+
+# Percentiles
+histogram_quantile(0.95, rate(metric_bucket[5m]))
+
+# Top N
+topk(10, sum by (label) (rate(metric[5m])))
+
+# Aggregation
+sum by (service) (rate(metric[5m]))
+avg by (instance) (metric)
+max by (region) (metric)
+
+# Math
+metric1 / metric2  # Ratio
+metric1 - metric2  # Difference
+metric1 &gt; 100      # Filter</code></pre>
+<h3>Grafana Variables</h3>
+<pre><code># Service selector
+Name: service
+Query: label_values(http_requests_total, service)
+Usage: {service=&quot;$service&quot;}
+
+# Time range
+Name: range
+Type: Interval
+Values: 5m,15m,1h,6h,24h
+Usage: rate(metric[$range])
+
+# Instance selector
+Name: instance
+Query: label_values(up{service=&quot;$service&quot;}, instance)
+Usage: {instance=~&quot;$instance&quot;}</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Too Many Panels</h3>
+<pre><code># WRONG: 50 panels on one dashboard (overwhelming)
+# CORRECT: 8-12 panels max, use drill-down links</code></pre>
+<h3>❌ No Thresholds</h3>
+<pre><code class="lang-json">// WRONG: Plain graph with no visual indicators
+{&quot;type&quot;: &quot;graph&quot;}
+
+// CORRECT: Color-coded thresholds
+{
+  &quot;type&quot;: &quot;graph&quot;,
+  &quot;fieldConfig&quot;: {
+    &quot;defaults&quot;: {
+      &quot;thresholds&quot;: {
+        &quot;steps&quot;: [
+          {&quot;value&quot;: 0, &quot;color&quot;: &quot;green&quot;},
+          {&quot;value&quot;: 80, &quot;color&quot;: &quot;yellow&quot;},
+          {&quot;value&quot;: 90, &quot;color&quot;: &quot;red&quot;}
+        ]
+      }
+    }
+  }
+}</code></pre>
+<h3>❌ Inconsistent Time Ranges</h3>
+<pre><code># WRONG: Panel 1 uses [5m], Panel 2 uses [1h]
+# CORRECT: Use dashboard variable $range</code></pre>
+<h3>❌ Raw Counters Instead of Rates</h3>
+<pre><code class="lang-promql"># WRONG: Counter value (meaningless)
+http_requests_total
+
+# CORRECT: Rate (requests/sec)
+rate(http_requests_total[5m])</code></pre>
+<h3>❌ Missing Context in Titles</h3>
+<pre><code># WRONG: &quot;Requests&quot;
+# CORRECT: &quot;API Requests per Second (5m avg)&quot;</code></pre>
+<h3>❌ Too Much Data in Tables</h3>
+<pre><code># WRONG: 1000 rows in table
+topk(1000, metric)
+
+# CORRECT: Top 10
+topk(10, metric)</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>metrics-instrumentation.md</strong> - Define metrics for dashboards</li><li><strong>structured-logging.md</strong> - Link logs from dashboard panels</li><li><strong>distributed-tracing.md</strong> - Drill down to traces</li><li><strong>alerting-strategy.md</strong> - Dashboard-based alert status</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/observability-dashboard-design.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

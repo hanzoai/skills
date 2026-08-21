@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ir-query-understanding</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ir-query-understanding.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ir-query-understanding.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ir-query-understanding</h1><p class="lede">Query expansion, spell correction, semantic search, query classification, entity recognition, and autocomplete</p><h1>Information Retrieval: Query Understanding</h1>
+<p><strong>Scope</strong>: Query preprocessing including expansion, spell correction, semantic understanding, classification, entity recognition, and suggestions <strong>Lines</strong>: ~300 <strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Improving search recall through query expansion</li><li>Handling misspelled queries with spell correction</li><li>Understanding query intent (informational, navigational, transactional)</li><li>Extracting entities from queries (people, places, products)</li><li>Implementing autocomplete and query suggestions</li><li>Bridging vocabulary gap between users and documents</li><li>Supporting multilingual search queries</li><li>Personalizing query interpretation based on user context</li></ul>
+<h2>Core Concepts</h2>
+<h3>Concept 1: Query Expansion</h3>
+<p><strong>Techniques</strong>:</p>
+<p><strong>Synonym Expansion</strong>: Add related terms</p>
+<ul><li>&quot;laptop&quot; → &quot;laptop&quot;, &quot;notebook&quot;, &quot;computer&quot;</li></ul>
+<p><strong>Pseudo-Relevance Feedback</strong>: Use top results to expand</p>
+<ul><li>Search → Get top 5 → Extract terms → Re-search</li></ul>
+<p><strong>Word Embeddings</strong>: Add semantically similar terms</p>
+<ul><li>Use word2vec, GloVe, or transformer embeddings</li></ul>
+<pre><code class="lang-python">from gensim.models import Word2Vec
+import numpy as np
+
+# Load pre-trained word embeddings
+# For demo, train small model (use pre-trained in production)
+sentences = [
+    [&quot;machine&quot;, &quot;learning&quot;, &quot;algorithms&quot;],
+    [&quot;deep&quot;, &quot;learning&quot;, &quot;neural&quot;, &quot;networks&quot;],
+    [&quot;supervised&quot;, &quot;learning&quot;, &quot;classification&quot;],
+]
+model = Word2Vec(sentences, vector_size=100, window=5, min_count=1)
+
+def expand_query_embeddings(query, model, top_k=3):
+    &quot;&quot;&quot;Expand query with semantically similar terms&quot;&quot;&quot;
+    terms = query.lower().split()
+    expanded = set(terms)
+
+    for term in terms:
+        if term in model.wv:
+            # Get similar words
+            similar = model.wv.most_similar(term, topn=top_k)
+            for word, score in similar:
+                if score &gt; 0.7:  # Threshold for similarity
+                    expanded.add(word)
+
+    return &quot; &quot;.join(expanded)
+
+# Pseudo-relevance feedback
+def pseudo_relevance_feedback(query, search_fn, top_k=5, expansion_terms=3):
+    &quot;&quot;&quot;Expand query using top search results&quot;&quot;&quot;
+    # Initial search
+    results = search_fn(query, limit=top_k)
+
+    # Extract terms from top results
+    from collections import Counter
+    term_counts = Counter()
+
+    for doc in results:
+        # Simple tokenization (use proper NLP in production)
+        terms = doc[&#x27;content&#x27;].lower().split()
+        term_counts.update(terms)
+
+    # Add most common terms not in original query
+    query_terms = set(query.lower().split())
+    expansion = []
+
+    for term, count in term_counts.most_common():
+        if term not in query_terms and len(expansion) &lt; expansion_terms:
+            expansion.append(term)
+
+    expanded_query = query + &quot; &quot; + &quot; &quot;.join(expansion)
+    return expanded_query
+
+# Example
+original_query = &quot;machine learning&quot;
+expanded = expand_query_embeddings(original_query, model, top_k=2)
+print(f&quot;Expanded query: {expanded}&quot;)</code></pre>
+<h3>Concept 2: Spell Correction</h3>
+<p><strong>Approaches</strong>:</p>
+<p><strong>Edit Distance</strong>: Levenshtein distance to find close matches <strong>Context-Aware</strong>: Use language model to pick best correction <strong>Search-Based</strong>: Correct based on index terms</p>
+<pre><code class="lang-python">import re
+from collections import Counter
+
+def edit_distance(s1, s2):
+    &quot;&quot;&quot;Compute Levenshtein distance&quot;&quot;&quot;
+    if len(s1) &lt; len(s2):
+        return edit_distance(s2, s1)
+
+    if len(s2) == 0:
+        return len(s1)
+
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+
+    return previous_row[-1]
+
+class SpellChecker:
+    def __init__(self, corpus):
+        &quot;&quot;&quot;Build dictionary from corpus&quot;&quot;&quot;
+        self.word_counts = Counter()
+        for doc in corpus:
+            words = re.findall(r&#x27;\w+&#x27;, doc.lower())
+            self.word_counts.update(words)
+
+    def correction(self, word):
+        &quot;&quot;&quot;Find best correction for word&quot;&quot;&quot;
+        if word in self.word_counts:
+            return word
+
+        # Generate candidates within edit distance 1-2
+        candidates = self._candidates(word)
+
+        # Return most frequent candidate
+        return max(candidates, key=lambda w: self.word_counts.get(w, 0))
+
+    def _candidates(self, word):
+        &quot;&quot;&quot;Generate candidate corrections&quot;&quot;&quot;
+        # Known words at edit distance 0, 1, 2
+        return (
+            self._known([word]) or
+            self._known(self._edits1(word)) or
+            self._known(self._edits2(word)) or
+            [word]
+        )
+
+    def _known(self, words):
+        &quot;&quot;&quot;Filter to known words&quot;&quot;&quot;
+        return set(w for w in words if w in self.word_counts)
+
+    def _edits1(self, word):
+        &quot;&quot;&quot;All edits 1 edit away&quot;&quot;&quot;
+        letters = &#x27;abcdefghijklmnopqrstuvwxyz&#x27;
+        splits = [(word[:i], word[i:]) for i in range(len(word) + 1)]
+        deletes = [L + R[1:] for L, R in splits if R]
+        transposes = [L + R[1] + R[0] + R[2:] for L, R in splits if len(R) &gt; 1]
+        replaces = [L + c + R[1:] for L, R in splits if R for c in letters]
+        inserts = [L + c + R for L, R in splits for c in letters]
+        return set(deletes + transposes + replaces + inserts)
+
+    def _edits2(self, word):
+        &quot;&quot;&quot;All edits 2 edits away&quot;&quot;&quot;
+        return set(e2 for e1 in self._edits1(word) for e2 in self._edits1(e1))
+
+# Example
+corpus = [&quot;machine learning algorithms&quot;, &quot;deep learning networks&quot;, &quot;supervised learning&quot;]
+speller = SpellChecker(corpus)
+
+misspelled = &quot;machne lerning&quot;
+corrected = &quot; &quot;.join([speller.correction(word) for word in misspelled.split()])
+print(f&quot;Corrected: {corrected}&quot;)  # &quot;machine learning&quot;</code></pre>
+<h3>Concept 3: Query Classification</h3>
+<p><strong>Intent Types</strong>:</p>
+<ul><li><strong>Informational</strong>: Seeking knowledge (&quot;what is machine learning&quot;)</li><li><strong>Navigational</strong>: Finding specific site/page (&quot;github login&quot;)</li><li><strong>Transactional</strong>: Ready to act (&quot;buy macbook pro&quot;)</li></ul>
+<pre><code class="lang-python">from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+
+# Training data: (query, intent)
+training_data = [
+    (&quot;what is machine learning&quot;, &quot;informational&quot;),
+    (&quot;how does neural network work&quot;, &quot;informational&quot;),
+    (&quot;github login&quot;, &quot;navigational&quot;),
+    (&quot;facebook home page&quot;, &quot;navigational&quot;),
+    (&quot;buy macbook pro&quot;, &quot;transactional&quot;),
+    (&quot;book flight to paris&quot;, &quot;transactional&quot;),
+    (&quot;machine learning tutorial&quot;, &quot;informational&quot;),
+    (&quot;amazon prime&quot;, &quot;navigational&quot;),
+    (&quot;order pizza online&quot;, &quot;transactional&quot;),
+]
+
+queries, intents = zip(*training_data)
+
+# Train classifier
+vectorizer = TfidfVectorizer()
+X = vectorizer.fit_transform(queries)
+
+classifier = LogisticRegression()
+classifier.fit(X, intents)
+
+def classify_query(query, vectorizer, classifier):
+    &quot;&quot;&quot;Classify query intent&quot;&quot;&quot;
+    X_query = vectorizer.transform([query])
+    intent = classifier.predict(X_query)[0]
+    probabilities = classifier.predict_proba(X_query)[0]
+
+    return {
+        &#x27;intent&#x27;: intent,
+        &#x27;confidence&#x27;: max(probabilities)
+    }
+
+# Example
+test_query = &quot;how to learn python&quot;
+result = classify_query(test_query, vectorizer, classifier)
+print(f&quot;Intent: {result[&#x27;intent&#x27;]} (confidence: {result[&#x27;confidence&#x27;]:.2f})&quot;)</code></pre>
+<h3>Concept 4: Entity Recognition</h3>
+<p><strong>Extract</strong>: People, places, products, dates, prices from queries</p>
+<pre><code class="lang-python">import re
+
+class QueryEntityExtractor:
+    def __init__(self):
+        # Patterns for common entities
+        self.patterns = {
+            &#x27;price&#x27;: r&#x27;\$?\d+(?:\.\d{2})?&#x27;,
+            &#x27;date&#x27;: r&#x27;\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4}&#x27;,
+            &#x27;email&#x27;: r&#x27;[\w\.-]+@[\w\.-]+\.\w+&#x27;,
+            &#x27;phone&#x27;: r&#x27;\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}&#x27;,
+        }
+
+        # Product catalog (in production, load from database)
+        self.products = {&#x27;macbook&#x27;, &#x27;iphone&#x27;, &#x27;ipad&#x27;, &#x27;airpods&#x27;}
+        self.brands = {&#x27;apple&#x27;, &#x27;google&#x27;, &#x27;microsoft&#x27;, &#x27;amazon&#x27;}
+
+    def extract(self, query):
+        &quot;&quot;&quot;Extract entities from query&quot;&quot;&quot;
+        entities = {}
+
+        # Regex-based extraction
+        for entity_type, pattern in self.patterns.items():
+            matches = re.findall(pattern, query, re.IGNORECASE)
+            if matches:
+                entities[entity_type] = matches
+
+        # Dictionary-based extraction
+        query_lower = query.lower()
+        words = set(query_lower.split())
+
+        entities[&#x27;products&#x27;] = [p for p in self.products if p in query_lower]
+        entities[&#x27;brands&#x27;] = [b for b in self.brands if b in words]
+
+        return entities
+
+# Example
+extractor = QueryEntityExtractor()
+query = &quot;buy macbook pro under $2000&quot;
+entities = extractor.extract(query)
+print(f&quot;Entities: {entities}&quot;)
+# {&#x27;price&#x27;: [&#x27;2000&#x27;], &#x27;products&#x27;: [&#x27;macbook&#x27;], &#x27;brands&#x27;: [&#x27;apple&#x27;]}</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Autocomplete with Prefix Matching</h3>
+<p><strong>When to use</strong>: Real-time query suggestions as user types</p>
+<pre><code class="lang-python">class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.is_end = False
+        self.frequency = 0
+
+class Autocomplete:
+    def __init__(self):
+        self.root = TrieNode()
+
+    def insert(self, query, frequency=1):
+        &quot;&quot;&quot;Insert query into trie&quot;&quot;&quot;
+        node = self.root
+        for char in query.lower():
+            if char not in node.children:
+                node.children[char] = TrieNode()
+            node = node.children[char]
+
+        node.is_end = True
+        node.frequency += frequency
+
+    def search(self, prefix, max_results=5):
+        &quot;&quot;&quot;Get top suggestions for prefix&quot;&quot;&quot;
+        # Navigate to prefix
+        node = self.root
+        for char in prefix.lower():
+            if char not in node.children:
+                return []
+            node = node.children[char]
+
+        # Collect all completions
+        results = []
+        self._collect_completions(node, prefix, results)
+
+        # Sort by frequency and return top-k
+        results.sort(key=lambda x: x[1], reverse=True)
+        return [query for query, freq in results[:max_results]]
+
+    def _collect_completions(self, node, current, results):
+        &quot;&quot;&quot;Recursively collect all completions&quot;&quot;&quot;
+        if node.is_end:
+            results.append((current, node.frequency))
+
+        for char, child in node.children.items():
+            self._collect_completions(child, current + char, results)
+
+# Build autocomplete from query logs
+ac = Autocomplete()
+query_log = [
+    (&quot;machine learning&quot;, 100),
+    (&quot;machine learning tutorial&quot;, 50),
+    (&quot;machine learning algorithms&quot;, 30),
+    (&quot;machine vision&quot;, 20),
+]
+
+for query, freq in query_log:
+    ac.insert(query, freq)
+
+# Suggest
+suggestions = ac.search(&quot;machine l&quot;, max_results=3)
+print(f&quot;Suggestions: {suggestions}&quot;)</code></pre>
+<h3>Pattern 2: Contextual Query Rewriting</h3>
+<p><strong>Use case</strong>: Rewrite query based on user context or conversation</p>
+<pre><code class="lang-python">def contextual_query_rewrite(query, user_context, conversation_history):
+    &quot;&quot;&quot;Rewrite query with context&quot;&quot;&quot;
+    rewritten = query
+
+    # Resolve pronouns using conversation history
+    if any(pronoun in query.lower() for pronoun in [&#x27;it&#x27;, &#x27;this&#x27;, &#x27;that&#x27;, &#x27;he&#x27;, &#x27;she&#x27;]):
+        if conversation_history:
+            last_entity = extract_main_entity(conversation_history[-1])
+            rewritten = rewritten.replace(&#x27;it&#x27;, last_entity)
+            rewritten = rewritten.replace(&#x27;this&#x27;, last_entity)
+
+    # Add implicit location
+    if user_context.get(&#x27;location&#x27;) and &#x27;near&#x27; not in query.lower():
+        if any(term in query.lower() for term in [&#x27;restaurant&#x27;, &#x27;hotel&#x27;, &#x27;store&#x27;]):
+            rewritten += f&quot; near {user_context[&#x27;location&#x27;]}&quot;
+
+    # Add temporal context
+    if user_context.get(&#x27;time_period&#x27;):
+        if any(term in query.lower() for term in [&#x27;news&#x27;, &#x27;events&#x27;, &#x27;weather&#x27;]):
+            rewritten += f&quot; {user_context[&#x27;time_period&#x27;]}&quot;
+
+    return rewritten
+
+# Example
+context = {&#x27;location&#x27;: &#x27;San Francisco&#x27;, &#x27;time_period&#x27;: &#x27;today&#x27;}
+history = [&quot;machine learning conferences&quot;]
+
+query = &quot;when is it happening&quot;
+rewritten = contextual_query_rewrite(query, context, history)
+print(f&quot;Rewritten: {rewritten}&quot;)
+# &quot;when is machine learning conferences happening&quot;</code></pre>
+<h3>Pattern 3: Multi-Language Query Understanding</h3>
+<p><strong>When to use</strong>: Support queries in multiple languages</p>
+<pre><code class="lang-python">from langdetect import detect
+
+def multilingual_query_processing(query):
+    &quot;&quot;&quot;Detect language and process accordingly&quot;&quot;&quot;
+    try:
+        lang = detect(query)
+    except:
+        lang = &#x27;en&#x27;
+
+    # Language-specific processing
+    if lang == &#x27;en&#x27;:
+        # English stopwords
+        stopwords = {&#x27;the&#x27;, &#x27;a&#x27;, &#x27;an&#x27;, &#x27;is&#x27;, &#x27;are&#x27;}
+    elif lang == &#x27;es&#x27;:
+        # Spanish stopwords
+        stopwords = {&#x27;el&#x27;, &#x27;la&#x27;, &#x27;los&#x27;, &#x27;las&#x27;, &#x27;es&#x27;, &#x27;son&#x27;}
+    elif lang == &#x27;zh-cn&#x27;:
+        # Chinese - different tokenization
+        # Use jieba or similar
+        stopwords = set()
+    else:
+        stopwords = set()
+
+    # Process with language-specific rules
+    terms = query.lower().split()
+    filtered_terms = [t for t in terms if t not in stopwords]
+
+    return {
+        &#x27;language&#x27;: lang,
+        &#x27;processed_query&#x27;: &#x27; &#x27;.join(filtered_terms),
+        &#x27;original_query&#x27;: query
+    }
+
+# Example
+query_en = &quot;what is machine learning&quot;
+query_es = &quot;qué es aprendizaje automático&quot;
+
+result_en = multilingual_query_processing(query_en)
+result_es = multilingual_query_processing(query_es)</code></pre>
+<h3>Pattern 4: Query Segmentation</h3>
+<p><strong>Use case</strong>: Break complex queries into components</p>
+<pre><code class="lang-python">import re
+
+def segment_query(query):
+    &quot;&quot;&quot;Segment query into structured components&quot;&quot;&quot;
+    segments = {
+        &#x27;what&#x27;: None,    # What user is looking for
+        &#x27;where&#x27;: None,   # Location constraint
+        &#x27;when&#x27;: None,    # Time constraint
+        &#x27;how&#x27;: None,     # Method/manner
+        &#x27;attributes&#x27;: [] # Additional attributes
+    }
+
+    query_lower = query.lower()
+
+    # Extract location
+    location_pattern = r&#x27;(?:in|at|near)\s+([a-z\s]+?)(?:\s|$)&#x27;
+    location_match = re.search(location_pattern, query_lower)
+    if location_match:
+        segments[&#x27;where&#x27;] = location_match.group(1).strip()
+
+    # Extract time
+    time_keywords = [&#x27;today&#x27;, &#x27;tomorrow&#x27;, &#x27;this week&#x27;, &#x27;next month&#x27;]
+    for keyword in time_keywords:
+        if keyword in query_lower:
+            segments[&#x27;when&#x27;] = keyword
+            break
+
+    # Extract main intent
+    if query_lower.startswith(&#x27;how&#x27;):
+        segments[&#x27;how&#x27;] = query
+    else:
+        # Remove location and time, rest is &quot;what&quot;
+        what = query_lower
+        if segments[&#x27;where&#x27;]:
+            what = what.replace(f&quot;in {segments[&#x27;where&#x27;]}&quot;, &quot;&quot;)
+            what = what.replace(f&quot;near {segments[&#x27;where&#x27;]}&quot;, &quot;&quot;)
+        if segments[&#x27;when&#x27;]:
+            what = what.replace(segments[&#x27;when&#x27;], &quot;&quot;)
+        segments[&#x27;what&#x27;] = what.strip()
+
+    return segments
+
+# Example
+query = &quot;italian restaurants in San Francisco open today&quot;
+segments = segment_query(query)
+print(f&quot;Segments: {segments}&quot;)</code></pre>
+<h3>Pattern 5: Query Relaxation</h3>
+<p><strong>When to use</strong>: No results for strict query, relax constraints</p>
+<pre><code class="lang-python">def relaxed_search(query, search_fn, min_results=3):
+    &quot;&quot;&quot;Progressive query relaxation if no results&quot;&quot;&quot;
+    # Try exact query first
+    results = search_fn(query)
+
+    if len(results) &gt;= min_results:
+        return results, &quot;exact&quot;
+
+    # Relaxation strategies
+    strategies = [
+        (&#x27;remove_quotes&#x27;, lambda q: q.replace(&#x27;&quot;&#x27;, &#x27;&#x27;)),
+        (&#x27;remove_stopwords&#x27;, lambda q: remove_stopwords(q)),
+        (&#x27;expand_synonyms&#x27;, lambda q: expand_with_synonyms(q)),
+        (&#x27;stem_terms&#x27;, lambda q: stem_query(q)),
+    ]
+
+    for strategy_name, strategy_fn in strategies:
+        relaxed_query = strategy_fn(query)
+        results = search_fn(relaxed_query)
+
+        if len(results) &gt;= min_results:
+            return results, strategy_name
+
+    # Ultimate fallback: search individual terms (OR query)
+    terms = query.split()
+    results = search_fn(&quot; OR &quot;.join(terms))
+
+    return results, &quot;individual_terms&quot;
+
+def remove_stopwords(query):
+    stopwords = {&#x27;the&#x27;, &#x27;a&#x27;, &#x27;an&#x27;, &#x27;is&#x27;, &#x27;are&#x27;, &#x27;in&#x27;, &#x27;on&#x27;, &#x27;at&#x27;}
+    return &#x27; &#x27;.join([w for w in query.split() if w.lower() not in stopwords])</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Query Expansion Techniques</h3>
+<pre><code>Technique                | Use Case                   | Pros              | Cons
+-------------------------|----------------------------|-------------------|-------------
+Synonyms                 | Vocabulary mismatch        | Simple, fast      | Limited coverage
+Pseudo-relevance feedback| High-quality corpus        | Domain-adaptive   | Query drift
+Word embeddings          | Semantic similarity        | Broader coverage  | May add noise
+User click data          | Large query logs           | User-validated    | Needs logs</code></pre>
+<h3>Intent Classification</h3>
+<pre><code>Intent Type      | Indicators                       | Search Strategy
+-----------------|----------------------------------|------------------
+Informational    | what, how, why, definition       | Return documents, snippets
+Navigational     | brand name, login, homepage      | Return direct link
+Transactional    | buy, order, download, book       | Return products, CTAs</code></pre>
+<h3>Key Guidelines</h3>
+<pre><code>✅ DO: Spell-check queries before search
+✅ DO: Expand queries to bridge vocabulary gap
+✅ DO: Classify intent to customize results
+✅ DO: Extract entities for structured search
+✅ DO: Suggest queries as user types (autocomplete)
+✅ DO: Handle multilingual queries
+
+❌ DON&#x27;T: Over-expand queries (query drift)
+❌ DON&#x27;T: Ignore user&#x27;s original terms
+❌ DON&#x27;T: Auto-correct without showing original
+❌ DON&#x27;T: Suggest irrelevant queries
+❌ DON&#x27;T: Apply same processing to all languages</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-python"># ❌ NEVER: Auto-correct without showing original query
+def bad_search(query):
+    corrected = spell_correct(query)
+    return search(corrected)
+    # User doesn&#x27;t know query was changed
+
+# ✅ CORRECT: Show correction, let user confirm
+def good_search(query):
+    corrected = spell_correct(query)
+    if corrected != query:
+        # Return both original and corrected results
+        return {
+            &#x27;original_results&#x27;: search(query),
+            &#x27;did_you_mean&#x27;: corrected,
+            &#x27;corrected_results&#x27;: search(corrected)
+        }
+    return {&#x27;results&#x27;: search(query)}</code></pre>
+<p>❌ <strong>Silent auto-correction</strong>: User confusion, wrong results ✅ <strong>Correct approach</strong>: Show &quot;Did you mean?&quot; with original results</p>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Expand query too aggressively
+expanded = original_query + &quot; &quot; + &quot; &quot;.join(all_synonyms)
+# Query drift: &quot;python programming&quot; → &quot;python programming snake coding development&quot;
+
+# ✅ Correct: Selective expansion with scoring
+def selective_expansion(query, synonyms, threshold=0.8):
+    expanded = query
+    for term in query.split():
+        if term in synonyms:
+            # Add only high-confidence synonyms
+            for syn, score in synonyms[term]:
+                if score &gt; threshold:
+                    expanded += f&quot; {syn}&quot;
+    return expanded</code></pre>
+<p>❌ <strong>Over-expansion</strong>: Query drift, irrelevant results ✅ <strong>Better</strong>: Use confidence thresholds, limit expansion</p>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Ignore query structure
+query = &quot;machine learning NOT deep learning&quot;
+processed = &quot; &quot;.join(query.split())  # Loses NOT operator
+
+# ✅ Correct: Preserve operators
+def parse_query(query):
+    # Preserve boolean operators, quotes, etc.
+    tokens = []
+    operators = {&#x27;AND&#x27;, &#x27;OR&#x27;, &#x27;NOT&#x27;}
+
+    for token in query.split():
+        if token.upper() in operators:
+            tokens.append(token.upper())
+        else:
+            tokens.append(token)
+
+    return tokens</code></pre>
+<p>❌ <strong>Destroying query structure</strong>: Loses user intent ✅ <strong>Better</strong>: Respect operators, quotes, special syntax</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>ir-search-fundamentals.md</code> - Use expanded queries with BM25/Elasticsearch</li><li><code>ir-vector-search.md</code> - Semantic query understanding with embeddings</li><li><code>ir-ranking-reranking.md</code> - Rank results after query understanding</li><li><code>ir-recommendation-systems.md</code> - Query-based recommendations</li><li><code>frontend-forms-validation.md</code> - Client-side query validation</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ir-query-understanding.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

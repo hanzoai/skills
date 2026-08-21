@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>build-systems-bazel-monorepos</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/build-systems-bazel-monorepos.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/build-systems-bazel-monorepos.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>build-systems-bazel-monorepos</h1><p class="lede">Bazel BUILD files, WORKSPACE/MODULE.bazel, hermetic builds, remote caching, build rules, Starlark custom rules, and monorepo best practices for polyglot projects.</p><h1>Bazel Monorepos</h1>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Managing large-scale polyglot monorepos (multiple languages)</li><li>Requiring hermetic, reproducible builds</li><li>Needing fast incremental builds with remote caching</li><li>Building projects with complex dependency graphs</li><li>Targeting multiple platforms from single codebase</li><li>Working at Google-scale (Bazel powers Google&#x27;s internal build)</li></ul>
+<p><strong>Alternatives</strong>: Gradle (JVM), CMake (C/C++), Cargo (Rust), language-specific tools</p>
+<p><strong>Prerequisites</strong>: Bazel 7.0+ installed (7.4.1 latest as of 2024), Bazelisk (version manager)</p>
+<h2>Core Concepts</h2>
+<h3>Bazel Philosophy</h3>
+<pre><code>Hermetic:     All dependencies explicit, no network during build
+Incremental:  Only rebuild what changed (fine-grained)
+Parallel:     Maximize parallelization across cores
+Cacheable:    Remote cache for team-wide sharing
+Polyglot:     Unified build for Java, C++, Python, Go, etc.</code></pre>
+<h3>Bazelisk (Recommended)</h3>
+<pre><code class="lang-bash"># Install Bazelisk (manages Bazel versions)
+# macOS
+brew install bazelisk
+
+# Linux
+wget https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
+chmod +x bazelisk-linux-amd64
+sudo mv bazelisk-linux-amd64 /usr/local/bin/bazel
+
+# Bazelisk reads .bazelversion for project-specific version
+echo &quot;7.4.1&quot; &gt; .bazelversion
+
+# Use bazel command (Bazelisk transparently handles version)
+bazel version</code></pre>
+<h3>Project Structure</h3>
+<pre><code>monorepo/
+├── WORKSPACE.bazel         # Workspace config (legacy)
+├── MODULE.bazel            # Module config (Bazel 6.0+, bzlmod)
+├── .bazelversion           # Bazel version (for Bazelisk)
+├── .bazelrc                # Build configuration
+├── java/
+│   ├── BUILD.bazel         # Build rules for Java code
+│   └── com/example/
+│       └── Main.java
+├── cpp/
+│   ├── BUILD.bazel
+│   └── lib.cc
+├── python/
+│   ├── BUILD.bazel
+│   └── app.py
+└── proto/
+    ├── BUILD.bazel
+    └── service.proto</code></pre>
+<h2>WORKSPACE and MODULE Files</h2>
+<h3>WORKSPACE.bazel (Legacy)</h3>
+<pre><code class="lang-python"># WORKSPACE.bazel - Legacy dependency management
+workspace(name = &quot;my_project&quot;)
+
+# HTTP archive (external dependency)
+load(&quot;@bazel_tools//tools/build_defs/repo:http.bzl&quot;, &quot;http_archive&quot;)
+
+http_archive(
+    name = &quot;rules_java&quot;,
+    urls = [&quot;https://github.com/bazelbuild/rules_java/archive/refs/tags/6.0.0.tar.gz&quot;],
+    sha256 = &quot;...&quot;,
+)
+
+http_archive(
+    name = &quot;rules_python&quot;,
+    urls = [&quot;https://github.com/bazelbuild/rules_python/releases/download/0.27.0/rules_python-0.27.0.tar.gz&quot;],
+    sha256 = &quot;...&quot;,
+)
+
+# Load rules
+load(&quot;@rules_java//java:repositories.bzl&quot;, &quot;rules_java_dependencies&quot;, &quot;rules_java_toolchains&quot;)
+rules_java_dependencies()
+rules_java_toolchains()
+
+load(&quot;@rules_python//python:repositories.bzl&quot;, &quot;py_repositories&quot;)
+py_repositories()</code></pre>
+<h3>MODULE.bazel (Bzlmod, Bazel 6.0+)</h3>
+<pre><code class="lang-python"># MODULE.bazel - Modern dependency management
+module(
+    name = &quot;my_project&quot;,
+    version = &quot;1.0.0&quot;,
+)
+
+# Bazel Central Registry dependencies
+bazel_dep(name = &quot;rules_java&quot;, version = &quot;6.0.0&quot;)
+bazel_dep(name = &quot;rules_python&quot;, version = &quot;0.27.0&quot;)
+bazel_dep(name = &quot;rules_cc&quot;, version = &quot;0.0.9&quot;)
+bazel_dep(name = &quot;protobuf&quot;, version = &quot;24.4&quot;)
+
+# Maven dependencies (Java)
+maven = use_extension(&quot;@rules_jvm_external//:extensions.bzl&quot;, &quot;maven&quot;)
+maven.install(
+    artifacts = [
+        &quot;com.google.guava:guava:32.1.3-jre&quot;,
+        &quot;org.junit.jupiter:junit-jupiter:5.10.0&quot;,
+    ],
+    repositories = [
+        &quot;https://repo.maven.apache.org/maven2&quot;,
+    ],
+)
+use_repo(maven, &quot;maven&quot;)
+
+# Python dependencies
+pip = use_extension(&quot;@rules_python//python:extensions.bzl&quot;, &quot;pip&quot;)
+pip.parse(
+    hub_name = &quot;pip&quot;,
+    python_version = &quot;3.11&quot;,
+    requirements_lock = &quot;//:requirements_lock.txt&quot;,
+)
+use_repo(pip, &quot;pip&quot;)</code></pre>
+<h2>BUILD Files</h2>
+<h3>Java Build Rules</h3>
+<pre><code class="lang-python"># java/BUILD.bazel
+load(&quot;@rules_java//java:defs.bzl&quot;, &quot;java_binary&quot;, &quot;java_library&quot;, &quot;java_test&quot;)
+
+# Library
+java_library(
+    name = &quot;utils&quot;,
+    srcs = glob([&quot;com/example/utils/*.java&quot;]),
+    deps = [
+        &quot;@maven//:com_google_guava_guava&quot;,
+    ],
+    visibility = [&quot;//visibility:public&quot;],
+)
+
+# Binary (executable)
+java_binary(
+    name = &quot;app&quot;,
+    srcs = [&quot;com/example/Main.java&quot;],
+    main_class = &quot;com.example.Main&quot;,
+    deps = [
+        &quot;:utils&quot;,
+        &quot;//proto:service_java_proto&quot;,
+    ],
+)
+
+# Test
+java_test(
+    name = &quot;utils_test&quot;,
+    srcs = glob([&quot;com/example/utils/*Test.java&quot;]),
+    test_class = &quot;com.example.utils.UtilsTest&quot;,
+    deps = [
+        &quot;:utils&quot;,
+        &quot;@maven//:org_junit_jupiter_junit_jupiter&quot;,
+    ],
+)</code></pre>
+<h3>C++ Build Rules</h3>
+<pre><code class="lang-python"># cpp/BUILD.bazel
+load(&quot;@rules_cc//cc:defs.bzl&quot;, &quot;cc_binary&quot;, &quot;cc_library&quot;, &quot;cc_test&quot;)
+
+# Library
+cc_library(
+    name = &quot;mylib&quot;,
+    srcs = [&quot;lib.cc&quot;],
+    hdrs = [&quot;lib.h&quot;],
+    deps = [
+        &quot;@com_google_absl//absl/strings&quot;,
+    ],
+    visibility = [&quot;//visibility:public&quot;],
+)
+
+# Binary
+cc_binary(
+    name = &quot;app&quot;,
+    srcs = [&quot;main.cc&quot;],
+    deps = [&quot;:mylib&quot;],
+)
+
+# Test
+cc_test(
+    name = &quot;mylib_test&quot;,
+    srcs = [&quot;lib_test.cc&quot;],
+    deps = [
+        &quot;:mylib&quot;,
+        &quot;@com_google_googletest//:gtest_main&quot;,
+    ],
+)</code></pre>
+<h3>Python Build Rules</h3>
+<pre><code class="lang-python"># python/BUILD.bazel
+load(&quot;@rules_python//python:defs.bzl&quot;, &quot;py_binary&quot;, &quot;py_library&quot;, &quot;py_test&quot;)
+
+# Library
+py_library(
+    name = &quot;utils&quot;,
+    srcs = [&quot;utils.py&quot;],
+    deps = [
+        &quot;@pip//numpy&quot;,
+    ],
+    visibility = [&quot;//visibility:public&quot;],
+)
+
+# Binary
+py_binary(
+    name = &quot;app&quot;,
+    srcs = [&quot;app.py&quot;],
+    main = &quot;app.py&quot;,
+    deps = [
+        &quot;:utils&quot;,
+        &quot;//proto:service_py_proto&quot;,
+    ],
+)
+
+# Test
+py_test(
+    name = &quot;utils_test&quot;,
+    srcs = [&quot;utils_test.py&quot;],
+    deps = [
+        &quot;:utils&quot;,
+        &quot;@pip//pytest&quot;,
+    ],
+)</code></pre>
+<h3>Protobuf Build Rules</h3>
+<pre><code class="lang-python"># proto/BUILD.bazel
+load(&quot;@rules_proto//proto:defs.bzl&quot;, &quot;proto_library&quot;)
+load(&quot;@rules_java//java:defs.bzl&quot;, &quot;java_proto_library&quot;)
+load(&quot;@rules_python//python:proto.bzl&quot;, &quot;py_proto_library&quot;)
+
+# Proto definition
+proto_library(
+    name = &quot;service_proto&quot;,
+    srcs = [&quot;service.proto&quot;],
+    visibility = [&quot;//visibility:public&quot;],
+)
+
+# Java proto
+java_proto_library(
+    name = &quot;service_java_proto&quot;,
+    deps = [&quot;:service_proto&quot;],
+    visibility = [&quot;//visibility:public&quot;],
+)
+
+# Python proto
+py_proto_library(
+    name = &quot;service_py_proto&quot;,
+    deps = [&quot;:service_proto&quot;],
+    visibility = [&quot;//visibility:public&quot;],
+)</code></pre>
+<h2>Build Configuration</h2>
+<h3>.bazelrc</h3>
+<pre><code class="lang-bash"># .bazelrc - Build configuration
+# Common flags
+build --enable_platform_specific_config
+build --incompatible_strict_action_env
+build --verbose_failures
+
+# Performance
+build --jobs=8
+build --local_ram_resources=HOST_RAM*.5
+build --remote_cache=https://cache.example.com
+
+# Output
+build --show_timestamps
+build --color=yes
+
+# Java
+build --java_runtime_version=remotejdk_11
+build --tool_java_runtime_version=remotejdk_11
+
+# C++
+build:linux --cxxopt=-std=c++17
+build:macos --cxxopt=-std=c++17
+
+# Test
+test --test_output=errors
+test --test_summary=detailed
+
+# Platform-specific (auto-selected)
+build:linux --copt=-DLINUX
+build:macos --copt=-DMACOS
+build:windows --copt=/DWINDOWS</code></pre>
+<h2>Remote Caching</h2>
+<h3>Local Cache</h3>
+<pre><code class="lang-bash"># Enable disk cache (default ~/.cache/bazel)
+build --disk_cache=~/.cache/bazel</code></pre>
+<h3>Remote Cache (HTTP)</h3>
+<pre><code class="lang-bash"># .bazelrc
+build --remote_cache=https://cache.example.com
+build --remote_upload_local_results=true
+
+# Or use Google Cloud Storage
+build --remote_cache=https://storage.googleapis.com/my-bazel-cache
+build --google_default_credentials</code></pre>
+<h3>Remote Execution (Advanced)</h3>
+<pre><code class="lang-bash"># Remote build execution (RBE)
+build --remote_executor=grpcs://remotebuildexecution.googleapis.com
+build --remote_instance_name=projects/my-project/instances/default_instance
+build --google_default_credentials</code></pre>
+<h2>Custom Rules (Starlark)</h2>
+<h3>Simple Custom Rule</h3>
+<pre><code class="lang-python"># rules/custom.bzl
+def _my_rule_impl(ctx):
+    &quot;&quot;&quot;Implementation function for my_rule.&quot;&quot;&quot;
+    # Access attributes
+    input_file = ctx.file.src
+    output_file = ctx.actions.declare_file(ctx.label.name + &quot;.out&quot;)
+
+    # Run action
+    ctx.actions.run_shell(
+        inputs = [input_file],
+        outputs = [output_file],
+        command = &quot;cat {} &gt; {}&quot;.format(input_file.path, output_file.path),
+    )
+
+    # Return provider
+    return [DefaultInfo(files = depset([output_file]))]
+
+# Define rule
+my_rule = rule(
+    implementation = _my_rule_impl,
+    attrs = {
+        &quot;src&quot;: attr.label(allow_single_file = True, mandatory = True),
+    },
+)</code></pre>
+<pre><code class="lang-python"># BUILD.bazel - Use custom rule
+load(&quot;//rules:custom.bzl&quot;, &quot;my_rule&quot;)
+
+my_rule(
+    name = &quot;processed&quot;,
+    src = &quot;input.txt&quot;,
+)</code></pre>
+<h3>Advanced Custom Rule</h3>
+<pre><code class="lang-python"># rules/code_gen.bzl
+def _code_gen_impl(ctx):
+    &quot;&quot;&quot;Generate code from template.&quot;&quot;&quot;
+    template = ctx.file.template
+    output = ctx.actions.declare_file(ctx.attr.output_name)
+
+    # Run Python script
+    ctx.actions.run(
+        executable = ctx.executable._generator,
+        arguments = [
+            &quot;--template&quot;, template.path,
+            &quot;--output&quot;, output.path,
+            &quot;--config&quot;, ctx.attr.config,
+        ],
+        inputs = [template],
+        outputs = [output],
+        mnemonic = &quot;CodeGen&quot;,
+        progress_message = &quot;Generating code from {}&quot;.format(template.short_path),
+    )
+
+    return [DefaultInfo(files = depset([output]))]
+
+code_gen = rule(
+    implementation = _code_gen_impl,
+    attrs = {
+        &quot;template&quot;: attr.label(allow_single_file = [&quot;.tpl&quot;], mandatory = True),
+        &quot;output_name&quot;: attr.string(mandatory = True),
+        &quot;config&quot;: attr.string(default = &quot;default&quot;),
+        &quot;_generator&quot;: attr.label(
+            default = Label(&quot;//tools:generator&quot;),
+            executable = True,
+            cfg = &quot;exec&quot;,
+        ),
+    },
+)</code></pre>
+<h2>Monorepo Best Practices</h2>
+<h3>Visibility Control</h3>
+<pre><code class="lang-python"># Restrict visibility
+java_library(
+    name = &quot;internal_utils&quot;,
+    srcs = [&quot;Utils.java&quot;],
+    visibility = [&quot;//java:__subpackages__&quot;],  # Only java/ subtree
+)
+
+# Public visibility
+java_library(
+    name = &quot;public_api&quot;,
+    srcs = [&quot;Api.java&quot;],
+    visibility = [&quot;//visibility:public&quot;],  # Entire workspace
+)
+
+# Package group
+package_group(
+    name = &quot;backend_team&quot;,
+    packages = [
+        &quot;//backend/...&quot;,
+        &quot;//common/...&quot;,
+    ],
+)
+
+java_library(
+    name = &quot;backend_lib&quot;,
+    srcs = [&quot;BackendLib.java&quot;],
+    visibility = [&quot;:backend_team&quot;],
+)</code></pre>
+<h3>Glob Patterns</h3>
+<pre><code class="lang-python"># Glob source files
+java_library(
+    name = &quot;lib&quot;,
+    srcs = glob([&quot;src/**/*.java&quot;]),
+    resources = glob([&quot;resources/**/*&quot;]),
+)
+
+# Exclude patterns
+java_library(
+    name = &quot;lib&quot;,
+    srcs = glob(
+        [&quot;**/*.java&quot;],
+        exclude = [&quot;**/*Test.java&quot;, &quot;**/testdata/**&quot;],
+    ),
+)</code></pre>
+<h3>Macros for Reusability</h3>
+<pre><code class="lang-python"># macros/java.bzl
+def java_module(name, srcs, deps = [], **kwargs):
+    &quot;&quot;&quot;Standard Java module with library and test.&quot;&quot;&quot;
+    native.java_library(
+        name = name,
+        srcs = srcs,
+        deps = deps,
+        **kwargs
+    )
+
+    native.java_test(
+        name = name + &quot;_test&quot;,
+        srcs = native.glob([name + &quot;/**/*Test.java&quot;]),
+        deps = [
+            &quot;:&quot; + name,
+            &quot;@maven//:org_junit_jupiter_junit_jupiter&quot;,
+        ] + deps,
+        **kwargs
+    )</code></pre>
+<pre><code class="lang-python"># BUILD.bazel
+load(&quot;//macros:java.bzl&quot;, &quot;java_module&quot;)
+
+java_module(
+    name = &quot;utils&quot;,
+    srcs = glob([&quot;utils/**/*.java&quot;]),
+    deps = [&quot;@maven//:com_google_guava_guava&quot;],
+)</code></pre>
+<h2>Performance Optimization</h2>
+<h3>Query Dependencies</h3>
+<pre><code class="lang-bash"># Show dependency graph
+bazel query --output=graph //java/... &gt; graph.dot
+
+# Find dependencies
+bazel query &quot;deps(//java:app)&quot;
+
+# Reverse dependencies (what depends on X)
+bazel query &quot;rdeps(//..., //java:utils)&quot;
+
+# Find test targets
+bazel query &quot;tests(//java/...)&quot;</code></pre>
+<h3>Build Analysis</h3>
+<pre><code class="lang-bash"># Profile build
+bazel build //java:app --profile=profile.json
+
+# View profile
+bazel analyze-profile profile.json
+
+# Show action timing
+bazel build //java:app --experimental_show_artifacts --experimental_profile_cpu_usage</code></pre>
+<h3>Incremental Builds</h3>
+<pre><code class="lang-bash"># Bazel automatically detects changes
+# Only rebuilds affected targets
+
+# Force rebuild
+bazel clean
+bazel build //...
+
+# Or specific target
+bazel clean --expunge  # Nuclear option (clears all caches)</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>❌ Not Using Hermetic Builds</h3>
+<pre><code class="lang-python"># WRONG: External system dependency
+genrule(
+    name = &quot;bad&quot;,
+    outs = [&quot;output.txt&quot;],
+    cmd = &quot;curl https://example.com/data &gt; $@&quot;,  # Network access!
+)
+
+# CORRECT: Explicit dependency
+http_file(
+    name = &quot;data&quot;,
+    urls = [&quot;https://example.com/data&quot;],
+    sha256 = &quot;...&quot;,
+)
+
+genrule(
+    name = &quot;good&quot;,
+    srcs = [&quot;@data//file&quot;],
+    outs = [&quot;output.txt&quot;],
+    cmd = &quot;cp $&lt; $@&quot;,
+)</code></pre>
+<h3>❌ Overly Broad Globs</h3>
+<pre><code class="lang-python"># WRONG: Too broad, includes unintended files
+srcs = glob([&quot;**/*.java&quot;])
+
+# CORRECT: Specific patterns
+srcs = glob(
+    [&quot;src/**/*.java&quot;],
+    exclude = [
+        &quot;**/*Test.java&quot;,
+        &quot;**/testdata/**&quot;,
+        &quot;**/generated/**&quot;,
+    ],
+)</code></pre>
+<h3>❌ Not Pinning Versions</h3>
+<pre><code class="lang-python"># WRONG: Unpinned version (non-reproducible)
+http_archive(
+    name = &quot;rules_java&quot;,
+    urls = [&quot;https://github.com/bazelbuild/rules_java/archive/refs/heads/main.zip&quot;],
+)
+
+# CORRECT: Pinned version with SHA
+http_archive(
+    name = &quot;rules_java&quot;,
+    urls = [&quot;https://github.com/bazelbuild/rules_java/archive/refs/tags/6.0.0.tar.gz&quot;],
+    sha256 = &quot;469b7f3b580b4fcf8112f4d6eb3e3d8239ef05f68a33e2c3c4f23d3a4e286994&quot;,
+)</code></pre>
+<h2>Quick Reference</h2>
+<h3>Essential Bazel Commands</h3>
+<pre><code class="lang-bash"># Build
+bazel build //java:app                # Build target
+bazel build //java/...                # Build all in java/
+bazel build //...                     # Build entire workspace
+
+# Test
+bazel test //java:app_test            # Run single test
+bazel test //java/...                 # Run all tests in java/
+bazel test //... --test_output=all    # Verbose test output
+
+# Run
+bazel run //java:app                  # Build and run binary
+
+# Clean
+bazel clean                           # Clean build outputs
+bazel clean --expunge                 # Nuclear clean (all caches)
+
+# Query
+bazel query //java/...                # List targets
+bazel query &quot;deps(//java:app)&quot;        # Show dependencies
+bazel query &quot;rdeps(//..., //java:lib)&quot; # Reverse dependencies
+
+# Info
+bazel info                            # Show workspace info
+bazel version                         # Bazel version</code></pre>
+<h3>Target Labels</h3>
+<pre><code>//package:target              # Absolute label
+//package                     # Short form (target = package name)
+:target                       # Relative to current package
+//...                         # All targets in workspace
+//package/...                 # All targets under package/
+@repo//package:target         # External repository</code></pre>
+<h2>Bazel vs Gradle Performance (2024 Data)</h2>
+<p><strong>Build Performance</strong> (Google internal data, 2024):</p>
+<ul><li><strong>Cold build</strong>: Bazel ~15% slower (hermetic sandboxing overhead)</li><li><strong>Incremental build</strong>: Bazel 3-5x faster (fine-grained caching)</li><li><strong>Multi-language</strong>: Bazel scales better (unified graph)</li><li><strong>Remote cache</strong>: Bazel superior (built-in, action-level granularity)</li></ul>
+<p><strong>When Bazel Excels</strong>:</p>
+<ul><li>Large monorepos (&gt;100k files)</li><li>Polyglot projects (Java + C++ + Python)</li><li>Multiple teams sharing cache</li><li>Strict reproducibility requirements</li></ul>
+<p><strong>When Gradle Excels</strong>:</p>
+<ul><li>Pure JVM projects</li><li>Smaller codebases (&lt;50k files)</li><li>Flexible build logic needed</li><li>Android development (Gradle is default)</li></ul>
+<h2>Python Integration Example</h2>
+<pre><code class="lang-python"># tools/generator.py - Custom code generator
+import argparse
+
+def generate(template_path, output_path, config):
+    with open(template_path) as f:
+        template = f.read()
+
+    # Process template (simplified)
+    code = template.replace(&quot;{{CONFIG}}&quot;, config)
+
+    with open(output_path, &#x27;w&#x27;) as f:
+        f.write(code)
+
+if __name__ == &quot;__main__&quot;:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(&quot;--template&quot;, required=True)
+    parser.add_argument(&quot;--output&quot;, required=True)
+    parser.add_argument(&quot;--config&quot;, default=&quot;default&quot;)
+    args = parser.parse_args()
+
+    generate(args.template, args.output, args.config)</code></pre>
+<pre><code class="lang-python"># tools/BUILD.bazel
+py_binary(
+    name = &quot;generator&quot;,
+    srcs = [&quot;generator.py&quot;],
+    visibility = [&quot;//visibility:public&quot;],
+)</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>build-system-selection.md</code> - Choosing between build systems</li><li><code>gradle-jvm-builds.md</code> - Alternative for JVM projects</li><li><code>cmake-patterns.md</code> - Alternative for C/C++ projects</li><li><code>build-optimization.md</code> - Caching and performance</li><li><code>cicd/ci-optimization.md</code> - Bazel in CI pipelines</li></ul>
+<h2>Summary</h2>
+<p>Bazel is Google&#x27;s open-source build system designed for massive monorepos with hermetic, reproducible builds:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ol><li><strong>Hermetic builds</strong> - All dependencies explicit, no network during build</li><li><strong>Fine-grained caching</strong> - Action-level caching for fast incremental builds</li><li><strong>Remote cache/execution</strong> - Share build artifacts across team/CI</li><li><strong>Polyglot support</strong> - Unified build for Java, C++, Python, Go, etc.</li><li><strong>Bzlmod</strong> - Modern dependency management (Bazel 6.0+)</li><li><strong>Starlark rules</strong> - Extend Bazel with custom build logic</li><li><strong>Visibility control</strong> - Enforce module boundaries</li><li><strong>Incremental by default</strong> - Only rebuild what changed</li></ol>
+<p><strong>When to Choose Bazel</strong>:</p>
+<ul><li>Large monorepos (Google, Uber, LinkedIn scale)</li><li>Multiple languages in single codebase</li><li>Strict reproducibility requirements</li><li>Need for remote caching/execution</li></ul>
+<p><strong>When to Choose Alternatives</strong>:</p>
+<ul><li>Small projects (setup overhead not justified)</li><li>Pure JVM (Gradle simpler)</li><li>Pure C/C++ (CMake more familiar)</li><li>Rapid prototyping (Bazel has learning curve)</li></ul>
+<p>Bazel excels at scale but requires investment in learning and setup. For projects expecting to grow to Google-scale complexity, the investment pays off.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/build-systems-bazel-monorepos.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

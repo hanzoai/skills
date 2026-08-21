@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distributed-systems-conflict-resolution</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/distributed-systems-conflict-resolution.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/distributed-systems-conflict-resolution.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>distributed-systems-conflict-resolution</h1><p class="lede">Conflict resolution strategies including Last-Write-Wins, multi-value, semantic resolution, and application-specific merge functions</p><h1>Conflict Resolution</h1>
+<p><strong>Scope</strong>: Conflict detection, resolution strategies, merge functions, application-specific resolution <strong>Lines</strong>: ~280 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Building eventually consistent systems</li><li>Handling concurrent writes</li><li>Implementing distributed databases</li><li>Designing conflict resolution logic</li><li>Working with CRDTs</li><li>Building collaborative applications</li><li>Understanding Dynamo, Riak</li><li>Implementing offline-first apps</li></ul>
+<h2>Core Concepts</h2>
+<h3>Types of Conflicts</h3>
+<p><strong>Write-Write Conflict</strong>: Two replicas update same key concurrently</p>
+<pre><code>Time →
+Replica A: Write X=1
+Replica B: Write X=2  (concurrent with A)
+
+Conflict: Which value should win?</code></pre>
+<p><strong>Read-Modify-Write Conflict</strong>: Concurrent modifications based on same read</p>
+<pre><code>Both clients read balance=100
+Client A: balance += 50  → 150
+Client B: balance += 30  → 130
+
+Which is correct? Should be 180!</code></pre>
+<hr>
+<h2>Resolution Strategies</h2>
+<h3>1. Last-Write-Wins (LWW)</h3>
+<p><strong>Approach</strong>: Use timestamp, latest wins</p>
+<pre><code class="lang-python">import time
+
+class LWWRegister:
+    &quot;&quot;&quot;Last-Write-Wins with timestamps&quot;&quot;&quot;
+
+    def __init__(self):
+        self.value = None
+        self.timestamp = 0
+
+    def write(self, value, timestamp=None):
+        &quot;&quot;&quot;Write with timestamp&quot;&quot;&quot;
+        if timestamp is None:
+            timestamp = time.time()
+
+        if timestamp &gt; self.timestamp:
+            self.value = value
+            self.timestamp = timestamp
+
+    def merge(self, other):
+        &quot;&quot;&quot;Merge with another replica&quot;&quot;&quot;
+        if other.timestamp &gt; self.timestamp:
+            self.value = other.value
+            self.timestamp = other.timestamp
+
+# Problem: Can lose data!
+r1 = LWWRegister()
+r2 = LWWRegister()
+
+r1.write(&#x27;A&#x27;, timestamp=100.001)
+r2.write(&#x27;B&#x27;, timestamp=100.002)  # B wins, A lost!
+
+r1.merge(r2)
+print(r1.value)  # &#x27;B&#x27; (A&#x27;s write lost)</code></pre>
+<p><strong>Pros</strong>: Simple, no user intervention <strong>Cons</strong>: Data loss possible, relies on clock synchronization</p>
+<h3>2. Multi-Value (Siblings)</h3>
+<p><strong>Approach</strong>: Keep all concurrent values, resolve later</p>
+<pre><code class="lang-python">class MultiValueRegister:
+    &quot;&quot;&quot;Keep concurrent values as siblings&quot;&quot;&quot;
+
+    def __init__(self):
+        self.values = {}  # vector_clock → value
+
+    def write(self, value, vector_clock):
+        &quot;&quot;&quot;Write with causality tracking&quot;&quot;&quot;
+        # Remove values this one supersedes
+        self.values = {
+            vc: v for vc, v in self.values.items()
+            if not self._causally_before(vc, vector_clock)
+        }
+        self.values[vector_clock] = value
+
+    def read(self):
+        &quot;&quot;&quot;Return all concurrent values&quot;&quot;&quot;
+        return list(self.values.values())
+
+    def _causally_before(self, vc1, vc2):
+        &quot;&quot;&quot;Check if vc1 causally before vc2&quot;&quot;&quot;
+        return all(vc1.get(k, 0) &lt;= vc2.get(k, 0) for k in vc2) and vc1 != vc2
+
+    def merge(self, other):
+        &quot;&quot;&quot;Merge siblings from other replica&quot;&quot;&quot;
+        for vc, v in other.values.items():
+            if vc not in self.values:
+                # Check if dominated by existing values
+                dominated = any(
+                    self._causally_before(vc, existing_vc)
+                    for existing_vc in self.values.keys()
+                )
+                if not dominated:
+                    self.values[vc] = v</code></pre>
+<p><strong>Pros</strong>: No data loss <strong>Cons</strong>: Application must handle siblings</p>
+<h3>3. Semantic Resolution</h3>
+<p><strong>Approach</strong>: Use domain knowledge to merge</p>
+<pre><code class="lang-python">class ShoppingCart:
+    &quot;&quot;&quot;Shopping cart with semantic merge&quot;&quot;&quot;
+
+    def __init__(self):
+        self.items = {}  # item_id → (quantity, add_timestamp, remove_timestamp)
+
+    def add_item(self, item_id, quantity, timestamp):
+        &quot;&quot;&quot;Add item to cart&quot;&quot;&quot;
+        if item_id in self.items:
+            qty, add_ts, rem_ts = self.items[item_id]
+            # Only if not removed after
+            if rem_ts is None or timestamp &gt; rem_ts:
+                self.items[item_id] = (qty + quantity, max(add_ts, timestamp), rem_ts)
+        else:
+            self.items[item_id] = (quantity, timestamp, None)
+
+    def remove_item(self, item_id, timestamp):
+        &quot;&quot;&quot;Remove item from cart&quot;&quot;&quot;
+        if item_id in self.items:
+            qty, add_ts, _ = self.items[item_id]
+            # Only if added before removal
+            if timestamp &gt; add_ts:
+                self.items[item_id] = (qty, add_ts, timestamp)
+
+    def merge(self, other):
+        &quot;&quot;&quot;Semantic merge of shopping carts&quot;&quot;&quot;
+        # Merge item by item
+        all_items = set(self.items.keys()) | set(other.items.keys())
+
+        for item_id in all_items:
+            my_item = self.items.get(item_id)
+            other_item = other.items.get(item_id)
+
+            if my_item and other_item:
+                # Both have item - merge
+                qty1, add1, rem1 = my_item
+                qty2, add2, rem2 = other_item
+
+                # Use latest add timestamp
+                final_add = max(add1, add2)
+
+                # Use latest remove timestamp (if any)
+                final_rem = max(rem1 or 0, rem2 or 0) if (rem1 or rem2) else None
+
+                # If removed after added, mark removed; otherwise sum quantities
+                if final_rem and final_rem &gt; final_add:
+                    self.items[item_id] = (0, final_add, final_rem)
+                else:
+                    self.items[item_id] = (qty1 + qty2, final_add, None)
+
+            elif my_item:
+                pass  # Keep my item
+            else:
+                self.items[item_id] = other_item  # Use other item
+
+    def get_items(self):
+        &quot;&quot;&quot;Get current cart contents (excluding removed)&quot;&quot;&quot;
+        return {
+            item_id: qty
+            for item_id, (qty, add_ts, rem_ts) in self.items.items()
+            if rem_ts is None or add_ts &gt; rem_ts
+        }</code></pre>
+<h3>4. Application-Specific Merge Functions</h3>
+<pre><code class="lang-python">class Counter:
+    &quot;&quot;&quot;Counter with commutative merge&quot;&quot;&quot;
+
+    def __init__(self, replica_id):
+        self.replica_id = replica_id
+        self.increments = {}  # replica_id → count
+
+    def increment(self, amount=1):
+        &quot;&quot;&quot;Increment counter&quot;&quot;&quot;
+        if self.replica_id not in self.increments:
+            self.increments[self.replica_id] = 0
+        self.increments[self.replica_id] += amount
+
+    def value(self):
+        &quot;&quot;&quot;Get total count&quot;&quot;&quot;
+        return sum(self.increments.values())
+
+    def merge(self, other):
+        &quot;&quot;&quot;Merge with another counter (element-wise max)&quot;&quot;&quot;
+        for replica_id, count in other.increments.items():
+            self.increments[replica_id] = max(
+                self.increments.get(replica_id, 0),
+                count
+            )
+
+# No conflicts! Merges commute
+c1 = Counter(&#x27;A&#x27;)
+c2 = Counter(&#x27;B&#x27;)
+
+c1.increment(5)
+c2.increment(3)
+
+c1.merge(c2)
+print(c1.value())  # 8 (correct!)</code></pre>
+<hr>
+<h2>Conflict Resolution in Practice</h2>
+<h3>Riak</h3>
+<pre><code class="lang-python"># Riak allows custom merge functions
+import riak
+
+client = riak.RiakClient()
+bucket = client.bucket(&#x27;users&#x27;)
+
+# Allow siblings
+bucket.allow_mult = True
+
+# Write
+obj = bucket.new(&#x27;user_123&#x27;, data={&#x27;name&#x27;: &#x27;Alice&#x27;, &#x27;age&#x27;: 30})
+obj.store()
+
+# Concurrent write creates sibling
+obj2 = bucket.get(&#x27;user_123&#x27;)
+obj2.data[&#x27;age&#x27;] = 31
+obj2.store()
+
+# Read returns siblings
+obj3 = bucket.get(&#x27;user_123&#x27;)
+if obj3.siblings:
+    # Application resolves conflict
+    merged = resolve_user_siblings(obj3.siblings)
+    obj3.data = merged
+    obj3.store()  # Store resolved value</code></pre>
+<h3>DynamoDB</h3>
+<pre><code class="lang-python">import boto3
+
+dynamodb = boto3.resource(&#x27;dynamodb&#x27;)
+table = dynamodb.Table(&#x27;Orders&#x27;)
+
+# Conditional write to avoid conflicts
+try:
+    table.put_item(
+        Item={&#x27;order_id&#x27;: &#x27;123&#x27;, &#x27;status&#x27;: &#x27;shipped&#x27;, &#x27;version&#x27;: 2},
+        ConditionExpression=&#x27;version = :v&#x27;,
+        ExpressionAttributeValues={&#x27;:v&#x27;: 1}
+    )
+except ClientError as e:
+    if e.response[&#x27;Error&#x27;][&#x27;Code&#x27;] == &#x27;ConditionalCheckFailedException&#x27;:
+        # Conflict detected - handle retry logic
+        current = table.get_item(Key={&#x27;order_id&#x27;: &#x27;123&#x27;})
+        # Merge or retry...</code></pre>
+<hr>
+<h2>Automatic Conflict Resolution</h2>
+<h3>Convergent Replicated Data Types (CRDTs)</h3>
+<pre><code class="lang-python"># CRDTs guarantee conflict-free merges
+
+class GSet:
+    &quot;&quot;&quot;Grow-only set - automatically conflict-free&quot;&quot;&quot;
+
+    def __init__(self):
+        self.elements = set()
+
+    def add(self, element):
+        self.elements.add(element)
+
+    def merge(self, other):
+        &quot;&quot;&quot;Union - always conflict-free&quot;&quot;&quot;
+        self.elements |= other.elements
+
+# No conflicts possible!
+s1 = GSet()
+s2 = GSet()
+
+s1.add(&#x27;A&#x27;)
+s2.add(&#x27;B&#x27;)
+
+s1.merge(s2)  # {A, B}
+s2.merge(s1)  # {B, A} = {A, B} (same result)</code></pre>
+<hr>
+<h2>User-Driven Resolution</h2>
+<h3>Interactive Resolution</h3>
+<pre><code class="lang-python">class DocumentEditor:
+    &quot;&quot;&quot;Collaborative editor with manual conflict resolution&quot;&quot;&quot;
+
+    def __init__(self):
+        self.content = &quot;&quot;
+        self.versions = []  # List of (content, vector_clock)
+
+    def edit(self, new_content, vector_clock):
+        &quot;&quot;&quot;Edit document&quot;&quot;&quot;
+        self.versions.append((new_content, vector_clock))
+
+    def get_conflicts(self):
+        &quot;&quot;&quot;Detect concurrent edits&quot;&quot;&quot;
+        conflicts = []
+        for i, (content1, vc1) in enumerate(self.versions):
+            for j, (content2, vc2) in enumerate(self.versions[i+1:]):
+                if self._concurrent(vc1, vc2):
+                    conflicts.append((content1, content2))
+        return conflicts
+
+    def resolve_conflict_manually(self, conflicts, chosen_version):
+        &quot;&quot;&quot;User chooses resolution&quot;&quot;&quot;
+        self.content = chosen_version
+        self.versions = [(chosen_version, self._new_vector_clock())]</code></pre>
+<hr>
+<h2>Strategies Comparison</h2>
+<p>| Strategy | Data Loss | Complexity | User Action | |----------|-----------|------------|-------------| | <strong>Last-Write-Wins</strong> | ❌ Possible | ✅ Simple | None | | <strong>Multi-Value</strong> | ✅ None | ⚠️ Medium | Required | | <strong>Semantic Merge</strong> | ✅ None | ⚠️ Medium-High | None | | <strong>CRDTs</strong> | ✅ None | ⚠️ Medium | None | | <strong>Manual</strong> | ✅ None | ❌ Complex | Required |</p>
+<hr>
+<h2>Best Practices</h2>
+<h3>1. Choose Strategy Based on Use Case</h3>
+<pre><code>✅ LWW: When latest value is correct (user status, config)
+✅ Multi-value: When user must decide (editing documents)
+✅ Semantic: When domain knowledge helps (shopping cart, calendar)
+✅ CRDTs: When automatic merge possible (counters, sets)</code></pre>
+<h3>2. Minimize Conflicts</h3>
+<pre><code class="lang-python"># Partition data to reduce conflicts
+class PartitionedStore:
+    &quot;&quot;&quot;Partition by user to reduce conflicts&quot;&quot;&quot;
+
+    def __init__(self):
+        self.partitions = {}  # user_id → user&#x27;s data
+
+    def write(self, user_id, key, value):
+        &quot;&quot;&quot;Write to user&#x27;s partition&quot;&quot;&quot;
+        if user_id not in self.partitions:
+            self.partitions[user_id] = {}
+        self.partitions[user_id][key] = value
+
+# Users rarely conflict with themselves</code></pre>
+<h3>3. Detect Conflicts Early</h3>
+<pre><code class="lang-python">def detect_conflict(write_vector_clock, stored_vector_clock):
+    &quot;&quot;&quot;Detect if write conflicts with stored value&quot;&quot;&quot;
+    # Concurrent if neither dominates
+    neither_dominates = (
+        not causally_before(write_vector_clock, stored_vector_clock) and
+        not causally_before(stored_vector_clock, write_vector_clock)
+    )
+    return neither_dominates</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>distributed-systems-crdt-fundamentals</code> - Conflict-free data types</li><li><code>distributed-systems-vector-clocks</code> - Causality tracking</li><li><code>distributed-systems-eventual-consistency</code> - Consistency models</li><li><code>distributed-systems-crdt-types</code> - Specific CRDT implementations</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/distributed-systems-conflict-resolution.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

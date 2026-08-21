@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>observability-alerting-strategy</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/observability-alerting-strategy.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/observability-alerting-strategy.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>observability-alerting-strategy</h1><p class="lede">Setting up production monitoring and on-call rotation</p><h1>Alerting Strategy</h1>
+<p><strong>Scope</strong>: Alert conditions, severity levels, on-call rotation, alert fatigue, SLO-based alerts</p>
+<p><strong>Lines</strong>: 368</p>
+<p><strong>Last Updated</strong>: 2025-10-18</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Setting up production monitoring and on-call rotation</li><li>Designing alert rules for critical systems</li><li>Reducing alert fatigue and false positives</li><li>Implementing SLO-based alerting</li><li>Configuring PagerDuty, Opsgenie, or similar on-call tools</li><li>Defining incident severity levels and escalation policies</li><li>Troubleshooting alerting issues (too many/too few alerts)</li><li>Building runbooks for common alerts</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Development environments (logs are sufficient)</li><li>Non-critical systems (monitoring dashboards are sufficient)</li><li>Metrics that don&#x27;t require human intervention</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Alert Philosophy</h3>
+<p><strong>Golden Rule</strong>: Every alert must be actionable</p>
+<ul><li><strong>Actionable</strong>: Requires human intervention</li><li><strong>Not actionable</strong>: FYI, nice-to-know (use dashboards instead)</li></ul>
+<p><strong>Example</strong>:</p>
+<pre><code>❌ Bad alert: &quot;CPU usage is 60%&quot; (so what?)
+✅ Good alert: &quot;CPU usage &gt;90% for 5 minutes&quot; (take action)
+
+❌ Bad alert: &quot;Request latency is 200ms&quot; (within SLO)
+✅ Good alert: &quot;Request latency &gt;1s, SLO budget exhausted&quot;</code></pre>
+<h3>Severity Levels</h3>
+<p><strong>P0 (Critical)</strong>: Immediate response, page on-call</p>
+<ul><li>Service completely down</li><li>Data loss occurring</li><li>Security breach</li><li>SLO budget exhausted (user-facing impact)</li><li><strong>Response</strong>: &lt;5 minutes</li></ul>
+<p><strong>P1 (High)</strong>: Urgent, page on-call during business hours</p>
+<ul><li>Service degraded (partial outage)</li><li>SLO at risk (warning threshold)</li><li>Critical dependency failing</li><li><strong>Response</strong>: &lt;15 minutes</li></ul>
+<p><strong>P2 (Medium)</strong>: Important, ticket to team</p>
+<ul><li>Non-critical service degraded</li><li>Elevated error rates (below SLO)</li><li>Resource constraints (disk, memory)</li><li><strong>Response</strong>: &lt;1 hour</li></ul>
+<p><strong>P3 (Low)</strong>: Informational, check next day</p>
+<ul><li>Non-production issues</li><li>Optimization opportunities</li><li><strong>Response</strong>: Next business day</li></ul>
+<h3>Alert Types</h3>
+<p><strong>1. Symptom-based</strong> (prefer): Alert on user-facing symptoms</p>
+<ul><li>High latency</li><li>High error rate</li><li>Service unavailable</li><li><strong>Why</strong>: Direct user impact</li></ul>
+<p><strong>2. Cause-based</strong>: Alert on underlying causes</p>
+<ul><li>High CPU usage</li><li>Memory leak</li><li>Database connection pool exhausted</li><li><strong>Why</strong>: Useful for diagnosis, but risk false positives</li></ul>
+<h3>SLO-Based Alerting</h3>
+<p><strong>SLO (Service Level Objective)</strong>: Target reliability (e.g., 99.9% uptime)</p>
+<p><strong>SLI (Service Level Indicator)</strong>: Measurement (e.g., success rate)</p>
+<p><strong>Error Budget</strong>: Allowed downtime (e.g., 0.1% = 43 minutes/month)</p>
+<p><strong>Alerting Strategy</strong>:</p>
+<ol><li><strong>Burn rate</strong>: How fast error budget is consumed</li><li><strong>Multi-window</strong>: Short window (fast burn) + long window (slow burn)</li><li><strong>Budget exhaustion</strong>: Alert when budget is near zero</li></ol>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: SLO-Based Alert (Prometheus)</h3>
+<pre><code class="lang-yaml"># SLO: 99.9% success rate (error budget: 0.1%)
+# Alert if burning budget 10x faster (1% error rate)
+
+groups:
+  - name: slo_alerts
+    interval: 30s
+    rules:
+      # Fast burn (1 hour window)
+      - alert: ErrorBudgetBurnFast
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~&quot;5..&quot;}[1h]))
+            /
+            sum(rate(http_requests_total[1h]))
+          ) &gt; 0.01  # 1% error rate (10x SLO)
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: &quot;Fast error budget burn detected&quot;
+          description: &quot;Error rate is {{ $value | humanizePercentage }}, burning error budget 10x faster than allowed&quot;
+
+      # Slow burn (6 hour window)
+      - alert: ErrorBudgetBurnSlow
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~&quot;5..&quot;}[6h]))
+            /
+            sum(rate(http_requests_total[6h]))
+          ) &gt; 0.002  # 0.2% error rate (2x SLO)
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;Slow error budget burn detected&quot;
+          description: &quot;Error rate is {{ $value | humanizePercentage }}, burning error budget 2x faster than allowed&quot;
+
+      # Budget exhaustion
+      - alert: ErrorBudgetExhausted
+        expr: |
+          (
+            1 - (
+              sum(rate(http_requests_total{status!~&quot;5..&quot;}[30d]))
+              /
+              sum(rate(http_requests_total[30d]))
+            )
+          ) &gt; 0.001  # Exceeded 0.1% error budget
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: &quot;Error budget exhausted&quot;
+          description: &quot;Monthly error budget has been exhausted&quot;</code></pre>
+<h3>Pattern 2: Latency Alert (Prometheus)</h3>
+<pre><code class="lang-yaml">groups:
+  - name: latency_alerts
+    rules:
+      # P95 latency above SLO
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket[5m]))
+          ) &gt; 1.0  # 1 second SLO
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;P95 latency above SLO&quot;
+          description: &quot;P95 latency is {{ $value }}s (SLO: 1s)&quot;
+
+      # P99 latency critical
+      - alert: HighLatencyP99Critical
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le) (rate(http_request_duration_seconds_bucket[5m]))
+          ) &gt; 5.0  # 5 second critical threshold
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: &quot;P99 latency critically high&quot;
+          description: &quot;P99 latency is {{ $value }}s (threshold: 5s)&quot;</code></pre>
+<h3>Pattern 3: Resource Alert (Prometheus)</h3>
+<pre><code class="lang-yaml">groups:
+  - name: resource_alerts
+    rules:
+      # CPU usage high
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=&quot;idle&quot;}[5m])) * 100) &gt; 90
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;High CPU usage on {{ $labels.instance }}&quot;
+          description: &quot;CPU usage is {{ $value | humanize }}%&quot;
+
+      # Memory usage critical
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 &gt; 95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: &quot;High memory usage on {{ $labels.instance }}&quot;
+          description: &quot;Memory usage is {{ $value | humanize }}%&quot;
+
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: |
+          (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 &lt; 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;Low disk space on {{ $labels.instance }}&quot;
+          description: &quot;Disk space available: {{ $value | humanize }}%&quot;</code></pre>
+<h3>Pattern 4: Error Rate Alert (Python)</h3>
+<pre><code class="lang-python">from prometheus_client import Counter, generate_latest
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+errors_total = Counter(
+    &#x27;api_errors_total&#x27;,
+    &#x27;Total API errors&#x27;,
+    [&#x27;endpoint&#x27;, &#x27;error_type&#x27;]
+)
+
+# Prometheus alert rule (configured in Prometheus)
+# alert: HighErrorRate
+# expr: rate(api_errors_total[5m]) &gt; 1  # More than 1 error/sec
+# for: 5m
+# labels:
+#   severity: critical
+# annotations:
+#   summary: &quot;High error rate detected&quot;
+
+@app.route(&#x27;/api/data&#x27;)
+def get_data():
+    try:
+        data = fetch_data()
+        return jsonify(data)
+    except Exception as e:
+        errors_total.labels(
+            endpoint=&#x27;/api/data&#x27;,
+            error_type=type(e).__name__
+        ).inc()
+        raise
+
+@app.route(&#x27;/metrics&#x27;)
+def metrics():
+    return generate_latest()</code></pre>
+<h3>Pattern 5: Alert Routing (Alertmanager)</h3>
+<pre><code class="lang-yaml"># alertmanager.yml
+global:
+  resolve_timeout: 5m
+
+route:
+  # Default receiver
+  receiver: team-slack
+
+  # Group alerts by cluster and alertname
+  group_by: [&#x27;cluster&#x27;, &#x27;alertname&#x27;]
+
+  # Wait before sending notification
+  group_wait: 10s
+
+  # Wait before sending notification for new alerts in group
+  group_interval: 10s
+
+  # Wait before resending notification
+  repeat_interval: 12h
+
+  routes:
+    # Critical alerts to PagerDuty
+    - match:
+        severity: critical
+      receiver: pagerduty-critical
+      continue: true  # Also send to Slack
+
+    # Database alerts to DBA team
+    - match_re:
+        service: database
+      receiver: dba-team-slack
+
+    # Business hours only
+    - match:
+        severity: warning
+      receiver: team-slack
+      active_time_intervals:
+        - business-hours
+
+receivers:
+  - name: team-slack
+    slack_configs:
+      - api_url: &#x27;https://hooks.slack.com/services/XXX&#x27;
+        channel: &#x27;#alerts&#x27;
+        title: &#x27;Alert: {{ .GroupLabels.alertname }}&#x27;
+        text: &#x27;{{ range .Alerts }}{{ .Annotations.description }}{{ end }}&#x27;
+
+  - name: pagerduty-critical
+    pagerduty_configs:
+      - service_key: &#x27;YOUR_PAGERDUTY_KEY&#x27;
+        severity: &#x27;critical&#x27;
+
+  - name: dba-team-slack
+    slack_configs:
+      - api_url: &#x27;https://hooks.slack.com/services/YYY&#x27;
+        channel: &#x27;#dba-alerts&#x27;
+
+time_intervals:
+  - name: business-hours
+    time_intervals:
+      - weekdays: [&#x27;monday:friday&#x27;]
+        times:
+          - start_time: &#x27;09:00&#x27;
+            end_time: &#x27;17:00&#x27;
+        location: &#x27;America/New_York&#x27;</code></pre>
+<h3>Pattern 6: Runbook Annotation</h3>
+<pre><code class="lang-yaml">groups:
+  - name: service_alerts
+    rules:
+      - alert: ServiceDown
+        expr: up{job=&quot;api-service&quot;} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: &quot;Service {{ $labels.instance }} is down&quot;
+          description: &quot;Service has been down for more than 1 minute&quot;
+          runbook_url: &quot;https://wiki.example.com/runbooks/service-down&quot;
+          dashboard_url: &quot;https://grafana.example.com/d/service-overview&quot;
+
+          # Inline runbook
+          runbook: |
+            1. Check service logs: kubectl logs -l app=api-service --tail=100
+            2. Check recent deployments: kubectl rollout history deployment/api-service
+            3. Check resource usage: kubectl top pods -l app=api-service
+            4. Restart service: kubectl rollout restart deployment/api-service
+            5. Escalate to team lead if issue persists &gt;10 minutes</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Alert Design Checklist</h3>
+<pre><code>[ ] Alert is actionable (requires human intervention)
+[ ] Alert has clear severity level (P0/P1/P2/P3)
+[ ] Alert includes context (service, endpoint, instance)
+[ ] Alert includes runbook link
+[ ] Alert threshold avoids false positives
+[ ] Alert uses appropriate time window (for: duration)
+[ ] Alert routes to correct team/channel
+[ ] Alert has tested escalation policy</code></pre>
+<h3>Severity Guidelines</h3>
+<pre><code>P0 (Critical): Page immediately, 24/7
+- Service down
+- Data loss
+- SLO exhausted
+
+P1 (High): Page during business hours
+- Service degraded
+- SLO at risk
+- Critical dependency down
+
+P2 (Medium): Ticket to team
+- Non-critical degradation
+- Resource warnings
+
+P3 (Low): Informational
+- Non-prod issues
+- Optimization opportunities</code></pre>
+<h3>Common Alert Thresholds</h3>
+<pre><code class="lang-yaml"># Error rate
+rate(errors_total[5m]) / rate(requests_total[5m]) &gt; 0.01  # 1%
+
+# Latency (P95)
+histogram_quantile(0.95, rate(latency_bucket[5m])) &gt; 1.0  # 1s
+
+# Availability
+up == 0  # Service down
+
+# CPU
+cpu_usage &gt; 90  # 90%
+
+# Memory
+memory_usage &gt; 95  # 95%
+
+# Disk
+disk_usage &gt; 90  # 90%
+
+# Queue size
+queue_size &gt; 1000  # 1000 messages</code></pre>
+<h3>Alert Routing Strategies</h3>
+<pre><code>By Severity:
+  Critical → PagerDuty → SMS + Call
+  Warning → Slack → #alerts channel
+  Info → Dashboard → No notification
+
+By Service:
+  API → API team
+  Database → DBA team
+  Frontend → Frontend team
+
+By Time:
+  Business hours → Slack
+  After hours → PagerDuty (critical only)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Alert Fatigue</h3>
+<pre><code class="lang-yaml"># WRONG: Too many alerts, too sensitive
+- alert: CPUHigh
+  expr: cpu_usage &gt; 50  # Fires constantly!
+  for: 1m
+
+# CORRECT: Reasonable threshold, longer window
+- alert: CPUCritical
+  expr: cpu_usage &gt; 90
+  for: 15m</code></pre>
+<h3>❌ Non-Actionable Alerts</h3>
+<pre><code class="lang-yaml"># WRONG: FYI alert (not actionable)
+- alert: RequestsIncreased
+  expr: rate(requests_total[5m]) &gt; 100
+  annotations:
+    summary: &quot;Requests increased&quot;
+
+# CORRECT: Actionable alert with impact
+- alert: ErrorRateHigh
+  expr: rate(errors_total[5m]) / rate(requests_total[5m]) &gt; 0.05
+  annotations:
+    summary: &quot;Error rate exceeds 5%, users impacted&quot;</code></pre>
+<h3>❌ Missing Context</h3>
+<pre><code class="lang-yaml"># WRONG: Vague alert
+- alert: Error
+  expr: errors_total &gt; 0
+  annotations:
+    summary: &quot;Error occurred&quot;
+
+# CORRECT: Context-rich alert
+- alert: PaymentServiceErrors
+  expr: rate(errors_total{service=&quot;payment&quot;}[5m]) &gt; 1
+  annotations:
+    summary: &quot;Payment service error rate high&quot;
+    description: &quot;{{ $value }} errors/sec on {{ $labels.instance }}&quot;
+    runbook_url: &quot;https://wiki.example.com/payment-errors&quot;</code></pre>
+<h3>❌ No Grouping or Throttling</h3>
+<pre><code class="lang-yaml"># WRONG: Individual alert per instance
+- alert: HighMemory
+  expr: memory_usage &gt; 90
+  # Fires 100x for 100 instances!
+
+# CORRECT: Grouped alert
+route:
+  group_by: [&#x27;alertname&#x27;, &#x27;cluster&#x27;]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h</code></pre>
+<h3>❌ Alerting on Causes, Not Symptoms</h3>
+<pre><code class="lang-yaml"># WRONG: Alert on CPU (cause)
+- alert: HighCPU
+  expr: cpu_usage &gt; 80
+  # So what? Is service degraded?
+
+# CORRECT: Alert on latency (symptom)
+- alert: HighLatency
+  expr: p95_latency &gt; 1.0
+  # Clear user impact</code></pre>
+<h3>❌ No Escalation Policy</h3>
+<pre><code class="lang-yaml"># WRONG: Single notification channel
+receiver: team-slack
+
+# CORRECT: Escalation chain
+routes:
+  - match:
+      severity: critical
+    receiver: pagerduty-primary
+    routes:
+      - match:
+          acknowledged: false
+        receiver: pagerduty-secondary
+        continue: true
+        repeat_interval: 15m</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>metrics-instrumentation.md</strong> - Define metrics for alerts</li><li><strong>structured-logging.md</strong> - Correlate logs with alerts</li><li><strong>distributed-tracing.md</strong> - Trace context for debugging alerts</li><li><strong>dashboard-design.md</strong> - Visualize alert status</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/observability-alerting-strategy.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>observability-metrics-instrumentation</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/observability-metrics-instrumentation.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/observability-metrics-instrumentation.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>observability-metrics-instrumentation</h1><p class="lede">Instrumenting applications for observability</p><h1>Metrics Instrumentation</h1>
+<p><strong>Scope</strong>: Prometheus, StatsD, custom metrics, cardinality, histograms, counters, gauges</p>
+<p><strong>Lines</strong>: 394</p>
+<p><strong>Last Updated</strong>: 2025-10-18</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Instrumenting applications for observability</li><li>Setting up Prometheus or StatsD metrics collection</li><li>Designing custom metrics for business/technical KPIs</li><li>Building dashboards requiring time-series data</li><li>Implementing SLIs (Service Level Indicators) for SLOs</li><li>Monitoring system performance (latency, throughput, errors)</li><li>Detecting anomalies and performance degradation</li><li>Capacity planning based on resource utilization</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Detailed request tracing (use distributed tracing instead)</li><li>Log aggregation (use structured logging instead)</li><li>One-off debugging (logs are better)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Metric Types</h3>
+<p><strong>1. Counter</strong> - Monotonically increasing value</p>
+<ul><li>Examples: Total requests, total errors, bytes sent</li><li>Operations: Increment only (resets to 0 on restart)</li><li>Query patterns: <code>rate()</code>, <code>increase()</code> in PromQL</li></ul>
+<p><strong>2. Gauge</strong> - Value that can go up or down</p>
+<ul><li>Examples: Active connections, memory usage, queue size</li><li>Operations: Set, increment, decrement</li><li>Query patterns: Direct value, <code>avg()</code>, <code>max()</code></li></ul>
+<p><strong>3. Histogram</strong> - Distribution of values in buckets</p>
+<ul><li>Examples: Request latency, response size</li><li>Operations: Observe value, auto-buckets</li><li>Provides: <code>_bucket</code>, <code>_sum</code>, <code>_count</code> metrics</li><li>Query patterns: <code>histogram_quantile()</code> for percentiles</li></ul>
+<p><strong>4. Summary</strong> - Similar to histogram, client-side quantiles</p>
+<ul><li>Examples: Request duration quantiles (p50, p95, p99)</li><li>Operations: Observe value, calculate quantiles</li><li>Provides: Quantiles, <code>_sum</code>, <code>_count</code></li><li><strong>Caution</strong>: Cannot aggregate across instances</li></ul>
+<h3>Cardinality</h3>
+<p><strong>Definition</strong>: Number of unique time series (metric + unique label combinations)</p>
+<p><strong>Example</strong>:</p>
+<pre><code># 1 metric × 3 status codes × 10 endpoints = 30 time series
+http_requests_total{status=&quot;200&quot;, endpoint=&quot;/api/users&quot;}
+http_requests_total{status=&quot;404&quot;, endpoint=&quot;/api/users&quot;}
+http_requests_total{status=&quot;500&quot;, endpoint=&quot;/api/users&quot;}
+...</code></pre>
+<p><strong>Cardinality Explosion</strong>:</p>
+<pre><code># DANGER: 1 metric × 1M user_ids = 1M time series!
+requests_total{user_id=&quot;user_123&quot;}</code></pre>
+<p><strong>Best Practices</strong>:</p>
+<ul><li>Keep label cardinality &lt; 100 unique values</li><li>Avoid high-cardinality labels (user_id, trace_id, email)</li><li>Use histograms to reduce cardinality (bucket ranges instead of individual values)</li></ul>
+<h3>Prometheus vs StatsD</h3>
+<p>| Feature | Prometheus | StatsD | |---------|-----------|--------| | <strong>Model</strong> | Pull (scrape) | Push | | <strong>Storage</strong> | Time-series DB | None (forwards to backend) | | <strong>Querying</strong> | PromQL | Depends on backend | | <strong>Aggregation</strong> | Server-side | Client or server | | <strong>Use Case</strong> | Modern cloud-native | Legacy systems, high-throughput |</p>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Prometheus Metrics (Python)</h3>
+<pre><code class="lang-python">from prometheus_client import Counter, Histogram, Gauge, Summary
+from prometheus_client import start_http_server
+import time
+from functools import wraps
+
+# Define metrics
+http_requests_total = Counter(
+    &#x27;http_requests_total&#x27;,
+    &#x27;Total HTTP requests&#x27;,
+    [&#x27;method&#x27;, &#x27;endpoint&#x27;, &#x27;status&#x27;]
+)
+
+http_request_duration_seconds = Histogram(
+    &#x27;http_request_duration_seconds&#x27;,
+    &#x27;HTTP request latency&#x27;,
+    [&#x27;method&#x27;, &#x27;endpoint&#x27;],
+    buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0, 10.0]
+)
+
+active_requests = Gauge(
+    &#x27;http_active_requests&#x27;,
+    &#x27;Number of active HTTP requests&#x27;
+)
+
+database_connection_pool = Gauge(
+    &#x27;database_connection_pool_size&#x27;,
+    &#x27;Database connection pool size&#x27;,
+    [&#x27;state&#x27;]  # active, idle
+)
+
+# Decorator for automatic instrumentation
+def track_request(endpoint: str):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            method = &quot;GET&quot;  # Extract from request context
+
+            active_requests.inc()
+
+            with http_request_duration_seconds.labels(
+                method=method,
+                endpoint=endpoint
+            ).time():
+                try:
+                    result = func(*args, **kwargs)
+                    status = &quot;200&quot;
+                    return result
+                except Exception as e:
+                    status = &quot;500&quot;
+                    raise
+                finally:
+                    http_requests_total.labels(
+                        method=method,
+                        endpoint=endpoint,
+                        status=status
+                    ).inc()
+                    active_requests.dec()
+
+        return wrapper
+    return decorator
+
+# Usage
+@track_request(&quot;/api/users&quot;)
+def get_users():
+    time.sleep(0.1)  # Simulate work
+    return {&quot;users&quot;: []}
+
+# Update gauges periodically
+def update_connection_pool_metrics(pool):
+    database_connection_pool.labels(state=&quot;active&quot;).set(pool.active_count())
+    database_connection_pool.labels(state=&quot;idle&quot;).set(pool.idle_count())
+
+# Expose metrics endpoint
+if __name__ == &quot;__main__&quot;:
+    start_http_server(8000)  # Metrics at http://localhost:8000/metrics
+
+    while True:
+        get_users()
+        time.sleep(1)</code></pre>
+<h3>Pattern 2: Prometheus Metrics (Go)</h3>
+<pre><code class="lang-go">package metrics
+
+import (
+    &quot;net/http&quot;
+    &quot;time&quot;
+
+    &quot;github.com/prometheus/client_golang/prometheus&quot;
+    &quot;github.com/prometheus/client_golang/prometheus/promauto&quot;
+    &quot;github.com/prometheus/client_golang/prometheus/promhttp&quot;
+)
+
+var (
+    httpRequestsTotal = promauto.NewCounterVec(
+        prometheus.CounterOpts{
+            Name: &quot;http_requests_total&quot;,
+            Help: &quot;Total HTTP requests&quot;,
+        },
+        []string{&quot;method&quot;, &quot;endpoint&quot;, &quot;status&quot;},
+    )
+
+    httpRequestDuration = promauto.NewHistogramVec(
+        prometheus.HistogramOpts{
+            Name:    &quot;http_request_duration_seconds&quot;,
+            Help:    &quot;HTTP request latency&quot;,
+            Buckets: prometheus.DefBuckets, // Default: 0.005 to 10s
+        },
+        []string{&quot;method&quot;, &quot;endpoint&quot;},
+    )
+
+    activeRequests = promauto.NewGauge(
+        prometheus.GaugeOpts{
+            Name: &quot;http_active_requests&quot;,
+            Help: &quot;Number of active HTTP requests&quot;,
+        },
+    )
+)
+
+// Middleware for automatic instrumentation
+func MetricsMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+
+        activeRequests.Inc()
+        defer activeRequests.Dec()
+
+        // Wrap ResponseWriter to capture status
+        ww := &amp;responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+
+        next.ServeHTTP(ww, r)
+
+        duration := time.Since(start).Seconds()
+
+        httpRequestsTotal.WithLabelValues(
+            r.Method,
+            r.URL.Path,
+            http.StatusText(ww.statusCode),
+        ).Inc()
+
+        httpRequestDuration.WithLabelValues(
+            r.Method,
+            r.URL.Path,
+        ).Observe(duration)
+    })
+}
+
+type responseWriter struct {
+    http.ResponseWriter
+    statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+    rw.statusCode = code
+    rw.ResponseWriter.WriteHeader(code)
+}
+
+// Expose metrics endpoint
+func StartMetricsServer(port string) {
+    http.Handle(&quot;/metrics&quot;, promhttp.Handler())
+    go http.ListenAndServe(&quot;:&quot;+port, nil)
+}</code></pre>
+<h3>Pattern 3: Custom Business Metrics</h3>
+<pre><code class="lang-python">from prometheus_client import Counter, Histogram, Gauge
+
+# Business metrics
+orders_total = Counter(
+    &#x27;orders_total&#x27;,
+    &#x27;Total orders placed&#x27;,
+    [&#x27;product_category&#x27;, &#x27;payment_method&#x27;]
+)
+
+order_value_dollars = Histogram(
+    &#x27;order_value_dollars&#x27;,
+    &#x27;Order value in dollars&#x27;,
+    buckets=[10, 25, 50, 100, 250, 500, 1000, 5000]
+)
+
+revenue_total_dollars = Counter(
+    &#x27;revenue_total_dollars&#x27;,
+    &#x27;Total revenue in dollars&#x27;,
+    [&#x27;product_category&#x27;]
+)
+
+cart_abandonment_total = Counter(
+    &#x27;cart_abandonment_total&#x27;,
+    &#x27;Total cart abandonments&#x27;,
+    [&#x27;abandonment_stage&#x27;]  # product_view, cart, checkout
+)
+
+active_subscriptions = Gauge(
+    &#x27;active_subscriptions&#x27;,
+    &#x27;Number of active subscriptions&#x27;,
+    [&#x27;plan_tier&#x27;]  # free, pro, enterprise
+)
+
+# Usage in business logic
+def place_order(order):
+    orders_total.labels(
+        product_category=order.category,
+        payment_method=order.payment_method
+    ).inc()
+
+    order_value_dollars.observe(order.total_amount)
+
+    revenue_total_dollars.labels(
+        product_category=order.category
+    ).inc(order.total_amount)
+
+def track_cart_abandonment(stage: str):
+    cart_abandonment_total.labels(abandonment_stage=stage).inc()
+
+def update_subscription_metrics(db):
+    for tier in [&#x27;free&#x27;, &#x27;pro&#x27;, &#x27;enterprise&#x27;]:
+        count = db.query(Subscription).filter_by(
+            tier=tier,
+            status=&#x27;active&#x27;
+        ).count()
+        active_subscriptions.labels(plan_tier=tier).set(count)</code></pre>
+<h3>Pattern 4: StatsD Metrics (Python)</h3>
+<pre><code class="lang-python">from statsd import StatsClient
+from functools import wraps
+import time
+
+statsd = StatsClient(host=&#x27;localhost&#x27;, port=8125, prefix=&#x27;myapp&#x27;)
+
+def track_timing(metric_name: str):
+    &quot;&quot;&quot;Decorator to track execution time.&quot;&quot;&quot;
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start = time.time()
+            try:
+                return func(*args, **kwargs)
+            finally:
+                duration_ms = (time.time() - start) * 1000
+                statsd.timing(metric_name, duration_ms)
+        return wrapper
+    return decorator
+
+# Usage
+@track_timing(&#x27;api.users.get&#x27;)
+def get_user(user_id: str):
+    # Increment counter
+    statsd.incr(&#x27;api.users.requests&#x27;)
+
+    try:
+        user = db.get_user(user_id)
+        statsd.incr(&#x27;api.users.success&#x27;)
+        return user
+    except Exception as e:
+        statsd.incr(&#x27;api.users.errors&#x27;)
+        raise
+
+# Gauge (snapshot value)
+def update_queue_size():
+    queue_size = redis.llen(&#x27;task_queue&#x27;)
+    statsd.gauge(&#x27;queue.size&#x27;, queue_size)
+
+# Set (count unique values)
+def track_unique_users(user_id: str):
+    statsd.set(&#x27;users.active&#x27;, user_id)</code></pre>
+<h3>Pattern 5: Histogram Percentiles (PromQL)</h3>
+<pre><code class="lang-promql"># 95th percentile latency
+histogram_quantile(0.95,
+  rate(http_request_duration_seconds_bucket[5m])
+)
+
+# 99th percentile by endpoint
+histogram_quantile(0.99,
+  sum by (endpoint, le) (
+    rate(http_request_duration_seconds_bucket[5m])
+  )
+)
+
+# Request rate (requests per second)
+rate(http_requests_total[5m])
+
+# Error rate (percentage)
+sum(rate(http_requests_total{status=~&quot;5..&quot;}[5m]))
+/
+sum(rate(http_requests_total[5m]))
+* 100
+
+# Average request duration
+rate(http_request_duration_seconds_sum[5m])
+/
+rate(http_request_duration_seconds_count[5m])</code></pre>
+<h3>Pattern 6: Multi-Dimensional Metrics</h3>
+<pre><code class="lang-python">from prometheus_client import Counter
+
+# Good: Bounded labels
+api_requests = Counter(
+    &#x27;api_requests_total&#x27;,
+    &#x27;API requests&#x27;,
+    [&#x27;method&#x27;, &#x27;endpoint&#x27;, &#x27;status&#x27;, &#x27;region&#x27;]
+)
+
+# Method: 4 values (GET, POST, PUT, DELETE)
+# Endpoint: ~20 values
+# Status: 5 values (2xx, 3xx, 4xx, 5xx)
+# Region: 3 values (us-east, us-west, eu-west)
+# Total cardinality: 4 × 20 × 5 × 3 = 1,200 time series
+
+api_requests.labels(
+    method=&quot;GET&quot;,
+    endpoint=&quot;/api/users&quot;,
+    status=&quot;200&quot;,
+    region=&quot;us-east&quot;
+).inc()
+
+# Query: Filter by dimension
+# sum by (endpoint) (rate(api_requests_total[5m]))</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Prometheus Client Libraries</h3>
+<pre><code class="lang-bash"># Python
+pip install prometheus-client
+
+# Go
+go get github.com/prometheus/client_golang/prometheus
+
+# Rust
+cargo add prometheus
+
+# Node.js
+npm install prom-client</code></pre>
+<h3>StatsD Client Libraries</h3>
+<pre><code class="lang-bash"># Python
+pip install statsd
+
+# Node.js
+npm install node-statsd
+
+# Go
+go get github.com/cactus/go-statsd-client/statsd</code></pre>
+<h3>Metric Naming Conventions</h3>
+<pre><code># Pattern: &lt;namespace&gt;_&lt;subsystem&gt;_&lt;name&gt;_&lt;unit&gt;
+
+# Good examples
+http_requests_total
+http_request_duration_seconds
+database_connections_active
+queue_messages_processed_total
+memory_usage_bytes
+
+# Bad examples
+RequestCount          # Use snake_case
+http_latency          # Missing unit
+TotalErrors           # Use snake_case, add context</code></pre>
+<h3>PromQL Quick Reference</h3>
+<pre><code class="lang-promql"># Rate (per-second average over time window)
+rate(metric[5m])
+
+# Increase (total increase over time window)
+increase(metric[1h])
+
+# Sum (aggregate across labels)
+sum(metric) by (label)
+
+# Average
+avg(metric) by (label)
+
+# Max/Min
+max(metric) by (label)
+min(metric) by (label)
+
+# Histogram quantile (percentile)
+histogram_quantile(0.95, rate(metric_bucket[5m]))
+
+# Arithmetic
+metric1 / metric2 * 100  # Percentage</code></pre>
+<h3>Histogram Bucket Guidelines</h3>
+<pre><code class="lang-python"># Latency (seconds)
+buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0, 10.0]
+
+# Request size (bytes)
+buckets=[100, 1000, 10_000, 100_000, 1_000_000, 10_000_000]
+
+# Duration (milliseconds)
+buckets=[10, 25, 50, 100, 250, 500, 1000, 2500, 5000]
+
+# Custom business metric (dollars)
+buckets=[1, 5, 10, 25, 50, 100, 250, 500, 1000]</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ High-Cardinality Labels</h3>
+<pre><code class="lang-python"># WRONG: User ID has millions of unique values
+requests_total = Counter(
+    &#x27;requests_total&#x27;,
+    &#x27;Total requests&#x27;,
+    [&#x27;user_id&#x27;]  # 1M users = 1M time series!
+)
+
+# CORRECT: Use low-cardinality labels
+requests_total = Counter(
+    &#x27;requests_total&#x27;,
+    &#x27;Total requests&#x27;,
+    [&#x27;endpoint&#x27;, &#x27;status&#x27;]  # ~100 time series
+)
+# Track user_id in logs or traces, not metrics</code></pre>
+<h3>❌ Missing Units in Metric Names</h3>
+<pre><code class="lang-python"># WRONG: Ambiguous units
+request_duration = Histogram(&#x27;request_duration&#x27;, &#x27;Request duration&#x27;)
+
+# CORRECT: Explicit units
+request_duration_seconds = Histogram(
+    &#x27;request_duration_seconds&#x27;,
+    &#x27;Request duration in seconds&#x27;
+)</code></pre>
+<h3>❌ Using Gauge for Counters</h3>
+<pre><code class="lang-python"># WRONG: Gauge for monotonic value
+requests_processed = Gauge(&#x27;requests_processed&#x27;, &#x27;Requests processed&#x27;)
+requests_processed.inc()  # Resets on restart!
+
+# CORRECT: Counter for monotonic value
+requests_processed = Counter(&#x27;requests_processed_total&#x27;, &#x27;Requests processed&#x27;)
+requests_processed.inc()  # Use rate() to get per-second rate</code></pre>
+<h3>❌ Summary Instead of Histogram</h3>
+<pre><code class="lang-python"># WRONG: Summary (cannot aggregate across instances)
+latency_summary = Summary(
+    &#x27;latency_summary&#x27;,
+    &#x27;Request latency summary&#x27;
+)
+
+# CORRECT: Histogram (aggregates across instances)
+latency_histogram = Histogram(
+    &#x27;latency_seconds&#x27;,
+    &#x27;Request latency histogram&#x27;,
+    buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 5.0]
+)</code></pre>
+<h3>❌ Too Many Labels</h3>
+<pre><code class="lang-python"># WRONG: 6 labels = cardinality explosion
+metric = Counter(
+    &#x27;api_requests&#x27;,
+    &#x27;API requests&#x27;,
+    [&#x27;method&#x27;, &#x27;endpoint&#x27;, &#x27;status&#x27;, &#x27;region&#x27;, &#x27;customer&#x27;, &#x27;version&#x27;]
+)
+
+# CORRECT: 3-4 essential labels
+metric = Counter(
+    &#x27;api_requests&#x27;,
+    &#x27;API requests&#x27;,
+    [&#x27;method&#x27;, &#x27;endpoint&#x27;, &#x27;status&#x27;]
+)</code></pre>
+<h3>❌ Inconsistent Label Names</h3>
+<pre><code class="lang-python"># WRONG: Inconsistent naming
+metric1 = Counter(&#x27;requests&#x27;, &#x27;Requests&#x27;, [&#x27;http_method&#x27;])
+metric2 = Counter(&#x27;errors&#x27;, &#x27;Errors&#x27;, [&#x27;method&#x27;])
+
+# CORRECT: Consistent naming
+metric1 = Counter(&#x27;requests_total&#x27;, &#x27;Requests&#x27;, [&#x27;method&#x27;])
+metric2 = Counter(&#x27;errors_total&#x27;, &#x27;Errors&#x27;, [&#x27;method&#x27;])</code></pre>
+<hr>
+<h2>Level 3: Resources</h2>
+<p>This skill has <strong>Level 3 Resources</strong> available with comprehensive reference material, production-ready scripts, and runnable examples.</p>
+<h3>Resource Structure</h3>
+<pre><code>metrics-instrumentation/resources/
+├── REFERENCE.md                    # Comprehensive reference (1,985 lines)
+│   ├── Metric types deep-dive (Counter, Gauge, Histogram, Summary)
+│   ├── Metric naming and label best practices
+│   ├── Cardinality management strategies
+│   ├── PromQL query language reference
+│   ├── Recording rules and alerting rules
+│   ├── Instrumentation patterns (Python, Go, Node.js, Rust)
+│   ├── Exporters (node_exporter, blackbox, custom)
+│   ├── Service discovery configurations
+│   ├── Storage, retention, and federation
+│   ├── Grafana integration
+│   ├── Performance optimization techniques
+│   ├── Production best practices
+│   └── Troubleshooting guide
+│
+├── scripts/                        # Production-ready analysis tools
+│   ├── analyze_metrics.py          # Cardinality analyzer
+│   ├── validate_promql.py          # PromQL query validator
+│   └── test_exporter.sh            # Exporter testing tool
+│
+└── examples/                       # Runnable examples
+    ├── python/
+    │   ├── flask_metrics.py        # Instrumented Flask app
+    │   ├── requirements.txt
+    │   └── Dockerfile
+    ├── go/
+    │   ├── http_metrics.go         # Instrumented Go HTTP server
+    │   └── go.mod
+    ├── typescript/
+    │   ├── express_metrics.ts      # Instrumented Express app
+    │   ├── package.json
+    │   └── tsconfig.json
+    ├── prometheus/
+    │   ├── prometheus.yml          # Comprehensive config
+    │   ├── rules.yml               # Recording rules
+    │   └── alerts.yml              # Alerting rules
+    ├── grafana/
+    │   └── dashboards/
+    │       └── http-metrics.json   # Sample dashboard
+    └── docker/
+        ├── docker-compose.yml      # Full stack (Prometheus + Grafana)
+        └── README.md</code></pre>
+<h3>Key Resources</h3>
+<p><strong>REFERENCE.md</strong> (1,985 lines): Comprehensive guide covering:</p>
+<ul><li>Prometheus architecture and data model</li><li>All metric types with detailed examples</li><li>Metric naming conventions and label best practices</li><li>Cardinality explosion detection and prevention</li><li>Complete PromQL reference with 50+ query examples</li><li>Recording rules for performance optimization</li><li>Alerting rules with severity levels</li><li>Instrumentation patterns for 4 languages</li><li>Official and custom exporters</li><li>Service discovery for Kubernetes, Consul, EC2</li><li>Storage configuration and remote write</li><li>Grafana dashboard design</li><li>Performance tuning and troubleshooting</li></ul>
+<p><strong>analyze_metrics.py</strong>: Production-ready cardinality analyzer</p>
+<ul><li>Connects to Prometheus or analyzes metrics files</li><li>Detects high-cardinality labels</li><li>Identifies naming convention violations</li><li>Provides optimization recommendations</li><li>Outputs human-readable or JSON format</li><li>Example: <code>analyze_metrics.py --url http://localhost:9090 --json</code></li></ul>
+<p><strong>validate_promql.py</strong>: PromQL query validator</p>
+<ul><li>Validates syntax and best practices</li><li>Checks for common anti-patterns</li><li>Tests queries against live Prometheus</li><li>Measures execution time and result size</li><li>Example: <code>validate_promql.py --query &#x27;rate(http_requests_total[5m])&#x27; --url http://localhost:9090</code></li></ul>
+<p><strong>test_exporter.sh</strong>: Exporter testing tool</p>
+<ul><li>Tests metrics endpoints for correctness</li><li>Validates Prometheus text format</li><li>Checks HELP and TYPE annotations</li><li>Detects naming convention issues</li><li>Identifies potential cardinality problems</li><li>Example: <code>test_exporter.sh --url http://localhost:8080/metrics</code></li></ul>
+<p><strong>Runnable Examples</strong>:</p>
+<ul><li>Flask, Go, and Express applications with full instrumentation</li><li>Complete Prometheus configuration with service discovery</li><li>Recording rules and alerting rules</li><li>Grafana dashboard JSON</li><li>Docker Compose stack for quick deployment</li></ul>
+<h3>Usage</h3>
+<pre><code class="lang-bash"># Access comprehensive reference
+cat metrics-instrumentation/resources/REFERENCE.md
+
+# Analyze metrics from Prometheus
+./scripts/analyze_metrics.py --url http://localhost:9090
+
+# Validate PromQL queries
+./scripts/validate_promql.py --query &#x27;sum(rate(http_requests_total[5m]))&#x27;
+
+# Test metrics endpoint
+./scripts/test_exporter.sh --url http://localhost:8080/metrics
+
+# Run example Flask app
+cd examples/python
+pip install -r requirements.txt
+python flask_metrics.py
+# Metrics at http://localhost:8080/metrics
+
+# Run full stack with Docker
+cd examples/docker
+docker-compose up -d
+# Prometheus: http://localhost:9090
+# Grafana: http://localhost:3000 (admin/admin)</code></pre>
+<h3>When to Use Level 3 Resources</h3>
+<p>Use these resources when:</p>
+<ul><li>Designing metrics architecture for new services</li><li>Debugging cardinality or performance issues</li><li>Learning PromQL query patterns</li><li>Setting up recording rules and alerts</li><li>Instrumenting applications in Python, Go, or Node.js</li><li>Configuring Prometheus for production</li><li>Building Grafana dashboards</li><li>Training team members on metrics best practices</li></ul>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>structured-logging.md</strong> - Complementary log-based observability</li><li><strong>distributed-tracing.md</strong> - Deep request flow analysis</li><li><strong>dashboard-design.md</strong> - Visualizing metrics in Grafana</li><li><strong>alerting-strategy.md</strong> - Alert rules based on metrics</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic) <strong>Level 3 Resources</strong>: Available</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/observability-metrics-instrumentation.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>proxies-traefik-configuration</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/proxies-traefik-configuration.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/proxies-traefik-configuration.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>proxies-traefik-configuration</h1><p class="lede">Traefik configuration including dynamic service discovery, middleware chains, automatic Let&#x27;s Encrypt, Docker/Kubernetes integration, and cloud-native routing</p><h1>Traefik Configuration</h1>
+<p><strong>Scope</strong>: Traefik setup, dynamic configuration, middleware, Let&#x27;s Encrypt, service discovery <strong>Lines</strong>: ~380 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Setting up cloud-native reverse proxy</li><li>Implementing automatic service discovery</li><li>Configuring automatic SSL/TLS with Let&#x27;s Encrypt</li><li>Working with Docker or Kubernetes</li><li>Building microservices architectures</li><li>Implementing middleware chains</li><li>Setting up canary deployments</li><li>Configuring dynamic routing rules</li></ul>
+<h2>Core Concepts</h2>
+<h3>Traefik Architecture</h3>
+<pre><code>Internet → EntryPoint → Router → Middleware → Service → Backend
+           (Port)       (Rules)  (Transform)  (Load Balance)</code></pre>
+<p><strong>Key Components</strong>:</p>
+<ul><li><strong>EntryPoints</strong>: Listen ports (HTTP/HTTPS/TCP/UDP)</li><li><strong>Routers</strong>: Match requests and route to services</li><li><strong>Middleware</strong>: Transform requests/responses</li><li><strong>Services</strong>: Define backend pools and load balancing</li><li><strong>Providers</strong>: Dynamic configuration sources (Docker, Kubernetes, File)</li></ul>
+<h3>Static vs Dynamic Configuration</h3>
+<p><strong>Static Configuration</strong> (traefik.yml):</p>
+<pre><code class="lang-yaml"># Core Traefik settings
+entryPoints:
+  web:
+    address: &quot;:80&quot;
+  websecure:
+    address: &quot;:443&quot;
+
+providers:
+  docker:
+    endpoint: &quot;unix:///var/run/docker.sock&quot;
+    exposedByDefault: false</code></pre>
+<p><strong>Dynamic Configuration</strong>:</p>
+<ul><li>Docker labels</li><li>Kubernetes ingress</li><li>File configuration</li><li>Consul/etcd</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Docker Provider with Labels</h3>
+<p><strong>Use Case</strong>: Automatic service discovery with Docker</p>
+<pre><code class="lang-yaml"># docker-compose.yml
+version: &#x27;3.8&#x27;
+
+services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - &quot;--api.insecure=true&quot;
+      - &quot;--providers.docker=true&quot;
+      - &quot;--providers.docker.exposedbydefault=false&quot;
+      - &quot;--entrypoints.web.address=:80&quot;
+      - &quot;--entrypoints.websecure.address=:443&quot;
+      - &quot;--certificatesresolvers.letsencrypt.acme.httpchallenge=true&quot;
+      - &quot;--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web&quot;
+      - &quot;--certificatesresolvers.letsencrypt.acme.email=admin@example.com&quot;
+      - &quot;--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json&quot;
+    ports:
+      - &quot;80:80&quot;
+      - &quot;443:443&quot;
+      - &quot;8080:8080&quot;
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+
+  app:
+    image: myapp:latest
+    labels:
+      # Enable Traefik
+      - &quot;traefik.enable=true&quot;
+
+      # HTTP router
+      - &quot;traefik.http.routers.app.rule=Host(`example.com`)&quot;
+      - &quot;traefik.http.routers.app.entrypoints=web&quot;
+      - &quot;traefik.http.routers.app.middlewares=redirect-to-https&quot;
+
+      # HTTPS router
+      - &quot;traefik.http.routers.app-secure.rule=Host(`example.com`)&quot;
+      - &quot;traefik.http.routers.app-secure.entrypoints=websecure&quot;
+      - &quot;traefik.http.routers.app-secure.tls=true&quot;
+      - &quot;traefik.http.routers.app-secure.tls.certresolver=letsencrypt&quot;
+
+      # Middleware: HTTP to HTTPS redirect
+      - &quot;traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https&quot;
+
+      # Service configuration
+      - &quot;traefik.http.services.app.loadbalancer.server.port=8080&quot;</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Automatic service discovery</li><li>No manual configuration updates</li><li>Automatic Let&#x27;s Encrypt SSL</li><li>Zero-downtime deployments</li></ul>
+<h3>Pattern 2: Middleware Chains</h3>
+<p><strong>Use Case</strong>: Apply multiple transformations to requests</p>
+<pre><code class="lang-yaml">services:
+  api:
+    image: api:latest
+    labels:
+      - &quot;traefik.enable=true&quot;
+      - &quot;traefik.http.routers.api.rule=Host(`api.example.com`)&quot;
+      - &quot;traefik.http.routers.api.entrypoints=websecure&quot;
+      - &quot;traefik.http.routers.api.tls=true&quot;
+
+      # Middleware chain
+      - &quot;traefik.http.routers.api.middlewares=api-chain&quot;
+      - &quot;traefik.http.middlewares.api-chain.chain.middlewares=rate-limit,auth,security-headers,compression&quot;
+
+      # Rate limiting
+      - &quot;traefik.http.middlewares.rate-limit.ratelimit.average=100&quot;
+      - &quot;traefik.http.middlewares.rate-limit.ratelimit.burst=50&quot;
+
+      # Basic auth
+      - &quot;traefik.http.middlewares.auth.basicauth.users=user:$$apr1$$...&quot;
+
+      # Security headers
+      - &quot;traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff&quot;
+      - &quot;traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN&quot;
+      - &quot;traefik.http.middlewares.security-headers.headers.stsSeconds=31536000&quot;
+
+      # Compression
+      - &quot;traefik.http.middlewares.compression.compress=true&quot;
+
+      - &quot;traefik.http.services.api.loadbalancer.server.port=8080&quot;</code></pre>
+<h3>Pattern 3: Path-Based Routing with Path Stripping</h3>
+<p><strong>Use Case</strong>: Route different paths to different services</p>
+<pre><code class="lang-yaml">services:
+  web:
+    image: web:latest
+    labels:
+      - &quot;traefik.enable=true&quot;
+      - &quot;traefik.http.routers.web.rule=Host(`example.com`)&quot;
+      - &quot;traefik.http.routers.web.entrypoints=websecure&quot;
+      - &quot;traefik.http.routers.web.tls=true&quot;
+      - &quot;traefik.http.services.web.loadbalancer.server.port=3000&quot;
+
+  api:
+    image: api:latest
+    labels:
+      - &quot;traefik.enable=true&quot;
+      - &quot;traefik.http.routers.api.rule=Host(`example.com`) &amp;&amp; PathPrefix(`/api`)&quot;
+      - &quot;traefik.http.routers.api.entrypoints=websecure&quot;
+      - &quot;traefik.http.routers.api.tls=true&quot;
+      - &quot;traefik.http.routers.api.middlewares=api-strip-prefix&quot;
+      - &quot;traefik.http.middlewares.api-strip-prefix.stripprefix.prefixes=/api&quot;
+      - &quot;traefik.http.services.api.loadbalancer.server.port=8080&quot;
+
+  admin:
+    image: admin:latest
+    labels:
+      - &quot;traefik.enable=true&quot;
+      - &quot;traefik.http.routers.admin.rule=Host(`example.com`) &amp;&amp; PathPrefix(`/admin`)&quot;
+      - &quot;traefik.http.routers.admin.entrypoints=websecure&quot;
+      - &quot;traefik.http.routers.admin.tls=true&quot;
+      - &quot;traefik.http.routers.admin.middlewares=admin-auth&quot;
+      - &quot;traefik.http.middlewares.admin-auth.basicauth.users=admin:$$apr1$$...&quot;
+      - &quot;traefik.http.services.admin.loadbalancer.server.port=4000&quot;</code></pre>
+<hr>
+<h2>Complete Static Configuration</h2>
+<h3>traefik.yml (File-Based Configuration)</h3>
+<pre><code class="lang-yaml"># Global configuration
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+# API and dashboard
+api:
+  dashboard: true
+  insecure: false  # Use middleware for auth in production
+
+# Entry points
+entryPoints:
+  web:
+    address: &quot;:80&quot;
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+
+  websecure:
+    address: &quot;:443&quot;
+    http:
+      tls:
+        certResolver: letsencrypt
+
+  metrics:
+    address: &quot;:8082&quot;
+
+# Providers
+providers:
+  docker:
+    endpoint: &quot;unix:///var/run/docker.sock&quot;
+    exposedByDefault: false
+    network: traefik-public
+    watch: true
+
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+# Certificate resolvers
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: admin@example.com
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+
+# Logging
+log:
+  level: INFO
+  format: json
+  filePath: /var/log/traefik/traefik.log
+
+accessLog:
+  filePath: /var/log/traefik/access.log
+  format: json
+  fields:
+    defaultMode: keep
+    headers:
+      defaultMode: keep
+
+# Metrics
+metrics:
+  prometheus:
+    entryPoint: metrics
+    addEntryPointsLabels: true
+    addServicesLabels: true</code></pre>
+<hr>
+<h2>Dynamic Configuration Examples</h2>
+<h3>Load Balancing Strategies</h3>
+<pre><code class="lang-yaml"># dynamic/services.yml
+http:
+  services:
+    # Round-robin (default)
+    app-service:
+      loadBalancer:
+        servers:
+          - url: &quot;http://app1:8080&quot;
+          - url: &quot;http://app2:8080&quot;
+          - url: &quot;http://app3:8080&quot;
+        healthCheck:
+          path: /health
+          interval: 10s
+          timeout: 3s
+
+    # Weighted round-robin
+    app-weighted:
+      loadBalancer:
+        servers:
+          - url: &quot;http://app1:8080&quot;
+          - url: &quot;http://app2:8080&quot;
+          - url: &quot;http://app3:8080&quot;
+        weighted:
+          services:
+            - name: app1
+              weight: 3
+            - name: app2
+              weight: 2
+            - name: app3
+              weight: 1
+
+    # Sticky sessions
+    app-sticky:
+      loadBalancer:
+        servers:
+          - url: &quot;http://app1:8080&quot;
+          - url: &quot;http://app2:8080&quot;
+        sticky:
+          cookie:
+            name: server_id
+            secure: true
+            httpOnly: true</code></pre>
+<h3>Advanced Middleware</h3>
+<pre><code class="lang-yaml"># dynamic/middleware.yml
+http:
+  middlewares:
+    # Rate limiting
+    api-rate-limit:
+      rateLimit:
+        average: 100
+        period: 1s
+        burst: 50
+
+    # IP whitelist
+    ip-whitelist:
+      ipWhiteList:
+        sourceRange:
+          - &quot;10.0.0.0/8&quot;
+          - &quot;172.16.0.0/12&quot;
+          - &quot;192.168.0.0/16&quot;
+
+    # Circuit breaker
+    circuit-breaker:
+      circuitBreaker:
+        expression: &quot;NetworkErrorRatio() &gt; 0.30 || ResponseCodeRatio(500, 600, 0, 600) &gt; 0.25&quot;
+
+    # Retry
+    retry-policy:
+      retry:
+        attempts: 3
+        initialInterval: 100ms
+
+    # Request buffering
+    buffer-requests:
+      buffering:
+        maxRequestBodyBytes: 2000000
+        memRequestBodyBytes: 2000000
+        maxResponseBodyBytes: 2000000
+        memResponseBodyBytes: 2000000
+
+    # CORS
+    cors-policy:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+        accessControlAllowOriginList:
+          - &quot;https://example.com&quot;
+        accessControlAllowHeaders:
+          - &quot;Content-Type&quot;
+          - &quot;Authorization&quot;
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
+    # Security headers
+    security-headers:
+      headers:
+        customResponseHeaders:
+          X-Content-Type-Options: &quot;nosniff&quot;
+          X-Frame-Options: &quot;SAMEORIGIN&quot;
+          X-XSS-Protection: &quot;1; mode=block&quot;
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentSecurityPolicy: &quot;default-src &#x27;self&#x27;&quot;</code></pre>
+<hr>
+<h2>Kubernetes Integration</h2>
+<h3>Ingress Resource</h3>
+<pre><code class="lang-yaml">apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: &quot;true&quot;
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: default-rate-limit@kubernetescrd
+spec:
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-service
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api-service
+                port:
+                  number: 8080</code></pre>
+<h3>Custom Resource Definitions (CRDs)</h3>
+<pre><code class="lang-yaml"># IngressRoute
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: app-ingressroute
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`example.com`) &amp;&amp; PathPrefix(`/api`)
+      kind: Rule
+      services:
+        - name: api-service
+          port: 8080
+      middlewares:
+        - name: rate-limit
+        - name: security-headers
+  tls:
+    certResolver: letsencrypt
+
+---
+# Middleware CRD
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: rate-limit
+spec:
+  rateLimit:
+    average: 100
+    burst: 50
+
+---
+# TLSOption CRD
+apiVersion: traefik.containo.us/v1alpha1
+kind: TLSOption
+metadata:
+  name: modern-tls
+spec:
+  minVersion: VersionTLS12
+  cipherSuites:
+    - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256</code></pre>
+<hr>
+<h2>Advanced Patterns</h2>
+<h3>Canary Deployments</h3>
+<pre><code class="lang-yaml">services:
+  app-v1:
+    image: app:v1
+    deploy:
+      replicas: 3
+    labels:
+      - &quot;traefik.enable=true&quot;
+      - &quot;traefik.http.services.app-v1.loadbalancer.server.port=8080&quot;
+      - &quot;traefik.http.services.app-v1.loadbalancer.weighted.services.app-v1.weight=90&quot;
+
+  app-v2:
+    image: app:v2
+    deploy:
+      replicas: 1
+    labels:
+      - &quot;traefik.enable=true&quot;
+      - &quot;traefik.http.services.app-v2.loadbalancer.server.port=8080&quot;
+      - &quot;traefik.http.services.app-v2.loadbalancer.weighted.services.app-v2.weight=10&quot;
+
+  router:
+    image: traefik:v2.10
+    labels:
+      - &quot;traefik.http.routers.app.rule=Host(`example.com`)&quot;
+      - &quot;traefik.http.routers.app.service=app-weighted&quot;
+      - &quot;traefik.http.services.app-weighted.weighted.services.app-v1.weight=90&quot;
+      - &quot;traefik.http.services.app-weighted.weighted.services.app-v2.weight=10&quot;</code></pre>
+<h3>TCP/UDP Routing</h3>
+<pre><code class="lang-yaml"># traefik.yml
+entryPoints:
+  postgres:
+    address: &quot;:5432&quot;
+  mysql:
+    address: &quot;:3306&quot;
+
+# dynamic/tcp.yml
+tcp:
+  routers:
+    postgres-router:
+      entryPoints:
+        - postgres
+      rule: &quot;HostSNI(`*`)&quot;
+      service: postgres-service
+
+  services:
+    postgres-service:
+      loadBalancer:
+        servers:
+          - address: &quot;postgres1:5432&quot;
+          - address: &quot;postgres2:5432&quot;</code></pre>
+<hr>
+<h2>Best Practices</h2>
+<h3>1. Use Health Checks</h3>
+<pre><code class="lang-yaml">labels:
+  - &quot;traefik.http.services.app.loadbalancer.healthcheck.path=/health&quot;
+  - &quot;traefik.http.services.app.loadbalancer.healthcheck.interval=10s&quot;
+  - &quot;traefik.http.services.app.loadbalancer.healthcheck.timeout=3s&quot;
+  - &quot;traefik.http.services.app.loadbalancer.healthcheck.scheme=http&quot;</code></pre>
+<h3>2. Secure Dashboard Access</h3>
+<pre><code class="lang-yaml"># Dashboard with middleware auth
+labels:
+  - &quot;traefik.http.routers.dashboard.rule=Host(`traefik.example.com`)&quot;
+  - &quot;traefik.http.routers.dashboard.service=api@internal&quot;
+  - &quot;traefik.http.routers.dashboard.middlewares=dashboard-auth&quot;
+  - &quot;traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$...&quot;</code></pre>
+<h3>3. Use Separate Networks</h3>
+<pre><code class="lang-yaml">services:
+  traefik:
+    networks:
+      - traefik-public
+
+  app:
+    networks:
+      - traefik-public
+      - internal
+
+networks:
+  traefik-public:
+    external: true
+  internal:
+    internal: true</code></pre>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Issue 1: Services Not Discovered</h3>
+<p><strong>Debug Steps</strong>:</p>
+<pre><code class="lang-bash"># Check Traefik logs
+docker logs traefik
+
+# Verify provider configuration
+docker exec traefik cat /etc/traefik/traefik.yml
+
+# Check service labels
+docker inspect app | grep traefik</code></pre>
+<p><strong>Common Solutions</strong>:</p>
+<ul><li>Ensure <code>traefik.enable=true</code> label</li><li>Check <code>exposedByDefault</code> setting</li><li>Verify network connectivity</li><li>Ensure correct provider configuration</li></ul>
+<h3>Issue 2: Let&#x27;s Encrypt Rate Limits</h3>
+<p><strong>Solutions</strong>:</p>
+<pre><code class="lang-yaml"># Use staging environment for testing
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+      email: admin@example.com
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>proxies-reverse-proxy</code> - Reverse proxy patterns</li><li><code>proxies-nginx-configuration</code> - Nginx configuration</li><li><code>containers-docker-compose</code> - Docker Compose orchestration</li><li><code>containers-kubernetes</code> - Kubernetes deployment</li><li><code>cryptography-tls-ssl</code> - SSL/TLS configuration</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/proxies-traefik-configuration.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>containers-dockerfile-optimization</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/containers-dockerfile-optimization.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/containers-dockerfile-optimization.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>containers-dockerfile-optimization</h1><p class="lede">Writing Dockerfiles for production applications</p><h1>Dockerfile Optimization</h1>
+<p><strong>Scope</strong>: Layer caching, multi-stage builds, .dockerignore, image size reduction <strong>Lines</strong>: ~280 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Writing Dockerfiles for production applications</li><li>Optimizing build times and image sizes</li><li>Implementing multi-stage builds</li><li>Configuring layer caching strategies</li><li>Reducing container attack surface</li><li>Troubleshooting slow Docker builds</li><li>Minimizing image transfer times</li></ul>
+<h2>Core Concepts</h2>
+<h3>Docker Image Layers</h3>
+<p><strong>Images are built in layers</strong>: Each instruction creates a new layer.</p>
+<p><strong>Key properties</strong>:</p>
+<ul><li><strong>Immutable</strong>: Once created, layers never change</li><li><strong>Cacheable</strong>: Unchanged layers are reused from cache</li><li><strong>Ordered</strong>: Layers stack sequentially (base → final)</li><li><strong>Shared</strong>: Multiple images can share base layers</li><li><strong>Additive</strong>: Each layer adds to previous (can&#x27;t truly delete)</li></ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-dockerfile">FROM python:3.11-slim    # Layer 1: Base image
+RUN apt-get update       # Layer 2: Package manager update
+COPY requirements.txt    # Layer 3: Copy requirements
+RUN pip install -r req   # Layer 4: Install dependencies
+COPY . .                 # Layer 5: Copy application code</code></pre>
+<hr>
+<h2>Layer Caching Strategies</h2>
+<h3>Rule 1: Order Instructions by Change Frequency</h3>
+<p><strong>❌ Wrong</strong> (bust cache on every code change):</p>
+<pre><code class="lang-dockerfile">FROM python:3.11-slim
+COPY . .                        # Changes frequently
+RUN pip install -r requirements.txt  # Reinstalls every time
+CMD [&quot;python&quot;, &quot;app.py&quot;]</code></pre>
+<p><strong>✅ Correct</strong> (cache dependencies):</p>
+<pre><code class="lang-dockerfile">FROM python:3.11-slim
+COPY requirements.txt .         # Changes rarely
+RUN pip install -r requirements.txt  # Cached unless requirements change
+COPY . .                        # Changes frequently
+CMD [&quot;python&quot;, &quot;app.py&quot;]</code></pre>
+<p><strong>Principle</strong>: Place stable layers first, volatile layers last.</p>
+<h3>Rule 2: Combine Commands to Reduce Layers</h3>
+<p><strong>❌ Wrong</strong> (many layers):</p>
+<pre><code class="lang-dockerfile">RUN apt-get update
+RUN apt-get install -y curl
+RUN apt-get install -y git
+RUN apt-get install -y vim
+RUN rm -rf /var/lib/apt/lists/*</code></pre>
+<p><strong>✅ Correct</strong> (single layer):</p>
+<pre><code class="lang-dockerfile">RUN apt-get update &amp;&amp; \
+    apt-get install -y \
+        curl \
+        git \
+        vim &amp;&amp; \
+    rm -rf /var/lib/apt/lists/*  # Safe: cleaning package manager cache</code></pre>
+<p><strong>Benefits</strong>: Smaller image, fewer layers, better caching.</p>
+<h3>Rule 3: Use .dockerignore to Exclude Files</h3>
+<p><strong>Create <code>.dockerignore</code></strong>:</p>
+<pre><code># Version control
+.git
+.gitignore
+
+# Dependencies
+node_modules/
+vendor/
+__pycache__/
+*.pyc
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs and temp files
+*.log
+tmp/
+.env.local
+
+# Documentation
+README.md
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile</code></pre>
+<p><strong>Impact</strong>: Faster builds, smaller context, no accidental secret leakage.</p>
+<h3>Rule 4: Cache Package Manager Dependencies</h3>
+<p><strong>Python (pip)</strong>:</p>
+<pre><code class="lang-dockerfile"># ✅ Cache pip dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .</code></pre>
+<p><strong>Node.js (npm/pnpm)</strong>:</p>
+<pre><code class="lang-dockerfile"># ✅ Cache npm dependencies
+COPY package.json pnpm-lock.yaml .
+RUN pnpm install --frozen-lockfile
+COPY . .</code></pre>
+<p><strong>Go</strong>:</p>
+<pre><code class="lang-dockerfile"># ✅ Cache Go modules
+COPY go.mod go.sum .
+RUN go mod download
+COPY . .
+RUN go build -o app</code></pre>
+<p><strong>Rust (Cargo)</strong>:</p>
+<pre><code class="lang-dockerfile"># ✅ Cache Cargo dependencies
+COPY Cargo.toml Cargo.lock .
+RUN mkdir src &amp;&amp; echo &quot;fn main() {}&quot; &gt; src/main.rs
+RUN cargo build --release
+COPY . .
+RUN cargo build --release</code></pre>
+<hr>
+<h2>Multi-Stage Builds</h2>
+<h3>Purpose: Separate Build and Runtime Environments</h3>
+<p><strong>Problem</strong>: Including build tools bloats final image.</p>
+<p><strong>Solution</strong>: Multi-stage builds.</p>
+<h3>Basic Multi-Stage Pattern</h3>
+<pre><code class="lang-dockerfile"># Stage 1: Build
+FROM golang:1.21 AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o app
+
+# Stage 2: Runtime
+FROM alpine:3.19
+WORKDIR /app
+COPY --from=builder /app/app .
+CMD [&quot;./app&quot;]</code></pre>
+<p><strong>Result</strong>: Final image contains only binary, not Go compiler.</p>
+<h3>Multi-Stage for Python</h3>
+<pre><code class="lang-dockerfile"># Stage 1: Build dependencies
+FROM python:3.11 AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# Stage 2: Runtime
+FROM python:3.11-slim
+WORKDIR /app
+COPY --from=builder /root/.local /root/.local
+COPY . .
+ENV PATH=/root/.local/bin:$PATH
+CMD [&quot;python&quot;, &quot;app.py&quot;]</code></pre>
+<h3>Multi-Stage for Node.js</h3>
+<pre><code class="lang-dockerfile"># Stage 1: Build
+FROM node:20 AS builder
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g pnpm &amp;&amp; pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build
+
+# Stage 2: Runtime
+FROM node:20-slim
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+CMD [&quot;node&quot;, &quot;dist/index.js&quot;]</code></pre>
+<h3>Multi-Stage for Static Sites</h3>
+<pre><code class="lang-dockerfile"># Stage 1: Build
+FROM node:20 AS builder
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g pnpm &amp;&amp; pnpm install
+COPY . .
+RUN pnpm build
+
+# Stage 2: Serve with nginx
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD [&quot;nginx&quot;, &quot;-g&quot;, &quot;daemon off;&quot;]</code></pre>
+<p><strong>Result</strong>: Final image is nginx + static files (no Node.js).</p>
+<hr>
+<h2>Image Size Optimization</h2>
+<h3>Strategy 1: Use Minimal Base Images</h3>
+<p><strong>Base image comparison</strong>: | Image | Size | Use Case | |-------|------|----------| | <code>ubuntu:22.04</code> | ~77MB | Full Ubuntu (avoid) | | <code>python:3.11</code> | ~1GB | Full Python + build tools | | <code>python:3.11-slim</code> | ~180MB | Python without extras | | <code>alpine:3.19</code> | ~7MB | Minimal Linux (musl libc) | | <code>scratch</code> | ~0MB | Empty (static binaries only) | | <code>distroless</code> | ~20MB | Runtime only (no shell) |</p>
+<p><strong>Recommendations</strong>:</p>
+<ul><li><strong>General</strong>: Use <code>-slim</code> variants (<code>python:3.11-slim</code>, <code>node:20-slim</code>)</li><li><strong>Static binaries</strong>: Use <code>scratch</code> or <code>distroless</code></li><li><strong>Alpine</strong>: Good for size, but musl libc can cause issues</li></ul>
+<h3>Strategy 2: Use Distroless for Security</h3>
+<pre><code class="lang-dockerfile"># Build stage
+FROM golang:1.21 AS builder
+WORKDIR /app
+COPY . .
+RUN CGO_ENABLED=0 go build -o app
+
+# Runtime stage with distroless
+FROM gcr.io/distroless/static-debian12
+COPY --from=builder /app/app /app
+ENTRYPOINT [&quot;/app&quot;]</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>No shell (smaller attack surface)</li><li>No package manager (can&#x27;t install malware)</li><li>Minimal CVEs</li><li>Small size (~20MB)</li></ul>
+<p><strong>Distroless variants</strong>:</p>
+<ul><li><code>gcr.io/distroless/static-debian12</code> - Static binaries</li><li><code>gcr.io/distroless/base-debian12</code> - Requires libc</li><li><code>gcr.io/distroless/python3-debian12</code> - Python runtime</li><li><code>gcr.io/distroless/nodejs20-debian12</code> - Node.js runtime</li></ul>
+<h3>Strategy 3: Remove Build Artifacts</h3>
+<pre><code class="lang-dockerfile">RUN apt-get update &amp;&amp; \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        curl &amp;&amp; \
+    # Build app \
+    make build &amp;&amp; \
+    # Clean up in same layer \
+    apt-get purge -y build-essential &amp;&amp; \
+    apt-get autoremove -y &amp;&amp; \
+    rm -rf /var/lib/apt/lists/*  # Safe: cleaning package manager cache</code></pre>
+<p><strong>Key</strong>: Cleanup in same <code>RUN</code> instruction (same layer).</p>
+<h3>Strategy 4: Use --no-cache-dir for Package Managers</h3>
+<pre><code class="lang-dockerfile"># Python
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Alpine apk
+RUN apk add --no-cache curl git
+
+# Debian/Ubuntu apt
+RUN apt-get update &amp;&amp; \
+    apt-get install -y --no-install-recommends curl &amp;&amp; \
+    rm -rf /var/lib/apt/lists/*  # Safe: cleaning package manager cache</code></pre>
+<h3>Strategy 5: Optimize COPY Instructions</h3>
+<p><strong>❌ Wrong</strong> (copies everything):</p>
+<pre><code class="lang-dockerfile">COPY . .</code></pre>
+<p><strong>✅ Correct</strong> (copy only needed files):</p>
+<pre><code class="lang-dockerfile">COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY src/ ./src/
+COPY config/ ./config/</code></pre>
+<p><strong>Use .dockerignore</strong> to exclude unnecessary files automatically.</p>
+<hr>
+<h2>Build Performance Optimization</h2>
+<h3>Technique 1: BuildKit (Modern Docker)</h3>
+<p><strong>Enable BuildKit</strong> (faster builds, better caching):</p>
+<pre><code class="lang-bash"># Linux/Mac
+export DOCKER_BUILDKIT=1
+docker build .
+
+# Or per-command
+DOCKER_BUILDKIT=1 docker build .</code></pre>
+<p><strong>BuildKit features</strong>:</p>
+<ul><li>Parallel builds</li><li>Better cache management</li><li>Improved layer reuse</li><li>Secrets mounting (no secrets in history)</li></ul>
+<h3>Technique 2: Cache Mounts (BuildKit)</h3>
+<pre><code class="lang-dockerfile"># Python with cache mount
+FROM python:3.11-slim
+COPY requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt</code></pre>
+<p><strong>Benefits</strong>: Reuses pip cache across builds (faster).</p>
+<h3>Technique 3: SSH Mounts for Private Dependencies</h3>
+<pre><code class="lang-dockerfile"># Clone private repo without embedding SSH key
+FROM golang:1.21
+RUN --mount=type=ssh \
+    git clone git@github.com:private/repo.git</code></pre>
+<p><strong>Build command</strong>:</p>
+<pre><code class="lang-bash">docker build --ssh default .</code></pre>
+<h3>Technique 4: Secrets Mounting</h3>
+<pre><code class="lang-dockerfile"># Use secret without embedding in layer
+FROM alpine
+RUN --mount=type=secret,id=github_token \
+    wget --header=&quot;Authorization: token $(cat /run/secrets/github_token)&quot; \
+    https://api.github.com/repos/private/repo/tarball</code></pre>
+<p><strong>Build command</strong>:</p>
+<pre><code class="lang-bash">docker build --secret id=github_token,src=$HOME/.github_token .</code></pre>
+<p><strong>Benefit</strong>: Secret never stored in image layers.</p>
+<hr>
+<h2>Common Dockerfile Patterns</h2>
+<h3>Pattern 1: Python Web App (FastAPI/Flask)</h3>
+<pre><code class="lang-dockerfile">FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application
+COPY . .
+
+# Non-root user
+RUN useradd -m appuser &amp;&amp; chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8000
+CMD [&quot;uvicorn&quot;, &quot;main:app&quot;, &quot;--host&quot;, &quot;0.0.0.0&quot;, &quot;--port&quot;, &quot;8000&quot;]</code></pre>
+<h3>Pattern 2: Node.js App</h3>
+<pre><code class="lang-dockerfile">FROM node:20-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g pnpm &amp;&amp; pnpm install --frozen-lockfile --prod
+
+# Copy application
+COPY . .
+
+# Non-root user
+RUN chown -R node:node /app
+USER node
+
+EXPOSE 3000
+CMD [&quot;node&quot;, &quot;index.js&quot;]</code></pre>
+<h3>Pattern 3: Go Static Binary</h3>
+<pre><code class="lang-dockerfile"># Build stage
+FROM golang:1.21 AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags=&quot;-w -s&quot; -o app
+
+# Runtime stage
+FROM scratch
+COPY --from=builder /app/app /app
+ENTRYPOINT [&quot;/app&quot;]</code></pre>
+<p><strong>Flags</strong>: <code>-ldflags=&quot;-w -s&quot;</code> removes debug info (smaller binary).</p>
+<h3>Pattern 4: Rust Binary</h3>
+<pre><code class="lang-dockerfile"># Build stage
+FROM rust:1.75 AS builder
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src &amp;&amp; echo &quot;fn main() {}&quot; &gt; src/main.rs
+RUN cargo build --release
+COPY . .
+RUN cargo build --release
+
+# Runtime stage
+FROM debian:bookworm-slim
+COPY --from=builder /app/target/release/app /usr/local/bin/app
+CMD [&quot;app&quot;]</code></pre>
+<hr>
+<h2>Dockerfile Linting and Analysis</h2>
+<h3>Tool 1: hadolint (Dockerfile Linter)</h3>
+<pre><code class="lang-bash"># Install
+brew install hadolint
+
+# Lint Dockerfile
+hadolint Dockerfile</code></pre>
+<p><strong>Common warnings</strong>:</p>
+<ul><li><code>DL3008</code>: Pin apt package versions</li><li><code>DL3013</code>: Pin pip versions</li><li><code>DL3059</code>: Multiple RUN commands (combine)</li><li><code>DL4006</code>: Use SHELL or arrays for pipefail</li></ul>
+<h3>Tool 2: dive (Image Layer Explorer)</h3>
+<pre><code class="lang-bash"># Install
+brew install dive
+
+# Analyze image
+dive myimage:latest</code></pre>
+<p><strong>Features</strong>:</p>
+<ul><li>Layer-by-layer breakdown</li><li>File changes per layer</li><li>Wasted space detection</li><li>Efficiency score</li></ul>
+<h3>Tool 3: docker history (Built-in)</h3>
+<pre><code class="lang-bash"># Show layer sizes
+docker history myimage:latest
+
+# Show layer commands
+docker history --no-trunc myimage:latest</code></pre>
+<hr>
+<h2>Dockerfile Best Practices Checklist</h2>
+<pre><code>Base Image:
+[ ] Use official images (python:3.11-slim, node:20-slim)
+[ ] Pin specific versions (not :latest)
+[ ] Use minimal variants (-slim, -alpine, distroless)
+
+Layer Optimization:
+[ ] Order instructions by change frequency (stable → volatile)
+[ ] Combine RUN commands with &amp;&amp;
+[ ] Clean up in same RUN layer
+[ ] Use .dockerignore to exclude files
+
+Caching:
+[ ] Copy dependency files before application code
+[ ] Use cache mounts for package managers (BuildKit)
+[ ] Leverage multi-stage builds
+[ ] Order COPY instructions carefully
+
+Security:
+[ ] Use non-root USER
+[ ] Don&#x27;t store secrets in layers
+[ ] Use --mount=type=secret for sensitive data
+[ ] Scan images for vulnerabilities (Trivy)
+
+Size:
+[ ] Use multi-stage builds
+[ ] Remove build dependencies
+[ ] Use --no-cache-dir for package managers
+[ ] Remove unnecessary files
+
+Performance:
+[ ] Enable BuildKit (DOCKER_BUILDKIT=1)
+[ ] Use cache mounts for dependencies
+[ ] Parallelize independent stages
+[ ] Use SSH mounts for private repos</code></pre>
+<hr>
+<h2>Common Dockerfile Anti-Patterns</h2>
+<p>❌ <strong>Using :latest tag</strong>: <code>FROM python:latest</code> ✅ Pin versions: <code>FROM python:3.11-slim</code></p>
+<p>❌ <strong>Running as root</strong>: No <code>USER</code> directive ✅ Create non-root user: <code>USER appuser</code></p>
+<p>❌ <strong>Busting cache</strong>: <code>COPY . .</code> before dependencies ✅ Copy dependencies first: <code>COPY requirements.txt .</code></p>
+<p>❌ <strong>Storing secrets</strong>: <code>ENV API_KEY=secret123</code> ✅ Use runtime secrets or mount: <code>--mount=type=secret</code></p>
+<p>❌ <strong>Many small layers</strong>: Multiple <code>RUN</code> commands ✅ Combine commands: <code>RUN cmd1 &amp;&amp; cmd2 &amp;&amp; cmd3</code></p>
+<p>❌ <strong>Not using .dockerignore</strong>: Copying <code>.git</code>, <code>node_modules</code> ✅ Exclude with .dockerignore</p>
+<p>❌ <strong>Installing unnecessary packages</strong>: <code>apt-get install -y vim curl wget</code> ✅ Install only required: <code>--no-install-recommends</code></p>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Build Commands</h3>
+<pre><code class="lang-bash"># Basic build
+docker build -t myapp:latest .
+
+# BuildKit build
+DOCKER_BUILDKIT=1 docker build -t myapp:latest .
+
+# Build with secrets
+docker build --secret id=token,src=./token.txt -t myapp .
+
+# Build with SSH
+docker build --ssh default -t myapp .
+
+# Build specific stage
+docker build --target builder -t myapp:builder .
+
+# No cache
+docker build --no-cache -t myapp .</code></pre>
+<h3>Image Analysis</h3>
+<pre><code class="lang-bash"># Show layers
+docker history myapp:latest
+
+# Inspect image
+docker inspect myapp:latest
+
+# Analyze with dive
+dive myapp:latest
+
+# Lint Dockerfile
+hadolint Dockerfile</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>container-security.md</code> - USER directive, vulnerability scanning</li><li><code>docker-compose-development.md</code> - Multi-container builds</li><li><code>container-registry-management.md</code> - Tagging and pushing images</li><li><code>kubernetes-deployments.md</code> - Deploying optimized images</li></ul>
+<hr>
+<h2>Level 3: Resources</h2>
+<p>This skill has comprehensive Level 3 resources in <code>skills/containers/dockerfile-optimization/resources/</code>.</p>
+<h3>REFERENCE.md</h3>
+<p>Comprehensive 900+ line reference covering:</p>
+<ul><li>Multi-stage builds (basic patterns, advanced patterns, parallel builds)</li><li>Layer caching strategies (cache invalidation, optimization techniques, BuildKit cache mounts)</li><li>Base image selection (alpine, slim, distroless, scratch comparisons)</li><li>.dockerignore best practices (templates, language-specific patterns)</li><li>Security hardening (non-root users, minimal attack surface, secret management)</li><li>Image size optimization (reduction techniques, real-world examples)</li><li>Build time optimization (BuildKit features, parallel stages, remote caching)</li><li>Runtime optimization (startup time, memory, CPU, disk I/O)</li><li>Dockerfile best practices (instruction order, anti-patterns, exec vs shell form)</li><li>BuildKit features (cache mounts, secret mounts, SSH mounts, heredoc syntax)</li><li>Health checks and signal handling (graceful shutdown patterns)</li><li>Resource limits (CPU, memory, disk I/O constraints)</li><li>Performance benchmarking techniques</li><li>Real-world optimization examples with before/after comparisons</li></ul>
+<h3>Scripts</h3>
+<p>Production-ready executable scripts with <code>--help</code> and <code>--json</code> support:</p>
+<ol><li><strong>analyze_dockerfile.py</strong> (500+ lines)</li></ol>
+<ul><li>Analyzes Dockerfiles for anti-patterns and security issues</li><li>Detects: root user, latest tags, inefficient layers, missing .dockerignore</li><li>Calculates optimization score (0-100)</li><li>Provides specific recommendations</li><li>Usage: <code>./analyze_dockerfile.py Dockerfile [--json] [--min-score 80]</code></li></ul>
+<ol><li><strong>optimize_image.sh</strong> (400+ lines)</li></ol>
+<ul><li>Analyzes Docker images with size and layer breakdown</li><li>Identifies optimization opportunities</li><li>Optional: Builds optimized version with comparison</li><li>Shows before/after size reduction percentage</li><li>Usage: <code>./optimize_image.sh [--build] [--json] myapp:latest</code></li></ul>
+<ol><li><strong>benchmark_builds.py</strong> (500+ lines)</li></ol>
+<ul><li>Benchmarks build times with different strategies</li><li>Compares: cached, no-cache, BuildKit, legacy builder, parallel stages</li><li>Measures image sizes and build durations</li><li>Provides speedup analysis and recommendations</li><li>Usage: <code>./benchmark_builds.py [--all] [--json] myapp</code></li></ul>
+<h3>Examples</h3>
+<h4>Optimized Dockerfiles by Language</h4>
+<ul><li><strong>python-optimized.Dockerfile</strong>: Multi-stage, slim base, cache mounts, non-root user</li><li><strong>node-optimized.Dockerfile</strong>: Alpine base, production deps only, dumb-init</li><li><strong>go-optimized.Dockerfile</strong>: Scratch base, static binary, minimal size (&lt;10MB)</li><li><strong>rust-optimized.Dockerfile</strong>: Cargo cache mounts, debian-slim runtime</li><li><strong>multi-stage-example.Dockerfile</strong>: Parallel stages, test stage, multiple targets</li></ul>
+<h4>Before/After Optimization Examples</h4>
+<ul><li><strong>python-before.Dockerfile</strong> → <strong>python-after.Dockerfile</strong>: 1.2GB → 150MB (87% reduction)</li><li><strong>node-before.Dockerfile</strong> → <strong>node-after.Dockerfile</strong>: 1.1GB → 180MB (83% reduction)</li><li><strong>COMPARISON.md</strong>: Detailed analysis of optimization techniques and impact</li></ul>
+<h3>Usage</h3>
+<pre><code class="lang-bash"># Analyze Dockerfile for issues
+cd skills/containers/dockerfile-optimization/resources/scripts
+./analyze_dockerfile.py /path/to/Dockerfile
+
+# Get JSON output for CI/CD integration
+./analyze_dockerfile.py Dockerfile --json --min-score 80
+
+# Analyze existing image
+./optimize_image.sh myapp:latest
+
+# Build optimized version and compare
+./optimize_image.sh --build myapp:latest
+
+# Benchmark different build strategies
+./benchmark_builds.py --all myapp
+
+# Compare specific strategies
+./benchmark_builds.py -s cached -s buildkit -s parallel myapp --json</code></pre>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/containers-dockerfile-optimization.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>
