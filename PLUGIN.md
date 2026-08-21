@@ -7,7 +7,7 @@
 
 ## Overview
 
-hanzo-skills is a comprehensive Claude Code plugin that provides 292 atomic, composable skills across 31 categories, plus context-aware skill discovery commands. It uses a gateway-based progressive loading architecture to minimize context usage while maximizing skill availability.
+hanzo-skills is a comprehensive Claude Code plugin that provides 292 atomic, composable skills across 31 categories, plus context-aware skill discovery commands. It uses a skill-based progressive loading architecture to minimize context usage while maximizing skill availability.
 
 ## Plugin Structure
 
@@ -16,8 +16,8 @@ hanzo-skills/
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin manifest
 ├── skills/                       # 292 skills, 31 categories
-│   ├── README.md                 # Master catalog (gateway index)
-│   ├── discover-*/               # 28 gateway skills
+│   ├── README.md                 # Master catalog (skill index)
+│   ├── <name>/SKILL.md          # one skill, one directory
 │   │   └── SKILL.md
 │   ├── api/                      # Category directories
 │   │   └── INDEX.md              # Category index
@@ -51,7 +51,7 @@ Claude Code will:
 1. Clone the repository to `~/.claude/plugins/hanzo-skills/`
 2. Register all commands (e.g., `/skills`)
 3. Make all 292 skills available for discovery
-4. Enable gateway-based progressive loading
+4. Enable skill-based progressive loading
 
 ### For Developers
 
@@ -69,11 +69,11 @@ cd hanzo-skills
 
 ### Three-Tier Progressive Loading
 
-**Tier 1: Gateway Skills (28 skills)**
+**Tier 1: Skills (28 skills)**
 - Lightweight entry points (~200 lines each)
 - Activate based on project keywords
 - Guide to category indexes
-- Examples: `discover-frontend`, `discover-database`, `discover-ml`
+- Examples: `frontend`, `database`, `ml`
 
 **Tier 2: Category Indexes (31 indexes)**
 - Comprehensive category overviews
@@ -90,19 +90,19 @@ cd hanzo-skills
 ### Context Management
 
 **Lazy Loading:**
-- Gateway skills load first (minimal context)
+- skills load first (minimal context)
 - Category indexes load on-demand
 - Individual skills load when explicitly needed
 
 **Progressive Discovery:**
 ```
-Project detected → Gateway activates → Category shown → Skill loaded
+Project detected → the skill activates → its files are read as needed
                     (~200 lines)        (~500 lines)     (~300 lines)
 ```
 
 **Context Savings:**
 - Loading all 292 skills: ~87,600 lines
-- Gateway-based approach: ~200-1,000 lines per session
+- Skill-based approach: ~200-1,000 lines per session
 - **98-99% context reduction**
 
 ## Commands
@@ -156,13 +156,13 @@ Project detected → Gateway activates → Category shown → Skill loaded
 {
   "name": "hanzo-skills",
   "version": "2.0.0",
-  "description": "292 atomic skills with gateway-based progressive loading",
+  "description": "292 atomic skills with skill-based progressive loading",
   "author": "rand",
   "homepage": "https://github.com/hanzoai/skills",
   "repository": "https://github.com/hanzoai/skills",
   "license": "MIT",
   "keywords": [
-    "skills", "gateway", "progressive-loading",
+    "skills", "skill", "progressive-loading",
     "diagrams", "mermaid", "ml", "api", "database",
     "testing", "infrastructure", "mathematics", "debugging"
   ]
@@ -180,7 +180,7 @@ Project detected → Gateway activates → Category shown → Skill loaded
 
 - **v1.0.0** - Manual installation
   - 292 skills across 31 categories
-  - Gateway-based progressive loading
+  - Skill-based progressive loading
   - Manual sync with install.sh
 
 ## Plugin Lifecycle
@@ -247,7 +247,7 @@ Project detected → Gateway activates → Category shown → Skill loaded
    - **my-skill.md** - Brief description
    ```
 
-4. **Update gateway if needed** (`skills/discover-new-category/SKILL.md`)
+4. **Write its SKILL.md** (`skills/<name>/SKILL.md`)
 
 5. **Update master catalog** (`skills/README.md`):
    ```markdown
@@ -292,7 +292,7 @@ Project detected → Gateway activates → Category shown → Skill loaded
    - Commands: lowercase, hyphen-separated
 4. **Keep skills focused**: 200-400 lines, single responsibility
 5. **Add YAML frontmatter**: name, category, description, keywords
-6. **Update documentation**: INDEX.md, README.md, gateway skills
+6. **Update documentation**: INDEX.md, README.md, skills
 7. **Test locally**: Install as plugin, verify discovery works
 8. **Submit pull request** with clear description
 
@@ -319,13 +319,13 @@ cat skills/your-category/your-skill.md
 ### For Plugin Users
 
 1. **Use `/skills` for discovery** - Don't manually browse directories
-2. **Load skills on-demand** - Let gateways guide you
+2. **Load skills on-demand** - Let skills guide you
 3. **Update regularly** - `/plugin update hanzo-skills` for latest skills
 4. **Provide feedback** - Report issues or suggest improvements
 
 ### For Plugin Developers
 
-1. **Maintain gateway architecture** - Don't break progressive loading
+1. **Maintain skill architecture** - Don't break progressive loading
 2. **Keep skills atomic** - One skill = one responsibility
 3. **Optimize for context** - Skills should be 200-400 lines
 4. **Test before publishing** - Verify plugin installs and commands work
@@ -406,8 +406,8 @@ cd ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
 ├── .claude-plugin/
 │   └── plugin.json          # Metadata read by Claude Code
 ├── skills/                   # Discovered by skill system
-│   ├── README.md             # Master catalog (28 gateways)
-│   ├── discover-*/SKILL.md   # Gateway skills
+│   ├── README.md             # Master catalog (28 skills)
+│   ├── <name>/SKILL.md      # one skill, one directory
 │   └── */INDEX.md            # Category indexes
 ├── commands/                 # Auto-registered by plugin system
 │   └── skills.md             # /skills command
@@ -424,11 +424,11 @@ cd ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
    - `pyproject.toml` → Python
    - etc.
 2. Analyze conversation context
-3. Match to gateway keywords
+3. Match to skill keywords
 4. Recommend relevant skills
 
 **Skill Matching:**
-1. Gateway activates based on keywords
+1. Skill activates based on keywords
 2. Category index provides overview
 3. User loads specific skill when needed
 
@@ -445,7 +445,7 @@ cd ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
 
 - [ ] **Marketplace distribution** - Publish to official Claude Code marketplace
 - [ ] **Skill analytics** - Track most-used skills, improve recommendations
-- [ ] **Custom gateways** - User-defined gateway skills
+- [ ] **Custom skills** - User-defined skills
 - [ ] **Skill collections** - Curated bundles for specific workflows
 - [ ] **Interactive skill wizard** - Guide users to right skills
 

@@ -86,8 +86,8 @@ See `skills/README.md` for the complete catalog of all categories and gateway sk
 
 ---
 
-**Browse**: This index provides a quick reference. Load the `discover-zig` gateway skill for common workflows and integration patterns.
+**Browse**: This index provides a quick reference. Load the `zig` gateway skill for common workflows and integration patterns.
 
 ```bash
-cat skills/discover-zig/SKILL.md
+cat skills/zig/SKILL.md
 ```

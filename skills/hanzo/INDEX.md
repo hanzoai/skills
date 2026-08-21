@@ -406,4 +406,4 @@ What do you need?
 
 **Last Updated**: 2026-03-23
 **Total Skills**: 131
-**Gateway**: `discover-hanzo/SKILL.md`
+**Gateway**: `hanzo/SKILL.md`

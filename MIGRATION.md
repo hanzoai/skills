@@ -68,7 +68,7 @@ Check that the plugin is installed:
 
 You should see:
 ```
-hanzo-skills (v2.0.0) - 292 atomic skills with gateway-based progressive loading
+hanzo-skills (v2.0.0) - 292 atomic skills with skill-based progressive loading
 ```
 
 Test the `/skills` command:
@@ -152,7 +152,7 @@ git pull
 ### Skills Structure
 
 The 292 skills across 31 categories are identical:
-- Same gateway architecture
+- Same skill architecture
 - Same progressive loading
 - Same skill content and guidance
 - Same category organization
@@ -163,15 +163,15 @@ All discovery mechanisms work exactly the same:
 - `/skills` command (context-aware recommendations)
 - `/skills frontend` (browse by category)
 - `/skills postgres` (search by keyword)
-- Automatic gateway activation
+- Automatic skill activation
 - Manual skill reading with `cat`
 
 ### Compatibility
 
 All existing workflows continue to work:
-- Gateway skills still activate based on project context
+- Skill skills still activate based on project context
 - Skills still compose with each other
-- All 28 gateways, 31 categories, 292 skills unchanged
+- All 28 skills, 31 categories, 292 skills unchanged
 
 ## Troubleshooting
 
@@ -204,7 +204,7 @@ ls ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
 
 You can keep the manual installation in `~/.claude~/.hanzo/skills/` for reference, but:
 - Only the plugin version will be used by `/skills` command
-- Gateway skills will activate from plugin location
+- Skill skills will activate from plugin location
 - This may cause confusion - recommended to remove manual installation
 
 ## Rollback (If Needed)

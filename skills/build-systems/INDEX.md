@@ -106,8 +106,8 @@ See `skills/README.md` for the complete catalog of all categories and gateway sk
 
 ---
 
-**Browse**: This index provides a quick reference. Load the `discover-build-systems` gateway skill for common workflows and integration patterns.
+**Browse**: This index provides a quick reference. Load the `build-systems` gateway skill for common workflows and integration patterns.
 
 ```bash
-cat skills/discover-build-systems/SKILL.md
+cat skills/build-systems/SKILL.md
 ```

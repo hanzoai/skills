@@ -200,7 +200,7 @@ Comprehensive skills for application security, vulnerability assessment, and sec
 
 ## Skill Combinations
 
-### With API Skills (`discover-api`)
+### With API Skills (`api`)
 - API authentication (JWT, OAuth2, API keys)
 - API authorization (endpoint permissions)
 - API rate limiting (abuse prevention)
@@ -214,7 +214,7 @@ Comprehensive skills for application security, vulnerability assessment, and sec
 
 ---
 
-### With Database Skills (`discover-database`)
+### With Database Skills (`database`)
 - SQL injection prevention
 - Database credential management
 - Row-level security (PostgreSQL RLS)
@@ -228,7 +228,7 @@ Comprehensive skills for application security, vulnerability assessment, and sec
 
 ---
 
-### With Frontend Skills (`discover-frontend`)
+### With Frontend Skills (`frontend`)
 - XSS prevention in React/Vue/Angular
 - Content Security Policy (CSP) configuration
 - Secure cookie handling
@@ -242,7 +242,7 @@ Comprehensive skills for application security, vulnerability assessment, and sec
 
 ---
 
-### With Infrastructure Skills (`discover-infrastructure`, `discover-cloud`)
+### With Infrastructure Skills (`infrastructure`, `cloud`)
 - Secrets management in Kubernetes
 - Container security scanning
 - TLS/SSL certificate management
@@ -256,7 +256,7 @@ Comprehensive skills for application security, vulnerability assessment, and sec
 
 ---
 
-### With Cryptography Skills (`discover-cryptography`)
+### With Cryptography Skills (`cryptography`)
 - Encryption key management
 - TLS/SSL implementation
 - Data encryption at rest and in transit
@@ -270,7 +270,7 @@ Comprehensive skills for application security, vulnerability assessment, and sec
 
 ---
 
-### With Testing Skills (`discover-testing`)
+### With Testing Skills (`testing`)
 - Security integration tests
 - Penetration testing automation
 - Fuzz testing for inputs
@@ -359,11 +359,11 @@ cat skills/security/secrets-management.md
 ---
 
 **Related Categories**:
-- `discover-api` - API authentication and authorization
-- `discover-database` - Database security and SQL injection prevention
-- `discover-cryptography` - Encryption, hashing, TLS/SSL
-- `discover-infrastructure` - Network security, container security
-- `discover-testing` - Security testing and penetration tests
+- `api` - API authentication and authorization
+- `database` - Database security and SQL injection prevention
+- `cryptography` - Encryption, hashing, TLS/SSL
+- `infrastructure` - Network security, container security
+- `testing` - Security testing and penetration tests
 
 ---
 

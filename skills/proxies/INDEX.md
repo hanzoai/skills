@@ -99,8 +99,8 @@ See `skills/README.md` for the complete catalog of all categories and gateway sk
 
 ---
 
-**Browse**: This index provides a quick reference. Load the `discover-proxies` gateway skill for common workflows and integration patterns.
+**Browse**: This index provides a quick reference. Load the `proxies` gateway skill for common workflows and integration patterns.
 
 ```bash
-cat skills/discover-proxies/SKILL.md
+cat skills/proxies/SKILL.md
 ```

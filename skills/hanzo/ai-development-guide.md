@@ -205,7 +205,7 @@ cat path/to/lux/skills/skills/lux/INDEX.md
 
 ```
 Tier 1: Gateway (auto-discovers relevant skills)
- → discover-hanzo/SKILL.md or discover-lux/SKILL.md
+ → hanzo/SKILL.md
 
 Tier 2: INDEX (full catalog with decision tree)
  → skills/hanzo/INDEX.md or skills/lux/INDEX.md

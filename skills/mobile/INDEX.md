@@ -126,8 +126,8 @@ See `skills/README.md` for the complete catalog of all categories and gateway sk
 
 ---
 
-**Browse**: This index provides a quick reference. Load the `discover-mobile` gateway skill for common workflows and integration patterns.
+**Browse**: This index provides a quick reference. Load the `mobile` gateway skill for common workflows and integration patterns.
 
 ```bash
-cat skills/discover-mobile/SKILL.md
+cat skills/mobile/SKILL.md
 ```
