@@ -1,6 +1,6 @@
 ---
 name: discover-hanzo-api
-description: Automatically discover how to CALL Hanzo's own products over api.hanzo.ai — models, agents, sandboxes, secrets, billing, deployments, identity, telemetry. Activates when a task needs a Hanzo API rather than code written from scratch: o11y, ai, commerce, iam, git, project, admin, integration, agent, platform, marketing, visor, pricing, cloudflare, captable, provisioning, book, company, deploy, task, crm, team, framework, guide, tool, sandbox, automation, ingress.
+description: "Automatically discover how to CALL Hanzo's own products over api.hanzo.ai — models, agents, sandboxes, secrets, billing, deployments, identity, telemetry. Activates when a task needs a Hanzo API rather than code written from scratch: o11y, ai, commerce, iam, git, project, admin, integration, agent, platform, marketing, visor, pricing, cloudflare, captable, provisioning, book, company, deploy, task, crm, team, framework, guide, tool, sandbox, automation, ingress."
 ---
 
 # Hanzo API Skills Discovery

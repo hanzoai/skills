@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { scanDir, dirSource } from "../src/node.js";
@@ -70,42 +69,24 @@ describe("dirSource + Registry", () => {
   });
 });
 
-// Best-effort proof against the REAL repos on this machine. Skipped where a
-// checkout is absent so the suite stays hermetic in CI.
-describe("real-world skill trees (best-effort)", () => {
-  const REAL = {
-    desktop: "/home/z/work/hanzo/desktop/.cursor/skills",
-    devSamples:
-      "/home/z/work/hanzo/dev/codex-rs/skills/src/assets/samples",
-    catalog: "/home/z/work/hanzo/skills/skills",
-  };
+// The catalogue this repo ships, parsed by the parser this repo ships. The
+// block that stood here named absolute paths under another machine's home, so
+// skipIf skipped it everywhere and nothing was ever checked. This one resolves
+// from the test file, so it runs wherever the repo is checked out.
+describe("the catalogue this repo ships", () => {
+  const CATALOG = join(here, "..", "..", "skills");
 
-  it.skipIf(!existsSync(REAL.desktop))(
-    "parses desktop .cursor/skills unchanged",
-    async () => {
-      const { skills, errors } = await scanDir(REAL.desktop, { scope: "user" });
-      expect(skills.length).toBeGreaterThan(0);
-      expect(errors).toHaveLength(0);
-      expect(skills.some((s) => s.id === "frontend-design")).toBe(true);
-    },
-  );
+  it("parses every SKILL.md with no errors", async () => {
+    const { skills, errors } = await scanDir(CATALOG, { scope: "repo" });
+    expect(errors).toEqual([]);
+    expect(skills.length).toBeGreaterThan(20);
+  });
 
-  it.skipIf(!existsSync(REAL.devSamples))(
-    "parses dev embedded sample skills unchanged",
-    async () => {
-      const { skills } = await scanDir(REAL.devSamples, { scope: "system" });
-      expect(skills.some((s) => s.id === "skill-creator")).toBe(true);
-      const creator = skills.find((s) => s.id === "skill-creator");
-      expect(creator?.interface?.display_name).toBeTruthy();
-    },
-  );
-
-  it.skipIf(!existsSync(REAL.catalog))(
-    "parses the hanzoai/skills catalog gateways",
-    async () => {
-      const { skills } = await scanDir(REAL.catalog, { scope: "repo" });
-      expect(skills.length).toBeGreaterThan(20);
-      expect(skills.some((s) => s.id.startsWith("discover-"))).toBe(true);
-    },
-  );
+  it("gives every skill an id that matches its directory", async () => {
+    const { skills } = await scanDir(CATALOG, { scope: "repo" });
+    const wrong = skills.filter(
+      (s) => s.path && !s.path.endsWith(`${s.id}/SKILL.md`),
+    );
+    expect(wrong.map((s) => s.path)).toEqual([]);
+  });
 });
