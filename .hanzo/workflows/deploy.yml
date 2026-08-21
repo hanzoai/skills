@@ -24,7 +24,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  KMS_ENDPOINT: https://kms.hanzo.ai
+  # api.hanzo.ai is the unified endpoint; KMS answers under /v1/kms there.
+  KMS_ENDPOINT: https://api.hanzo.ai
   HOSTNAME_APEX: hanzoskills.com
   HOSTNAME_WWW: www.hanzoskills.com
 
@@ -99,10 +100,15 @@ jobs:
                 -d "{\"clientId\":\"$KMS_CLIENT_ID\",\"clientSecret\":\"$KMS_CLIENT_SECRET\"}" \
                 | jq -r '.accessToken // empty')
           [ -n "$tok" ] || { echo "::error::KMS login failed at $KMS_ENDPOINT"; exit 1; }
+          # Two shapes answer here: the unscoped path and the org-scoped one.
           read_secret() {
-            curl -fsS "$KMS_ENDPOINT/v1/kms/orgs/hanzo/secrets/deploy/cf-pages/$1?env=prod" \
-              -H "Authorization: Bearer $tok" \
-              | jq -r '.secret.value // .secret.secretValue // empty'
+            v=$(curl -fsS "$KMS_ENDPOINT/v1/kms/secrets/deploy/cf-pages/$1?env=prod" \
+                -H "Authorization: Bearer $tok" | jq -r '.value // empty' || true)
+            if [ -z "$v" ]; then
+              v=$(curl -fsS "$KMS_ENDPOINT/v1/kms/orgs/hanzo/secrets/deploy/cf-pages/$1?env=prod" \
+                  -H "Authorization: Bearer $tok" | jq -r '.secret.value // .secret.secretValue // empty' || true)
+            fi
+            printf '%s' "$v"
           }
           api=$(read_secret CF_API_TOKEN)
           acct=$(read_secret CF_ACCOUNT_ID)
