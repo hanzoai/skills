@@ -54,6 +54,34 @@ skills/
   tests/                # Test suite
 ```
 
+## The site — hanzoskills.com
+
+`public/` is the site, byte for byte. It is a **Cloudflare Pages** project
+(direct upload), not a Worker and not ingress+s3 — the live host returns
+`access-control-allow-origin: *` and a charset-suffixed content-type, which
+Workers Static Assets does not emit. Compare `/llms.txt` against hanzo.codes
+(a Worker) to tell them apart; the `/` response alone does not distinguish them.
+
+```
+public/          index.html + 537 <name>.html + <name>.md + all.md, llms.txt, favicon.svg
+scripts/site.py  the shared chrome: style, nav, hero, copy-prompt menu, agent bar
+scripts/marks.py mark geometry, from hanzoai/design assets/{providers,logos}
+tests/site.mjs   browser checks — mark, menu, bar, computed border-radius
+wrangler.toml    pages_build_output_dir = public
+```
+
+- `scripts/site.py` is the ONE definition of the chrome and rewrites every page.
+  It is idempotent, and CI fails if `public/` does not match it.
+- Publishing is `.github/workflows/deploy.yml` on push to main. It resolves the
+  Pages project **by hostname** rather than by a remembered name, then asserts
+  the live host serves the new bytes. Do not publish by hand.
+- Cloudflare injects its analytics beacon at the edge; `site.py` strips it so it
+  never enters source.
+- Controls are pills (`--r: 999px`) and surfaces are `--r-soft: 14px`, matching
+  hanzo.ai, whose buttons compute to a full pill at 44px tall.
+- `public/` content is a snapshot of the corpus, not generated from `skills/`.
+  The markdown→html generator that produced it has no home in this repo.
+
 ## Key Skills by Domain
 
 ### Infrastructure
