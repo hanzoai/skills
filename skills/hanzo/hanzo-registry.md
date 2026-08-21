@@ -5,12 +5,12 @@
 
 ## Overview
 
-Hanzo Registry is a **private Docker container registry** running Docker Distribution (registry:2) on hanzo-k8s, authenticated via Hanzo IAM token-based auth. It provides a self-hosted alternative to Docker Hub and GHCR for internal container images. Live at `registry.hanzo.ai`.
+Hanzo Registry is a **private Docker container registry** running Docker Distribution (registry:2) on hanzo-k8s, authenticated via Hanzo IAM token-based auth. It carries container images and Helm charts, org-namespaced as `<host>/<org>/<app>`. Live at `oci.hanzo.ai`.
 
 ### Why Hanzo Registry?
 
-- **IAM-integrated auth**: Token-based auth via `iam.hanzo.ai/api/registry/token`
-- **Persistent storage**: 50Gi PVC on DigitalOcean Block Storage
+- **IAM-integrated auth**: Token-based auth via `hanzo.id/v1/iam/registry/token`
+- **S3-backed storage**: object storage on hanzoai/s3, no PVC
 - **CORS-enabled**: Supports browser-based registry operations
 - **Delete support**: Image deletion enabled for cleanup workflows
 - **K8s-native**: Runs as a Deployment in the `hanzo` namespace on hanzo-k8s
@@ -19,7 +19,7 @@ Hanzo Registry is a **private Docker container registry** running Docker Distrib
 
 - **Image**: `registry:2` (Docker Distribution)
 - **Auth**: JWT token-based via Hanzo IAM (Hanzo IAM)
-- **Storage**: Filesystem-backed with 50Gi PVC (`do-block-storage`)
+- **Storage**: S3-backed (hanzoai/s3)
 - **Port**: 5000 (ClusterIP service)
 - **CI**: GitHub Actions deploy workflow with KMS-sourced credentials
 
@@ -37,19 +37,21 @@ Repo: `hanzoai/registry` (Apache 2.0).
 ## Hard requirements
 
 1. **Kubernetes cluster** (hanzo-k8s) with the `hanzo` namespace
-2. **Hanzo IAM** at iam.hanzo.ai for token-based authentication
+2. **Hanzo IAM** at hanzo.id for token-based authentication
 3. **Signing certificate** (`signing.crt` / `signing.key`) as K8s secret `registry-signing-key`
-4. **PVC**: 50Gi `do-block-storage` class PersistentVolumeClaim
+4. **S3 bucket** on hanzoai/s3 with credentials in the `s3-credentials` secret
 
 ## Quick reference
 
 | Item | Value |
 |------|-------|
-| Endpoint | `registry.hanzo.ai` |
+| Endpoint | `oci.hanzo.ai` |
+| Repository path | `oci.hanzo.ai/<org>/<app>` |
 | Internal port | 5000 (ClusterIP) |
-| Auth realm | `https://iam.hanzo.ai/api/registry/token` |
+| Auth realm | `https://hanzo.id/v1/iam/registry/token` |
+| Auth service | `oci.hanzo.ai` |
 | Token issuer | `hanzo-iam` |
-| Storage | 50Gi PVC (`registry-data`) |
+| Storage | S3 (hanzoai/s3) |
 | K8s namespace | `hanzo` |
 | Repo | `github.com/hanzoai/registry` |
 | License | Apache 2.0 |
@@ -60,14 +62,14 @@ Repo: `hanzoai/registry` (Apache 2.0).
 
 ```bash
 # Login (uses Hanzo IAM credentials)
-docker login registry.hanzo.ai
+docker login oci.hanzo.ai
 
-# Push an image
-docker tag myapp:latest registry.hanzo.ai/myapp:latest
-docker push registry.hanzo.ai/myapp:latest
+# Push an image — repositories are org-namespaced
+docker tag myapp:latest oci.hanzo.ai/hanzoai/myapp:latest
+docker push oci.hanzo.ai/hanzoai/myapp:latest
 
 # Pull an image
-docker pull registry.hanzo.ai/myapp:latest
+docker pull oci.hanzo.ai/hanzoai/myapp:latest
 ```
 
 ### First-time setup
@@ -102,20 +104,20 @@ make restart
 
 ```
 ┌─────────────────┐ ┌──────────────────┐ ┌─────────────────┐
-│ Docker Client │────>│ registry.hanzo.ai│────>│ Hanzo IAM │
+│ Docker Client │────>│ oci.hanzo.ai     │────>│ Hanzo IAM │
 │ (push/pull) │ │ (registry:2) │ │ (token realm) │
 └─────────────────┘ └────────┬─────────┘ └─────────────────┘
  │
  ┌──────┴─────────┐
- │ 50Gi PVC │
- │ (DO Block) │
+ │ hanzoai/s3 │
+ │ (object store) │
  └────────────────┘
 ```
 
 ### Auth Flow
 
-1. Docker client attempts to push/pull from `registry.hanzo.ai`
-2. Registry returns 401 with token realm URL (`iam.hanzo.ai/api/registry/token`)
+1. Docker client attempts to push/pull from `oci.hanzo.ai`
+2. Registry returns 401 with token realm URL (`hanzo.id/v1/iam/registry/token`)
 3. Client requests token from IAM, providing credentials
 4. IAM validates credentials and returns a signed JWT (issuer: `hanzo-iam`)
 5. Client retries with JWT in Authorization header
@@ -123,34 +125,31 @@ make restart
 
 ### Registry Configuration
 
+The auth and http stanzas of `config.yml` — the storage driver is S3, configured
+from the `s3-credentials` secret:
+
 ```yaml
-# config.yml
 version: 0.1
-storage:
- filesystem:
- rootdirectory: /var/lib/registry
- delete:
- enabled: true
 http:
- addr: :5000
- headers:
- X-Content-Type-Options: [nosniff]
- Access-Control-Allow-Origin: ['https://registry.hanzo.ai']
- Access-Control-Allow-Methods: ['HEAD', 'GET', 'OPTIONS', 'DELETE']
+  addr: :5000
+  headers:
+    X-Content-Type-Options: [nosniff]
+    Access-Control-Allow-Origin: ['https://oci.hanzo.ai']
+    Access-Control-Allow-Methods: ['HEAD', 'GET', 'OPTIONS', 'DELETE']
 auth:
- token:
- realm: https://iam.hanzo.ai/api/registry/token
- service: registry.hanzo.ai
- issuer: hanzo-iam
- rootcertbundle: /etc/registry-signing/signing.crt
+  token:
+    realm: https://hanzo.id/v1/iam/registry/token
+    service: oci.hanzo.ai
+    issuer: hanzo-iam
+    rootcertbundle: /etc/registry-signing/signing.crt
 ```
 
 ### K8s Resources
 
 - **Deployment**: 1 replica, `registry:2` image, 100m/128Mi request, 500m/512Mi limit
 - **Service**: ClusterIP on port 5000
-- **PVC**: 50Gi `do-block-storage` class (`registry-data`)
 - **Secret**: `registry-signing-key` with `signing.crt` mounted to `/etc/registry-signing/`
+- **Secret**: `s3-credentials` (KMS-synced) for the object store
 
 ### CI/CD
 
@@ -164,9 +163,9 @@ The `deploy.yml` workflow triggers on push to `main` (when `k8s/` or `config.yml
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| 401 on push/pull | Missing or expired IAM token | `docker login registry.hanzo.ai` |
+| 401 on push/pull | Missing or expired IAM token | `docker login oci.hanzo.ai` |
 | Certificate error | `signing.crt` not mounted | Verify `registry-signing-key` secret exists |
-| Storage full | 50Gi PVC exhausted | Delete unused images or resize PVC |
+| Push denied to a bare name | Repositories are org-namespaced | Tag as `oci.hanzo.ai/<org>/<app>` |
 | CORS errors | Browser request blocked | Check `Access-Control-Allow-Origin` in config.yml |
 
 ## Related Skills
