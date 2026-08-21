@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>protocols-grpc-implementation</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/protocols-grpc-implementation.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/protocols-grpc-implementation.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>protocols-grpc-implementation</h1><p class="lede">Implementing gRPC APIs with Protocol Buffers</p><h1>gRPC Implementation</h1>
+<p><strong>Scope</strong>: gRPC services, Protocol Buffers, streaming, error handling, performance optimization <strong>Lines</strong>: ~350 <strong>Last Updated</strong>: 2025-10-27</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Implementing gRPC services from scratch</li><li>Designing Protocol Buffer schemas</li><li>Implementing streaming RPCs (unary, server, client, bidirectional)</li><li>Adding error handling and status codes</li><li>Implementing interceptors and middleware</li><li>Optimizing gRPC performance</li><li>Setting up load balancing for gRPC</li><li>Securing gRPC with TLS and authentication</li><li>Debugging gRPC services</li></ul>
+<h2>Core Concepts</h2>
+<h3>gRPC Architecture</h3>
+<p><strong>gRPC</strong> (gRPC Remote Procedure Call): High-performance RPC framework using HTTP/2 and Protocol Buffers.</p>
+<p><strong>Key characteristics</strong>:</p>
+<ul><li><strong>HTTP/2 transport</strong>: Multiplexing, header compression, binary framing</li><li><strong>Protocol Buffers</strong>: Efficient binary serialization (smaller payloads than JSON)</li><li><strong>Code generation</strong>: Client and server code generated from .proto files</li><li><strong>Streaming</strong>: Native support for streaming requests and responses</li><li><strong>Multi-language</strong>: Official support for 10+ languages</li><li><strong>Type-safe</strong>: Strong typing enforced by Protocol Buffers</li></ul>
+<p><strong>Architecture components</strong>:</p>
+<pre><code>Client → Stub (Generated) → HTTP/2 → Server → Service Implementation
+         ↓                              ↓
+    Interceptors                   Interceptors
+         ↓                              ↓
+    Metadata                       Metadata</code></pre>
+<hr>
+<h2>Protocol Buffers Basics</h2>
+<h3>Message Definition</h3>
+<pre><code class="lang-protobuf">// users.proto
+syntax = &quot;proto3&quot;;
+
+package users.v1;
+
+option go_package = &quot;github.com/example/users/v1;usersv1&quot;;
+
+// User represents a user in the system
+message User {
+  string id = 1;              // Field number (used for encoding)
+  string email = 2;
+  string name = 3;
+  int32 age = 4;
+  bool is_active = 5;
+  repeated string tags = 6;   // List of strings
+  google.protobuf.Timestamp created_at = 7;
+}
+
+// CreateUserRequest with nested message
+message CreateUserRequest {
+  string email = 1;
+  string name = 2;
+  Profile profile = 3;        // Nested message
+
+  message Profile {
+    string bio = 1;
+    string avatar_url = 2;
+  }
+}
+
+message CreateUserResponse {
+  User user = 1;
+  string message = 2;
+}</code></pre>
+<p><strong>Key concepts</strong>:</p>
+<ul><li><strong>Field numbers</strong> (1, 2, 3): Used for encoding (never reuse deleted numbers)</li><li><strong>Types</strong>: <code>string</code>, <code>int32</code>, <code>int64</code>, <code>bool</code>, <code>bytes</code>, <code>float</code>, <code>double</code></li><li><strong>repeated</strong>: List/array of values</li><li><strong>Nested messages</strong>: Messages within messages</li><li><strong>Imports</strong>: <code>import &quot;google/protobuf/timestamp.proto&quot;;</code></li></ul>
+<h3>Service Definition (RPC Methods)</h3>
+<pre><code class="lang-protobuf">// Four types of RPCs
+service UserService {
+  // Unary: Single request → Single response
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  // Server streaming: Single request → Stream of responses
+  rpc ListUsers(ListUsersRequest) returns (stream User);
+
+  // Client streaming: Stream of requests → Single response
+  rpc CreateUsers(stream CreateUserRequest) returns (CreateUsersResponse);
+
+  // Bidirectional streaming: Stream of requests ↔ Stream of responses
+  rpc Chat(stream ChatMessage) returns (stream ChatMessage);
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message ListUsersRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message CreateUsersResponse {
+  repeated User users = 1;
+  int32 created_count = 2;
+}
+
+message ChatMessage {
+  string user_id = 1;
+  string content = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}</code></pre>
+<hr>
+<h2>RPC Types and Implementation</h2>
+<h3>1. Unary RPC (Request-Response)</h3>
+<p><strong>Pattern</strong>: Client sends one request, server returns one response</p>
+<p><strong>.proto definition</strong>:</p>
+<pre><code class="lang-protobuf">rpc GetUser(GetUserRequest) returns (GetUserResponse);</code></pre>
+<p><strong>Python server</strong> (grpcio):</p>
+<pre><code class="lang-python">import grpc
+from concurrent import futures
+import users_pb2
+import users_pb2_grpc
+
+class UserService(users_pb2_grpc.UserServiceServicer):
+    def GetUser(self, request, context):
+        # request: GetUserRequest
+        # context: grpc.ServicerContext (metadata, peer, etc.)
+
+        user_id = request.id
+
+        # Fetch from database
+        user = db.get_user(user_id)
+
+        if not user:
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details(f&#x27;User {user_id} not found&#x27;)
+            return users_pb2.GetUserResponse()
+
+        # Return response
+        return users_pb2.GetUserResponse(
+            user=users_pb2.User(
+                id=user[&#x27;id&#x27;],
+                email=user[&#x27;email&#x27;],
+                name=user[&#x27;name&#x27;]
+            )
+        )
+
+# Start server
+server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+users_pb2_grpc.add_UserServiceServicer_to_server(UserService(), server)
+server.add_insecure_port(&#x27;[::]:50051&#x27;)
+server.start()
+server.wait_for_termination()</code></pre>
+<p><strong>Python client</strong>:</p>
+<pre><code class="lang-python">import grpc
+import users_pb2
+import users_pb2_grpc
+
+# Create channel
+channel = grpc.insecure_channel(&#x27;localhost:50051&#x27;)
+stub = users_pb2_grpc.UserServiceStub(channel)
+
+# Call RPC
+try:
+    response = stub.GetUser(users_pb2.GetUserRequest(id=&#x27;123&#x27;))
+    print(f&#x27;User: {response.user.name}&#x27;)
+except grpc.RpcError as e:
+    print(f&#x27;Error: {e.code()} - {e.details()}&#x27;)</code></pre>
+<h3>2. Server Streaming RPC</h3>
+<p><strong>Pattern</strong>: Client sends one request, server streams multiple responses</p>
+<p><strong>.proto definition</strong>:</p>
+<pre><code class="lang-protobuf">rpc ListUsers(ListUsersRequest) returns (stream User);</code></pre>
+<p><strong>Python server</strong>:</p>
+<pre><code class="lang-python">def ListUsers(self, request, context):
+    page_size = request.page_size or 50
+
+    # Stream users (yield multiple responses)
+    for user in db.list_users(limit=page_size):
+        yield users_pb2.User(
+            id=user[&#x27;id&#x27;],
+            email=user[&#x27;email&#x27;],
+            name=user[&#x27;name&#x27;]
+        )</code></pre>
+<p><strong>Python client</strong>:</p>
+<pre><code class="lang-python"># Receive stream
+response_stream = stub.ListUsers(users_pb2.ListUsersRequest(page_size=10))
+
+for user in response_stream:
+    print(f&#x27;User: {user.name} ({user.email})&#x27;)</code></pre>
+<h3>3. Client Streaming RPC</h3>
+<p><strong>Pattern</strong>: Client streams multiple requests, server returns one response</p>
+<p><strong>.proto definition</strong>:</p>
+<pre><code class="lang-protobuf">rpc CreateUsers(stream CreateUserRequest) returns (CreateUsersResponse);</code></pre>
+<p><strong>Python server</strong>:</p>
+<pre><code class="lang-python">def CreateUsers(self, request_iterator, context):
+    created_users = []
+
+    # Receive stream of requests
+    for request in request_iterator:
+        user = db.create_user(email=request.email, name=request.name)
+        created_users.append(user)
+
+    return users_pb2.CreateUsersResponse(
+        users=created_users,
+        created_count=len(created_users)
+    )</code></pre>
+<p><strong>Python client</strong>:</p>
+<pre><code class="lang-python">def request_generator():
+    # Generate stream of requests
+    for i in range(5):
+        yield users_pb2.CreateUserRequest(
+            email=f&#x27;user{i}@example.com&#x27;,
+            name=f&#x27;User {i}&#x27;
+        )
+
+# Send stream
+response = stub.CreateUsers(request_generator())
+print(f&#x27;Created {response.created_count} users&#x27;)</code></pre>
+<h3>4. Bidirectional Streaming RPC</h3>
+<p><strong>Pattern</strong>: Client and server both stream messages independently</p>
+<p><strong>.proto definition</strong>:</p>
+<pre><code class="lang-protobuf">rpc Chat(stream ChatMessage) returns (stream ChatMessage);</code></pre>
+<p><strong>Python server</strong>:</p>
+<pre><code class="lang-python">def Chat(self, request_iterator, context):
+    # Concurrent reading and writing
+    for message in request_iterator:
+        # Process incoming message
+        user_id = message.user_id
+        content = message.content
+
+        # Broadcast to other users (example)
+        response = users_pb2.ChatMessage(
+            user_id=&#x27;system&#x27;,
+            content=f&#x27;{user_id} said: {content}&#x27;,
+            timestamp=Timestamp()
+        )
+        yield response</code></pre>
+<p><strong>Python client</strong>:</p>
+<pre><code class="lang-python">def message_generator():
+    messages = [&#x27;Hello&#x27;, &#x27;How are you?&#x27;, &#x27;Goodbye&#x27;]
+    for msg in messages:
+        yield users_pb2.ChatMessage(
+            user_id=&#x27;user123&#x27;,
+            content=msg,
+            timestamp=Timestamp()
+        )
+
+# Bidirectional stream
+responses = stub.Chat(message_generator())
+
+for response in responses:
+    print(f&#x27;{response.user_id}: {response.content}&#x27;)</code></pre>
+<hr>
+<h2>Error Handling</h2>
+<h3>gRPC Status Codes</h3>
+<pre><code class="lang-python">from grpc import StatusCode
+
+# Common status codes
+StatusCode.OK               # 0: Success
+StatusCode.CANCELLED        # 1: Operation cancelled
+StatusCode.INVALID_ARGUMENT # 3: Invalid argument
+StatusCode.NOT_FOUND        # 5: Resource not found
+StatusCode.ALREADY_EXISTS   # 6: Resource already exists
+StatusCode.PERMISSION_DENIED # 7: Permission denied
+StatusCode.UNAUTHENTICATED  # 16: Missing authentication
+StatusCode.INTERNAL         # 13: Internal error
+StatusCode.UNAVAILABLE      # 14: Service unavailable
+StatusCode.DEADLINE_EXCEEDED # 4: Deadline exceeded</code></pre>
+<h3>Server Error Handling</h3>
+<pre><code class="lang-python">def GetUser(self, request, context):
+    try:
+        user_id = request.id
+
+        # Validate input
+        if not user_id:
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(&#x27;User ID is required&#x27;)
+            return users_pb2.GetUserResponse()
+
+        # Check authentication
+        if not context.metadata().get(&#x27;authorization&#x27;):
+            context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+            context.set_details(&#x27;Authentication required&#x27;)
+            return users_pb2.GetUserResponse()
+
+        # Fetch user
+        user = db.get_user(user_id)
+
+        if not user:
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details(f&#x27;User {user_id} not found&#x27;)
+            return users_pb2.GetUserResponse()
+
+        return users_pb2.GetUserResponse(user=user)
+
+    except Exception as e:
+        context.set_code(grpc.StatusCode.INTERNAL)
+        context.set_details(f&#x27;Internal error: {str(e)}&#x27;)
+        return users_pb2.GetUserResponse()</code></pre>
+<h3>Client Error Handling</h3>
+<pre><code class="lang-python">try:
+    response = stub.GetUser(
+        users_pb2.GetUserRequest(id=&#x27;123&#x27;),
+        timeout=5  # Deadline in seconds
+    )
+    print(f&#x27;User: {response.user.name}&#x27;)
+
+except grpc.RpcError as e:
+    # Handle specific errors
+    if e.code() == grpc.StatusCode.NOT_FOUND:
+        print(&#x27;User not found&#x27;)
+    elif e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+        print(&#x27;Request timeout&#x27;)
+    elif e.code() == grpc.StatusCode.UNAUTHENTICATED:
+        print(&#x27;Authentication required&#x27;)
+    else:
+        print(f&#x27;Error: {e.code()} - {e.details()}&#x27;)</code></pre>
+<hr>
+<h2>Interceptors (Middleware)</h2>
+<h3>Server Interceptor</h3>
+<pre><code class="lang-python">class LoggingInterceptor(grpc.ServerInterceptor):
+    def intercept_service(self, continuation, handler_call_details):
+        # Before RPC
+        method = handler_call_details.method
+        print(f&#x27;[Server] Received: {method}&#x27;)
+
+        # Continue to actual RPC
+        response = continuation(handler_call_details)
+
+        # After RPC
+        print(f&#x27;[Server] Completed: {method}&#x27;)
+        return response
+
+# Use interceptor
+server = grpc.server(
+    futures.ThreadPoolExecutor(max_workers=10),
+    interceptors=[LoggingInterceptor()]
+)</code></pre>
+<h3>Client Interceptor</h3>
+<pre><code class="lang-python">class AuthInterceptor(grpc.UnaryUnaryClientInterceptor):
+    def __init__(self, token):
+        self.token = token
+
+    def intercept_unary_unary(self, continuation, client_call_details, request):
+        # Add authentication metadata
+        metadata = []
+        if client_call_details.metadata:
+            metadata = list(client_call_details.metadata)
+        metadata.append((&#x27;authorization&#x27;, f&#x27;Bearer {self.token}&#x27;))
+
+        # Update call details
+        new_details = client_call_details._replace(metadata=metadata)
+
+        # Continue with modified metadata
+        return continuation(new_details, request)
+
+# Use interceptor
+channel = grpc.insecure_channel(&#x27;localhost:50051&#x27;)
+intercepted_channel = grpc.intercept_channel(
+    channel,
+    AuthInterceptor(token=&#x27;secret-token&#x27;)
+)
+stub = users_pb2_grpc.UserServiceStub(intercepted_channel)</code></pre>
+<hr>
+<h2>Common Patterns and Best Practices</h2>
+<h3>Deadlines (Timeouts)</h3>
+<p><strong>Always set deadlines</strong> to prevent hanging requests:</p>
+<pre><code class="lang-python"># Client-side deadline
+response = stub.GetUser(
+    request,
+    timeout=5  # 5 seconds
+)
+
+# Server-side deadline check
+def GetUser(self, request, context):
+    if context.time_remaining() &lt; 1:  # Less than 1 second left
+        context.set_code(grpc.StatusCode.DEADLINE_EXCEEDED)
+        return users_pb2.GetUserResponse()</code></pre>
+<h3>Metadata (Headers)</h3>
+<pre><code class="lang-python"># Client: Send metadata
+metadata = [
+    (&#x27;authorization&#x27;, &#x27;Bearer token123&#x27;),
+    (&#x27;request-id&#x27;, &#x27;abc-123&#x27;)
+]
+response = stub.GetUser(request, metadata=metadata)
+
+# Server: Read metadata
+def GetUser(self, request, context):
+    metadata = dict(context.invocation_metadata())
+    auth_token = metadata.get(&#x27;authorization&#x27;)
+    request_id = metadata.get(&#x27;request-id&#x27;)</code></pre>
+<h3>Connection Management</h3>
+<pre><code class="lang-python"># Reuse channels (don&#x27;t create per-request)
+channel = grpc.insecure_channel(&#x27;localhost:50051&#x27;)
+stub = users_pb2_grpc.UserServiceStub(channel)
+
+# Close when done
+channel.close()
+
+# Connection options
+channel = grpc.insecure_channel(
+    &#x27;localhost:50051&#x27;,
+    options=[
+        (&#x27;grpc.max_receive_message_length&#x27;, 10 * 1024 * 1024),  # 10 MB
+        (&#x27;grpc.max_send_message_length&#x27;, 10 * 1024 * 1024),     # 10 MB
+        (&#x27;grpc.keepalive_time_ms&#x27;, 30000),                       # 30 seconds
+    ]
+)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Not setting deadlines</strong>: Requests can hang forever ✅ Set timeouts: <code>stub.GetUser(request, timeout=5)</code></p>
+<p>❌ <strong>Creating channels per request</strong>: Expensive (TCP connection overhead) ✅ Reuse channels: Create once, use many times</p>
+<p>❌ <strong>Ignoring status codes</strong>: All errors return same generic message ✅ Handle specific codes: Check <code>grpc.StatusCode.NOT_FOUND</code>, etc.</p>
+<p>❌ <strong>Large messages</strong>: Sending 100 MB+ messages ✅ Use streaming: Break into smaller chunks</p>
+<p>❌ <strong>No error handling in streams</strong>: Stream errors kill connection ✅ Wrap in try/except: Handle <code>grpc.RpcError</code></p>
+<p>❌ <strong>Missing field numbers</strong>: Can&#x27;t decode old messages ✅ Never reuse field numbers: Mark as <code>reserved</code></p>
+<p>❌ <strong>Breaking changes</strong>: Removing required fields ✅ Use proto evolution: Add fields, use <code>reserved</code>, deprecate</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>protobuf-schema-design.md</code> - Advanced Protocol Buffers patterns</li><li><code>grpc-load-balancing.md</code> - Client-side and proxy load balancing</li><li><code>grpc-security.md</code> - TLS, authentication, authorization</li><li><code>http2-fundamentals.md</code> - Understanding HTTP/2 (gRPC transport)</li><li><code>api-rest-design.md</code> - Comparing REST vs gRPC</li></ul>
+<hr>
+<h2>Level 3: Resources</h2>
+<h3>Overview</h3>
+<p>This skill includes comprehensive Level 3 resources for deep gRPC implementation knowledge and practical tools.</p>
+<p><strong>Resources include</strong>:</p>
+<ul><li><strong>REFERENCE.md</strong> (2,303 lines): Complete technical reference covering all gRPC concepts</li><li><strong>3 executable scripts</strong>: Proto validation, client generation, server testing</li><li><strong>8 production examples</strong>: Complete implementations across multiple languages</li></ul>
+<h3>REFERENCE.md</h3>
+<p><strong>Location</strong>: <code>skills/protocols/grpc-implementation/resources/REFERENCE.md</code></p>
+<p><strong>Comprehensive technical reference</strong> (2,303 lines) covering:</p>
+<p><strong>Core Topics</strong>:</p>
+<ul><li>gRPC fundamentals and architecture</li><li>Protocol Buffers (syntax, types, evolution)</li><li>Service definitions and RPC types</li><li>Error handling and status codes</li><li>Interceptors and middleware</li><li>Metadata and headers</li><li>Deadlines and timeouts</li><li>Load balancing strategies</li><li>Security (TLS, authentication)</li><li>Performance optimization</li><li>Streaming patterns</li><li>Testing strategies</li><li>Debugging tools</li><li>Migration strategies</li><li>Anti-patterns</li><li>Language-specific guides (Python, Go, Node.js)</li></ul>
+<p><strong>Key Sections</strong>:</p>
+<ol><li><strong>Fundamentals</strong>: HTTP/2 transport, Protocol Buffers, code generation</li><li><strong>Protocol Buffers</strong>: Complete syntax guide, field types, schema evolution</li><li><strong>RPC Types</strong>: All four types with complete implementations (unary, server streaming, client streaming, bidirectional)</li><li><strong>Error Handling</strong>: Status codes, rich error details, retry strategies</li><li><strong>Interceptors</strong>: Server and client interceptors for cross-cutting concerns</li><li><strong>Load Balancing</strong>: Client-side and proxy-based strategies</li><li><strong>Security</strong>: TLS/mTLS, token-based auth, OAuth 2.0</li><li><strong>Performance</strong>: Connection pooling, compression, keepalive</li><li><strong>Tools</strong>: grpcurl, buf, grpc-gateway, health probes</li><li><strong>Anti-Patterns</strong>: Common mistakes and solutions</li></ol>
+<p><strong>Format</strong>: Markdown with extensive code examples in Python, Go, and Node.js</p>
+<h3>Scripts</h3>
+<p>Three production-ready executable scripts in <code>resources/scripts/</code>:</p>
+<h4>1. validate_proto.py (687 lines)</h4>
+<p><strong>Purpose</strong>: Validate Protocol Buffer definitions</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Parse and validate .proto syntax</li><li>Check naming conventions (PascalCase messages, snake_case fields)</li><li>Detect breaking changes between versions</li><li>Validate service definitions</li><li>Check best practices (reserved fields, deprecation)</li><li>Output as JSON or human-readable text</li></ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-bash"># Basic validation
+./validate_proto.py --proto-file api.proto
+
+# JSON output
+./validate_proto.py --proto-file api.proto --json
+
+# Check breaking changes
+./validate_proto.py --proto-file api_v2.proto --check-breaking --baseline api_v1.proto
+
+# Save report
+./validate_proto.py --proto-file api.proto --json &gt; validation-report.json</code></pre>
+<p><strong>Categories checked</strong>:</p>
+<ul><li><strong>Syntax</strong>: Proto syntax errors, duplicate field numbers, reserved ranges</li><li><strong>Naming</strong>: Convention violations (PascalCase, snake_case)</li><li><strong>Best practices</strong>: Missing options, field number efficiency, request/response patterns</li><li><strong>Breaking changes</strong>: Deleted messages/services, changed types, reused field numbers</li></ul>
+<h4>2. generate_client.py (906 lines)</h4>
+<p><strong>Purpose</strong>: Generate gRPC client code and examples</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Generate client code for Python, Go, Node.js</li><li>Include example usage code</li><li>Add error handling patterns</li><li>Generate interceptor templates</li><li>Create testing helpers</li><li>Support multiple output formats</li></ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-bash"># Generate Python client
+./generate_client.py --proto-file api.proto --language python --output-dir ./client
+
+# Generate Go client
+./generate_client.py --proto-file api.proto --language go --output-dir ./client
+
+# JSON output (list generated files)
+./generate_client.py --proto-file api.proto --language python --json</code></pre>
+<p><strong>Generated files</strong>:</p>
+<ul><li><strong>Python</strong>: client.py, example.py, interceptor.py, test_client.py</li><li><strong>Go</strong>: client.go, example.go</li><li><strong>Node.js</strong>: client.js, example.js</li></ul>
+<p><strong>Includes</strong>: Error handling, retry logic, connection management, interceptors</p>
+<h4>3. test_grpc_server.sh (643 lines)</h4>
+<p><strong>Purpose</strong>: Test gRPC server endpoints and performance</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Test all four RPC types</li><li>Measure latency and throughput</li><li>Test error handling</li><li>Validate metadata</li><li>Generate test reports (JSON or text)</li><li>Performance benchmarking</li></ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-bash"># Test all methods
+./test_grpc_server.sh --server localhost:50051 --proto-file api.proto
+
+# Test specific method
+./test_grpc_server.sh --server localhost:50051 --proto-file api.proto --method UserService/GetUser
+
+# With metadata (authentication)
+./test_grpc_server.sh --server localhost:50051 --proto-file api.proto --metadata authorization:&quot;Bearer token123&quot;
+
+# JSON output for CI/CD
+./test_grpc_server.sh --server localhost:50051 --proto-file api.proto --json &gt; report.json
+
+# Performance test (100 iterations)
+./test_grpc_server.sh --server localhost:50051 --proto-file api.proto --iterations 100</code></pre>
+<p><strong>Requirements</strong>: grpcurl, jq, bc</p>
+<p><strong>Metrics</strong>: Latency (min, avg, p50, p95, p99, max), throughput (req/sec), success rate</p>
+<h3>Examples</h3>
+<p>Eight production-ready examples in <code>resources/examples/</code>:</p>
+<h4>1. protos/service.proto</h4>
+<p>Complete service definition demonstrating:</p>
+<ul><li>All four RPC types (unary, server streaming, client streaming, bidirectional)</li><li>Domain models (User, UserStatus)</li><li>Request/response messages</li><li>Enums and oneof types</li><li>Well-known types (Timestamp, Empty)</li><li>Complete CRUD operations plus streaming</li></ul>
+<p><strong>Services</strong>: UserService with 10 methods covering all RPC patterns</p>
+<h4>2. python/server.py</h4>
+<p>Complete Python gRPC server implementation:</p>
+<ul><li>All four RPC types implemented</li><li>In-memory database (example)</li><li>Error handling with proper status codes</li><li>Input validation</li><li>Metadata handling</li><li>Authentication checks</li><li>Comprehensive logging</li><li>Context management</li></ul>
+<p><strong>Key features</strong>: Unary CRUD, server streaming (ListUsers, WatchUserChanges), client streaming (CreateUsers, UploadUserData), bidirectional (Chat, CollaborativeEdit)</p>
+<h4>3. python/client.py</h4>
+<p>Complete Python gRPC client implementation:</p>
+<ul><li>Test functions for all RPC types</li><li>Error handling with retries</li><li>Timeout configuration</li><li>Metadata support</li><li>Comprehensive examples</li><li>Test suite for error cases</li></ul>
+<p><strong>Tests</strong>: Unary RPCs, server streaming, client streaming, bidirectional streaming, error handling</p>
+<h4>4. go/server.go</h4>
+<p>Go gRPC server implementation (template):</p>
+<ul><li>Type-safe implementation</li><li>Context handling</li><li>Error handling with status package</li><li>Connection management</li></ul>
+<p><strong>Format</strong>: Production-ready Go server template</p>
+<h4>5. nodejs/server.js</h4>
+<p>Node.js gRPC server implementation (template):</p>
+<ul><li>Async/await patterns</li><li>Callback-based RPCs</li><li>Error handling</li><li>Proto loading with grpc-js</li></ul>
+<p><strong>Format</strong>: Production-ready Node.js server template</p>
+<h4>6. interceptors/auth_interceptor.py</h4>
+<p>Authentication interceptor example:</p>
+<ul><li><strong>Server interceptor</strong>: JWT validation, public methods whitelist, UNAUTHENTICATED errors</li><li><strong>Client interceptor</strong>: Automatic token addition, metadata management</li><li>Token generation utilities</li><li>Complete JWT flow example</li></ul>
+<p><strong>Features</strong>: JWT authentication, token validation, expiration handling, public endpoint support</p>
+<h4>7. streaming/bidirectional_chat.py</h4>
+<p>Bidirectional streaming example (template):</p>
+<ul><li>Chat room implementation</li><li>Concurrent send/receive</li><li>Connection management</li><li>Message broadcasting</li></ul>
+<p><strong>Pattern</strong>: Full duplex communication for real-time chat</p>
+<h4>8. docker/docker-compose.yml</h4>
+<p>Production Docker deployment:</p>
+<ul><li>gRPC server container</li><li>gRPC client container</li><li>grpcurl for testing</li><li>Health checks</li><li>Service networking</li><li>Volume mounts for code</li><li>Automatic code generation</li></ul>
+<p><strong>Services</strong>: grpc-server (Python), grpc-client (Python), grpcurl (testing)</p>
+<p><strong>Features</strong>: Health checks, service discovery, logging, production notes for TLS/auth</p>
+<h3>Quick Start</h3>
+<p><strong>1. Validate your .proto file</strong>:</p>
+<pre><code class="lang-bash">cd skills/protocols/grpc-implementation/resources/scripts
+./validate_proto.py --proto-file ../examples/protos/service.proto --json</code></pre>
+<p><strong>2. Generate client code</strong>:</p>
+<pre><code class="lang-bash">./generate_client.py --proto-file ../examples/protos/service.proto --language python --output-dir ./client</code></pre>
+<p><strong>3. Run examples</strong>:</p>
+<pre><code class="lang-bash">cd ../examples
+
+# Generate stubs
+python -m grpc_tools.protoc -I./protos --python_out=./python --grpc_python_out=./python protos/service.proto
+
+# Start server
+python python/server.py
+
+# Run client (in another terminal)
+python python/client.py</code></pre>
+<p><strong>4. Test with Docker</strong>:</p>
+<pre><code class="lang-bash">cd docker
+docker-compose up</code></pre>
+<p><strong>5. Test server</strong>:</p>
+<pre><code class="lang-bash">cd scripts
+./test_grpc_server.sh --server localhost:50051 --proto-file ../examples/protos/service.proto --json</code></pre>
+<h3>File Structure</h3>
+<pre><code>skills/protocols/grpc-implementation/
+├── grpc-implementation.md (this file)
+└── resources/
+    ├── REFERENCE.md (2,303 lines)
+    ├── scripts/
+    │   ├── validate_proto.py (687 lines) - Proto validation
+    │   ├── generate_client.py (906 lines) - Client generation
+    │   └── test_grpc_server.sh (643 lines) - Server testing
+    └── examples/
+        ├── protos/
+        │   └── service.proto - Complete service definition
+        ├── python/
+        │   ├── server.py - Python server (all RPC types)
+        │   └── client.py - Python client (all RPC types)
+        ├── go/
+        │   └── server.go - Go server template
+        ├── nodejs/
+        │   └── server.js - Node.js server template
+        ├── interceptors/
+        │   └── auth_interceptor.py - JWT authentication
+        ├── streaming/
+        │   └── bidirectional_chat.py - Chat example
+        └── docker/
+            └── docker-compose.yml - Docker deployment</code></pre>
+<h3>Resources Summary</h3>
+<p>| Category | Item | Lines | Description | |----------|------|-------|-------------| | <strong>Reference</strong> | REFERENCE.md | 2,303 | Complete technical reference | | <strong>Scripts</strong> | validate_proto.py | 687 | Proto validation tool | | | generate_client.py | 906 | Client code generator | | | test_grpc_server.sh | 643 | Server testing tool | | <strong>Examples</strong> | service.proto | 156 | Complete service definition | | | python/server.py | 450 | Python server implementation | | | python/client.py | 280 | Python client implementation | | | auth_interceptor.py | 240 | JWT authentication example | | | docker-compose.yml | 90 | Docker deployment |</p>
+<p><strong>Total</strong>: 5,755 lines of production-ready resources</p>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/protocols-grpc-implementation.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

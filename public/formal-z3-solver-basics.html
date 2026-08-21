@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>formal-z3-solver-basics</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/formal-z3-solver-basics.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/formal-z3-solver-basics.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>formal-z3-solver-basics</h1><p class="lede">Out of Scope: - Low-level C++ API (use Python bindings) - Custom theory development - Advanced proof engineering (see lean-theorem-proving.md) - SAT-only solving (see sat-solving-strategies.md)</p><h1>Z3 Solver Basics</h1>
+<h2>Metadata</h2>
+<ul><li><strong>Skill ID</strong>: z3-solver-basics</li><li><strong>Category</strong>: Formal Methods / SMT Solving</li><li><strong>Complexity</strong>: Intermediate</li><li><strong>Prerequisites</strong>: Python programming, basic logic, constraint satisfaction</li><li><strong>Last Updated</strong>: 2025-10-18</li></ul>
+<h2>Overview</h2>
+<h3>Purpose</h3>
+<p>Master Z3 SMT solver for constraint solving, program verification, symbolic execution, and optimization problems using the Python API.</p>
+<h3>Scope</h3>
+<p><strong>In Scope</strong>:</p>
+<ul><li>Z3 Python API fundamentals</li><li>SMT theory selection (QF_LIA, QF_BV, arrays, reals)</li><li>Constraint modeling and encoding</li><li>Solver modes (satisfiability, optimization)</li><li>Tactics and strategies</li><li>Unsat cores and proof extraction</li></ul>
+<p><strong>Out of Scope</strong>:</p>
+<ul><li>Low-level C++ API (use Python bindings)</li><li>Custom theory development</li><li>Advanced proof engineering (see lean-theorem-proving.md)</li><li>SAT-only solving (see sat-solving-strategies.md)</li></ul>
+<h3>When to Use This Skill</h3>
+<p><strong>Primary Use Cases</strong>:</p>
+<ul><li>Solving constraint satisfaction problems</li><li>Program verification and bug finding</li><li>Test input generation</li><li>Scheduling and planning problems</li><li>Symbolic execution</li><li>Configuration validation</li></ul>
+<p><strong>Choose Z3 When</strong>:</p>
+<ul><li>Need theories beyond Boolean (integers, bitvectors, arrays)</li><li>Require optimization (maximize/minimize objectives)</li><li>Want integrated theory reasoning</li><li>Need unsat core extraction</li><li>Prefer Python API for rapid prototyping</li></ul>
+<p><strong>Alternatives</strong>:</p>
+<ul><li><strong>MiniSat/CryptoMiniSat</strong>: Pure Boolean SAT (faster for SAT-only)</li><li><strong>CVC5</strong>: Alternative SMT solver with different strengths</li><li><strong>Yices2</strong>: Fast for linear arithmetic</li><li><strong>Constraint programming</strong>: Use OR-Tools for discrete optimization</li></ul>
+<h2>Core Concepts</h2>
+<h3>1. SMT Theories Hierarchy</h3>
+<pre><code>SMT (Satisfiability Modulo Theories)
+├── QF_UF (Uninterpreted Functions)
+├── QF_LIA (Linear Integer Arithmetic)
+├── QF_LRA (Linear Real Arithmetic)
+├── QF_BV (Bitvectors)
+├── QF_AUFLIA (Arrays + UF + Linear Integer Arithmetic)
+├── QF_AUFBV (Arrays + UF + Bitvectors)
+└── Non-quantifier-free theories (with ∀, ∃)</code></pre>
+<p><strong>Theory Selection Guide</strong>:</p>
+<ul><li><strong>QF_LIA</strong>: Integer variables, linear constraints (<code>x + 2*y &lt;= 10</code>)</li><li><strong>QF_LRA</strong>: Real-valued variables, linear constraints</li><li><strong>QF_BV</strong>: Fixed-width integers, bitwise operations</li><li><strong>Arrays</strong>: Index-value mappings, read/write operations</li><li><strong>QF_UF</strong>: Functions without interpretation (symbolic functions)</li></ul>
+<h3>2. Z3 Architecture</h3>
+<pre><code>User Code (Python)
+    ↓
+Z3 Python Bindings (z3-solver)
+    ↓
+Z3 Core Engine (C++)
+    ├── Preprocessor (simplification)
+    ├── Theory Solvers (LIA, BV, Arrays)
+    ├── SAT Solver (CDCL core)
+    └── Tactic Framework (strategies)
+    ↓
+Result: sat, unsat, unknown</code></pre>
+<h3>3. Solver Modes</h3>
+<p><strong>Standard Mode</strong> (check):</p>
+<pre><code class="lang-python">from z3 import *
+
+s = Solver()
+x = Int(&#x27;x&#x27;)
+s.add(x &gt; 0)
+s.add(x &lt; 10)
+result = s.check()  # sat, unsat, unknown
+if result == sat:
+    print(s.model())  # Solution: x = 1 (or any value in [1, 9])</code></pre>
+<p><strong>Optimization Mode</strong> (Optimize):</p>
+<pre><code class="lang-python">opt = Optimize()
+x = Int(&#x27;x&#x27;)
+y = Int(&#x27;y&#x27;)
+opt.add(x + y &lt;= 10)
+opt.add(x &gt;= 0, y &gt;= 0)
+opt.maximize(x + 2*y)  # Objective function
+if opt.check() == sat:
+    print(opt.model())  # x=0, y=10 (maximizes objective)</code></pre>
+<h3>4. Constraint Types</h3>
+<p><strong>Arithmetic Constraints</strong>:</p>
+<pre><code class="lang-python">x, y = Ints(&#x27;x y&#x27;)
+constraints = [
+    x + y == 10,           # Linear equality
+    2*x - 3*y &lt;= 5,        # Linear inequality
+    x * y == 24,           # Nonlinear (switches to NRA theory)
+    x % 2 == 0,            # Modulo (integer division)
+]</code></pre>
+<p><strong>Bitvector Constraints</strong>:</p>
+<pre><code class="lang-python">x = BitVec(&#x27;x&#x27;, 32)  # 32-bit bitvector
+y = BitVec(&#x27;y&#x27;, 32)
+constraints = [
+    x &amp; y == 0,              # Bitwise AND
+    x | y == 0xFFFFFFFF,     # Bitwise OR (all bits set)
+    x &gt;&gt; 2 == y,             # Logical right shift
+    SignExt(16, x) == y,     # Sign extension
+]</code></pre>
+<p><strong>Array Constraints</strong>:</p>
+<pre><code class="lang-python">A = Array(&#x27;A&#x27;, IntSort(), IntSort())  # Array: Int -&gt; Int
+i, j = Ints(&#x27;i j&#x27;)
+constraints = [
+    Store(A, i, 10)[i] == 10,         # Write then read
+    Select(A, i) == Select(A, j),     # Same values at i, j
+]</code></pre>
+<h2>Implementation Patterns</h2>
+<h3>Pattern 1: Basic Constraint Solving</h3>
+<pre><code class="lang-python">from z3 import *
+
+# Problem: Find x, y such that x^2 + y^2 = 25 and x &gt; y
+def solve_pythagorean():
+    s = Solver()
+    x = Int(&#x27;x&#x27;)
+    y = Int(&#x27;y&#x27;)
+
+    s.add(x*x + y*y == 25)
+    s.add(x &gt; y)
+
+    if s.check() == sat:
+        m = s.model()
+        print(f&quot;Solution: x={m[x]}, y={m[y]}&quot;)
+        # Output: x=5, y=0 or x=4, y=3 or x=3, y=-4, etc.
+    else:
+        print(&quot;No solution&quot;)
+
+solve_pythagorean()</code></pre>
+<h3>Pattern 2: Multiple Solutions with Blocking Clauses</h3>
+<pre><code class="lang-python">def find_all_solutions(solver, variables, max_solutions=10):
+    &quot;&quot;&quot;Find multiple solutions by blocking previous ones&quot;&quot;&quot;
+    solutions = []
+
+    for _ in range(max_solutions):
+        if solver.check() != sat:
+            break
+
+        m = solver.model()
+        solution = {v: m[v] for v in variables}
+        solutions.append(solution)
+
+        # Block this solution
+        block = Or([v != m[v] for v in variables])
+        solver.add(block)
+
+    return solutions
+
+# Example: Find all x, y pairs where x + y = 5, 0 &lt;= x,y &lt;= 5
+s = Solver()
+x, y = Ints(&#x27;x y&#x27;)
+s.add(x + y == 5)
+s.add(x &gt;= 0, x &lt;= 5)
+s.add(y &gt;= 0, y &lt;= 5)
+
+solutions = find_all_solutions(s, [x, y])
+for sol in solutions:
+    print(f&quot;x={sol[x]}, y={sol[y]}&quot;)
+# Output: (0,5), (1,4), (2,3), (3,2), (4,1), (5,0)</code></pre>
+<h3>Pattern 3: Optimization with Multiple Objectives</h3>
+<pre><code class="lang-python">def solve_multiobjective():
+    &quot;&quot;&quot;Lexicographic optimization: prioritize objectives&quot;&quot;&quot;
+    opt = Optimize()
+    x, y = Ints(&#x27;x y&#x27;)
+
+    # Constraints
+    opt.add(x + y &lt;= 10)
+    opt.add(x &gt;= 0, y &gt;= 0)
+
+    # Primary objective: maximize x
+    h1 = opt.maximize(x)
+
+    # Secondary objective: maximize y (given optimal x)
+    h2 = opt.maximize(y)
+
+    if opt.check() == sat:
+        print(f&quot;x={opt.model()[x]}, y={opt.model()[y]}&quot;)
+        print(f&quot;Objective 1: {opt.lower(h1)} &lt;= x &lt;= {opt.upper(h1)}&quot;)
+        print(f&quot;Objective 2: {opt.lower(h2)} &lt;= y &lt;= {opt.upper(h2)}&quot;)
+    # Output: x=10, y=0 (maximizes x first, then y)
+
+solve_multiobjective()</code></pre>
+<h3>Pattern 4: Unsat Core Extraction</h3>
+<pre><code class="lang-python">def analyze_conflicting_constraints():
+    &quot;&quot;&quot;Find minimal subset of constraints that cause unsat&quot;&quot;&quot;
+    s = Solver()
+    x = Int(&#x27;x&#x27;)
+
+    # Create named constraints
+    c1 = x &gt; 10
+    c2 = x &lt; 5
+    c3 = x &gt;= 0
+    c4 = x &lt;= 100
+
+    # Add with tracking
+    s.assert_and_track(c1, &#x27;c1&#x27;)
+    s.assert_and_track(c2, &#x27;c2&#x27;)
+    s.assert_and_track(c3, &#x27;c3&#x27;)
+    s.assert_and_track(c4, &#x27;c4&#x27;)
+
+    if s.check() == unsat:
+        core = s.unsat_core()
+        print(f&quot;Conflicting constraints: {core}&quot;)
+        # Output: [c1, c2] (x &gt; 10 and x &lt; 5 conflict)
+
+analyze_conflicting_constraints()</code></pre>
+<h3>Pattern 5: Theory-Specific Tactics</h3>
+<pre><code class="lang-python">def solve_with_tactics():
+    &quot;&quot;&quot;Use tactics for performance tuning&quot;&quot;&quot;
+    x, y = Ints(&#x27;x y&#x27;)
+    formula = And(x + y == 10, x - y == 2)
+
+    # Strategy: simplify, then solve with LIA solver
+    tactic = Then(&#x27;simplify&#x27;, &#x27;qflia&#x27;)  # Quantifier-free LIA
+    solver = tactic.solver()
+    solver.add(formula)
+
+    if solver.check() == sat:
+        print(solver.model())
+    # Output: x=6, y=4
+
+solve_with_tactics()</code></pre>
+<h3>Pattern 6: Incremental Solving</h3>
+<pre><code class="lang-python">def incremental_solving():
+    &quot;&quot;&quot;Efficient solving with push/pop for backtracking&quot;&quot;&quot;
+    s = Solver()
+    x, y = Ints(&#x27;x y&#x27;)
+
+    # Base constraints
+    s.add(x + y &lt;= 10)
+
+    # Try scenario 1: x &gt; 5
+    s.push()
+    s.add(x &gt; 5)
+    if s.check() == sat:
+        print(f&quot;Scenario 1: {s.model()}&quot;)
+    s.pop()
+
+    # Try scenario 2: y &gt; 5 (independent of scenario 1)
+    s.push()
+    s.add(y &gt; 5)
+    if s.check() == sat:
+        print(f&quot;Scenario 2: {s.model()}&quot;)
+    s.pop()
+
+incremental_solving()</code></pre>
+<h3>Pattern 7: Array Reasoning</h3>
+<pre><code class="lang-python">def verify_array_swap():
+    &quot;&quot;&quot;Verify swap operation using array theory&quot;&quot;&quot;
+    A = Array(&#x27;A&#x27;, IntSort(), IntSort())
+    i, j = Ints(&#x27;i j&#x27;)
+
+    # Swap operation
+    A_swap = Store(Store(A, i, Select(A, j)), j, Select(A, i))
+
+    # Verify: after swap, A[i] == old_A[j] and A[j] == old_A[i]
+    s = Solver()
+    s.add(Select(A_swap, i) != Select(A, j))  # Should be unsat
+
+    if s.check() == unsat:
+        print(&quot;Swap verified correct&quot;)
+    else:
+        print(f&quot;Bug found: {s.model()}&quot;)
+
+verify_array_swap()</code></pre>
+<h3>Pattern 8: Bitvector Reasoning</h3>
+<pre><code class="lang-python">def check_overflow():
+    &quot;&quot;&quot;Detect integer overflow in bitvector arithmetic&quot;&quot;&quot;
+    x = BitVec(&#x27;x&#x27;, 8)  # 8-bit unsigned integer
+    y = BitVec(&#x27;y&#x27;, 8)
+
+    s = Solver()
+    s.add(x + y &gt; 255)  # Overflow condition
+    s.add(ULT(x + y, x))  # Result &lt; x (overflow check)
+
+    if s.check() == sat:
+        m = s.model()
+        print(f&quot;Overflow: {m[x]} + {m[y]} = {m.evaluate(x + y)}&quot;)
+        # Example: 200 + 100 = 44 (mod 256)
+
+check_overflow()</code></pre>
+<h2>Quick Reference</h2>
+<h3>Installation</h3>
+<pre><code class="lang-bash"># Python Z3
+pip install z3-solver
+
+# Or with uv
+uv add z3-solver
+
+# Verify
+python -c &quot;import z3; print(z3.get_version_string())&quot;</code></pre>
+<h3>Common Types</h3>
+<pre><code class="lang-python"># Integer variables
+x = Int(&#x27;x&#x27;)
+x, y, z = Ints(&#x27;x y z&#x27;)
+
+# Real variables
+r = Real(&#x27;r&#x27;)
+
+# Boolean variables
+b = Bool(&#x27;b&#x27;)
+
+# Bitvectors
+bv = BitVec(&#x27;bv&#x27;, 32)  # 32-bit
+
+# Arrays
+A = Array(&#x27;A&#x27;, IntSort(), IntSort())  # Int -&gt; Int
+B = Array(&#x27;B&#x27;, BitVecSort(32), IntSort())  # BitVec(32) -&gt; Int</code></pre>
+<h3>Constraint Operations</h3>
+<pre><code class="lang-python"># Logical
+And(c1, c2, c3)
+Or(c1, c2)
+Not(c)
+Implies(c1, c2)
+Xor(c1, c2)
+
+# Arithmetic
+x + y, x - y, x * y, x / y  # Division is integer division for Int
+x % y  # Modulo
+x ** 2  # Exponentiation (switches to nonlinear)
+
+# Comparison
+x == y, x != y
+x &lt; y, x &lt;= y, x &gt; y, x &gt;= y
+
+# Bitvector
+x &amp; y, x | y, x ^ y  # Bitwise AND, OR, XOR
+~x  # Bitwise NOT
+x &lt;&lt; n, x &gt;&gt; n  # Shifts
+ZeroExt(n, x), SignExt(n, x)  # Extension
+Extract(high, low, x)  # Bit extraction
+
+# Array
+Select(A, i)  # Read A[i]
+Store(A, i, v)  # Write A[i] = v</code></pre>
+<h3>Solver API</h3>
+<pre><code class="lang-python">s = Solver()
+s.add(constraint)  # Add constraint
+s.check()  # Returns sat, unsat, or unknown
+s.model()  # Get model if sat
+s.push()  # Save state
+s.pop()  # Restore state
+s.reset()  # Clear all constraints
+
+# Optimization
+opt = Optimize()
+opt.add(constraint)
+h = opt.maximize(expr)  # or minimize(expr)
+opt.check()
+opt.model()
+opt.lower(h), opt.upper(h)  # Objective bounds</code></pre>
+<h3>Tactics</h3>
+<pre><code class="lang-python"># Common tactics
+tactics = [
+    &#x27;simplify&#x27;,      # Algebraic simplification
+    &#x27;solve-eqs&#x27;,     # Gaussian elimination
+    &#x27;qflia&#x27;,         # Quantifier-free linear integer arithmetic
+    &#x27;qfbv&#x27;,          # Quantifier-free bitvectors
+    &#x27;qfnra&#x27;,         # Quantifier-free nonlinear real arithmetic
+    &#x27;sat&#x27;,           # SAT solver
+    &#x27;smt&#x27;,           # Full SMT solver
+]
+
+# Use tactic
+tactic = Then(&#x27;simplify&#x27;, &#x27;qflia&#x27;)
+solver = tactic.solver()</code></pre>
+<h3>Performance Tips</h3>
+<pre><code class="lang-python"># 1. Set timeout (milliseconds)
+s = Solver()
+s.set(&#x27;timeout&#x27;, 5000)  # 5 seconds
+
+# 2. Enable parallel mode
+set_param(&#x27;parallel.enable&#x27;, True)
+
+# 3. Use appropriate theory
+# QF_LIA faster than general arithmetic
+# Use bitvectors for bounded integers
+
+# 4. Simplify before solving
+from z3 import simplify
+formula = simplify(complex_formula)
+s.add(formula)
+
+# 5. Incremental solving with push/pop
+s.push()
+s.add(temporary_constraint)
+s.check()
+s.pop()</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>Anti-Pattern 1: Over-Constraining</h3>
+<p><strong>Problem</strong>: Adding redundant or conflicting constraints.</p>
+<pre><code class="lang-python"># BAD: Redundant constraints slow down solver
+s = Solver()
+x = Int(&#x27;x&#x27;)
+s.add(x &gt; 0)
+s.add(x &gt; 1)  # Implies x &gt; 0 (redundant)
+s.add(x &gt;= 2)  # Also redundant</code></pre>
+<p><strong>Solution</strong>: Simplify constraints first.</p>
+<pre><code class="lang-python"># GOOD: Minimal constraint set
+s = Solver()
+x = Int(&#x27;x&#x27;)
+s.add(x &gt;= 2)  # Sufficient (implies x &gt; 0 and x &gt; 1)</code></pre>
+<h3>Anti-Pattern 2: Wrong Theory Selection</h3>
+<p><strong>Problem</strong>: Using nonlinear arithmetic when linear suffices.</p>
+<pre><code class="lang-python"># BAD: Nonlinear (slower)
+x, y = Reals(&#x27;x y&#x27;)
+s = Solver()
+s.add(x * y == 10)  # Nonlinear</code></pre>
+<p><strong>Solution</strong>: Reformulate as linear when possible.</p>
+<pre><code class="lang-python"># GOOD: Linear (if y is constant)
+x = Real(&#x27;x&#x27;)
+y_value = 2.0
+s = Solver()
+s.add(x == 10 / y_value)  # Linear</code></pre>
+<h3>Anti-Pattern 3: Ignoring Solver Status</h3>
+<p><strong>Problem</strong>: Accessing model without checking satisfiability.</p>
+<pre><code class="lang-python"># BAD: May crash if unsat
+s = Solver()
+s.add(False)
+m = s.model()  # Error: solver is unsat</code></pre>
+<p><strong>Solution</strong>: Always check status first.</p>
+<pre><code class="lang-python"># GOOD: Check before model access
+if s.check() == sat:
+    m = s.model()
+else:
+    print(&quot;No solution exists&quot;)</code></pre>
+<h3>Anti-Pattern 4: Inefficient Blocking Clauses</h3>
+<p><strong>Problem</strong>: Expensive enumeration of solutions.</p>
+<pre><code class="lang-python"># BAD: Blocks each variable separately (exponential clauses)
+for _ in range(100):
+    if s.check() == sat:
+        m = s.model()
+        for v in variables:
+            s.add(v != m[v])  # Wrong: adds 1 clause per variable</code></pre>
+<p><strong>Solution</strong>: Block entire solution at once.</p>
+<pre><code class="lang-python"># GOOD: Single blocking clause per solution
+for _ in range(100):
+    if s.check() == sat:
+        m = s.model()
+        s.add(Or([v != m[v] for v in variables]))  # 1 clause</code></pre>
+<h3>Anti-Pattern 5: Not Using Push/Pop</h3>
+<p><strong>Problem</strong>: Recreating solver for each scenario.</p>
+<pre><code class="lang-python"># BAD: Recreates solver (slow)
+for scenario in scenarios:
+    s = Solver()  # New solver each time
+    s.add(base_constraints)
+    s.add(scenario)
+    s.check()</code></pre>
+<p><strong>Solution</strong>: Use incremental solving.</p>
+<pre><code class="lang-python"># GOOD: Reuse solver with push/pop
+s = Solver()
+s.add(base_constraints)
+for scenario in scenarios:
+    s.push()
+    s.add(scenario)
+    s.check()
+    s.pop()</code></pre>
+<h2>Real-World Applications</h2>
+<h3>Application 1: Sudoku Solver</h3>
+<pre><code class="lang-python">def solve_sudoku(grid):
+    &quot;&quot;&quot;Solve 9x9 Sudoku using Z3&quot;&quot;&quot;
+    cells = [[Int(f&quot;c_{i}_{j}&quot;) for j in range(9)] for i in range(9)]
+
+    s = Solver()
+
+    # Each cell in [1, 9]
+    for i in range(9):
+        for j in range(9):
+            s.add(And(cells[i][j] &gt;= 1, cells[i][j] &lt;= 9))
+
+    # Row constraints
+    for i in range(9):
+        s.add(Distinct([cells[i][j] for j in range(9)]))
+
+    # Column constraints
+    for j in range(9):
+        s.add(Distinct([cells[i][j] for i in range(9)]))
+
+    # 3x3 box constraints
+    for box_i in range(3):
+        for box_j in range(3):
+            box = [cells[i][j]
+                   for i in range(box_i*3, box_i*3+3)
+                   for j in range(box_j*3, box_j*3+3)]
+            s.add(Distinct(box))
+
+    # Add initial grid values
+    for i in range(9):
+        for j in range(9):
+            if grid[i][j] != 0:
+                s.add(cells[i][j] == grid[i][j])
+
+    if s.check() == sat:
+        m = s.model()
+        return [[m.evaluate(cells[i][j]).as_long() for j in range(9)]
+                for i in range(9)]
+    return None</code></pre>
+<h3>Application 2: Program Verification</h3>
+<pre><code class="lang-python">def verify_binary_search(arr_size=10):
+    &quot;&quot;&quot;Verify binary search finds element if present&quot;&quot;&quot;
+    A = Array(&#x27;A&#x27;, IntSort(), IntSort())
+    target = Int(&#x27;target&#x27;)
+    low, high, mid = Ints(&#x27;low high mid&#x27;)
+
+    s = Solver()
+
+    # Array is sorted
+    for i in range(arr_size - 1):
+        s.add(Select(A, i) &lt;= Select(A, i+1))
+
+    # Target exists at some index
+    exists_idx = Int(&#x27;exists_idx&#x27;)
+    s.add(And(exists_idx &gt;= 0, exists_idx &lt; arr_size))
+    s.add(Select(A, exists_idx) == target)
+
+    # Binary search logic (simplified)
+    s.add(low == 0)
+    s.add(high == arr_size - 1)
+    s.add(mid == (low + high) / 2)
+
+    # After one iteration, mid should narrow search
+    found = Select(A, mid) == target
+    go_left = Select(A, mid) &gt; target
+    go_right = Select(A, mid) &lt; target
+
+    # Check: we always make progress
+    s.add(Not(Or(found, And(go_left, exists_idx &lt; mid),
+                       And(go_right, exists_idx &gt; mid))))
+
+    if s.check() == unsat:
+        print(&quot;Binary search verified: always makes progress&quot;)
+    else:
+        print(f&quot;Bug found: {s.model()}&quot;)
+
+verify_binary_search()</code></pre>
+<h2>Related Skills</h2>
+<ul><li><strong>sat-solving-strategies.md</strong>: Pure Boolean SAT solving, CDCL algorithms</li><li><strong>smt-theory-applications.md</strong>: Advanced SMT applications, theory combinations</li><li><strong>constraint-propagation.md</strong>: CSP techniques, arc consistency</li><li><strong>lean-theorem-proving.md</strong>: Interactive theorem proving</li><li><strong>program-analysis.md</strong>: Static analysis, abstract interpretation</li></ul>
+<h2>References</h2>
+<ul><li>Z3 Tutorial: https://ericpony.github.io/z3py-tutorial/guide-examples.htm</li><li>Z3 API Docs: https://z3prover.github.io/api/html/namespacez3py.html</li><li>SMT-LIB Standard: http://smtlib.cs.uiowa.edu/</li><li>Book: &quot;Decision Procedures&quot; by Kroening &amp; Strichman</li></ul>
+<h2>Troubleshooting</h2>
+<p><strong>Problem</strong>: Solver returns &quot;unknown&quot;</p>
+<ul><li><strong>Cause</strong>: Nonlinear constraints, quantifiers, or timeout</li><li><strong>Fix</strong>: Simplify formula, increase timeout, or use approximations</li></ul>
+<p><strong>Problem</strong>: Slow solving</p>
+<ul><li><strong>Cause</strong>: Wrong theory, over-constraining, or poor variable ordering</li><li><strong>Fix</strong>: Use tactics, simplify constraints, or enable parallel mode</li></ul>
+<p><strong>Problem</strong>: Unexpected model values</p>
+<ul><li><strong>Cause</strong>: Under-constrained problem (multiple solutions)</li><li><strong>Fix</strong>: Add more constraints or enumerate all solutions</li></ul>
+<p><strong>Problem</strong>: ImportError for z3</p>
+<ul><li><strong>Cause</strong>: Not installed or wrong environment</li><li><strong>Fix</strong>: <code>pip install z3-solver</code> or <code>uv add z3-solver</code></li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/formal-z3-solver-basics.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

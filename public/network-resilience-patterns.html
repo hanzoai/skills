@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>network-resilience-patterns</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/network-resilience-patterns.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/network-resilience-patterns.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>network-resilience-patterns</h1><p class="lede">Building robust network applications</p><h1>Network Resilience Patterns</h1>
+<p><strong>Use this skill when:</strong></p>
+<ul><li>Building robust network applications</li><li>Handling unreliable connections</li><li>Implementing retry and backoff strategies</li><li>Creating fault-tolerant distributed systems</li><li>Preventing cascading failures</li></ul>
+<h2>Retry Patterns</h2>
+<h3>Exponential Backoff</h3>
+<pre><code class="lang-python">import time
+import random
+
+def exponential_backoff_retry(func, max_retries=5, base_delay=1, max_delay=60):
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+
+            delay = min(base_delay * (2 ** attempt), max_delay)
+            jitter = random.uniform(0, delay * 0.1)
+            sleep_time = delay + jitter
+
+            print(f&quot;Attempt {attempt + 1} failed: {e}&quot;)
+            print(f&quot;Retrying in {sleep_time:.2f}s...&quot;)
+            time.sleep(sleep_time)
+
+# Usage
+result = exponential_backoff_retry(lambda: api_call())</code></pre>
+<h3>Async Retry with Tenacity</h3>
+<pre><code class="lang-python">from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type
+)
+import httpx
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=1, max=60),
+    retry=retry_if_exception_type(httpx.HTTPError)
+)
+async def fetch_with_retry(url):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        response.raise_for_status()
+        return response.json()
+
+# Usage
+data = await fetch_with_retry(&quot;https://api.example.com/data&quot;)</code></pre>
+<h2>Circuit Breaker</h2>
+<h3>Basic Circuit Breaker</h3>
+<pre><code class="lang-python">from enum import Enum
+import time
+
+class CircuitState(Enum):
+    CLOSED = &quot;closed&quot;
+    OPEN = &quot;open&quot;
+    HALF_OPEN = &quot;half_open&quot;
+
+class CircuitBreaker:
+    def __init__(self, failure_threshold=5, timeout=60):
+        self.failure_threshold = failure_threshold
+        self.timeout = timeout
+        self.failures = 0
+        self.last_failure_time = None
+        self.state = CircuitState.CLOSED
+
+    def call(self, func, *args, **kwargs):
+        if self.state == CircuitState.OPEN:
+            if time.time() - self.last_failure_time &gt; self.timeout:
+                self.state = CircuitState.HALF_OPEN
+            else:
+                raise Exception(&quot;Circuit breaker is OPEN&quot;)
+
+        try:
+            result = func(*args, **kwargs)
+
+            if self.state == CircuitState.HALF_OPEN:
+                self.state = CircuitState.CLOSED
+                self.failures = 0
+
+            return result
+
+        except Exception as e:
+            self.failures += 1
+            self.last_failure_time = time.time()
+
+            if self.failures &gt;= self.failure_threshold:
+                self.state = CircuitState.OPEN
+
+            raise
+
+# Usage
+breaker = CircuitBreaker(failure_threshold=3, timeout=30)
+
+try:
+    result = breaker.call(api_call, param1, param2)
+except Exception as e:
+    print(f&quot;Call failed: {e}&quot;)</code></pre>
+<h2>Timeout Patterns</h2>
+<h3>Request Timeout</h3>
+<pre><code class="lang-python">import httpx
+
+async def fetch_with_timeout(url, timeout_seconds=10):
+    try:
+        async with httpx.AsyncClient(timeout=timeout_seconds) as client:
+            response = await client.get(url)
+            return response.json()
+    except httpx.TimeoutException:
+        print(f&quot;Request timed out after {timeout_seconds}s&quot;)
+        raise
+
+# Different timeouts for different operations
+async def fetch_with_custom_timeouts(url):
+    timeout = httpx.Timeout(
+        connect=5.0,    # Connection timeout
+        read=10.0,      # Read timeout
+        write=5.0,      # Write timeout
+        pool=None       # Pool timeout
+    )
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        return await client.get(url)</code></pre>
+<h2>Fallback Strategies</h2>
+<h3>Graceful Degradation</h3>
+<pre><code class="lang-python">async def get_user_data(user_id):
+    # Try primary source
+    try:
+        return await fetch_from_primary_api(user_id)
+    except Exception as e:
+        print(f&quot;Primary failed: {e}&quot;)
+
+        # Try cache
+        try:
+            cached = await get_from_cache(user_id)
+            if cached:
+                return cached
+        except Exception:
+            pass
+
+        # Try secondary source
+        try:
+            return await fetch_from_secondary_api(user_id)
+        except Exception as e2:
+            print(f&quot;Secondary failed: {e2}&quot;)
+
+            # Return minimal default data
+            return {&quot;id&quot;: user_id, &quot;name&quot;: &quot;Unknown&quot;, &quot;status&quot;: &quot;unavailable&quot;}</code></pre>
+<h2>Connection Pooling</h2>
+<h3>HTTP Connection Pool</h3>
+<pre><code class="lang-python">import httpx
+
+# Reuse connections
+client = httpx.AsyncClient(
+    limits=httpx.Limits(
+        max_keepalive_connections=20,
+        max_connections=100
+    ),
+    timeout=30.0
+)
+
+async def make_requests():
+    # All requests reuse connections
+    results = []
+    for i in range(100):
+        response = await client.get(f&quot;https://api.example.com/item/{i}&quot;)
+        results.append(response.json())
+
+    return results
+
+# Remember to close client
+await client.aclose()</code></pre>
+<h2>Rate Limiting</h2>
+<h3>Token Bucket</h3>
+<pre><code class="lang-python">import time
+import asyncio
+
+class TokenBucket:
+    def __init__(self, capacity, refill_rate):
+        self.capacity = capacity
+        self.tokens = capacity
+        self.refill_rate = refill_rate
+        self.last_refill = time.time()
+
+    async def acquire(self, tokens=1):
+        while True:
+            now = time.time()
+            elapsed = now - self.last_refill
+
+            # Refill tokens
+            self.tokens = min(
+                self.capacity,
+                self.tokens + elapsed * self.refill_rate
+            )
+            self.last_refill = now
+
+            if self.tokens &gt;= tokens:
+                self.tokens -= tokens
+                return
+
+            # Wait for more tokens
+            await asyncio.sleep(0.1)
+
+# Usage
+bucket = TokenBucket(capacity=10, refill_rate=1)  # 1 token/second
+
+async def rate_limited_request(url):
+    await bucket.acquire()
+    return await fetch(url)</code></pre>
+<h2>Health Checks</h2>
+<h3>Service Health Monitoring</h3>
+<pre><code class="lang-python">import asyncio
+from dataclasses import dataclass
+from typing import Dict
+
+@dataclass
+class HealthStatus:
+    healthy: bool
+    latency_ms: float
+    last_check: float
+
+class HealthMonitor:
+    def __init__(self, check_interval=30):
+        self.check_interval = check_interval
+        self.services: Dict[str, HealthStatus] = {}
+
+    async def check_service(self, name, check_func):
+        start = time.time()
+        try:
+            await asyncio.wait_for(check_func(), timeout=5)
+            latency = (time.time() - start) * 1000
+
+            self.services[name] = HealthStatus(
+                healthy=True,
+                latency_ms=latency,
+                last_check=time.time()
+            )
+        except Exception as e:
+            self.services[name] = HealthStatus(
+                healthy=False,
+                latency_ms=0,
+                last_check=time.time()
+            )
+
+    async def monitor(self, services):
+        while True:
+            for name, check_func in services.items():
+                await self.check_service(name, check_func)
+
+            await asyncio.sleep(self.check_interval)
+
+# Usage
+monitor = HealthMonitor()
+
+services = {
+    &quot;api&quot;: lambda: fetch(&quot;https://api.example.com/health&quot;),
+    &quot;database&quot;: lambda: check_db_connection(),
+    &quot;cache&quot;: lambda: check_redis()
+}
+
+asyncio.create_task(monitor.monitor(services))</code></pre>
+<h2>Anti-Patterns to Avoid</h2>
+<p><strong>DON&#x27;T retry indefinitely:</strong></p>
+<pre><code class="lang-python"># ❌ BAD
+while True:
+    try:
+        return api_call()
+    except:
+        pass  # Infinite loop!
+
+# ✅ GOOD
+for attempt in range(max_retries):
+    try:
+        return api_call()
+    except Exception as e:
+        if attempt == max_retries - 1:
+            raise</code></pre>
+<p><strong>DON&#x27;T ignore timeout configuration:</strong></p>
+<pre><code class="lang-python"># ❌ BAD - Default timeout might be too long
+response = requests.get(url)
+
+# ✅ GOOD
+response = requests.get(url, timeout=10)</code></pre>
+<h2>Related Skills</h2>
+<ul><li><strong>tailscale-vpn.md</strong> - Reliable network layer</li><li><strong>mosh-resilient-ssh.md</strong> - Connection resilience</li><li><strong>mtls-implementation.md</strong> - Secure resilient connections</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/network-resilience-patterns.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

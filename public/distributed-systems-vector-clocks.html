@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distributed-systems-vector-clocks</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/distributed-systems-vector-clocks.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/distributed-systems-vector-clocks.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>distributed-systems-vector-clocks</h1><p class="lede">Vector clocks for tracking causality in distributed systems, detecting concurrent events, and resolving conflicts</p><h1>Vector Clocks</h1>
+<p><strong>Scope</strong>: Vector clocks, causality tracking, happens-before relationships, conflict detection <strong>Lines</strong>: ~310 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Tracking causality in distributed systems</li><li>Detecting concurrent events</li><li>Implementing conflict resolution</li><li>Understanding Dynamo, Riak internals</li><li>Building distributed databases</li><li>Implementing version control</li><li>Detecting data races</li><li>Ordering distributed events</li></ul>
+<h2>Core Concepts</h2>
+<h3>The Problem: Physical Time Unreliable</h3>
+<pre><code>Server A (clock slow):  t=100 → Write X=1
+Server B (clock fast):  t=105 → Write X=2
+
+Which happened first? Can&#x27;t tell from timestamps!</code></pre>
+<h3>Lamport Clocks (Logical Time)</h3>
+<p><strong>Single counter per system</strong>:</p>
+<pre><code class="lang-python">class LamportClock:
+    def __init__(self):
+        self.time = 0
+
+    def increment(self):
+        &quot;&quot;&quot;Increment on local event&quot;&quot;&quot;
+        self.time += 1
+        return self.time
+
+    def update(self, received_time):
+        &quot;&quot;&quot;Update on receiving message&quot;&quot;&quot;
+        self.time = max(self.time, received_time) + 1
+        return self.time</code></pre>
+<p><strong>Problem</strong>: Can&#x27;t detect concurrency</p>
+<pre><code>A: t=1 → t=2 → t=3
+B:        t=1 → t=2
+
+A:t=2 and B:t=2 concurrent? Can&#x27;t tell!</code></pre>
+<h3>Vector Clocks (Track All Processes)</h3>
+<p><strong>One counter per process</strong>:</p>
+<pre><code class="lang-python">class VectorClock:
+    def __init__(self, process_id, num_processes):
+        self.process_id = process_id
+        self.clock = [0] * num_processes
+
+    def increment(self):
+        &quot;&quot;&quot;Increment local counter&quot;&quot;&quot;
+        self.clock[self.process_id] += 1
+        return self.clock.copy()
+
+    def update(self, received_clock):
+        &quot;&quot;&quot;Merge with received clock&quot;&quot;&quot;
+        for i in range(len(self.clock)):
+            self.clock[i] = max(self.clock[i], received_clock[i])
+        self.clock[self.process_id] += 1
+        return self.clock.copy()
+
+    def compare(self, other_clock):
+        &quot;&quot;&quot;Compare vector clocks&quot;&quot;&quot;
+        less_than = any(self.clock[i] &lt; other_clock[i] for i in range(len(self.clock)))
+        greater_than = any(self.clock[i] &gt; other_clock[i] for i in range(len(self.clock)))
+
+        if less_than and not greater_than:
+            return &quot;BEFORE&quot;  # self happened before other
+        elif greater_than and not less_than:
+            return &quot;AFTER&quot;   # self happened after other
+        elif not less_than and not greater_than:
+            return &quot;EQUAL&quot;   # same event
+        else:
+            return &quot;CONCURRENT&quot;  # concurrent events</code></pre>
+<hr>
+<h2>Happens-Before Relationship</h2>
+<h3>Definition</h3>
+<p><strong>Event A happens-before event B</strong> if:</p>
+<ol><li>A and B on same process, A before B</li><li>A is send, B is receive of same message</li><li>Transitive: A → B and B → C implies A → C</li></ol>
+<p><strong>Vector clock property</strong>: A happens-before B ⟺ VC(A) &lt; VC(B)</p>
+<h3>Example</h3>
+<pre><code>Process A:  [1,0,0] → send msg → [2,0,0]
+Process B:  [0,1,0] → receive → [2,2,0] → [2,3,0]
+Process C:  [0,0,1] → [0,0,2]
+
+Relationships:
+[1,0,0] happens-before [2,3,0]  (A:send before B:receive)
+[1,0,0] concurrent with [0,0,1] (different processes, no communication)</code></pre>
+<hr>
+<h2>Implementation</h2>
+<h3>Full Implementation</h3>
+<pre><code class="lang-python">from typing import Dict, List, Tuple
+
+class VectorClock:
+    &quot;&quot;&quot;Vector clock for distributed system&quot;&quot;&quot;
+
+    def __init__(self, node_id: str, nodes: List[str]):
+        self.node_id = node_id
+        self.nodes = nodes
+        self.clock = {node: 0 for node in nodes}
+
+    def tick(self) -&gt; Dict[str, int]:
+        &quot;&quot;&quot;Increment local clock on local event&quot;&quot;&quot;
+        self.clock[self.node_id] += 1
+        return self.get_clock()
+
+    def send_event(self) -&gt; Dict[str, int]:
+        &quot;&quot;&quot;Prepare vector clock for sending&quot;&quot;&quot;
+        return self.tick()
+
+    def receive_event(self, received_clock: Dict[str, int]) -&gt; Dict[str, int]:
+        &quot;&quot;&quot;Update clock on receiving message&quot;&quot;&quot;
+        # Merge clocks (element-wise max)
+        for node in self.nodes:
+            self.clock[node] = max(
+                self.clock.get(node, 0),
+                received_clock.get(node, 0)
+            )
+        # Increment local clock
+        self.clock[self.node_id] += 1
+        return self.get_clock()
+
+    def get_clock(self) -&gt; Dict[str, int]:
+        &quot;&quot;&quot;Get current clock value&quot;&quot;&quot;
+        return self.clock.copy()
+
+    def happens_before(self, vc1: Dict[str, int], vc2: Dict[str, int]) -&gt; bool:
+        &quot;&quot;&quot;Check if vc1 happens before vc2&quot;&quot;&quot;
+        # vc1 ≤ vc2 for all components, and vc1 &lt; vc2 for at least one
+        less_or_equal = all(vc1.get(n, 0) &lt;= vc2.get(n, 0) for n in self.nodes)
+        strictly_less = any(vc1.get(n, 0) &lt; vc2.get(n, 0) for n in self.nodes)
+        return less_or_equal and strictly_less
+
+    def concurrent(self, vc1: Dict[str, int], vc2: Dict[str, int]) -&gt; bool:
+        &quot;&quot;&quot;Check if vc1 and vc2 are concurrent&quot;&quot;&quot;
+        return not self.happens_before(vc1, vc2) and not self.happens_before(vc2, vc1)
+
+# Usage Example
+nodes = [&#x27;A&#x27;, &#x27;B&#x27;, &#x27;C&#x27;]
+vc_a = VectorClock(&#x27;A&#x27;, nodes)
+vc_b = VectorClock(&#x27;B&#x27;, nodes)
+vc_c = VectorClock(&#x27;C&#x27;, nodes)
+
+# Process A: local event
+clock_a1 = vc_a.tick()  # A: {A:1, B:0, C:0}
+
+# Process A: send to B
+msg_clock = vc_a.send_event()  # A: {A:2, B:0, C:0}
+
+# Process B: receive from A
+vc_b.receive_event(msg_clock)  # B: {A:2, B:1, C:0}
+
+# Process B: local event
+clock_b1 = vc_b.tick()  # B: {A:2, B:2, C:0}
+
+# Process C: independent event
+clock_c1 = vc_c.tick()  # C: {A:0, B:0, C:1}
+
+# Check relationships
+print(vc_a.happens_before(clock_a1, clock_b1))  # True (A&#x27;s event before B&#x27;s)
+print(vc_a.concurrent(clock_a1, clock_c1))      # True (independent)</code></pre>
+<hr>
+<h2>Practical Applications</h2>
+<h3>Application 1: Distributed Key-Value Store</h3>
+<pre><code class="lang-python">class VersionedValue:
+    &quot;&quot;&quot;Value with vector clock version&quot;&quot;&quot;
+
+    def __init__(self, value, vector_clock):
+        self.value = value
+        self.vector_clock = vector_clock
+
+class DistributedKVStore:
+    &quot;&quot;&quot;Key-value store with vector clock versioning&quot;&quot;&quot;
+
+    def __init__(self, node_id, nodes):
+        self.node_id = node_id
+        self.vc = VectorClock(node_id, nodes)
+        self.store = {}  # key → list of VersionedValue
+
+    def put(self, key, value):
+        &quot;&quot;&quot;Write value with current vector clock&quot;&quot;&quot;
+        clock = self.vc.tick()
+        versioned = VersionedValue(value, clock)
+
+        if key not in self.store:
+            self.store[key] = [versioned]
+        else:
+            # Remove versions that this one supersedes
+            self.store[key] = [
+                v for v in self.store[key]
+                if not self.vc.happens_before(v.vector_clock, clock)
+            ]
+            self.store[key].append(versioned)
+
+        return clock
+
+    def get(self, key):
+        &quot;&quot;&quot;Get value(s) for key&quot;&quot;&quot;
+        if key not in self.store:
+            return None
+
+        # Return all concurrent versions (siblings)
+        versions = self.store[key]
+        if len(versions) == 1:
+            return versions[0].value
+        else:
+            # Multiple concurrent versions - conflict!
+            return [v.value for v in versions]
+
+    def merge_from_replica(self, key, versioned_values):
+        &quot;&quot;&quot;Merge values from another replica&quot;&quot;&quot;
+        if key not in self.store:
+            self.store[key] = versioned_values
+            return
+
+        # Merge versions
+        all_versions = self.store[key] + versioned_values
+
+        # Remove dominated versions
+        result = []
+        for v1 in all_versions:
+            dominated = False
+            for v2 in all_versions:
+                if v1 != v2 and self.vc.happens_before(v1.vector_clock, v2.vector_clock):
+                    dominated = True
+                    break
+            if not dominated:
+                result.append(v1)
+
+        self.store[key] = result
+
+# Usage
+store_a = DistributedKVStore(&#x27;A&#x27;, [&#x27;A&#x27;, &#x27;B&#x27;])
+store_b = DistributedKVStore(&#x27;B&#x27;, [&#x27;A&#x27;, &#x27;B&#x27;])
+
+# A writes
+store_a.put(&#x27;user:1&#x27;, {&#x27;name&#x27;: &#x27;Alice&#x27;, &#x27;age&#x27;: 30})
+
+# B writes concurrently (before seeing A&#x27;s write)
+store_b.put(&#x27;user:1&#x27;, {&#x27;name&#x27;: &#x27;Alice&#x27;, &#x27;age&#x27;: 31})
+
+# Now A and B sync - conflict detected!
+# Both versions present with concurrent vector clocks</code></pre>
+<h3>Application 2: Causal Delivery</h3>
+<pre><code class="lang-python">class CausalBroadcast:
+    &quot;&quot;&quot;Ensure messages delivered in causal order&quot;&quot;&quot;
+
+    def __init__(self, node_id, nodes):
+        self.node_id = node_id
+        self.vc = VectorClock(node_id, nodes)
+        self.pending = []  # Messages waiting for causal delivery
+        self.delivered = []
+
+    def broadcast(self, message):
+        &quot;&quot;&quot;Broadcast message with vector clock&quot;&quot;&quot;
+        clock = self.vc.send_event()
+        return (message, clock)
+
+    def receive(self, message, sender_clock):
+        &quot;&quot;&quot;Receive message, deliver when causal order satisfied&quot;&quot;&quot;
+        self.pending.append((message, sender_clock))
+        self._try_deliver()
+
+    def _try_deliver(self):
+        &quot;&quot;&quot;Try to deliver pending messages in causal order&quot;&quot;&quot;
+        delivered_any = True
+
+        while delivered_any:
+            delivered_any = False
+
+            for msg, msg_clock in self.pending[:]:
+                if self._can_deliver(msg_clock):
+                    self.pending.remove((msg, msg_clock))
+                    self._deliver(msg, msg_clock)
+                    delivered_any = True
+
+    def _can_deliver(self, msg_clock):
+        &quot;&quot;&quot;Check if message can be delivered&quot;&quot;&quot;
+        # Can deliver if all causally preceding messages delivered
+        for node, count in msg_clock.items():
+            if node == self.node_id:
+                continue  # Skip own clock
+            if count &gt; self.vc.clock.get(node, 0):
+                return False  # Missing causal predecessor
+        return True
+
+    def _deliver(self, message, sender_clock):
+        &quot;&quot;&quot;Deliver message and update vector clock&quot;&quot;&quot;
+        self.vc.receive_event(sender_clock)
+        self.delivered.append(message)
+        print(f&quot;Delivered: {message}&quot;)</code></pre>
+<hr>
+<h2>Optimizations</h2>
+<h3>Problem: Vector Clock Size</h3>
+<p><strong>Growth</strong>: O(number of processes)</p>
+<p><strong>Solutions</strong>:</p>
+<ol><li><strong>Pruning</strong>: Remove inactive processes</li></ol>
+<pre><code class="lang-python">def prune_clock(self, min_activity_time):
+    &quot;&quot;&quot;Remove processes inactive for too long&quot;&quot;&quot;
+    current_time = time.time()
+    self.clock = {
+        node: count for node, count in self.clock.items()
+        if self.last_activity.get(node, 0) &gt; current_time - min_activity_time
+    }</code></pre>
+<ol><li><strong>Use Dotted Version Vectors</strong> (see related skill)</li></ol>
+<ol><li><strong>Dynamic process IDs</strong>: Short-lived IDs instead of permanent process IDs</li></ol>
+<hr>
+<h2>Comparison with Alternatives</h2>
+<p>| Mechanism | Size | Detects Concurrency | Complexity | |-----------|------|-------------------|------------| | <strong>Timestamps</strong> | O(1) | ❌ No | Simple | | <strong>Lamport Clocks</strong> | O(1) | ❌ No | Simple | | <strong>Vector Clocks</strong> | O(N) | ✅ Yes | Medium | | <strong>Dotted Version Vectors</strong> | O(active writers) | ✅ Yes | Medium | | <strong>Interval Tree Clocks</strong> | O(log N) | ✅ Yes | Complex |</p>
+<hr>
+<h2>Testing Vector Clocks</h2>
+<pre><code class="lang-python">import unittest
+
+class TestVectorClock(unittest.TestCase):
+    def test_happens_before(self):
+        &quot;&quot;&quot;Test happens-before relationship&quot;&quot;&quot;
+        vc = VectorClock(&#x27;A&#x27;, [&#x27;A&#x27;, &#x27;B&#x27;])
+
+        vc1 = {&#x27;A&#x27;: 1, &#x27;B&#x27;: 0}
+        vc2 = {&#x27;A&#x27;: 2, &#x27;B&#x27;: 1}
+
+        self.assertTrue(vc.happens_before(vc1, vc2))
+        self.assertFalse(vc.happens_before(vc2, vc1))
+
+    def test_concurrent(self):
+        &quot;&quot;&quot;Test concurrent events&quot;&quot;&quot;
+        vc = VectorClock(&#x27;A&#x27;, [&#x27;A&#x27;, &#x27;B&#x27;])
+
+        vc1 = {&#x27;A&#x27;: 1, &#x27;B&#x27;: 0}
+        vc2 = {&#x27;A&#x27;: 0, &#x27;B&#x27;: 1}
+
+        self.assertTrue(vc.concurrent(vc1, vc2))
+
+    def test_message_passing(self):
+        &quot;&quot;&quot;Test vector clock update on message passing&quot;&quot;&quot;
+        vc_a = VectorClock(&#x27;A&#x27;, [&#x27;A&#x27;, &#x27;B&#x27;])
+        vc_b = VectorClock(&#x27;B&#x27;, [&#x27;A&#x27;, &#x27;B&#x27;])
+
+        # A sends
+        sent_clock = vc_a.send_event()
+
+        # B receives
+        vc_b.receive_event(sent_clock)
+
+        # B&#x27;s clock should reflect A&#x27;s event
+        self.assertEqual(vc_b.clock[&#x27;A&#x27;], 1)
+        self.assertEqual(vc_b.clock[&#x27;B&#x27;], 1)</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>distributed-systems-dotted-version-vectors</code> - Optimized vector clocks</li><li><code>distributed-systems-interval-tree-clocks</code> - Scalable causality tracking</li><li><code>distributed-systems-logical-clocks</code> - Lamport clocks</li><li><code>distributed-systems-crdt-fundamentals</code> - Using clocks in CRDTs</li><li><code>distributed-systems-eventual-consistency</code> - Consistency models</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/distributed-systems-vector-clocks.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>caching-cdn-edge-caching</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/caching-cdn-edge-caching.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/caching-cdn-edge-caching.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>caching-cdn-edge-caching</h1><p class="lede">CDN and edge cache optimization with Cloudflare, Fastly, and CloudFront for global performance and reduced origin load</p><h1>CDN Edge Caching</h1>
+<p><strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p><strong>Activate when</strong>:</p>
+<ul><li>Delivering content globally with low latency</li><li>Reducing origin server load and bandwidth costs</li><li>Implementing edge caching with Cloudflare, Fastly, or CloudFront</li><li>Optimizing TTFB (Time To First Byte) performance</li><li>Configuring cache purging and invalidation at scale</li><li>Setting up geo-caching and regional optimization</li><li>Debugging CDN cache behavior and hit rates</li></ul>
+<p><strong>Prerequisites</strong>: <code>http-caching.md</code>, <code>caching-fundamentals.md</code>, basic CDN knowledge</p>
+<p><strong>Related Skills</strong>: <code>cache-invalidation-strategies.md</code>, <code>cloudflare-workers.md</code>, <code>frontend-performance.md</code></p>
+<hr>
+<h2>Core Concepts</h2>
+<h3>CDN Architecture</h3>
+<pre><code>User Request → Edge Server (PoP) → Origin Shield → Origin Server
+    (10-50ms)      (cache check)      (optional)      (100-500ms)
+
+Edge Cache Hierarchy:
+1. Edge PoP (Point of Presence) - 200+ locations globally
+2. Origin Shield (optional) - Regional cache tier
+3. Origin Server - Your application/storage</code></pre>
+<h3>Performance Impact (2024 Data)</h3>
+<pre><code class="lang-python">from dataclasses import dataclass
+
+@dataclass
+class CDNPerformanceMetrics:
+    &quot;&quot;&quot;Real-world CDN performance improvements&quot;&quot;&quot;
+
+    # TTFB improvements with edge caching
+    without_cdn = {
+        &quot;average_ttfb&quot;: &quot;402ms&quot;,
+        &quot;p95_ttfb&quot;: &quot;800ms&quot;,
+        &quot;origin_requests&quot;: &quot;100%&quot;
+    }
+
+    with_cdn = {
+        &quot;average_ttfb&quot;: &quot;207ms&quot;,  # 49% improvement
+        &quot;p95_ttfb&quot;: &quot;350ms&quot;,      # 56% improvement
+        &quot;cache_hit_rate&quot;: &quot;85-95%&quot;,
+        &quot;origin_requests&quot;: &quot;5-15%&quot;
+    }
+
+    # Case study: Optimized edge TTL
+    edge_ttl_optimization = {
+        &quot;before&quot;: &quot;Edge TTL: 1 hour&quot;,
+        &quot;after&quot;: &quot;Edge TTL: 1 week&quot;,
+        &quot;result&quot;: &quot;Long-tail content cached, 70% TTFB reduction (500ms → 150ms)&quot;
+    }
+
+    # Netflix 2022 optimization
+    netflix_case_study = {
+        &quot;change&quot;: &quot;Mixed invalidation + expiration approach&quot;,
+        &quot;cpu_reduction&quot;: &quot;30%&quot;,
+        &quot;cache_efficiency&quot;: &quot;Maintained data freshness&quot;
+    }</code></pre>
+<hr>
+<h2>Cloudflare Edge Caching</h2>
+<h3>1. Cache Rules</h3>
+<p><strong>Concept</strong>: Control caching behavior based on URL patterns, file types, conditions</p>
+<pre><code class="lang-javascript">// Cloudflare Workers example
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    // Define cache behavior by path
+    let cacheControl;
+
+    if (url.pathname.match(/\.(js|css|png|jpg|svg)$/)) {
+      // Static assets - long cache
+      cacheControl = &#x27;public, max-age=31536000, immutable&#x27;;
+    } else if (url.pathname.startsWith(&#x27;/api/&#x27;)) {
+      // API responses - short cache
+      cacheControl = &#x27;public, max-age=300, s-maxage=600&#x27;;
+    } else if (url.pathname.endsWith(&#x27;.html&#x27;)) {
+      // HTML - always revalidate
+      cacheControl = &#x27;public, max-age=0, must-revalidate&#x27;;
+    } else {
+      // Default
+      cacheControl = &#x27;public, max-age=3600&#x27;;
+    }
+
+    // Fetch from origin
+    const response = await fetch(request);
+
+    // Clone response and add cache header
+    const newResponse = new Response(response.body, response);
+    newResponse.headers.set(&#x27;Cache-Control&#x27;, cacheControl);
+
+    return newResponse;
+  }
+};</code></pre>
+<h3>2. Edge TTL Configuration</h3>
+<pre><code class="lang-python">class CloudflareEdgeTTL:
+    &quot;&quot;&quot;Cloudflare Edge TTL best practices (2024)&quot;&quot;&quot;
+
+    @staticmethod
+    def dynamic_content():
+        &quot;&quot;&quot;
+        Dynamic content with short Edge TTL
+
+        Ensures content freshness for frequently updated data
+        &quot;&quot;&quot;
+        return {
+            &quot;edge_ttl&quot;: &quot;1-4 hours&quot;,
+            &quot;browser_ttl&quot;: &quot;5 minutes&quot;,
+            &quot;use_case&quot;: &quot;News feeds, dashboards&quot;,
+            &quot;headers&quot;: &quot;Cache-Control: public, max-age=300, s-maxage=3600&quot;
+        }
+
+    @staticmethod
+    def static_content():
+        &quot;&quot;&quot;
+        Static content with long Edge TTL
+
+        2024 optimization: 1 week is sweet spot
+        &quot;&quot;&quot;
+        return {
+            &quot;edge_ttl&quot;: &quot;1 week (604800s)&quot;,
+            &quot;browser_ttl&quot;: &quot;1 hour&quot;,
+            &quot;use_case&quot;: &quot;Images, fonts, versioned assets&quot;,
+            &quot;headers&quot;: &quot;Cache-Control: public, max-age=3600, s-maxage=604800&quot;,
+            &quot;benefit&quot;: &quot;Long-tail content cached at edge&quot;
+        }
+
+    @staticmethod
+    def api_responses():
+        &quot;&quot;&quot;
+        API responses with balanced TTL
+
+        Longer edge cache than browser for shared caching
+        &quot;&quot;&quot;
+        return {
+            &quot;edge_ttl&quot;: &quot;10 minutes&quot;,
+            &quot;browser_ttl&quot;: &quot;1 minute&quot;,
+            &quot;use_case&quot;: &quot;Public APIs, product catalogs&quot;,
+            &quot;headers&quot;: &quot;Cache-Control: public, max-age=60, s-maxage=600&quot;
+        }
+
+# Cloudflare Page Rules (Dashboard configuration)
+&quot;&quot;&quot;
+URL Pattern: example.com/static/*
+Settings:
+  - Cache Level: Cache Everything
+  - Edge Cache TTL: 1 week
+  - Browser Cache TTL: 1 hour
+
+URL Pattern: example.com/api/*
+Settings:
+  - Cache Level: Cache Everything
+  - Edge Cache TTL: 10 minutes
+  - Browser Cache TTL: 1 minute
+  - Bypass Cache on Cookie: yes
+&quot;&quot;&quot;</code></pre>
+<h3>3. Tiered Cache</h3>
+<p><strong>Concept</strong>: Multi-tier caching to reduce origin requests</p>
+<pre><code class="lang-python">class CloudflareTieredCache:
+    &quot;&quot;&quot;
+    Tiered Cache optimization (included with all plans)
+
+    Flow: Edge PoP → Regional Tier → Origin
+    &quot;&quot;&quot;
+
+    benefits = {
+        &quot;reduced_origin_load&quot;: &quot;Upper-tier PoPs cache for lower-tier&quot;,
+        &quot;improved_hit_rate&quot;: &quot;Regional cache serves multiple edge locations&quot;,
+        &quot;lower_bandwidth&quot;: &quot;Fewer origin fetches&quot;,
+        &quot;automatic&quot;: &quot;No configuration needed (enabled by default)&quot;
+    }
+
+    # How it works
+    &quot;&quot;&quot;
+    1. User in Asia requests /image.jpg
+    2. Asia PoP checks local cache (MISS)
+    3. Asia PoP checks regional tier (Singapore)
+    4. Regional tier has cached copy (HIT)
+    5. Regional tier serves to Asia PoP
+    6. Asia PoP caches and serves to user
+
+    Next request from Japan:
+    - Japan PoP → Singapore regional → Cached! (no origin)
+    &quot;&quot;&quot;</code></pre>
+<h3>4. Bypass Cache on Cookie</h3>
+<pre><code class="lang-javascript">// Cloudflare Worker: Bypass cache for authenticated users
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    // Check for session cookie
+    const cookies = request.headers.get(&#x27;Cookie&#x27;) || &#x27;&#x27;;
+    const hasSessionCookie = cookies.includes(&#x27;session_id=&#x27;);
+
+    if (hasSessionCookie) {
+      // Bypass cache for authenticated users
+      const response = await fetch(request, {
+        cf: { cacheEverything: false }
+      });
+
+      const newResponse = new Response(response.body, response);
+      newResponse.headers.set(&#x27;Cache-Control&#x27;, &#x27;private, no-cache&#x27;);
+      return newResponse;
+    }
+
+    // Cache for anonymous users
+    const response = await fetch(request, {
+      cf: {
+        cacheEverything: true,
+        cacheTtl: 3600
+      }
+    });
+
+    return response;
+  }
+};</code></pre>
+<hr>
+<h2>Fastly Edge Caching</h2>
+<h3>1. VCL (Varnish Configuration Language)</h3>
+<pre><code class="lang-vcl"># Fastly VCL example
+sub vcl_recv {
+  # Skip cache for authenticated requests
+  if (req.http.Cookie ~ &quot;session_id&quot;) {
+    return(pass);
+  }
+
+  # Normalize URL for better cache hit rate
+  if (req.url ~ &quot;\?$&quot;) {
+    set req.url = regsub(req.url, &quot;\?$&quot;, &quot;&quot;);
+  }
+
+  # Set cache key
+  set req.hash += req.url;
+  set req.hash += req.http.host;
+}
+
+sub vcl_fetch {
+  # Override cache TTL based on content type
+  if (beresp.http.Content-Type ~ &quot;image/&quot;) {
+    set beresp.ttl = 7d;  # 1 week for images
+    set beresp.http.Cache-Control = &quot;public, max-age=604800&quot;;
+  }
+
+  if (beresp.http.Content-Type ~ &quot;application/json&quot;) {
+    set beresp.ttl = 5m;  # 5 minutes for JSON APIs
+    set beresp.http.Cache-Control = &quot;public, max-age=300&quot;;
+  }
+
+  return(deliver);
+}
+
+sub vcl_deliver {
+  # Add cache status header for debugging
+  if (obj.hits &gt; 0) {
+    set resp.http.X-Cache = &quot;HIT&quot;;
+    set resp.http.X-Cache-Hits = obj.hits;
+  } else {
+    set resp.http.X-Cache = &quot;MISS&quot;;
+  }
+}</code></pre>
+<h3>2. Surrogate Keys (Cache Tags)</h3>
+<p><strong>Concept</strong>: Tag-based cache invalidation for granular control</p>
+<pre><code class="lang-python">class FastlySurrogateKeys:
+    &quot;&quot;&quot;Surrogate key patterns for efficient purging&quot;&quot;&quot;
+
+    @staticmethod
+    def set_surrogate_keys(product_id: int, category_id: int) -&gt; str:
+        &quot;&quot;&quot;
+        Set multiple surrogate keys for flexible invalidation
+
+        Pattern: entity-type:id
+        &quot;&quot;&quot;
+        keys = [
+            f&quot;product:{product_id}&quot;,
+            f&quot;category:{category_id}&quot;,
+            &quot;product-listing&quot;,
+            f&quot;v1&quot;  # API version
+        ]
+        return &quot; &quot;.join(keys)
+
+    # Flask example
+    @staticmethod
+    def flask_example():
+        &quot;&quot;&quot;
+        from flask import Response
+
+        @app.route(&#x27;/api/product/&lt;int:product_id&gt;&#x27;)
+        def get_product(product_id):
+            product = get_product_from_db(product_id)
+
+            # Set surrogate keys
+            keys = FastlySurrogateKeys.set_surrogate_keys(
+                product_id, product[&#x27;category_id&#x27;]
+            )
+
+            response = Response(json.dumps(product))
+            response.headers[&#x27;Surrogate-Key&#x27;] = keys
+            response.headers[&#x27;Cache-Control&#x27;] = &#x27;public, max-age=3600&#x27;
+
+            return response
+        &quot;&quot;&quot;
+
+    @staticmethod
+    def purge_by_key(api_key: str, service_id: str, surrogate_key: str):
+        &quot;&quot;&quot;
+        Purge cache by surrogate key via Fastly API
+
+        Benefits:
+        - Purge all products in category: &quot;category:123&quot;
+        - Purge specific product: &quot;product:456&quot;
+        - Purge all product listings: &quot;product-listing&quot;
+        &quot;&quot;&quot;
+        import requests
+
+        url = f&quot;https://api.fastly.com/service/{service_id}/purge/{surrogate_key}&quot;
+        headers = {
+            &quot;Fastly-Key&quot;: api_key,
+            &quot;Accept&quot;: &quot;application/json&quot;
+        }
+
+        response = requests.post(url, headers=headers)
+        return response.json()
+
+# Usage
+&quot;&quot;&quot;
+# When product 456 is updated:
+purge_by_key(api_key, service_id, &quot;product:456&quot;)
+
+# When category 123 changes:
+purge_by_key(api_key, service_id, &quot;category:123&quot;)
+# Invalidates all products in that category
+&quot;&quot;&quot;</code></pre>
+<h3>3. Soft Purge vs Instant Purge</h3>
+<pre><code class="lang-python">class FastlyPurgeStrategies:
+    &quot;&quot;&quot;Purge strategies for different scenarios&quot;&quot;&quot;
+
+    @staticmethod
+    def instant_purge():
+        &quot;&quot;&quot;
+        Hard purge: Immediately remove from cache
+
+        Use when: Critical updates, security issues
+        Downside: All requests hit origin (stampede risk)
+        &quot;&quot;&quot;
+        return {
+            &quot;method&quot;: &quot;POST /purge/{url}&quot;,
+            &quot;behavior&quot;: &quot;Remove immediately, next request hits origin&quot;,
+            &quot;use_case&quot;: &quot;Breaking news, security patches&quot;
+        }
+
+    @staticmethod
+    def soft_purge():
+        &quot;&quot;&quot;
+        Soft purge: Mark stale, serve while revalidating
+
+        Use when: Normal updates, performance critical
+        Benefit: No origin stampede, smooth updates
+        &quot;&quot;&quot;
+        return {
+            &quot;method&quot;: &quot;POST /purge/{url} with Fastly-Soft-Purge: 1&quot;,
+            &quot;behavior&quot;: &quot;Mark stale, serve stale while revalidating&quot;,
+            &quot;use_case&quot;: &quot;Product updates, content changes&quot;
+        }
+
+# Implementation
+import requests
+
+def soft_purge_url(api_key: str, url: str):
+    &quot;&quot;&quot;Soft purge specific URL&quot;&quot;&quot;
+    headers = {
+        &quot;Fastly-Key&quot;: api_key,
+        &quot;Fastly-Soft-Purge&quot;: &quot;1&quot;
+    }
+    response = requests.post(f&quot;https://api.fastly.com/purge/{url}&quot;, headers=headers)
+    return response.json()</code></pre>
+<hr>
+<h2>CloudFront Caching</h2>
+<h3>1. Cache Behaviors</h3>
+<pre><code class="lang-python">class CloudFrontCacheBehaviors:
+    &quot;&quot;&quot;AWS CloudFront cache configuration&quot;&quot;&quot;
+
+    @staticmethod
+    def static_assets_behavior():
+        &quot;&quot;&quot;Cache behavior for static assets&quot;&quot;&quot;
+        return {
+            &quot;path_pattern&quot;: &quot;/static/*&quot;,
+            &quot;viewer_protocol_policy&quot;: &quot;redirect-to-https&quot;,
+            &quot;cache_policy&quot;: {
+                &quot;min_ttl&quot;: 86400,      # 1 day
+                &quot;default_ttl&quot;: 2592000,  # 30 days
+                &quot;max_ttl&quot;: 31536000    # 1 year
+            },
+            &quot;compress&quot;: True,
+            &quot;allowed_methods&quot;: [&quot;GET&quot;, &quot;HEAD&quot;],
+        }
+
+    @staticmethod
+    def api_behavior():
+        &quot;&quot;&quot;Cache behavior for API endpoints&quot;&quot;&quot;
+        return {
+            &quot;path_pattern&quot;: &quot;/api/*&quot;,
+            &quot;viewer_protocol_policy&quot;: &quot;https-only&quot;,
+            &quot;cache_policy&quot;: {
+                &quot;min_ttl&quot;: 0,
+                &quot;default_ttl&quot;: 300,    # 5 minutes
+                &quot;max_ttl&quot;: 3600        # 1 hour
+            },
+            &quot;origin_request_policy&quot;: &quot;AllViewer&quot;,
+            &quot;cache_based_on&quot;: [&quot;query_strings&quot;, &quot;headers&quot;]
+        }
+
+# Terraform configuration
+&quot;&quot;&quot;
+resource &quot;aws_cloudfront_distribution&quot; &quot;main&quot; {
+  enabled = true
+
+  origin {
+    domain_name = &quot;origin.example.com&quot;
+    origin_id   = &quot;primary&quot;
+  }
+
+  # Static assets
+  ordered_cache_behavior {
+    path_pattern     = &quot;/static/*&quot;
+    target_origin_id = &quot;primary&quot;
+
+    min_ttl     = 86400
+    default_ttl = 2592000
+    max_ttl     = 31536000
+
+    compress = true
+
+    allowed_methods = [&quot;GET&quot;, &quot;HEAD&quot;]
+    cached_methods  = [&quot;GET&quot;, &quot;HEAD&quot;]
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = &quot;none&quot;
+      }
+    }
+
+    viewer_protocol_policy = &quot;redirect-to-https&quot;
+  }
+
+  # API endpoints
+  ordered_cache_behavior {
+    path_pattern     = &quot;/api/*&quot;
+    target_origin_id = &quot;primary&quot;
+
+    min_ttl     = 0
+    default_ttl = 300
+    max_ttl     = 3600
+
+    allowed_methods = [&quot;GET&quot;, &quot;HEAD&quot;, &quot;OPTIONS&quot;, &quot;PUT&quot;, &quot;POST&quot;, &quot;PATCH&quot;, &quot;DELETE&quot;]
+    cached_methods  = [&quot;GET&quot;, &quot;HEAD&quot;]
+
+    forwarded_values {
+      query_string = true
+      headers      = [&quot;Authorization&quot;, &quot;Accept&quot;]
+      cookies {
+        forward = &quot;all&quot;
+      }
+    }
+
+    viewer_protocol_policy = &quot;https-only&quot;
+  }
+}
+&quot;&quot;&quot;</code></pre>
+<h3>2. Lambda@Edge for Dynamic Caching</h3>
+<pre><code class="lang-javascript">// Lambda@Edge: Viewer Request
+exports.handler = async (event) =&gt; {
+  const request = event.Records[0].cf.request;
+  const headers = request.headers;
+
+  // Normalize URL for better cache hit rate
+  if (request.querystring) {
+    // Sort query parameters
+    const params = new URLSearchParams(request.querystring);
+    const sortedParams = new URLSearchParams([...params.entries()].sort());
+    request.querystring = sortedParams.toString();
+  }
+
+  // Add cache key based on device type
+  const userAgent = headers[&#x27;user-agent&#x27;][0].value.toLowerCase();
+  const deviceType = /mobile/i.test(userAgent) ? &#x27;mobile&#x27; : &#x27;desktop&#x27;;
+  headers[&#x27;x-device-type&#x27;] = [{ value: deviceType }];
+
+  return request;
+};
+
+// Lambda@Edge: Origin Response
+exports.handler = async (event) =&gt; {
+  const response = event.Records[0].cf.response;
+
+  // Set cache headers based on content type
+  const contentType = response.headers[&#x27;content-type&#x27;]?.[0]?.value || &#x27;&#x27;;
+
+  if (contentType.includes(&#x27;image/&#x27;)) {
+    response.headers[&#x27;cache-control&#x27;] = [{
+      value: &#x27;public, max-age=31536000, immutable&#x27;
+    }];
+  } else if (contentType.includes(&#x27;application/json&#x27;)) {
+    response.headers[&#x27;cache-control&#x27;] = [{
+      value: &#x27;public, max-age=300&#x27;
+    }];
+  }
+
+  return response;
+};</code></pre>
+<hr>
+<h2>Cache Warming Strategies</h2>
+<pre><code class="lang-python">import asyncio
+import aiohttp
+from typing import List
+
+class CacheWarming:
+    &quot;&quot;&quot;Proactive cache warming for deployments&quot;&quot;&quot;
+
+    @staticmethod
+    async def warm_urls(urls: List[str], headers: dict = None):
+        &quot;&quot;&quot;
+        Warm cache by requesting URLs
+
+        Use after: Deployments, cache purges, invalidations
+        &quot;&quot;&quot;
+        if headers is None:
+            headers = {&quot;User-Agent&quot;: &quot;Cache-Warmer/1.0&quot;}
+
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for url in urls:
+                tasks.append(session.get(url, headers=headers))
+
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+            results = []
+            for url, response in zip(urls, responses):
+                if isinstance(response, Exception):
+                    results.append({&quot;url&quot;: url, &quot;status&quot;: &quot;error&quot;, &quot;error&quot;: str(response)})
+                else:
+                    results.append({
+                        &quot;url&quot;: url,
+                        &quot;status&quot;: response.status,
+                        &quot;cache_status&quot;: response.headers.get(&quot;X-Cache&quot;, &quot;unknown&quot;)
+                    })
+
+            return results
+
+    @staticmethod
+    def generate_warm_urls(sitemap_url: str) -&gt; List[str]:
+        &quot;&quot;&quot;
+        Generate URLs to warm from sitemap
+
+        Prioritize high-traffic pages
+        &quot;&quot;&quot;
+        import requests
+        from xml.etree import ElementTree
+
+        response = requests.get(sitemap_url)
+        root = ElementTree.fromstring(response.content)
+
+        urls = []
+        for url_element in root.findall(&#x27;.//{http://www.sitemaps.org/schemas/sitemap/0.9}loc&#x27;):
+            urls.append(url_element.text)
+
+        return urls
+
+# Usage
+async def warm_cache_after_deployment():
+    &quot;&quot;&quot;Warm cache after deployment&quot;&quot;&quot;
+    important_urls = [
+        &quot;https://example.com/&quot;,
+        &quot;https://example.com/products&quot;,
+        &quot;https://example.com/api/featured&quot;,
+    ]
+
+    results = await CacheWarming.warm_urls(important_urls)
+
+    for result in results:
+        print(f&quot;{result[&#x27;url&#x27;]}: {result[&#x27;status&#x27;]} - {result.get(&#x27;cache_status&#x27;)}&quot;)
+
+# Run warming
+# asyncio.run(warm_cache_after_deployment())</code></pre>
+<hr>
+<h2>Geo-Caching and Regional Optimization</h2>
+<pre><code class="lang-python">class GeoCaching:
+    &quot;&quot;&quot;Geographic caching strategies&quot;&quot;&quot;
+
+    @staticmethod
+    def geo_specific_content():
+        &quot;&quot;&quot;
+        Serve different content by region
+
+        Use Vary header or separate cache keys
+        &quot;&quot;&quot;
+        return {
+            &quot;approach_1_vary_header&quot;: {
+                &quot;header&quot;: &quot;Vary: Cloudflare-IPCountry&quot;,
+                &quot;behavior&quot;: &quot;Separate cache per country&quot;,
+                &quot;use_case&quot;: &quot;I18n content&quot;
+            },
+            &quot;approach_2_dynamic_routing&quot;: {
+                &quot;method&quot;: &quot;Cloudflare Workers geo-routing&quot;,
+                &quot;benefit&quot;: &quot;Custom logic per region&quot;,
+                &quot;use_case&quot;: &quot;Complex regional rules&quot;
+            }
+        }
+
+# Cloudflare Workers geo-routing
+&quot;&quot;&quot;
+export default {
+  async fetch(request, env) {
+    const country = request.cf.country;
+
+    // Route to regional buckets
+    let cacheKey;
+    if ([&#x27;US&#x27;, &#x27;CA&#x27;, &#x27;MX&#x27;].includes(country)) {
+      cacheKey = `https://cdn.example.com/na/${request.url}`;
+    } else if ([&#x27;GB&#x27;, &#x27;FR&#x27;, &#x27;DE&#x27;].includes(country)) {
+      cacheKey = `https://cdn.example.com/eu/${request.url}`;
+    } else {
+      cacheKey = `https://cdn.example.com/global/${request.url}`;
+    }
+
+    // Fetch with regional cache key
+    return fetch(cacheKey, request);
+  }
+};
+&quot;&quot;&quot;</code></pre>
+<hr>
+<h2>Debugging and Monitoring</h2>
+<pre><code class="lang-python">class CDNCacheDebugging:
+    &quot;&quot;&quot;Tools for debugging CDN cache behavior&quot;&quot;&quot;
+
+    @staticmethod
+    def check_cache_status():
+        &quot;&quot;&quot;
+        Interpret cache status headers
+
+        Common headers:
+        - X-Cache: HIT/MISS
+        - CF-Cache-Status: Cloudflare status
+        - X-Cache-Hits: Number of hits
+        - Age: Time in cache (seconds)
+        &quot;&quot;&quot;
+        return {
+            &quot;cloudflare&quot;: {
+                &quot;HIT&quot;: &quot;Served from Cloudflare cache&quot;,
+                &quot;MISS&quot;: &quot;Not in cache, fetched from origin&quot;,
+                &quot;EXPIRED&quot;: &quot;Cached but TTL expired, revalidating&quot;,
+                &quot;STALE&quot;: &quot;Serving stale content&quot;,
+                &quot;BYPASS&quot;: &quot;Cache bypassed&quot;,
+                &quot;DYNAMIC&quot;: &quot;Uncacheable (dynamic content)&quot;
+            },
+            &quot;fastly&quot;: {
+                &quot;HIT&quot;: &quot;Served from Fastly cache&quot;,
+                &quot;MISS&quot;: &quot;Origin fetch&quot;,
+                &quot;PASS&quot;: &quot;Bypassed cache&quot;
+            }
+        }
+
+# curl debugging
+&quot;&quot;&quot;
+# Check cache status
+curl -I https://example.com/api/data
+
+# Relevant headers:
+# CF-Cache-Status: HIT
+# Age: 120
+# Cache-Control: public, max-age=3600
+&quot;&quot;&quot;
+
+# Python debugging
+import requests
+
+def debug_cdn_cache(url: str):
+    &quot;&quot;&quot;Debug CDN cache behavior&quot;&quot;&quot;
+    response = requests.get(url)
+
+    return {
+        &quot;url&quot;: url,
+        &quot;status&quot;: response.status_code,
+        &quot;cache_control&quot;: response.headers.get(&quot;Cache-Control&quot;),
+        &quot;cf_cache_status&quot;: response.headers.get(&quot;CF-Cache-Status&quot;),
+        &quot;x_cache&quot;: response.headers.get(&quot;X-Cache&quot;),
+        &quot;age&quot;: response.headers.get(&quot;Age&quot;),
+        &quot;etag&quot;: response.headers.get(&quot;ETag&quot;),
+    }
+
+# Monitor cache hit rate
+def calculate_hit_rate(total_requests: int, cache_hits: int) -&gt; float:
+    &quot;&quot;&quot;Calculate cache hit rate percentage&quot;&quot;&quot;
+    return (cache_hits / total_requests) * 100 if total_requests &gt; 0 else 0</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>CDN Selection Guide</h3>
+<p>| Feature | Cloudflare | Fastly | CloudFront | |---------|-----------|--------|------------| | <strong>Ease of Use</strong> | Excellent | Moderate | Good | | <strong>Free Tier</strong> | Yes (generous) | No | Yes (limited) | | <strong>Purge API</strong> | Yes | Excellent (surrogate keys) | Yes | | <strong>Edge Compute</strong> | Workers | Compute@Edge | Lambda@Edge | | <strong>Cache TTL Control</strong> | Page Rules, Workers | VCL | Behaviors | | <strong>Best For</strong> | General sites | High-performance APIs | AWS ecosystem |</p>
+<h3>Cache Optimization Checklist</h3>
+<ul><li>[ ] Set appropriate Edge TTL (1 week for static, minutes for dynamic)</li><li>[ ] Configure browser Cache-Control headers</li><li>[ ] Enable compression (gzip/brotli)</li><li>[ ] Implement cache warming for critical pages</li><li>[ ] Set up cache purging/invalidation</li><li>[ ] Monitor cache hit rates (target: 85%+)</li><li>[ ] Use Tiered Cache (Cloudflare) or Origin Shield</li><li>[ ] Test cache behavior with curl/browser tools</li></ul>
+<hr>
+<h2>Related Skills</h2>
+<p><strong>Next Steps</strong>:</p>
+<ul><li><code>cache-invalidation-strategies.md</code> → Purging and invalidation patterns</li><li><code>cache-performance-monitoring.md</code> → Measuring CDN effectiveness</li><li><code>cloudflare-workers.md</code> → Edge compute integration</li></ul>
+<p><strong>Foundations</strong>:</p>
+<ul><li><code>http-caching.md</code> → Browser and HTTP caching</li><li><code>caching-fundamentals.md</code> → Core caching concepts</li></ul>
+<hr>
+<h2>Summary</h2>
+<p>CDN edge caching dramatically improves global performance and reduces origin load:</p>
+<ul><li><strong>Cloudflare</strong>: Easy setup, generous free tier, Tiered Cache, Workers for custom logic</li><li><strong>Fastly</strong>: VCL power, surrogate keys for granular purging, instant/soft purge</li><li><strong>CloudFront</strong>: AWS integration, Lambda@Edge, robust cache behaviors</li><li><strong>Performance</strong>: 49-80% TTFB improvements, 85-95% cache hit rates</li></ul>
+<p><strong>Key takeaways</strong>:</p>
+<ol><li>Use long Edge TTL (1 week) for static content</li><li>Implement Tiered Cache to reduce origin requests</li><li>Use surrogate keys (Fastly) or tags for granular invalidation</li><li>Monitor cache hit rates and optimize for 85%+ hits</li><li>Warm cache after deployments and purges</li></ol>
+<p><strong>Next</strong>: Move to <code>redis-caching-patterns.md</code> for application-level caching.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/caching-cdn-edge-caching.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

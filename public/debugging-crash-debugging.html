@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>debugging-crash-debugging</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/debugging-crash-debugging.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/debugging-crash-debugging.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>debugging-crash-debugging</h1><p class="lede">Signal handling, crash reproduction, fuzzing for crash discovery, telemetry aggregation, and post-mortem workflows</p><h1>Crash Debugging</h1>
+<p><strong>Scope</strong>: Signal handling (SIGSEGV, SIGABRT), backtrace generation, crash reproduction, fuzzing (AFL, libFuzzer), crash telemetry <strong>Lines</strong>: ~410 <strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Application crashes unexpectedly (SIGSEGV, SIGABRT, SIGFPE)</li><li>Need to reproduce crashes from bug reports</li><li>Setting up crash telemetry and aggregation</li><li>Implementing signal handlers for graceful crash reporting</li><li>Using fuzzing to discover crash-inducing inputs</li><li>Debugging null pointer dereferences or memory corruption</li><li>Investigating stack overflow or assertion failures</li><li>Building post-mortem debugging workflows</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Concept 1: Common Crash Signals</h3>
+<p><strong>Signal Types and Causes</strong>:</p>
+<p>| Signal | Name | Common Causes | |--------|------|---------------| | SIGSEGV | Segmentation Fault | Null pointer, invalid memory access, buffer overflow | | SIGABRT | Abort | assert() failure, std::abort(), memory corruption detected | | SIGFPE | Floating Point Exception | Division by zero, integer overflow (signed) | | SIGILL | Illegal Instruction | Corrupted code, wrong architecture binary | | SIGBUS | Bus Error | Misaligned memory access, mmap failure | | SIGSTKFLT | Stack Fault | Stack overflow (rare on modern systems) |</p>
+<p><strong>Default Signal Behavior</strong>:</p>
+<ul><li>Terminate process</li><li>Generate core dump (if enabled)</li><li>No cleanup or logging</li></ul>
+<pre><code class="lang-c">#include &lt;signal.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+void signal_handler(int sig) {
+    fprintf(stderr, &quot;Caught signal %d (%s)\n&quot;, sig, strsignal(sig));
+    // Log crash, generate backtrace, cleanup resources
+    exit(1);
+}
+
+int main() {
+    // Install signal handlers
+    signal(SIGSEGV, signal_handler);
+    signal(SIGABRT, signal_handler);
+    signal(SIGFPE, signal_handler);
+
+    // Application code
+    return 0;
+}</code></pre>
+<h3>Concept 2: Stack Unwinding and Backtraces</h3>
+<p><strong>Backtrace Generation</strong> (capturing call stack):</p>
+<pre><code class="lang-c">// Linux: backtrace() from execinfo.h
+#include &lt;execinfo.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;signal.h&gt;
+
+void print_backtrace() {
+    void *array[20];
+    size_t size = backtrace(array, 20);
+    char **strings = backtrace_symbols(array, size);
+
+    fprintf(stderr, &quot;Backtrace (%zd frames):\n&quot;, size);
+    for (size_t i = 0; i &lt; size; i++) {
+        fprintf(stderr, &quot;  %s\n&quot;, strings[i]);
+    }
+
+    free(strings);
+}
+
+void crash_handler(int sig) {
+    fprintf(stderr, &quot;ERROR: Signal %d (%s)\n&quot;, sig, strsignal(sig));
+    print_backtrace();
+    exit(1);
+}
+
+int main() {
+    signal(SIGSEGV, crash_handler);
+    signal(SIGABRT, crash_handler);
+
+    // Trigger crash for testing
+    int *ptr = NULL;
+    *ptr = 42;  // SIGSEGV
+}</code></pre>
+<p><strong>C++ Stack Unwinding</strong> (std::stacktrace in C++23):</p>
+<pre><code class="lang-cpp">#include &lt;stacktrace&gt;
+#include &lt;iostream&gt;
+
+void crash_handler(int sig) {
+    std::cerr &lt;&lt; &quot;Caught signal &quot; &lt;&lt; sig &lt;&lt; &quot;\n&quot;;
+    std::cerr &lt;&lt; std::stacktrace::current() &lt;&lt; &quot;\n&quot;;
+    std::exit(1);
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Immediate crash context (call stack)</li><li>Helps identify root cause quickly</li><li>Works without debugger</li></ul>
+<h3>Concept 3: Crash Reproduction Strategies</h3>
+<p><strong>Reproduction Categories</strong>:</p>
+<ol><li><strong>Deterministic crashes</strong>: Same input always crashes</li></ol>
+<ul><li>Example: Null pointer dereference on specific API call</li><li>Strategy: Capture input, replay in test</li></ul>
+<ol><li><strong>Non-deterministic crashes</strong>: Timing or state-dependent</li></ol>
+<ul><li>Example: Race condition, uninitialized memory</li><li>Strategy: Stress testing, record-replay, sanitizers</li></ul>
+<ol><li><strong>Environmental crashes</strong>: Specific to environment</li></ol>
+<ul><li>Example: Out-of-memory, file descriptor exhaustion</li><li>Strategy: Reproduce constraints (memory limits, resource limits)</li></ul>
+<p><strong>Minimal Reproduction</strong>:</p>
+<pre><code class="lang-python"># ❌ Bug report: &quot;App crashes when processing data&quot;
+# Not reproducible (what data? what operation?)
+
+# ✅ Minimal reproduction
+import app
+
+# Trigger crash with minimal input
+data = {&quot;user_id&quot;: None}  # Null user_id causes crash
+app.process(data)  # Crashes on data[&quot;user_id&quot;].lower()
+
+# Root cause: No null check before string method
+# Fix: Add null check or use data.get(&quot;user_id&quot;, &quot;&quot;)</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Comprehensive Signal Handler (Linux)</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Production applications requiring crash reporting</li><li>Need backtraces and context before process termination</li><li>Resource cleanup before crash</li></ul>
+<pre><code class="lang-c">#include &lt;signal.h&gt;
+#include &lt;execinfo.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;time.h&gt;
+
+static void write_crash_log(int sig, void *addr) {
+    char filename[256];
+    time_t now = time(NULL);
+    snprintf(filename, sizeof(filename), &quot;/var/log/crash_%ld.log&quot;, (long)now);
+
+    FILE *f = fopen(filename, &quot;w&quot;);
+    if (!f) {
+        f = stderr;
+    }
+
+    fprintf(f, &quot;=== CRASH REPORT ===\n&quot;);
+    fprintf(f, &quot;Signal: %d (%s)\n&quot;, sig, strsignal(sig));
+    fprintf(f, &quot;Fault address: %p\n&quot;, addr);
+    fprintf(f, &quot;PID: %d\n&quot;, getpid());
+    fprintf(f, &quot;Timestamp: %ld\n&quot;, now);
+
+    // Backtrace
+    void *array[50];
+    size_t size = backtrace(array, 50);
+    fprintf(f, &quot;\nBacktrace (%zd frames):\n&quot;, size);
+    backtrace_symbols_fd(array, size, fileno(f));
+
+    if (f != stderr) {
+        fclose(f);
+    }
+}
+
+void crash_handler(int sig, siginfo_t *info, void *context) {
+    // Write crash log
+    write_crash_log(sig, info-&gt;si_addr);
+
+    // Cleanup resources (be careful: limited operations safe in signal handler)
+    // - Close log files
+    // - Flush buffers
+    // - Release critical locks (if safe)
+
+    // Re-raise signal with default handler to generate core dump
+    signal(sig, SIG_DFL);
+    raise(sig);
+}
+
+void setup_crash_handlers() {
+    struct sigaction sa;
+    sa.sa_flags = SA_SIGINFO;
+    sa.sa_sigaction = crash_handler;
+    sigemptyset(&amp;sa.sa_mask);
+
+    sigaction(SIGSEGV, &amp;sa, NULL);
+    sigaction(SIGABRT, &amp;sa, NULL);
+    sigaction(SIGFPE, &amp;sa, NULL);
+    sigaction(SIGILL, &amp;sa, NULL);
+    sigaction(SIGBUS, &amp;sa, NULL);
+}
+
+int main() {
+    setup_crash_handlers();
+    // Application code
+}</code></pre>
+<p><strong>Signal Handler Safety</strong>:</p>
+<ul><li>Only async-signal-safe functions allowed (write, _exit, etc.)</li><li>Avoid: malloc, printf, locks (may deadlock)</li><li>Keep handler minimal (log and exit)</li></ul>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Captures crash context automatically</li><li>Logs to persistent storage</li><li>Generates core dump after logging</li></ul>
+<h3>Pattern 2: C++ Exception to Signal Translation</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>C++ applications with both exceptions and crashes</li><li>Need uniform crash handling for exceptions and signals</li><li>Catching unhandled exceptions</li></ul>
+<pre><code class="lang-cpp">#include &lt;exception&gt;
+#include &lt;signal.h&gt;
+#include &lt;execinfo.h&gt;
+#include &lt;iostream&gt;
+
+void signal_handler(int sig) {
+    std::cerr &lt;&lt; &quot;Signal &quot; &lt;&lt; sig &lt;&lt; &quot; caught\n&quot;;
+
+    void *array[20];
+    size_t size = backtrace(array, 20);
+    backtrace_symbols_fd(array, size, STDERR_FILENO);
+
+    std::abort();  // Generate core dump
+}
+
+void terminate_handler() {
+    std::cerr &lt;&lt; &quot;Unhandled exception caught\n&quot;;
+
+    // Rethrow to get exception details
+    try {
+        std::exception_ptr eptr = std::current_exception();
+        if (eptr) {
+            std::rethrow_exception(eptr);
+        }
+    } catch (const std::exception &amp;e) {
+        std::cerr &lt;&lt; &quot;Exception: &quot; &lt;&lt; e.what() &lt;&lt; &quot;\n&quot;;
+    } catch (...) {
+        std::cerr &lt;&lt; &quot;Unknown exception\n&quot;;
+    }
+
+    void *array[20];
+    size_t size = backtrace(array, 20);
+    backtrace_symbols_fd(array, size, STDERR_FILENO);
+
+    std::abort();
+}
+
+int main() {
+    // Install handlers
+    std::set_terminate(terminate_handler);
+    signal(SIGSEGV, signal_handler);
+    signal(SIGABRT, signal_handler);
+
+    // Application code
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Unified crash handling (exceptions + signals)</li><li>Exception details in crash logs</li><li>Backtrace for unhandled exceptions</li></ul>
+<h3>Pattern 3: Fuzzing with AFL (American Fuzzy Lop)</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Discovering crash-inducing inputs</li><li>Security testing (buffer overflows, format string bugs)</li><li>Regression testing (ensure no new crashes)</li></ul>
+<pre><code class="lang-bash"># Install AFL++
+git clone https://github.com/AFLplusplus/AFLplusplus
+cd AFLplusplus
+make
+sudo make install
+
+# Compile target with AFL instrumentation
+afl-gcc -g -O0 -fsanitize=address target.c -o target
+# Or with afl-clang-fast for better performance:
+afl-clang-fast -g -O0 -fsanitize=address target.c -o target
+
+# Prepare input corpus (seed inputs)
+mkdir input_corpus
+echo &quot;test input&quot; &gt; input_corpus/seed1.txt
+
+# Run fuzzer
+afl-fuzz -i input_corpus -o output -- ./target @@
+# @@ is replaced with path to generated input file
+
+# AFL output:
+# - output/crashes/     → Inputs that caused crashes
+# - output/hangs/       → Inputs that caused timeouts
+# - output/queue/       → Interesting inputs (code coverage)
+
+# Reproduce crash
+./target output/crashes/id:000000,sig:11,src:000000,op:flip1,pos:0</code></pre>
+<p><strong>Example Fuzz Target</strong>:</p>
+<pre><code class="lang-c">// target.c - vulnerable program
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        return 1;
+    }
+
+    FILE *f = fopen(argv[1], &quot;r&quot;);
+    if (!f) {
+        return 1;
+    }
+
+    char buffer[16];
+    // ❌ Vulnerable: no bounds check
+    fscanf(f, &quot;%s&quot;, buffer);  // Buffer overflow if input &gt; 15 chars
+
+    printf(&quot;Read: %s\n&quot;, buffer);
+    fclose(f);
+    return 0;
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Automatic crash discovery</li><li>Code coverage-guided fuzzing (explores code paths)</li><li>Finds edge cases humans miss</li></ul>
+<h3>Pattern 4: Fuzzing with libFuzzer (LLVM)</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>In-process fuzzing (faster than AFL)</li><li>C/C++ library fuzzing</li><li>Integration with sanitizers (ASan, UBSan)</li></ul>
+<pre><code class="lang-cpp">// fuzz_target.cpp
+#include &lt;stdint.h&gt;
+#include &lt;stddef.h&gt;
+
+// Fuzz entry point (called by libFuzzer)
+extern &quot;C&quot; int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+    if (size &lt; 4) {
+        return 0;  // Ignore small inputs
+    }
+
+    // Call function under test
+    process_data(data, size);
+
+    return 0;  // Non-zero = error (stop fuzzing)
+}</code></pre>
+<p><strong>Compile and Run</strong>:</p>
+<pre><code class="lang-bash"># Compile with libFuzzer and ASan
+clang++ -g -O1 -fsanitize=fuzzer,address fuzz_target.cpp -o fuzz_target
+
+# Run fuzzer
+./fuzz_target
+
+# LibFuzzer output:
+# #1      INITED cov: 42 ft: 56 corp: 1/1b exec/s: 0 rss: 30Mb
+# #2      NEW    cov: 45 ft: 59 corp: 2/2b exec/s: 0 rss: 30Mb
+# ...
+# ==12345==ERROR: AddressSanitizer: heap-buffer-overflow
+# (Crash found, corpus saved)
+
+# Reproduce crash
+./fuzz_target crash-&lt;hash&gt;</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Fast (in-process, no exec overhead)</li><li>Excellent sanitizer integration</li><li>Built into LLVM/Clang</li></ul>
+<p><strong>Limitations</strong>:</p>
+<ul><li>Requires source code modifications</li><li>In-process only (no stdin fuzzing)</li></ul>
+<h3>Pattern 5: Crash Telemetry Aggregation</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Production applications with many users</li><li>Need crash statistics and trends</li><li>Prioritizing bug fixes by crash frequency</li></ul>
+<pre><code class="lang-python"># Using Sentry for crash aggregation
+import sentry_sdk
+
+sentry_sdk.init(
+    dsn=&quot;https://example@o0.ingest.sentry.io/0&quot;,
+    environment=&quot;production&quot;,
+    release=&quot;myapp@1.0.0&quot;,
+)
+
+# Automatic crash reporting
+def main():
+    # Crashes automatically reported with:
+    # - Stack trace
+    # - Environment (OS, Python version)
+    # - Release version
+    # - User context (if set)
+    risky_operation()  # If this crashes, Sentry captures it
+
+# Sentry dashboard shows:
+# - Crash count by version
+# - Top crashing functions
+# - User impact (unique users affected)
+# - Trends (new vs. recurring crashes)</code></pre>
+<p><strong>Crash Grouping</strong>:</p>
+<ul><li>Sentry groups crashes by stack trace similarity</li><li>Same bug from multiple users → one issue</li><li>New crashes flagged as regressions</li></ul>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Prioritize fixes by user impact</li><li>Track crash-free user rate</li><li>Identify platform-specific crashes</li></ul>
+<h3>Pattern 6: Deterministic Crash Reproduction</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Bug reports from production crashes</li><li>Need reliable crash reproduction for debugging</li><li>Writing regression tests</li></ul>
+<pre><code class="lang-python"># Crash report from production:
+# Stack trace shows: process_message() → parse_json() → crash
+
+# Step 1: Extract minimal failing input
+def test_crash_reproduction():
+    # From logs: &quot;Processing message: {id:123,name:null}&quot;
+    message = &#x27;{&quot;id&quot;: 123, &quot;name&quot;: null}&#x27;
+
+    # Reproduce crash
+    with pytest.raises(AttributeError):
+        process_message(message)  # Crashes on name.lower()
+
+# Step 2: Fix bug
+def process_message_fixed(msg):
+    data = json.loads(msg)
+    # ✅ Add null check
+    name = data.get(&quot;name&quot;) or &quot;&quot;
+    return name.lower()
+
+# Step 3: Regression test
+def test_null_name_handling():
+    message = &#x27;{&quot;id&quot;: 123, &quot;name&quot;: null}&#x27;
+    result = process_message_fixed(message)
+    assert result == &quot;&quot;  # No crash</code></pre>
+<p><strong>Crash Reproduction Checklist</strong>:</p>
+<ol><li>Capture input that triggers crash (from logs, telemetry)</li><li>Minimize input (remove irrelevant data)</li><li>Write failing test that reproduces crash</li><li>Fix bug</li><li>Verify test passes</li><li>Commit test as regression prevention</li></ol>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Prevents regressions</li><li>Documents bug and fix</li><li>Enables debugging without production access</li></ul>
+<h3>Pattern 7: Stack Overflow Detection</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Debugging recursive functions</li><li>Investigating SIGSEGV from deep call stacks</li><li>Implementing stack depth limits</li></ul>
+<pre><code class="lang-c">#include &lt;sys/resource.h&gt;
+#include &lt;stdio.h&gt;
+
+void check_stack_limit() {
+    struct rlimit rl;
+    getrlimit(RLIMIT_STACK, &amp;rl);
+
+    printf(&quot;Stack limit: %ld bytes (soft), %ld bytes (hard)\n&quot;,
+           (long)rl.rlim_cur, (long)rl.rlim_max);
+}
+
+void set_stack_limit(size_t bytes) {
+    struct rlimit rl;
+    rl.rlim_cur = bytes;
+    rl.rlim_max = bytes;
+
+    if (setrlimit(RLIMIT_STACK, &amp;rl) != 0) {
+        perror(&quot;setrlimit&quot;);
+    }
+}
+
+// Detect stack overflow before crash
+#include &lt;ucontext.h&gt;
+
+void recursive_function(int depth) {
+    char buffer[1024];  // Consumes stack
+
+    // Estimate stack usage
+    static void *stack_start = NULL;
+    if (stack_start == NULL) {
+        stack_start = &amp;buffer;
+    }
+
+    size_t used = (char*)stack_start - (char*)&amp;buffer;
+    if (used &gt; 1024 * 1024) {  // 1MB threshold
+        fprintf(stderr, &quot;Stack overflow risk! Depth=%d, Used=%zu\n&quot;, depth, used);
+        return;  // Stop recursion
+    }
+
+    recursive_function(depth + 1);
+}</code></pre>
+<p><strong>Rust Stack Overflow</strong> (automatic detection):</p>
+<pre><code class="lang-rust">// Rust detects stack overflow and panics
+fn recursive_function(depth: u32) {
+    let _buffer = [0u8; 1024];  // Stack allocation
+
+    if depth &lt; 1_000_000 {
+        recursive_function(depth + 1);
+    }
+}
+
+// Stack overflow triggers panic (not SIGSEGV)
+// thread &#x27;main&#x27; has overflowed its stack</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Early detection (before crash)</li><li>Configurable stack limits</li><li>Graceful degradation</li></ul>
+<h3>Pattern 8: Post-Mortem Debugging Workflow</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Production crash analysis</li><li>Structured approach to crash investigation</li><li>Team crash triage process</li></ul>
+<pre><code>Crash Workflow:
+1. Capture crash report (telemetry, logs, core dump)
+2. Symbolicate stack trace (match symbols to binary version)
+3. Identify crash signature (function, file, line)
+4. Search for existing issues (check if known bug)
+5. Reproduce crash (minimal test case)
+6. Analyze root cause (memory, logic, race condition)
+7. Fix and test
+8. Deploy fix and verify (monitor crash rate)
+9. Document (RCA, post-mortem)</code></pre>
+<p><strong>Crash Triage Template</strong>:</p>
+<pre><code class="lang-markdown">## Crash Report: SIGSEGV in process_request()
+
+**Signature**: `process_request() → parse_header() → strlen(NULL)`
+
+**Stack Trace**:</code></pre>
+<p>#0 strlen() at /lib/x86_64-linux-gnu/libc.so.6 #1 parse_header(header=0x0) at server.c:123 #2 process_request(req=0x7f1234567890) at server.c:89</p>
+<pre><code>
+**Root Cause**: NULL pointer passed to parse_header()
+
+**Impact**: 142 crashes in last 24h (0.3% of requests)
+
+**Fix**: Add null check before strlen()
+
+**Test**: Added regression test in test_null_header()
+
+**Deployed**: v1.2.1 (2025-10-26)
+
+**Verification**: Zero crashes in 48h post-deployment</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Structured investigation</li><li>Knowledge sharing (team-wide)</li><li>Prevents duplicate debugging effort</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Signal Quick Reference</h3>
+<pre><code>Signal    | Meaning                  | Common Cause
+----------|--------------------------|---------------------------
+SIGSEGV   | Segmentation Fault       | NULL deref, buffer overflow
+SIGABRT   | Abort                    | assert(), abort()
+SIGFPE    | Floating Point Exception | Division by zero
+SIGILL    | Illegal Instruction      | Corrupted binary
+SIGBUS    | Bus Error                | Misaligned access
+SIGSTKFLT | Stack Fault              | Stack overflow</code></pre>
+<h3>Fuzzing Tool Comparison</h3>
+<pre><code>Tool      | Type        | Speed   | Setup      | Best For
+----------|-------------|---------|------------|------------------
+AFL++     | File-based  | Medium  | Easy       | Programs reading files
+libFuzzer | In-process  | Fast    | Moderate   | Libraries, APIs
+Honggfuzz | Hybrid      | Fast    | Easy       | Multi-threaded apps
+OSS-Fuzz  | Continuous  | N/A     | Complex    | Open-source projects</code></pre>
+<h3>Key Guidelines</h3>
+<pre><code>✅ DO: Install signal handlers in production (logging, cleanup)
+✅ DO: Generate backtraces on crashes (execinfo.h, std::stacktrace)
+✅ DO: Integrate crash telemetry (Sentry, Crashlytics)
+✅ DO: Write regression tests for all crashes
+✅ DO: Fuzz critical parsers and input handlers
+✅ DO: Symbolicate stack traces (match binary version)
+✅ DO: Set stack limits to detect overflow early
+
+❌ DON&#x27;T: Ignore crashes in testing (fix before production)
+❌ DON&#x27;T: Use unsafe operations in signal handlers (malloc, locks)
+❌ DON&#x27;T: Deploy without crash reporting infrastructure
+❌ DON&#x27;T: Assume crashes are user error (investigate all)
+❌ DON&#x27;T: Skip fuzzing security-critical code
+❌ DON&#x27;T: Delete crash logs before analysis</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-c">// ❌ NEVER: Empty signal handler (hides crashes)
+void signal_handler(int sig) {
+    // Do nothing - crash ignored!
+}
+
+// ✅ CORRECT: Log and abort
+void signal_handler(int sig) {
+    write(STDERR_FILENO, &quot;CRASH\n&quot;, 6);
+    signal(sig, SIG_DFL);
+    raise(sig);  // Re-raise to generate core dump
+}</code></pre>
+<p>❌ <strong>Ignoring crashes</strong>: Masks bugs, leads to data corruption ✅ <strong>Correct approach</strong>: Log, cleanup, generate core dump</p>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Generic exception handling (hides crashes)
+try:
+    process_data(user_input)
+except Exception:
+    pass  # ❌ Silently ignores all errors
+
+# ✅ Correct: Catch specific exceptions, log unknown
+try:
+    process_data(user_input)
+except ValueError as e:
+    logger.warning(f&quot;Invalid input: {e}&quot;)
+except Exception as e:
+    logger.error(f&quot;Unexpected error: {e}&quot;, exc_info=True)
+    sentry_sdk.capture_exception(e)
+    raise  # Re-raise unexpected errors</code></pre>
+<p>❌ <strong>Broad exception suppression</strong>: Hides bugs, makes debugging impossible ✅ <strong>Better</strong>: Catch specific exceptions, log and report unknown</p>
+<pre><code class="lang-cpp">// ❌ Don&#x27;t: Allocate memory in signal handler
+void crash_handler(int sig) {
+    std::string msg = &quot;Crash!&quot;;  // ❌ Allocates memory (unsafe)
+    std::cout &lt;&lt; msg &lt;&lt; std::endl;  // ❌ Not async-signal-safe
+}
+
+// ✅ Correct: Use only async-signal-safe functions
+void crash_handler(int sig) {
+    const char msg[] = &quot;Crash!\n&quot;;
+    write(STDERR_FILENO, msg, sizeof(msg) - 1);  // ✅ Safe
+    _exit(1);  // ✅ Safe (unlike exit())
+}</code></pre>
+<p>❌ <strong>Unsafe signal handlers</strong>: May deadlock or corrupt state ✅ <strong>Better</strong>: Use only async-signal-safe functions (write, _exit)</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>debugging/core-dump-analysis.md</code> - Analyzing core dumps from crashes</li><li><code>debugging/memory-leak-debugging.md</code> - Memory corruption causes crashes</li><li><code>debugging/concurrency-debugging.md</code> - Race conditions cause crashes</li><li><code>testing/integration-testing.md</code> - Crash reproduction in tests</li><li><code>observability/structured-logging.md</code> - Crash context in logs</li><li><code>cicd/testing-strategy.md</code> - Fuzzing in CI pipelines</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/debugging-crash-debugging.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

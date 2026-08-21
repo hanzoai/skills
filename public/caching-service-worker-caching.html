@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>caching-service-worker-caching</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/caching-service-worker-caching.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/caching-service-worker-caching.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>caching-service-worker-caching</h1><p class="lede">Progressive Web App (PWA) caching with Service Workers - offline-first architecture, caching strategies, Workbox patterns, and modern browser caching.</p><h1>Service Worker Caching</h1>
+<p><strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Building Progressive Web Apps (PWAs) with offline support</li><li>Implementing client-side caching for web applications</li><li>Creating offline-first or resilient web experiences</li><li>Reducing server load with aggressive client caching</li><li>Improving performance on slow or unreliable networks</li><li>Building installable web apps with native-like experiences</li></ul>
+<p><strong>Browser Support (2025)</strong>: Chrome, Edge, Safari, Firefox (95%+ global coverage)</p>
+<p><strong>Prerequisites</strong>: Understanding of <code>http-caching.md</code> (HTTP caching headers complement Service Workers)</p>
+<h2>Core Concepts</h2>
+<h3>Service Worker Overview</h3>
+<p>A <strong>Service Worker</strong> is a JavaScript file that runs in the background, separate from the web page:</p>
+<ul><li>Intercepts network requests (acts as a programmable proxy)</li><li>Manages a cache storage independent of HTTP cache</li><li>Enables offline functionality</li><li>Runs on a separate thread (doesn&#x27;t block UI)</li></ul>
+<p><strong>Key difference from HTTP cache</strong>: Service Worker cache is programmatic - you control every aspect of caching logic.</p>
+<h3>Service Worker Lifecycle</h3>
+<pre><code>Install → Activate → Fetch (intercept requests)</code></pre>
+<pre><code class="lang-javascript">// service-worker.js - Lifecycle events
+
+const CACHE_VERSION = &#x27;v1&#x27;;
+const CACHE_NAME = `app-cache-${CACHE_VERSION}`;
+
+// 1. INSTALL: Cache initial resources
+self.addEventListener(&#x27;install&#x27;, (event) =&gt; {
+  console.log(&#x27;[SW] Installing service worker...&#x27;);
+
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =&gt; {
+      console.log(&#x27;[SW] Caching app shell&#x27;);
+      return cache.addAll([
+        &#x27;/&#x27;,
+        &#x27;/index.html&#x27;,
+        &#x27;/styles/main.css&#x27;,
+        &#x27;/scripts/app.js&#x27;,
+        &#x27;/images/logo.png&#x27;,
+      ]);
+    })
+  );
+
+  // Force new service worker to activate immediately
+  self.skipWaiting();
+});
+
+// 2. ACTIVATE: Clean up old caches
+self.addEventListener(&#x27;activate&#x27;, (event) =&gt; {
+  console.log(&#x27;[SW] Activating service worker...&#x27;);
+
+  event.waitUntil(
+    caches.keys().then((cacheNames) =&gt; {
+      return Promise.all(
+        cacheNames
+          .filter((name) =&gt; name !== CACHE_NAME)
+          .map((name) =&gt; {
+            console.log(`[SW] Deleting old cache: ${name}`);
+            return caches.delete(name);
+          })
+      );
+    })
+  );
+
+  // Take control of all pages immediately
+  return self.clients.claim();
+});
+
+// 3. FETCH: Intercept network requests
+self.addEventListener(&#x27;fetch&#x27;, (event) =&gt; {
+  console.log(`[SW] Fetching: ${event.request.url}`);
+  // Caching strategy goes here (see below)
+});</code></pre>
+<h3>Registering Service Worker</h3>
+<pre><code class="lang-javascript">// main.js - Register service worker from main page
+
+if (&#x27;serviceWorker&#x27; in navigator) {
+  window.addEventListener(&#x27;load&#x27;, () =&gt; {
+    navigator.serviceWorker
+      .register(&#x27;/service-worker.js&#x27;)
+      .then((registration) =&gt; {
+        console.log(&#x27;SW registered:&#x27;, registration.scope);
+
+        // Listen for updates
+        registration.addEventListener(&#x27;updatefound&#x27;, () =&gt; {
+          const newWorker = registration.installing;
+          console.log(&#x27;New service worker found, installing...&#x27;);
+
+          newWorker.addEventListener(&#x27;statechange&#x27;, () =&gt; {
+            if (newWorker.state === &#x27;installed&#x27; &amp;&amp; navigator.serviceWorker.controller) {
+              // New version available
+              console.log(&#x27;New version available! Reload to update.&#x27;);
+              showUpdateNotification();
+            }
+          });
+        });
+      })
+      .catch((error) =&gt; {
+        console.error(&#x27;SW registration failed:&#x27;, error);
+      });
+  });
+}
+
+function showUpdateNotification() {
+  // Notify user of available update
+  if (confirm(&#x27;New version available! Reload to update?&#x27;)) {
+    window.location.reload();
+  }
+}</code></pre>
+<h2>Caching Strategies</h2>
+<h3>1. Cache First (Cache Falling Back to Network)</h3>
+<p><strong>Best for</strong>: Static assets (JS, CSS, images) that rarely change.</p>
+<pre><code class="lang-javascript">// Strategy: Try cache first, fallback to network
+self.addEventListener(&#x27;fetch&#x27;, (event) =&gt; {
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) =&gt; {
+      if (cachedResponse) {
+        console.log(`[SW] Cache hit: ${event.request.url}`);
+        return cachedResponse;
+      }
+
+      console.log(`[SW] Cache miss, fetching: ${event.request.url}`);
+      return fetch(event.request).then((networkResponse) =&gt; {
+        // Cache the fetched response for future use
+        return caches.open(CACHE_NAME).then((cache) =&gt; {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      });
+    })
+  );
+});</code></pre>
+<h3>2. Network First (Network Falling Back to Cache)</h3>
+<p><strong>Best for</strong>: Dynamic content (API responses) where freshness is important.</p>
+<pre><code class="lang-javascript">// Strategy: Try network first, fallback to cache if offline
+function networkFirst(request) {
+  return fetch(request)
+    .then((networkResponse) =&gt; {
+      // Update cache with fresh response
+      caches.open(CACHE_NAME).then((cache) =&gt; {
+        cache.put(request, networkResponse.clone());
+      });
+      return networkResponse;
+    })
+    .catch(() =&gt; {
+      // Network failed, try cache
+      console.log(`[SW] Network failed, using cache: ${request.url}`);
+      return caches.match(request);
+    });
+}
+
+self.addEventListener(&#x27;fetch&#x27;, (event) =&gt; {
+  if (event.request.url.includes(&#x27;/api/&#x27;)) {
+    event.respondWith(networkFirst(event.request));
+  }
+});</code></pre>
+<h3>3. Stale-While-Revalidate</h3>
+<p><strong>Best for</strong>: Balancing freshness and performance - serve cached, update in background.</p>
+<pre><code class="lang-javascript">// Strategy: Serve from cache, fetch fresh copy in background
+function staleWhileRevalidate(request) {
+  return caches.open(CACHE_NAME).then((cache) =&gt; {
+    return cache.match(request).then((cachedResponse) =&gt; {
+      // Fetch fresh copy in background
+      const fetchPromise = fetch(request).then((networkResponse) =&gt; {
+        cache.put(request, networkResponse.clone());
+        return networkResponse;
+      });
+
+      // Return cached response immediately, or wait for network
+      return cachedResponse || fetchPromise;
+    });
+  });
+}
+
+self.addEventListener(&#x27;fetch&#x27;, (event) =&gt; {
+  // Use for semi-dynamic content
+  if (event.request.url.includes(&#x27;/articles/&#x27;)) {
+    event.respondWith(staleWhileRevalidate(event.request));
+  }
+});</code></pre>
+<h3>4. Network Only</h3>
+<p><strong>Best for</strong>: POST requests, analytics, real-time data.</p>
+<pre><code class="lang-javascript">// Strategy: Always use network, never cache
+self.addEventListener(&#x27;fetch&#x27;, (event) =&gt; {
+  if (event.request.method === &#x27;POST&#x27;) {
+    event.respondWith(fetch(event.request));
+  }
+});</code></pre>
+<h3>5. Cache Only</h3>
+<p><strong>Best for</strong>: App shell that&#x27;s guaranteed to be cached.</p>
+<pre><code class="lang-javascript">// Strategy: Only serve from cache
+self.addEventListener(&#x27;fetch&#x27;, (event) =&gt; {
+  if (event.request.url.includes(&#x27;/app-shell/&#x27;)) {
+    event.respondWith(caches.match(event.request));
+  }
+});</code></pre>
+<h2>Workbox Library (Google&#x27;s Service Worker Framework)</h2>
+<p><strong>Workbox</strong> simplifies Service Worker development with pre-built strategies.</p>
+<h3>Basic Workbox Setup</h3>
+<pre><code class="lang-javascript">// service-worker.js - Using Workbox
+importScripts(&#x27;https://storage.googleapis.com/workbox-cdn/releases/7.0.0/workbox-sw.js&#x27;);
+
+const { registerRoute } = workbox.routing;
+const { CacheFirst, NetworkFirst, StaleWhileRevalidate } = workbox.strategies;
+const { CacheableResponsePlugin } = workbox.cacheableResponse;
+const { ExpirationPlugin } = workbox.expiration;
+
+// Cache page navigations (HTML) with Network First
+registerRoute(
+  ({ request }) =&gt; request.mode === &#x27;navigate&#x27;,
+  new NetworkFirst({
+    cacheName: &#x27;pages&#x27;,
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+    ],
+  })
+);
+
+// Cache CSS, JS, and Web Worker requests with Stale While Revalidate
+registerRoute(
+  ({ request }) =&gt;
+    request.destination === &#x27;style&#x27; ||
+    request.destination === &#x27;script&#x27; ||
+    request.destination === &#x27;worker&#x27;,
+  new StaleWhileRevalidate({
+    cacheName: &#x27;assets&#x27;,
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+    ],
+  })
+);
+
+// Cache images with Cache First and expiration
+registerRoute(
+  ({ request }) =&gt; request.destination === &#x27;image&#x27;,
+  new CacheFirst({
+    cacheName: &#x27;images&#x27;,
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+      }),
+    ],
+  })
+);
+
+// Cache Google Fonts
+registerRoute(
+  ({ url }) =&gt; url.origin === &#x27;https://fonts.googleapis.com&#x27;,
+  new StaleWhileRevalidate({
+    cacheName: &#x27;google-fonts-stylesheets&#x27;,
+  })
+);
+
+registerRoute(
+  ({ url }) =&gt; url.origin === &#x27;https://fonts.gstatic.com&#x27;,
+  new CacheFirst({
+    cacheName: &#x27;google-fonts-webfonts&#x27;,
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+        maxEntries: 30,
+      }),
+    ],
+  })
+);</code></pre>
+<h3>Workbox with Build Tools (Vite/Webpack)</h3>
+<pre><code class="lang-javascript">// vite.config.js - Workbox with Vite PWA Plugin
+import { defineConfig } from &#x27;vite&#x27;;
+import { VitePWA } from &#x27;vite-plugin-pwa&#x27;;
+
+export default defineConfig({
+  plugins: [
+    VitePWA({
+      registerType: &#x27;autoUpdate&#x27;,
+      workbox: {
+        globPatterns: [&#x27;**/*.{js,css,html,ico,png,svg}&#x27;],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/api\.example\.com\/.*/i,
+            handler: &#x27;NetworkFirst&#x27;,
+            options: {
+              cacheName: &#x27;api-cache&#x27;,
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60, // 1 hour
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
+      },
+    }),
+  ],
+});</code></pre>
+<h2>Offline-First Architecture</h2>
+<h3>Offline Page Fallback</h3>
+<pre><code class="lang-javascript">// service-worker.js - Show offline page when network fails
+
+const OFFLINE_PAGE = &#x27;/offline.html&#x27;;
+
+self.addEventListener(&#x27;install&#x27;, (event) =&gt; {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =&gt; {
+      return cache.add(OFFLINE_PAGE);
+    })
+  );
+});
+
+self.addEventListener(&#x27;fetch&#x27;, (event) =&gt; {
+  if (event.request.mode === &#x27;navigate&#x27;) {
+    event.respondWith(
+      fetch(event.request).catch(() =&gt; {
+        return caches.match(OFFLINE_PAGE);
+      })
+    );
+  }
+});</code></pre>
+<h3>Background Sync for Failed Requests</h3>
+<p><strong>Queue failed requests, retry when online</strong>.</p>
+<pre><code class="lang-javascript">// service-worker.js - Background Sync API
+
+self.addEventListener(&#x27;sync&#x27;, (event) =&gt; {
+  if (event.tag === &#x27;sync-posts&#x27;) {
+    event.waitUntil(syncPendingPosts());
+  }
+});
+
+async function syncPendingPosts() {
+  const cache = await caches.open(&#x27;pending-posts&#x27;);
+  const requests = await cache.keys();
+
+  return Promise.all(
+    requests.map(async (request) =&gt; {
+      try {
+        const response = await fetch(request.clone());
+        if (response.ok) {
+          await cache.delete(request);
+          console.log(&#x27;Synced pending post:&#x27;, request.url);
+        }
+      } catch (error) {
+        console.error(&#x27;Sync failed:&#x27;, error);
+      }
+    })
+  );
+}
+
+// main.js - Queue post when offline
+async function submitPost(data) {
+  try {
+    const response = await fetch(&#x27;/api/posts&#x27;, {
+      method: &#x27;POST&#x27;,
+      body: JSON.stringify(data),
+      headers: { &#x27;Content-Type&#x27;: &#x27;application/json&#x27; },
+    });
+    return response;
+  } catch (error) {
+    // Offline - queue for background sync
+    const cache = await caches.open(&#x27;pending-posts&#x27;);
+    await cache.put(
+      new Request(&#x27;/api/posts&#x27;, {
+        method: &#x27;POST&#x27;,
+        body: JSON.stringify(data),
+      })
+    );
+
+    // Register sync event
+    const registration = await navigator.serviceWorker.ready;
+    await registration.sync.register(&#x27;sync-posts&#x27;);
+    console.log(&#x27;Post queued for background sync&#x27;);
+  }
+}</code></pre>
+<h2>Cache Versioning and Migration</h2>
+<h3>Versioned Caches</h3>
+<pre><code class="lang-javascript">const CACHE_VERSION = &#x27;v2&#x27;;
+const CACHE_NAME = `app-cache-${CACHE_VERSION}`;
+
+// Activate: Delete old versions
+self.addEventListener(&#x27;activate&#x27;, (event) =&gt; {
+  event.waitUntil(
+    caches.keys().then((cacheNames) =&gt; {
+      return Promise.all(
+        cacheNames
+          .filter((name) =&gt; name.startsWith(&#x27;app-cache-&#x27;) &amp;&amp; name !== CACHE_NAME)
+          .map((name) =&gt; caches.delete(name))
+      );
+    })
+  );
+});</code></pre>
+<h3>Migration Between Versions</h3>
+<pre><code class="lang-javascript">// service-worker.js - Migrate cache data between versions
+
+self.addEventListener(&#x27;activate&#x27;, (event) =&gt; {
+  event.waitUntil(
+    (async () =&gt; {
+      const oldCacheName = &#x27;app-cache-v1&#x27;;
+      const newCacheName = &#x27;app-cache-v2&#x27;;
+
+      if (await caches.has(oldCacheName)) {
+        const oldCache = await caches.open(oldCacheName);
+        const newCache = await caches.open(newCacheName);
+
+        // Migrate specific entries
+        const requests = await oldCache.keys();
+        for (const request of requests) {
+          // Only migrate static assets
+          if (request.url.includes(&#x27;/static/&#x27;)) {
+            const response = await oldCache.match(request);
+            await newCache.put(request, response);
+          }
+        }
+
+        // Delete old cache
+        await caches.delete(oldCacheName);
+        console.log(&#x27;Cache migrated from v1 to v2&#x27;);
+      }
+    })()
+  );
+});</code></pre>
+<h2>Advanced Patterns</h2>
+<h3>Conditional Caching</h3>
+<pre><code class="lang-javascript">// Cache only successful GET requests
+self.addEventListener(&#x27;fetch&#x27;, (event) =&gt; {
+  if (event.request.method !== &#x27;GET&#x27;) {
+    return; // Don&#x27;t cache POST/PUT/DELETE
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((cached) =&gt; {
+      return (
+        cached ||
+        fetch(event.request).then((response) =&gt; {
+          // Only cache successful responses
+          if (response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) =&gt; {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+      );
+    })
+  );
+});</code></pre>
+<h3>Cache with Timeout</h3>
+<pre><code class="lang-javascript">// Network with timeout fallback
+function fetchWithTimeout(request, timeout = 3000) {
+  return Promise.race([
+    fetch(request),
+    new Promise((_, reject) =&gt;
+      setTimeout(() =&gt; reject(new Error(&#x27;Network timeout&#x27;)), timeout)
+    ),
+  ]);
+}
+
+self.addEventListener(&#x27;fetch&#x27;, (event) =&gt; {
+  event.respondWith(
+    fetchWithTimeout(event.request, 2000)
+      .catch(() =&gt; caches.match(event.request))
+      .catch(() =&gt; caches.match(&#x27;/offline.html&#x27;))
+  );
+});</code></pre>
+<h2>Debugging Service Workers</h2>
+<h3>Chrome DevTools</h3>
+<pre><code class="lang-javascript">// service-worker.js - Debug logging
+
+const DEBUG = true;
+
+function log(...args) {
+  if (DEBUG) {
+    console.log(&#x27;[SW]&#x27;, ...args);
+  }
+}
+
+self.addEventListener(&#x27;fetch&#x27;, (event) =&gt; {
+  log(&#x27;Fetch:&#x27;, event.request.url);
+  log(&#x27;Cache strategy:&#x27;, getStrategy(event.request.url));
+});</code></pre>
+<p><strong>Chrome DevTools</strong>:</p>
+<ol><li>Open DevTools → Application tab → Service Workers</li><li>Check &quot;Update on reload&quot; for development</li><li>&quot;Unregister&quot; to remove service worker</li><li>&quot;Bypass for network&quot; to disable temporarily</li><li>Application → Cache Storage to inspect cached data</li></ol>
+<h3>Force Update</h3>
+<pre><code class="lang-javascript">// main.js - Force service worker update
+
+navigator.serviceWorker.register(&#x27;/service-worker.js&#x27;).then((registration) =&gt; {
+  // Check for updates every hour
+  setInterval(() =&gt; {
+    registration.update();
+  }, 60 * 60 * 1000);
+});
+
+// Manually trigger update
+document.getElementById(&#x27;update-btn&#x27;).addEventListener(&#x27;click&#x27;, () =&gt; {
+  navigator.serviceWorker.ready.then((registration) =&gt; {
+    registration.update();
+  });
+});</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>❌ Caching Everything</h3>
+<pre><code class="lang-javascript">// WRONG: Cache all requests indiscriminately
+self.addEventListener(&#x27;fetch&#x27;, (event) =&gt; {
+  event.respondWith(caches.match(event.request) || fetch(event.request));
+  // Problem: Caches POST requests, analytics, user-specific data
+});
+
+// CORRECT: Selective caching
+if (event.request.method === &#x27;GET&#x27; &amp;&amp; !event.request.url.includes(&#x27;/api/user&#x27;)) {
+  // Cache only appropriate requests
+}</code></pre>
+<h3>❌ Not Versioning Caches</h3>
+<pre><code class="lang-javascript">// WRONG: Same cache name forever
+const CACHE_NAME = &#x27;app-cache&#x27;; // Never changes
+
+// CORRECT: Version your caches
+const CACHE_VERSION = &#x27;v2&#x27;;
+const CACHE_NAME = `app-cache-${CACHE_VERSION}`;</code></pre>
+<h3>❌ Forgetting to Clean Up</h3>
+<pre><code class="lang-javascript">// WRONG: No activation cleanup
+// Old caches accumulate, waste storage
+
+// CORRECT: Delete old caches on activate
+self.addEventListener(&#x27;activate&#x27;, (event) =&gt; {
+  event.waitUntil(
+    caches.keys().then((names) =&gt;
+      Promise.all(names.filter((n) =&gt; n !== CACHE_NAME).map((n) =&gt; caches.delete(n)))
+    )
+  );
+});</code></pre>
+<h2>Quick Reference</h2>
+<p><strong>Caching Strategy Selection</strong>:</p>
+<pre><code>Static assets (JS/CSS/images) → Cache First
+API responses → Network First
+Semi-dynamic content → Stale While Revalidate
+Real-time data / POST requests → Network Only
+App shell → Cache Only</code></pre>
+<p><strong>Cache Size Limits</strong> (2025):</p>
+<ul><li>Chrome: ~60% of free disk space</li><li>Safari: 50MB soft limit, up to 1GB with user permission</li><li>Firefox: Up to 50% of free disk space</li></ul>
+<p><strong>Service Worker Lifecycle</strong>:</p>
+<ol><li>Register → <code>navigator.serviceWorker.register()</code></li><li>Install → <code>self.addEventListener(&#x27;install&#x27;)</code></li><li>Activate → <code>self.addEventListener(&#x27;activate&#x27;)</code></li><li>Fetch → <code>self.addEventListener(&#x27;fetch&#x27;)</code></li></ol>
+<p><strong>Workbox Strategies</strong>:</p>
+<ul><li><code>CacheFirst</code>: Static assets</li><li><code>NetworkFirst</code>: Dynamic content</li><li><code>StaleWhileRevalidate</code>: Balance freshness/performance</li><li><code>NetworkOnly</code>: Real-time data</li><li><code>CacheOnly</code>: Guaranteed cached content</li></ul>
+<h2>Related Skills</h2>
+<ul><li><code>http-caching.md</code> - HTTP caching headers (complement Service Workers)</li><li><code>frontend-performance.md</code> - Overall frontend performance optimization</li><li><code>web-accessibility.md</code> - Ensure offline pages are accessible</li><li><code>cache-invalidation-strategies.md</code> - Cache versioning strategies</li></ul>
+<h2>Summary</h2>
+<p>Service Workers provide powerful client-side caching for Progressive Web Apps:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ol><li><strong>Service Workers ≠ HTTP Cache</strong> - They complement each other</li><li><strong>Choose the right strategy</strong> - Cache First for static, Network First for dynamic</li><li><strong>Use Workbox for production</strong> - Handles edge cases and best practices</li><li><strong>Version your caches</strong> - Clean up old caches on activation</li><li><strong>Offline-first thinking</strong> - Plan for network failures</li><li><strong>Background Sync</strong> - Queue failed requests for retry when online</li><li><strong>Debug thoroughly</strong> - Service Workers can cause hard-to-debug issues</li></ol>
+<p>Service Workers enable resilient, performant web applications that work offline. Combined with HTTP caching and CDN edge caching, they form a complete caching strategy from browser to origin server.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/caching-service-worker-caching.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

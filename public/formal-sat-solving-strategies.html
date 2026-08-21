@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>formal-sat-solving-strategies</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/formal-sat-solving-strategies.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/formal-sat-solving-strategies.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>formal-sat-solving-strategies</h1><p class="lede">Out of Scope: - SMT theories (see z3-solver-basics.md) - Theorem proving (see lean-theorem-proving.md) - Constraint programming (see csp-modeling.md) - Solver implementation (focus on usage)</p><h1>SAT Solving Strategies</h1>
+<h2>Metadata</h2>
+<ul><li><strong>Skill ID</strong>: sat-solving-strategies</li><li><strong>Category</strong>: Formal Methods / SAT Solving</li><li><strong>Complexity</strong>: Advanced</li><li><strong>Prerequisites</strong>: Boolean logic, graph algorithms, basic complexity theory</li><li><strong>Last Updated</strong>: 2025-10-18</li></ul>
+<h2>Overview</h2>
+<h3>Purpose</h3>
+<p>Master Boolean satisfiability (SAT) solving algorithms, encodings, and heuristics for combinatorial problems and formal verification.</p>
+<h3>Scope</h3>
+<p><strong>In Scope</strong>:</p>
+<ul><li>DPLL and CDCL algorithms</li><li>CNF encoding techniques</li><li>Cardinality and pseudo-boolean constraints</li><li>Watched literals and clause learning</li><li>Restart and branching heuristics</li><li>SAT solver selection and tuning</li></ul>
+<p><strong>Out of Scope</strong>:</p>
+<ul><li>SMT theories (see z3-solver-basics.md)</li><li>Theorem proving (see lean-theorem-proving.md)</li><li>Constraint programming (see csp-modeling.md)</li><li>Solver implementation (focus on usage)</li></ul>
+<h3>When to Use This Skill</h3>
+<p><strong>Primary Use Cases</strong>:</p>
+<ul><li>Boolean satisfiability checking</li><li>Combinatorial optimization (via SAT encoding)</li><li>Hardware verification</li><li>Equivalence checking</li><li>Model checking (bounded)</li><li>Test generation</li></ul>
+<p><strong>Choose SAT When</strong>:</p>
+<ul><li>Problem is purely Boolean (no arithmetic)</li><li>Need maximum performance for satisfiability</li><li>Have efficient CNF encoding</li><li>Don&#x27;t need uninterpreted functions or theories</li></ul>
+<p><strong>Alternatives</strong>:</p>
+<ul><li><strong>Z3/SMT</strong>: Need arithmetic or arrays (see z3-solver-basics.md)</li><li><strong>CSP solvers</strong>: Discrete domains, global constraints</li><li><strong>MILP</strong>: Linear optimization with integers</li><li><strong>BDDs</strong>: Symbolic state space exploration</li></ul>
+<h2>Core Concepts</h2>
+<h3>1. SAT Problem Definition</h3>
+<pre><code>Input: Boolean formula φ in CNF (Conjunctive Normal Form)
+  CNF = (l₁₁ ∨ l₁₂ ∨ ...) ∧ (l₂₁ ∨ l₂₂ ∨ ...) ∧ ...
+  where lᵢⱼ is a literal (variable or its negation)
+
+Output:
+  - SAT + assignment if φ is satisfiable
+  - UNSAT if no assignment satisfies φ
+
+Example:
+  φ = (x₁ ∨ ¬x₂) ∧ (x₂ ∨ x₃) ∧ (¬x₁ ∨ ¬x₃)
+  Solution: x₁=T, x₂=T, x₃=F satisfies φ</code></pre>
+<h3>2. DPLL Algorithm (Davis-Putnam-Logemann-Loveland)</h3>
+<pre><code>DPLL(φ, assignment):
+  1. Unit Propagation:
+     - Find unit clauses (single literal)
+     - Assign literal to satisfy clause
+     - Simplify formula
+
+  2. Pure Literal Elimination:
+     - Find variables appearing only positive or only negative
+     - Assign to satisfy all occurrences
+
+  3. Base Cases:
+     - If φ = ∅ (empty): return SAT
+     - If ∅ ∈ φ (empty clause): return UNSAT
+
+  4. Branching:
+     - Pick unassigned variable x
+     - Try DPLL(φ[x=T], assignment + {x=T})
+     - If SAT: return SAT
+     - Else: try DPLL(φ[x=F], assignment + {x=F})</code></pre>
+<p><strong>Example Trace</strong>:</p>
+<pre><code>φ = (x₁ ∨ x₂) ∧ (¬x₁ ∨ x₃) ∧ (¬x₂ ∨ ¬x₃) ∧ (x₃)
+
+Step 1: Unit propagation on (x₃)
+  Assign x₃ = T
+  φ becomes (x₁ ∨ x₂) ∧ (¬x₁ ∨ T) ∧ (¬x₂ ∨ F)
+  Simplify: (x₁ ∨ x₂) ∧ (¬x₂)
+
+Step 2: Unit propagation on (¬x₂)
+  Assign x₂ = F
+  φ becomes (x₁ ∨ F)
+  Simplify: (x₁)
+
+Step 3: Unit propagation on (x₁)
+  Assign x₁ = T
+  φ becomes ∅ (empty formula)
+  Return SAT with {x₁=T, x₂=F, x₃=T}</code></pre>
+<h3>3. CDCL Algorithm (Conflict-Driven Clause Learning)</h3>
+<pre><code>CDCL extends DPLL with:
+
+1. Implication Graph:
+   - Track assignment reasons (decisions vs. implications)
+   - Build graph showing variable dependencies
+
+2. Conflict Analysis:
+   - When conflict occurs, analyze implication graph
+   - Derive &quot;learned clause&quot; (reason for conflict)
+   - Add learned clause to formula
+
+3. Non-chronological Backtracking:
+   - Backtrack to decision level of learned clause
+   - Skip irrelevant decisions
+
+4. Restarts:
+   - Periodically restart search with learned clauses
+   - Escape bad search space regions</code></pre>
+<p><strong>Implication Graph Example</strong>:</p>
+<pre><code>Decision: x₁ = T (level 1)
+  → (¬x₁ ∨ x₂) implies x₂ = T
+  → (¬x₂ ∨ x₃) implies x₃ = T
+
+Decision: x₄ = F (level 2)
+  → (x₃ ∨ ¬x₄ ∨ x₅) implies x₅ = T
+  → (¬x₃ ∨ ¬x₅) CONFLICT!
+
+Learned Clause: (¬x₁ ∨ ¬x₄)
+  (If x₁=T and x₄=F, we always get conflict)
+
+Backtrack to level 1 (skipping x₄ decision)</code></pre>
+<h3>4. Watched Literals</h3>
+<pre><code>Efficient unit propagation using 2-watched literals per clause:
+
+Clause: (l₁ ∨ l₂ ∨ l₃ ∨ l₄)
+Watch: l₁ and l₂
+
+Invariant: If clause has ≥2 unassigned literals, watch 2 of them
+
+When literal becomes false:
+  - If clause has another unassigned literal, move watch
+  - If only 1 watch remains unassigned, propagate unit
+  - If both watches false, conflict
+
+Benefit: Only visit clauses when watched literal changes
+  (No need to scan all clauses on every assignment)</code></pre>
+<h3>5. Branching Heuristics</h3>
+<p><strong>VSIDS (Variable State Independent Decaying Sum)</strong>:</p>
+<pre><code class="lang-python"># Each variable has activity score
+activity[var] = 0.0
+increment = 1.0
+
+# On conflict learning:
+for var in learned_clause:
+    activity[var] += increment
+
+# Periodic decay
+if num_conflicts % 256 == 0:
+    for var in variables:
+        activity[var] *= 0.95
+    increment *= 0.95
+
+# Branching decision
+next_var = max(unassigned_vars, key=lambda v: activity[v])</code></pre>
+<p><strong>Phase Saving</strong>:</p>
+<pre><code class="lang-python"># Remember last assigned value for each variable
+last_value[var] = assigned_value
+
+# On branching:
+var = pick_var_vsids()
+value = last_value[var]  # Try last value first
+assign(var, value)</code></pre>
+<h2>Implementation Patterns</h2>
+<h3>Pattern 1: Using PySAT (Python SAT Library)</h3>
+<pre><code class="lang-python">from pysat.solvers import Glucose3
+from pysat.formula import CNF
+
+def solve_cnf_file(filename):
+    &quot;&quot;&quot;Solve CNF in DIMACS format&quot;&quot;&quot;
+    cnf = CNF(from_file=filename)
+
+    with Glucose3(bootstrap_with=cnf) as solver:
+        if solver.solve():
+            model = solver.get_model()
+            print(f&quot;SAT: {model}&quot;)
+            return model
+        else:
+            print(&quot;UNSAT&quot;)
+            return None
+
+# Example DIMACS file content:
+# p cnf 3 3
+# 1 -2 0
+# 2 3 0
+# -1 -3 0
+# (3 variables, 3 clauses)</code></pre>
+<h3>Pattern 2: Programmatic SAT Construction</h3>
+<pre><code class="lang-python">from pysat.solvers import Solver
+
+def solve_graph_coloring(edges, num_colors=3):
+    &quot;&quot;&quot;3-coloring of graph using SAT&quot;&quot;&quot;
+    nodes = set()
+    for u, v in edges:
+        nodes.add(u)
+        nodes.add(v)
+
+    # Variable encoding: x[node][color] = node has color
+    # Variable number: node * num_colors + color + 1 (1-indexed)
+    def var(node, color):
+        return node * num_colors + color + 1
+
+    clauses = []
+
+    # Each node has at least one color
+    for node in nodes:
+        clauses.append([var(node, c) for c in range(num_colors)])
+
+    # Each node has at most one color
+    for node in nodes:
+        for c1 in range(num_colors):
+            for c2 in range(c1 + 1, num_colors):
+                clauses.append([-var(node, c1), -var(node, c2)])
+
+    # Adjacent nodes have different colors
+    for u, v in edges:
+        for c in range(num_colors):
+            clauses.append([-var(u, c), -var(v, c)])
+
+    # Solve
+    with Solver(name=&#x27;glucose3&#x27;) as solver:
+        for clause in clauses:
+            solver.add_clause(clause)
+
+        if solver.solve():
+            model = solver.get_model()
+            coloring = {}
+            for node in nodes:
+                for c in range(num_colors):
+                    if var(node, c) in model:
+                        coloring[node] = c
+            return coloring
+        return None
+
+# Example: Triangle graph
+edges = [(0, 1), (1, 2), (2, 0)]
+coloring = solve_graph_coloring(edges)
+print(coloring)  # {0: 0, 1: 1, 2: 2}</code></pre>
+<h3>Pattern 3: Cardinality Constraints (At-Most-K)</h3>
+<pre><code class="lang-python">from pysat.card import CardEnc
+
+def at_most_k_constraint(lits, k):
+    &quot;&quot;&quot;At most k of lits can be true&quot;&quot;&quot;
+    # Encoding options: sequential, ladder, totalizer, etc.
+    cnf = CardEnc.atmost(lits, bound=k, encoding=EncType.seqcounter)
+    return cnf.clauses
+
+def solve_scheduling(jobs, max_parallel=2):
+    &quot;&quot;&quot;Schedule jobs with at most max_parallel running concurrently&quot;&quot;&quot;
+    # Variable: x[job][time] = job runs at time
+    time_slots = len(jobs)
+
+    def var(job, time):
+        return job * time_slots + time + 1
+
+    clauses = []
+
+    # Each job runs exactly once
+    for job in range(len(jobs)):
+        clauses.append([var(job, t) for t in range(time_slots)])
+
+    # At most max_parallel jobs at each time
+    for t in range(time_slots):
+        lits = [var(job, t) for job in range(len(jobs))]
+        clauses.extend(at_most_k_constraint(lits, max_parallel))
+
+    with Solver() as solver:
+        for clause in clauses:
+            solver.add_clause(clause)
+        if solver.solve():
+            return solver.get_model()
+    return None</code></pre>
+<h3>Pattern 4: Pseudo-Boolean Constraints</h3>
+<pre><code class="lang-python">from pysat.pb import PBEnc
+
+def weighted_constraint(lits, weights, bound):
+    &quot;&quot;&quot;Sum of weights * lits &lt;= bound&quot;&quot;&quot;
+    cnf = PBEnc.leq(lits, weights, bound)
+    return cnf.clauses
+
+def solve_knapsack_sat(items, capacity):
+    &quot;&quot;&quot;0/1 knapsack using SAT encoding&quot;&quot;&quot;
+    # items = [(weight, value), ...]
+    # Variable: x[i] = item i is selected
+
+    clauses = []
+
+    # Weight constraint: sum(weight[i] * x[i]) &lt;= capacity
+    lits = [i + 1 for i in range(len(items))]
+    weights = [w for w, v in items]
+    clauses.extend(weighted_constraint(lits, weights, capacity))
+
+    # Optimize value (manually via binary search on lower bounds)
+    # For simplicity, just find feasible solution
+    with Solver() as solver:
+        for clause in clauses:
+            solver.add_clause(clause)
+        if solver.solve():
+            model = solver.get_model()
+            selected = [i for i in range(len(items)) if (i+1) in model]
+            total_value = sum(items[i][1] for i in selected)
+            return selected, total_value
+    return None, 0
+
+items = [(10, 60), (20, 100), (30, 120)]
+capacity = 50
+result = solve_knapsack_sat(items, capacity)
+print(result)</code></pre>
+<h3>Pattern 5: Incremental SAT with Assumptions</h3>
+<pre><code class="lang-python">from pysat.solvers import Glucose4
+
+def solve_with_assumptions():
+    &quot;&quot;&quot;Use assumptions for incremental solving&quot;&quot;&quot;
+    solver = Glucose4()
+
+    # Base clauses
+    x1, x2, x3 = 1, 2, 3
+    solver.add_clause([x1, x2])
+    solver.add_clause([-x1, x3])
+
+    # Try scenario 1: x2 = False
+    if solver.solve(assumptions=[-x2]):
+        print(f&quot;Scenario 1 SAT: {solver.get_model()}&quot;)
+    else:
+        print(&quot;Scenario 1 UNSAT&quot;)
+
+    # Try scenario 2: x3 = False (independent)
+    if solver.solve(assumptions=[-x3]):
+        print(f&quot;Scenario 2 SAT: {solver.get_model()}&quot;)
+    else:
+        print(&quot;Scenario 2 UNSAT&quot;)
+
+    solver.delete()
+
+solve_with_assumptions()</code></pre>
+<h3>Pattern 6: Unsat Core Extraction</h3>
+<pre><code class="lang-python">from pysat.solvers import Glucose3
+
+def find_minimal_unsat_core(clauses):
+    &quot;&quot;&quot;Find minimal subset of clauses that are UNSAT&quot;&quot;&quot;
+    # Add selector variables to each clause
+    selectors = []
+    augmented = []
+
+    for i, clause in enumerate(clauses):
+        selector = len(clauses) + i + 1  # Fresh variable
+        selectors.append(selector)
+        augmented.append(clause + [-selector])  # clause ∨ ¬selector
+
+    with Glucose3() as solver:
+        for clause in augmented:
+            solver.add_clause(clause)
+
+        # Try to satisfy with all selectors true
+        if not solver.solve(assumptions=selectors):
+            # Get core selectors
+            core = solver.get_core()
+            core_indices = [selectors.index(s) for s in core if s in selectors]
+            return [clauses[i] for i in core_indices]
+
+    return None  # SAT
+
+# Example
+clauses = [[1, 2], [-1, 3], [-2, -3], [-3]]
+core = find_minimal_unsat_core(clauses)
+print(f&quot;UNSAT core: {core}&quot;)
+# Output: [[-1, 3], [-3]] or similar minimal core</code></pre>
+<h3>Pattern 7: Restart Strategies</h3>
+<pre><code class="lang-python">from pysat.solvers import Solver
+
+def solve_with_custom_restarts(clauses, restart_interval=100):
+    &quot;&quot;&quot;SAT solving with periodic restarts&quot;&quot;&quot;
+    solver = Solver(name=&#x27;minisat22&#x27;)
+
+    for clause in clauses:
+        solver.add_clause(clause)
+
+    # MiniSat supports restart configuration
+    # Other solvers have different APIs
+    solver.conf_budget(conflicts=restart_interval)
+
+    iterations = 0
+    while iterations &lt; 10:  # Max 10 restarts
+        status = solver.solve_limited(expect_interrupt=True)
+
+        if status is True:
+            return solver.get_model()
+        elif status is False:
+            return None  # UNSAT
+        else:
+            # Interrupted (restart)
+            iterations += 1
+            solver.conf_budget(conflicts=restart_interval)
+
+    return None  # Timeout
+
+# Note: Modern solvers handle restarts automatically
+# This pattern is for custom restart strategies</code></pre>
+<h2>Quick Reference</h2>
+<h3>Installation</h3>
+<pre><code class="lang-bash"># PySAT (Python SAT library)
+pip install python-sat
+
+# Or with uv
+uv add python-sat
+
+# CryptoMiniSat (standalone)
+pip install pycryptosat
+
+# Verify
+python -c &quot;from pysat.solvers import Glucose3; print(&#x27;OK&#x27;)&quot;</code></pre>
+<h3>SAT Solver Comparison</h3>
+<pre><code>Solver         | Speed      | Features           | Use Case
+---------------|------------|--------------------|-----------------------
+MiniSat        | Fast       | Basic CDCL         | General purpose
+Glucose        | Very Fast  | Aggressive learning| Hard instances
+CryptoMiniSat  | Fast       | XOR clauses        | Crypto, hashing
+Lingeling      | Very Fast  | Preprocessing      | Competitions
+Cadical        | Very Fast  | Modern heuristics  | State-of-the-art</code></pre>
+<h3>DIMACS CNF Format</h3>
+<pre><code>p cnf &lt;num_vars&gt; &lt;num_clauses&gt;
+&lt;lit1&gt; &lt;lit2&gt; ... 0
+&lt;lit1&gt; &lt;lit2&gt; ... 0
+...
+
+Example:
+p cnf 3 2
+1 -2 3 0
+-1 2 0
+
+Explanation:
+- Variables: 1, 2, 3
+- Clause 1: x₁ ∨ ¬x₂ ∨ x₃
+- Clause 2: ¬x₁ ∨ x₂</code></pre>
+<h3>Common Encoding Patterns</h3>
+<pre><code class="lang-python"># At-least-one (ALO)
+[x1, x2, x3]
+
+# At-most-one (AMO) - pairwise
+[-x1, -x2]
+[-x1, -x3]
+[-x2, -x3]
+
+# Exactly-one (EXO)
+ALO + AMO
+
+# Implication: x → y
+[-x, y]
+
+# Equivalence: x ↔ y
+[-x, y], [x, -y]
+
+# XOR: x ⊕ y
+[x, y], [-x, -y]</code></pre>
+<h3>PySAT API Cheat Sheet</h3>
+<pre><code class="lang-python">from pysat.solvers import Glucose3
+from pysat.formula import CNF
+
+# Create solver
+solver = Glucose3()  # or Minisat22, Cadical, etc.
+
+# Add clauses
+solver.add_clause([1, -2, 3])
+solver.add_clause([-1, 2])
+
+# Solve
+if solver.solve():
+    model = solver.get_model()  # List of literals
+else:
+    print(&quot;UNSAT&quot;)
+
+# Incremental with assumptions
+solver.solve(assumptions=[1, -3])
+
+# Get core (if UNSAT)
+core = solver.get_core()
+
+# Cleanup
+solver.delete()
+
+# Context manager (auto cleanup)
+with Glucose3() as s:
+    s.add_clause([1, 2])
+    s.solve()</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>Anti-Pattern 1: Naive CNF Encoding</h3>
+<p><strong>Problem</strong>: Tseitin transformation explosion.</p>
+<pre><code class="lang-python"># BAD: Direct encoding of (x1 ∧ x2) ∨ (x3 ∧ x4)
+# Converts to: (x1 ∨ x3) ∧ (x1 ∨ x4) ∧ (x2 ∨ x3) ∧ (x2 ∨ x4)
+# 4 clauses, but loses structure</code></pre>
+<p><strong>Solution</strong>: Use Tseitin variables to preserve structure.</p>
+<pre><code class="lang-python"># GOOD: Introduce auxiliary variables
+# y1 ↔ (x1 ∧ x2)
+# y2 ↔ (x3 ∧ x4)
+# y1 ∨ y2
+
+# Clauses:
+# y1 → x1, y1 → x2, (x1 ∧ x2) → y1
+# y2 → x3, y2 → x4, (x3 ∧ x4) → y2
+# y1 ∨ y2</code></pre>
+<h3>Anti-Pattern 2: Inefficient Cardinality Encoding</h3>
+<p><strong>Problem</strong>: Quadratic AMO encoding for large sets.</p>
+<pre><code class="lang-python"># BAD: Pairwise AMO for 100 variables
+# O(n²) clauses: 100 * 99 / 2 = 4950 clauses
+lits = list(range(1, 101))
+for i in range(len(lits)):
+    for j in range(i+1, len(lits)):
+        clauses.append([-lits[i], -lits[j]])</code></pre>
+<p><strong>Solution</strong>: Use efficient encoding (sequential, commander).</p>
+<pre><code class="lang-python"># GOOD: Sequential encoding for AMO
+from pysat.card import CardEnc, EncType
+cnf = CardEnc.atmost(lits, bound=1, encoding=EncType.seqcounter)
+# O(n) clauses and variables</code></pre>
+<h3>Anti-Pattern 3: Not Using Incremental Solving</h3>
+<p><strong>Problem</strong>: Rebuilding solver for each query.</p>
+<pre><code class="lang-python"># BAD: Create new solver each time
+for scenario in scenarios:
+    solver = Glucose3()
+    for clause in base_clauses:  # Re-add every time
+        solver.add_clause(clause)
+    solver.add_clause(scenario)
+    solver.solve()
+    solver.delete()</code></pre>
+<p><strong>Solution</strong>: Use assumptions for incremental queries.</p>
+<pre><code class="lang-python"># GOOD: Single solver with assumptions
+solver = Glucose3()
+for clause in base_clauses:
+    solver.add_clause(clause)
+
+for scenario_lit in scenario_lits:
+    if solver.solve(assumptions=[scenario_lit]):
+        process(solver.get_model())
+solver.delete()</code></pre>
+<h3>Anti-Pattern 4: Ignoring Preprocessing</h3>
+<p><strong>Problem</strong>: Not simplifying formula before solving.</p>
+<pre><code class="lang-python"># BAD: Directly solve complex formula
+solver.add_clause([1, 2, 3])
+solver.add_clause([1, 2, -3])  # Subsumes to [1, 2]
+solver.solve()</code></pre>
+<p><strong>Solution</strong>: Use preprocessor or simplify manually.</p>
+<pre><code class="lang-python"># GOOD: Simplify first
+from pysat.formula import CNF
+cnf = CNF()
+cnf.append([1, 2, 3])
+cnf.append([1, 2, -3])
+
+# Subsumption: [1, 2, 3] subsumed by [1, 2]
+simplified = CNF()
+simplified.append([1, 2])  # Only keep simplified clause
+
+solver.add_clause([1, 2])
+solver.solve()</code></pre>
+<h3>Anti-Pattern 5: Wrong Solver Choice</h3>
+<p><strong>Problem</strong>: Using general SAT for special structure.</p>
+<pre><code class="lang-python"># BAD: SAT for pure arithmetic
+# Problem: x + y + z &lt;= 2 (encoded as CNF)
+# Explosion of clauses for cardinality constraint</code></pre>
+<p><strong>Solution</strong>: Use SMT solver for arithmetic.</p>
+<pre><code class="lang-python"># GOOD: Use Z3 for arithmetic
+from z3 import *
+x, y, z = Ints(&#x27;x y z&#x27;)
+s = Solver()
+s.add(x + y + z &lt;= 2)
+s.check()
+# More natural and efficient</code></pre>
+<h2>Real-World Applications</h2>
+<h3>Application 1: N-Queens SAT Encoding</h3>
+<pre><code class="lang-python">from pysat.solvers import Glucose3
+
+def solve_n_queens(n):
+    &quot;&quot;&quot;Solve N-Queens using SAT encoding&quot;&quot;&quot;
+    def var(row, col):
+        return row * n + col + 1
+
+    clauses = []
+
+    # Each row has exactly one queen
+    for row in range(n):
+        clauses.append([var(row, col) for col in range(n)])
+        for c1 in range(n):
+            for c2 in range(c1+1, n):
+                clauses.append([-var(row, c1), -var(row, c2)])
+
+    # Each column has at most one queen
+    for col in range(n):
+        for r1 in range(n):
+            for r2 in range(r1+1, n):
+                clauses.append([-var(r1, col), -var(r2, col)])
+
+    # Diagonals have at most one queen
+    for r1 in range(n):
+        for c1 in range(n):
+            for r2 in range(r1+1, n):
+                for c2 in range(n):
+                    # Same diagonal: |r1-r2| == |c1-c2|
+                    if abs(r1-r2) == abs(c1-c2):
+                        clauses.append([-var(r1, c1), -var(r2, c2)])
+
+    with Glucose3() as solver:
+        for clause in clauses:
+            solver.add_clause(clause)
+        if solver.solve():
+            model = solver.get_model()
+            board = [[0]*n for _ in range(n)]
+            for lit in model:
+                if lit &gt; 0:
+                    row, col = divmod(lit-1, n)
+                    board[row][col] = 1
+            return board
+    return None
+
+# Solve 8-Queens
+board = solve_n_queens(8)
+for row in board:
+    print(row)</code></pre>
+<h3>Application 2: Bounded Model Checking</h3>
+<pre><code class="lang-python">def bounded_model_check(initial, transition, bad, k):
+    &quot;&quot;&quot;BMC: Check if bad state reachable in k steps&quot;&quot;&quot;
+    # Variables: state[time][var]
+    def var(time, state_var):
+        return time * num_state_vars + state_var + 1
+
+    clauses = []
+
+    # Initial state
+    clauses.extend(initial(0))
+
+    # Transition relation for k steps
+    for t in range(k):
+        clauses.extend(transition(t, t+1))
+
+    # Check if bad state reachable
+    for t in range(k+1):
+        solver = Glucose3()
+        for clause in clauses:
+            solver.add_clause(clause)
+        clauses.extend(bad(t))
+
+        if solver.solve():
+            return t, solver.get_model()  # Bug found at step t
+        solver.delete()
+
+    return None, None  # No bug found within k steps</code></pre>
+<h2>Related Skills</h2>
+<ul><li><strong>z3-solver-basics.md</strong>: SMT solving with theories</li><li><strong>smt-theory-applications.md</strong>: Advanced SMT applications</li><li><strong>csp-modeling.md</strong>: Constraint satisfaction problems</li><li><strong>model-checking.md</strong>: Formal verification techniques</li></ul>
+<h2>References</h2>
+<ul><li>Handbook of Satisfiability (2nd ed.)</li><li>MiniSat: http://minisat.se/</li><li>PySAT: https://pysathq.github.io/</li><li>SAT Competition: http://www.satcompetition.org/</li></ul>
+<h2>Troubleshooting</h2>
+<p><strong>Problem</strong>: Solver too slow</p>
+<ul><li><strong>Fix</strong>: Try different solver (Glucose, Cadical), enable preprocessing, use better encoding</li></ul>
+<p><strong>Problem</strong>: Memory explosion</p>
+<ul><li><strong>Fix</strong>: Reduce auxiliary variables, use efficient cardinality encoding, solve incrementally</li></ul>
+<p><strong>Problem</strong>: UNKNOWN result</p>
+<ul><li><strong>Fix</strong>: Increase timeout, check for quantifiers (use SMT instead), simplify formula</li></ul>
+<p><strong>Problem</strong>: Encoding too large</p>
+<ul><li><strong>Fix</strong>: Use Tseitin transformation, sequential counters, or switch to SMT</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/formal-sat-solving-strategies.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>debugging-container-debugging</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/debugging-container-debugging.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/debugging-container-debugging.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>debugging-container-debugging</h1><p class="lede">Debugging applications inside containers using docker exec, kubectl debug, ephemeral containers, and distroless debugging techniques</p><h1>Container Debugging</h1>
+<p><strong>Scope</strong>: Docker debugging, Kubernetes ephemeral containers, kubectl debug, debug vs production images, distroless debugging, sidecar patterns</p>
+<p><strong>Lines</strong>: 410</p>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Debugging applications running in Docker containers</li><li>Troubleshooting Kubernetes pods without debug tools</li><li>Investigating networking issues in containerized environments</li><li>Analyzing resource constraints (CPU, memory limits)</li><li>Debugging distroless or minimal container images</li><li>Inspecting container filesystem and processes</li><li>Troubleshooting container startup failures</li><li>Debugging multi-container pods (sidecars, init containers)</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Local development debugging (use IDE debuggers)</li><li>Applications running directly on host (use standard debugging)</li><li>Simple logging issues (check container logs first)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Container Debugging Challenges</h3>
+<p><strong>Why containers are harder to debug</strong>:</p>
+<ol><li><strong>Immutable infrastructure</strong>: Can&#x27;t install debug tools at runtime</li><li><strong>Minimal images</strong>: Production images lack shells, utilities</li><li><strong>Ephemeral nature</strong>: Containers restart, losing state</li><li><strong>Network isolation</strong>: Different networking namespace</li><li><strong>Resource limits</strong>: CPU/memory constraints affect behavior</li></ol>
+<h3>Debug Image vs Production Image</h3>
+<pre><code class="lang-dockerfile"># Production image: Minimal, secure
+FROM gcr.io/distroless/python3-debian11
+COPY app.py /app/
+CMD [&quot;/app/app.py&quot;]
+# No shell, no package manager, no debug tools!
+
+# Debug image: Full tooling
+FROM python:3.11-slim
+RUN apt-get update &amp;&amp; apt-get install -y \
+    curl vim strace tcpdump netcat
+COPY app.py /app/
+CMD [&quot;/app/app.py&quot;]</code></pre>
+<h3>Container Debugging Techniques</h3>
+<pre><code>Layer 1: Non-invasive (read-only inspection)
+├─ docker logs / kubectl logs
+├─ docker inspect / kubectl describe
+└─ docker stats / kubectl top
+
+Layer 2: Shell access
+├─ docker exec -it &lt;container&gt; /bin/sh
+├─ kubectl exec -it &lt;pod&gt; -- /bin/sh
+└─ nsenter (host-level container access)
+
+Layer 3: Ephemeral debugging
+├─ kubectl debug (ephemeral container)
+├─ Debug sidecar containers
+└─ docker run with shared volumes
+
+Layer 4: Advanced diagnostics
+├─ strace (syscall tracing)
+├─ tcpdump (network analysis)
+└─ gdb (attach to running process)</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Docker Container Debugging</h3>
+<pre><code class="lang-bash"># 1. Check container status
+docker ps -a  # Show all containers (including stopped)
+docker inspect &lt;container_id&gt;  # Full container metadata
+
+# 2. View logs
+docker logs &lt;container_id&gt;
+docker logs -f &lt;container_id&gt;  # Follow logs
+docker logs --tail 100 &lt;container_id&gt;  # Last 100 lines
+docker logs --since 10m &lt;container_id&gt;  # Last 10 minutes
+
+# 3. Execute commands inside container
+docker exec -it &lt;container_id&gt; /bin/sh
+docker exec -it &lt;container_id&gt; /bin/bash  # If bash available
+
+# 4. Inspect filesystem
+docker exec &lt;container_id&gt; ls -la /app
+docker exec &lt;container_id&gt; cat /app/config.yaml
+
+# 5. Check resource usage
+docker stats &lt;container_id&gt;  # Real-time stats
+docker top &lt;container_id&gt;    # Running processes
+
+# 6. Copy files from container
+docker cp &lt;container_id&gt;:/app/logs/error.log ./error.log
+
+# 7. Attach to running container (see stdout)
+docker attach &lt;container_id&gt;
+
+# 8. Run debug tools (if not in image)
+# Mount debug tools from host
+docker run -it --pid=container:&lt;container_id&gt; \
+  --net=container:&lt;container_id&gt; \
+  --cap-add sys_admin \
+  nicolaka/netshoot</code></pre>
+<h3>Pattern 2: Kubernetes Pod Debugging</h3>
+<pre><code class="lang-bash"># 1. Check pod status
+kubectl get pods -n &lt;namespace&gt;
+kubectl describe pod &lt;pod_name&gt; -n &lt;namespace&gt;
+
+# 2. View logs
+kubectl logs &lt;pod_name&gt; -n &lt;namespace&gt;
+kubectl logs &lt;pod_name&gt; -c &lt;container_name&gt; -n &lt;namespace&gt;  # Multi-container pod
+kubectl logs -f &lt;pod_name&gt; -n &lt;namespace&gt;  # Follow logs
+kubectl logs --previous &lt;pod_name&gt;  # Previous container (after crash)
+
+# 3. Execute commands in pod
+kubectl exec -it &lt;pod_name&gt; -n &lt;namespace&gt; -- /bin/sh
+kubectl exec -it &lt;pod_name&gt; -c &lt;container_name&gt; -- /bin/sh  # Specific container
+
+# 4. Port forwarding (access pod from localhost)
+kubectl port-forward &lt;pod_name&gt; 8080:80 -n &lt;namespace&gt;
+
+# 5. Check resource usage
+kubectl top pod &lt;pod_name&gt; -n &lt;namespace&gt;
+kubectl top pods -n &lt;namespace&gt; --sort-by=memory
+
+# 6. Copy files from pod
+kubectl cp &lt;namespace&gt;/&lt;pod_name&gt;:/app/config.yaml ./config.yaml
+kubectl cp &lt;namespace&gt;/&lt;pod_name&gt;:/app/logs ./logs -c &lt;container_name&gt;
+
+# 7. View events
+kubectl get events -n &lt;namespace&gt; --sort-by=&#x27;.lastTimestamp&#x27;
+kubectl describe pod &lt;pod_name&gt; -n &lt;namespace&gt; | grep -A 10 Events</code></pre>
+<h3>Pattern 3: Ephemeral Debug Containers (Kubernetes 1.23+)</h3>
+<pre><code class="lang-bash"># Create ephemeral debug container with all tools
+kubectl debug &lt;pod_name&gt; -n &lt;namespace&gt; \
+  -it --image=nicolaka/netshoot \
+  --target=&lt;container_name&gt;
+
+# Debug with specific debug image
+kubectl debug &lt;pod_name&gt; -n &lt;namespace&gt; \
+  -it --image=busybox:1.35 \
+  --target=app-container
+
+# Debug by copying pod and replacing image
+kubectl debug &lt;pod_name&gt; -n &lt;namespace&gt; \
+  -it --copy-to=debug-pod \
+  --container=app \
+  --image=python:3.11-slim
+
+# Debug distroless container
+kubectl debug &lt;pod_name&gt; -n &lt;namespace&gt; \
+  -it --image=busybox:1.35 \
+  --target=distroless-app \
+  --share-processes
+
+# Example: Debug container with full tooling
+kubectl debug my-app-pod -n production \
+  -it --image=ubuntu:22.04 \
+  --target=app -- /bin/bash
+
+# Inside debug container:
+# - Shared PID namespace: can see target process
+# - Shared network namespace: same network stack
+# - Shared filesystem: can inspect volumes</code></pre>
+<p><strong>Debug container example</strong> (Python app in distroless):</p>
+<pre><code class="lang-yaml"># Original pod (distroless, no shell)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app
+spec:
+  containers:
+  - name: app
+    image: gcr.io/distroless/python3
+    command: [&quot;/app/main.py&quot;]
+
+# Debug with ephemeral container
+# kubectl debug my-app -it --image=python:3.11-slim --target=app
+# Now you can:
+# - ps aux (see processes)
+# - ls -la /proc/&lt;pid&gt;/fd (open file descriptors)
+# - cat /proc/&lt;pid&gt;/environ (environment variables)
+# - strace -p &lt;pid&gt; (trace syscalls)</code></pre>
+<h3>Pattern 4: nsenter (Host-Level Container Access)</h3>
+<pre><code class="lang-bash"># Get container PID
+docker inspect --format &#x27;{{.State.Pid}}&#x27; &lt;container_id&gt;
+# Or:
+docker inspect &lt;container_id&gt; | jq &#x27;.[0].State.Pid&#x27;
+
+# Enter container namespaces from host
+PID=$(docker inspect --format &#x27;{{.State.Pid}}&#x27; &lt;container_id&gt;)
+
+# Enter all namespaces
+nsenter -t $PID -m -u -i -n -p /bin/sh
+
+# Enter specific namespaces
+nsenter -t $PID -n ip addr  # Network namespace
+nsenter -t $PID -m ls /app  # Mount namespace
+nsenter -t $PID -p ps aux   # PID namespace
+
+# Use nsenter with Kubernetes (requires node access)
+# 1. Get node where pod is running
+kubectl get pod &lt;pod_name&gt; -o wide
+
+# 2. SSH to node
+ssh &lt;node_name&gt;
+
+# 3. Find container ID
+crictl ps | grep &lt;pod_name&gt;
+
+# 4. Get container PID
+PID=$(crictl inspect &lt;container_id&gt; | jq &#x27;.info.pid&#x27;)
+
+# 5. Enter container
+nsenter -t $PID -m -u -i -n -p /bin/sh</code></pre>
+<h3>Pattern 5: Debug Sidecar Pattern</h3>
+<pre><code class="lang-yaml"># Deployment with debug sidecar
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      shareProcessNamespace: true  # Share PID namespace
+      containers:
+      # Main application (distroless)
+      - name: app
+        image: gcr.io/distroless/python3
+        command: [&quot;/app/main.py&quot;]
+        volumeMounts:
+        - name: app-data
+          mountPath: /app/data
+
+      # Debug sidecar (full tooling)
+      - name: debug
+        image: nicolaka/netshoot
+        command: [&quot;/bin/sleep&quot;, &quot;infinity&quot;]
+        volumeMounts:
+        - name: app-data
+          mountPath: /app/data
+        securityContext:
+          capabilities:
+            add: [&quot;SYS_PTRACE&quot;]  # Allow attaching to processes
+
+      volumes:
+      - name: app-data
+        emptyDir: {}
+
+# Access debug sidecar
+# kubectl exec -it &lt;pod_name&gt; -c debug -- /bin/bash
+
+# From debug sidecar, you can:
+# - ps aux (see main app process)
+# - strace -p &lt;pid&gt; (trace main app)
+# - tcpdump -i any (capture network traffic)
+# - ls /app/data (inspect shared volumes)</code></pre>
+<h3>Pattern 6: Distroless Container Debugging</h3>
+<pre><code class="lang-bash"># Option 1: Ephemeral container (Kubernetes 1.23+)
+kubectl debug &lt;pod_name&gt; \
+  -it --image=busybox:1.35 \
+  --target=distroless-app \
+  --share-processes
+
+# Option 2: Debug image with same app
+# Build debug variant of Dockerfile
+FROM python:3.11-slim AS debug
+RUN apt-get update &amp;&amp; apt-get install -y \
+    curl vim strace tcpdump netcat procps
+COPY app/ /app/
+CMD [&quot;/app/main.py&quot;]
+
+FROM gcr.io/distroless/python3 AS production
+COPY app/ /app/
+CMD [&quot;/app/main.py&quot;]
+
+# Deploy debug image temporarily
+kubectl set image deployment/my-app app=my-app:debug
+
+# Rollback to production after debugging
+kubectl rollout undo deployment/my-app
+
+# Option 3: Copy files from running container
+kubectl cp &lt;pod_name&gt;:/app/config.yaml ./config.yaml
+kubectl exec &lt;pod_name&gt; -- cat /app/logs/error.log &gt; error.log
+
+# Option 4: Use docker multi-stage with debug target
+docker build --target debug -t my-app:debug .
+docker run -it my-app:debug /bin/bash</code></pre>
+<h3>Pattern 7: Network Debugging in Containers</h3>
+<pre><code class="lang-bash"># Debugging DNS
+kubectl exec -it &lt;pod_name&gt; -- nslookup kubernetes.default
+kubectl exec -it &lt;pod_name&gt; -- cat /etc/resolv.conf
+
+# If no nslookup, use debug container
+kubectl debug &lt;pod_name&gt; -it --image=nicolaka/netshoot
+# Inside debug container:
+dig kubernetes.default.svc.cluster.local
+nslookup google.com
+
+# Test connectivity
+kubectl exec -it &lt;pod_name&gt; -- wget -O- http://service-name:8080/health
+kubectl exec -it &lt;pod_name&gt; -- nc -zv service-name 8080
+
+# Capture network traffic (requires privileged)
+kubectl exec -it &lt;pod_name&gt; -- tcpdump -i any -w /tmp/capture.pcap
+kubectl cp &lt;pod_name&gt;:/tmp/capture.pcap ./capture.pcap
+
+# Analyze in Wireshark
+wireshark capture.pcap
+
+# Check network policies
+kubectl get networkpolicies -n &lt;namespace&gt;
+kubectl describe networkpolicy &lt;policy_name&gt;
+
+# Test pod-to-pod connectivity
+# Terminal 1: Start server
+kubectl run test-server --image=nginx --port=80
+
+# Terminal 2: Test from client
+kubectl run test-client -it --rm --image=busybox -- wget -O- test-server</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Essential Debug Images</h3>
+<p>| Image | Use Case | Size | Tools | |-------|----------|------|-------| | <strong>nicolaka/netshoot</strong> | Network debugging | ~400MB | curl, tcpdump, nslookup, iperf, netcat | | <strong>busybox:1.35</strong> | Minimal debugging | ~5MB | sh, wget, nc (basic utils) | | <strong>ubuntu:22.04</strong> | Full debugging | ~80MB | apt, full shell, build tools | | <strong>alpine:3.18</strong> | Lightweight + package manager | ~7MB | apk, sh, basic utils |</p>
+<h3>Docker Debug Commands</h3>
+<pre><code class="lang-bash"># Logs
+docker logs &lt;container&gt; [-f] [--tail N] [--since TIME]
+
+# Stats
+docker stats [&lt;container&gt;]
+docker top &lt;container&gt;
+
+# Filesystem
+docker exec &lt;container&gt; ls /app
+docker cp &lt;container&gt;:/path/to/file ./file
+
+# Shell
+docker exec -it &lt;container&gt; /bin/sh
+docker run -it --entrypoint /bin/sh &lt;image&gt;
+
+# Network
+docker inspect &lt;container&gt; | jq &#x27;.[0].NetworkSettings&#x27;
+docker network inspect &lt;network&gt;
+
+# Processes
+docker exec &lt;container&gt; ps aux
+nsenter -t &lt;pid&gt; -p ps aux</code></pre>
+<h3>Kubernetes Debug Commands</h3>
+<pre><code class="lang-bash"># Logs
+kubectl logs &lt;pod&gt; [-c &lt;container&gt;] [-f] [--previous]
+
+# Stats
+kubectl top pod &lt;pod&gt;
+kubectl top nodes
+
+# Filesystem
+kubectl exec &lt;pod&gt; -- ls /app
+kubectl cp &lt;pod&gt;:/path/to/file ./file
+
+# Shell
+kubectl exec -it &lt;pod&gt; -- /bin/sh
+kubectl debug &lt;pod&gt; -it --image=busybox
+
+# Network
+kubectl port-forward &lt;pod&gt; 8080:80
+kubectl get svc,endpoints
+
+# Events
+kubectl get events --sort-by=&#x27;.lastTimestamp&#x27;
+kubectl describe pod &lt;pod&gt;</code></pre>
+<h3>strace Cheat Sheet</h3>
+<pre><code class="lang-bash"># Trace syscalls of running process
+strace -p &lt;pid&gt;
+
+# Trace specific syscalls
+strace -e trace=open,read,write -p &lt;pid&gt;
+
+# Trace with timestamps
+strace -tt -p &lt;pid&gt;
+
+# Count syscalls
+strace -c -p &lt;pid&gt;
+
+# Trace new process from start
+strace -f python app.py
+
+# Save to file
+strace -o /tmp/trace.log -p &lt;pid&gt;</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Installing Debug Tools in Production Images</h3>
+<pre><code class="lang-dockerfile"># WRONG: Bloated production image
+FROM python:3.11-slim
+RUN apt-get update &amp;&amp; apt-get install -y \
+    vim curl tcpdump strace gdb  # Increases attack surface!
+COPY app.py /app/
+CMD [&quot;python&quot;, &quot;/app/app.py&quot;]
+
+# CORRECT: Multi-stage with debug target
+FROM python:3.11-slim AS base
+COPY app.py /app/
+
+FROM base AS debug
+RUN apt-get update &amp;&amp; apt-get install -y vim curl strace
+
+FROM base AS production
+CMD [&quot;python&quot;, &quot;/app/app.py&quot;]</code></pre>
+<h3>❌ Running Containers as Root</h3>
+<pre><code class="lang-yaml"># WRONG: Root user in container
+containers:
+- name: app
+  image: my-app:latest
+  # Runs as root by default!
+
+# CORRECT: Non-root user
+containers:
+- name: app
+  image: my-app:latest
+  securityContext:
+    runAsUser: 1000
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false</code></pre>
+<h3>❌ Debugging with Modified Code</h3>
+<pre><code class="lang-bash"># WRONG: Edit code in running container
+kubectl exec -it &lt;pod&gt; -- vi /app/main.py  # Changes lost on restart!
+
+# CORRECT: Rebuild image with changes
+docker build -t my-app:debug .
+kubectl set image deployment/my-app app=my-app:debug</code></pre>
+<h3>❌ Forgetting Resource Limits</h3>
+<pre><code class="lang-yaml"># WRONG: No resource limits (can OOM)
+containers:
+- name: app
+  image: my-app:latest
+
+# CORRECT: Define limits
+containers:
+- name: app
+  image: my-app:latest
+  resources:
+    requests:
+      memory: &quot;128Mi&quot;
+      cpu: &quot;100m&quot;
+    limits:
+      memory: &quot;256Mi&quot;
+      cpu: &quot;500m&quot;</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>containers/dockerfile-optimization.md</strong> - Multi-stage builds for debug images</li><li><strong>debugging/network-debugging.md</strong> - tcpdump, DNS, connectivity testing</li><li><strong>infrastructure/kubernetes-basics.md</strong> - Pod lifecycle, namespaces</li><li><strong>observability/structured-logging.md</strong> - Container logging best practices</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/debugging-container-debugging.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

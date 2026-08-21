@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distributed-systems-crdt-fundamentals</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/distributed-systems-crdt-fundamentals.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/distributed-systems-crdt-fundamentals.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>distributed-systems-crdt-fundamentals</h1><p class="lede">Conflict-free Replicated Data Types (CRDTs) fundamentals including convergence, commutativity, and basic CRDT operations</p><h1>CRDT Fundamentals</h1>
+<p><strong>Scope</strong>: CRDTs, eventual consistency, conflict-free merging, convergence properties <strong>Lines</strong>: ~320 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Building collaborative applications</li><li>Implementing offline-first apps</li><li>Designing distributed databases</li><li>Understanding Redis, Riak internals</li><li>Building real-time sync systems</li><li>Handling network partitions gracefully</li><li>Avoiding distributed locks</li><li>Implementing eventual consistency</li></ul>
+<h2>Core Concepts</h2>
+<h3>What are CRDTs?</h3>
+<p><strong>CRDT</strong>: Conflict-free Replicated Data Type</p>
+<p><strong>Key property</strong>: Replicas can be updated independently and concurrently, and are guaranteed to converge to same state</p>
+<pre><code>Replica A:  value = 1  →  value += 5  →  value = 6  ─┐
+                                                       ├→ Merge → value = 9
+Replica B:  value = 1  →  value += 3  →  value = 4  ─┘
+
+Without coordination, replicas converge!</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>No coordination needed</li><li>Always available (AP in CAP)</li><li>Eventually consistent</li><li>Partition tolerant</li></ul>
+<h3>Strong Eventual Consistency (SEC)</h3>
+<p><strong>Guarantee</strong>: Replicas that have received same updates are in same state</p>
+<p><strong>Requirements</strong>:</p>
+<ol><li><strong>Convergence</strong>: f(f(s, u1), u2) = f(f(s, u2), u1)  (commutative)</li><li><strong>Monotonic</strong>: Once applied, updates never rolled back</li></ol>
+<hr>
+<h2>CRDT Categories</h2>
+<h3>Operation-based CRDTs (CmRDTs)</h3>
+<p><strong>Approach</strong>: Broadcast operations, apply in order</p>
+<p><strong>Requirements</strong>:</p>
+<ul><li>Reliable broadcast (exactly-once delivery)</li><li>Commutative operations</li></ul>
+<p><strong>Example</strong>: G-Counter (grow-only counter)</p>
+<pre><code class="lang-python">class GCounter:
+    &quot;&quot;&quot;Operation-based grow-only counter&quot;&quot;&quot;
+
+    def __init__(self, replica_id, n_replicas):
+        self.replica_id = replica_id
+        self.counts = [0] * n_replicas  # One count per replica
+
+    def increment(self):
+        &quot;&quot;&quot;Increment local counter&quot;&quot;&quot;
+        self.counts[self.replica_id] += 1
+        return (&#x27;increment&#x27;, self.replica_id)  # Operation to broadcast
+
+    def apply_operation(self, operation):
+        &quot;&quot;&quot;Apply received operation&quot;&quot;&quot;
+        op_type, replica_id = operation
+        if op_type == &#x27;increment&#x27;:
+            self.counts[replica_id] += 1
+
+    def value(self):
+        &quot;&quot;&quot;Get total count&quot;&quot;&quot;
+        return sum(self.counts)</code></pre>
+<h3>State-based CRDTs (CvRDTs)</h3>
+<p><strong>Approach</strong>: Periodically merge entire state</p>
+<p><strong>Requirements</strong>:</p>
+<ul><li>Idempotent merge function</li><li>Commutative merge</li><li>Associative merge</li></ul>
+<p><strong>Example</strong>: G-Counter (state-based)</p>
+<pre><code class="lang-python">class GCounterState:
+    &quot;&quot;&quot;State-based grow-only counter&quot;&quot;&quot;
+
+    def __init__(self, replica_id, n_replicas):
+        self.replica_id = replica_id
+        self.counts = [0] * n_replicas
+
+    def increment(self):
+        &quot;&quot;&quot;Increment local counter&quot;&quot;&quot;
+        self.counts[self.replica_id] += 1
+
+    def merge(self, other):
+        &quot;&quot;&quot;Merge with another replica (element-wise max)&quot;&quot;&quot;
+        new_counts = [
+            max(self.counts[i], other.counts[i])
+            for i in range(len(self.counts))
+        ]
+        result = GCounterState(self.replica_id, len(self.counts))
+        result.counts = new_counts
+        return result
+
+    def value(self):
+        &quot;&quot;&quot;Get total count&quot;&quot;&quot;
+        return sum(self.counts)
+
+# Usage
+replica_a = GCounterState(0, 3)
+replica_b = GCounterState(1, 3)
+
+replica_a.increment()
+replica_a.increment()
+replica_b.increment()
+
+# Merge (commutative, idempotent)
+merged = replica_a.merge(replica_b)
+print(merged.value())  # 3</code></pre>
+<hr>
+<h2>Common CRDT Types</h2>
+<h3>G-Counter (Grow-Only Counter)</h3>
+<p><strong>Operations</strong>: Increment only</p>
+<p><strong>Properties</strong>:</p>
+<ul><li>Monotonically increasing</li><li>Simple merge (element-wise max)</li></ul>
+<p><strong>Use cases</strong>: Page views, likes, metrics</p>
+<h3>PN-Counter (Positive-Negative Counter)</h3>
+<p><strong>Idea</strong>: Two G-Counters (positive and negative)</p>
+<pre><code class="lang-python">class PNCounter:
+    &quot;&quot;&quot;Counter that can increment and decrement&quot;&quot;&quot;
+
+    def __init__(self, replica_id, n_replicas):
+        self.replica_id = replica_id
+        self.positive = GCounterState(replica_id, n_replicas)
+        self.negative = GCounterState(replica_id, n_replicas)
+
+    def increment(self):
+        self.positive.increment()
+
+    def decrement(self):
+        self.negative.increment()
+
+    def value(self):
+        return self.positive.value() - self.negative.value()
+
+    def merge(self, other):
+        result = PNCounter(self.replica_id, len(self.positive.counts))
+        result.positive = self.positive.merge(other.positive)
+        result.negative = self.negative.merge(other.negative)
+        return result</code></pre>
+<h3>G-Set (Grow-Only Set)</h3>
+<pre><code class="lang-python">class GSet:
+    &quot;&quot;&quot;Grow-only set (add-only)&quot;&quot;&quot;
+
+    def __init__(self):
+        self.elements = set()
+
+    def add(self, element):
+        self.elements.add(element)
+
+    def lookup(self, element):
+        return element in self.elements
+
+    def merge(self, other):
+        &quot;&quot;&quot;Union of sets&quot;&quot;&quot;
+        result = GSet()
+        result.elements = self.elements | other.elements
+        return result</code></pre>
+<h3>2P-Set (Two-Phase Set)</h3>
+<p><strong>Idea</strong>: Two G-Sets (added and removed)</p>
+<pre><code class="lang-python">class TwoPhaseSet:
+    &quot;&quot;&quot;Add and remove, but can&#x27;t re-add after remove&quot;&quot;&quot;
+
+    def __init__(self):
+        self.added = set()
+        self.removed = set()
+
+    def add(self, element):
+        self.added.add(element)
+
+    def remove(self, element):
+        if element in self.added:
+            self.removed.add(element)
+
+    def lookup(self, element):
+        return element in self.added and element not in self.removed
+
+    def merge(self, other):
+        result = TwoPhaseSet()
+        result.added = self.added | other.added
+        result.removed = self.removed | other.removed
+        return result</code></pre>
+<hr>
+<h2>Practical Example: Collaborative Counter</h2>
+<pre><code class="lang-python">import time
+from typing import Dict
+
+class DistributedCounter:
+    &quot;&quot;&quot;Production-ready distributed counter using PN-Counter CRDT&quot;&quot;&quot;
+
+    def __init__(self, replica_id: str, all_replicas: list):
+        self.replica_id = replica_id
+        self.all_replicas = all_replicas
+        self.counter = PNCounter(replica_id, len(all_replicas))
+
+    def increment(self, amount: int = 1):
+        &quot;&quot;&quot;Increment counter locally&quot;&quot;&quot;
+        for _ in range(amount):
+            self.counter.increment()
+
+    def decrement(self, amount: int = 1):
+        &quot;&quot;&quot;Decrement counter locally&quot;&quot;&quot;
+        for _ in range(amount):
+            self.counter.decrement()
+
+    def get_value(self) -&gt; int:
+        &quot;&quot;&quot;Get current counter value&quot;&quot;&quot;
+        return self.counter.value()
+
+    def sync_with_replica(self, other_replica):
+        &quot;&quot;&quot;Sync state with another replica&quot;&quot;&quot;
+        self.counter = self.counter.merge(other_replica.counter)
+
+    def periodic_sync(self, interval: int = 5):
+        &quot;&quot;&quot;Periodically sync with all replicas&quot;&quot;&quot;
+        while True:
+            for replica in self.all_replicas:
+                if replica != self:
+                    self.sync_with_replica(replica)
+            time.sleep(interval)
+
+# Usage
+replicas = [
+    DistributedCounter(&#x27;A&#x27;, []),
+    DistributedCounter(&#x27;B&#x27;, []),
+    DistributedCounter(&#x27;C&#x27;, [])
+]
+
+# Each replica has reference to others
+for r in replicas:
+    r.all_replicas = replicas
+
+# Concurrent updates
+replicas[0].increment(5)
+replicas[1].increment(3)
+replicas[2].decrement(2)
+
+# Sync
+for i in range(len(replicas)):
+    for j in range(i + 1, len(replicas)):
+        replicas[i].sync_with_replica(replicas[j])
+
+# All replicas converge to same value
+assert replicas[0].get_value() == replicas[1].get_value() == replicas[2].get_value()</code></pre>
+<hr>
+<h2>CRDT Properties</h2>
+<h3>Convergence</h3>
+<p><strong>Property</strong>: All replicas eventually reach same state</p>
+<p><strong>How</strong>:</p>
+<pre><code>Merge must be:
+1. Commutative: merge(A, B) = merge(B, A)
+2. Idempotent: merge(A, A) = A
+3. Associative: merge(merge(A, B), C) = merge(A, merge(B, C))</code></pre>
+<p><strong>Test</strong>:</p>
+<pre><code class="lang-python">def test_convergence():
+    &quot;&quot;&quot;Test that replicas converge regardless of merge order&quot;&quot;&quot;
+    r1 = GCounterState(0, 2)
+    r2 = GCounterState(1, 2)
+
+    r1.increment()
+    r1.increment()
+    r2.increment()
+
+    # Merge in different orders
+    result1 = r1.merge(r2)
+    result2 = r2.merge(r1)
+
+    assert result1.value() == result2.value()  # Convergence</code></pre>
+<h3>Monotonicity</h3>
+<p><strong>Property</strong>: State only grows, never shrinks (in terms of information)</p>
+<p><strong>Implication</strong>: Can&#x27;t truly &quot;delete&quot; - must use tombstones</p>
+<hr>
+<h2>Trade-offs</h2>
+<h3>Advantages</h3>
+<pre><code>✅ No coordination needed
+✅ Always available
+✅ Partition tolerant
+✅ Low latency (local operations)
+✅ Offline-first friendly</code></pre>
+<h3>Disadvantages</h3>
+<pre><code>❌ Limited operations (must be commutative)
+❌ Metadata overhead (tracking causality)
+❌ Some operations complex (e.g., remove from set)
+❌ Conflicts resolved automatically (may not match user intent)
+❌ Growing state size (garbage collection needed)</code></pre>
+<hr>
+<h2>When to Use CRDTs</h2>
+<h3>Good Fit</h3>
+<pre><code>✅ Collaborative editing (Google Docs, Figma)
+✅ Distributed databases (Riak, Redis)
+✅ Shopping cart
+✅ Presence indicators (online/offline)
+✅ Like counters
+✅ Distributed caching</code></pre>
+<h3>Poor Fit</h3>
+<pre><code>❌ Financial transactions (need strong consistency)
+❌ Inventory management (can&#x27;t oversell)
+❌ Sequential operations (order matters)
+❌ Complex business logic</code></pre>
+<hr>
+<h2>Comparison with Other Approaches</h2>
+<p>| Approach | Consistency | Availability | Coordination | Latency | |----------|------------|--------------|--------------|---------| | <strong>CRDTs</strong> | Eventual | High | None | Low | | <strong>Consensus (RAFT)</strong> | Strong | Medium | High | Medium | | <strong>2PC</strong> | Strong | Low | High | High | | <strong>Last-Write-Wins</strong> | Weak | High | None | Low |</p>
+<hr>
+<h2>Real-World Examples</h2>
+<h3>Redis</h3>
+<pre><code class="lang-python"># Redis CRDT support (Redis Enterprise)
+import redis
+
+r = redis.Redis()
+
+# CRDT Counter
+r.execute_command(&#x27;CRDT.COUNTER&#x27;, &#x27;mykey&#x27;, &#x27;INC&#x27;, 5)
+
+# CRDT Set
+r.execute_command(&#x27;CRDT.ORADD&#x27;, &#x27;myset&#x27;, &#x27;element&#x27;)</code></pre>
+<h3>Riak</h3>
+<pre><code class="lang-python"># Riak KV with CRDTs
+from riak import RiakClient
+
+client = RiakClient()
+bucket = client.bucket_type(&#x27;maps&#x27;).bucket(&#x27;my_bucket&#x27;)
+
+# Riak Map CRDT
+my_map = bucket.new()
+my_map.counters[&#x27;page_views&#x27;].increment(1)
+my_map.sets[&#x27;tags&#x27;].add(&#x27;crdt&#x27;)
+my_map.store()</code></pre>
+<hr>
+<h2>Testing CRDTs</h2>
+<pre><code class="lang-python">import unittest
+
+class TestCRDT(unittest.TestCase):
+    def test_commutativity(self):
+        &quot;&quot;&quot;Test merge is commutative&quot;&quot;&quot;
+        r1 = GCounterState(0, 2)
+        r2 = GCounterState(1, 2)
+
+        r1.increment()
+        r2.increment()
+        r2.increment()
+
+        # merge(A, B) == merge(B, A)
+        result1 = r1.merge(r2)
+        result2 = r2.merge(r1)
+
+        self.assertEqual(result1.value(), result2.value())
+
+    def test_idempotence(self):
+        &quot;&quot;&quot;Test merge is idempotent&quot;&quot;&quot;
+        r1 = GCounterState(0, 2)
+        r1.increment()
+
+        # merge(A, A) == A
+        result = r1.merge(r1)
+        self.assertEqual(result.value(), r1.value())
+
+    def test_associativity(self):
+        &quot;&quot;&quot;Test merge is associative&quot;&quot;&quot;
+        r1 = GCounterState(0, 3)
+        r2 = GCounterState(1, 3)
+        r3 = GCounterState(2, 3)
+
+        r1.increment()
+        r2.increment()
+        r3.increment()
+
+        # merge(merge(A, B), C) == merge(A, merge(B, C))
+        result1 = r1.merge(r2).merge(r3)
+        result2 = r1.merge(r2.merge(r3))
+
+        self.assertEqual(result1.value(), result2.value())</code></pre>
+<hr>
+<h2>Level 3: Resources</h2>
+<p><strong>Location</strong>: <code>skills/distributed-systems/crdt-fundamentals/resources/</code></p>
+<h3>Reference Documentation</h3>
+<p><strong>REFERENCE.md</strong> (~950 lines): Comprehensive CRDT reference covering:</p>
+<ul><li>Theoretical foundation (strong eventual consistency, commutativity, semilattice structure)</li><li>Operation-based CRDTs: G-Counter, PN-Counter, G-Set, 2P-Set, OR-Set</li><li>State-based CRDTs: LWW-Element-Set, LWW-Register, MV-Register</li><li>Sequence CRDTs: RGA, WOOT, LSEQ, Logoot</li><li>Map and composite CRDTs (OR-Map, LWW-Map, JSON structures)</li><li>Conflict resolution semantics (LWW, MV, add-wins, remove-wins)</li><li>CRDT implementations (Automerge, Yjs, CRJSON, Riak, Redis, Akka)</li><li>CAP theorem positioning and tradeoffs</li><li>Performance characteristics (space/time complexity, network overhead)</li><li>Design patterns (layered CRDTs, intent preservation, constraints, hybrid consistency, undo)</li><li>Testing and verification strategies</li></ul>
+<h3>Scripts</h3>
+<p><strong>simulate_crdt.py</strong>: Simulate CRDT operations with concurrent replicas</p>
+<ul><li>Implementations: G-Counter, PN-Counter, OR-Set, LWW-Set, RGA</li><li>Predefined scenarios demonstrating convergence</li><li>Support for custom operation sequences</li><li>JSON output for integration</li></ul>
+<pre><code class="lang-bash"># Simulate G-Counter with 3 replicas
+./simulate_crdt.py g-counter --replicas 3
+
+# Simulate OR-Set with concurrent add/remove
+./simulate_crdt.py or-set --scenario concurrent-ops --json
+
+# Simulate RGA text editing
+./simulate_crdt.py rga --scenario text-edit</code></pre>
+<p><strong>benchmark_merge.py</strong>: Benchmark CRDT merge performance</p>
+<ul><li>Merge scaling with increasing state sizes</li><li>Replica scaling (2 to 20+ replicas)</li><li>Conflict rate impact on merge performance</li><li>Individual operation performance</li><li>Memory usage analysis</li></ul>
+<pre><code class="lang-bash"># Benchmark all CRDTs
+./benchmark_merge.py all --benchmark all
+
+# Benchmark specific CRDT with custom sizes
+./benchmark_merge.py or-set --benchmark merge-scaling --sizes 10,100,1000
+
+# JSON output for visualization
+./benchmark_merge.py pn-counter --json &gt; results.json</code></pre>
+<p><strong>visualize_convergence.py</strong>: Generate convergence diagrams</p>
+<ul><li>ASCII timeline visualization</li><li>Mermaid sequence diagrams</li><li>Graphviz DOT graphs</li><li>JSON data export</li></ul>
+<pre><code class="lang-bash"># ASCII visualization of linear convergence
+./visualize_convergence.py g-counter --scenario linear
+
+# Mermaid diagram for star topology
+./visualize_convergence.py or-set --scenario star --format mermaid
+
+# Export all formats
+./visualize_convergence.py g-counter --scenario partition --format all -o convergence.md</code></pre>
+<h3>Examples</h3>
+<p><strong>Python</strong>:</p>
+<ul><li><code>g_counter.py</code>: G-Counter with serialization, distributed system simulation</li><li><code>or_set.py</code>: OR-Set with add-wins semantics, shopping cart example</li><li><code>lww_register.py</code>: LWW-Register with hybrid logical clocks, MV-Register</li></ul>
+<p><strong>TypeScript</strong>:</p>
+<ul><li><code>yjs-collaborative-editing.ts</code>: Real-time collaborative text editing with Yjs</li><li>Text, map, array synchronization</li><li>Undo/redo support</li><li>Observers and persistence</li><li>Collaborative todo list</li></ul>
+<p><strong>JavaScript</strong>:</p>
+<ul><li><code>automerge-example.js</code>: Automerge for JSON CRDTs</li><li>Document collaboration</li><li>Nested objects and lists</li><li>History and time travel</li><li>Conflict resolution</li></ul>
+<p>All examples are runnable and include multiple scenarios demonstrating:</p>
+<ul><li>Basic CRDT operations</li><li>Concurrent operations and convergence</li><li>Distributed system simulation</li><li>Real-world applications</li></ul>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>distributed-systems-crdt-types</code> - Specific CRDT implementations</li><li><code>distributed-systems-eventual-consistency</code> - Consistency models</li><li><code>distributed-systems-conflict-resolution</code> - Conflict handling</li><li><code>distributed-systems-vector-clocks</code> - Causality tracking</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/distributed-systems-crdt-fundamentals.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

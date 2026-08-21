@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>build-systems-make-fundamentals</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/build-systems-make-fundamentals.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/build-systems-make-fundamentals.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>build-systems-make-fundamentals</h1><p class="lede">Makefile syntax, targets, dependencies, pattern rules, and best practices for building C/C++ and multi-language projects with Make.</p><h1>Make Fundamentals</h1>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Building C/C++ projects with traditional Makefiles</li><li>Creating build automation for UNIX/Linux systems</li><li>Understanding legacy build systems</li><li>Writing portable build scripts</li><li>Needing lightweight, ubiquitous build tool</li><li>Maintaining existing Makefile-based projects</li></ul>
+<p><strong>Alternatives</strong>: CMake (cross-platform), Ninja (speed), Bazel (monorepos)</p>
+<p><strong>Prerequisites</strong>: Basic shell scripting, compiler toolchains (gcc, clang)</p>
+<h2>Core Concepts</h2>
+<h3>Basic Makefile Structure</h3>
+<pre><code class="lang-makefile"># Comments start with #
+
+# Target: Dependencies
+# &lt;TAB&gt; Commands
+
+target: dependencies
+	commands
+
+# Variables
+CC = gcc
+CFLAGS = -Wall -Wextra -O2
+SOURCES = main.c utils.c
+OBJECTS = $(SOURCES:.c=.o)
+
+# Default target (first target in file)
+all: program
+
+# Executable target
+program: $(OBJECTS)
+	$(CC) $(OBJECTS) -o program
+
+# Pattern rule for .o files
+%.o: %.c
+	$(CC) $(CFLAGS) -c $&lt; -o $@
+
+# Phony targets (not real files)
+.PHONY: all clean install
+
+clean:
+	rm -f $(OBJECTS) program
+
+install: program
+	cp program /usr/local/bin/</code></pre>
+<h3>Automatic Variables</h3>
+<pre><code class="lang-makefile"># $@ - The target name
+# $&lt; - First dependency
+# $^ - All dependencies
+# $? - Dependencies newer than target
+# $* - Stem of pattern rule
+
+%.o: %.c %.h
+	@echo &quot;Target: $@&quot;      # e.g., &quot;main.o&quot;
+	@echo &quot;First dep: $&lt;&quot;   # e.g., &quot;main.c&quot;
+	@echo &quot;All deps: $^&quot;    # e.g., &quot;main.c main.h&quot;
+	$(CC) -c $&lt; -o $@</code></pre>
+<h3>Variables and Assignment</h3>
+<pre><code class="lang-makefile"># Simple assignment (evaluated immediately)
+VAR := value
+
+# Recursive assignment (evaluated when used)
+VAR = value
+
+# Conditional assignment (only if not set)
+VAR ?= default_value
+
+# Append to variable
+VAR += additional_value
+
+# Example
+CC := gcc
+CFLAGS = -Wall
+CFLAGS += -g -O2
+PREFIX ?= /usr/local
+
+# Use variables
+$(CC) $(CFLAGS) main.c -o main</code></pre>
+<p>##</p>
+<p> Pattern Rules and Implicit Rules</p>
+<h3>Pattern Rules</h3>
+<pre><code class="lang-makefile"># General pattern: %.target: %.source
+%.o: %.c
+	$(CC) $(CFLAGS) -c $&lt; -o $@
+
+# Multiple patterns
+%_test: %_test.c
+	$(CC) $(CFLAGS) $&lt; -o $@ -lcheck
+
+# Static pattern rules
+$(OBJECTS): %.o: %.c
+	$(CC) $(CFLAGS) -c $&lt; -o $@
+
+# Pattern with multiple extensions
+%.pdf: %.tex
+	pdflatex $&lt;
+	pdflatex $&lt;  # Run twice for references</code></pre>
+<h3>Implicit Rules</h3>
+<p>Make has built-in implicit rules:</p>
+<pre><code class="lang-makefile"># Built-in rule for C compilation
+# %.o: %.c
+#	$(CC) $(CPPFLAGS) $(CFLAGS) -c $&lt; -o $@
+
+# Override implicit variables
+CC = clang
+CFLAGS = -Wall -Wextra -std=c11
+
+# Disable implicit rules
+.SUFFIXES:
+
+# Or cancel specific implicit rule
+%.o: %.c</code></pre>
+<h2>Common Patterns</h2>
+<h3>Multi-Directory Project</h3>
+<pre><code class="lang-makefile"># Project structure:
+# src/
+# include/
+# build/
+# tests/
+
+CC := gcc
+CFLAGS := -Wall -Wextra -std=c11 -I./include
+SRCDIR := src
+BUILDDIR := build
+TESTDIR := tests
+
+SOURCES := $(wildcard $(SRCDIR)/*.c)
+OBJECTS := $(SOURCES:$(SRCDIR)/%.c=$(BUILDDIR)/%.o)
+DEPS := $(OBJECTS:.o=.d)
+
+TARGET := myprogram
+
+.PHONY: all clean test dirs
+
+all: dirs $(TARGET)
+
+dirs:
+	@mkdir -p $(BUILDDIR)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(OBJECTS) -o $@
+
+# Auto-generate dependencies
+$(BUILDDIR)/%.o: $(SRCDIR)/%.c
+	$(CC) $(CFLAGS) -MMD -MP -c $&lt; -o $@
+
+# Include dependency files
+-include $(DEPS)
+
+clean:  # Cleans build artifacts only - safe to run
+	rm -rf $(BUILDDIR) $(TARGET)
+
+test: $(TARGET)
+	$(MAKE) -C $(TESTDIR)</code></pre>
+<h3>Conditional Compilation</h3>
+<pre><code class="lang-makefile"># Debug vs Release builds
+DEBUG ?= 0
+
+ifeq ($(DEBUG), 1)
+    CFLAGS += -g -O0 -DDEBUG
+else
+    CFLAGS += -O2 -DNDEBUG
+endif
+
+# Platform-specific
+UNAME := $(shell uname)
+
+ifeq ($(UNAME), Darwin)
+    LIBS += -framework CoreFoundation
+else ifeq ($(UNAME), Linux)
+    LIBS += -lrt
+endif
+
+# Compiler detection
+CC ?= gcc
+ifeq ($(CC), clang)
+    CFLAGS += -Qunused-arguments
+endif</code></pre>
+<h3>Recursive Make (Sub-directories)</h3>
+<pre><code class="lang-makefile"># Top-level Makefile
+SUBDIRS := src tests docs
+
+.PHONY: all $(SUBDIRS) clean
+
+all: $(SUBDIRS)
+
+$(SUBDIRS):
+	$(MAKE) -C $@
+
+# Ensure tests depend on src
+tests: src
+
+clean:
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir clean; \
+	done</code></pre>
+<h3>Parallel Builds</h3>
+<pre><code class="lang-makefile"># Enable parallel builds with make -j
+
+# Serialize certain targets
+.NOTPARALLEL: install
+
+# Or use order-only prerequisites
+program: | $(BUILDDIR)
+	# Build program only after builddir exists
+
+$(BUILDDIR):
+	mkdir -p $@
+
+# Limit parallelism for specific target
+test:
+	$(MAKE) -C tests -j1  # Serial tests</code></pre>
+<h2>Advanced Techniques</h2>
+<h3>Functions</h3>
+<pre><code class="lang-makefile"># Built-in functions
+
+# String substitution
+SOURCES := main.c utils.c
+OBJECTS := $(SOURCES:.c=.o)
+# Or: $(patsubst %.c,%.o,$(SOURCES))
+
+# Wildcard
+SOURCES := $(wildcard src/*.c)
+
+# Directory/basename
+DIRS := $(dir $(SOURCES))      # Extract directories
+BASES := $(notdir $(SOURCES))  # Extract basenames
+STEMS := $(basename $(SOURCES)) # Remove extension
+
+# Filter
+CFILES := $(filter %.c,$(SOURCES))
+NON_TEST := $(filter-out %_test.c,$(SOURCES))
+
+# Shell command
+GIT_HASH := $(shell git rev-parse --short HEAD)
+NUM_CORES := $(shell nproc)
+
+# Conditional
+DEBUG_FLAG := $(if $(DEBUG),-g)
+
+# Example: Version from git
+VERSION := $(shell git describe --tags --always --dirty)
+CFLAGS += -DVERSION=\&quot;$(VERSION)\&quot;</code></pre>
+<h3>Custom Functions</h3>
+<pre><code class="lang-makefile"># Define function with $(call)
+define compile_template
+$(1)_objs := $$($(1)_srcs:.c=.o)
+$(1): $$($(1)_objs)
+	$$(CC) $$($(1)_objs) -o $(1)
+endef
+
+# Use function
+app1_srcs := main.c utils.c
+$(eval $(call compile_template,app1))
+
+app2_srcs := test.c helpers.c
+$(eval $(call compile_template,app2))</code></pre>
+<h3>Include Files</h3>
+<pre><code class="lang-makefile"># Include configuration
+include config.mk
+
+# Include dependencies (silent failure with -)
+-include $(DEPS)
+
+# Conditional include
+ifeq ($(USE_SSL), 1)
+include ssl.mk
+endif
+
+# Example config.mk
+# CC = clang
+# CFLAGS = -Wall
+# PREFIX = /opt/local</code></pre>
+<h2>Phony Targets Best Practices</h2>
+<pre><code class="lang-makefile">.PHONY: all clean install uninstall test help
+
+# Default target
+all: program
+
+# Clean build artifacts - safe to run
+clean:
+	rm -f $(OBJECTS) $(TARGET)
+	rm -rf $(BUILDDIR)
+
+# Install to system
+install: $(TARGET)
+	install -d $(PREFIX)/bin
+	install -m 755 $(TARGET) $(PREFIX)/bin/
+
+# Uninstall
+uninstall:
+	rm -f $(PREFIX)/bin/$(TARGET)
+
+# Run tests
+test: $(TARGET)
+	@echo &quot;Running tests...&quot;
+	@./run_tests.sh
+
+# Help message
+help:
+	@echo &quot;Available targets:&quot;
+	@echo &quot;  all      - Build program (default)&quot;
+	@echo &quot;  clean    - Remove build artifacts&quot;
+	@echo &quot;  install  - Install to $(PREFIX)&quot;
+	@echo &quot;  test     - Run test suite&quot;
+	@echo &quot;&quot;
+	@echo &quot;Variables:&quot;
+	@echo &quot;  DEBUG=1  - Enable debug build&quot;
+	@echo &quot;  PREFIX   - Install prefix (default: /usr/local)&quot;</code></pre>
+<h2>Dependency Generation</h2>
+<h3>GCC Dependency Generation</h3>
+<pre><code class="lang-makefile"># Automatic dependency generation with -MMD -MP
+
+CC := gcc
+CFLAGS := -Wall -std=c11
+DEPFLAGS = -MMD -MP
+
+SOURCES := $(wildcard *.c)
+OBJECTS := $(SOURCES:.c=.o)
+DEPS := $(OBJECTS:.o=.d)
+
+program: $(OBJECTS)
+	$(CC) $^ -o $@
+
+# Compile with dependency generation
+%.o: %.c
+	$(CC) $(CFLAGS) $(DEPFLAGS) -c $&lt; -o $@
+
+# Include generated dependencies
+-include $(DEPS)
+
+clean:
+	rm -f $(OBJECTS) $(DEPS) program</code></pre>
+<h3>Manual Dependency Tracking</h3>
+<pre><code class="lang-makefile"># Explicit dependencies
+main.o: main.c main.h utils.h config.h
+utils.o: utils.c utils.h config.h
+config.o: config.c config.h
+
+# Or generate with makedepend
+depend:
+	makedepend -Y -- $(CFLAGS) -- $(SOURCES)</code></pre>
+<h2>Silent and Verbose Modes</h2>
+<pre><code class="lang-makefile"># Silent mode (@)
+clean:
+	@echo &quot;Cleaning...&quot;
+	@rm -f $(OBJECTS)
+
+# Verbose mode (V=1)
+V ?= 0
+ifeq ($(V), 1)
+    Q =
+else
+    Q = @
+endif
+
+%.o: %.c
+	$(Q)echo &quot;CC $&lt;&quot;
+	$(Q)$(CC) $(CFLAGS) -c $&lt; -o $@
+
+# Or use .SILENT
+.SILENT: clean</code></pre>
+<h2>Cross-Compilation</h2>
+<pre><code class="lang-makefile"># Cross-compile for ARM
+CROSS_COMPILE ?= arm-linux-gnueabihf-
+
+CC := $(CROSS_COMPILE)gcc
+AR := $(CROSS_COMPILE)ar
+STRIP := $(CROSS_COMPILE)strip
+
+# Platform-specific flags
+ARCH ?= x86_64
+ifeq ($(ARCH), arm)
+    CFLAGS += -march=armv7-a
+else ifeq ($(ARCH), x86_64)
+    CFLAGS += -m64
+endif
+
+# Example usage: make ARCH=arm</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>❌ Tabs vs Spaces</h3>
+<pre><code class="lang-makefile"># WRONG: Using spaces instead of tabs
+target:
+    echo &quot;This will fail&quot;  # Spaces, not tab
+
+# CORRECT: Use tab character
+target:
+	echo &quot;This works&quot;  # Tab character</code></pre>
+<h3>❌ Recursive Variable Infinite Loop</h3>
+<pre><code class="lang-makefile"># WRONG: Infinite recursion
+CFLAGS = $(CFLAGS) -Wall
+
+# CORRECT: Use different variable or :=
+CFLAGS := $(CFLAGS) -Wall
+# Or
+BASE_CFLAGS = -Wall
+CFLAGS = $(BASE_CFLAGS) -g</code></pre>
+<h3>❌ Not Using .PHONY</h3>
+<pre><code class="lang-makefile"># WRONG: If file named &quot;clean&quot; exists, won&#x27;t run
+clean:
+	rm -f *.o
+
+# CORRECT: Declare as phony
+.PHONY: clean
+clean:
+	rm -f *.o</code></pre>
+<h3>❌ Hardcoded Paths</h3>
+<pre><code class="lang-makefile"># WRONG: Hardcoded paths
+install:
+	cp program /usr/local/bin/
+
+# CORRECT: Use variables
+PREFIX ?= /usr/local
+install:
+	cp program $(PREFIX)/bin/</code></pre>
+<h3>❌ Not Tracking Dependencies</h3>
+<pre><code class="lang-makefile"># WRONG: No header dependencies
+program: main.o utils.o
+	gcc $^ -o $@
+
+# CORRECT: Include dependencies or use -MMD
+%.o: %.c
+	$(CC) $(CFLAGS) -MMD -c $&lt; -o $@
+-include *.d</code></pre>
+<h2>Quick Reference</h2>
+<h3>Essential Make Commands</h3>
+<pre><code class="lang-bash">make                # Build default target
+make target         # Build specific target
+make -j4            # Parallel build (4 jobs)
+make -n             # Dry run (show commands)
+make -B             # Force rebuild all
+make -k             # Keep going on errors
+make V=1            # Verbose output
+make DEBUG=1        # Set variable
+make -C dir         # Run in directory
+make --print-data-base  # Print rules</code></pre>
+<h3>Common Variables</h3>
+<pre><code class="lang-makefile">CC      # C compiler (gcc)
+CXX     # C++ compiler (g++)
+CFLAGS  # C compiler flags
+LDFLAGS # Linker flags
+LDLIBS  # Libraries to link
+AR      # Archive tool (ar)
+INSTALL # Install command</code></pre>
+<h3>Pattern Examples</h3>
+<pre><code class="lang-makefile">%.o: %.c          # C object files
+%.so: %.o         # Shared libraries
+%_test: %_test.c  # Test executables
+$(BUILD)/%.o: $(SRC)/%.c  # With directories</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>cmake-patterns.md</code> - Modern cross-platform build system</li><li><code>build-system-selection.md</code> - Choosing between Make, CMake, Bazel</li><li><code>cross-platform-builds.md</code> - Multi-platform build strategies</li><li><code>build-optimization.md</code> - Incremental builds and caching</li><li><code>zig-build-system.md</code> - Zig&#x27;s build.zig as Make alternative</li><li><code>cicd/ci-optimization.md</code> - Optimizing Make in CI pipelines</li></ul>
+<h2>Summary</h2>
+<p>Make is the ubiquitous UNIX build tool with a steep learning curve but powerful capabilities:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ol><li><strong>Tabs matter</strong> - Commands must be indented with tabs, not spaces</li><li><strong>Pattern rules</strong> - Use <code>%.o: %.c</code> for reusable rules</li><li><strong>Automatic variables</strong> - Master <code>$@</code>, <code>$&lt;</code>, <code>$^</code> for concise Makefiles</li><li><strong>Dependency generation</strong> - Use <code>-MMD -MP</code> to auto-track header dependencies</li><li><strong>Phony targets</strong> - Always declare <code>.PHONY</code> for non-file targets</li><li><strong>Variables</strong> - Use <code>:=</code> for immediate, <code>=</code> for recursive, <code>?=</code> for defaults</li><li><strong>Parallel builds</strong> - Support <code>make -j</code> for faster builds</li><li><strong>Cross-platform</strong> - Use conditional logic for platform differences</li></ol>
+<p>Make excels at incremental builds and is the foundation for many modern build systems. While CMake and Bazel offer more features, Make remains the lightweight, portable choice for C/C++ projects.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/build-systems-make-fundamentals.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

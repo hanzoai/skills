@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dspy-evaluation</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/dspy-evaluation.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/dspy-evaluation.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>dspy-evaluation</h1><p class="lede">Evaluating DSPy programs with metrics, Evaluate class, and performance analysis</p><h1>DSPy Evaluation</h1>
+<p><strong>Scope</strong>: Metrics, Evaluate class, performance measurement, A/B testing, debugging <strong>Lines</strong>: ~380 <strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Measuring DSPy program accuracy and performance</li><li>Comparing different modules or optimizations</li><li>Setting up automated evaluation pipelines</li><li>Debugging module failures</li><li>Running A/B tests on prompt variations</li><li>Validating program quality before production</li></ul>
+<h2>Core Concepts</h2>
+<h3>Evaluation in DSPy</h3>
+<p><strong>Purpose</strong>: Measure how well your program performs</p>
+<ul><li><strong>Quantitative</strong>: Accuracy, F1, BLEU scores</li><li><strong>Qualitative</strong>: Inspect specific predictions</li><li><strong>Comparative</strong>: Before vs after optimization</li><li><strong>Continuous</strong>: Monitor production performance</li></ul>
+<p><strong>Key insight</strong>: Good evaluation drives good optimization</p>
+<h3>Metrics</h3>
+<p><strong>Definition</strong>: Functions that score predictions</p>
+<p><strong>Types</strong>:</p>
+<ol><li><strong>Binary</strong>: True/False (correct/incorrect)</li><li><strong>Continuous</strong>: 0.0 to 1.0 (partial credit)</li><li><strong>Multi-metric</strong>: Combine multiple factors</li></ol>
+<p><strong>Requirements</strong>:</p>
+<pre><code class="lang-python">def metric(example, pred, trace=None) -&gt; bool | float:
+    &quot;&quot;&quot;
+    Args:
+        example: Ground truth example with .answer, etc.
+        pred: Prediction object with .answer, .reasoning, etc.
+        trace: Optional execution trace
+
+    Returns:
+        bool: True if correct, False otherwise
+        OR
+        float: Score between 0.0 and 1.0
+    &quot;&quot;&quot;
+    pass</code></pre>
+<h3>Evaluate Class</h3>
+<p><strong>Purpose</strong>: Run systematic evaluation on datasets</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Parallel execution (multi-threading)</li><li>Progress tracking</li><li>Error handling</li><li>Statistical aggregation</li><li>Display modes (table, summary)</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Simple Accuracy Metric</h3>
+<pre><code class="lang-python">import dspy
+
+# Binary metric: exact match
+def exact_match(example, pred, trace=None):
+    &quot;&quot;&quot;Return True if prediction exactly matches answer.&quot;&quot;&quot;
+    return example.answer.lower().strip() == pred.answer.lower().strip()
+
+# Usage
+program = dspy.Predict(&quot;question -&gt; answer&quot;)
+
+# Manual evaluation
+result = program(question=&quot;What is 2+2?&quot;)
+example = dspy.Example(question=&quot;What is 2+2?&quot;, answer=&quot;4&quot;)
+
+is_correct = exact_match(example, result)
+print(f&quot;Correct: {is_correct}&quot;)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Classification tasks</li><li>QA with definite answers</li><li>Quick validation</li></ul>
+<h3>Pattern 2: Partial Credit Metric</h3>
+<pre><code class="lang-python">import dspy
+
+def fuzzy_match(example, pred, trace=None):
+    &quot;&quot;&quot;Return score based on answer overlap.&quot;&quot;&quot;
+    answer = pred.answer.lower()
+    gold = example.answer.lower()
+
+    # Exact match
+    if answer == gold:
+        return 1.0
+
+    # Partial match: gold answer appears in prediction
+    if gold in answer:
+        return 0.7
+
+    # Weak match: any word overlap
+    answer_words = set(answer.split())
+    gold_words = set(gold.split())
+    overlap = len(answer_words &amp; gold_words)
+
+    if overlap &gt; 0:
+        return 0.3 * (overlap / len(gold_words))
+
+    return 0.0
+
+# Use with optimizer
+optimizer = dspy.BootstrapFewShot(metric=fuzzy_match, metric_threshold=0.7)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Open-ended text generation</li><li>Summarization</li><li>Tasks where partial correctness matters</li></ul>
+<h3>Pattern 3: Using Evaluate Class</h3>
+<pre><code class="lang-python">import dspy
+from dspy.evaluate import Evaluate
+
+# Define program
+program = dspy.ChainOfThought(&quot;question -&gt; answer&quot;)
+
+# Prepare test set
+testset = [
+    dspy.Example(question=&quot;What is 2+2?&quot;, answer=&quot;4&quot;).with_inputs(&quot;question&quot;),
+    dspy.Example(question=&quot;Capital of France?&quot;, answer=&quot;Paris&quot;).with_inputs(&quot;question&quot;),
+    dspy.Example(question=&quot;Who wrote Hamlet?&quot;, answer=&quot;Shakespeare&quot;).with_inputs(&quot;question&quot;),
+]
+
+# Define metric
+def accuracy(example, pred, trace=None):
+    return example.answer.lower() in pred.answer.lower()
+
+# Create evaluator
+evaluator = Evaluate(
+    devset=testset,
+    metric=accuracy,
+    num_threads=4,  # Parallel evaluation
+    display_progress=True,
+    display_table=5,  # Show first 5 results
+)
+
+# Run evaluation
+score = evaluator(program)
+print(f&quot;Accuracy: {score:.1%}&quot;)</code></pre>
+<p><strong>Output example</strong>:</p>
+<pre><code>Question                    | Predicted Answer | Correct
+----------------------------|------------------|--------
+What is 2+2?               | 4                | ✓
+Capital of France?         | Paris            | ✓
+Who wrote Hamlet?          | William Shakespeare | ✓
+
+Accuracy: 100.0%</code></pre>
+<h3>Pattern 4: Multi-Metric Evaluation</h3>
+<pre><code class="lang-python">import dspy
+from dspy.evaluate import Evaluate
+
+# Multiple metrics for comprehensive evaluation
+def accuracy(example, pred, trace=None):
+    return example.answer.lower() in pred.answer.lower()
+
+def has_reasoning(example, pred, trace=None):
+    &quot;&quot;&quot;Check if reasoning is provided and non-trivial.&quot;&quot;&quot;
+    if not hasattr(pred, &#x27;reasoning&#x27;):
+        return 0.0
+    return 1.0 if len(pred.reasoning.split()) &gt; 5 else 0.0
+
+def confidence_calibration(example, pred, trace=None):
+    &quot;&quot;&quot;Check if confidence matches correctness.&quot;&quot;&quot;
+    is_correct = accuracy(example, pred)
+    if hasattr(pred, &#x27;confidence&#x27;):
+        conf = float(pred.confidence) if pred.confidence else 0.5
+        # High confidence + correct = good
+        # Low confidence + incorrect = good
+        # Mismatch = bad
+        if is_correct and conf &gt; 0.7:
+            return 1.0
+        if not is_correct and conf &lt; 0.3:
+            return 1.0
+        return 0.5
+    return 0.5
+
+# Evaluate each metric separately
+eval_accuracy = Evaluate(devset=testset, metric=accuracy)
+eval_reasoning = Evaluate(devset=testset, metric=has_reasoning)
+eval_calibration = Evaluate(devset=testset, metric=confidence_calibration)
+
+# Run all evaluations
+acc_score = eval_accuracy(program)
+reasoning_score = eval_reasoning(program)
+calib_score = eval_calibration(program)
+
+print(f&quot;Accuracy: {acc_score:.1%}&quot;)
+print(f&quot;Reasoning Quality: {reasoning_score:.1%}&quot;)
+print(f&quot;Calibration: {calib_score:.1%}&quot;)
+
+# Composite score
+overall = 0.6 * acc_score + 0.2 * reasoning_score + 0.2 * calib_score
+print(f&quot;Overall Score: {overall:.1%}&quot;)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Production systems with multiple quality factors</li><li>Need comprehensive quality assessment</li><li>Balancing multiple objectives</li></ul>
+<h3>Pattern 5: A/B Testing Programs</h3>
+<pre><code class="lang-python">import dspy
+from dspy.evaluate import Evaluate
+
+# Program A: Simple Predict
+program_a = dspy.Predict(&quot;question -&gt; answer&quot;)
+
+# Program B: ChainOfThought
+program_b = dspy.ChainOfThought(&quot;question -&gt; answer&quot;)
+
+# Prepare test set
+testset = [...]
+
+# Define metric
+def accuracy(example, pred, trace=None):
+    return example.answer.lower() in pred.answer.lower()
+
+# Create evaluator
+evaluator = Evaluate(devset=testset, metric=accuracy, num_threads=4)
+
+# Evaluate both programs
+score_a = evaluator(program_a)
+score_b = evaluator(program_b)
+
+# Compare results
+print(f&quot;Program A (Predict): {score_a:.1%}&quot;)
+print(f&quot;Program B (ChainOfThought): {score_b:.1%}&quot;)
+print(f&quot;Winner: {&#x27;B&#x27; if score_b &gt; score_a else &#x27;A&#x27;}&quot;)
+print(f&quot;Improvement: {abs(score_b - score_a):.1%}&quot;)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Comparing module types (Predict vs ChainOfThought)</li><li>Comparing optimizations (before vs after)</li><li>Choosing between LMs (GPT-4 vs Claude)</li></ul>
+<h3>Pattern 6: Error Analysis</h3>
+<pre><code class="lang-python">import dspy
+from dspy.evaluate import Evaluate
+
+program = dspy.ChainOfThought(&quot;question -&gt; answer&quot;)
+testset = [...]
+
+# Track errors for analysis
+errors = []
+
+def accuracy_with_logging(example, pred, trace=None):
+    &quot;&quot;&quot;Metric that logs errors for analysis.&quot;&quot;&quot;
+    correct = example.answer.lower() in pred.answer.lower()
+
+    if not correct:
+        errors.append({
+            &#x27;question&#x27;: example.question,
+            &#x27;expected&#x27;: example.answer,
+            &#x27;predicted&#x27;: pred.answer,
+            &#x27;reasoning&#x27;: getattr(pred, &#x27;reasoning&#x27;, &#x27;N/A&#x27;),
+        })
+
+    return correct
+
+# Run evaluation
+evaluator = Evaluate(devset=testset, metric=accuracy_with_logging)
+score = evaluator(program)
+
+# Analyze errors
+print(f&quot;\nAccuracy: {score:.1%}&quot;)
+print(f&quot;\nErrors ({len(errors)}):&quot;)
+for i, err in enumerate(errors[:5], 1):  # Show first 5 errors
+    print(f&quot;\n{i}. Question: {err[&#x27;question&#x27;]}&quot;)
+    print(f&quot;   Expected: {err[&#x27;expected&#x27;]}&quot;)
+    print(f&quot;   Predicted: {err[&#x27;predicted&#x27;]}&quot;)
+    print(f&quot;   Reasoning: {err[&#x27;reasoning&#x27;]}&quot;)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Identify common failure patterns</li><li>Guide optimization efforts</li><li>Improve training data</li></ul>
+<h3>Pattern 7: LM-as-Judge Metric</h3>
+<pre><code class="lang-python">import dspy
+
+# Use LM to evaluate predictions
+judge = dspy.ChainOfThought(&quot;question, answer, predicted_answer -&gt; score: float, explanation&quot;)
+
+def llm_judge_metric(example, pred, trace=None):
+    &quot;&quot;&quot;Use language model to evaluate answer quality.&quot;&quot;&quot;
+    result = judge(
+        question=example.question,
+        answer=example.answer,
+        predicted_answer=pred.answer
+    )
+
+    try:
+        score = float(result.score)
+        return max(0.0, min(1.0, score))  # Clamp to [0, 1]
+    except:
+        # Fallback to simple match if LM fails
+        return 1.0 if example.answer.lower() in pred.answer.lower() else 0.0
+
+# Use LM-as-judge for nuanced evaluation
+evaluator = Evaluate(devset=testset, metric=llm_judge_metric, num_threads=1)  # Sequential for LM calls
+score = evaluator(program)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Open-ended generation tasks</li><li>Nuanced quality assessment</li><li>When exact match is too strict</li></ul>
+<p><strong>Caution</strong>:</p>
+<ul><li>Slower (requires LM calls)</li><li>More expensive</li><li>LM judge can be wrong</li></ul>
+<h3>Pattern 8: Production Monitoring</h3>
+<pre><code class="lang-python">import dspy
+from dspy.evaluate import Evaluate
+import time
+
+# Production program
+program = dspy.ChainOfThought(&quot;question -&gt; answer&quot;)
+
+# Metrics for monitoring
+def response_quality(example, pred, trace=None):
+    &quot;&quot;&quot;Monitor prediction quality.&quot;&quot;&quot;
+    return example.answer.lower() in pred.answer.lower()
+
+def response_time(example, pred, trace=None):
+    &quot;&quot;&quot;Monitor latency (tracked separately).&quot;&quot;&quot;
+    # This is illustrative; actual timing would be external
+    return 1.0  # Placeholder
+
+# Sample production traffic for evaluation
+sample_size = 100
+production_samples = [...]  # Collect from production logs
+
+# Periodic evaluation
+evaluator = Evaluate(
+    devset=production_samples,
+    metric=response_quality,
+    num_threads=4,
+)
+
+# Run evaluation
+score = evaluator(program)
+
+# Alert if quality drops
+if score &lt; 0.85:
+    print(f&quot;⚠️ Quality degradation detected: {score:.1%}&quot;)
+    # Send alert, trigger investigation
+else:
+    print(f&quot;✓ Quality maintained: {score:.1%}&quot;)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Production monitoring</li><li>Detecting model drift</li><li>Continuous quality assurance</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Metric Function Template</h3>
+<pre><code class="lang-python">def my_metric(example, pred, trace=None):
+    &quot;&quot;&quot;
+    Evaluate prediction quality.
+
+    Args:
+        example: dspy.Example with ground truth
+        pred: Prediction object from module
+        trace: Optional execution trace
+
+    Returns:
+        bool: True/False for binary metrics
+        float: 0.0-1.0 for continuous metrics
+    &quot;&quot;&quot;
+    # Implement evaluation logic
+    return score</code></pre>
+<h3>Common Metrics</h3>
+<pre><code class="lang-python"># Exact match
+def exact_match(ex, pred, trace=None):
+    return ex.answer == pred.answer
+
+# Contains
+def contains(ex, pred, trace=None):
+    return ex.answer.lower() in pred.answer.lower()
+
+# Fuzzy match
+def fuzzy(ex, pred, trace=None):
+    from difflib import SequenceMatcher
+    ratio = SequenceMatcher(None, ex.answer, pred.answer).ratio()
+    return ratio
+
+# F1 score
+def f1_score(ex, pred, trace=None):
+    ex_words = set(ex.answer.lower().split())
+    pred_words = set(pred.answer.lower().split())
+    overlap = len(ex_words &amp; pred_words)
+    precision = overlap / len(pred_words) if pred_words else 0
+    recall = overlap / len(ex_words) if ex_words else 0
+    return 2 * precision * recall / (precision + recall) if (precision + recall) &gt; 0 else 0</code></pre>
+<h3>Evaluation Checklist</h3>
+<pre><code>✅ DO: Use separate test set (never seen during training)
+✅ DO: Evaluate baseline before optimization
+✅ DO: Use multiple metrics for comprehensive view
+✅ DO: Run error analysis on failures
+✅ DO: Report confidence intervals if dataset is small
+
+❌ DON&#x27;T: Evaluate on training data (overfitting!)
+❌ DON&#x27;T: Rely on single metric
+❌ DON&#x27;T: Ignore errors (analyze them!)
+❌ DON&#x27;T: Skip baseline comparison</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Evaluating on training data</strong>: Overfitting, invalid results</p>
+<pre><code class="lang-python"># Bad
+evaluator = Evaluate(devset=trainset, metric=accuracy)  # WRONG!</code></pre>
+<p>✅ Use held-out test set:</p>
+<pre><code class="lang-python"># Good
+evaluator = Evaluate(devset=testset, metric=accuracy)</code></pre>
+<p>❌ <strong>Single metric only</strong>: Misses important quality factors</p>
+<pre><code class="lang-python"># Bad - only accuracy
+score = evaluate(program, accuracy)</code></pre>
+<p>✅ Use multiple metrics:</p>
+<pre><code class="lang-python"># Good - comprehensive evaluation
+acc = evaluate(program, accuracy)
+f1 = evaluate(program, f1_score)
+reasoning = evaluate(program, has_reasoning)</code></pre>
+<p>❌ <strong>No error analysis</strong>: Don&#x27;t learn from failures</p>
+<pre><code class="lang-python"># Bad - just get score, don&#x27;t investigate
+score = evaluator(program)
+print(score)  # Done, but learned nothing</code></pre>
+<p>✅ Analyze errors:</p>
+<pre><code class="lang-python"># Good - investigate failures
+score = evaluator(program)
+errors = [ex for ex in testset if not metric(ex, program(ex.question))]
+analyze_common_patterns(errors)</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>dspy-optimizers.md</code> - Using metrics for optimization</li><li><code>dspy-modules.md</code> - Programs to evaluate</li><li><code>dspy-assertions.md</code> - Runtime validation</li><li><code>llm-dataset-preparation.md</code> - Creating evaluation datasets</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/dspy-evaluation.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

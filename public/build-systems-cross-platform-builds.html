@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>build-systems-cross-platform-builds</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/build-systems-cross-platform-builds.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/build-systems-cross-platform-builds.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>build-systems-cross-platform-builds</h1><p class="lede">Platform detection, conditional compilation, preprocessor macros, CMake cross-compilation, Zig cross-compilation, toolchain configuration, and multi-platform testing strategies.</p><h1>Cross-Platform Builds</h1>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Building software for Windows, macOS, and Linux</li><li>Cross-compiling for different architectures (x86, ARM, etc.)</li><li>Handling platform-specific APIs and behaviors</li><li>Creating portable libraries or applications</li><li>Targeting embedded systems or mobile platforms</li><li>Managing platform-specific dependencies</li></ul>
+<p><strong>Prerequisites</strong>: Understanding of target platforms, C/C++ or Rust, build systems (CMake, Cargo, etc.)</p>
+<h2>Core Concepts</h2>
+<h3>Platform Taxonomy</h3>
+<pre><code>Operating Systems:
+├── Windows (Win32/Win64)
+├── macOS (Darwin)
+├── Linux (various distros)
+├── BSD (FreeBSD, OpenBSD, NetBSD)
+├── Mobile (iOS, Android)
+└── Embedded (FreeRTOS, bare-metal)
+
+Architectures:
+├── x86 (32-bit, i386, i686)
+├── x86_64 (64-bit, amd64)
+├── ARM (32-bit, armv7, armv8)
+├── ARM64 (AArch64, Apple Silicon)
+├── RISC-V
+└── WebAssembly (wasm32, wasm64)
+
+Compilers:
+├── GCC (Linux, cross-platform)
+├── Clang/LLVM (macOS, cross-platform)
+├── MSVC (Windows)
+└── MinGW/Cygwin (Windows POSIX)</code></pre>
+<h2>Platform Detection</h2>
+<h3>Compiler Predefined Macros</h3>
+<pre><code class="lang-c">// C/C++ preprocessor macros for platform detection
+
+// Operating System
+#ifdef _WIN32
+    // Windows (32-bit or 64-bit)
+    #ifdef _WIN64
+        // Windows 64-bit
+    #endif
+#elif __APPLE__
+    #include &lt;TargetConditionals.h&gt;
+    #if TARGET_OS_MAC
+        // macOS
+    #elif TARGET_OS_IPHONE
+        // iOS
+    #endif
+#elif __linux__
+    // Linux
+#elif __FreeBSD__
+    // FreeBSD
+#elif __unix__
+    // Generic Unix
+#endif
+
+// Architecture
+#ifdef _M_X64 || __x86_64__ || __amd64__
+    // x86_64 (64-bit)
+#elif _M_IX86 || __i386__
+    // x86 (32-bit)
+#elif __aarch64__ || _M_ARM64
+    // ARM64
+#elif __arm__ || _M_ARM
+    // ARM 32-bit
+#endif
+
+// Compiler
+#ifdef _MSC_VER
+    // Microsoft Visual C++
+#elif __GNUC__
+    // GCC or compatible
+#elif __clang__
+    // Clang
+#endif</code></pre>
+<h3>CMake Platform Detection</h3>
+<pre><code class="lang-cmake"># Operating system
+if(WIN32)
+    message(STATUS &quot;Building for Windows&quot;)
+elseif(APPLE)
+    message(STATUS &quot;Building for macOS&quot;)
+elseif(UNIX)
+    message(STATUS &quot;Building for Unix/Linux&quot;)
+endif()
+
+# Architecture
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(STATUS &quot;64-bit build&quot;)
+else()
+    message(STATUS &quot;32-bit build&quot;)
+endif()
+
+# Compiler
+if(MSVC)
+    message(STATUS &quot;Using MSVC&quot;)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL &quot;GNU&quot;)
+    message(STATUS &quot;Using GCC&quot;)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL &quot;Clang&quot;)
+    message(STATUS &quot;Using Clang&quot;)
+endif()</code></pre>
+<h3>Rust Platform Detection</h3>
+<pre><code class="lang-rust">// Rust conditional compilation
+#[cfg(target_os = &quot;windows&quot;)]
+fn platform_specific() {
+    println!(&quot;Windows&quot;);
+}
+
+#[cfg(target_os = &quot;macos&quot;)]
+fn platform_specific() {
+    println!(&quot;macOS&quot;);
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+fn platform_specific() {
+    println!(&quot;Linux&quot;);
+}
+
+#[cfg(target_arch = &quot;x86_64&quot;)]
+fn arch_specific() {
+    println!(&quot;x86_64&quot;);
+}
+
+#[cfg(target_arch = &quot;aarch64&quot;)]
+fn arch_specific() {
+    println!(&quot;ARM64&quot;);
+}</code></pre>
+<h2>Conditional Compilation</h2>
+<h3>C/C++ Preprocessor</h3>
+<pre><code class="lang-c">// header.h - Cross-platform exports
+#ifdef _WIN32
+    #ifdef BUILD_DLL
+        #define API_EXPORT __declspec(dllexport)
+    #else
+        #define API_EXPORT __declspec(dllimport)
+    #endif
+#else
+    #define API_EXPORT __attribute__((visibility(&quot;default&quot;)))
+#endif
+
+// Usage
+API_EXPORT void my_function();</code></pre>
+<pre><code class="lang-c">// Platform-specific includes
+#ifdef _WIN32
+    #include &lt;windows.h&gt;
+    #include &lt;winsock2.h&gt;
+#else
+    #include &lt;unistd.h&gt;
+    #include &lt;sys/socket.h&gt;
+    #include &lt;netinet/in.h&gt;
+#endif
+
+// Platform-specific implementations
+void sleep_ms(int ms) {
+#ifdef _WIN32
+    Sleep(ms);
+#else
+    usleep(ms * 1000);
+#endif
+}</code></pre>
+<h3>CMake Conditional Configuration</h3>
+<pre><code class="lang-cmake"># Platform-specific sources
+if(WIN32)
+    set(PLATFORM_SOURCES src/platform_win.cpp)
+elseif(APPLE)
+    set(PLATFORM_SOURCES src/platform_mac.cpp)
+else()
+    set(PLATFORM_SOURCES src/platform_linux.cpp)
+endif()
+
+add_library(mylib src/common.cpp ${PLATFORM_SOURCES})
+
+# Platform-specific compile flags
+if(WIN32)
+    target_compile_definitions(mylib PRIVATE UNICODE _UNICODE)
+    target_link_libraries(mylib PRIVATE ws2_32)
+elseif(APPLE)
+    target_link_libraries(mylib PRIVATE &quot;-framework CoreFoundation&quot;)
+else()
+    target_link_libraries(mylib PRIVATE pthread dl)
+endif()</code></pre>
+<h3>Cargo Platform-Specific Dependencies</h3>
+<pre><code class="lang-toml"># Cargo.toml
+[dependencies]
+# Common dependencies
+serde = &quot;1.0&quot;
+
+# Platform-specific dependencies
+[target.&#x27;cfg(windows)&#x27;.dependencies]
+winapi = { version = &quot;0.3&quot;, features = [&quot;winuser&quot;, &quot;winsock2&quot;] }
+
+[target.&#x27;cfg(unix)&#x27;.dependencies]
+libc = &quot;0.2&quot;
+
+[target.&#x27;cfg(target_os = &quot;macos&quot;)&#x27;.dependencies]
+core-foundation = &quot;0.9&quot;</code></pre>
+<h2>CMake Cross-Compilation</h2>
+<h3>Toolchain Files</h3>
+<pre><code class="lang-cmake"># toolchain-arm-linux.cmake
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR arm)
+
+# Cross-compiler paths
+set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
+set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+
+# Sysroot (target system root)
+set(CMAKE_SYSROOT /usr/arm-linux-gnueabihf)
+set(CMAKE_FIND_ROOT_PATH /usr/arm-linux-gnueabihf)
+
+# Search paths
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+
+# Compiler flags
+set(CMAKE_C_FLAGS &quot;${CMAKE_C_FLAGS} -march=armv7-a -mfpu=neon&quot;)
+set(CMAKE_CXX_FLAGS &quot;${CMAKE_CXX_FLAGS} -march=armv7-a -mfpu=neon&quot;)</code></pre>
+<pre><code class="lang-bash"># Use toolchain file
+cmake -DCMAKE_TOOLCHAIN_FILE=toolchain-arm-linux.cmake ..
+cmake --build .</code></pre>
+<h3>Windows Toolchain on Linux (MinGW)</h3>
+<pre><code class="lang-cmake"># toolchain-mingw-w64.cmake
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86_64)
+
+set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc)
+set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
+set(CMAKE_RC_COMPILER x86_64-w64-mingw32-windres)
+
+set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+
+# Link statically to avoid DLL dependencies
+set(CMAKE_EXE_LINKER_FLAGS &quot;-static-libgcc -static-libstdc++&quot;)</code></pre>
+<pre><code class="lang-bash"># Build Windows executable on Linux
+cmake -DCMAKE_TOOLCHAIN_FILE=toolchain-mingw-w64.cmake ..
+cmake --build .
+# Output: myapp.exe (Windows executable)</code></pre>
+<h2>Zig Cross-Compilation</h2>
+<h3>Zig as Cross-Compiler</h3>
+<pre><code class="lang-bash"># Zig provides cross-compilation out of the box (no toolchain setup)
+
+# List targets
+zig targets
+
+# Cross-compile C/C++ for Windows on Linux
+zig cc main.c -target x86_64-windows-gnu -o main.exe
+
+# Cross-compile for ARM64 Linux
+zig cc main.c -target aarch64-linux-gnu -o main
+
+# Cross-compile for macOS (requires SDK)
+zig cc main.c -target x86_64-macos -o main
+
+# With CMake
+CC=&quot;zig cc -target x86_64-windows-gnu&quot; cmake ..</code></pre>
+<h3>Zig Build System Cross-Compilation</h3>
+<pre><code class="lang-zig">// build.zig
+const std = @import(&quot;std&quot;);
+
+pub fn build(b: *std.Build) void {
+    // Target can be overridden: zig build -Dtarget=x86_64-windows
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const exe = b.addExecutable(.{
+        .name = &quot;myapp&quot;,
+        .root_source_file = .{ .path = &quot;src/main.zig&quot; },
+        .target = target,
+        .optimize = optimize,
+    });
+
+    b.installArtifact(exe);
+}</code></pre>
+<pre><code class="lang-bash"># Cross-compile with Zig
+zig build -Dtarget=x86_64-windows     # Windows
+zig build -Dtarget=aarch64-linux      # ARM64 Linux
+zig build -Dtarget=x86_64-macos       # macOS
+zig build -Dtarget=wasm32-freestanding # WebAssembly</code></pre>
+<h2>Cargo Cross-Compilation</h2>
+<h3>Cross Tool</h3>
+<pre><code class="lang-bash"># Install cross (wrapper around Cargo)
+cargo install cross
+
+# Cross-compile for different targets
+cross build --target x86_64-pc-windows-gnu
+cross build --target aarch64-unknown-linux-gnu
+cross build --target armv7-unknown-linux-gnueabihf
+
+# List targets
+rustc --print target-list</code></pre>
+<h3>Manual Cross-Compilation</h3>
+<pre><code class="lang-bash"># Add target
+rustup target add x86_64-pc-windows-gnu
+rustup target add aarch64-unknown-linux-gnu
+
+# Build for target
+cargo build --target x86_64-pc-windows-gnu
+cargo build --target aarch64-unknown-linux-gnu</code></pre>
+<h3>Cargo Config for Cross-Compilation</h3>
+<pre><code class="lang-toml"># .cargo/config.toml
+[target.x86_64-pc-windows-gnu]
+linker = &quot;x86_64-w64-mingw32-gcc&quot;
+
+[target.aarch64-unknown-linux-gnu]
+linker = &quot;aarch64-linux-gnu-gcc&quot;</code></pre>
+<h2>Platform-Specific Code Patterns</h2>
+<h3>File Paths</h3>
+<pre><code class="lang-c">// C - Platform-specific path separators
+#ifdef _WIN32
+    #define PATH_SEPARATOR &#x27;\\&#x27;
+    #define PATH_SEPARATOR_STR &quot;\\&quot;
+#else
+    #define PATH_SEPARATOR &#x27;/&#x27;
+    #define PATH_SEPARATOR_STR &quot;/&quot;
+#endif
+
+// Build path
+char path[256];
+snprintf(path, sizeof(path), &quot;data%s%s&quot;, PATH_SEPARATOR_STR, &quot;config.txt&quot;);</code></pre>
+<pre><code class="lang-rust">// Rust - Use std::path (automatically handles platform differences)
+use std::path::{Path, PathBuf};
+
+let path = Path::new(&quot;data&quot;).join(&quot;config.txt&quot;);
+// Windows: data\config.txt
+// Unix: data/config.txt</code></pre>
+<h3>Sockets</h3>
+<pre><code class="lang-c">// C - Cross-platform socket initialization
+#ifdef _WIN32
+    WSADATA wsa_data;
+    WSAStartup(MAKEWORD(2, 2), &amp;wsa_data);
+    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+    // Use sock...
+    closesocket(sock);
+    WSACleanup();
+#else
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    // Use sock...
+    close(sock);
+#endif</code></pre>
+<h3>Dynamic Libraries</h3>
+<pre><code class="lang-c">// C - Cross-platform dynamic library loading
+#ifdef _WIN32
+    HMODULE handle = LoadLibraryA(&quot;mylib.dll&quot;);
+    void* symbol = GetProcAddress(handle, &quot;my_function&quot;);
+    FreeLibrary(handle);
+#else
+    void* handle = dlopen(&quot;libmylib.so&quot;, RTLD_LAZY);
+    void* symbol = dlsym(handle, &quot;my_function&quot;);
+    dlclose(handle);
+#endif</code></pre>
+<pre><code class="lang-rust">// Rust - Use libloading crate (cross-platform)
+use libloading::{Library, Symbol};
+
+let lib = Library::new(&quot;mylib.so&quot;)?;
+let func: Symbol&lt;fn() -&gt; i32&gt; = lib.get(b&quot;my_function&quot;)?;
+let result = func();</code></pre>
+<h2>Platform-Specific Optimizations</h2>
+<h3>Compiler Flags</h3>
+<pre><code class="lang-cmake"># CMake - Platform-specific optimizations
+if(WIN32)
+    target_compile_options(mylib PRIVATE /O2 /GL)
+    target_link_options(mylib PRIVATE /LTCG)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL &quot;GNU&quot; OR CMAKE_CXX_COMPILER_ID STREQUAL &quot;Clang&quot;)
+    target_compile_options(mylib PRIVATE -O3 -march=native -flto)
+    target_link_options(mylib PRIVATE -flto)
+endif()</code></pre>
+<h3>SIMD Intrinsics</h3>
+<pre><code class="lang-c">// C - Platform-specific SIMD
+#include &lt;stdint.h&gt;
+
+void add_vectors(float* a, float* b, float* c, size_t n) {
+#if defined(__SSE__) &amp;&amp; (defined(__x86_64__) || defined(_M_X64))
+    // x86_64 SSE
+    #include &lt;xmmintrin.h&gt;
+    for (size_t i = 0; i &lt; n; i += 4) {
+        __m128 va = _mm_load_ps(&amp;a[i]);
+        __m128 vb = _mm_load_ps(&amp;b[i]);
+        __m128 vc = _mm_add_ps(va, vb);
+        _mm_store_ps(&amp;c[i], vc);
+    }
+#elif defined(__ARM_NEON)
+    // ARM NEON
+    #include &lt;arm_neon.h&gt;
+    for (size_t i = 0; i &lt; n; i += 4) {
+        float32x4_t va = vld1q_f32(&amp;a[i]);
+        float32x4_t vb = vld1q_f32(&amp;b[i]);
+        float32x4_t vc = vaddq_f32(va, vb);
+        vst1q_f32(&amp;c[i], vc);
+    }
+#else
+    // Fallback scalar code
+    for (size_t i = 0; i &lt; n; i++) {
+        c[i] = a[i] + b[i];
+    }
+#endif
+}</code></pre>
+<h2>Testing Multi-Platform Builds</h2>
+<h3>CI/CD Matrix Testing</h3>
+<pre><code class="lang-yaml"># .github/workflows/cross-platform.yml
+name: Cross-Platform Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        arch: [x86_64]
+        include:
+          - os: ubuntu-latest
+            arch: aarch64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build .
+
+      - name: Test
+        run: |
+          cd build
+          ctest --output-on-failure</code></pre>
+<h3>Docker for Cross-Platform Testing</h3>
+<pre><code class="lang-dockerfile"># Dockerfile.cross - Multi-platform build
+FROM --platform=$BUILDPLATFORM debian:bookworm AS builder
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
+RUN apt-get update &amp;&amp; apt-get install -y \
+    gcc-aarch64-linux-gnu \
+    gcc-x86-64-linux-gnu \
+    cmake
+
+COPY . /src
+WORKDIR /src/build
+
+RUN if [ &quot;$TARGETPLATFORM&quot; = &quot;linux/arm64&quot; ]; then \
+        cmake -DCMAKE_TOOLCHAIN_FILE=../toolchain-arm64.cmake .. ; \
+    else \
+        cmake .. ; \
+    fi &amp;&amp; \
+    cmake --build .
+
+# Build for multiple platforms
+# docker buildx build --platform linux/amd64,linux/arm64 -t myapp:latest .</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>❌ Hardcoded Platform Assumptions</h3>
+<pre><code class="lang-c">// WRONG: Assumes Unix-like system
+void read_config() {
+    FILE* f = fopen(&quot;/etc/myapp/config.txt&quot;, &quot;r&quot;);  // Fails on Windows
+}
+
+// CORRECT: Use platform-appropriate paths
+#ifdef _WIN32
+    const char* config_path = &quot;C:\\ProgramData\\MyApp\\config.txt&quot;;
+#else
+    const char* config_path = &quot;/etc/myapp/config.txt&quot;;
+#endif</code></pre>
+<h3>❌ Not Testing on Target Platforms</h3>
+<pre><code class="lang-bash"># WRONG: Only test on developer machine (macOS)
+# Ship to production (Linux) without testing
+
+# CORRECT: Use CI matrix to test all platforms
+# See CI/CD matrix example above</code></pre>
+<h3>❌ Mixing Platform-Specific APIs</h3>
+<pre><code class="lang-c">// WRONG: Mix Windows and POSIX APIs
+#include &lt;windows.h&gt;
+#include &lt;pthread.h&gt;  // Won&#x27;t compile on Windows
+
+// CORRECT: Use conditional compilation
+#ifdef _WIN32
+    #include &lt;windows.h&gt;
+#else
+    #include &lt;pthread.h&gt;
+#endif</code></pre>
+<h3>❌ Ignoring Endianness</h3>
+<pre><code class="lang-c">// WRONG: Assume little-endian (x86)
+uint32_t value = *(uint32_t*)buffer;
+
+// CORRECT: Handle endianness explicitly
+#include &lt;stdint.h&gt;
+
+uint32_t read_le32(const uint8_t* buf) {
+    return (uint32_t)buf[0]
+         | ((uint32_t)buf[1] &lt;&lt; 8)
+         | ((uint32_t)buf[2] &lt;&lt; 16)
+         | ((uint32_t)buf[3] &lt;&lt; 24);
+}</code></pre>
+<h2>Quick Reference</h2>
+<h3>Platform Detection Macros</h3>
+<pre><code class="lang-c">// OS Detection
+_WIN32          // Windows (32 or 64-bit)
+_WIN64          // Windows 64-bit
+__APPLE__       // macOS, iOS
+__linux__       // Linux
+__unix__        // Unix-like
+__FreeBSD__     // FreeBSD
+
+// Architecture
+__x86_64__      // x86_64 (GCC/Clang)
+_M_X64          // x86_64 (MSVC)
+__i386__        // x86 (GCC/Clang)
+_M_IX86         // x86 (MSVC)
+__aarch64__     // ARM64 (GCC/Clang)
+_M_ARM64        // ARM64 (MSVC)
+__arm__         // ARM32
+__wasm32__      // WebAssembly
+
+// Compiler
+_MSC_VER        // MSVC
+__GNUC__        // GCC
+__clang__       // Clang</code></pre>
+<h3>CMake Cross-Compilation</h3>
+<pre><code class="lang-bash"># ARM Linux
+cmake -DCMAKE_TOOLCHAIN_FILE=toolchain-arm.cmake ..
+
+# Windows on Linux (MinGW)
+cmake -DCMAKE_TOOLCHAIN_FILE=toolchain-mingw.cmake ..
+
+# Android
+cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
+      -DANDROID_ABI=arm64-v8a ..</code></pre>
+<h3>Zig Cross-Compilation Targets</h3>
+<pre><code class="lang-bash"># Common targets
+x86_64-linux-gnu          # Linux x86_64
+aarch64-linux-gnu         # Linux ARM64
+x86_64-windows-gnu        # Windows x86_64
+x86_64-macos              # macOS x86_64
+aarch64-macos             # macOS ARM64 (Apple Silicon)
+wasm32-freestanding       # WebAssembly</code></pre>
+<h2>Python Integration Example</h2>
+<pre><code class="lang-python"># detect_platform.py - Platform detection and configuration
+import platform
+import sys
+
+def detect_platform():
+    &quot;&quot;&quot;Detect platform and generate build configuration.&quot;&quot;&quot;
+    os_type = platform.system()  # &#x27;Windows&#x27;, &#x27;Darwin&#x27;, &#x27;Linux&#x27;
+    machine = platform.machine()  # &#x27;x86_64&#x27;, &#x27;arm64&#x27;, &#x27;AMD64&#x27;, etc.
+
+    config = {
+        &#x27;os&#x27;: os_type.lower(),
+        &#x27;arch&#x27;: machine.lower(),
+        &#x27;compiler&#x27;: &#x27;msvc&#x27; if os_type == &#x27;Windows&#x27; else &#x27;gcc&#x27;,
+        &#x27;shared_ext&#x27;: {
+            &#x27;Windows&#x27;: &#x27;.dll&#x27;,
+            &#x27;Darwin&#x27;: &#x27;.dylib&#x27;,
+            &#x27;Linux&#x27;: &#x27;.so&#x27;,
+        }.get(os_type, &#x27;.so&#x27;),
+    }
+
+    return config
+
+if __name__ == &#x27;__main__&#x27;:
+    config = detect_platform()
+    print(f&quot;OS: {config[&#x27;os&#x27;]}&quot;)
+    print(f&quot;Architecture: {config[&#x27;arch&#x27;]}&quot;)
+    print(f&quot;Compiler: {config[&#x27;compiler&#x27;]}&quot;)
+    print(f&quot;Shared library extension: {config[&#x27;shared_ext&#x27;]}&quot;)
+
+# Generate CMake config
+# cmake -DPLATFORM_OS={config[&#x27;os&#x27;]} -DPLATFORM_ARCH={config[&#x27;arch&#x27;]} ..</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>cmake-patterns.md</code> - CMake configuration for cross-platform builds</li><li><code>build-system-selection.md</code> - Choosing build systems</li><li><code>zig-build-system.md</code> - Zig cross-compilation features</li><li><code>zig-cross-compilation.md</code> - Advanced Zig cross-compilation</li><li><code>build-optimization.md</code> - Build performance</li><li><code>cicd/ci-optimization.md</code> - CI/CD for multi-platform testing</li></ul>
+<h2>Summary</h2>
+<p>Cross-platform development requires careful attention to platform differences and systematic testing:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ol><li><strong>Platform detection</strong> - Use preprocessor macros or build system detection</li><li><strong>Conditional compilation</strong> - Isolate platform-specific code with <code>#ifdef</code></li><li><strong>Toolchain files</strong> - Use CMake toolchain files for cross-compilation</li><li><strong>Zig advantage</strong> - Zig provides zero-setup cross-compilation</li><li><strong>Test all platforms</strong> - Use CI matrix testing for validation</li><li><strong>Abstract platform APIs</strong> - Create platform-agnostic interfaces</li><li><strong>Handle edge cases</strong> - Endianness, path separators, line endings</li><li><strong>Cross-compilation</strong> - Build for target platforms from development machine</li></ol>
+<p><strong>Best Practices</strong>:</p>
+<ul><li>Prefer cross-platform libraries (Rust std, C++ std::filesystem)</li><li>Use platform detection in build system, not just source code</li><li>Test on actual target platforms, not just cross-compiled binaries</li><li>Document platform-specific requirements and limitations</li></ul>
+<p><strong>2024 Tooling</strong>:</p>
+<ul><li><strong>Zig</strong>: Zero-setup cross-compilation (best DX)</li><li><strong>CMake</strong>: Mature cross-platform builds (most ecosystem support)</li><li><strong>Cargo + cross</strong>: Easy Rust cross-compilation</li><li><strong>Docker buildx</strong>: Multi-platform container builds</li></ul>
+<p>Cross-platform development is essential for modern software, and tools like Zig are making it increasingly accessible.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/build-systems-cross-platform-builds.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

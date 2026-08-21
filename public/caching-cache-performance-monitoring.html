@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>caching-cache-performance-monitoring</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/caching-cache-performance-monitoring.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/caching-cache-performance-monitoring.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>caching-cache-performance-monitoring</h1><p class="lede">Measuring and optimizing cache performance - metrics, monitoring tools, alerts, load testing, and instrumentation for cache hit rates and latency.</p><h1>Cache Performance Monitoring</h1>
+<p><strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Measuring cache effectiveness (hit ratio, latency, eviction rate)</li><li>Optimizing cache configuration based on data</li><li>Debugging cache performance issues</li><li>Setting up alerts for cache anomalies</li><li>Load testing applications with caching layers</li><li>Demonstrating cache performance improvements to stakeholders</li><li>Troubleshooting high database load or slow responses</li></ul>
+<p><strong>Prerequisites</strong>: Understanding of <code>caching-fundamentals.md</code>, <code>redis-caching-patterns.md</code>, <code>http-caching.md</code>, and <code>cdn-edge-caching.md</code></p>
+<h2>Core Metrics</h2>
+<h3>Key Performance Indicators (KPIs)</h3>
+<p>| Metric | Formula | Target | Interpretation | |--------|---------|--------|----------------| | <strong>Cache Hit Ratio</strong> | <code>hits / (hits + misses)</code> | 85-95% | % of requests served from cache | | <strong>Cache Miss Ratio</strong> | <code>misses / (hits + misses)</code> | 5-15% | % of requests requiring source fetch | | <strong>Eviction Rate</strong> | <code>evictions / total_items</code> | &lt;10% | % of items removed before expiration | | <strong>Cache Latency</strong> | p50, p95, p99 response time | &lt;5ms (Redis) | Time to retrieve from cache | | <strong>Cache Memory Usage</strong> | <code>used_memory / max_memory</code> | &lt;80% | Memory utilization | | <strong>Stale Serve Rate</strong> | <code>stale_responses / total_responses</code> | Context-dependent | % of stale data served |</p>
+<h3>Industry Benchmarks (2024-2025)</h3>
+<pre><code>Redis Cache Hit Ratio: 90-95% (well-configured)
+CDN Cache Hit Ratio: 85-95% (optimized)
+Browser Cache Hit Ratio: 60-80% (varies by site)
+
+Redis Latency: &lt;1ms p99 (local), &lt;5ms p99 (network)
+CDN Latency: 20-50ms TTFB (cached), 200-500ms (miss)
+
+Eviction Rate: &lt;5% (healthy), &gt;20% (undersized cache)</code></pre>
+<h2>Redis Monitoring</h2>
+<h3>Redis INFO Command</h3>
+<pre><code class="lang-python">import redis
+from typing import Dict
+
+class RedisMonitor:
+    def __init__(self, redis_client: redis.Redis):
+        self.client = redis_client
+
+    def get_cache_metrics(self) -&gt; Dict:
+        &quot;&quot;&quot;Extract cache metrics from Redis INFO&quot;&quot;&quot;
+        info = self.client.info()
+
+        # Memory metrics
+        used_memory = info[&#x27;used_memory_human&#x27;]
+        max_memory = info.get(&#x27;maxmemory_human&#x27;, &#x27;unlimited&#x27;)
+        memory_usage_pct = (info[&#x27;used_memory&#x27;] / info.get(&#x27;maxmemory&#x27;, float(&#x27;inf&#x27;))) * 100
+
+        # Cache hit/miss metrics
+        hits = info[&#x27;keyspace_hits&#x27;]
+        misses = info[&#x27;keyspace_misses&#x27;]
+        total_requests = hits + misses
+        hit_ratio = (hits / total_requests * 100) if total_requests &gt; 0 else 0
+
+        # Eviction metrics
+        evicted_keys = info[&#x27;evicted_keys&#x27;]
+
+        # Connection metrics
+        connected_clients = info[&#x27;connected_clients&#x27;]
+
+        return {
+            &#x27;used_memory&#x27;: used_memory,
+            &#x27;max_memory&#x27;: max_memory,
+            &#x27;memory_usage_pct&#x27;: round(memory_usage_pct, 2),
+            &#x27;keyspace_hits&#x27;: hits,
+            &#x27;keyspace_misses&#x27;: misses,
+            &#x27;hit_ratio&#x27;: round(hit_ratio, 2),
+            &#x27;evicted_keys&#x27;: evicted_keys,
+            &#x27;connected_clients&#x27;: connected_clients,
+            &#x27;uptime_days&#x27;: info[&#x27;uptime_in_days&#x27;],
+        }
+
+    def print_metrics(self):
+        &quot;&quot;&quot;Human-readable metrics output&quot;&quot;&quot;
+        metrics = self.get_cache_metrics()
+
+        print(&quot;=== Redis Cache Metrics ===&quot;)
+        print(f&quot;Memory: {metrics[&#x27;used_memory&#x27;]} / {metrics[&#x27;max_memory&#x27;]} ({metrics[&#x27;memory_usage_pct&#x27;]}%)&quot;)
+        print(f&quot;Hit Ratio: {metrics[&#x27;hit_ratio&#x27;]}%&quot;)
+        print(f&quot;Cache Hits: {metrics[&#x27;keyspace_hits&#x27;]:,}&quot;)
+        print(f&quot;Cache Misses: {metrics[&#x27;keyspace_misses&#x27;]:,}&quot;)
+        print(f&quot;Evicted Keys: {metrics[&#x27;evicted_keys&#x27;]:,}&quot;)
+        print(f&quot;Connected Clients: {metrics[&#x27;connected_clients&#x27;]}&quot;)
+        print(f&quot;Uptime: {metrics[&#x27;uptime_days&#x27;]} days&quot;)
+
+# Usage
+monitor = RedisMonitor(redis.Redis())
+monitor.print_metrics()</code></pre>
+<h3>Redis Slow Log</h3>
+<pre><code class="lang-python">class RedisSlowLogMonitor:
+    def __init__(self, redis_client: redis.Redis):
+        self.client = redis_client
+
+    def get_slow_queries(self, count: int = 10):
+        &quot;&quot;&quot;Get slowest Redis commands&quot;&quot;&quot;
+        slow_log = self.client.slowlog_get(count)
+
+        print(f&quot;=== Top {count} Slow Redis Commands ===&quot;)
+        for entry in slow_log:
+            # entry: (id, timestamp, duration_microseconds, command, client_addr, client_name)
+            cmd_id, timestamp, duration_us, command, *_ = entry
+            duration_ms = duration_us / 1000
+
+            print(f&quot;[{duration_ms:.2f}ms] {&#x27; &#x27;.join(str(c) for c in command)}&quot;)
+
+# Configure slow log threshold (10ms)
+redis_client.config_set(&#x27;slowlog-log-slower-than&#x27;, 10000)  # microseconds
+monitor = RedisSlowLogMonitor(redis_client)
+monitor.get_slow_queries()</code></pre>
+<h3>Application-Level Instrumentation</h3>
+<pre><code class="lang-python">import time
+from functools import wraps
+from dataclasses import dataclass
+from typing import Callable, Any
+
+@dataclass
+class CacheStats:
+    hits: int = 0
+    misses: int = 0
+    errors: int = 0
+    total_latency_ms: float = 0.0
+
+    @property
+    def hit_ratio(self) -&gt; float:
+        total = self.hits + self.misses
+        return (self.hits / total * 100) if total &gt; 0 else 0
+
+    @property
+    def avg_latency_ms(self) -&gt; float:
+        total_requests = self.hits + self.misses
+        return (self.total_latency_ms / total_requests) if total_requests &gt; 0 else 0
+
+
+class InstrumentedCache:
+    def __init__(self, redis_client: redis.Redis):
+        self.cache = redis_client
+        self.stats = CacheStats()
+
+    def get(self, key: str) -&gt; Any:
+        &quot;&quot;&quot;Instrumented cache get&quot;&quot;&quot;
+        start = time.perf_counter()
+
+        try:
+            value = self.cache.get(key)
+            latency_ms = (time.perf_counter() - start) * 1000
+            self.stats.total_latency_ms += latency_ms
+
+            if value:
+                self.stats.hits += 1
+                print(f&quot;[CACHE HIT] {key} ({latency_ms:.2f}ms)&quot;)
+            else:
+                self.stats.misses += 1
+                print(f&quot;[CACHE MISS] {key} ({latency_ms:.2f}ms)&quot;)
+
+            return value
+        except Exception as e:
+            self.stats.errors += 1
+            print(f&quot;[CACHE ERROR] {key}: {e}&quot;)
+            return None
+
+    def print_stats(self):
+        &quot;&quot;&quot;Print accumulated statistics&quot;&quot;&quot;
+        print(&quot;\n=== Cache Performance Stats ===&quot;)
+        print(f&quot;Hits: {self.stats.hits}&quot;)
+        print(f&quot;Misses: {self.stats.misses}&quot;)
+        print(f&quot;Hit Ratio: {self.stats.hit_ratio:.2f}%&quot;)
+        print(f&quot;Avg Latency: {self.stats.avg_latency_ms:.2f}ms&quot;)
+        print(f&quot;Errors: {self.stats.errors}&quot;)
+
+# Usage
+cache = InstrumentedCache(redis_client)
+for i in range(100):
+    cache.get(f&quot;user:{i}&quot;)
+cache.print_stats()</code></pre>
+<h2>HTTP Cache Monitoring</h2>
+<h3>Analyzing Response Headers</h3>
+<pre><code class="lang-python">import requests
+from datetime import datetime
+
+class HTTPCacheAnalyzer:
+    @staticmethod
+    def analyze_response(url: str):
+        &quot;&quot;&quot;Analyze HTTP cache headers&quot;&quot;&quot;
+        response = requests.get(url)
+
+        print(f&quot;=== HTTP Cache Analysis: {url} ===&quot;)
+        print(f&quot;Status: {response.status_code}&quot;)
+
+        # Cache-Control
+        cache_control = response.headers.get(&#x27;Cache-Control&#x27;, &#x27;Not set&#x27;)
+        print(f&quot;Cache-Control: {cache_control}&quot;)
+
+        # ETag
+        etag = response.headers.get(&#x27;ETag&#x27;, &#x27;Not set&#x27;)
+        print(f&quot;ETag: {etag}&quot;)
+
+        # Last-Modified
+        last_modified = response.headers.get(&#x27;Last-Modified&#x27;, &#x27;Not set&#x27;)
+        print(f&quot;Last-Modified: {last_modified}&quot;)
+
+        # Age (time in cache)
+        age = response.headers.get(&#x27;Age&#x27;, &#x27;0&#x27;)
+        print(f&quot;Age: {age}s&quot;)
+
+        # X-Cache (CDN cache status)
+        x_cache = response.headers.get(&#x27;X-Cache&#x27;, &#x27;Not set&#x27;)
+        print(f&quot;X-Cache: {x_cache}&quot;)
+
+        # Cloudflare specific
+        cf_cache_status = response.headers.get(&#x27;CF-Cache-Status&#x27;, &#x27;Not set&#x27;)
+        print(f&quot;CF-Cache-Status: {cf_cache_status}&quot;)
+
+        # Calculate freshness
+        if &#x27;max-age&#x27; in cache_control:
+            max_age = int(cache_control.split(&#x27;max-age=&#x27;)[1].split(&#x27;,&#x27;)[0])
+            age_seconds = int(age)
+            freshness_pct = ((max_age - age_seconds) / max_age * 100) if max_age &gt; 0 else 0
+            print(f&quot;Freshness: {freshness_pct:.1f}% ({max_age - age_seconds}s remaining)&quot;)
+
+# Usage
+analyzer = HTTPCacheAnalyzer()
+analyzer.analyze_response(&#x27;https://example.com/api/data&#x27;)</code></pre>
+<h3>Browser Cache DevTools Automation</h3>
+<pre><code class="lang-javascript">// JavaScript: Monitor browser cache performance
+
+class BrowserCacheMonitor {
+  constructor() {
+    this.stats = { cacheHits: 0, cacheMisses: 0 };
+  }
+
+  // Monitor Performance API
+  analyzeResourceTiming() {
+    const resources = performance.getEntriesByType(&#x27;resource&#x27;);
+
+    resources.forEach((resource) =&gt; {
+      const fromCache =
+        resource.transferSize === 0 ||
+        resource.transferSize &lt; resource.encodedBodySize;
+
+      if (fromCache) {
+        this.stats.cacheHits++;
+        console.log(`[CACHE HIT] ${resource.name}`);
+      } else {
+        this.stats.cacheMisses++;
+        console.log(`[CACHE MISS] ${resource.name} (${resource.transferSize} bytes)`);
+      }
+    });
+
+    this.printStats();
+  }
+
+  printStats() {
+    const total = this.stats.cacheHits + this.stats.cacheMisses;
+    const hitRatio = (this.stats.cacheHits / total) * 100;
+
+    console.log(&#x27;\n=== Browser Cache Performance ===&#x27;);
+    console.log(`Cache Hits: ${this.stats.cacheHits}`);
+    console.log(`Cache Misses: ${this.stats.cacheMisses}`);
+    console.log(`Hit Ratio: ${hitRatio.toFixed(2)}%`);
+  }
+}
+
+// Usage (run in browser console)
+const monitor = new BrowserCacheMonitor();
+monitor.analyzeResourceTiming();</code></pre>
+<h2>CDN Analytics</h2>
+<h3>Cloudflare Analytics</h3>
+<pre><code class="lang-python">import requests
+import os
+from datetime import datetime, timedelta
+
+class CloudflareAnalytics:
+    def __init__(self, api_token: str, zone_id: str):
+        self.api_token = api_token
+        self.zone_id = zone_id
+        self.base_url = f&quot;https://api.cloudflare.com/client/v4/zones/{zone_id}/analytics&quot;
+
+    def get_cache_metrics(self, since_hours: int = 24):
+        &quot;&quot;&quot;Get Cloudflare cache analytics&quot;&quot;&quot;
+        headers = {
+            &#x27;Authorization&#x27;: f&#x27;Bearer {self.api_token}&#x27;,
+            &#x27;Content-Type&#x27;: &#x27;application/json&#x27;,
+        }
+
+        since = datetime.utcnow() - timedelta(hours=since_hours)
+        params = {
+            &#x27;since&#x27;: since.isoformat() + &#x27;Z&#x27;,
+        }
+
+        response = requests.get(
+            f&quot;{self.base_url}/dashboard&quot;,
+            headers=headers,
+            params=params
+        )
+        data = response.json()
+
+        if data[&#x27;success&#x27;]:
+            totals = data[&#x27;result&#x27;][&#x27;totals&#x27;]
+
+            requests_total = totals[&#x27;requests&#x27;][&#x27;all&#x27;]
+            requests_cached = totals[&#x27;requests&#x27;][&#x27;cached&#x27;]
+            requests_uncached = totals[&#x27;requests&#x27;][&#x27;uncached&#x27;]
+
+            cache_hit_ratio = (requests_cached / requests_total * 100) if requests_total &gt; 0 else 0
+
+            bandwidth_total = totals[&#x27;bandwidth&#x27;][&#x27;all&#x27;]
+            bandwidth_cached = totals[&#x27;bandwidth&#x27;][&#x27;cached&#x27;]
+            bandwidth_saved_pct = (bandwidth_cached / bandwidth_total * 100) if bandwidth_total &gt; 0 else 0
+
+            print(f&quot;=== Cloudflare Cache Analytics (Last {since_hours}h) ===&quot;)
+            print(f&quot;Total Requests: {requests_total:,}&quot;)
+            print(f&quot;Cached Requests: {requests_cached:,}&quot;)
+            print(f&quot;Uncached Requests: {requests_uncached:,}&quot;)
+            print(f&quot;Cache Hit Ratio: {cache_hit_ratio:.2f}%&quot;)
+            print(f&quot;Bandwidth Saved: {bandwidth_saved_pct:.2f}%&quot;)
+
+# Usage
+analytics = CloudflareAnalytics(
+    api_token=os.environ[&#x27;CLOUDFLARE_API_TOKEN&#x27;],
+    zone_id=os.environ[&#x27;CLOUDFLARE_ZONE_ID&#x27;]
+)
+analytics.get_cache_metrics(since_hours=24)</code></pre>
+<h3>Fastly Real-Time Stats</h3>
+<pre><code class="lang-python">class FastlyAnalytics:
+    def __init__(self, api_key: str, service_id: str):
+        self.api_key = api_key
+        self.service_id = service_id
+
+    def get_realtime_stats(self):
+        &quot;&quot;&quot;Get Fastly real-time cache stats&quot;&quot;&quot;
+        headers = {&#x27;Fastly-Key&#x27;: self.api_key}
+        url = f&quot;https://api.fastly.com/stats/service/{self.service_id}&quot;
+
+        response = requests.get(url, headers=headers)
+        data = response.json()
+
+        # Aggregate stats from all datacenters
+        total_hits = sum(dc[&#x27;hits&#x27;] for dc in data[&#x27;data&#x27;])
+        total_miss = sum(dc[&#x27;miss&#x27;] for dc in data[&#x27;data&#x27;])
+        total_pass = sum(dc[&#x27;pass&#x27;] for dc in data[&#x27;data&#x27;])
+
+        total_requests = total_hits + total_miss + total_pass
+        hit_ratio = (total_hits / total_requests * 100) if total_requests &gt; 0 else 0
+
+        print(&quot;=== Fastly Real-Time Stats ===&quot;)
+        print(f&quot;Cache Hits: {total_hits:,}&quot;)
+        print(f&quot;Cache Misses: {total_miss:,}&quot;)
+        print(f&quot;Cache Pass: {total_pass:,}&quot;)
+        print(f&quot;Hit Ratio: {hit_ratio:.2f}%&quot;)
+
+# Usage
+fastly = FastlyAnalytics(
+    api_key=os.environ[&#x27;FASTLY_API_KEY&#x27;],
+    service_id=os.environ[&#x27;FASTLY_SERVICE_ID&#x27;]
+)
+fastly.get_realtime_stats()</code></pre>
+<h2>APM Integration</h2>
+<h3>Prometheus Metrics</h3>
+<pre><code class="lang-python">from prometheus_client import Counter, Histogram, Gauge
+
+# Define metrics
+cache_requests = Counter(&#x27;cache_requests_total&#x27;, &#x27;Total cache requests&#x27;, [&#x27;status&#x27;])
+cache_latency = Histogram(&#x27;cache_latency_seconds&#x27;, &#x27;Cache operation latency&#x27;)
+cache_size = Gauge(&#x27;cache_size_bytes&#x27;, &#x27;Current cache size in bytes&#x27;)
+
+class PrometheusInstrumentedCache:
+    def __init__(self, redis_client: redis.Redis):
+        self.cache = redis_client
+
+    @cache_latency.time()
+    def get(self, key: str):
+        &quot;&quot;&quot;Cache get with Prometheus instrumentation&quot;&quot;&quot;
+        value = self.cache.get(key)
+
+        if value:
+            cache_requests.labels(status=&#x27;hit&#x27;).inc()
+        else:
+            cache_requests.labels(status=&#x27;miss&#x27;).inc()
+
+        return value
+
+    def update_cache_size(self):
+        &quot;&quot;&quot;Update cache size gauge&quot;&quot;&quot;
+        info = self.cache.info()
+        cache_size.set(info[&#x27;used_memory&#x27;])
+
+# Expose metrics endpoint (Flask example)
+from flask import Flask
+from prometheus_client import generate_latest
+
+app = Flask(__name__)
+
+@app.route(&#x27;/metrics&#x27;)
+def metrics():
+    return generate_latest()</code></pre>
+<h3>StatsD Integration</h3>
+<pre><code class="lang-python">from statsd import StatsD
+
+class StatsDInstrumentedCache:
+    def __init__(self, redis_client: redis.Redis, statsd_host: str = &#x27;localhost&#x27;, statsd_port: int = 8125):
+        self.cache = redis_client
+        self.statsd = StatsD(host=statsd_host, port=statsd_port)
+
+    def get(self, key: str):
+        &quot;&quot;&quot;Cache get with StatsD metrics&quot;&quot;&quot;
+        start = time.time()
+        value = self.cache.get(key)
+        duration_ms = (time.time() - start) * 1000
+
+        # Record latency
+        self.statsd.timing(&#x27;cache.latency&#x27;, duration_ms)
+
+        # Record hit/miss
+        if value:
+            self.statsd.incr(&#x27;cache.hits&#x27;)
+        else:
+            self.statsd.incr(&#x27;cache.misses&#x27;)
+
+        return value</code></pre>
+<h2>Load Testing with Caching</h2>
+<h3>Cache Performance Testing</h3>
+<pre><code class="lang-python">import asyncio
+import aiohttp
+import time
+from statistics import mean, median
+
+class CacheLoadTester:
+    def __init__(self, url: str, num_requests: int = 1000):
+        self.url = url
+        self.num_requests = num_requests
+        self.results = []
+
+    async def make_request(self, session: aiohttp.ClientSession, request_id: int):
+        &quot;&quot;&quot;Single request with timing&quot;&quot;&quot;
+        start = time.perf_counter()
+
+        async with session.get(self.url) as response:
+            await response.read()
+            latency_ms = (time.perf_counter() - start) * 1000
+
+            # Check cache status
+            cache_status = response.headers.get(&#x27;X-Cache-Status&#x27;, &#x27;UNKNOWN&#x27;)
+
+            self.results.append({
+                &#x27;request_id&#x27;: request_id,
+                &#x27;latency_ms&#x27;: latency_ms,
+                &#x27;status&#x27;: response.status,
+                &#x27;cache_status&#x27;: cache_status,
+            })
+
+    async def run_test(self):
+        &quot;&quot;&quot;Run concurrent load test&quot;&quot;&quot;
+        print(f&quot;Starting load test: {self.num_requests} requests to {self.url}&quot;)
+
+        async with aiohttp.ClientSession() as session:
+            tasks = [self.make_request(session, i) for i in range(self.num_requests)]
+            await asyncio.gather(*tasks)
+
+        self.analyze_results()
+
+    def analyze_results(self):
+        &quot;&quot;&quot;Analyze load test results&quot;&quot;&quot;
+        latencies = [r[&#x27;latency_ms&#x27;] for r in self.results]
+        cache_hits = sum(1 for r in self.results if &#x27;HIT&#x27; in r.get(&#x27;cache_status&#x27;, &#x27;&#x27;))
+        cache_misses = sum(1 for r in self.results if &#x27;MISS&#x27; in r.get(&#x27;cache_status&#x27;, &#x27;&#x27;))
+
+        print(&quot;\n=== Load Test Results ===&quot;)
+        print(f&quot;Total Requests: {len(self.results)}&quot;)
+        print(f&quot;Cache Hits: {cache_hits}&quot;)
+        print(f&quot;Cache Misses: {cache_misses}&quot;)
+        print(f&quot;Hit Ratio: {cache_hits / len(self.results) * 100:.2f}%&quot;)
+        print(f&quot;\nLatency:&quot;)
+        print(f&quot;  Mean: {mean(latencies):.2f}ms&quot;)
+        print(f&quot;  Median: {median(latencies):.2f}ms&quot;)
+        print(f&quot;  p95: {sorted(latencies)[int(len(latencies) * 0.95)]:.2f}ms&quot;)
+        print(f&quot;  p99: {sorted(latencies)[int(len(latencies) * 0.99)]:.2f}ms&quot;)
+
+# Usage
+tester = CacheLoadTester(&#x27;https://example.com/api/data&#x27;, num_requests=1000)
+asyncio.run(tester.run_test())</code></pre>
+<h2>Alerts and Anomaly Detection</h2>
+<h3>Alert Thresholds</h3>
+<pre><code class="lang-python">class CacheAlertManager:
+    def __init__(self, redis_monitor: RedisMonitor):
+        self.monitor = redis_monitor
+
+    def check_alerts(self) -&gt; list[str]:
+        &quot;&quot;&quot;Check cache metrics against thresholds&quot;&quot;&quot;
+        metrics = self.monitor.get_cache_metrics()
+        alerts = []
+
+        # Alert: Low hit ratio
+        if metrics[&#x27;hit_ratio&#x27;] &lt; 80:
+            alerts.append(f&quot;⚠️  Low cache hit ratio: {metrics[&#x27;hit_ratio&#x27;]}% (threshold: 80%)&quot;)
+
+        # Alert: High memory usage
+        if metrics[&#x27;memory_usage_pct&#x27;] &gt; 90:
+            alerts.append(f&quot;🚨 High memory usage: {metrics[&#x27;memory_usage_pct&#x27;]}% (threshold: 90%)&quot;)
+
+        # Alert: High eviction rate
+        total_keys = metrics[&#x27;keyspace_hits&#x27;] + metrics[&#x27;keyspace_misses&#x27;]
+        eviction_rate = (metrics[&#x27;evicted_keys&#x27;] / total_keys * 100) if total_keys &gt; 0 else 0
+        if eviction_rate &gt; 10:
+            alerts.append(f&quot;⚠️  High eviction rate: {eviction_rate:.2f}% (threshold: 10%)&quot;)
+
+        # Alert: Too many connected clients
+        if metrics[&#x27;connected_clients&#x27;] &gt; 1000:
+            alerts.append(f&quot;⚠️  High client count: {metrics[&#x27;connected_clients&#x27;]} (threshold: 1000)&quot;)
+
+        return alerts
+
+    def send_alerts(self):
+        &quot;&quot;&quot;Check and send alerts&quot;&quot;&quot;
+        alerts = self.check_alerts()
+
+        if alerts:
+            print(&quot;=== Cache Alerts ===&quot;)
+            for alert in alerts:
+                print(alert)
+                # Send to alerting system (PagerDuty, Slack, etc.)
+        else:
+            print(&quot;✅ All cache metrics within normal range&quot;)
+
+# Usage
+alert_manager = CacheAlertManager(monitor)
+alert_manager.send_alerts()</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>❌ Not Monitoring Cache Performance</h3>
+<pre><code class="lang-python"># WRONG: Deploy caching without monitoring
+cache.set(&quot;user:123&quot;, data)  # No metrics, no alerts
+
+# CORRECT: Instrument all cache operations
+instrumented_cache.set(&quot;user:123&quot;, data)  # Tracks hits, misses, latency</code></pre>
+<h3>❌ Ignoring Cache Hit Ratio</h3>
+<pre><code class="lang-python"># WRONG: Accept 30% hit ratio as &quot;good enough&quot;
+# Problem: 70% of requests hit database
+
+# CORRECT: Investigate and optimize for &gt;85% hit ratio</code></pre>
+<h3>❌ No Alerting for Cache Failures</h3>
+<pre><code class="lang-python"># WRONG: Cache failures silently fall back to database
+# Problem: Database overload during cache outage
+
+# CORRECT: Alert when cache hit ratio drops suddenly</code></pre>
+<h2>Quick Reference</h2>
+<p><strong>Critical Metrics</strong>:</p>
+<ul><li>Hit Ratio: 85-95% (target)</li><li>Cache Latency: &lt;5ms p99 (Redis)</li><li>Memory Usage: &lt;80% (healthy)</li><li>Eviction Rate: &lt;10% (well-sized)</li></ul>
+<p><strong>Monitoring Tools</strong>:</p>
+<ul><li>Redis: <code>INFO</code>, slowlog, redis-cli --stat</li><li>HTTP: Response headers (Age, X-Cache, CF-Cache-Status)</li><li>CDN: Cloudflare Analytics, Fastly Real-Time Stats</li><li>APM: Prometheus, StatsD, Datadog, New Relic</li></ul>
+<p><strong>Alert Thresholds</strong>:</p>
+<pre><code>Hit ratio &lt; 80% → Investigate cache strategy
+Memory usage &gt; 90% → Increase cache size or tune eviction
+Eviction rate &gt; 10% → Cache undersized
+Latency p99 &gt; 10ms → Network or Redis issue</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>redis-caching-patterns.md</code> - Redis metrics and instrumentation</li><li><code>cache-invalidation-strategies.md</code> - Monitor invalidation effectiveness</li><li><code>cdn-edge-caching.md</code> - CDN cache performance monitoring</li><li><code>observability/structured-logging.md</code> - Logging cache events</li><li><code>observability/metrics-instrumentation.md</code> - Application metrics</li></ul>
+<h2>Summary</h2>
+<p>Cache performance monitoring is essential for maintaining high-performance applications:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ol><li><strong>Measure hit ratio religiously</strong> - Target 85-95% for production systems</li><li><strong>Monitor latency</strong> - Cache should be 10-100x faster than origin</li><li><strong>Set up alerts</strong> - Catch cache issues before they impact users</li><li><strong>Use multiple monitoring layers</strong> - Application, Redis, HTTP, CDN</li><li><strong>Load test with caching</strong> - Verify cache performance under load</li><li><strong>Track eviction rate</strong> - High evictions indicate undersized cache</li><li><strong>Integrate with APM</strong> - Cache metrics alongside application metrics</li></ol>
+<p>Without monitoring, you&#x27;re flying blind. Cache performance monitoring provides the visibility needed to optimize caching strategies and maintain system health.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/caching-cache-performance-monitoring.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

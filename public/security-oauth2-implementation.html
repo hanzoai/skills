@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>security-oauth2-implementation</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/security-oauth2-implementation.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/security-oauth2-implementation.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>security-oauth2-implementation</h1><p class="lede">OAuth 2.0 implementation including authorization code, client credentials, PKCE, refresh tokens, and security best practices</p><h1>Security: OAuth 2.0 Implementation</h1>
+<p><strong>Scope</strong>: OAuth 2.0 flows, PKCE, token management, authorization server setup <strong>Lines</strong>: ~400 <strong>Last Updated</strong>: 2025-10-27</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Implementing OAuth 2.0 authorization server</li><li>Adding OAuth 2.0 to client applications</li><li>Securing APIs with OAuth 2.0 tokens</li><li>Implementing authorization code flow with PKCE</li><li>Setting up service-to-service authentication (client credentials)</li><li>Implementing refresh token rotation</li><li>Migrating from session-based to token-based auth</li><li>Integrating with third-party OAuth providers</li></ul>
+<h2>OAuth 2.0 Fundamentals</h2>
+<h3>Roles</h3>
+<pre><code class="lang-python">&quot;&quot;&quot;
+OAuth 2.0 Four Roles:
+
+1. Resource Owner (User)
+   - Owns the protected data
+   - Grants access to client applications
+
+2. Client (Application)
+   - Requests access to protected resources
+   - Types: Confidential (server-side) or Public (mobile/SPA)
+
+3. Authorization Server
+   - Authenticates resource owner
+   - Issues access tokens to clients
+
+4. Resource Server (API)
+   - Hosts protected resources
+   - Validates access tokens
+&quot;&quot;&quot;</code></pre>
+<h3>Grant Types</h3>
+<h4>1. Authorization Code Flow (Most Secure)</h4>
+<p><strong>Use for</strong>: Web applications with server-side backend</p>
+<pre><code class="lang-python">&quot;&quot;&quot;
+Flow:
+1. Client redirects user to authorization server
+2. User authenticates and authorizes
+3. Authorization server redirects back with code
+4. Client exchanges code for tokens (server-side)
+5. Client uses access token to call API
+
+Security: Code never exposed to browser, client secret required
+&quot;&quot;&quot;
+
+from flask import Flask, redirect, request, session
+import requests
+import secrets
+
+app = Flask(__name__)
+app.secret_key = secrets.token_hex(32)
+
+AUTH_SERVER = &quot;https://auth.example.com&quot;
+CLIENT_ID = &quot;your-client-id&quot;
+CLIENT_SECRET = &quot;your-client-secret&quot;
+REDIRECT_URI = &quot;https://yourapp.com/callback&quot;
+
+@app.route(&#x27;/login&#x27;)
+def login():
+    &quot;&quot;&quot;Initiate authorization code flow&quot;&quot;&quot;
+
+    # Generate state for CSRF protection
+    state = secrets.token_urlsafe(32)
+    session[&#x27;oauth_state&#x27;] = state
+
+    # Build authorization URL
+    params = {
+        &#x27;response_type&#x27;: &#x27;code&#x27;,
+        &#x27;client_id&#x27;: CLIENT_ID,
+        &#x27;redirect_uri&#x27;: REDIRECT_URI,
+        &#x27;scope&#x27;: &#x27;read write&#x27;,
+        &#x27;state&#x27;: state
+    }
+
+    auth_url = f&quot;{AUTH_SERVER}/authorize?&quot; + &quot;&amp;&quot;.join(
+        f&quot;{k}={v}&quot; for k, v in params.items()
+    )
+
+    return redirect(auth_url)
+
+@app.route(&#x27;/callback&#x27;)
+def callback():
+    &quot;&quot;&quot;Handle authorization callback&quot;&quot;&quot;
+
+    # Validate state (CSRF protection)
+    if request.args.get(&#x27;state&#x27;) != session.get(&#x27;oauth_state&#x27;):
+        return &quot;Invalid state&quot;, 400
+
+    # Get authorization code
+    code = request.args.get(&#x27;code&#x27;)
+    if not code:
+        error = request.args.get(&#x27;error&#x27;)
+        return f&quot;Authorization failed: {error}&quot;, 400
+
+    # Exchange code for tokens
+    token_response = requests.post(
+        f&quot;{AUTH_SERVER}/token&quot;,
+        data={
+            &#x27;grant_type&#x27;: &#x27;authorization_code&#x27;,
+            &#x27;code&#x27;: code,
+            &#x27;redirect_uri&#x27;: REDIRECT_URI,
+            &#x27;client_id&#x27;: CLIENT_ID,
+            &#x27;client_secret&#x27;: CLIENT_SECRET
+        }
+    )
+
+    if token_response.status_code != 200:
+        return &quot;Token exchange failed&quot;, 500
+
+    tokens = token_response.json()
+
+    # Store tokens securely
+    session[&#x27;access_token&#x27;] = tokens[&#x27;access_token&#x27;]
+    session[&#x27;refresh_token&#x27;] = tokens.get(&#x27;refresh_token&#x27;)
+
+    return redirect(&#x27;/dashboard&#x27;)</code></pre>
+<h4>2. Authorization Code Flow with PKCE</h4>
+<p><strong>Use for</strong>: Mobile apps, SPAs, any public client</p>
+<pre><code class="lang-python">&quot;&quot;&quot;
+PKCE (Proof Key for Code Exchange) - RFC 7636
+Prevents authorization code interception attacks
+
+Additional steps:
+1. Client generates code_verifier (random string)
+2. Client creates code_challenge = SHA256(code_verifier)
+3. Authorization request includes code_challenge
+4. Token request includes code_verifier
+5. Server validates: SHA256(code_verifier) == code_challenge
+&quot;&quot;&quot;
+
+import secrets
+import hashlib
+import base64
+
+def generate_pkce_pair():
+    &quot;&quot;&quot;Generate PKCE code verifier and challenge&quot;&quot;&quot;
+
+    # Generate code verifier (43-128 chars)
+    code_verifier = secrets.token_urlsafe(64)  # 86 chars
+
+    # Create code challenge (S256 method)
+    challenge_bytes = hashlib.sha256(code_verifier.encode()).digest()
+    code_challenge = base64.urlsafe_b64encode(challenge_bytes).decode().rstrip(&#x27;=&#x27;)
+
+    return code_verifier, code_challenge
+
+# Client initiates flow
+code_verifier, code_challenge = generate_pkce_pair()
+
+# Step 1: Authorization request with challenge
+auth_params = {
+    &#x27;response_type&#x27;: &#x27;code&#x27;,
+    &#x27;client_id&#x27;: CLIENT_ID,
+    &#x27;redirect_uri&#x27;: REDIRECT_URI,
+    &#x27;scope&#x27;: &#x27;read write&#x27;,
+    &#x27;state&#x27;: state,
+    &#x27;code_challenge&#x27;: code_challenge,
+    &#x27;code_challenge_method&#x27;: &#x27;S256&#x27;  # SHA-256
+}
+
+# Step 2: Token request with verifier
+token_data = {
+    &#x27;grant_type&#x27;: &#x27;authorization_code&#x27;,
+    &#x27;code&#x27;: authorization_code,
+    &#x27;redirect_uri&#x27;: REDIRECT_URI,
+    &#x27;client_id&#x27;: CLIENT_ID,
+    &#x27;code_verifier&#x27;: code_verifier  # Server validates this
+}</code></pre>
+<h4>3. Client Credentials Flow</h4>
+<p><strong>Use for</strong>: Server-to-server authentication, no user involved</p>
+<pre><code class="lang-python">&quot;&quot;&quot;
+Flow:
+1. Client sends credentials to token endpoint
+2. Authorization server validates and issues token
+3. Client uses token to access API
+
+No user interaction - machine-to-machine
+&quot;&quot;&quot;
+
+import requests
+from requests.auth import HTTPBasicAuth
+
+def get_access_token(client_id: str, client_secret: str, scope: str = None):
+    &quot;&quot;&quot;Get access token using client credentials&quot;&quot;&quot;
+
+    response = requests.post(
+        f&quot;{AUTH_SERVER}/token&quot;,
+        auth=HTTPBasicAuth(client_id, client_secret),
+        data={
+            &#x27;grant_type&#x27;: &#x27;client_credentials&#x27;,
+            &#x27;scope&#x27;: scope or &#x27;api:read api:write&#x27;
+        }
+    )
+
+    response.raise_for_status()
+    return response.json()[&#x27;access_token&#x27;]
+
+# Usage
+token = get_access_token(CLIENT_ID, CLIENT_SECRET)
+
+# Use token for API calls
+api_response = requests.get(
+    &quot;https://api.example.com/resource&quot;,
+    headers={&#x27;Authorization&#x27;: f&#x27;Bearer {token}&#x27;}
+)</code></pre>
+<h4>4. Refresh Token Flow</h4>
+<p><strong>Use for</strong>: Obtaining new access token without re-authentication</p>
+<pre><code class="lang-python">&quot;&quot;&quot;
+Refresh Token Strategy:
+- Access tokens: Short-lived (5-15 minutes)
+- Refresh tokens: Long-lived (days/weeks/months)
+- Use refresh token to get new access token
+- Implement refresh token rotation for security
+&quot;&quot;&quot;
+
+def refresh_access_token(refresh_token: str):
+    &quot;&quot;&quot;Exchange refresh token for new access token&quot;&quot;&quot;
+
+    response = requests.post(
+        f&quot;{AUTH_SERVER}/token&quot;,
+        data={
+            &#x27;grant_type&#x27;: &#x27;refresh_token&#x27;,
+            &#x27;refresh_token&#x27;: refresh_token,
+            &#x27;client_id&#x27;: CLIENT_ID,
+            &#x27;client_secret&#x27;: CLIENT_SECRET
+        }
+    )
+
+    if response.status_code != 200:
+        # Refresh token invalid/expired - user must re-authenticate
+        return None
+
+    tokens = response.json()
+
+    return {
+        &#x27;access_token&#x27;: tokens[&#x27;access_token&#x27;],
+        &#x27;refresh_token&#x27;: tokens.get(&#x27;refresh_token&#x27;),  # May rotate
+        &#x27;expires_in&#x27;: tokens[&#x27;expires_in&#x27;]
+    }
+
+# Automatic token refresh wrapper
+class OAuth2Client:
+    &quot;&quot;&quot;OAuth 2.0 client with automatic token refresh&quot;&quot;&quot;
+
+    def __init__(self, access_token, refresh_token, expires_at):
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+        self.expires_at = expires_at
+
+    def get_valid_token(self):
+        &quot;&quot;&quot;Get access token, refreshing if needed&quot;&quot;&quot;
+        import time
+
+        if time.time() &gt;= self.expires_at - 60:  # Refresh 1 min early
+            tokens = refresh_access_token(self.refresh_token)
+
+            if not tokens:
+                raise Exception(&quot;Refresh token expired&quot;)
+
+            self.access_token = tokens[&#x27;access_token&#x27;]
+            self.refresh_token = tokens[&#x27;refresh_token&#x27;]
+            self.expires_at = time.time() + tokens[&#x27;expires_in&#x27;]
+
+        return self.access_token
+
+    def api_call(self, url, **kwargs):
+        &quot;&quot;&quot;Make API call with automatic token refresh&quot;&quot;&quot;
+        token = self.get_valid_token()
+
+        headers = kwargs.get(&#x27;headers&#x27;, {})
+        headers[&#x27;Authorization&#x27;] = f&#x27;Bearer {token}&#x27;
+        kwargs[&#x27;headers&#x27;] = headers
+
+        return requests.get(url, **kwargs)</code></pre>
+<h2>Authorization Server Implementation</h2>
+<h3>Simple Authorization Server (Python)</h3>
+<pre><code class="lang-python">from flask import Flask, request, jsonify, redirect
+from datetime import datetime, timedelta
+import secrets
+import hashlib
+import sqlite3
+
+app = Flask(__name__)
+
+class AuthorizationServer:
+    &quot;&quot;&quot;Minimal OAuth 2.0 authorization server&quot;&quot;&quot;
+
+    def __init__(self):
+        self.codes = {}  # {code: {client_id, redirect_uri, user_id, code_challenge}}
+        self.tokens = {}  # {token: {user_id, client_id, scope, expires}}
+        self.clients = {
+            &#x27;client123&#x27;: {
+                &#x27;secret&#x27;: &#x27;secret456&#x27;,
+                &#x27;redirect_uris&#x27;: [&#x27;https://client.example.com/callback&#x27;]
+            }
+        }
+
+    def validate_client(self, client_id, client_secret=None):
+        &quot;&quot;&quot;Validate client credentials&quot;&quot;&quot;
+        if client_id not in self.clients:
+            return False
+
+        if client_secret:
+            return self.clients[client_id][&#x27;secret&#x27;] == client_secret
+
+        return True
+
+    def validate_redirect_uri(self, client_id, redirect_uri):
+        &quot;&quot;&quot;Validate redirect URI (exact match)&quot;&quot;&quot;
+        allowed = self.clients[client_id][&#x27;redirect_uris&#x27;]
+        return redirect_uri in allowed
+
+    def generate_authorization_code(self, client_id, redirect_uri, user_id,
+                                   code_challenge=None):
+        &quot;&quot;&quot;Generate authorization code&quot;&quot;&quot;
+        code = secrets.token_urlsafe(32)
+
+        self.codes[code] = {
+            &#x27;client_id&#x27;: client_id,
+            &#x27;redirect_uri&#x27;: redirect_uri,
+            &#x27;user_id&#x27;: user_id,
+            &#x27;code_challenge&#x27;: code_challenge,
+            &#x27;expires&#x27;: datetime.now() + timedelta(minutes=10)
+        }
+
+        return code
+
+    def verify_pkce(self, code_verifier, code_challenge):
+        &quot;&quot;&quot;Verify PKCE code challenge&quot;&quot;&quot;
+        # S256: BASE64URL(SHA256(code_verifier)) == code_challenge
+        challenge_bytes = hashlib.sha256(code_verifier.encode()).digest()
+        computed_challenge = base64.urlsafe_b64encode(challenge_bytes).decode().rstrip(&#x27;=&#x27;)
+
+        return computed_challenge == code_challenge
+
+    def generate_token(self, user_id, client_id, scope):
+        &quot;&quot;&quot;Generate access token&quot;&quot;&quot;
+        token = secrets.token_urlsafe(32)
+
+        self.tokens[token] = {
+            &#x27;user_id&#x27;: user_id,
+            &#x27;client_id&#x27;: client_id,
+            &#x27;scope&#x27;: scope,
+            &#x27;expires&#x27;: datetime.now() + timedelta(hours=1)
+        }
+
+        return token
+
+auth_server = AuthorizationServer()
+
+@app.route(&#x27;/authorize&#x27;)
+def authorize():
+    &quot;&quot;&quot;Authorization endpoint&quot;&quot;&quot;
+
+    # Validate parameters
+    response_type = request.args.get(&#x27;response_type&#x27;)
+    client_id = request.args.get(&#x27;client_id&#x27;)
+    redirect_uri = request.args.get(&#x27;redirect_uri&#x27;)
+    state = request.args.get(&#x27;state&#x27;)
+    code_challenge = request.args.get(&#x27;code_challenge&#x27;)
+
+    # Validate client
+    if not auth_server.validate_client(client_id):
+        return &quot;Invalid client&quot;, 400
+
+    # Validate redirect URI
+    if not auth_server.validate_redirect_uri(client_id, redirect_uri):
+        return &quot;Invalid redirect URI&quot;, 400
+
+    # Validate response type
+    if response_type != &#x27;code&#x27;:
+        return redirect(f&quot;{redirect_uri}?error=unsupported_response_type&amp;state={state}&quot;)
+
+    # TODO: Authenticate user and get consent
+    user_id = &quot;user123&quot;  # From session after login
+
+    # Generate authorization code
+    code = auth_server.generate_authorization_code(
+        client_id, redirect_uri, user_id, code_challenge
+    )
+
+    # Redirect back to client
+    callback_url = f&quot;{redirect_uri}?code={code}&quot;
+    if state:
+        callback_url += f&quot;&amp;state={state}&quot;
+
+    return redirect(callback_url)
+
+@app.route(&#x27;/token&#x27;, methods=[&#x27;POST&#x27;])
+def token():
+    &quot;&quot;&quot;Token endpoint&quot;&quot;&quot;
+
+    grant_type = request.form.get(&#x27;grant_type&#x27;)
+
+    if grant_type == &#x27;authorization_code&#x27;:
+        return handle_authorization_code_grant()
+    elif grant_type == &#x27;client_credentials&#x27;:
+        return handle_client_credentials_grant()
+    elif grant_type == &#x27;refresh_token&#x27;:
+        return handle_refresh_token_grant()
+    else:
+        return jsonify({&#x27;error&#x27;: &#x27;unsupported_grant_type&#x27;}), 400
+
+def handle_authorization_code_grant():
+    &quot;&quot;&quot;Handle authorization code grant&quot;&quot;&quot;
+
+    code = request.form.get(&#x27;code&#x27;)
+    redirect_uri = request.form.get(&#x27;redirect_uri&#x27;)
+    client_id = request.form.get(&#x27;client_id&#x27;)
+    client_secret = request.form.get(&#x27;client_secret&#x27;)
+    code_verifier = request.form.get(&#x27;code_verifier&#x27;)
+
+    # Validate client
+    if not auth_server.validate_client(client_id, client_secret):
+        return jsonify({&#x27;error&#x27;: &#x27;invalid_client&#x27;}), 401
+
+    # Validate code
+    if code not in auth_server.codes:
+        return jsonify({&#x27;error&#x27;: &#x27;invalid_grant&#x27;}), 400
+
+    code_data = auth_server.codes[code]
+
+    # Check expiration
+    if datetime.now() &gt; code_data[&#x27;expires&#x27;]:
+        del auth_server.codes[code]
+        return jsonify({&#x27;error&#x27;: &#x27;invalid_grant&#x27;}), 400
+
+    # Validate redirect URI
+    if code_data[&#x27;redirect_uri&#x27;] != redirect_uri:
+        return jsonify({&#x27;error&#x27;: &#x27;invalid_grant&#x27;}), 400
+
+    # Validate PKCE if used
+    if code_data[&#x27;code_challenge&#x27;]:
+        if not code_verifier:
+            return jsonify({&#x27;error&#x27;: &#x27;invalid_request&#x27;}), 400
+
+        if not auth_server.verify_pkce(code_verifier, code_data[&#x27;code_challenge&#x27;]):
+            return jsonify({&#x27;error&#x27;: &#x27;invalid_grant&#x27;}), 400
+
+    # Generate tokens
+    access_token = auth_server.generate_token(
+        code_data[&#x27;user_id&#x27;], client_id, &#x27;read write&#x27;
+    )
+    refresh_token = secrets.token_urlsafe(32)
+
+    # Delete used code (single use)
+    del auth_server.codes[code]
+
+    return jsonify({
+        &#x27;access_token&#x27;: access_token,
+        &#x27;token_type&#x27;: &#x27;Bearer&#x27;,
+        &#x27;expires_in&#x27;: 3600,
+        &#x27;refresh_token&#x27;: refresh_token
+    })</code></pre>
+<h2>Token Validation</h2>
+<h3>Resource Server Token Validation</h3>
+<pre><code class="lang-python">from functools import wraps
+from flask import request, jsonify
+import jwt
+
+def require_oauth(scope_required=None):
+    &quot;&quot;&quot;Decorator to protect endpoints with OAuth&quot;&quot;&quot;
+
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Extract token from header
+            auth_header = request.headers.get(&#x27;Authorization&#x27;)
+
+            if not auth_header or not auth_header.startswith(&#x27;Bearer &#x27;):
+                return jsonify({&#x27;error&#x27;: &#x27;missing_token&#x27;}), 401
+
+            token = auth_header[7:]  # Remove &#x27;Bearer &#x27;
+
+            # Validate token
+            try:
+                # Option 1: JWT validation (if using JWTs)
+                payload = jwt.decode(
+                    token,
+                    PUBLIC_KEY,
+                    algorithms=[&#x27;RS256&#x27;],
+                    audience=&#x27;https://api.example.com&#x27;
+                )
+
+                # Option 2: Token introspection (opaque tokens)
+                # payload = introspect_token(token)
+
+            except jwt.ExpiredSignatureError:
+                return jsonify({&#x27;error&#x27;: &#x27;token_expired&#x27;}), 401
+            except jwt.InvalidTokenError:
+                return jsonify({&#x27;error&#x27;: &#x27;invalid_token&#x27;}), 401
+
+            # Validate scope
+            if scope_required:
+                token_scopes = payload.get(&#x27;scope&#x27;, &#x27;&#x27;).split()
+                if scope_required not in token_scopes:
+                    return jsonify({&#x27;error&#x27;: &#x27;insufficient_scope&#x27;}), 403
+
+            # Add user info to request context
+            request.oauth_user_id = payload.get(&#x27;sub&#x27;)
+            request.oauth_scope = payload.get(&#x27;scope&#x27;)
+
+            return f(*args, **kwargs)
+
+        return decorated_function
+    return decorator
+
+# Usage
+@app.route(&#x27;/api/protected&#x27;)
+@require_oauth(scope_required=&#x27;read&#x27;)
+def protected_endpoint():
+    user_id = request.oauth_user_id
+    return jsonify({&#x27;user_id&#x27;: user_id, &#x27;data&#x27;: &#x27;sensitive&#x27;})</code></pre>
+<h2>Security Best Practices</h2>
+<h3>OAuth 2.0 Security Checklist</h3>
+<pre><code class="lang-python">&quot;&quot;&quot;
+CRITICAL Security Requirements:
+
+1. Always use HTTPS (TLS 1.2+)
+   - Never send tokens/codes over HTTP
+   - Use HSTS headers
+
+2. Validate redirect URIs (EXACT match)
+   - No wildcards or pattern matching
+   - Store allowed URIs in database
+
+3. Use state parameter (CSRF protection)
+   - Generate random state for each request
+   - Validate in callback
+
+4. Implement PKCE for ALL clients
+   - Mandatory for public clients (mobile/SPA)
+   - Recommended for confidential clients
+
+5. Short-lived access tokens
+   - 5-15 minutes maximum
+   - Use refresh tokens for longevity
+
+6. Refresh token rotation
+   - Issue new refresh token on use
+   - Revoke old refresh token
+   - Detect token theft (family tracking)
+
+7. Token storage
+   - Hash refresh tokens in database (SHA-256)
+   - Never store tokens in localStorage (XSS risk)
+   - Use httpOnly cookies or secure storage
+
+8. Client authentication
+   - Require client_secret for confidential clients
+   - Validate credentials on every request
+
+9. Rate limiting
+   - Limit token requests per client
+   - Detect brute force attacks
+
+10. Scope validation
+    - Validate requested scopes
+    - Enforce least privilege
+    - Check scopes on resource access
+&quot;&quot;&quot;</code></pre>
+<h3>Common Vulnerabilities</h3>
+<pre><code class="lang-python">&quot;&quot;&quot;
+Common OAuth 2.0 Vulnerabilities:
+
+1. Authorization Code Interception
+   Attack: Intercept code in redirect
+   Mitigation: PKCE
+
+2. Redirect URI Manipulation
+   Attack: Change redirect_uri to attacker domain
+   Mitigation: Exact URI matching
+
+3. State Parameter Missing
+   Attack: CSRF on OAuth flow
+   Mitigation: Always use state parameter
+
+4. Token Leakage
+   Attack: Tokens in URLs, logs, referrer
+   Mitigation: Use POST for tokens, no tokens in URLs
+
+5. Insufficient Redirect URI Validation
+   Attack: Open redirect to steal codes
+   Mitigation: Strict whitelist validation
+
+6. Refresh Token Reuse
+   Attack: Stolen refresh token used indefinitely
+   Mitigation: Token rotation, family tracking
+
+7. Scope Escalation
+   Attack: Request excessive scopes
+   Mitigation: User consent, scope validation
+&quot;&quot;&quot;</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>security-authentication.md</code> - Authentication patterns, JWT, sessions</li><li><code>api-authentication.md</code> - API authentication strategies</li><li><code>security-secrets-management.md</code> - Storing client secrets, tokens</li><li><code>api-rest-design.md</code> - RESTful API design with OAuth</li></ul>
+<h2>Level 3: Resources</h2>
+<h3>Comprehensive Reference</h3>
+<p><strong>Location</strong>: <code>skills/security/oauth2-implementation/resources/REFERENCE.md</code></p>
+<p>The REFERENCE.md file (3,200+ lines) provides exhaustive coverage of:</p>
+<ul><li>Complete OAuth 2.0 specification (RFC 6749) with all grant types</li><li>Authorization code flow with detailed sequence diagrams</li><li>Client credentials flow for machine-to-machine authentication</li><li>Device authorization flow (RFC 8628) for limited-input devices</li><li>PKCE specification (RFC 7636) with S256 and plain methods</li><li>Refresh token rotation and family tracking</li><li>Token introspection (RFC 7662) and revocation (RFC 7009)</li><li>Scope design best practices and hierarchies</li><li>Security considerations from RFC 6819</li><li>OAuth 2.1 draft updates and deprecations</li><li>JWT vs opaque tokens comparison</li><li>Authorization server implementation patterns</li><li>Client libraries for Python, Node.js, Go, Java</li><li>Integration with Keycloak, Auth0, Okta, ORY Hydra</li><li>OpenID Connect (OIDC) layer on OAuth 2.0</li><li>Token binding and proof-of-possession</li><li>Attack vectors and mitigations (code interception, CSRF, etc.)</li><li>Production deployment considerations</li><li>Monitoring and logging OAuth flows</li></ul>
+<h3>Executable Scripts</h3>
+<p><strong>Location</strong>: <code>skills/security/oauth2-implementation/resources/scripts/</code></p>
+<ol><li><strong>validate_oauth_config.py</strong> - OAuth 2.0 server configuration validator</li></ol>
+<ul><li>Validates authorization server configuration files</li><li>Checks grant type security settings</li><li>Validates redirect URI patterns and security</li><li>Detects missing PKCE enforcement</li><li>Audits token lifetime configurations</li><li>Validates CORS settings for token endpoints</li><li>Checks client secret strength</li><li>Provides security recommendations</li><li>Supports JSON output for CI/CD</li><li>Usage: <code>./validate_oauth_config.py --config-file oauth-server.conf --json</code></li></ul>
+<ol><li><strong>test_oauth_flow.py</strong> - OAuth 2.0 flow end-to-end testing</li></ol>
+<ul><li>Tests authorization code flow with PKCE</li><li>Tests client credentials flow</li><li>Tests refresh token rotation</li><li>Validates token response format and claims</li><li>Tests token revocation endpoints</li><li>Validates state parameter handling</li><li>Checks PKCE challenge verification</li><li>Generates detailed test reports</li><li>Supports multiple authorization servers</li><li>Usage: <code>./test_oauth_flow.py --authorization-server https://auth.example.com --flow authorization_code --json</code></li></ul>
+<ol><li><strong>generate_pkce.py</strong> - PKCE challenge and verifier generator</li></ol>
+<ul><li>Generates cryptographically secure code_verifier</li><li>Creates code_challenge using S256 or plain method</li><li>Validates PKCE pairs for testing</li><li>Shows complete OAuth flow with PKCE</li><li>Supports custom verifier lengths (43-128 chars)</li><li>Includes verification function</li><li>Provides usage examples</li><li>Usage: <code>./generate_pkce.py --method S256 --verifier-length 64 --json</code></li></ul>
+<h3>Production-Ready Examples</h3>
+<p><strong>Location</strong>: <code>skills/security/oauth2-implementation/resources/examples/</code></p>
+<ol><li><strong>python/authorization_code_flow.py</strong> - Complete auth code flow with PKCE</li></ol>
+<ul><li>Flask-based client implementation</li><li>PKCE generation and validation</li><li>State parameter CSRF protection</li><li>Automatic token refresh</li><li>Secure token storage patterns</li><li>Error handling and retry logic</li></ul>
+<ol><li><strong>python/client_credentials.py</strong> - Service-to-service authentication</li></ol>
+<ul><li>Client credentials flow implementation</li><li>Token caching with expiration</li><li>Automatic token refresh</li><li>Rate limiting and backoff</li><li>Connection pooling</li></ul>
+<ol><li><strong>python/resource_server.py</strong> - Protected API with token validation</li></ol>
+<ul><li>JWT validation with RS256</li><li>Token introspection support</li><li>Scope-based authorization</li><li>Rate limiting per client</li><li>Comprehensive error responses</li></ul>
+<ol><li><strong>nodejs/oauth-server.js</strong> - OAuth server with node-oauth2-server</li></ol>
+<ul><li>Complete authorization server</li><li>All grant types supported</li><li>PKCE validation</li><li>Refresh token rotation</li><li>PostgreSQL token storage</li></ul>
+<ol><li><strong>python/refresh_token_rotation.py</strong> - Secure refresh token handling</li></ol>
+<ul><li>Refresh token rotation pattern</li><li>Token family tracking (theft detection)</li><li>Automatic revocation on compromise</li><li>Database schema included</li></ul>
+<ol><li><strong>config/keycloak-realm.json</strong> - Keycloak realm configuration</li></ol>
+<ul><li>Production-ready realm setup</li><li>Client configurations for web, mobile, SPA</li><li>Scope definitions</li><li>Token lifetimes</li><li>PKCE enforcement</li></ul>
+<ol><li><strong>typescript/react-oauth-client.tsx</strong> - React OAuth integration</li></ol>
+<ul><li>React hooks for OAuth flow</li><li>PKCE implementation</li><li>Token storage in memory</li><li>Automatic token refresh</li><li>Protected route components</li></ul>
+<ol><li><strong>docker/docker-compose.yml</strong> - Complete OAuth environment</li></ol>
+<ul><li>Authorization server (Keycloak)</li><li>Resource server (API)</li><li>Client application</li><li>PostgreSQL database</li><li>Nginx reverse proxy</li></ul>
+<p>All examples are production-ready, fully commented, and include error handling.</p>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/security-oauth2-implementation.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

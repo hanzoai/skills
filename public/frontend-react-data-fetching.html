@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>frontend-react-data-fetching</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/frontend-react-data-fetching.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/frontend-react-data-fetching.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>frontend-react-data-fetching</h1><p class="lede">Scope: SWR, React Query, Server Actions, caching strategies, optimistic updates Lines: ~310 Last Updated: 2025-10-18</p><h1>React Data Fetching</h1>
+<p><strong>Scope</strong>: SWR, React Query, Server Actions, caching strategies, optimistic updates <strong>Lines</strong>: ~310 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Fetching data from APIs</li><li>Implementing caching strategies</li><li>Handling loading and error states</li><li>Optimistic UI updates</li><li>Infinite scrolling/pagination</li><li>Real-time data synchronization</li><li>Choosing between SWR and React Query</li></ul>
+<h2>Core Concepts</h2>
+<h3>Client vs Server Data</h3>
+<p><strong>Client State</strong> - UI state, form inputs, modals</p>
+<pre><code class="lang-tsx">const [isOpen, setIsOpen] = useState(false);</code></pre>
+<p><strong>Server State</strong> - Data from API, database</p>
+<pre><code class="lang-tsx">const { data: posts } = useSWR(&#x27;/api/posts&#x27;);</code></pre>
+<p><strong>Key differences</strong>:</p>
+<ul><li>Server state is async, remote, shared</li><li>Server state can be stale</li><li>Server state needs caching, revalidation</li><li>Server state is owned by server</li></ul>
+<hr>
+<h2>SWR (Stale-While-Revalidate)</h2>
+<h3>Basic Usage</h3>
+<pre><code class="lang-tsx">import useSWR from &#x27;swr&#x27;;
+
+const fetcher = (url: string) =&gt; fetch(url).then(res =&gt; res.json());
+
+function Profile() {
+  const { data, error, isLoading } = useSWR(&#x27;/api/user&#x27;, fetcher);
+
+  if (isLoading) return &lt;div&gt;Loading...&lt;/div&gt;;
+  if (error) return &lt;div&gt;Failed to load&lt;/div&gt;;
+
+  return &lt;div&gt;Hello {data.name}!&lt;/div&gt;;
+}</code></pre>
+<h3>Global Configuration</h3>
+<pre><code class="lang-tsx">// app/layout.tsx or _app.tsx
+import { SWRConfig } from &#x27;swr&#x27;;
+
+const fetcher = (url: string) =&gt; fetch(url).then(res =&gt; {
+  if (!res.ok) throw new Error(&#x27;API error&#x27;);
+  return res.json();
+});
+
+export default function App({ children }) {
+  return (
+    &lt;SWRConfig value={{
+      fetcher,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 2000,
+    }}&gt;
+      {children}
+    &lt;/SWRConfig&gt;
+  );
+}</code></pre>
+<h3>Mutations</h3>
+<pre><code class="lang-tsx">function UpdateProfile() {
+  const { data: user, mutate } = useSWR(&#x27;/api/user&#x27;, fetcher);
+
+  const updateName = async (newName: string) =&gt; {
+    // Optimistic update
+    mutate({ ...user, name: newName }, false);
+
+    // API call
+    await fetch(&#x27;/api/user&#x27;, {
+      method: &#x27;PATCH&#x27;,
+      body: JSON.stringify({ name: newName }),
+    });
+
+    // Revalidate
+    mutate();
+  };
+
+  return (
+    &lt;input
+      value={user?.name}
+      onChange={(e) =&gt; updateName(e.target.value)}
+    /&gt;
+  );
+}</code></pre>
+<h3>Dependent Queries</h3>
+<pre><code class="lang-tsx">function UserPosts({ userId }: { userId: string }) {
+  // First fetch user
+  const { data: user } = useSWR(`/api/users/${userId}`, fetcher);
+
+  // Then fetch user&#x27;s posts (only when user is loaded)
+  const { data: posts } = useSWR(
+    user ? `/api/users/${user.id}/posts` : null,
+    fetcher
+  );
+
+  if (!user) return &lt;div&gt;Loading user...&lt;/div&gt;;
+  if (!posts) return &lt;div&gt;Loading posts...&lt;/div&gt;;
+
+  return &lt;div&gt;{posts.map(post =&gt; &lt;div key={post.id}&gt;{post.title}&lt;/div&gt;)}&lt;/div&gt;;
+}</code></pre>
+<h3>Pagination</h3>
+<pre><code class="lang-tsx">function PostList() {
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading } = useSWR(
+    `/api/posts?page=${page}&amp;limit=10`,
+    fetcher
+  );
+
+  return (
+    &lt;div&gt;
+      {data?.posts.map(post =&gt; &lt;div key={post.id}&gt;{post.title}&lt;/div&gt;)}
+
+      &lt;button onClick={() =&gt; setPage(page - 1)} disabled={page === 1}&gt;
+        Previous
+      &lt;/button&gt;
+      &lt;button onClick={() =&gt; setPage(page + 1)}&gt;
+        Next
+      &lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+<h3>Infinite Scroll</h3>
+<pre><code class="lang-tsx">import useSWRInfinite from &#x27;swr/infinite&#x27;;
+
+function InfinitePostList() {
+  const getKey = (pageIndex: number, previousPageData: any) =&gt; {
+    // Reached the end
+    if (previousPageData &amp;&amp; !previousPageData.posts.length) return null;
+
+    // First page
+    return `/api/posts?page=${pageIndex + 1}&amp;limit=10`;
+  };
+
+  const { data, size, setSize, isLoading } = useSWRInfinite(getKey, fetcher);
+
+  const posts = data ? data.flatMap(page =&gt; page.posts) : [];
+  const isLoadingMore = isLoading || (size &gt; 0 &amp;&amp; data &amp;&amp; typeof data[size - 1] === &#x27;undefined&#x27;);
+  const isEmpty = data?.[0]?.posts.length === 0;
+  const isReachingEnd = isEmpty || (data &amp;&amp; data[data.length - 1]?.posts.length &lt; 10);
+
+  return (
+    &lt;div&gt;
+      {posts.map(post =&gt; &lt;div key={post.id}&gt;{post.title}&lt;/div&gt;)}
+
+      {!isReachingEnd &amp;&amp; (
+        &lt;button onClick={() =&gt; setSize(size + 1)} disabled={isLoadingMore}&gt;
+          {isLoadingMore ? &#x27;Loading...&#x27; : &#x27;Load More&#x27;}
+        &lt;/button&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</code></pre>
+<hr>
+<h2>React Query (TanStack Query)</h2>
+<h3>Basic Usage</h3>
+<pre><code class="lang-tsx">import { useQuery } from &#x27;@tanstack/react-query&#x27;;
+
+function Posts() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: [&#x27;posts&#x27;],
+    queryFn: async () =&gt; {
+      const res = await fetch(&#x27;/api/posts&#x27;);
+      if (!res.ok) throw new Error(&#x27;Failed to fetch&#x27;);
+      return res.json();
+    },
+  });
+
+  if (isLoading) return &lt;div&gt;Loading...&lt;/div&gt;;
+  if (error) return &lt;div&gt;Error: {error.message}&lt;/div&gt;;
+
+  return (
+    &lt;div&gt;
+      {data.map((post: Post) =&gt; (
+        &lt;div key={post.id}&gt;{post.title}&lt;/div&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}</code></pre>
+<h3>Query Client Setup</h3>
+<pre><code class="lang-tsx">// app/providers.tsx
+&#x27;use client&#x27;;
+
+import { QueryClient, QueryClientProvider } from &#x27;@tanstack/react-query&#x27;;
+import { ReactQueryDevtools } from &#x27;@tanstack/react-query-devtools&#x27;;
+import { useState } from &#x27;react&#x27;;
+
+export function QueryProvider({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(() =&gt; new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000, // 1 minute
+        refetchOnWindowFocus: false,
+      },
+    },
+  }));
+
+  return (
+    &lt;QueryClientProvider client={queryClient}&gt;
+      {children}
+      &lt;ReactQueryDevtools initialIsOpen={false} /&gt;
+    &lt;/QueryClientProvider&gt;
+  );
+}</code></pre>
+<h3>Mutations</h3>
+<pre><code class="lang-tsx">import { useMutation, useQueryClient } from &#x27;@tanstack/react-query&#x27;;
+
+function CreatePost() {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async (newPost: { title: string; content: string }) =&gt; {
+      const res = await fetch(&#x27;/api/posts&#x27;, {
+        method: &#x27;POST&#x27;,
+        headers: { &#x27;Content-Type&#x27;: &#x27;application/json&#x27; },
+        body: JSON.stringify(newPost),
+      });
+      if (!res.ok) throw new Error(&#x27;Failed to create&#x27;);
+      return res.json();
+    },
+    onSuccess: () =&gt; {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: [&#x27;posts&#x27;] });
+    },
+  });
+
+  return (
+    &lt;button
+      onClick={() =&gt; mutation.mutate({ title: &#x27;New Post&#x27;, content: &#x27;Content&#x27; })}
+      disabled={mutation.isPending}
+    &gt;
+      {mutation.isPending ? &#x27;Creating...&#x27; : &#x27;Create Post&#x27;}
+    &lt;/button&gt;
+  );
+}</code></pre>
+<h3>Optimistic Updates</h3>
+<pre><code class="lang-tsx">function UpdatePost({ post }: { post: Post }) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async (updatedPost: Post) =&gt; {
+      const res = await fetch(`/api/posts/${post.id}`, {
+        method: &#x27;PUT&#x27;,
+        body: JSON.stringify(updatedPost),
+      });
+      return res.json();
+    },
+
+    // Optimistic update
+    onMutate: async (updatedPost) =&gt; {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: [&#x27;posts&#x27;, post.id] });
+
+      // Snapshot previous value
+      const previousPost = queryClient.getQueryData([&#x27;posts&#x27;, post.id]);
+
+      // Optimistically update cache
+      queryClient.setQueryData([&#x27;posts&#x27;, post.id], updatedPost);
+
+      // Return context with snapshot
+      return { previousPost };
+    },
+
+    // Rollback on error
+    onError: (err, updatedPost, context) =&gt; {
+      queryClient.setQueryData([&#x27;posts&#x27;, post.id], context?.previousPost);
+    },
+
+    // Always refetch after error or success
+    onSettled: () =&gt; {
+      queryClient.invalidateQueries({ queryKey: [&#x27;posts&#x27;, post.id] });
+    },
+  });
+
+  return (
+    &lt;button onClick={() =&gt; mutation.mutate({ ...post, title: &#x27;Updated&#x27; })}&gt;
+      Update
+    &lt;/button&gt;
+  );
+}</code></pre>
+<h3>Pagination</h3>
+<pre><code class="lang-tsx">function PaginatedPosts() {
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading, isPlaceholderData } = useQuery({
+    queryKey: [&#x27;posts&#x27;, page],
+    queryFn: async () =&gt; {
+      const res = await fetch(`/api/posts?page=${page}&amp;limit=10`);
+      return res.json();
+    },
+    placeholderData: (previousData) =&gt; previousData, // Keep previous data while fetching
+  });
+
+  return (
+    &lt;div&gt;
+      {data?.posts.map((post: Post) =&gt; (
+        &lt;div key={post.id}&gt;{post.title}&lt;/div&gt;
+      ))}
+
+      &lt;button
+        onClick={() =&gt; setPage(page - 1)}
+        disabled={page === 1}
+      &gt;
+        Previous
+      &lt;/button&gt;
+      &lt;button
+        onClick={() =&gt; setPage(page + 1)}
+        disabled={isPlaceholderData || !data?.hasMore}
+      &gt;
+        Next
+      &lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+<h3>Infinite Queries</h3>
+<pre><code class="lang-tsx">import { useInfiniteQuery } from &#x27;@tanstack/react-query&#x27;;
+
+function InfinitePosts() {
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: [&#x27;posts&#x27;],
+    queryFn: async ({ pageParam = 1 }) =&gt; {
+      const res = await fetch(`/api/posts?page=${pageParam}&amp;limit=10`);
+      return res.json();
+    },
+    getNextPageParam: (lastPage, pages) =&gt; {
+      return lastPage.hasMore ? pages.length + 1 : undefined;
+    },
+    initialPageParam: 1,
+  });
+
+  const posts = data?.pages.flatMap(page =&gt; page.posts) ?? [];
+
+  return (
+    &lt;div&gt;
+      {posts.map((post: Post) =&gt; (
+        &lt;div key={post.id}&gt;{post.title}&lt;/div&gt;
+      ))}
+
+      {hasNextPage &amp;&amp; (
+        &lt;button onClick={() =&gt; fetchNextPage()} disabled={isFetchingNextPage}&gt;
+          {isFetchingNextPage ? &#x27;Loading...&#x27; : &#x27;Load More&#x27;}
+        &lt;/button&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</code></pre>
+<hr>
+<h2>Next.js Server Actions</h2>
+<h3>Basic Server Action</h3>
+<pre><code class="lang-tsx">// app/actions.ts
+&#x27;use server&#x27;;
+
+import { revalidatePath } from &#x27;next/cache&#x27;;
+
+export async function createPost(formData: FormData) {
+  const title = formData.get(&#x27;title&#x27;) as string;
+  const content = formData.get(&#x27;content&#x27;) as string;
+
+  await prisma.post.create({
+    data: { title, content }
+  });
+
+  revalidatePath(&#x27;/posts&#x27;);
+}
+
+// app/posts/new/page.tsx
+import { createPost } from &#x27;@/app/actions&#x27;;
+
+export default function NewPostPage() {
+  return (
+    &lt;form action={createPost}&gt;
+      &lt;input name=&quot;title&quot; required /&gt;
+      &lt;textarea name=&quot;content&quot; required /&gt;
+      &lt;button type=&quot;submit&quot;&gt;Create&lt;/button&gt;
+    &lt;/form&gt;
+  );
+}</code></pre>
+<h3>Client-Side with useFormStatus</h3>
+<pre><code class="lang-tsx">// app/components/SubmitButton.tsx
+&#x27;use client&#x27;;
+
+import { useFormStatus } from &#x27;react-dom&#x27;;
+
+export function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    &lt;button type=&quot;submit&quot; disabled={pending}&gt;
+      {pending ? &#x27;Creating...&#x27; : &#x27;Create Post&#x27;}
+    &lt;/button&gt;
+  );
+}
+
+// app/posts/new/page.tsx
+import { createPost } from &#x27;@/app/actions&#x27;;
+import { SubmitButton } from &#x27;@/app/components/SubmitButton&#x27;;
+
+export default function NewPostPage() {
+  return (
+    &lt;form action={createPost}&gt;
+      &lt;input name=&quot;title&quot; required /&gt;
+      &lt;textarea name=&quot;content&quot; required /&gt;
+      &lt;SubmitButton /&gt;
+    &lt;/form&gt;
+  );
+}</code></pre>
+<h3>useFormState for Validation</h3>
+<pre><code class="lang-tsx">// app/actions.ts
+&#x27;use server&#x27;;
+
+export async function createPost(prevState: any, formData: FormData) {
+  const title = formData.get(&#x27;title&#x27;) as string;
+  const content = formData.get(&#x27;content&#x27;) as string;
+
+  // Validation
+  if (!title || title.length &lt; 3) {
+    return { error: &#x27;Title must be at least 3 characters&#x27; };
+  }
+
+  await prisma.post.create({ data: { title, content } });
+
+  return { success: true };
+}
+
+// app/components/PostForm.tsx
+&#x27;use client&#x27;;
+
+import { useFormState } from &#x27;react-dom&#x27;;
+import { createPost } from &#x27;@/app/actions&#x27;;
+
+export function PostForm() {
+  const [state, formAction] = useFormState(createPost, null);
+
+  return (
+    &lt;form action={formAction}&gt;
+      &lt;input name=&quot;title&quot; required /&gt;
+      {state?.error &amp;&amp; &lt;p className=&quot;error&quot;&gt;{state.error}&lt;/p&gt;}
+      &lt;textarea name=&quot;content&quot; required /&gt;
+      &lt;button type=&quot;submit&quot;&gt;Create&lt;/button&gt;
+    &lt;/form&gt;
+  );
+}</code></pre>
+<hr>
+<h2>Caching Strategies</h2>
+<h3>Stale-While-Revalidate (SWR Pattern)</h3>
+<pre><code class="lang-tsx">// Return stale data immediately, revalidate in background
+const { data } = useSWR(&#x27;/api/posts&#x27;, fetcher, {
+  revalidateOnFocus: true,    // Revalidate when window regains focus
+  revalidateOnReconnect: true, // Revalidate when network reconnects
+  dedupingInterval: 2000,      // Dedupe requests within 2 seconds
+});</code></pre>
+<h3>Cache and Network (React Query)</h3>
+<pre><code class="lang-tsx">const { data } = useQuery({
+  queryKey: [&#x27;posts&#x27;],
+  queryFn: fetchPosts,
+  staleTime: 5 * 60 * 1000,    // 5 minutes before stale
+  cacheTime: 10 * 60 * 1000,   // 10 minutes in cache
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
+});</code></pre>
+<h3>Time-Based Revalidation (Next.js)</h3>
+<pre><code class="lang-tsx">// app/posts/page.tsx
+export const revalidate = 60; // Revalidate every 60 seconds
+
+async function getPosts() {
+  const res = await fetch(&#x27;https://api.example.com/posts&#x27;, {
+    next: { revalidate: 60 }
+  });
+  return res.json();
+}
+
+export default async function PostsPage() {
+  const posts = await getPosts();
+  return &lt;div&gt;{posts.map(post =&gt; &lt;div key={post.id}&gt;{post.title}&lt;/div&gt;)}&lt;/div&gt;;
+}</code></pre>
+<h3>On-Demand Revalidation (Next.js)</h3>
+<pre><code class="lang-tsx">// app/actions.ts
+&#x27;use server&#x27;;
+
+import { revalidatePath, revalidateTag } from &#x27;next/cache&#x27;;
+
+export async function createPost(data: any) {
+  await prisma.post.create({ data });
+
+  // Revalidate specific paths
+  revalidatePath(&#x27;/posts&#x27;);
+  revalidatePath(&#x27;/&#x27;);
+
+  // Or revalidate by tag
+  revalidateTag(&#x27;posts&#x27;);
+}
+
+// Fetch with tag
+async function getPosts() {
+  const res = await fetch(&#x27;https://api.example.com/posts&#x27;, {
+    next: { tags: [&#x27;posts&#x27;] }
+  });
+  return res.json();
+}</code></pre>
+<hr>
+<h2>SWR vs React Query</h2>
+<h3>Comparison</h3>
+<p>| Feature | SWR | React Query | |---------|-----|-------------| | <strong>Bundle Size</strong> | 4.3kb | 12.9kb | | <strong>Complexity</strong> | Simple | More features | | <strong>DevTools</strong> | No | Yes | | <strong>Mutations</strong> | Manual | Built-in | | <strong>TypeScript</strong> | Good | Excellent | | <strong>Best For</strong> | Simple apps, Next.js | Complex apps, large teams |</p>
+<h3>When to Use SWR</h3>
+<pre><code>✅ Next.js projects (official Vercel library)
+✅ Simple data fetching needs
+✅ Small bundle size priority
+✅ Straightforward caching
+✅ Quick setup</code></pre>
+<h3>When to Use React Query</h3>
+<pre><code>✅ Complex mutations
+✅ Optimistic updates
+✅ DevTools needed
+✅ Pagination/infinite scroll
+✅ Large apps with many queries
+✅ Advanced caching strategies</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>SWR Basic Pattern</h3>
+<pre><code class="lang-tsx">const { data, error, isLoading, mutate } = useSWR(key, fetcher, options);
+
+// Mutate
+mutate(newData, false); // Optimistic
+mutate();               // Revalidate</code></pre>
+<h3>React Query Basic Pattern</h3>
+<pre><code class="lang-tsx">const { data, error, isLoading } = useQuery({
+  queryKey: [&#x27;key&#x27;],
+  queryFn: fetchFn,
+});
+
+const mutation = useMutation({
+  mutationFn: createFn,
+  onSuccess: () =&gt; queryClient.invalidateQueries({ queryKey: [&#x27;key&#x27;] }),
+});</code></pre>
+<h3>Server Actions Pattern</h3>
+<pre><code class="lang-tsx">&#x27;use server&#x27;;
+export async function action(formData: FormData) {
+  // Mutation
+  revalidatePath(&#x27;/path&#x27;);
+}
+
+// Client
+&lt;form action={action}&gt;...&lt;/form&gt;</code></pre>
+<hr>
+<h2>Common Anti-Patterns</h2>
+<p>❌ <strong>Fetching in useEffect</strong>: Use SWR/React Query instead ✅ Dedicated data fetching library</p>
+<p>❌ <strong>Global state for server data</strong>: Server state !== client state ✅ Keep server data in SWR/React Query cache</p>
+<p>❌ <strong>No loading/error states</strong>: Poor UX ✅ Always handle loading, error, empty states</p>
+<p>❌ <strong>Not caching</strong>: Unnecessary refetches ✅ Use staleTime, cacheTime appropriately</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>react-state-management.md</code> - Client state (Zustand, Context)</li><li><code>nextjs-app-router.md</code> - Server Components, Server Actions</li><li><code>frontend-performance.md</code> - Request deduplication, prefetching</li><li><code>react-form-handling.md</code> - Form validation, submission</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/frontend-react-data-fetching.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

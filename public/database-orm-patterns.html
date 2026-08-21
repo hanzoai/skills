@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>database-orm-patterns</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/database-orm-patterns.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/database-orm-patterns.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>database-orm-patterns</h1><p class="lede">Working with ORMs (SQLAlchemy, Prisma, GORM, Diesel)</p><h1>ORM Patterns</h1>
+<p><strong>Scope</strong>: ORM usage patterns, N+1 prevention, transactions, best practices <strong>Lines</strong>: ~300 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Working with ORMs (SQLAlchemy, Prisma, GORM, Diesel)</li><li>Debugging N+1 query problems</li><li>Implementing eager loading strategies</li><li>Managing database transactions</li><li>Optimizing ORM query performance</li><li>Choosing between ORM and raw SQL</li><li>Performing batch operations</li></ul>
+<h2>Core Concepts</h2>
+<h3>ORM vs Raw SQL</h3>
+<p><strong>ORM (Object-Relational Mapping)</strong>: Maps database tables to objects/classes.</p>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Type safety (especially in typed languages)</li><li>Abstraction over SQL dialects</li><li>Protection against SQL injection</li><li>Easier refactoring</li><li>Built-in migrations</li></ul>
+<p><strong>Drawbacks</strong>:</p>
+<ul><li>Performance overhead</li><li>Complex queries can be verbose</li><li>Hidden N+1 problems</li><li>Learning curve for advanced features</li></ul>
+<h3>When to Use Each</h3>
+<pre><code>Use ORM when:
+├─ Simple CRUD operations
+├─ Type safety is critical
+├─ Working with relationships
+├─ Need cross-database compatibility
+└─ Team prefers ORM patterns
+
+Use Raw SQL when:
+├─ Complex analytics queries
+├─ Performance-critical paths
+├─ Bulk operations (1000+ rows)
+├─ Database-specific features needed
+└─ ORM generates suboptimal queries</code></pre>
+<hr>
+<h2>The N+1 Query Problem</h2>
+<h3>What is N+1?</h3>
+<p><strong>Problem</strong>: Loading a collection of N items, then making 1 query per item to load related data.</p>
+<p><strong>Example</strong>: Load 100 users, then query orders for each user = <strong>101 queries</strong> (1 + 100).</p>
+<h3>Detection</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul><li>Slow page loads despite simple data</li><li>Database query count &gt;&gt; expected</li><li>Repeated similar queries with different IDs</li></ul>
+<p><strong>Logging</strong>:</p>
+<pre><code class="lang-python"># SQLAlchemy: Enable query logging
+import logging
+logging.basicConfig()
+logging.getLogger(&#x27;sqlalchemy.engine&#x27;).setLevel(logging.INFO)</code></pre>
+<pre><code class="lang-typescript">// Prisma: Enable query logging
+const prisma = new PrismaClient({
+  log: [&#x27;query&#x27;, &#x27;info&#x27;, &#x27;warn&#x27;, &#x27;error&#x27;],
+})</code></pre>
+<pre><code class="lang-go">// GORM: Enable query logging
+db, err := gorm.Open(postgres.Open(dsn), &amp;gorm.Config{
+  Logger: logger.Default.LogMode(logger.Info),
+})</code></pre>
+<pre><code class="lang-rust">// Diesel: No built-in logging, use diesel::debug_query
+let query = users::table.filter(users::id.eq(1));
+println!(&quot;{}&quot;, diesel::debug_query::&lt;diesel::pg::Pg, _&gt;(&amp;query));</code></pre>
+<h3>N+1 Example (Anti-Pattern)</h3>
+<p><strong>SQLAlchemy (Python)</strong>:</p>
+<pre><code class="lang-python"># ❌ N+1 PROBLEM: 1 query for users + N queries for orders
+users = session.query(User).all()  # 1 query
+for user in users:
+    orders = user.orders  # N queries (lazy load)
+    print(f&quot;{user.name}: {len(orders)} orders&quot;)</code></pre>
+<p><strong>Prisma (TypeScript)</strong>:</p>
+<pre><code class="lang-typescript">// ❌ N+1 PROBLEM
+const users = await prisma.user.findMany();  // 1 query
+for (const user of users) {
+  const orders = await prisma.order.findMany({  // N queries
+    where: { userId: user.id }
+  });
+  console.log(`${user.name}: ${orders.length} orders`);
+}</code></pre>
+<p><strong>GORM (Go)</strong>:</p>
+<pre><code class="lang-go">// ❌ N+1 PROBLEM
+var users []User
+db.Find(&amp;users)  // 1 query
+for _, user := range users {
+    var orders []Order
+    db.Where(&quot;user_id = ?&quot;, user.ID).Find(&amp;orders)  // N queries
+    fmt.Printf(&quot;%s: %d orders\n&quot;, user.Name, len(orders))
+}</code></pre>
+<p><strong>Diesel (Rust)</strong>:</p>
+<pre><code class="lang-rust">// ❌ N+1 PROBLEM
+let users = users::table.load::&lt;User&gt;(&amp;mut conn)?;  // 1 query
+for user in &amp;users {
+    let orders = Order::belonging_to(user)  // N queries
+        .load::&lt;Order&gt;(&amp;mut conn)?;
+    println!(&quot;{}: {} orders&quot;, user.name, orders.len());
+}</code></pre>
+<hr>
+<h2>Eager Loading Solutions</h2>
+<h3>SQLAlchemy: joinedload / selectinload</h3>
+<p><strong>joinedload</strong>: Single query with JOIN</p>
+<pre><code class="lang-python">from sqlalchemy.orm import joinedload
+
+# ✅ SOLUTION: 1 query with LEFT OUTER JOIN
+users = session.query(User).options(joinedload(User.orders)).all()
+for user in users:
+    orders = user.orders  # No additional query
+    print(f&quot;{user.name}: {len(orders)} orders&quot;)
+
+# Generated SQL:
+# SELECT users.*, orders.*
+# FROM users LEFT OUTER JOIN orders ON users.id = orders.user_id</code></pre>
+<p><strong>selectinload</strong>: Two queries (1 for users, 1 for all orders)</p>
+<pre><code class="lang-python">from sqlalchemy.orm import selectinload
+
+# ✅ SOLUTION: 2 queries total
+users = session.query(User).options(selectinload(User.orders)).all()
+
+# Query 1: SELECT * FROM users
+# Query 2: SELECT * FROM orders WHERE user_id IN (?, ?, ...)</code></pre>
+<p><strong>When to use which</strong>:</p>
+<ul><li><code>joinedload</code>: Few related items, need data in single query</li><li><code>selectinload</code>: Many related items (avoids cartesian product)</li><li><code>lazyload</code>: Default (lazy), only load when accessed (causes N+1)</li><li><code>noload</code>: Don&#x27;t load relationship at all</li></ul>
+<p><strong>Multiple relationships</strong>:</p>
+<pre><code class="lang-python">users = session.query(User).options(
+    selectinload(User.orders).selectinload(Order.items),  # Nested
+    joinedload(User.profile)  # Separate relationship
+).all()</code></pre>
+<h3>Prisma: include</h3>
+<p><strong>include</strong>: Eager load relationships</p>
+<pre><code class="lang-typescript">// ✅ SOLUTION: Single operation with nested query
+const users = await prisma.user.findMany({
+  include: {
+    orders: true,  // Load orders
+  }
+});
+
+// Or with nested includes
+const users = await prisma.user.findMany({
+  include: {
+    orders: {
+      include: {
+        items: true  // Load order items
+      }
+    },
+    profile: true  // Load user profile
+  }
+});</code></pre>
+<p><strong>select</strong>: Load specific fields only</p>
+<pre><code class="lang-typescript">// Optimize by selecting only needed fields
+const users = await prisma.user.findMany({
+  select: {
+    id: true,
+    name: true,
+    orders: {
+      select: {
+        id: true,
+        total: true,
+      }
+    }
+  }
+});</code></pre>
+<h3>GORM: Preload / Joins</h3>
+<p><strong>Preload</strong>: Separate queries (like selectinload)</p>
+<pre><code class="lang-go">// ✅ SOLUTION: 2 queries total
+var users []User
+db.Preload(&quot;Orders&quot;).Find(&amp;users)
+
+// Query 1: SELECT * FROM users
+// Query 2: SELECT * FROM orders WHERE user_id IN (?, ?, ...)
+
+// Nested preload
+db.Preload(&quot;Orders.Items&quot;).Preload(&quot;Profile&quot;).Find(&amp;users)</code></pre>
+<p><strong>Joins</strong>: Single query with JOIN</p>
+<pre><code class="lang-go">// ✅ SOLUTION: 1 query with JOIN
+var users []User
+db.Joins(&quot;Orders&quot;).Find(&amp;users)
+
+// SELECT users.*, orders.* FROM users
+// LEFT JOIN orders ON orders.user_id = users.id</code></pre>
+<p><strong>Preload with conditions</strong>:</p>
+<pre><code class="lang-go">db.Preload(&quot;Orders&quot;, &quot;status = ?&quot;, &quot;completed&quot;).Find(&amp;users)</code></pre>
+<h3>Diesel: Associations</h3>
+<p><strong>Manual approach</strong> (Diesel doesn&#x27;t have built-in eager loading):</p>
+<pre><code class="lang-rust">use diesel::prelude::*;
+
+// ✅ SOLUTION: 2 queries manually executed
+let users = users::table.load::&lt;User&gt;(&amp;mut conn)?;
+let user_ids: Vec&lt;i32&gt; = users.iter().map(|u| u.id).collect();
+
+// Single query for all orders
+let orders = orders::table
+    .filter(orders::user_id.eq_any(&amp;user_ids))
+    .load::&lt;Order&gt;(&amp;mut conn)?;
+
+// Group orders by user_id in application code
+let orders_by_user: HashMap&lt;i32, Vec&lt;Order&gt;&gt; = orders
+    .into_iter()
+    .fold(HashMap::new(), |mut acc, order| {
+        acc.entry(order.user_id).or_insert_with(Vec::new).push(order);
+        acc
+    });
+
+for user in &amp;users {
+    let user_orders = orders_by_user.get(&amp;user.id).unwrap_or(&amp;vec![]);
+    println!(&quot;{}: {} orders&quot;, user.name, user_orders.len());
+}</code></pre>
+<p><strong>Using diesel-async with joins</strong>:</p>
+<pre><code class="lang-rust">// Single query with JOIN
+let results = users::table
+    .left_join(orders::table)
+    .select((User::as_select(), Option::&lt;Order&gt;::as_select()))
+    .load::&lt;(User, Option&lt;Order&gt;)&gt;(&amp;mut conn)?;
+
+// Group by user in application</code></pre>
+<hr>
+<h2>Transaction Management</h2>
+<h3>SQLAlchemy</h3>
+<p><strong>Context manager (recommended)</strong>:</p>
+<pre><code class="lang-python">from sqlalchemy.orm import Session
+
+# ✅ Automatic commit/rollback
+with Session(engine) as session:
+    user = User(name=&quot;Alice&quot;)
+    session.add(user)
+    session.commit()  # Explicit commit
+
+# Or with automatic commit on exit
+with Session(engine, expire_on_commit=False) as session:
+    with session.begin():
+        user = User(name=&quot;Bob&quot;)
+        session.add(user)
+    # Auto-commit on exit, rollback on exception</code></pre>
+<p><strong>Manual transaction</strong>:</p>
+<pre><code class="lang-python">session = Session(engine)
+try:
+    user = User(name=&quot;Charlie&quot;)
+    session.add(user)
+    session.commit()
+except Exception as e:
+    session.rollback()
+    raise
+finally:
+    session.close()</code></pre>
+<p><strong>Nested transactions (savepoints)</strong>:</p>
+<pre><code class="lang-python">with session.begin():
+    user = User(name=&quot;Dave&quot;)
+    session.add(user)
+
+    with session.begin_nested():  # Savepoint
+        order = Order(user_id=user.id)
+        session.add(order)
+        # Rollback this savepoint if error, user still committed</code></pre>
+<h3>Prisma</h3>
+<p><strong>Implicit transactions</strong> (single operations are atomic):</p>
+<pre><code class="lang-typescript">// Automatically wrapped in transaction
+await prisma.user.create({
+  data: {
+    name: &quot;Alice&quot;,
+    orders: {
+      create: [
+        { total: 100 },
+        { total: 200 }
+      ]
+    }
+  }
+});</code></pre>
+<p><strong>Explicit transactions</strong>:</p>
+<pre><code class="lang-typescript">// ✅ Manual transaction for multiple operations
+await prisma.$transaction(async (tx) =&gt; {
+  const user = await tx.user.create({
+    data: { name: &quot;Bob&quot; }
+  });
+
+  await tx.order.create({
+    data: {
+      userId: user.id,
+      total: 150
+    }
+  });
+
+  // Rollback automatically on error
+});</code></pre>
+<p><strong>Sequential transactions</strong> (array form):</p>
+<pre><code class="lang-typescript">// All-or-nothing: all succeed or all rollback
+await prisma.$transaction([
+  prisma.user.create({ data: { name: &quot;Charlie&quot; }}),
+  prisma.order.create({ data: { userId: 1, total: 100 }}),
+]);</code></pre>
+<p><strong>Transaction isolation levels</strong>:</p>
+<pre><code class="lang-typescript">await prisma.$transaction(
+  async (tx) =&gt; {
+    // Transaction operations
+  },
+  {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    maxWait: 5000,  // Wait up to 5 seconds
+    timeout: 10000, // Transaction timeout
+  }
+);</code></pre>
+<h3>GORM</h3>
+<p><strong>Automatic transactions</strong>:</p>
+<pre><code class="lang-go">// Single operation is atomic
+db.Create(&amp;User{Name: &quot;Alice&quot;})</code></pre>
+<p><strong>Manual transactions</strong>:</p>
+<pre><code class="lang-go">// ✅ Explicit transaction
+tx := db.Begin()
+defer func() {
+    if r := recover(); r != nil {
+        tx.Rollback()
+    }
+}()
+
+if err := tx.Create(&amp;User{Name: &quot;Bob&quot;}).Error; err != nil {
+    tx.Rollback()
+    return err
+}
+
+if err := tx.Create(&amp;Order{UserID: 1, Total: 100}).Error; err != nil {
+    tx.Rollback()
+    return err
+}
+
+return tx.Commit().Error</code></pre>
+<p><strong>Transaction callback</strong> (cleaner):</p>
+<pre><code class="lang-go">// ✅ Auto rollback on error, commit on success
+err := db.Transaction(func(tx *gorm.DB) error {
+    if err := tx.Create(&amp;User{Name: &quot;Charlie&quot;}).Error; err != nil {
+        return err  // Rollback
+    }
+
+    if err := tx.Create(&amp;Order{UserID: 1, Total: 150}).Error; err != nil {
+        return err  // Rollback
+    }
+
+    return nil  // Commit
+})</code></pre>
+<p><strong>Savepoints</strong>:</p>
+<pre><code class="lang-go">tx := db.Begin()
+tx.Create(&amp;User{Name: &quot;Dave&quot;})
+
+tx.SavePoint(&quot;sp1&quot;)
+tx.Create(&amp;Order{UserID: 1})
+tx.RollbackTo(&quot;sp1&quot;)  // Rollback to savepoint
+
+tx.Commit()  // User created, order not</code></pre>
+<h3>Diesel</h3>
+<p><strong>Transactions</strong>:</p>
+<pre><code class="lang-rust">use diesel::Connection;
+
+// ✅ Explicit transaction
+conn.transaction::&lt;_, diesel::result::Error, _&gt;(|conn| {
+    diesel::insert_into(users::table)
+        .values(&amp;new_user)
+        .execute(conn)?;
+
+    diesel::insert_into(orders::table)
+        .values(&amp;new_order)
+        .execute(conn)?;
+
+    Ok(())  // Commit
+})
+// Automatic rollback on Err</code></pre>
+<p><strong>Nested transactions</strong> (savepoints):</p>
+<pre><code class="lang-rust">conn.transaction(|conn| {
+    diesel::insert_into(users::table)
+        .values(&amp;new_user)
+        .execute(conn)?;
+
+    conn.transaction(|conn| {  // Savepoint
+        diesel::insert_into(orders::table)
+            .values(&amp;new_order)
+            .execute(conn)?;
+        Ok(())
+    })?;
+
+    Ok(())
+})</code></pre>
+<hr>
+<h2>Batch Operations</h2>
+<h3>SQLAlchemy</h3>
+<p><strong>Bulk insert</strong> (fast, no ORM overhead):</p>
+<pre><code class="lang-python"># ✅ Efficient bulk insert
+users = [
+    {&quot;name&quot;: &quot;Alice&quot;, &quot;email&quot;: &quot;alice@example.com&quot;},
+    {&quot;name&quot;: &quot;Bob&quot;, &quot;email&quot;: &quot;bob@example.com&quot;},
+    # ... 1000 more
+]
+
+session.bulk_insert_mappings(User, users)
+session.commit()
+
+# Or with ORM objects (slower, but fires events)
+session.add_all([User(name=&quot;Alice&quot;), User(name=&quot;Bob&quot;)])
+session.commit()</code></pre>
+<p><strong>Bulk update</strong>:</p>
+<pre><code class="lang-python"># Update multiple rows at once
+session.query(User).filter(User.status == &quot;pending&quot;).update(
+    {&quot;status&quot;: &quot;active&quot;},
+    synchronize_session=False  # Skip session sync for performance
+)
+session.commit()</code></pre>
+<p><strong>Bulk delete</strong>:</p>
+<pre><code class="lang-python">session.query(User).filter(User.status == &quot;inactive&quot;).delete()
+session.commit()</code></pre>
+<h3>Prisma</h3>
+<p><strong>createMany</strong>:</p>
+<pre><code class="lang-typescript">// ✅ Efficient batch insert
+await prisma.user.createMany({
+  data: [
+    { name: &quot;Alice&quot;, email: &quot;alice@example.com&quot; },
+    { name: &quot;Bob&quot;, email: &quot;bob@example.com&quot; },
+    // ... more
+  ],
+  skipDuplicates: true,  // Optional: skip on unique constraint violation
+});</code></pre>
+<p><strong>updateMany</strong>:</p>
+<pre><code class="lang-typescript">await prisma.user.updateMany({
+  where: { status: &quot;pending&quot; },
+  data: { status: &quot;active&quot; },
+});</code></pre>
+<p><strong>deleteMany</strong>:</p>
+<pre><code class="lang-typescript">await prisma.user.deleteMany({
+  where: { status: &quot;inactive&quot; },
+});</code></pre>
+<h3>GORM</h3>
+<p><strong>CreateInBatches</strong>:</p>
+<pre><code class="lang-go">// ✅ Efficient batch insert
+users := []User{
+    {Name: &quot;Alice&quot;, Email: &quot;alice@example.com&quot;},
+    {Name: &quot;Bob&quot;, Email: &quot;bob@example.com&quot;},
+    // ... more
+}
+
+// Insert in batches of 100
+db.CreateInBatches(users, 100)</code></pre>
+<p><strong>Batch updates</strong>:</p>
+<pre><code class="lang-go">// Update all matching rows
+db.Model(&amp;User{}).Where(&quot;status = ?&quot;, &quot;pending&quot;).Update(&quot;status&quot;, &quot;active&quot;)
+
+// Or with map for multiple columns
+db.Model(&amp;User{}).Where(&quot;status = ?&quot;, &quot;pending&quot;).Updates(map[string]interface{}{
+    &quot;status&quot;: &quot;active&quot;,
+    &quot;updated_at&quot;: time.Now(),
+})</code></pre>
+<h3>Diesel</h3>
+<p><strong>Batch insert</strong>:</p>
+<pre><code class="lang-rust">// ✅ Single INSERT with multiple VALUES
+diesel::insert_into(users::table)
+    .values(&amp;vec![
+        NewUser { name: &quot;Alice&quot;, email: &quot;alice@example.com&quot; },
+        NewUser { name: &quot;Bob&quot;, email: &quot;bob@example.com&quot; },
+        // ... more
+    ])
+    .execute(&amp;mut conn)?;</code></pre>
+<p><strong>Batch update</strong>:</p>
+<pre><code class="lang-rust">diesel::update(users::table.filter(users::status.eq(&quot;pending&quot;)))
+    .set(users::status.eq(&quot;active&quot;))
+    .execute(&amp;mut conn)?;</code></pre>
+<hr>
+<h2>Query Optimization Techniques</h2>
+<h3>Select Only Needed Columns</h3>
+<p><strong>SQLAlchemy</strong>:</p>
+<pre><code class="lang-python"># ❌ Loads all columns
+users = session.query(User).all()
+
+# ✅ Load specific columns
+users = session.query(User.id, User.name).all()
+
+# Or with load_only
+from sqlalchemy.orm import load_only
+users = session.query(User).options(load_only(User.id, User.name)).all()</code></pre>
+<p><strong>Prisma</strong>:</p>
+<pre><code class="lang-typescript">// ✅ Select specific fields
+const users = await prisma.user.findMany({
+  select: {
+    id: true,
+    name: true,
+  }
+});</code></pre>
+<p><strong>GORM</strong>:</p>
+<pre><code class="lang-go">// ✅ Select specific columns
+var users []User
+db.Select(&quot;id&quot;, &quot;name&quot;).Find(&amp;users)</code></pre>
+<h3>Limit + Offset Pagination</h3>
+<p><strong>SQLAlchemy</strong>:</p>
+<pre><code class="lang-python"># ✅ Efficient pagination
+page = 2
+per_page = 20
+users = session.query(User).limit(per_page).offset((page - 1) * per_page).all()</code></pre>
+<p><strong>Prisma</strong>:</p>
+<pre><code class="lang-typescript">const page = 2;
+const perPage = 20;
+const users = await prisma.user.findMany({
+  skip: (page - 1) * perPage,
+  take: perPage,
+});</code></pre>
+<p><strong>Cursor-based pagination</strong> (better for large datasets):</p>
+<pre><code class="lang-typescript">const users = await prisma.user.findMany({
+  take: 20,
+  skip: 1,  // Skip the cursor itself
+  cursor: {
+    id: lastSeenId,
+  },
+  orderBy: {
+    id: &#x27;asc&#x27;,
+  },
+});</code></pre>
+<h3>Counting Efficiently</h3>
+<p><strong>SQLAlchemy</strong>:</p>
+<pre><code class="lang-python"># ❌ Loads all rows
+count = len(session.query(User).all())
+
+# ✅ COUNT query
+count = session.query(User).count()
+
+# Or with func.count
+from sqlalchemy import func
+count = session.query(func.count(User.id)).scalar()</code></pre>
+<p><strong>Prisma</strong>:</p>
+<pre><code class="lang-typescript">const count = await prisma.user.count({
+  where: { status: &quot;active&quot; },
+});</code></pre>
+<hr>
+<h2>Raw SQL Escapes</h2>
+<h3>When to Use Raw SQL</h3>
+<ul><li>Complex joins ORM can&#x27;t express efficiently</li><li>Database-specific functions (window functions, CTEs)</li><li>Bulk operations with special logic</li><li>Performance-critical queries</li></ul>
+<h3>SQLAlchemy: text()</h3>
+<pre><code class="lang-python">from sqlalchemy import text
+
+# ✅ Safe parameterized query
+result = session.execute(
+    text(&quot;SELECT * FROM users WHERE email = :email&quot;),
+    {&quot;email&quot;: &quot;alice@example.com&quot;}
+)
+users = result.fetchall()
+
+# Or with ORM objects
+users = session.query(User).from_statement(
+    text(&quot;SELECT * FROM users WHERE status = :status&quot;)
+).params(status=&quot;active&quot;).all()</code></pre>
+<h3>Prisma: $queryRaw</h3>
+<pre><code class="lang-typescript">import { Prisma } from &#x27;@prisma/client&#x27;;
+
+// ✅ Safe parameterized query (prevents SQL injection)
+const users = await prisma.$queryRaw&lt;User[]&gt;`
+  SELECT * FROM users WHERE email = ${email}
+`;
+
+// For non-SELECT queries
+await prisma.$executeRaw`
+  UPDATE users SET status = &#x27;active&#x27; WHERE created_at &lt; ${cutoffDate}
+`;
+
+// Unsafe (only use with trusted input)
+const result = await prisma.$queryRawUnsafe(
+  &#x27;SELECT * FROM users WHERE status = $1&#x27;,
+  &#x27;active&#x27;
+);</code></pre>
+<h3>GORM: Raw SQL</h3>
+<pre><code class="lang-go">// ✅ Safe parameterized query
+var users []User
+db.Raw(&quot;SELECT * FROM users WHERE email = ?&quot;, &quot;alice@example.com&quot;).Scan(&amp;users)
+
+// Execute non-SELECT
+db.Exec(&quot;UPDATE users SET status = ? WHERE created_at &lt; ?&quot;, &quot;active&quot;, cutoff)</code></pre>
+<h3>Diesel: sql_query</h3>
+<pre><code class="lang-rust">use diesel::sql_query;
+use diesel::sql_types::Text;
+
+// ✅ Safe parameterized query
+let users = sql_query(&quot;SELECT * FROM users WHERE email = $1&quot;)
+    .bind::&lt;Text, _&gt;(&quot;alice@example.com&quot;)
+    .load::&lt;User&gt;(&amp;mut conn)?;</code></pre>
+<hr>
+<h2>Common ORM Anti-Patterns</h2>
+<h3>1. Loading Full Objects When Counting</h3>
+<pre><code class="lang-python"># ❌ Loads all data just to count
+users = session.query(User).filter(User.status == &quot;active&quot;).all()
+count = len(users)
+
+# ✅ Use COUNT
+count = session.query(User).filter(User.status == &quot;active&quot;).count()</code></pre>
+<h3>2. Updating in Loop</h3>
+<pre><code class="lang-python"># ❌ N queries
+for user in users:
+    user.status = &quot;active&quot;
+    session.commit()
+
+# ✅ Batch update
+session.query(User).filter(User.id.in_([u.id for u in users])).update(
+    {&quot;status&quot;: &quot;active&quot;},
+    synchronize_session=False
+)
+session.commit()</code></pre>
+<h3>3. Not Using Transactions for Related Data</h3>
+<pre><code class="lang-typescript">// ❌ No transaction (inconsistent state if error occurs)
+const user = await prisma.user.create({ data: { name: &quot;Alice&quot; }});
+await prisma.order.create({ data: { userId: user.id, total: 100 }});
+
+// ✅ Use transaction
+await prisma.$transaction(async (tx) =&gt; {
+  const user = await tx.user.create({ data: { name: &quot;Alice&quot; }});
+  await tx.order.create({ data: { userId: user.id, total: 100 }});
+});</code></pre>
+<h3>4. SELECT * in Queries</h3>
+<pre><code class="lang-go">// ❌ Loads all columns (wastes bandwidth)
+var users []User
+db.Find(&amp;users)
+
+// ✅ Select needed columns
+db.Select(&quot;id&quot;, &quot;name&quot;, &quot;email&quot;).Find(&amp;users)</code></pre>
+<h3>5. Not Handling Connection Pooling</h3>
+<p>See <code>database-connection-pooling.md</code> for proper pool configuration per ORM.</p>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Eager Loading Comparison</h3>
+<p>| ORM | Method | Queries | Use Case | |-----|--------|---------|----------| | SQLAlchemy | <code>joinedload()</code> | 1 (JOIN) | Few related items | | SQLAlchemy | <code>selectinload()</code> | 2 (IN) | Many related items | | Prisma | <code>include</code> | 1-2 | Any relationships | | GORM | <code>Preload()</code> | 2 (IN) | Standard loading | | GORM | <code>Joins()</code> | 1 (JOIN) | Need JOIN conditions | | Diesel | Manual grouping | 2 | Full control |</p>
+<h3>Transaction Patterns</h3>
+<pre><code class="lang-python"># SQLAlchemy
+with session.begin():
+    # operations
+
+# Prisma
+await prisma.$transaction([...])
+
+# GORM
+db.Transaction(func(tx *gorm.DB) error { ... })
+
+# Diesel
+conn.transaction(|conn| { ... })</code></pre>
+<h3>Optimization Checklist</h3>
+<pre><code>Performance Issues:
+[ ] Enable query logging to detect N+1
+[ ] Use eager loading (joinedload, include, Preload)
+[ ] Select only needed columns (select, load_only)
+[ ] Use batch operations for multiple inserts/updates
+[ ] Count with COUNT query, not len(results)
+[ ] Use transactions for related operations
+[ ] Paginate with LIMIT/OFFSET or cursor
+[ ] Monitor slow queries (see postgres-query-optimization.md)
+[ ] Use raw SQL for complex analytics
+[ ] Configure connection pool properly</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>postgres-query-optimization.md</code> - Optimize underlying SQL queries</li><li><code>database-connection-pooling.md</code> - Pool configuration per ORM</li><li><code>postgres-schema-design.md</code> - Schema design affects ORM usage</li><li><code>postgres-migrations.md</code> - ORM migrations (Alembic, Prisma Migrate)</li></ul>
+<hr>
+<h2>Common Pitfalls</h2>
+<p>❌ <strong>Ignoring N+1 queries</strong> - Causes exponential slowdown ✅ Always eager load relationships with multiple items</p>
+<p>❌ <strong>No transactions for related operations</strong> - Data inconsistency ✅ Wrap related inserts/updates in transaction</p>
+<p>❌ <strong>Using loops for batch operations</strong> - Thousands of queries ✅ Use bulk_insert_mappings, createMany, CreateInBatches</p>
+<p>❌ <strong>Loading full objects for counting</strong> - Wastes memory/bandwidth ✅ Use count() methods</p>
+<p>❌ <strong>Not using proper connection pooling</strong> - Exhausted connections ✅ Configure pool based on workers/threads</p>
+<p>❌ <strong>Raw SQL without parameterization</strong> - SQL injection ✅ Always use parameterized queries (text(), $queryRaw, bind)</p>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/database-orm-patterns.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

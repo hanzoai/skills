@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>live-programming-holes</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/live-programming-holes.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/live-programming-holes.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>live-programming-holes</h1><p class="lede">Live programming with typed holes - Hazel environment, continuous feedback, live evaluation with indeterminate results, incremental bidirectional typing (OOPSLA 2025), collaborative editing (Grove)</p><h1>Live Programming with Typed Holes</h1>
+<p><strong>Scope</strong>: Hazel environment, live evaluation, incremental typing (OOPSLA 2025), collaborative editing (Grove POPL 2025) <strong>Lines</strong>: ~420 <strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Building live programming environments</li><li>Implementing continuous feedback systems</li><li>Creating educational programming tools</li><li>Designing exploratory programming interfaces</li><li>Implementing real-time collaboration for code</li><li>Understanding incremental type checking algorithms</li></ul>
+<h2>Core Concepts</h2>
+<h3>Live Programming Principles</h3>
+<p><strong>Live programming</strong>: Immediate, continuous feedback while editing</p>
+<pre><code class="lang-python">from dataclasses import dataclass
+from typing import Union, Optional, List
+
+class LiveEnvironment:
+    &quot;&quot;&quot;
+    Live programming environment characteristics:
+
+    1. Edit freely: All intermediate states valid
+    2. See immediately: Continuous evaluation
+    3. Inspect anywhere: Click to see types, values
+    4. No compile step: No edit-compile-run cycle
+    &quot;&quot;&quot;
+
+    def __init__(self):
+        self.program = EmptyHole()  # Start with hole
+        self.evaluation_result = None
+        self.type_info = {}
+
+    def on_edit(self, new_program: &#x27;Expr&#x27;):
+        &quot;&quot;&quot;
+        On every edit:
+        1. Re-type check (incremental)
+        2. Re-evaluate (if possible)
+        3. Update display
+        &quot;&quot;&quot;
+        # Incremental type checking
+        self.type_info = self.incremental_typecheck(new_program)
+
+        # Live evaluation
+        try:
+            self.evaluation_result = self.evaluate(new_program)
+        except:
+            self.evaluation_result = IndeterminateResult()
+
+        # Update UI immediately
+        self.update_display()
+
+    def update_display(self):
+        &quot;&quot;&quot;
+        Show:
+        - Syntax highlighting
+        - Type annotations (hover)
+        - Evaluation result
+        - Hole goals
+        &quot;&quot;&quot;
+        pass
+
+print(&quot;Live programming: edit → type → eval → display (continuously)&quot;)</code></pre>
+<h3>Hazel Architecture</h3>
+<p><strong>Hazel</strong>: Web-based live functional programming environment</p>
+<pre><code class="lang-python">@dataclass
+class HazelState:
+    &quot;&quot;&quot;
+    Hazel system state
+
+    Core components:
+    - Editor: Structure editor (Hazelnut)
+    - Type checker: Bidirectional with holes
+    - Evaluator: Small-step with indeterminate results
+    - UI: React-based web interface
+    &quot;&quot;&quot;
+    # Current program (ZExp with cursor)
+    program: &#x27;ZExp&#x27;
+
+    # Type information
+    type_map: dict  # Expression → Type
+
+    # Evaluation state
+    eval_state: &#x27;EvalState&#x27;
+
+    # UI state
+    cursor_position: tuple
+    selected_hole: Optional[str]
+
+@dataclass
+class EvalState:
+    &quot;&quot;&quot;
+    Evaluation state for live environment
+
+    Multiple evaluation modes:
+    - Step-by-step: Single reduction steps
+    - To value: Reduce to normal form
+    - Lazy: Evaluate on demand
+    &quot;&quot;&quot;
+    current_expr: &#x27;Expr&#x27;
+    step_count: int
+    is_indeterminate: bool  # Contains holes
+
+# Hazel workflow
+def hazel_workflow():
+    &quot;&quot;&quot;
+    User interaction in Hazel:
+
+    1. Edit structure (keyboard/mouse)
+       → Hazelnut edit actions
+
+    2. Type check continuously
+       → Bidirectional type synthesis
+
+    3. Evaluate on demand
+       → Click &quot;evaluate&quot; or automatic
+
+    4. Inspect results
+       → Hover for types
+       → Click holes to see goals
+       → Step through evaluation
+
+    Always valid, always typeable, always inspectable!
+    &quot;&quot;&quot;
+    pass
+
+print(&quot;Hazel: Fully integrated live environment&quot;)</code></pre>
+<h3>Live Evaluation with Indeterminate Results</h3>
+<p><strong>Key insight</strong>: Can evaluate programs with holes to indeterminate results</p>
+<pre><code class="lang-python">@dataclass
+class DeterminateValue:
+    &quot;&quot;&quot;Concrete value&quot;&quot;&quot;
+    value: any
+
+@dataclass
+class IndeterminateValue:
+    &quot;&quot;&quot;Value containing holes - we don&#x27;t know what it is yet&quot;&quot;&quot;
+    hole_id: str
+    expected_type: &#x27;Type&#x27;
+    context: dict
+
+Result = Union[DeterminateValue, IndeterminateValue]
+
+class LiveEvaluator:
+    &quot;&quot;&quot;Evaluate programs with holes&quot;&quot;&quot;
+
+    def evaluate_live(self, expr: &#x27;Expr&#x27;) -&gt; Result:
+        &quot;&quot;&quot;
+        Evaluate with holes
+
+        Examples:
+        - 2 + 3 → 5 (determinate)
+        - 2 + ?h → ⊥h (indeterminate)
+        - if true then 5 else ?h → 5 (determinate! Hole not evaluated)
+        - if ?h then 1 else 2 → ⊥h (indeterminate, need hole value)
+        &quot;&quot;&quot;
+        match expr:
+            case Hole(name, typ, ctx):
+                # Hole evaluates to indeterminate
+                return IndeterminateValue(name, typ, ctx)
+
+            case Num(n):
+                return DeterminateValue(n)
+
+            case Plus(e1, e2):
+                v1 = self.evaluate_live(e1)
+                v2 = self.evaluate_live(e2)
+
+                # If either indeterminate, result is indeterminate
+                if isinstance(v1, IndeterminateValue):
+                    return v1
+                if isinstance(v2, IndeterminateValue):
+                    return v2
+
+                # Both determinate: compute
+                return DeterminateValue(v1.value + v2.value)
+
+            case If(cond, then_branch, else_branch):
+                cond_val = self.evaluate_live(cond)
+
+                if isinstance(cond_val, IndeterminateValue):
+                    # Can&#x27;t decide which branch
+                    return cond_val
+
+                # Determinate condition: choose branch
+                if cond_val.value:
+                    return self.evaluate_live(then_branch)
+                else:
+                    return self.evaluate_live(else_branch)
+
+    def display_result(self, result: Result) -&gt; str:
+        &quot;&quot;&quot;
+        Display evaluation result to user
+
+        Determinate: Show value
+        Indeterminate: Show which hole blocked evaluation
+        &quot;&quot;&quot;
+        match result:
+            case DeterminateValue(v):
+                return f&quot;Result: {v}&quot;
+            case IndeterminateValue(hole_id, typ, _):
+                return f&quot;⊥{hole_id} : {typ} (indeterminate - depends on hole)&quot;
+
+print(&quot;Live evaluation: Results may be indeterminate but still meaningful&quot;)</code></pre>
+<h3>Incremental Bidirectional Typing (OOPSLA 2025)</h3>
+<p><strong>Incremental typing</strong>: Re-type only what changed (Distinguished Paper!)</p>
+<pre><code class="lang-python">class IncrementalTypeChecker:
+    &quot;&quot;&quot;
+    Incremental bidirectional type checking
+
+    Based on OOPSLA 2025 work:
+    &quot;Incremental Bidirectional Typing via Order Maintenance&quot;
+
+    Key idea: Borrow techniques from incremental browser layout
+    &quot;&quot;&quot;
+
+    def __init__(self):
+        self.type_cache = {}  # Expression → Type
+        self.dependency_graph = {}  # What depends on what
+        self.dirty_set = set()  # What needs re-checking
+
+    def edit(self, old_expr: &#x27;Expr&#x27;, new_expr: &#x27;Expr&#x27;, path: List[int]):
+        &quot;&quot;&quot;
+        Handle edit at path
+
+        Instead of re-typing entire program:
+        1. Mark changed node as dirty
+        2. Propagate dirtiness up dependencies
+        3. Re-type only dirty nodes
+        &quot;&quot;&quot;
+        # Mark affected nodes
+        self.mark_dirty(path)
+
+        # Incremental re-typing
+        return self.retype_dirty()
+
+    def mark_dirty(self, path: List[int]):
+        &quot;&quot;&quot;
+        Mark node and dependents as dirty
+
+        If e changed at path p:
+        - Mark e as dirty
+        - Mark parent of e as dirty (dependent)
+        - Propagate to all ancestors
+        &quot;&quot;&quot;
+        for node in self.ancestors(path):
+            self.dirty_set.add(node)
+
+            # Mark anything that depends on this node
+            for dependent in self.dependency_graph.get(node, []):
+                self.dirty_set.add(dependent)
+
+    def retype_dirty(self):
+        &quot;&quot;&quot;
+        Re-type only dirty nodes
+
+        Process in dependency order:
+        1. Leaves first (no dependencies)
+        2. Then parents (depend on leaves)
+        3. Bottom-up to root
+        &quot;&quot;&quot;
+        # Topological sort of dirty nodes
+        ordered = self.topo_sort(self.dirty_set)
+
+        for node in ordered:
+            # Re-type this node
+            new_type = self.typecheck_node(node)
+            self.type_cache[node] = new_type
+
+        self.dirty_set.clear()
+
+    def typecheck_node(self, node: &#x27;Expr&#x27;) -&gt; &#x27;Type&#x27;:
+        &quot;&quot;&quot;
+        Type single node
+
+        Can use cached types for clean children!
+        Only re-type dirty subtrees
+        &quot;&quot;&quot;
+        match node:
+            case App(f, arg):
+                # Lookup types (cached if clean, recomputed if dirty)
+                f_type = self.get_type(f)
+                arg_type = self.get_type(arg)
+
+                # Type application
+                if isinstance(f_type, TArrow):
+                    check_consistent(arg_type, f_type.param)
+                    return f_type.result
+                else:
+                    return THole()
+            # ... other cases
+
+    def get_type(self, expr: &#x27;Expr&#x27;) -&gt; &#x27;Type&#x27;:
+        &quot;&quot;&quot;
+        Get type: from cache if clean, recompute if dirty
+        &quot;&quot;&quot;
+        if expr in self.dirty_set:
+            return self.typecheck_node(expr)
+        else:
+            return self.type_cache.get(expr, THole())
+
+print(&quot;Incremental typing: Only re-type what changed&quot;)</code></pre>
+<h3>Live Pattern Matching</h3>
+<p><strong>Live pattern editing</strong>: See match coverage in real-time</p>
+<pre><code class="lang-python">class LivePatternChecker:
+    &quot;&quot;&quot;
+    Live pattern match analysis
+
+    Shows:
+    - Which patterns are redundant
+    - Which cases are missing
+    - Example values that reach each branch
+    &quot;&quot;&quot;
+
+    def analyze_match(self, match_expr: Match) -&gt; &#x27;MatchAnalysis&#x27;:
+        &quot;&quot;&quot;
+        Analyze pattern match live
+
+        Example:
+          match x : Bool with
+          | true → 1
+          | _    → 2
+
+        Analysis:
+        - Pattern 1 (true): Covers {true}
+        - Pattern 2 (_): Covers {false} (not redundant!)
+        - Complete: Yes
+        &quot;&quot;&quot;
+        scrutinee_type = self.get_type(match_expr.scrutinee)
+        all_values = enumerate_values(scrutinee_type)
+
+        coverage = []
+        for i, (pattern, _) in enumerate(match_expr.branches):
+            covered = match_values(pattern, all_values)
+            coverage.append((i, covered))
+
+            # Remove covered values
+            all_values = all_values - covered
+
+        return MatchAnalysis(
+            coverage=coverage,
+            uncovered=all_values,
+            redundant=self.find_redundant(coverage)
+        )
+
+    def display_coverage(self, analysis: &#x27;MatchAnalysis&#x27;):
+        &quot;&quot;&quot;
+        Display coverage visually in IDE
+
+        - Green: Pattern covers new cases
+        - Yellow: Pattern is redundant
+        - Red: Missing cases (uncovered)
+        &quot;&quot;&quot;
+        pass
+
+print(&quot;Live pattern analysis: See coverage and completeness instantly&quot;)</code></pre>
+<h3>Grove: Collaborative Editing (POPL 2025)</h3>
+<p><strong>Grove</strong>: Commutative edit actions for real-time collaboration</p>
+<pre><code class="lang-python">class GroveCollaboration:
+    &quot;&quot;&quot;
+    Grove: Bidirectionally Typed Structure Editor Calculus (POPL 2025)
+
+    Key innovation: Commutative edit actions
+
+    Traditional conflict:
+      User A: Edit at position 10
+      User B: Insert at position 5
+      → Position 10 is now 15! Conflict!
+
+    Grove approach:
+      Edits reference paths in tree, not positions
+      Most edits naturally commute
+    &quot;&quot;&quot;
+
+    def __init__(self):
+        self.local_operations = []
+        self.remote_operations = []
+        self.program_state = EmptyHole()
+
+    def apply_edit(self, edit: &#x27;GroveEdit&#x27;, source: str):
+        &quot;&quot;&quot;
+        Apply edit (local or remote)
+
+        Grove guarantees:
+        1. Edits at different paths commute
+        2. Edits at same path have defined merge
+        3. Type safety preserved in all merges
+        &quot;&quot;&quot;
+        if source == &quot;local&quot;:
+            self.local_operations.append(edit)
+        else:
+            self.remote_operations.append(edit)
+
+        # Apply edit
+        self.program_state = self.transform_and_apply(edit, self.program_state)
+
+    def transform_and_apply(self, edit: &#x27;GroveEdit&#x27;, state: &#x27;Expr&#x27;) -&gt; &#x27;Expr&#x27;:
+        &quot;&quot;&quot;
+        Operational transformation for Grove
+
+        If concurrent edits:
+        - Transform edit to account for other edits
+        - Apply transformed edit
+        - Result: Convergent state (same for all users)
+        &quot;&quot;&quot;
+        # Transform edit based on concurrent operations
+        transformed = self.transform(edit, self.get_concurrent_edits(edit))
+
+        # Apply transformed edit
+        return self.apply(transformed, state)
+
+    def transform(self, edit: &#x27;GroveEdit&#x27;, concurrent: List[&#x27;GroveEdit&#x27;]) -&gt; &#x27;GroveEdit&#x27;:
+        &quot;&quot;&quot;
+        Transform edit to commute with concurrent edits
+
+        Example:
+          Edit A: Insert at path [0, 1]
+          Edit B: Insert at path [0]
+
+        Transform B relative to A:
+          B&#x27; still at [0] (independent paths)
+
+        Transform A relative to B:
+          A&#x27; now at [0, 1, 1] (B changed structure)
+        &quot;&quot;&quot;
+        pass
+
+print(&quot;Grove: Conflict-free collaborative structure editing&quot;)</code></pre>
+<h3>Performance Optimizations</h3>
+<p><strong>Making live programming fast</strong> enough for interactive use</p>
+<pre><code class="lang-python">class PerformanceOptimizations:
+    &quot;&quot;&quot;
+    Optimizations for live programming
+
+    Challenges:
+    - Type check on every keystroke (can&#x27;t be slow!)
+    - Evaluate continuously (can&#x27;t block UI)
+    - Large programs (thousands of lines)
+    &quot;&quot;&quot;
+
+    @staticmethod
+    def incremental_everything():
+        &quot;&quot;&quot;
+        1. Incremental parsing (structure editor: free!)
+        2. Incremental type checking (OOPSLA 2025)
+        3. Incremental evaluation (cache results)
+        4. Incremental rendering (React reconciliation)
+        &quot;&quot;&quot;
+        pass
+
+    @staticmethod
+    def lazy_evaluation():
+        &quot;&quot;&quot;
+        Don&#x27;t evaluate everything immediately
+
+        - Evaluate visible parts
+        - Evaluate on demand (click to expand)
+        - Cache evaluation results
+        - Invalidate cache on edit
+        &quot;&quot;&quot;
+        pass
+
+    @staticmethod
+    def web_workers():
+        &quot;&quot;&quot;
+        Use Web Workers for heavy computation
+
+        Main thread: UI, editor
+        Worker thread: Type checking, evaluation
+
+        Communication:
+        - Main → Worker: Edit operations
+        - Worker → Main: Type info, results
+        &quot;&quot;&quot;
+        pass
+
+    @staticmethod
+    def memoization():
+        &quot;&quot;&quot;
+        Memoize expensive operations
+
+        - Type synthesis
+        - Constraint solving
+        - Pattern match analysis
+        - Evaluation results
+        &quot;&quot;&quot;
+        pass
+
+print(&quot;Performance: Incremental + lazy + parallel + memoized&quot;)</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Example-Driven Development</h3>
+<pre><code class="lang-python">def example_driven_pattern():
+    &quot;&quot;&quot;
+    Live programming enables example-driven workflow
+
+    1. Write examples first
+       factorial 0 = 1
+       factorial 3 = 6
+
+    2. See examples fail (holes)
+       factorial n = ?impl
+
+    3. Implement to make examples pass
+       factorial 0 = 1
+       factorial n = n * factorial (n - 1)
+
+    4. Examples now pass live!
+
+    Immediate feedback guides implementation
+    &quot;&quot;&quot;
+    print(&quot;Examples first, then implement to match&quot;)</code></pre>
+<h3>Pattern 2: Visual Debugging</h3>
+<pre><code class="lang-python">def visual_debugging():
+    &quot;&quot;&quot;
+    Live evaluation enables visual debugging
+
+    - Click expression: See value
+    - Step through evaluation: See each step
+    - Inspect hole: See why indeterminate
+    - Trace execution: See call graph
+
+    No printf debugging needed!
+    &quot;&quot;&quot;
+    pass</code></pre>
+<h3>Pattern 3: Exploratory Programming</h3>
+<pre><code class="lang-python">def exploratory_pattern():
+    &quot;&quot;&quot;
+    Live environment for exploration
+
+    1. Import library
+    2. Create hole: ?explore
+    3. See available functions (autocomplete)
+    4. Try function: f ?arg
+    5. See type error or result immediately
+    6. Iterate rapidly
+
+    Learning by experimentation
+    &quot;&quot;&quot;
+    pass</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Hazel Environment</h3>
+<p>| Component | Technology | Purpose | |-----------|------------|---------| | Editor | ReasonML + React | Structure editor UI | | Type checker | Bidirectional | Continuous typing | | Evaluator | Small-step | Live evaluation | | Backend | OCaml | Core semantics |</p>
+<h3>Incremental Typing</h3>
+<pre><code>Edit → Mark dirty → Propagate → Re-type only dirty → Cache
+
+Performance: O(size of edit) not O(size of program)</code></pre>
+<h3>Grove Collaboration</h3>
+<pre><code>Edit → Transform → Apply → Converge
+
+Property: Commutative edits → No conflicts</code></pre>
+<h3>Evaluation Results</h3>
+<pre><code>Determinate: Concrete value
+Indeterminate: Contains holes (⊥h)
+Error: Type error (⦇e⦈ type mismatch)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Re-typing entire program on edit</strong>: Too slow ✅ Incremental type checking</p>
+<p>❌ <strong>Blocking UI during evaluation</strong>: Unresponsive ✅ Use web workers, async evaluation</p>
+<p>❌ <strong>No feedback on indeterminate</strong>: Confusing ✅ Show which hole blocked evaluation</p>
+<p>❌ <strong>Conflicting concurrent edits</strong>: Data loss ✅ Use operational transformation (Grove)</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>hazelnut-calculus.md</code> - Structure editor foundation</li><li><code>typed-holes-foundations.md</code> - Basic holes theory</li><li><code>typed-holes-interaction.md</code> - IDE features for holes</li><li><code>structure-editors.md</code> - Editor design patterns</li><li><code>operational-semantics.md</code> - Evaluation semantics</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/live-programming-holes.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

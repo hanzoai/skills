@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>debugging-browser-devtools</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/debugging-browser-devtools.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/debugging-browser-devtools.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>debugging-browser-devtools</h1><p class="lede">Comprehensive guide to browser developer tools for debugging web applications. Covers Chrome/Firefox/Safari DevTools including Sources panel, breakpoints, performance profiling, memory analysis, network debugging, Console API, React/Vue debugging, and Lighthouse/Core Web Vitals.</p><h1>Browser DevTools</h1>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<h2>Overview</h2>
+<p>Browser DevTools are essential for web development debugging. This guide covers Chrome DevTools (most feature-rich), with notes on Firefox and Safari differences.</p>
+<h2>Opening DevTools</h2>
+<h3>Keyboard Shortcuts</h3>
+<pre><code>Chrome/Edge:
+  F12 / Cmd+Opt+I (Mac) / Ctrl+Shift+I (Windows)
+  Cmd+Opt+J (Mac) / Ctrl+Shift+J (Windows) - Console
+  Cmd+Opt+C (Mac) / Ctrl+Shift+C (Windows) - Inspect Element
+
+Firefox:
+  F12 / Cmd+Opt+I (Mac) / Ctrl+Shift+I (Windows)
+  Cmd+Opt+K (Mac) / Ctrl+Shift+K (Windows) - Console
+
+Safari:
+  Cmd+Opt+I (Mac) - Enable in Preferences → Advanced first</code></pre>
+<h3>DevTools Panels</h3>
+<p><strong>Core panels</strong>:</p>
+<ul><li><strong>Elements</strong>: Inspect/modify DOM and CSS</li><li><strong>Console</strong>: Execute JavaScript, view logs</li><li><strong>Sources</strong>: Debug JavaScript with breakpoints</li><li><strong>Network</strong>: Monitor HTTP requests/responses</li><li><strong>Performance</strong>: Profile runtime performance</li><li><strong>Memory</strong>: Analyze memory usage and leaks</li><li><strong>Application</strong>: Inspect storage, service workers, manifest</li></ul>
+<p><strong>Additional panels</strong>:</p>
+<ul><li><strong>Security</strong>: HTTPS, certificates, mixed content</li><li><strong>Lighthouse</strong>: Audit performance, accessibility, SEO</li><li><strong>Recorder</strong>: Record and replay user flows</li></ul>
+<hr>
+<h2>Elements Panel</h2>
+<h3>Inspecting DOM</h3>
+<p><strong>Navigate DOM tree</strong>:</p>
+<pre><code>Click element in page → Right-click → Inspect
+Or: Cmd+Shift+C, then click element
+
+Arrow keys: Navigate siblings
+Enter: Expand/collapse node
+H key: Hide/show element
+Delete: Delete node (temporary)</code></pre>
+<p><strong>Modify DOM</strong>:</p>
+<pre><code>Right-click element:
+  - Edit as HTML
+  - Duplicate element
+  - Delete element
+  - Copy → Copy selector / XPath / element
+  - Store as global variable ($0, $1, etc.)</code></pre>
+<p><strong>DOM search</strong>:</p>
+<pre><code>Cmd+F (inside Elements panel)
+
+Search by:
+  - Tag name: div
+  - Class: .my-class
+  - ID: #my-id
+  - CSS selector: div.container &gt; p
+  - XPath: //div[@class=&#x27;container&#x27;]
+  - Text content: &quot;Hello World&quot;</code></pre>
+<h3>Inspecting CSS</h3>
+<p><strong>Styles panel</strong> (right side):</p>
+<pre><code>Shows all CSS rules for selected element:
+  - Inline styles (top)
+  - Stylesheet rules (ordered by specificity)
+  - Inherited styles
+  - Browser defaults (user agent stylesheet)
+
+Click checkbox: Toggle rule
+Click value: Edit value
+Click property: Edit property
+Click selector: Edit selector</code></pre>
+<p><strong>Computed panel</strong>:</p>
+<pre><code>Shows final computed values after cascade
+Filter by property name
+Show all / show only active properties</code></pre>
+<p><strong>Live CSS editing</strong>:</p>
+<pre><code class="lang-javascript">// Click element → Styles panel → Edit
+
+// Toggle property
+☑ color: red;  // Click checkbox to disable
+
+// Add property
+element.style {
+  /* Click here, type property: value */
+  background: blue;
+}
+
+// Force pseudo-state
+Click :hov → Check :hover/:focus/:active/:visited</code></pre>
+<h3>Box Model Visualization</h3>
+<pre><code>Blue: Content
+Green: Padding
+Yellow: Border
+Orange: Margin
+
+Click values to edit: width, height, margin, padding</code></pre>
+<hr>
+<h2>Console Panel</h2>
+<h3>Console API</h3>
+<p><strong>Logging</strong>:</p>
+<pre><code class="lang-javascript">// Basic logging
+console.log(&#x27;Hello&#x27;, &#x27;World&#x27;);  // Multiple args
+console.log(&#x27;User:&#x27;, { name: &#x27;Alice&#x27;, age: 30 });
+
+// Log levels
+console.info(&#x27;Information&#x27;);
+console.warn(&#x27;Warning!&#x27;);
+console.error(&#x27;Error!&#x27;);
+console.debug(&#x27;Debug info&#x27;);  // Hidden by default
+
+// Styled output
+console.log(&#x27;%c Big Red Text&#x27;, &#x27;color: red; font-size: 20px;&#x27;);
+console.log(&#x27;%c Blue %c Green&#x27;, &#x27;color: blue;&#x27;, &#x27;color: green;&#x27;);</code></pre>
+<p><strong>Structured logging</strong>:</p>
+<pre><code class="lang-javascript">// Table view
+const users = [
+  { name: &#x27;Alice&#x27;, age: 30 },
+  { name: &#x27;Bob&#x27;, age: 25 }
+];
+console.table(users);
+
+// Group related logs
+console.group(&#x27;User Details&#x27;);
+console.log(&#x27;Name:&#x27;, name);
+console.log(&#x27;Age:&#x27;, age);
+console.groupEnd();
+
+// Collapsible group
+console.groupCollapsed(&#x27;Debug Info&#x27;);
+console.log(&#x27;Hidden by default&#x27;);
+console.groupEnd();</code></pre>
+<p><strong>Assertions and tracing</strong>:</p>
+<pre><code class="lang-javascript">// Assert (logs only if false)
+console.assert(x &gt; 0, &#x27;x must be positive&#x27;, { x });
+
+// Stack trace
+console.trace(&#x27;How did we get here?&#x27;);
+
+// Count calls
+console.count(&#x27;API call&#x27;);  // API call: 1
+console.count(&#x27;API call&#x27;);  // API call: 2
+console.countReset(&#x27;API call&#x27;);
+
+// Timing
+console.time(&#x27;operation&#x27;);
+expensiveOperation();
+console.timeEnd(&#x27;operation&#x27;);  // operation: 123.45ms</code></pre>
+<h3>Console Utilities</h3>
+<p><strong>DOM selection</strong>:</p>
+<pre><code class="lang-javascript">// $ (jQuery-like selector)
+$(&#x27;.my-class&#x27;)  // querySelector
+$$(&#x27;.my-class&#x27;)  // querySelectorAll
+
+// Recent inspected elements
+$0  // Most recently selected element
+$1  // Second most recent
+$2  // Third most recent
+
+// Event listeners
+getEventListeners($0)  // All listeners on $0</code></pre>
+<p><strong>Monitoring</strong>:</p>
+<pre><code class="lang-javascript">// Monitor function calls
+monitor(myFunction);  // Logs when myFunction is called
+unmonitor(myFunction);
+
+// Monitor events
+monitorEvents($0);  // Log all events on $0
+monitorEvents($0, &#x27;click&#x27;);  // Log only click events
+unmonitorEvents($0);
+
+// Copy to clipboard
+copy({ name: &#x27;Alice&#x27;, age: 30 });  // Copies JSON to clipboard</code></pre>
+<p><strong>Inspection</strong>:</p>
+<pre><code class="lang-javascript">// Inspect object
+inspect($0);  // Opens Elements panel at $0
+
+// List properties
+dir($0);  // Interactive object explorer
+dirxml($0);  // XML/HTML representation
+
+// Values
+values({ a: 1, b: 2, c: 3 });  // [1, 2, 3]
+keys({ a: 1, b: 2, c: 3 });    // [&#x27;a&#x27;, &#x27;b&#x27;, &#x27;c&#x27;]</code></pre>
+<hr>
+<h2>Sources Panel</h2>
+<h3>Breakpoints</h3>
+<p><strong>Line breakpoints</strong>:</p>
+<pre><code>1. Open file in Sources panel
+2. Click line number → Blue marker
+3. Run code → Execution pauses
+
+Right-click breakpoint:
+  - Edit breakpoint (condition)
+  - Disable breakpoint
+  - Remove breakpoint</code></pre>
+<p><strong>Conditional breakpoints</strong>:</p>
+<pre><code class="lang-javascript">// Right-click line number → Add conditional breakpoint
+// Expression: i === 99 (only breaks when true)
+
+for (let i = 0; i &lt; 100; i++) {
+  console.log(i);  // Breakpoint here with condition &quot;i === 99&quot;
+}</code></pre>
+<p><strong>Logpoints</strong> (log without stopping):</p>
+<pre><code class="lang-javascript">// Right-click line number → Add logpoint
+// Message: &quot;Count is&quot;, count
+
+// Equivalent to console.log but without modifying code</code></pre>
+<p><strong>DOM breakpoints</strong>:</p>
+<pre><code>Elements panel → Right-click element:
+  - Break on subtree modifications
+  - Break on attribute modifications
+  - Break on node removal
+
+Pauses when DOM changes</code></pre>
+<p><strong>XHR/Fetch breakpoints</strong>:</p>
+<pre><code>Sources → XHR/fetch Breakpoints → Add
+URL contains: api/users
+
+Pauses on matching network requests</code></pre>
+<p><strong>Event listener breakpoints</strong>:</p>
+<pre><code>Sources → Event Listener Breakpoints
+Check: Mouse → click
+Check: Keyboard → keydown
+
+Pauses when event fires</code></pre>
+<h3>Stepping Through Code</h3>
+<p><strong>Debug controls</strong>:</p>
+<pre><code>F8 / Cmd+\ : Resume (continue)
+F10 / Cmd+&#x27; : Step over
+F11 / Cmd+; : Step into
+Shift+F11 / Cmd+Shift+; : Step out
+
+Step over: Execute current line, don&#x27;t enter functions
+Step into: Enter function on current line
+Step out: Continue until current function returns</code></pre>
+<p><strong>Call stack</strong>:</p>
+<pre><code>Shows function call hierarchy:
+  myFunction (current)
+    ↑ callerFunction
+      ↑ main
+
+Click frame → Jump to that context
+Async frames: Shows async call chain</code></pre>
+<p><strong>Scope variables</strong>:</p>
+<pre><code>Shows variables in current scope:
+  - Local (function scope)
+  - Closure (parent scopes)
+  - Global (window)
+
+Click value → Edit value
+Right-click → Copy value / Store as global variable</code></pre>
+<p><strong>Watch expressions</strong>:</p>
+<pre><code>Add expression to watch:
+  count &gt; 10
+  user.name
+  myArray.length
+
+Updates automatically on each step</code></pre>
+<h3>Source Maps</h3>
+<p><strong>Enable source maps</strong>:</p>
+<pre><code>Settings (⚙️) → Sources → Enable JavaScript source maps
+
+Debugging minified code:
+//# sourceMappingURL=app.min.js.map
+
+DevTools loads original source for debugging</code></pre>
+<p><strong>Workspace mapping</strong> (local edits persist):</p>
+<pre><code>Sources → Filesystem → Add folder
+Grant access → Edit files in DevTools
+Changes save to disk automatically</code></pre>
+<hr>
+<h2>Network Panel</h2>
+<h3>Monitoring Requests</h3>
+<p><strong>Request list</strong>:</p>
+<pre><code>Columns:
+  - Name: Request URL
+  - Status: HTTP status code
+  - Type: Content type (document, script, xhr, etc.)
+  - Initiator: What triggered request
+  - Size: Response size
+  - Time: Duration
+  - Waterfall: Timeline visualization
+
+Click request → Details panel</code></pre>
+<p><strong>Filter requests</strong>:</p>
+<pre><code>Filter bar:
+  - XHR: XMLHttpRequest / fetch
+  - JS: JavaScript files
+  - CSS: Stylesheets
+  - Img: Images
+  - Font: Web fonts
+  - Doc: HTML documents
+  - WS: WebSocket
+  - Other: Uncategorized
+
+Search: domain:example.com, method:POST, status-code:404</code></pre>
+<h3>Request Details</h3>
+<p><strong>Headers tab</strong>:</p>
+<pre><code>General:
+  Request URL: https://api.example.com/users
+  Request Method: GET
+  Status Code: 200 OK
+
+Response Headers:
+  content-type: application/json
+  cache-control: max-age=3600
+
+Request Headers:
+  User-Agent: Mozilla/5.0...
+  Authorization: Bearer token...</code></pre>
+<p><strong>Preview tab</strong>:</p>
+<pre><code>Formatted response:
+  - JSON: Collapsible tree
+  - HTML: Rendered preview
+  - Images: Visual preview</code></pre>
+<p><strong>Response tab</strong>:</p>
+<pre><code>Raw response body
+Copy response, save as file</code></pre>
+<p><strong>Timing tab</strong>:</p>
+<pre><code>Breakdown of request timing:
+  - Queueing: Waiting in queue
+  - Stalled: Waiting for connection
+  - DNS Lookup: Domain resolution
+  - Initial connection: TCP handshake
+  - SSL: TLS negotiation
+  - Request sent: Sending request
+  - Waiting (TTFB): Time to first byte
+  - Content Download: Receiving response
+
+Total: 234ms</code></pre>
+<h3>Network Throttling</h3>
+<p><strong>Simulate slow connections</strong>:</p>
+<pre><code>Network panel → Throttling dropdown:
+  - Fast 3G (750 KB/s)
+  - Slow 3G (400 KB/s)
+  - Offline
+
+Custom: Add custom profile</code></pre>
+<h3>HAR Files (HTTP Archive)</h3>
+<p><strong>Export network activity</strong>:</p>
+<pre><code>Network panel → Right-click → Save all as HAR with content
+
+Share with teammates, analyze in external tools
+Load: Drag HAR file into Network panel</code></pre>
+<hr>
+<h2>Performance Panel</h2>
+<h3>Recording Performance</h3>
+<p><strong>Record runtime performance</strong>:</p>
+<pre><code>1. Click Record (circle button)
+2. Perform actions on page
+3. Click Stop
+
+Or: Reload with profiling (Cmd+Shift+E)</code></pre>
+<p><strong>Performance profile</strong>:</p>
+<pre><code>Timeline shows:
+  - FPS: Frames per second
+  - CPU: CPU usage (colors = activity types)
+  - NET: Network requests
+  - HEAP: Memory usage
+
+Zoom: Scroll over timeline
+Select range: Click and drag</code></pre>
+<h3>Flame Chart</h3>
+<p><strong>Analyze call stack</strong>:</p>
+<pre><code>Main thread timeline shows function calls:
+  - Width = duration
+  - Y-axis = call stack depth
+  - Color = activity type (scripting, rendering, painting)
+
+Click function → Bottom panel shows:
+  - Self time: Time in function (excluding children)
+  - Total time: Time in function + children
+  - Source file and line number
+
+Red triangle: Long task (&gt;50ms)</code></pre>
+<p><strong>Activity types</strong>:</p>
+<pre><code>Yellow: JavaScript execution
+Purple: Rendering (layout, paint)
+Green: Painting
+Blue: Loading (parsing HTML/CSS)
+Gray: Other</code></pre>
+<h3>Performance Insights (2025 Feature)</h3>
+<p><strong>Automated analysis</strong>:</p>
+<pre><code>Performance Insights panel (new):
+  - Identifies performance issues automatically
+  - Shows &quot;Insights&quot; for long tasks, layout shifts, etc.
+  - Click insight → Jump to relevant code
+
+Common insights:
+  - &quot;Long task blocking main thread&quot;
+  - &quot;Layout shift caused by image without dimensions&quot;
+  - &quot;Render-blocking resource&quot;</code></pre>
+<h3>Web Vitals</h3>
+<p><strong>Core Web Vitals</strong> (2025 thresholds):</p>
+<pre><code>LCP (Largest Contentful Paint): &lt; 2.5s
+FID (First Input Delay): &lt; 100ms
+CLS (Cumulative Layout Shift): &lt; 0.1
+
+Performance panel → Experience section shows vitals
+Hover over metric → See which element triggered it</code></pre>
+<hr>
+<h2>Memory Panel</h2>
+<h3>Heap Snapshots</h3>
+<p><strong>Take snapshot</strong>:</p>
+<pre><code>Memory panel → Heap snapshot → Take snapshot
+
+Shows all objects in memory:
+  - Constructor: Object type
+  - Distance: Steps from root
+  - Shallow Size: Object size
+  - Retained Size: Object + retained objects
+
+Compare snapshots to find leaks</code></pre>
+<p><strong>Find memory leaks</strong>:</p>
+<pre><code>1. Take snapshot (baseline)
+2. Perform action (e.g., open/close modal)
+3. Take second snapshot
+4. Select &quot;Comparison&quot; view
+5. Look for objects with positive delta
+
+Detached DOM nodes = likely leak</code></pre>
+<h3>Allocation Timeline</h3>
+<p><strong>Record allocations over time</strong>:</p>
+<pre><code>Memory panel → Allocation instrumentation on timeline → Start
+
+Blue bars = allocations
+Gray bars = garbage collections
+
+Click bar → See objects allocated at that time</code></pre>
+<h3>Allocation Sampling</h3>
+<p><strong>Lightweight profiling</strong>:</p>
+<pre><code>Memory panel → Allocation sampling → Start
+
+Shows memory allocations by function
+Less overhead than timeline, good for long recordings</code></pre>
+<hr>
+<h2>Application Panel</h2>
+<h3>Storage</h3>
+<p><strong>Local Storage</strong>:</p>
+<pre><code>Application → Local Storage → domain
+View/edit/delete key-value pairs</code></pre>
+<p><strong>Session Storage</strong>:</p>
+<pre><code>Application → Session Storage → domain
+Cleared when tab closes</code></pre>
+<p><strong>Cookies</strong>:</p>
+<pre><code>Application → Cookies → domain
+View/edit/delete cookies
+Attributes: Name, Value, Domain, Path, Expires, Size, HttpOnly, Secure, SameSite</code></pre>
+<p><strong>IndexedDB</strong>:</p>
+<pre><code>Application → IndexedDB → database → object store
+Browse records, delete records</code></pre>
+<h3>Service Workers</h3>
+<p><strong>Inspect service workers</strong>:</p>
+<pre><code>Application → Service Workers
+
+Shows:
+  - Status: Activated, Waiting, Installing
+  - Source: Service worker script
+  - Scope: URLs controlled
+
+Actions:
+  - Update: Force update
+  - Unregister: Remove service worker
+  - Offline: Simulate offline mode</code></pre>
+<h3>Cache Storage</h3>
+<p><strong>Inspect cache entries</strong>:</p>
+<pre><code>Application → Cache Storage → cache name
+View cached requests/responses
+Delete individual entries</code></pre>
+<hr>
+<h2>Lighthouse</h2>
+<h3>Running Audits</h3>
+<p><strong>Lighthouse panel</strong>:</p>
+<pre><code>Categories:
+  ☑ Performance
+  ☑ Accessibility
+  ☑ Best Practices
+  ☑ SEO
+  ☑ PWA
+
+Device: Mobile / Desktop
+Throttling: Simulated / DevTools / None
+
+Click &quot;Analyze page load&quot;</code></pre>
+<h3>Lighthouse Scores (2025)</h3>
+<p><strong>Score ranges</strong>:</p>
+<pre><code>90-100: Green (Good)
+50-89: Orange (Needs Improvement)
+0-49: Red (Poor)
+
+Each category has weighted metrics</code></pre>
+<p><strong>Performance metrics</strong>:</p>
+<pre><code>- First Contentful Paint (FCP): &lt; 1.8s
+- Largest Contentful Paint (LCP): &lt; 2.5s
+- Total Blocking Time (TBT): &lt; 200ms
+- Cumulative Layout Shift (CLS): &lt; 0.1
+- Speed Index: &lt; 3.4s</code></pre>
+<p><strong>Opportunities</strong> (improve load time):</p>
+<pre><code>- Eliminate render-blocking resources
+- Properly size images
+- Defer offscreen images
+- Minify CSS/JavaScript
+- Serve images in next-gen formats (WebP, AVIF)</code></pre>
+<p><strong>Diagnostics</strong> (additional info):</p>
+<pre><code>- Minimize main thread work
+- Reduce JavaScript execution time
+- Avoid enormous network payloads
+- Serve static assets with efficient cache policy</code></pre>
+<hr>
+<h2>Debugging Frameworks</h2>
+<h3>React DevTools</h3>
+<p><strong>Install extension</strong>:</p>
+<pre><code>Chrome Web Store: React Developer Tools
+Firefox Add-ons: React Developer Tools</code></pre>
+<p><strong>Components tab</strong>:</p>
+<pre><code>Browse component tree
+Inspect props, state, hooks
+Edit props/state in real-time
+Search components by name</code></pre>
+<p><strong>Profiler tab</strong>:</p>
+<pre><code>Record component renders
+Identify expensive renders
+See why component re-rendered
+Flame chart shows render duration</code></pre>
+<h3>Vue DevTools</h3>
+<p><strong>Install extension</strong>:</p>
+<pre><code>Chrome/Firefox: Vue.js devtools</code></pre>
+<p><strong>Features</strong>:</p>
+<pre><code>- Components: Inspect component tree, props, data
+- Vuex: State management inspector
+- Events: View emitted events
+- Routing: Vue Router inspector
+- Performance: Component render profiling</code></pre>
+<hr>
+<h2>Advanced Features</h2>
+<h3>Overrides</h3>
+<p><strong>Override network responses</strong>:</p>
+<pre><code>Sources → Overrides → Select folder
+Enable local overrides
+
+Edit file in Sources panel → Saves to local folder
+Reloads serve local version instead of network</code></pre>
+<h3>Snippets</h3>
+<p><strong>Save reusable scripts</strong>:</p>
+<pre><code>Sources → Snippets → New snippet
+
+Write JavaScript:
+  console.log(&#x27;Testing...&#x27;);
+  $$(&#x27;.my-class&#x27;).forEach(el =&gt; el.remove());
+
+Cmd+Enter: Run snippet</code></pre>
+<h3>Coverage</h3>
+<p><strong>Find unused CSS/JS</strong>:</p>
+<pre><code>Cmd+Shift+P → Show Coverage
+
+Click Record → Perform actions → Stop
+
+Red: Unused code
+Blue: Executed code
+
+Click file → See highlighted unused lines</code></pre>
+<h3>Rendering Panel</h3>
+<p><strong>Debug rendering issues</strong>:</p>
+<pre><code>Cmd+Shift+P → Show Rendering
+
+Options:
+  - Paint flashing: Highlights repaints (green)
+  - Layout Shift Regions: Shows CLS culprits (blue)
+  - FPS meter: Shows frames per second
+  - Scrolling performance issues: Highlights slow scrolling
+  - Emulate CSS media: prefers-color-scheme, prefers-reduced-motion</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Common Mistakes</h3>
+<pre><code>❌ NEVER: Leave console.log() in production code
+   → Performance overhead, exposes debug info
+
+❌ NEVER: Debug minified code without source maps
+   → Impossible to read, wastes time
+
+❌ NEVER: Ignore Console errors/warnings
+   → Often cause subtle bugs, performance issues
+
+❌ NEVER: Test only on desktop Chrome
+   → Mobile Safari, Firefox have different behaviors
+
+❌ NEVER: Use DevTools on production site for testing
+   → Use staging/dev environments
+
+❌ NEVER: Disable cache during development
+   → Doesn&#x27;t reflect real user experience</code></pre>
+<h3>Best Practices</h3>
+<pre><code>✅ ALWAYS: Use Lighthouse for performance audits
+✅ ALWAYS: Enable source maps for debugging
+✅ ALWAYS: Test Core Web Vitals in Performance panel
+✅ ALWAYS: Use React/Vue DevTools for framework debugging
+✅ ALWAYS: Clear cache when testing service workers
+✅ ALWAYS: Use network throttling for mobile testing
+✅ ALWAYS: Export HAR files for sharing network issues</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>gdb-fundamentals.md</strong>: GDB for C/C++ debugging</li><li><strong>lldb-macos-debugging.md</strong>: LLDB for macOS/iOS</li><li><strong>python-debugging.md</strong>: Python debugging tools</li><li><strong>remote-debugging.md</strong>: Remote debugging techniques</li><li><strong>frontend-performance.md</strong>: Frontend optimization</li><li><strong>web-accessibility-fundamentals.md</strong>: Accessibility testing</li></ul>
+<hr>
+<h2>Summary</h2>
+<p>Browser DevTools provide comprehensive web debugging capabilities:</p>
+<ol><li><strong>Elements</strong>: Inspect/modify DOM and CSS, force pseudo-states</li><li><strong>Console</strong>: Execute JavaScript, advanced logging, utilities</li><li><strong>Sources</strong>: Breakpoints, stepping, watch expressions, source maps</li><li><strong>Network</strong>: Monitor requests, timing, throttling, HAR export</li><li><strong>Performance</strong>: Flame charts, Core Web Vitals, performance insights</li><li><strong>Memory</strong>: Heap snapshots, leak detection, allocation profiling</li><li><strong>Lighthouse</strong>: Automated audits for performance, accessibility, SEO</li><li><strong>Framework DevTools</strong>: React/Vue component inspection and profiling</li></ol>
+<p><strong>Quick start</strong>:</p>
+<pre><code>F12 → Open DevTools
+Cmd+Shift+C → Inspect element
+Sources → Set breakpoint → Reload page
+Network → Monitor requests → Check timing
+Performance → Record → Analyze flame chart
+Lighthouse → Run audit → Review opportunities</code></pre>
+<p>Master browser DevTools for efficient web development and debugging.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/debugging-browser-devtools.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

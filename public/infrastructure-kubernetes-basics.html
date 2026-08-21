@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>infrastructure-kubernetes-basics</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/infrastructure-kubernetes-basics.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/infrastructure-kubernetes-basics.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>infrastructure-kubernetes-basics</h1><p class="lede">Deploying containerized applications at scale</p><h1>Kubernetes Basics</h1>
+<p><strong>Scope</strong>: Container orchestration with Kubernetes - Pods, Deployments, Services, ConfigMaps, Secrets, Ingress <strong>Lines</strong>: 378 <strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p><strong>Activate when</strong>:</p>
+<ul><li>Deploying containerized applications at scale</li><li>Managing microservices architectures</li><li>Automating container orchestration and scaling</li><li>Implementing rolling updates and rollbacks</li><li>Managing application configuration and secrets</li><li>Setting up load balancing and service discovery</li></ul>
+<p><strong>Prerequisites</strong>:</p>
+<ul><li>Docker installed and basic Docker knowledge</li><li>kubectl CLI installed (<code>brew install kubectl</code> or from kubernetes.io)</li><li>Access to Kubernetes cluster (Minikube, EKS, GKE, AKS)</li><li>Basic understanding of YAML syntax</li><li>Container registry account (Docker Hub, ECR, GCR)</li></ul>
+<p><strong>Common scenarios</strong>:</p>
+<ul><li>Deploying web applications and APIs</li><li>Running batch jobs and cron tasks</li><li>Implementing blue-green deployments</li><li>Auto-scaling based on load</li><li>Managing multi-environment deployments</li><li>Service mesh implementation</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>1. Pods</h3>
+<pre><code class="lang-yaml"># pod.yaml - Smallest deployable unit
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    app: nginx
+    environment: production
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.25
+    ports:
+    - containerPort: 80
+      name: http
+    resources:
+      requests:
+        memory: &quot;64Mi&quot;
+        cpu: &quot;250m&quot;
+      limits:
+        memory: &quot;128Mi&quot;
+        cpu: &quot;500m&quot;
+    env:
+    - name: ENVIRONMENT
+      value: &quot;production&quot;
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 80
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 80
+      initialDelaySeconds: 5
+      periodSeconds: 5
+  restartPolicy: Always</code></pre>
+<h3>2. Deployments</h3>
+<pre><code class="lang-yaml"># deployment.yaml - Manages ReplicaSets and rolling updates
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+  labels:
+    app: web-app
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # Max pods above desired count
+      maxUnavailable: 0  # Max pods unavailable during update
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+        version: v1.0.0
+    spec:
+      containers:
+      - name: web-app
+        image: myregistry/web-app:1.0.0
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: url
+        - name: APP_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: config.json
+        resources:
+          requests:
+            memory: &quot;256Mi&quot;
+            cpu: &quot;500m&quot;
+          limits:
+            memory: &quot;512Mi&quot;
+            cpu: &quot;1000m&quot;
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5</code></pre>
+<h3>3. Services</h3>
+<pre><code class="lang-yaml"># service-clusterip.yaml - Internal service
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-app-service
+spec:
+  type: ClusterIP  # Only accessible within cluster
+  selector:
+    app: web-app
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+
+---
+# service-loadbalancer.yaml - External load balancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-app-lb
+spec:
+  type: LoadBalancer  # Cloud provider load balancer
+  selector:
+    app: web-app
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+
+---
+# service-nodeport.yaml - Exposes on node IP
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-app-nodeport
+spec:
+  type: NodePort  # Accessible on node IP:NodePort
+  selector:
+    app: web-app
+  ports:
+  - port: 80
+    targetPort: 8080
+    nodePort: 30080  # 30000-32767 range</code></pre>
+<h3>4. ConfigMaps</h3>
+<pre><code class="lang-yaml"># configmap.yaml - Configuration data
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  # Key-value pairs
+  log_level: &quot;info&quot;
+  max_connections: &quot;100&quot;
+
+  # File-like keys
+  config.json: |
+    {
+      &quot;apiUrl&quot;: &quot;https://api.example.com&quot;,
+      &quot;timeout&quot;: 30,
+      &quot;retries&quot;: 3
+    }
+
+  nginx.conf: |
+    server {
+      listen 80;
+      server_name _;
+
+      location / {
+        proxy_pass http://backend:8080;
+        proxy_set_header Host $host;
+      }
+    }
+
+---
+# Use ConfigMap in Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-pod
+spec:
+  containers:
+  - name: app
+    image: myapp:1.0
+    # Environment variables from ConfigMap
+    envFrom:
+    - configMapRef:
+        name: app-config
+    # Individual env vars
+    env:
+    - name: LOG_LEVEL
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: log_level
+    # Mount as volume
+    volumeMounts:
+    - name: config-volume
+      mountPath: /etc/config
+  volumes:
+  - name: config-volume
+    configMap:
+      name: app-config
+      items:
+      - key: nginx.conf
+        path: nginx.conf</code></pre>
+<h3>5. Secrets</h3>
+<pre><code class="lang-yaml"># secret.yaml - Sensitive data (base64 encoded)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+type: Opaque
+data:
+  username: YWRtaW4=  # echo -n &#x27;admin&#x27; | base64
+  password: cGFzc3dvcmQxMjM=  # echo -n &#x27;password123&#x27; | base64
+  url: cG9zdGdyZXM6Ly9hZG1pbjpwYXNzd29yZDEyM0BkYi5leGFtcGxlLmNvbTo1NDMyL215ZGI=
+
+---
+# Use Secret in Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db-client
+spec:
+  containers:
+  - name: client
+    image: postgres:15
+    env:
+    - name: DB_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: db-credentials
+          key: username
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: db-credentials
+          key: password
+    # Mount as files
+    volumeMounts:
+    - name: db-secret
+      mountPath: /etc/secrets
+      readOnly: true
+  volumes:
+  - name: db-secret
+    secret:
+      secretName: db-credentials</code></pre>
+<h3>6. Ingress</h3>
+<pre><code class="lang-yaml"># ingress.yaml - HTTP/HTTPS routing
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: &quot;letsencrypt-prod&quot;
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - app.example.com
+    secretName: app-tls-cert
+  rules:
+  - host: app.example.com
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api-service
+            port:
+              number: 80
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web-service
+            port:
+              number: 80</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Multi-Container Pods</h3>
+<pre><code class="lang-yaml"># Sidecar pattern - logging container
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-app-with-logging
+spec:
+  containers:
+  # Main application container
+  - name: web-app
+    image: myapp:1.0
+    ports:
+    - containerPort: 8080
+    volumeMounts:
+    - name: shared-logs
+      mountPath: /var/log/app
+
+  # Sidecar logging container
+  - name: log-shipper
+    image: fluent/fluent-bit:2.0
+    volumeMounts:
+    - name: shared-logs
+      mountPath: /var/log/app
+    - name: fluent-bit-config
+      mountPath: /fluent-bit/etc/
+
+  volumes:
+  - name: shared-logs
+    emptyDir: {}
+  - name: fluent-bit-config
+    configMap:
+      name: fluent-bit-config</code></pre>
+<h3>CronJobs</h3>
+<pre><code class="lang-yaml"># cronjob.yaml - Scheduled jobs
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: daily-backup
+spec:
+  schedule: &quot;0 2 * * *&quot;  # Daily at 2 AM UTC
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: backup-tool:1.0
+            env:
+            - name: BACKUP_TARGET
+              value: &quot;s3://backups/daily&quot;
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: access_key_id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: secret_access_key
+          restartPolicy: OnFailure</code></pre>
+<h3>Horizontal Pod Autoscaler</h3>
+<pre><code class="lang-yaml"># hpa.yaml - Auto-scaling based on metrics
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web-app-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web-app
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15</code></pre>
+<h3>StatefulSets</h3>
+<pre><code class="lang-yaml"># statefulset.yaml - For stateful applications
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: [&quot;ReadWriteOnce&quot;]
+      storageClassName: &quot;fast-ssd&quot;
+      resources:
+        requests:
+          storage: 10Gi</code></pre>
+<h3>NetworkPolicies</h3>
+<pre><code class="lang-yaml"># networkpolicy.yaml - Network segmentation
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: web
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: database
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:  # Allow DNS
+    - namespaceSelector: {}
+    ports:
+    - protocol: UDP
+      port: 53</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>kubectl Commands</h3>
+<pre><code class="lang-bash"># Cluster info
+kubectl cluster-info
+kubectl get nodes
+kubectl top nodes
+
+# Pods
+kubectl get pods
+kubectl get pods -o wide
+kubectl describe pod &lt;pod-name&gt;
+kubectl logs &lt;pod-name&gt;
+kubectl logs &lt;pod-name&gt; -f  # Follow logs
+kubectl logs &lt;pod-name&gt; -c &lt;container-name&gt;  # Multi-container
+kubectl exec -it &lt;pod-name&gt; -- /bin/bash
+
+# Deployments
+kubectl get deployments
+kubectl describe deployment &lt;deployment-name&gt;
+kubectl rollout status deployment/&lt;deployment-name&gt;
+kubectl rollout history deployment/&lt;deployment-name&gt;
+kubectl rollout undo deployment/&lt;deployment-name&gt;
+kubectl scale deployment/&lt;deployment-name&gt; --replicas=5
+
+# Services
+kubectl get services
+kubectl describe service &lt;service-name&gt;
+kubectl get endpoints
+
+# ConfigMaps and Secrets
+kubectl create configmap app-config --from-file=config.json
+kubectl create secret generic db-creds --from-literal=password=secret123
+kubectl get configmaps
+kubectl get secrets
+kubectl describe configmap &lt;name&gt;
+
+# Apply manifests
+kubectl apply -f deployment.yaml
+kubectl apply -f ./manifests/  # Directory
+kubectl delete -f deployment.yaml
+
+# Port forwarding
+kubectl port-forward pod/&lt;pod-name&gt; 8080:80
+kubectl port-forward service/&lt;service-name&gt; 8080:80
+
+# Labels and selectors
+kubectl get pods --selector=app=web
+kubectl label pods &lt;pod-name&gt; environment=production
+kubectl get pods --show-labels
+
+# Contexts and namespaces
+kubectl config get-contexts
+kubectl config use-context &lt;context-name&gt;
+kubectl get namespaces
+kubectl create namespace dev
+kubectl config set-context --current --namespace=dev
+
+# Debug
+kubectl debug &lt;pod-name&gt; -it --image=busybox
+kubectl get events
+kubectl get all -n &lt;namespace&gt;</code></pre>
+<h3>Resource Requests and Limits</h3>
+<pre><code class="lang-yaml">resources:
+  requests:
+    memory: &quot;256Mi&quot;  # Guaranteed
+    cpu: &quot;500m&quot;      # 0.5 CPU cores
+  limits:
+    memory: &quot;512Mi&quot;  # Maximum
+    cpu: &quot;1000m&quot;     # 1 CPU core
+
+# CPU units:
+# 1 CPU = 1000m (millicores)
+# 100m = 0.1 CPU
+# 500m = 0.5 CPU
+
+# Memory units:
+# 128Mi = 128 Mebibytes
+# 1Gi = 1 Gibibyte</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-yaml"># ❌ NEVER: Run as root without necessity
+spec:
+  containers:
+  - name: app
+    image: myapp:1.0
+    # No securityContext - runs as root
+
+# ✅ CORRECT: Run as non-root user
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  containers:
+  - name: app
+    image: myapp:1.0
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true</code></pre>
+<pre><code class="lang-yaml"># ❌ NEVER: Use &#x27;latest&#x27; tag in production
+spec:
+  containers:
+  - name: app
+    image: myapp:latest  # Unpredictable
+
+# ✅ CORRECT: Use specific version tags
+spec:
+  containers:
+  - name: app
+    image: myapp:1.2.3  # Reproducible
+    imagePullPolicy: IfNotPresent</code></pre>
+<pre><code class="lang-yaml"># ❌ NEVER: Ignore resource limits
+spec:
+  containers:
+  - name: app
+    image: myapp:1.0
+    # No resources defined - can consume unlimited
+
+# ✅ CORRECT: Always define resources
+spec:
+  containers:
+  - name: app
+    image: myapp:1.0
+    resources:
+      requests:
+        memory: &quot;256Mi&quot;
+        cpu: &quot;250m&quot;
+      limits:
+        memory: &quot;512Mi&quot;
+        cpu: &quot;500m&quot;</code></pre>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-yaml"># ❌ Don&#x27;t expose secrets in environment variables unnecessarily
+env:
+- name: DB_PASSWORD
+  value: &quot;hardcoded-password&quot;  # Visible in pod spec
+
+# ✅ CORRECT: Use secrets and mount as files when possible
+volumeMounts:
+- name: db-secret
+  mountPath: /etc/secrets
+  readOnly: true
+volumes:
+- name: db-secret
+  secret:
+    secretName: db-credentials</code></pre>
+<pre><code class="lang-yaml"># ❌ Don&#x27;t skip health checks
+spec:
+  containers:
+  - name: app
+    image: myapp:1.0
+    # No liveness or readiness probes
+
+# ✅ CORRECT: Always implement health checks
+spec:
+  containers:
+  - name: app
+    image: myapp:1.0
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 5</code></pre>
+<pre><code class="lang-bash"># ❌ Don&#x27;t apply without reviewing
+kubectl apply -f manifest.yaml  # No validation
+
+# ✅ CORRECT: Validate and review first
+kubectl apply -f manifest.yaml --dry-run=client -o yaml
+kubectl diff -f manifest.yaml
+kubectl apply -f manifest.yaml</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<p><strong>Infrastructure</strong>:</p>
+<ul><li><code>terraform-patterns.md</code> - Infrastructure as Code for Kubernetes resources</li><li><code>infrastructure-security.md</code> - RBAC, network policies, security contexts</li><li><code>cost-optimization.md</code> - Resource sizing, cluster autoscaling</li></ul>
+<p><strong>Development</strong>:</p>
+<ul><li><code>aws-serverless.md</code> - Alternative to container orchestration</li><li><code>cloudflare-workers.md</code> - Edge computing alternative</li></ul>
+<p><strong>Standards from CLAUDE.md</strong>:</p>
+<ul><li>Always define resource requests and limits</li><li>Use specific image tags (not &#x27;latest&#x27;)</li><li>Implement liveness and readiness probes</li><li>Run containers as non-root users</li><li>Use namespaces for multi-tenancy</li><li>Apply network policies for security</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/infrastructure-kubernetes-basics.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

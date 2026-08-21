@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>observability-opentelemetry-integration</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/observability-opentelemetry-integration.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/observability-opentelemetry-integration.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>observability-opentelemetry-integration</h1><p class="lede">Integrating OpenTelemetry for unified observability (traces, metrics, logs)</p><h1>OpenTelemetry Integration</h1>
+<p><strong>Scope</strong>: OTel Collector, auto-instrumentation, manual instrumentation, traces/metrics/logs correlation, backend integrations</p>
+<p><strong>Lines</strong>: 460</p>
+<p><strong>Last Updated</strong>: 2025-10-26</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Adopting OpenTelemetry for unified observability (traces, metrics, logs)</li><li>Migrating from proprietary instrumentation (Datadog, New Relic, AppDynamics)</li><li>Implementing distributed tracing across microservices</li><li>Correlating traces, metrics, and logs with exemplars</li><li>Setting up OTel Collector pipelines and processors</li><li>Auto-instrumenting applications (Python, Java, Go, Node.js)</li><li>Integrating with observability backends (Grafana, Jaeger, Datadog)</li><li>Standardizing telemetry across polyglot environments</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Simple metrics-only instrumentation (use Prometheus directly)</li><li>Single-process applications without distributed components</li><li>Legacy systems that can&#x27;t run OTel agents</li></ul>
+<p><strong>Context (2024-2025)</strong>:</p>
+<ul><li><strong>89% of organizations</strong> investing in OpenTelemetry (CNCF survey)</li><li><strong>75% still use Prometheus</strong> alongside OTel (complementary, not replacement)</li><li><strong>100% YoY increase</strong> in OTel search volume (2024-2025)</li><li><strong>45% YoY growth</strong> in OTel adoption across enterprises</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>OpenTelemetry Architecture</h3>
+<pre><code>Application Code
+  ↓
+OTel SDK (auto or manual instrumentation)
+  ↓
+OTel Collector (optional but recommended)
+  ↓ (pipelines: receivers → processors → exporters)
+Backend (Jaeger, Grafana Tempo, Datadog, etc.)</code></pre>
+<p><strong>Key Components</strong>:</p>
+<ol><li><strong>SDK</strong>: Libraries for instrumenting code (auto or manual)</li><li><strong>Collector</strong>: Pipeline for receiving, processing, exporting telemetry</li><li><strong>Backend</strong>: Storage and visualization (Jaeger, Tempo, Prometheus, Loki)</li></ol>
+<h3>Signals: Traces, Metrics, Logs</h3>
+<p><strong>Traces</strong>: Request flows across services</p>
+<ul><li>Spans: Individual operations with start/end times</li><li>Context propagation: W3C Trace Context headers</li><li>Use: &quot;Why is this request slow?&quot;</li></ul>
+<p><strong>Metrics</strong>: Aggregated measurements over time</p>
+<ul><li>Counters, gauges, histograms (like Prometheus)</li><li>Exemplars: Link metrics to traces</li><li>Use: &quot;How many errors occurred?&quot;</li></ul>
+<p><strong>Logs</strong>: Discrete events with context</p>
+<ul><li>Structured logs with trace/span IDs</li><li>Correlation with traces and metrics</li><li>Use: &quot;What happened in this request?&quot;</li></ul>
+<h3>OpenTelemetry vs Prometheus</h3>
+<p>| Feature | OpenTelemetry | Prometheus | |---------|--------------|------------| | <strong>Purpose</strong> | Unified telemetry (traces/metrics/logs) | Metrics-only | | <strong>Adoption</strong> | 89% investment (2024) | 75% active usage (2024) | | <strong>Model</strong> | Push (via Collector) | Pull (scrape) | | <strong>Traces</strong> | Native support | None | | <strong>Logs</strong> | Native support | None (use Loki) | | <strong>Metrics</strong> | Compatible with Prometheus | Native | | <strong>Exemplars</strong> | Yes (link metrics → traces) | Yes (since v2.26) | | <strong>Use Case</strong> | Modern cloud-native observability | Metrics-focused monitoring |</p>
+<p><strong>Key Insight</strong>: OTel complements Prometheus (not replaces). Use OTel for traces/logs, export to Prometheus for metrics.</p>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: OTel Collector Configuration</h3>
+<pre><code class="lang-yaml"># otel-collector-config.yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # Prometheus scraper (if needed)
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: &#x27;otel-collector&#x27;
+          scrape_interval: 15s
+          static_configs:
+            - targets: [&#x27;localhost:8888&#x27;]
+
+processors:
+  # Batch telemetry for efficiency
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+
+  # Sample traces (90% reduction)
+  probabilistic_sampler:
+    sampling_percentage: 10
+
+  # Add resource attributes
+  resource:
+    attributes:
+      - key: environment
+        value: production
+        action: insert
+      - key: service.version
+        value: ${SERVICE_VERSION}
+        action: insert
+
+  # Remove PII from logs
+  attributes:
+    actions:
+      - key: email
+        action: delete
+      - key: ssn
+        action: delete
+
+exporters:
+  # Jaeger for traces
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  # Prometheus for metrics
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: otel
+
+  # Loki for logs
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    labels:
+      resource:
+        service.name: &quot;service_name&quot;
+        environment: &quot;env&quot;
+
+  # Datadog (if using commercial backend)
+  datadog:
+    api:
+      site: datadoghq.com
+      key: ${DD_API_KEY}
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, probabilistic_sampler, resource]
+      exporters: [otlp/jaeger, datadog]
+
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [batch, resource]
+      exporters: [prometheus, datadog]
+
+    logs:
+      receivers: [otlp]
+      processors: [batch, attributes, resource]
+      exporters: [loki, datadog]
+
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888</code></pre>
+<h3>Pattern 2: Auto-Instrumentation (Python)</h3>
+<pre><code class="lang-python"># Auto-instrumentation with opentelemetry-instrument CLI
+# Install:
+# pip install opentelemetry-distro opentelemetry-exporter-otlp
+
+# Run with auto-instrumentation:
+# opentelemetry-instrument \
+#   --traces_exporter otlp \
+#   --metrics_exporter otlp \
+#   --service_name my-service \
+#   --exporter_otlp_endpoint http://otel-collector:4318 \
+#   python app.py
+
+from flask import Flask
+import logging
+
+app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
+
+@app.route(&#x27;/api/users/&lt;user_id&gt;&#x27;)
+def get_user(user_id):
+    # Auto-instrumented by OTel
+    logging.info(f&quot;Fetching user {user_id}&quot;)
+
+    # Database query (auto-traced)
+    user = db.query(User).filter_by(id=user_id).first()
+
+    # HTTP call (auto-traced)
+    response = requests.get(f&#x27;http://auth-service/validate/{user_id}&#x27;)
+
+    return {&quot;user&quot;: user.to_dict()}
+
+if __name__ == &#x27;__main__&#x27;:
+    app.run()</code></pre>
+<p><strong>Auto-instrumentation supports</strong>:</p>
+<ul><li><strong>Python</strong>: Flask, Django, FastAPI, SQLAlchemy, requests, httpx</li><li><strong>Java</strong>: Spring Boot, JDBC, Hibernate, OkHttp, gRPC</li><li><strong>Node.js</strong>: Express, Fastify, HTTP, MongoDB, MySQL</li><li><strong>Go</strong>: net/http, database/sql, gRPC (requires manual setup)</li></ul>
+<h3>Pattern 3: Manual Instrumentation (Python)</h3>
+<pre><code class="lang-python">from opentelemetry import trace, metrics
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.sdk.resources import Resource
+
+# Setup tracer
+resource = Resource.create({
+    &quot;service.name&quot;: &quot;order-service&quot;,
+    &quot;service.version&quot;: &quot;1.0.0&quot;,
+    &quot;deployment.environment&quot;: &quot;production&quot;
+})
+
+trace.set_tracer_provider(TracerProvider(resource=resource))
+tracer = trace.get_tracer(__name__)
+
+span_exporter = OTLPSpanExporter(endpoint=&quot;http://otel-collector:4317&quot;)
+trace.get_tracer_provider().add_span_processor(
+    BatchSpanProcessor(span_exporter)
+)
+
+# Setup metrics
+metric_reader = PeriodicExportingMetricReader(
+    OTLPMetricExporter(endpoint=&quot;http://otel-collector:4317&quot;)
+)
+metrics.set_meter_provider(MeterProvider(
+    resource=resource,
+    metric_readers=[metric_reader]
+))
+meter = metrics.get_meter(__name__)
+
+# Create metrics
+order_counter = meter.create_counter(
+    &quot;orders.placed&quot;,
+    description=&quot;Number of orders placed&quot;,
+    unit=&quot;1&quot;
+)
+
+order_value_histogram = meter.create_histogram(
+    &quot;orders.value&quot;,
+    description=&quot;Order value in USD&quot;,
+    unit=&quot;USD&quot;
+)
+
+# Manual instrumentation
+def place_order(order_data: dict):
+    with tracer.start_as_current_span(&quot;place_order&quot;) as span:
+        # Add attributes to span
+        span.set_attribute(&quot;order.id&quot;, order_data[&quot;id&quot;])
+        span.set_attribute(&quot;order.total&quot;, order_data[&quot;total&quot;])
+        span.set_attribute(&quot;customer.id&quot;, order_data[&quot;customer_id&quot;])
+
+        try:
+            # Validate order
+            with tracer.start_as_current_span(&quot;validate_order&quot;):
+                validate(order_data)
+
+            # Save to database
+            with tracer.start_as_current_span(&quot;save_to_database&quot;) as db_span:
+                db_span.set_attribute(&quot;db.system&quot;, &quot;postgresql&quot;)
+                db_span.set_attribute(&quot;db.operation&quot;, &quot;INSERT&quot;)
+                order_id = db.save_order(order_data)
+
+            # Update metrics
+            order_counter.add(1, {&quot;status&quot;: &quot;success&quot;})
+            order_value_histogram.record(order_data[&quot;total&quot;])
+
+            # Add event to span
+            span.add_event(&quot;Order placed successfully&quot;, {
+                &quot;order.id&quot;: order_id
+            })
+
+            return order_id
+
+        except Exception as e:
+            # Record exception in span
+            span.record_exception(e)
+            span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+
+            order_counter.add(1, {&quot;status&quot;: &quot;error&quot;})
+            raise</code></pre>
+<h3>Pattern 4: Traces + Metrics Correlation (Exemplars)</h3>
+<pre><code class="lang-python">from opentelemetry import trace, metrics
+from opentelemetry.sdk.metrics.view import View
+from opentelemetry.sdk.metrics import MeterProvider
+
+# Enable exemplars for histograms
+meter_provider = MeterProvider(
+    views=[
+        View(
+            instrument_name=&quot;http.server.duration&quot;,
+            aggregation=ExplicitBucketHistogramAggregation(
+                boundaries=[0.01, 0.05, 0.1, 0.5, 1.0, 5.0],
+                record_min_max=True
+            )
+        )
+    ]
+)
+
+metrics.set_meter_provider(meter_provider)
+meter = metrics.get_meter(__name__)
+
+duration_histogram = meter.create_histogram(
+    &quot;http.server.duration&quot;,
+    description=&quot;HTTP request duration&quot;,
+    unit=&quot;s&quot;
+)
+
+# Record metric with trace context (automatic exemplar)
+def handle_request(request):
+    start = time.time()
+
+    # Trace is automatically linked to metric
+    with tracer.start_as_current_span(&quot;handle_request&quot;) as span:
+        try:
+            response = process(request)
+            return response
+        finally:
+            duration = time.time() - start
+            # Exemplar links this metric point to the trace
+            duration_histogram.record(duration, {
+                &quot;http.method&quot;: request.method,
+                &quot;http.status_code&quot;: response.status_code
+            })</code></pre>
+<p><strong>Exemplar workflow</strong>:</p>
+<ol><li>High latency metric detected: p95 = 2.5s</li><li>Click on metric point in Grafana</li><li>View exemplar trace IDs linked to that metric</li><li>Jump to trace view to see exact slow request</li></ol>
+<h3>Pattern 5: Log + Trace Correlation</h3>
+<pre><code class="lang-python">import logging
+from opentelemetry import trace
+
+# Configure structured logging with trace context
+class TraceContextFilter(logging.Filter):
+    def filter(self, record):
+        span = trace.get_current_span()
+        if span:
+            ctx = span.get_span_context()
+            record.trace_id = format(ctx.trace_id, &#x27;032x&#x27;)
+            record.span_id = format(ctx.span_id, &#x27;016x&#x27;)
+        else:
+            record.trace_id = &#x27;0&#x27; * 32
+            record.span_id = &#x27;0&#x27; * 16
+        return True
+
+logging.basicConfig(
+    format=&#x27;%(asctime)s %(levelname)s [trace_id=%(trace_id)s span_id=%(span_id)s] %(message)s&#x27;,
+    level=logging.INFO
+)
+
+logger = logging.getLogger(__name__)
+logger.addFilter(TraceContextFilter())
+
+# Use logger within traced functions
+def process_payment(payment_data):
+    with tracer.start_as_current_span(&quot;process_payment&quot;) as span:
+        logger.info(&quot;Processing payment&quot;, extra={
+            &quot;payment.amount&quot;: payment_data[&quot;amount&quot;],
+            &quot;payment.method&quot;: payment_data[&quot;method&quot;]
+        })
+
+        try:
+            result = charge(payment_data)
+            logger.info(&quot;Payment successful&quot;, extra={&quot;payment.id&quot;: result.id})
+            return result
+        except Exception as e:
+            logger.error(&quot;Payment failed&quot;, extra={&quot;error&quot;: str(e)})
+            raise
+
+# Log output includes trace/span IDs:
+# 2025-10-26 10:30:15 INFO [trace_id=4bf92f3577b34da6a3ce929d0e0e4736 span_id=00f067aa0ba902b7] Processing payment</code></pre>
+<h3>Pattern 6: Sampling Strategies</h3>
+<pre><code class="lang-yaml"># Tail-based sampling (smart sampling after trace completes)
+processors:
+  tail_sampling:
+    policies:
+      # Always sample errors
+      - name: errors
+        type: status_code
+        status_code:
+          status_codes: [ERROR]
+
+      # Sample slow requests (&gt;1s)
+      - name: slow-requests
+        type: latency
+        latency:
+          threshold_ms: 1000
+
+      # Sample 10% of all other requests
+      - name: probabilistic
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 10
+
+      # Always sample specific endpoints
+      - name: critical-endpoints
+        type: string_attribute
+        string_attribute:
+          key: http.target
+          values: [/api/checkout, /api/payment]
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [tail_sampling, batch]
+      exporters: [otlp/jaeger]</code></pre>
+<h3>Pattern 7: Resource Attributes</h3>
+<pre><code class="lang-python">from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
+
+# Standard semantic conventions
+resource = Resource.create({
+    # Service attributes
+    SERVICE_NAME: &quot;order-service&quot;,
+    SERVICE_VERSION: &quot;1.2.3&quot;,
+    &quot;service.namespace&quot;: &quot;ecommerce&quot;,
+    &quot;service.instance.id&quot;: &quot;order-service-abc123&quot;,
+
+    # Deployment attributes
+    &quot;deployment.environment&quot;: &quot;production&quot;,
+    &quot;deployment.region&quot;: &quot;us-east-1&quot;,
+
+    # Cloud provider attributes
+    &quot;cloud.provider&quot;: &quot;aws&quot;,
+    &quot;cloud.platform&quot;: &quot;aws_eks&quot;,
+    &quot;cloud.region&quot;: &quot;us-east-1&quot;,
+    &quot;cloud.availability_zone&quot;: &quot;us-east-1a&quot;,
+
+    # Kubernetes attributes (if applicable)
+    &quot;k8s.cluster.name&quot;: &quot;prod-cluster&quot;,
+    &quot;k8s.namespace.name&quot;: &quot;ecommerce&quot;,
+    &quot;k8s.pod.name&quot;: &quot;order-service-7d8f5c9b4-xk2pl&quot;,
+    &quot;k8s.container.name&quot;: &quot;order-service&quot;,
+})
+
+# Use resource in tracer/meter providers
+tracer_provider = TracerProvider(resource=resource)</code></pre>
+<hr>
+<h2>Backend Integrations</h2>
+<h3>Grafana Stack (Open Source)</h3>
+<pre><code class="lang-yaml"># docker-compose.yml
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    volumes:
+      - ./otel-config.yaml:/etc/otel-collector-config.yaml
+    command: [&quot;--config=/etc/otel-collector-config.yaml&quot;]
+    ports:
+      - &quot;4317:4317&quot;  # OTLP gRPC
+      - &quot;4318:4318&quot;  # OTLP HTTP
+
+  # Traces
+  tempo:
+    image: grafana/tempo:latest
+    ports:
+      - &quot;3200:3200&quot;
+
+  # Metrics
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - &quot;9090:9090&quot;
+
+  # Logs
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - &quot;3100:3100&quot;
+
+  # Visualization
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - &quot;3000:3000&quot;
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true</code></pre>
+<h3>Datadog Integration</h3>
+<pre><code class="lang-yaml"># otel-collector-config.yaml
+exporters:
+  datadog:
+    api:
+      site: datadoghq.com
+      key: ${DD_API_KEY}
+
+    host_metadata:
+      enabled: true
+      hostname: ${HOSTNAME}
+      tags:
+        - env:production
+        - team:platform
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [datadog]
+
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [datadog]</code></pre>
+<h3>Jaeger Integration</h3>
+<pre><code class="lang-yaml">exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger]</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Installation</h3>
+<pre><code class="lang-bash"># Python
+pip install opentelemetry-distro opentelemetry-exporter-otlp
+
+# Auto-instrumentation
+pip install opentelemetry-instrumentation-flask  # or django, fastapi, etc.
+
+# Node.js
+npm install @opentelemetry/sdk-node @opentelemetry/auto-instrumentations-node
+
+# Go (manual only)
+go get go.opentelemetry.io/otel
+go get go.opentelemetry.io/otel/sdk
+go get go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
+
+# Java
+# Download opentelemetry-javaagent.jar
+java -javaagent:opentelemetry-javaagent.jar \
+     -Dotel.service.name=my-service \
+     -Dotel.exporter.otlp.endpoint=http://otel-collector:4317 \
+     -jar myapp.jar</code></pre>
+<h3>OTel Collector Deployment</h3>
+<pre><code class="lang-bash"># Docker
+docker run -v $(pwd)/config.yaml:/etc/otel-collector-config.yaml \
+  -p 4317:4317 -p 4318:4318 \
+  otel/opentelemetry-collector-contrib:latest \
+  --config=/etc/otel-collector-config.yaml
+
+# Kubernetes
+kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/latest/download/opentelemetry-operator.yaml</code></pre>
+<h3>Key Environment Variables</h3>
+<pre><code class="lang-bash"># Exporter endpoint
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+
+# Service name
+export OTEL_SERVICE_NAME=my-service
+
+# Resource attributes
+export OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production,service.version=1.0.0
+
+# Traces, metrics, logs exporters
+export OTEL_TRACES_EXPORTER=otlp
+export OTEL_METRICS_EXPORTER=otlp
+export OTEL_LOGS_EXPORTER=otlp</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Not Using OTel Collector</h3>
+<pre><code># WRONG: Direct export to backend
+App → Jaeger (vendor lock-in, no processing)
+
+# CORRECT: Export through Collector
+App → OTel Collector → Jaeger (portable, scalable)</code></pre>
+<h3>❌ Over-Sampling in Production</h3>
+<pre><code class="lang-yaml"># WRONG: 100% sampling (expensive, high cardinality)
+processors:
+  probabilistic_sampler:
+    sampling_percentage: 100
+
+# CORRECT: Tail-based sampling (smart sampling)
+processors:
+  tail_sampling:
+    policies:
+      - name: errors
+        type: status_code
+        status_code: {status_codes: [ERROR]}
+      - name: probabilistic
+        type: probabilistic
+        probabilistic: {sampling_percentage: 10}</code></pre>
+<h3>❌ Missing Resource Attributes</h3>
+<pre><code class="lang-python"># WRONG: No context about service
+resource = Resource.create({})
+
+# CORRECT: Rich service metadata
+resource = Resource.create({
+    &quot;service.name&quot;: &quot;order-service&quot;,
+    &quot;service.version&quot;: &quot;1.0.0&quot;,
+    &quot;deployment.environment&quot;: &quot;production&quot;
+})</code></pre>
+<h3>❌ Not Correlating Signals</h3>
+<pre><code class="lang-python"># WRONG: Logs without trace context
+logger.info(&quot;Processing order&quot;)
+
+# CORRECT: Logs with trace/span IDs
+logger.info(&quot;Processing order&quot;, extra={
+    &quot;trace_id&quot;: trace.get_current_span().get_span_context().trace_id
+})</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>distributed-tracing.md</strong> - Deep dive into distributed tracing concepts</li><li><strong>metrics-instrumentation.md</strong> - Prometheus and metrics best practices</li><li><strong>structured-logging.md</strong> - Log formatting and correlation</li><li><strong>observability-cost-optimization.md</strong> - Reduce OTel costs with sampling/filtering</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/observability-opentelemetry-integration.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

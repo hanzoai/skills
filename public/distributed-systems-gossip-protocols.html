@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distributed-systems-gossip-protocols</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/distributed-systems-gossip-protocols.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/distributed-systems-gossip-protocols.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>distributed-systems-gossip-protocols</h1><p class="lede">Gossip protocols for disseminating information, failure detection, and eventual consistency in large-scale distributed systems</p><h1>Gossip Protocols</h1>
+<p><strong>Scope</strong>: Epidemic protocols, rumor spreading, failure detection, membership, eventual consistency <strong>Lines</strong>: ~210 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Building large-scale distributed systems</li><li>Implementing failure detection</li><li>Disseminating cluster state</li><li>Understanding Cassandra, Redis Cluster</li><li>Implementing membership protocols</li><li>Broadcasting updates efficiently</li><li>Building peer-to-peer systems</li><li>Handling network partitions</li></ul>
+<h2>Core Concepts</h2>
+<h3>Gossip Overview</h3>
+<p><strong>Idea</strong>: Nodes periodically exchange information with random peers (like spreading rumors)</p>
+<pre><code>Node A knows update → Tells random peers (B, C)
+B and C → Each tell random peers
+Eventually all nodes know update</code></pre>
+<p><strong>Properties</strong>:</p>
+<ul><li>Scalable (O(log N) rounds)</li><li>Fault-tolerant (no single point of failure)</li><li>Eventually consistent</li><li>Simple implementation</li></ul>
+<hr>
+<h2>Gossip Algorithms</h2>
+<h3>1. Rumor Spreading (Push)</h3>
+<pre><code class="lang-python">import random
+import time
+
+class GossipNode:
+    &quot;&quot;&quot;Node implementing push-based gossip&quot;&quot;&quot;
+
+    def __init__(self, node_id, all_nodes):
+        self.node_id = node_id
+        self.all_nodes = all_nodes
+        self.data = {}  # key → (value, version)
+        self.peers = [n for n in all_nodes if n != self]
+
+    def update_local(self, key, value):
+        &quot;&quot;&quot;Update local data&quot;&quot;&quot;
+        version = time.time()
+        self.data[key] = (value, version)
+
+        # Gossip to random peers
+        self.gossip_update(key, value, version)
+
+    def gossip_update(self, key, value, version):
+        &quot;&quot;&quot;Push update to random peers&quot;&quot;&quot;
+        # Select random subset of peers (fanout=3)
+        fanout = min(3, len(self.peers))
+        peers_to_notify = random.sample(self.peers, fanout)
+
+        for peer in peers_to_notify:
+            peer.receive_gossip(key, value, version, self.node_id)
+
+    def receive_gossip(self, key, value, version, sender_id):
+        &quot;&quot;&quot;Receive gossip from peer&quot;&quot;&quot;
+        if key not in self.data or version &gt; self.data[key][1]:
+            # New or newer version - update and re-gossip
+            self.data[key] = (value, version)
+            self.gossip_update(key, value, version)
+
+# Usage
+nodes = [GossipNode(i, range(10)) for i in range(10)]
+
+# Update on one node - gossips to others
+nodes[0].update_local(&#x27;config&#x27;, &#x27;value&#x27;)
+
+# After a few rounds, all nodes have update</code></pre>
+<h3>2. Anti-Entropy (Pull/Push-Pull)</h3>
+<pre><code class="lang-python">class AntiEntropyNode:
+    &quot;&quot;&quot;Node with periodic full state synchronization&quot;&quot;&quot;
+
+    def __init__(self, node_id, all_nodes):
+        self.node_id = node_id
+        self.all_nodes = all_nodes
+        self.data = {}  # key → (value, version)
+
+    def periodic_sync(self):
+        &quot;&quot;&quot;Periodically sync with random peer&quot;&quot;&quot;
+        while True:
+            time.sleep(5)  # Every 5 seconds
+
+            peer = random.choice([n for n in self.all_nodes if n != self])
+            self.sync_with_peer(peer)
+
+    def sync_with_peer(self, peer):
+        &quot;&quot;&quot;Full state synchronization with peer&quot;&quot;&quot;
+        # Get peer&#x27;s data
+        peer_data = peer.get_all_data()
+
+        # Merge data (element-wise max by version)
+        for key, (value, version) in peer_data.items():
+            if key not in self.data or version &gt; self.data[key][1]:
+                self.data[key] = (value, version)
+
+        # Send our data to peer
+        for key, (value, version) in self.data.items():
+            if key not in peer_data or version &gt; peer_data[key][1]:
+                peer.update_from_sync(key, value, version)
+
+    def get_all_data(self):
+        return self.data.copy()
+
+    def update_from_sync(self, key, value, version):
+        if key not in self.data or version &gt; self.data[key][1]:
+            self.data[key] = (value, version)</code></pre>
+<hr>
+<h2>Failure Detection</h2>
+<h3>SWIM Protocol</h3>
+<pre><code class="lang-python">import threading
+
+class SWIMNode:
+    &quot;&quot;&quot;Scalable Weakly-consistent Infection-style Process Group Membership&quot;&quot;&quot;
+
+    def __init__(self, node_id, all_nodes):
+        self.node_id = node_id
+        self.all_nodes = all_nodes
+        self.alive_nodes = set(all_nodes)
+        self.suspected_nodes = set()
+
+    def periodic_ping(self):
+        &quot;&quot;&quot;Periodically ping random node&quot;&quot;&quot;
+        while True:
+            time.sleep(1)
+
+            # Select random node
+            target = random.choice(list(self.alive_nodes - {self.node_id}))
+
+            # Direct ping
+            if not self.ping(target, timeout=1):
+                # Indirect ping through others
+                if not self.indirect_ping(target):
+                    # Mark as suspected
+                    self.suspect_node(target)
+
+    def ping(self, target, timeout=1):
+        &quot;&quot;&quot;Ping target node directly&quot;&quot;&quot;
+        try:
+            response = target.receive_ping(self.node_id)
+            return response == &quot;ACK&quot;
+        except:
+            return False
+
+    def indirect_ping(self, target):
+        &quot;&quot;&quot;Ping target through k random nodes&quot;&quot;&quot;
+        k = min(3, len(self.alive_nodes) - 2)
+        proxies = random.sample(list(self.alive_nodes - {self.node_id, target}), k)
+
+        for proxy in proxies:
+            if proxy.ping_on_behalf(target):
+                return True
+
+        return False
+
+    def suspect_node(self, node):
+        &quot;&quot;&quot;Mark node as suspected (gossip suspicion)&quot;&quot;&quot;
+        self.suspected_nodes.add(node)
+        self.gossip_suspicion(node)
+
+    def receive_ping(self, sender_id):
+        &quot;&quot;&quot;Respond to ping&quot;&quot;&quot;
+        return &quot;ACK&quot;
+
+# Nodes detect failures within a few protocol periods</code></pre>
+<hr>
+<h2>Membership Management</h2>
+<h3>Gossip-Based Membership</h3>
+<pre><code class="lang-python">class MembershipGossip:
+    &quot;&quot;&quot;Distributed membership using gossip&quot;&quot;&quot;
+
+    def __init__(self, node_id):
+        self.node_id = node_id
+        self.members = {}  # node_id → (heartbeat, timestamp)
+
+    def update_heartbeat(self):
+        &quot;&quot;&quot;Increment own heartbeat&quot;&quot;&quot;
+        if self.node_id not in self.members:
+            self.members[self.node_id] = (0, time.time())
+
+        heartbeat, _ = self.members[self.node_id]
+        self.members[self.node_id] = (heartbeat + 1, time.time())
+
+        # Gossip to peers
+        self.gossip_membership()
+
+    def gossip_membership(self):
+        &quot;&quot;&quot;Send membership list to random peers&quot;&quot;&quot;
+        # Send to random subset
+        pass
+
+    def receive_membership(self, peer_members):
+        &quot;&quot;&quot;Merge membership from peer&quot;&quot;&quot;
+        for node_id, (heartbeat, timestamp) in peer_members.items():
+            if node_id not in self.members:
+                # New member
+                self.members[node_id] = (heartbeat, timestamp)
+            else:
+                my_heartbeat, my_timestamp = self.members[node_id]
+
+                if heartbeat &gt; my_heartbeat:
+                    # More recent heartbeat
+                    self.members[node_id] = (heartbeat, timestamp)
+
+    def detect_failures(self, timeout=30):
+        &quot;&quot;&quot;Detect failed nodes (no heartbeat updates)&quot;&quot;&quot;
+        now = time.time()
+        failed = []
+
+        for node_id, (heartbeat, timestamp) in self.members.items():
+            if now - timestamp &gt; timeout:
+                failed.append(node_id)
+
+        return failed</code></pre>
+<hr>
+<h2>Convergence Properties</h2>
+<h3>Epidemic Spreading</h3>
+<pre><code>Round 1: 1 node knows
+Round 2: 3 nodes know (1 + 2 new)
+Round 3: 9 nodes know (3 + 6 new)
+...
+Round log(N): All N nodes know
+
+Convergence: O(log N) rounds</code></pre>
+<h3>Guarantees</h3>
+<pre><code>Eventual delivery: All non-faulty nodes eventually receive update
+Reliability: High probability of delivery (adjustable with fanout)
+Scalability: Communication overhead O(N log N) total</code></pre>
+<hr>
+<h2>Real-World Examples</h2>
+<h3>Cassandra Gossip</h3>
+<pre><code>Every second:
+1. Node picks random peer
+2. Exchanges state (nodes, tokens, schema)
+3. Updates local view
+
+State includes:
+- Live nodes
+- Dead/suspected nodes
+- Token ownership
+- Schema versions</code></pre>
+<h3>Redis Cluster</h3>
+<pre><code>Every second:
+1. Node sends PING to random nodes
+2. Receives PONG with cluster state
+3. Detects node failures
+4. Gossips slot ownership
+
+Failure detection: No PONG → node marked as FAIL</code></pre>
+<hr>
+<h2>Optimizations</h2>
+<h3>1. Bounded Fanout</h3>
+<pre><code class="lang-python"># Limit gossip fanout to control overhead
+FANOUT = 3  # Each node gossips to 3 peers
+
+# Achieves O(log N) convergence with O(N) messages per round</code></pre>
+<h3>2. Damping</h3>
+<pre><code class="lang-python">class DampedGossip:
+    &quot;&quot;&quot;Stop gossiping old news&quot;&quot;&quot;
+
+    def __init__(self):
+        self.gossip_count = {}  # update_id → count
+
+    def should_gossip(self, update_id):
+        count = self.gossip_count.get(update_id, 0)
+        # Stop after k rounds
+        return count &lt; 5
+
+    def gossip(self, update_id):
+        if self.should_gossip(update_id):
+            # Gossip
+            self.gossip_count[update_id] = self.gossip_count.get(update_id, 0) + 1</code></pre>
+<h3>3. Prioritization</h3>
+<pre><code class="lang-python"># Gossip recent/important updates more frequently
+# Gossip old updates less frequently</code></pre>
+<hr>
+<h2>When to Use Gossip</h2>
+<pre><code>✅ Good for:
+- Large-scale systems (&gt;100 nodes)
+- Eventually consistent data
+- Failure detection
+- Cluster membership
+- Configuration distribution
+
+❌ Not good for:
+- Strong consistency required
+- Low latency critical
+- Small clusters (&lt;10 nodes)
+- Ordered delivery required</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>distributed-systems-eventual-consistency</code> - Consistency models</li><li><code>distributed-systems-crdt-fundamentals</code> - Conflict-free updates</li><li><code>distributed-systems-replication-strategies</code> - Data replication</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/distributed-systems-gossip-protocols.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

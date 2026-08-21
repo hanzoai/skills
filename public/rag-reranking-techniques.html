@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>rag-reranking-techniques</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/rag-reranking-techniques.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/rag-reranking-techniques.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>rag-reranking-techniques</h1><p class="lede">Multi-stage retrieval pipelines with cross-encoder and LLM-based reranking for improved RAG precision</p><h1>RAG Reranking Techniques</h1>
+<p><strong>Scope</strong>: Multi-stage retrieval, cross-encoders, tensor reranking, LLM-as-reranker, evaluation metrics <strong>Lines</strong>: ~450 <strong>Last Updated</strong>: 2025-10-26</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Initial retrieval returns too many irrelevant passages (low precision)</li><li>Need to improve top-3 or top-5 accuracy (where most users read)</li><li>Working with large knowledge bases (&gt;100K documents)</li><li>First-stage retrieval is fast but noisy (bi-encoder limitations)</li><li>Implementing production RAG requiring &gt;85% precision@5</li><li>Using cross-encoder models (Cohere, BGE, ms-marco rerankers)</li><li>Leveraging LLMs for contextual reranking (Claude, GPT-4)</li><li>Measuring reranking impact with nDCG, MAP, MRR metrics</li><li>Integrating Arize Phoenix for reranking observability</li></ul>
+<h2>Core Concepts</h2>
+<h3>Multi-Stage Retrieval Architecture</h3>
+<p><strong>Stage 1: Fast Retrieval</strong> (bi-encoder, vector search)</p>
+<ul><li>Retrieve top-K candidates (K = 20-100)</li><li>Fast: ~10-50ms for millions of docs</li><li>Trade-off: Lower precision, higher recall</li></ul>
+<p><strong>Stage 2: Reranking</strong> (cross-encoder or LLM)</p>
+<ul><li>Rerank top-K to select best-N (N = 3-10)</li><li>Slower: ~100-500ms per query</li><li>Trade-off: Higher precision, lower throughput</li></ul>
+<p><strong>Stage 3: Generation</strong> (LLM with reranked context)</p>
+<ul><li>Generate answer from top-N passages</li><li>Quality: Better context → better answers</li></ul>
+<p><strong>Why multi-stage</strong>:</p>
+<ul><li>Bi-encoders: Encode query and document separately (fast, but misses interaction)</li><li>Cross-encoders: Encode query+document together (slow, but captures interaction)</li><li>Two-stage: Fast retrieval + slow reranking = best of both worlds</li></ul>
+<h3>Reranking Methods (2024-2025)</h3>
+<p><strong>1. Cross-Encoder Reranking</strong> (traditional, 2020-2024)</p>
+<ul><li>Models: <code>ms-marco-MiniLM</code>, <code>cross-encoder/ms-marco-electra-base</code></li><li>Score: Direct relevance score for (query, passage) pair</li><li>Speed: 50-200ms per passage</li></ul>
+<p><strong>2. Tensor-Based Reranking</strong> (emerging, 2024-2025)</p>
+<ul><li>Models: ColBERT, ColBERTv2, Token-level reranking</li><li>Score: Late interaction (query token × doc token similarity)</li><li>Speed: 20-100ms per passage</li><li>Trend: Gaining adoption for cost/quality balance</li></ul>
+<p><strong>3. LLM-as-Reranker</strong> (state-of-art, 2024-2025)</p>
+<ul><li>Models: GPT-4, Claude Sonnet/Opus, fine-tuned LLMs</li><li>Score: Contextual relevance judgment</li><li>Speed: 200-1000ms per batch</li><li>Trend: Best quality, highest cost</li></ul>
+<p><strong>4. Lightweight Rerankers</strong> (efficiency-focused, 2024)</p>
+<ul><li>Models: BGE-reranker-base, mxbai-rerank-xsmall</li><li>Score: Optimized cross-encoder variants</li><li>Speed: 10-50ms per passage</li><li>Trend: Edge deployment, mobile RAG</li></ul>
+<h3>Improvement Studies (2024-2025 Benchmarks)</h3>
+<p><strong>nDCG@10 improvements</strong> (BEIR benchmark):</p>
+<ul><li>Bi-encoder only: 0.52 nDCG</li><li>Bi-encoder + cross-encoder: 0.62 nDCG (+19%)</li><li>Bi-encoder + LLM reranker: 0.67 nDCG (+29%)</li></ul>
+<p><strong>Top-5 precision improvements</strong> (MS MARCO):</p>
+<ul><li>Retrieval only: 72% P@5</li><li>+ Cross-encoder: 84% P@5 (+17%)</li><li>+ GPT-4 reranker: 89% P@5 (+24%)</li></ul>
+<p><strong>Typical gains</strong>: 15-30% improvement in top-k metrics</p>
+<h3>Evaluation Metrics</h3>
+<p><strong>nDCG@k</strong> (Normalized Discounted Cumulative Gain):</p>
+<pre><code>DCG@k = Σ (rel_i / log2(i+1))  # i from 1 to k
+nDCG@k = DCG@k / ideal_DCG@k</code></pre>
+<ul><li>Measures: Graded relevance + position</li><li>Range: 0-1 (higher is better)</li><li>Use: Main metric for ranking quality</li></ul>
+<p><strong>MAP</strong> (Mean Average Precision):</p>
+<pre><code>AP = (1/num_relevant) * Σ (P@k * rel(k))
+MAP = mean(AP across queries)</code></pre>
+<ul><li>Measures: Precision across all positions</li><li>Range: 0-1 (higher is better)</li><li>Use: Overall retrieval quality</li></ul>
+<p><strong>MRR</strong> (Mean Reciprocal Rank):</p>
+<pre><code>RR = 1 / rank_of_first_relevant
+MRR = mean(RR across queries)</code></pre>
+<ul><li>Measures: Position of first relevant result</li><li>Range: 0-1 (higher is better)</li><li>Use: First-result quality (e.g., search)</li></ul>
+<hr>
+<h2>Implementation Patterns</h2>
+<h3>Pattern 1: Cross-Encoder Reranking with DSPy</h3>
+<pre><code class="lang-python">import dspy
+from sentence_transformers import CrossEncoder
+
+class CrossEncoderReranker(dspy.Module):
+    &quot;&quot;&quot;Two-stage retrieval with cross-encoder reranking.&quot;&quot;&quot;
+
+    def __init__(self, retrieve_k=20, rerank_k=5, model_name=&quot;cross-encoder/ms-marco-MiniLM-L-6-v2&quot;):
+        super().__init__()
+        self.retrieve_k = retrieve_k
+        self.rerank_k = rerank_k
+
+        # Stage 1: Fast bi-encoder retrieval
+        self.retrieve = dspy.Retrieve(k=retrieve_k)
+
+        # Stage 2: Cross-encoder reranker
+        self.cross_encoder = CrossEncoder(model_name)
+
+    def forward(self, question: str):
+        # Stage 1: Retrieve candidates
+        retrieval = self.retrieve(question)
+        candidates = retrieval.passages
+
+        if len(candidates) == 0:
+            return dspy.Prediction(passages=[])
+
+        # Stage 2: Rerank with cross-encoder
+        pairs = [(question, passage) for passage in candidates]
+        scores = self.cross_encoder.predict(pairs)
+
+        # Sort by score and take top-k
+        ranked_pairs = sorted(
+            zip(candidates, scores),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        reranked_passages = [passage for passage, _ in ranked_pairs[:self.rerank_k]]
+        reranked_scores = [score for _, score in ranked_pairs[:self.rerank_k]]
+
+        return dspy.Prediction(
+            passages=reranked_passages,
+            scores=reranked_scores
+        )
+
+
+class RerankedRAG(dspy.Module):
+    &quot;&quot;&quot;RAG with cross-encoder reranking.&quot;&quot;&quot;
+
+    def __init__(self):
+        super().__init__()
+        self.retrieve = CrossEncoderReranker(retrieve_k=20, rerank_k=5)
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question: str):
+        retrieval = self.retrieve(question)
+        context = &quot;\n\n&quot;.join(retrieval.passages)
+        return self.generate(context=context, question=question)
+
+
+# Use reranked RAG
+lm = dspy.LM(&quot;openai/gpt-4o-mini&quot;)
+dspy.configure(lm=lm)
+
+rag = RerankedRAG()
+result = rag(question=&quot;What is DSPy?&quot;)
+print(result.answer)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Need 15-20% improvement in top-5 accuracy</li><li>Can afford 100-300ms additional latency</li><li>Working with MS MARCO-trained models</li></ul>
+<h3>Pattern 2: ColBERT-style Tensor Reranking</h3>
+<pre><code class="lang-python">import dspy
+from colbert.modeling.checkpoint import Checkpoint
+from colbert.infra import ColBERTConfig
+
+class ColBERTReranker(dspy.Module):
+    &quot;&quot;&quot;Tensor-based late interaction reranking.&quot;&quot;&quot;
+
+    def __init__(self, retrieve_k=30, rerank_k=5, checkpoint=&quot;colbertv2.0&quot;):
+        super().__init__()
+        self.retrieve_k = retrieve_k
+        self.rerank_k = rerank_k
+
+        # Stage 1: Fast retrieval
+        self.retrieve = dspy.Retrieve(k=retrieve_k)
+
+        # Stage 2: ColBERT reranker
+        config = ColBERTConfig(checkpoint=checkpoint)
+        self.colbert = Checkpoint(checkpoint, colbert_config=config)
+
+    def forward(self, question: str):
+        # Stage 1: Retrieve candidates
+        candidates = self.retrieve(question).passages
+
+        if len(candidates) == 0:
+            return dspy.Prediction(passages=[])
+
+        # Stage 2: Token-level reranking
+        query_embedding = self.colbert.queryFromText([question])[0]
+
+        scores = []
+        for passage in candidates:
+            doc_embedding = self.colbert.docFromText([passage])[0]
+
+            # Late interaction: max-sim aggregation
+            similarity = self._maxsim(query_embedding, doc_embedding)
+            scores.append(similarity)
+
+        # Sort and select top-k
+        ranked = sorted(
+            zip(candidates, scores),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        reranked_passages = [p for p, _ in ranked[:self.rerank_k]]
+
+        return dspy.Prediction(passages=reranked_passages)
+
+    def _maxsim(self, query_emb, doc_emb):
+        &quot;&quot;&quot;MaxSim operation for late interaction.&quot;&quot;&quot;
+        import torch
+
+        # For each query token, find max similarity with doc tokens
+        similarity_matrix = torch.matmul(query_emb, doc_emb.T)
+        max_sims = similarity_matrix.max(dim=1).values
+
+        # Sum max similarities
+        return max_sims.sum().item()</code></pre>
+<p><strong>When to use</strong> (2024-2025 trend):</p>
+<ul><li>Need better quality than cross-encoders</li><li>Want faster inference than full cross-encoders</li><li>Have GPU available for reranking</li><li>Working with token-level relevance signals</li></ul>
+<h3>Pattern 3: LLM-as-Reranker (GPT-4/Claude)</h3>
+<pre><code class="lang-python">import dspy
+
+class LLMReranker(dspy.Module):
+    &quot;&quot;&quot;LLM-based contextual reranking.&quot;&quot;&quot;
+
+    def __init__(self, retrieve_k=20, rerank_k=5):
+        super().__init__()
+        self.retrieve_k = retrieve_k
+        self.rerank_k = rerank_k
+
+        # Stage 1: Fast retrieval
+        self.retrieve = dspy.Retrieve(k=retrieve_k)
+
+        # Stage 2: LLM reranker
+        self.rerank = dspy.ChainOfThought(
+            &quot;question, passages -&gt; ranked_indices: list[int], reasoning&quot;
+        )
+
+    def forward(self, question: str):
+        # Stage 1: Retrieve candidates
+        candidates = self.retrieve(question).passages
+
+        if len(candidates) == 0:
+            return dspy.Prediction(passages=[])
+
+        # Format passages for LLM
+        passages_text = &quot;\n\n&quot;.join([
+            f&quot;[{i}] {passage}&quot;
+            for i, passage in enumerate(candidates)
+        ])
+
+        # Stage 2: LLM reranking
+        rerank_result = self.rerank(
+            question=question,
+            passages=passages_text
+        )
+
+        # Extract top indices
+        try:
+            top_indices = rerank_result.ranked_indices[:self.rerank_k]
+            reranked_passages = [candidates[i] for i in top_indices]
+        except:
+            # Fallback: use first k passages
+            reranked_passages = candidates[:self.rerank_k]
+
+        return dspy.Prediction(
+            passages=reranked_passages,
+            reasoning=rerank_result.reasoning
+        )
+
+
+class LLMRerankedRAG(dspy.Module):
+    &quot;&quot;&quot;RAG with LLM-based reranking.&quot;&quot;&quot;
+
+    def __init__(self):
+        super().__init__()
+        self.retrieve = LLMReranker(retrieve_k=15, rerank_k=5)
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question: str):
+        retrieval = self.retrieve(question)
+        context = &quot;\n\n&quot;.join(retrieval.passages)
+
+        result = self.generate(context=context, question=question)
+        result.rerank_reasoning = retrieval.reasoning
+
+        return result</code></pre>
+<p><strong>When to use</strong> (2024-2025 state-of-art):</p>
+<ul><li>Need highest quality reranking (best top-5 precision)</li><li>Can afford higher cost and latency</li><li>Want explainable reranking decisions</li><li>Working with complex queries requiring contextual judgment</li></ul>
+<h3>Pattern 4: Cohere Reranker API</h3>
+<pre><code class="lang-python">import dspy
+import cohere
+
+class CohereReranker(dspy.Module):
+    &quot;&quot;&quot;Production reranking with Cohere API.&quot;&quot;&quot;
+
+    def __init__(self, api_key: str, retrieve_k=30, rerank_k=5, model=&quot;rerank-english-v2.0&quot;):
+        super().__init__()
+        self.retrieve_k = retrieve_k
+        self.rerank_k = rerank_k
+
+        self.retrieve = dspy.Retrieve(k=retrieve_k)
+        self.cohere = cohere.Client(api_key)
+        self.model = model
+
+    def forward(self, question: str):
+        # Stage 1: Retrieve candidates
+        candidates = self.retrieve(question).passages
+
+        if len(candidates) == 0:
+            return dspy.Prediction(passages=[])
+
+        # Stage 2: Cohere reranking
+        rerank_response = self.cohere.rerank(
+            query=question,
+            documents=candidates,
+            top_n=self.rerank_k,
+            model=self.model
+        )
+
+        # Extract reranked passages
+        reranked_passages = [
+            result.document[&#x27;text&#x27;]
+            for result in rerank_response.results
+        ]
+
+        reranked_scores = [
+            result.relevance_score
+            for result in rerank_response.results
+        ]
+
+        return dspy.Prediction(
+            passages=reranked_passages,
+            scores=reranked_scores
+        )
+
+
+# Use with RAG
+class CohereRerankedRAG(dspy.Module):
+    def __init__(self, cohere_api_key: str):
+        super().__init__()
+        self.retrieve = CohereReranker(cohere_api_key, retrieve_k=30, rerank_k=5)
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question: str):
+        retrieval = self.retrieve(question)
+        context = &quot;\n\n&quot;.join(retrieval.passages)
+        return self.generate(context=context, question=question)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Want production-ready reranking API</li><li>Need multilingual support (Cohere supports 100+ languages)</li><li>Prefer managed service over self-hosted models</li><li>Can afford API costs (~$0.002 per 1K reranks)</li></ul>
+<h3>Pattern 5: Arize Phoenix Reranking Observability</h3>
+<pre><code class="lang-python">import dspy
+from phoenix.trace import dsl as trace_dsl
+from phoenix.evals import RetrievalEvaluator
+import numpy as np
+
+class ObservableReranker(dspy.Module):
+    &quot;&quot;&quot;Reranking with Phoenix observability.&quot;&quot;&quot;
+
+    def __init__(self, retrieve_k=20, rerank_k=5):
+        super().__init__()
+        self.retrieve_k = retrieve_k
+        self.rerank_k = rerank_k
+
+        self.retrieve = dspy.Retrieve(k=retrieve_k)
+        self.cross_encoder = CrossEncoder(&quot;cross-encoder/ms-marco-MiniLM-L-6-v2&quot;)
+
+    def forward(self, question: str):
+        # Trace retrieval stage
+        with trace_dsl.span(&quot;stage1_retrieval&quot;):
+            candidates = self.retrieve(question).passages
+            trace_dsl.log_attribute(&quot;num_candidates&quot;, len(candidates))
+
+        # Trace reranking stage
+        with trace_dsl.span(&quot;stage2_reranking&quot;):
+            pairs = [(question, p) for p in candidates]
+            scores = self.cross_encoder.predict(pairs)
+
+            ranked = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
+            reranked = [p for p, _ in ranked[:self.rerank_k]]
+
+            # Log reranking metrics
+            trace_dsl.log_attribute(&quot;top_score&quot;, float(ranked[0][1]))
+            trace_dsl.log_attribute(&quot;score_drop&quot;, float(ranked[0][1] - ranked[-1][1]))
+            trace_dsl.log_attribute(&quot;num_reranked&quot;, len(reranked))
+
+        return dspy.Prediction(
+            passages=reranked,
+            before_rerank=candidates,
+            after_rerank=reranked
+        )
+
+
+def evaluate_reranking_impact(reranker, test_set):
+    &quot;&quot;&quot;Measure reranking impact with nDCG, MAP, MRR.&quot;&quot;&quot;
+    from sklearn.metrics import ndcg_score
+
+    ndcg_before = []
+    ndcg_after = []
+    mrr_before = []
+    mrr_after = []
+
+    for example in test_set:
+        result = reranker(question=example.question)
+
+        # Calculate relevance labels (1 if relevant, 0 otherwise)
+        before_relevance = [
+            1 if p in example.relevant_docs else 0
+            for p in result.before_rerank
+        ]
+        after_relevance = [
+            1 if p in example.relevant_docs else 0
+            for p in result.after_rerank
+        ]
+
+        # nDCG@k
+        if sum(before_relevance) &gt; 0:  # Has relevant docs
+            ndcg_b = ndcg_score([before_relevance], [list(range(len(before_relevance), 0, -1))])
+            ndcg_a = ndcg_score([after_relevance], [list(range(len(after_relevance), 0, -1))])
+            ndcg_before.append(ndcg_b)
+            ndcg_after.append(ndcg_a)
+
+        # MRR
+        mrr_b = 1.0 / (before_relevance.index(1) + 1) if 1 in before_relevance else 0
+        mrr_a = 1.0 / (after_relevance.index(1) + 1) if 1 in after_relevance else 0
+        mrr_before.append(mrr_b)
+        mrr_after.append(mrr_a)
+
+    print(f&quot;nDCG before: {np.mean(ndcg_before):.3f}&quot;)
+    print(f&quot;nDCG after:  {np.mean(ndcg_after):.3f}&quot;)
+    print(f&quot;Improvement: +{(np.mean(ndcg_after) - np.mean(ndcg_before)) / np.mean(ndcg_before) * 100:.1f}%&quot;)
+
+    print(f&quot;\nMRR before: {np.mean(mrr_before):.3f}&quot;)
+    print(f&quot;MRR after:  {np.mean(mrr_after):.3f}&quot;)
+    print(f&quot;Improvement: +{(np.mean(mrr_after) - np.mean(mrr_before)) / np.mean(mrr_before) * 100:.1f}%&quot;)</code></pre>
+<p><strong>Metrics to track</strong>:</p>
+<ul><li>nDCG@5, nDCG@10 (overall ranking quality)</li><li>MRR (first relevant result position)</li><li>Precision@5 (top-5 accuracy)</li><li>Latency (retrieval vs reranking time)</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Reranking Method Selection</h3>
+<pre><code>Need best quality? → LLM reranker (GPT-4, Claude)
+Need cost efficiency? → Cross-encoder (ms-marco)
+Need speed? → Tensor reranking (ColBERT)
+Need production API? → Cohere reranker</code></pre>
+<h3>Typical k Values</h3>
+<pre><code>retrieve_k: 20-100 (cast wide net)
+rerank_k: 3-10 (focus on best)
+
+Common: retrieve_k=30, rerank_k=5</code></pre>
+<h3>Performance Benchmarks (2024)</h3>
+<pre><code>Cross-encoder: 100-300ms/query, +17% P@5
+ColBERT: 50-150ms/query, +20% P@5
+LLM reranker: 500-2000ms/query, +24% P@5
+Cohere API: 200-400ms/query, +18% P@5</code></pre>
+<h3>Evaluation Priority</h3>
+<pre><code>1. nDCG@10 (primary metric)
+2. MRR (user experience)
+3. Precision@5 (practical accuracy)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Reranking without enough candidates</strong>:</p>
+<pre><code class="lang-python"># Bad - too few candidates to rerank
+retrieve = dspy.Retrieve(k=5)  # Not enough!
+reranker = CrossEncoderReranker(retrieve_k=5, rerank_k=3)</code></pre>
+<p>✅ Retrieve more, rerank to top-k:</p>
+<pre><code class="lang-python"># Good - cast wide net, then rerank
+reranker = CrossEncoderReranker(retrieve_k=30, rerank_k=5)</code></pre>
+<p>❌ <strong>Using slow reranker for all passages</strong>:</p>
+<pre><code class="lang-python"># Bad - reranking 100 passages with LLM
+for passage in all_100_passages:
+    score = llm_rerank(query, passage)  # Expensive!</code></pre>
+<p>✅ Two-stage: fast retrieval, then rerank top-k:</p>
+<pre><code class="lang-python"># Good - rerank only top candidates
+candidates = fast_retrieve(query, k=30)
+reranked = llm_rerank(query, candidates[:10])</code></pre>
+<p>❌ <strong>Not measuring reranking impact</strong>:</p>
+<pre><code class="lang-python"># Bad - deploy reranker without evaluation
+reranker = CrossEncoderReranker()
+# Hope it works better?</code></pre>
+<p>✅ Measure before/after:</p>
+<pre><code class="lang-python"># Good - evaluate impact
+results = evaluate_reranking_impact(reranker, test_set)
+# nDCG improved by 18%</code></pre>
+<p>❌ <strong>Ignoring latency budget</strong>:</p>
+<pre><code class="lang-python"># Bad - LLM reranker for real-time app
+reranker = LLMReranker(retrieve_k=50, rerank_k=10)  # 2-3 seconds!</code></pre>
+<p>✅ Match reranker to latency requirements:</p>
+<pre><code class="lang-python"># Good - cross-encoder for &lt;500ms latency
+reranker = CrossEncoderReranker(retrieve_k=30, rerank_k=5)  # 200ms</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>dspy-rag.md</code> - Basic RAG patterns and vector retrieval</li><li><code>hybrid-search-rag.md</code> - Combining vector and BM25 retrieval</li><li><code>graph-rag.md</code> - Graph-based multihop retrieval</li><li><code>hierarchical-rag.md</code> - Multi-level document structures</li><li><code>dspy-evaluation.md</code> - Evaluating RAG pipelines</li></ul>
+<hr>
+<h2>Summary</h2>
+<p>Reranking improves RAG precision by adding a second-stage ranking step:</p>
+<ul><li><strong>Multi-stage architecture</strong>: Fast retrieval (k=20-100) → Slow reranking (k=3-10)</li><li><strong>Cross-encoders</strong>: Traditional, effective, moderate cost (ms-marco models)</li><li><strong>Tensor reranking</strong>: Emerging 2024-2025 trend (ColBERT, token-level)</li><li><strong>LLM rerankers</strong>: State-of-art quality, highest cost (GPT-4, Claude)</li><li><strong>Typical gains</strong>: 15-30% improvement in nDCG@10, P@5</li><li><strong>Evaluation</strong>: Use nDCG, MAP, MRR with Arize Phoenix observability</li><li><strong>Best practice</strong>: Start with cross-encoder, measure impact, upgrade if needed</li></ul>
+<p>Production RAG systems commonly achieve 84-89% Precision@5 with reranking vs 72-78% without.</p>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/rag-reranking-techniques.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

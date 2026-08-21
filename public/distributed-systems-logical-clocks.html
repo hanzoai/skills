@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distributed-systems-logical-clocks</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/distributed-systems-logical-clocks.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/distributed-systems-logical-clocks.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>distributed-systems-logical-clocks</h1><p class="lede">Lamport logical clocks for establishing happened-before ordering in distributed systems without synchronized physical clocks</p><h1>Logical Clocks</h1>
+<p><strong>Scope</strong>: Lamport clocks, happened-before, logical time, total ordering <strong>Lines</strong>: ~260 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Ordering events in distributed systems</li><li>Understanding Lamport&#x27;s seminal work</li><li>Implementing simple causality tracking</li><li>Building distributed snapshots</li><li>Debugging distributed systems</li><li>Understanding logical time foundations</li><li>Implementing total order broadcast</li><li>Learning distributed systems basics</li></ul>
+<h2>Core Concepts</h2>
+<h3>The Problem: Physical Clocks Unreliable</h3>
+<pre><code>Server A (clock: 10:00:00): Event X
+Server B (clock: 09:59:59): Event Y
+
+Physical time says X after Y, but maybe:
+- B&#x27;s clock is slow
+- Network delay
+- Events actually concurrent</code></pre>
+<p><strong>Solution</strong>: Logical time based on causality, not physical time</p>
+<h3>Happened-Before Relation (→)</h3>
+<p><strong>Definition</strong> (Lamport, 1978):</p>
+<p>Event <code>a</code> happened-before event <code>b</code> (written <code>a → b</code>) if:</p>
+<ol><li><code>a</code> and <code>b</code> on same process, <code>a</code> occurs before <code>b</code></li><li><code>a</code> is send event, <code>b</code> is receive of same message</li><li>Transitive: if <code>a → b</code> and <code>b → c</code>, then <code>a → c</code></li></ol>
+<p>If neither <code>a → b</code> nor <code>b → a</code>, then <code>a</code> and <code>b</code> are <strong>concurrent</strong>.</p>
+<hr>
+<h2>Lamport Clocks</h2>
+<h3>Algorithm</h3>
+<pre><code class="lang-python">class LamportClock:
+    &quot;&quot;&quot;Lamport logical clock&quot;&quot;&quot;
+
+    def __init__(self):
+        self.time = 0
+
+    def tick(self):
+        &quot;&quot;&quot;Increment clock on local event&quot;&quot;&quot;
+        self.time += 1
+        return self.time
+
+    def send_event(self):
+        &quot;&quot;&quot;Prepare timestamp for sending in message&quot;&quot;&quot;
+        self.time += 1
+        return self.time
+
+    def receive_event(self, received_time):
+        &quot;&quot;&quot;Update clock upon receiving message&quot;&quot;&quot;
+        self.time = max(self.time, received_time) + 1
+        return self.time
+
+# Usage
+clock_a = LamportClock()
+clock_b = LamportClock()
+
+# Process A: local events
+t1 = clock_a.tick()  # t1 = 1
+
+# Process A: send message
+msg_time = clock_a.send_event()  # msg_time = 2
+
+# Process B: receive message
+clock_b.receive_event(msg_time)  # B&#x27;s time = max(0, 2) + 1 = 3
+
+# Process B: local event
+t2 = clock_b.tick()  # t2 = 4</code></pre>
+<h3>Clock Condition</h3>
+<p><strong>Property</strong>: If <code>a → b</code>, then <code>C(a) &lt; C(b)</code></p>
+<p><strong>Note</strong>: Converse not true! <code>C(a) &lt; C(b)</code> does NOT imply <code>a → b</code></p>
+<p><strong>Limitation</strong>: Can&#x27;t detect concurrency</p>
+<pre><code>Process A: C=1, C=2, C=3
+Process B:      C=1, C=2
+
+A:C=2 and B:C=2 concurrent? Unknown from clocks alone!</code></pre>
+<hr>
+<h2>Total Ordering</h2>
+<h3>Problem: Partial Order Not Enough</h3>
+<p><strong>Scenario</strong>: Distributed mutual exclusion needs total order</p>
+<p><strong>Solution</strong>: Break ties with process ID</p>
+<pre><code class="lang-python">class TotalOrderClock:
+    &quot;&quot;&quot;Lamport clock with total ordering&quot;&quot;&quot;
+
+    def __init__(self, process_id):
+        self.process_id = process_id
+        self.time = 0
+
+    def tick(self):
+        self.time += 1
+        return (self.time, self.process_id)
+
+    def send_event(self):
+        self.time += 1
+        return (self.time, self.process_id)
+
+    def receive_event(self, received_time, sender_id):
+        self.time = max(self.time, received_time) + 1
+        return (self.time, self.process_id)
+
+    @staticmethod
+    def compare(timestamp1, timestamp2):
+        &quot;&quot;&quot;Total order comparison&quot;&quot;&quot;
+        time1, pid1 = timestamp1
+        time2, pid2 = timestamp2
+
+        if time1 &lt; time2:
+            return -1
+        elif time1 &gt; time2:
+            return 1
+        else:
+            # Same logical time - break tie with process ID
+            return -1 if pid1 &lt; pid2 else (1 if pid1 &gt; pid2 else 0)</code></pre>
+<hr>
+<h2>Practical Applications</h2>
+<h3>Application 1: Distributed Mutual Exclusion</h3>
+<pre><code class="lang-python">import heapq
+from typing import Set
+
+class DistributedMutex:
+    &quot;&quot;&quot;Lamport&#x27;s distributed mutual exclusion&quot;&quot;&quot;
+
+    def __init__(self, process_id, all_processes):
+        self.process_id = process_id
+        self.all_processes = all_processes
+        self.clock = TotalOrderClock(process_id)
+        self.request_queue = []  # Priority queue of (timestamp, process_id)
+        self.replies_received = set()
+
+    def request_lock(self):
+        &quot;&quot;&quot;Request access to critical section&quot;&quot;&quot;
+        timestamp = self.clock.send_event()
+
+        # Add own request to queue
+        heapq.heappush(self.request_queue, (timestamp, self.process_id))
+
+        # Broadcast request to all processes
+        for proc in self.all_processes:
+            if proc != self.process_id:
+                self.send_request(proc, timestamp)
+
+        # Wait for replies from all other processes
+        while len(self.replies_received) &lt; len(self.all_processes) - 1:
+            pass  # In real system, would wait on condition variable
+
+    def receive_request(self, sender_id, request_timestamp):
+        &quot;&quot;&quot;Handle lock request from another process&quot;&quot;&quot;
+        self.clock.receive_event(request_timestamp[0], sender_id)
+
+        # Add to queue
+        heapq.heappush(self.request_queue, (request_timestamp, sender_id))
+
+        # Send reply
+        reply_timestamp = self.clock.send_event()
+        self.send_reply(sender_id, reply_timestamp)
+
+    def receive_reply(self, sender_id):
+        &quot;&quot;&quot;Handle reply from another process&quot;&quot;&quot;
+        self.replies_received.add(sender_id)
+
+    def can_enter_cs(self):
+        &quot;&quot;&quot;Check if can enter critical section&quot;&quot;&quot;
+        if not self.request_queue:
+            return False
+
+        # Own request must be at head of queue
+        earliest = self.request_queue[0]
+        return earliest[1] == self.process_id
+
+    def release_lock(self):
+        &quot;&quot;&quot;Release lock after critical section&quot;&quot;&quot;
+        # Remove own request
+        heapq.heappop(self.request_queue)
+
+        # Broadcast release to all
+        timestamp = self.clock.send_event()
+        for proc in self.all_processes:
+            if proc != self.process_id:
+                self.send_release(proc, timestamp)
+
+    def receive_release(self, sender_id):
+        &quot;&quot;&quot;Handle release from another process&quot;&quot;&quot;
+        # Remove sender&#x27;s request from queue
+        self.request_queue = [
+            (ts, pid) for (ts, pid) in self.request_queue
+            if pid != sender_id
+        ]
+        heapq.heapify(self.request_queue)</code></pre>
+<h3>Application 2: Causal Logging</h3>
+<pre><code class="lang-python">class CausalLogger:
+    &quot;&quot;&quot;Log events with causal ordering&quot;&quot;&quot;
+
+    def __init__(self, node_id):
+        self.node_id = node_id
+        self.clock = LamportClock()
+        self.log = []
+
+    def log_event(self, event_type, data):
+        &quot;&quot;&quot;Log local event&quot;&quot;&quot;
+        timestamp = self.clock.tick()
+        log_entry = {
+            &#x27;timestamp&#x27;: timestamp,
+            &#x27;node&#x27;: self.node_id,
+            &#x27;type&#x27;: event_type,
+            &#x27;data&#x27;: data
+        }
+        self.log.append(log_entry)
+        return timestamp
+
+    def log_send(self, recipient, message):
+        &quot;&quot;&quot;Log message send&quot;&quot;&quot;
+        timestamp = self.clock.send_event()
+        self.log.append({
+            &#x27;timestamp&#x27;: timestamp,
+            &#x27;node&#x27;: self.node_id,
+            &#x27;type&#x27;: &#x27;send&#x27;,
+            &#x27;recipient&#x27;: recipient,
+            &#x27;message&#x27;: message
+        })
+        return timestamp
+
+    def log_receive(self, sender, message, sender_timestamp):
+        &quot;&quot;&quot;Log message receive&quot;&quot;&quot;
+        timestamp = self.clock.receive_event(sender_timestamp)
+        self.log.append({
+            &#x27;timestamp&#x27;: timestamp,
+            &#x27;node&#x27;: self.node_id,
+            &#x27;type&#x27;: &#x27;receive&#x27;,
+            &#x27;sender&#x27;: sender,
+            &#x27;message&#x27;: message,
+            &#x27;sender_timestamp&#x27;: sender_timestamp
+        })
+        return timestamp
+
+    def get_ordered_log(self):
+        &quot;&quot;&quot;Get log entries in happened-before order&quot;&quot;&quot;
+        return sorted(self.log, key=lambda x: x[&#x27;timestamp&#x27;])</code></pre>
+<hr>
+<h2>Distributed Snapshots</h2>
+<h3>Chandy-Lamport Snapshot Algorithm</h3>
+<pre><code class="lang-python">class SnapshotManager:
+    &quot;&quot;&quot;Distributed snapshot using logical clocks&quot;&quot;&quot;
+
+    def __init__(self, process_id, channels):
+        self.process_id = process_id
+        self.channels = channels  # Other processes
+        self.clock = LamportClock()
+        self.state = {}
+        self.snapshot_state = None
+        self.snapshot_in_progress = False
+        self.channel_states = {}  # Messages in transit
+
+    def initiate_snapshot(self):
+        &quot;&quot;&quot;Start snapshot (by any process)&quot;&quot;&quot;
+        self.snapshot_in_progress = True
+        self.snapshot_state = self.state.copy()
+
+        # Record state of all channels
+        for channel in self.channels:
+            self.channel_states[channel] = []
+
+        # Send marker on all outgoing channels
+        for channel in self.channels:
+            self.send_marker(channel)
+
+    def receive_marker(self, sender):
+        &quot;&quot;&quot;Handle marker from another process&quot;&quot;&quot;
+        if not self.snapshot_in_progress:
+            # First marker received - take snapshot
+            self.initiate_snapshot()
+            self.channel_states[sender] = []  # Empty (no messages before marker)
+        else:
+            # Already snapshotting - stop recording on this channel
+            # Messages received after marker not in snapshot
+            pass
+
+    def receive_message(self, sender, message):
+        &quot;&quot;&quot;Handle regular message&quot;&quot;&quot;
+        if self.snapshot_in_progress and sender in self.channel_states:
+            # Record message as part of channel state
+            self.channel_states[sender].append(message)
+
+        # Process message normally
+        self.clock.receive_event(message[&#x27;timestamp&#x27;])</code></pre>
+<hr>
+<h2>Limitations</h2>
+<pre><code>❌ Can&#x27;t detect concurrency (unlike vector clocks)
+❌ Clock values can grow large
+❌ Doesn&#x27;t capture full causality
+✅ Simple and efficient
+✅ Establishes partial order
+✅ Foundation for other algorithms</code></pre>
+<hr>
+<h2>Comparison</h2>
+<p>| Clock Type | Space | Detects Concurrency | Use Case | |------------|-------|-------------------|----------| | <strong>Physical</strong> | O(1) | ❌ No | When synchronized clocks available | | <strong>Lamport</strong> | O(1) | ❌ No | Simple ordering, total order needed | | <strong>Vector</strong> | O(N) | ✅ Yes | Conflict detection, versioning | | <strong>Hybrid</strong> | O(1) + physical | Partially | Balance simplicity and accuracy |</p>
+<hr>
+<h2>Testing</h2>
+<pre><code class="lang-python">import unittest
+
+class TestLamportClock(unittest.TestCase):
+    def test_local_events(self):
+        &quot;&quot;&quot;Test local event ordering&quot;&quot;&quot;
+        clock = LamportClock()
+        t1 = clock.tick()
+        t2 = clock.tick()
+        self.assertLess(t1, t2)
+
+    def test_message_passing(self):
+        &quot;&quot;&quot;Test clock update on message passing&quot;&quot;&quot;
+        clock_a = LamportClock()
+        clock_b = LamportClock()
+
+        # A: several local events
+        clock_a.tick()
+        clock_a.tick()
+        clock_a.tick()
+
+        # A sends to B
+        msg_time = clock_a.send_event()  # 4
+
+        # B receives
+        clock_b.receive_event(msg_time)
+
+        # B&#x27;s clock should jump
+        self.assertGreater(clock_b.time, msg_time)
+
+    def test_clock_condition(self):
+        &quot;&quot;&quot;Test happened-before implies clock ordering&quot;&quot;&quot;
+        clock_a = LamportClock()
+        clock_b = LamportClock()
+
+        t1 = clock_a.tick()
+        send_time = clock_a.send_event()
+        recv_time = clock_b.receive_event(send_time)
+
+        # t1 happened-before recv_time
+        self.assertLess(t1, recv_time)</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>distributed-systems-vector-clocks</code> - Full causality tracking</li><li><code>distributed-systems-interval-tree-clocks</code> - Scalable clocks</li><li><code>distributed-systems-distributed-locks</code> - Mutual exclusion</li><li><code>distributed-systems-eventual-consistency</code> - Ordering in eventual consistency</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/distributed-systems-logical-clocks.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

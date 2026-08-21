@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ml-lora-peft-techniques</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ml-lora-peft-techniques.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ml-lora-peft-techniques.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ml-lora-peft-techniques</h1><p class="lede">Fine-tuning large models with limited GPU memory</p><h1>LoRA and PEFT Techniques</h1>
+<p><strong>Scope</strong>: LoRA, QLoRA, adapter tuning, rank selection, merging, multi-adapter inference <strong>Lines</strong>: ~340 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Fine-tuning large models with limited GPU memory</li><li>Training multiple task-specific adapters from same base model</li><li>Reducing training time and storage costs</li><li>Merging multiple LoRA adapters for multi-task models</li><li>Optimizing fine-tuning hyperparameters (rank, alpha)</li><li>Deploying memory-efficient models in production</li></ul>
+<h2>Core Concepts</h2>
+<h3>Parameter-Efficient Fine-Tuning (PEFT)</h3>
+<p><strong>What is PEFT</strong>:</p>
+<ul><li>Train only a small subset of model parameters</li><li>Freeze base model weights</li><li>Add small trainable &quot;adapter&quot; layers</li><li>Achieves 99%+ of full fine-tuning quality</li><li>Uses 10-100x less memory and storage</li></ul>
+<p><strong>PEFT Methods</strong>:</p>
+<ul><li><strong>LoRA</strong>: Low-Rank Adaptation (most popular)</li><li><strong>QLoRA</strong>: Quantized LoRA (4-bit base model)</li><li><strong>Prefix Tuning</strong>: Learn task-specific prompts</li><li><strong>Adapter Layers</strong>: Small bottleneck layers</li><li><strong>IA3</strong>: Learned rescaling vectors</li></ul>
+<h3>LoRA (Low-Rank Adaptation)</h3>
+<p><strong>How LoRA Works</strong>:</p>
+<ul><li>Freezes original model weights W</li><li>Adds trainable low-rank matrices A and B</li><li>Updates: ΔW = B × A (where B is m×r, A is r×n)</li><li>Final output: W + ΔW = W + BA</li><li>Only trains A and B (&lt;&lt;&lt; original parameters)</li></ul>
+<p><strong>Key Hyperparameters</strong>:</p>
+<ul><li><strong>Rank (r)</strong>: Dimensionality of low-rank matrices (4-128)</li><li><strong>Alpha</strong>: Scaling factor for LoRA updates (usually = r)</li><li><strong>Dropout</strong>: Regularization (0-0.1, often 0 for LoRA)</li><li><strong>Target Modules</strong>: Which layers to apply LoRA to</li></ul>
+<p><strong>Memory Savings</strong>:</p>
+<ul><li>7B model: ~28GB → ~6GB (4-bit QLoRA)</li><li>13B model: ~52GB → ~10GB (4-bit QLoRA)</li><li>70B model: ~280GB → ~48GB (4-bit QLoRA)</li></ul>
+<h3>QLoRA (Quantized LoRA)</h3>
+<p><strong>QLoRA Components</strong>:</p>
+<ul><li>4-bit NormalFloat (NF4) quantization of base model</li><li>Double quantization for constants</li><li>Paged optimizers for memory efficiency</li><li>LoRA adapters trained in bfloat16</li></ul>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Train 70B models on single 48GB GPU</li><li>Minimal quality loss vs full precision</li><li>Faster training than 16-bit LoRA</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Basic LoRA Configuration</h3>
+<pre><code class="lang-python">from peft import LoraConfig, get_peft_model
+from transformers import AutoModelForCausalLM
+
+# Load base model
+model = AutoModelForCausalLM.from_pretrained(
+    &quot;meta-llama/Llama-3-8b&quot;,
+    device_map=&quot;auto&quot;,
+    torch_dtype=&quot;auto&quot;
+)
+
+# Configure LoRA
+lora_config = LoraConfig(
+    r=16,  # Rank
+    lora_alpha=16,  # Alpha (scaling)
+    target_modules=[
+        &quot;q_proj&quot;,  # Query projection
+        &quot;k_proj&quot;,  # Key projection
+        &quot;v_proj&quot;,  # Value projection
+        &quot;o_proj&quot;,  # Output projection
+    ],
+    lora_dropout=0.05,
+    bias=&quot;none&quot;,
+    task_type=&quot;CAUSAL_LM&quot;
+)
+
+# Apply LoRA
+model = get_peft_model(model, lora_config)
+
+# Print trainable parameters
+model.print_trainable_parameters()
+# Output: trainable params: 4,194,304 || all params: 8,030,261,248 || trainable%: 0.05%</code></pre>
+<h3>QLoRA with 4-bit Quantization</h3>
+<pre><code class="lang-python">from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
+import torch
+
+# 4-bit quantization config
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type=&quot;nf4&quot;,  # NormalFloat4
+    bnb_4bit_compute_dtype=torch.bfloat16,  # Compute in bf16
+    bnb_4bit_use_double_quant=True,  # Double quantization
+)
+
+# Load quantized model
+model = AutoModelForCausalLM.from_pretrained(
+    &quot;meta-llama/Llama-3-8b&quot;,
+    quantization_config=bnb_config,
+    device_map=&quot;auto&quot;,
+)
+
+# Prepare for k-bit training
+model = prepare_model_for_kbit_training(model)
+
+# Apply LoRA
+lora_config = LoraConfig(
+    r=64,  # Higher rank for 4-bit to compensate
+    lora_alpha=128,
+    target_modules=[
+        &quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;, &quot;o_proj&quot;,
+        &quot;gate_proj&quot;, &quot;up_proj&quot;, &quot;down_proj&quot;  # MLP layers
+    ],
+    lora_dropout=0.05,
+    bias=&quot;none&quot;,
+    task_type=&quot;CAUSAL_LM&quot;
+)
+
+model = get_peft_model(model, lora_config)</code></pre>
+<h3>Target Module Selection</h3>
+<pre><code class="lang-python"># Attention-only (memory efficient)
+target_modules = [&quot;q_proj&quot;, &quot;v_proj&quot;]
+
+# All attention (good balance)
+target_modules = [&quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;, &quot;o_proj&quot;]
+
+# Attention + MLP (best quality)
+target_modules = [
+    &quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;, &quot;o_proj&quot;,
+    &quot;gate_proj&quot;, &quot;up_proj&quot;, &quot;down_proj&quot;
+]
+
+# Auto-detect all linear layers
+import re
+
+def find_all_linear_names(model):
+    &quot;&quot;&quot;Find all linear layer names in model.&quot;&quot;&quot;
+    cls = torch.nn.Linear
+    lora_module_names = set()
+
+    for name, module in model.named_modules():
+        if isinstance(module, cls):
+            names = name.split(&#x27;.&#x27;)
+            lora_module_names.add(names[-1])
+
+    # Remove output layer
+    if &quot;lm_head&quot; in lora_module_names:
+        lora_module_names.remove(&quot;lm_head&quot;)
+
+    return list(lora_module_names)
+
+target_modules = find_all_linear_names(model)</code></pre>
+<h3>Rank Selection Strategy</h3>
+<pre><code class="lang-python"># Small models (&lt;3B) or simple tasks
+lora_config = LoraConfig(r=8, lora_alpha=16)
+
+# Medium models (7-13B) general tasks
+lora_config = LoraConfig(r=16, lora_alpha=32)
+
+# Large models (30-70B) or complex tasks
+lora_config = LoraConfig(r=64, lora_alpha=128)
+
+# Quality vs efficiency tradeoff
+ranks = [8, 16, 32, 64]
+for r in ranks:
+    print(f&quot;Rank {r}:&quot;)
+    print(f&quot;  Trainable params: ~{r * 2 * 4096 * 32 / 1e6:.1f}M&quot;)
+    print(f&quot;  Storage: ~{r * 2 * 4096 * 32 * 2 / 1e6:.1f}MB&quot;)</code></pre>
+<h3>Saving and Loading LoRA Adapters</h3>
+<pre><code class="lang-python">from peft import PeftModel
+
+# Save LoRA adapter only (~100MB for r=16)
+model.save_pretrained(&quot;./lora-adapters&quot;)
+
+# Load LoRA adapter
+from transformers import AutoModelForCausalLM
+
+base_model = AutoModelForCausalLM.from_pretrained(
+    &quot;meta-llama/Llama-3-8b&quot;,
+    device_map=&quot;auto&quot;
+)
+
+model = PeftModel.from_pretrained(
+    base_model,
+    &quot;./lora-adapters&quot;
+)
+
+# Merge adapter into base model (for deployment)
+merged_model = model.merge_and_unload()
+merged_model.save_pretrained(&quot;./merged-model&quot;)
+
+# Push to Hub (adapter only)
+model.push_to_hub(&quot;username/lora-adapter&quot;)
+
+# Push merged model
+merged_model.push_to_hub(&quot;username/merged-model&quot;)</code></pre>
+<h3>Multi-Adapter Inference</h3>
+<pre><code class="lang-python">from peft import PeftModel
+
+# Load base model once
+base_model = AutoModelForCausalLM.from_pretrained(
+    &quot;meta-llama/Llama-3-8b&quot;,
+    device_map=&quot;auto&quot;
+)
+
+# Load first adapter
+model = PeftModel.from_pretrained(
+    base_model,
+    &quot;adapters/task1&quot;,
+    adapter_name=&quot;task1&quot;
+)
+
+# Add second adapter
+model.load_adapter(&quot;adapters/task2&quot;, adapter_name=&quot;task2&quot;)
+
+# Add third adapter
+model.load_adapter(&quot;adapters/task3&quot;, adapter_name=&quot;task3&quot;)
+
+# Switch between adapters
+model.set_adapter(&quot;task1&quot;)
+output1 = model.generate(**inputs)
+
+model.set_adapter(&quot;task2&quot;)
+output2 = model.generate(**inputs)
+
+# Disable all adapters (use base model)
+model.disable_adapters()
+output_base = model.generate(**inputs)</code></pre>
+<h3>Merging Multiple Adapters</h3>
+<pre><code class="lang-python">from peft import PeftModel
+
+# Load base and first adapter
+model = PeftModel.from_pretrained(
+    base_model,
+    &quot;adapters/task1&quot;,
+    adapter_name=&quot;task1&quot;
+)
+
+# Load additional adapters
+model.load_adapter(&quot;adapters/task2&quot;, adapter_name=&quot;task2&quot;)
+model.load_adapter(&quot;adapters/task3&quot;, adapter_name=&quot;task3&quot;)
+
+# Merge adapters with weights
+model.add_weighted_adapter(
+    adapters=[&quot;task1&quot;, &quot;task2&quot;, &quot;task3&quot;],
+    weights=[0.5, 0.3, 0.2],
+    adapter_name=&quot;merged&quot;,
+    combination_type=&quot;linear&quot;  # or &quot;cat&quot; for concatenation
+)
+
+# Save merged adapter
+model.save_pretrained(&quot;./merged-adapter&quot;)</code></pre>
+<h3>Training with PEFT</h3>
+<pre><code class="lang-python">from transformers import Trainer, TrainingArguments
+from peft import get_peft_model, LoraConfig
+
+# Configure LoRA
+lora_config = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    target_modules=[&quot;q_proj&quot;, &quot;v_proj&quot;],
+    lora_dropout=0.05,
+    bias=&quot;none&quot;,
+    task_type=&quot;CAUSAL_LM&quot;
+)
+
+# Apply to model
+model = get_peft_model(model, lora_config)
+
+# Training arguments
+training_args = TrainingArguments(
+    output_dir=&quot;./lora-output&quot;,
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=4,
+    learning_rate=2e-4,  # Higher LR for LoRA
+    num_train_epochs=3,
+    logging_steps=10,
+    save_strategy=&quot;epoch&quot;,
+    fp16=True,
+)
+
+# Train
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+)
+
+trainer.train()
+
+# Save LoRA adapter
+model.save_pretrained(&quot;./lora-final&quot;)</code></pre>
+<h3>Modal.com Deployment</h3>
+<pre><code class="lang-python">import modal
+
+app = modal.App(&quot;lora-finetune&quot;)
+
+image = (
+    modal.Image.debian_slim()
+    .pip_install(
+        &quot;torch&quot;,
+        &quot;transformers&quot;,
+        &quot;peft&quot;,
+        &quot;bitsandbytes&quot;,
+        &quot;accelerate&quot;
+    )
+)
+
+@app.function(
+    gpu=&quot;l40s&quot;,
+    image=image,
+    timeout=3600
+)
+def train_lora(base_model: str, dataset_path: str, output_path: str):
+    from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
+    from peft import LoraConfig, get_peft_model
+    from datasets import load_dataset
+    import torch
+
+    # Load model
+    model = AutoModelForCausalLM.from_pretrained(
+        base_model,
+        device_map=&quot;auto&quot;,
+        torch_dtype=torch.bfloat16
+    )
+
+    tokenizer = AutoTokenizer.from_pretrained(base_model)
+
+    # Configure LoRA
+    lora_config = LoraConfig(
+        r=16,
+        lora_alpha=32,
+        target_modules=[&quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;, &quot;o_proj&quot;],
+        lora_dropout=0.05,
+        bias=&quot;none&quot;,
+        task_type=&quot;CAUSAL_LM&quot;
+    )
+
+    model = get_peft_model(model, lora_config)
+
+    # Load dataset
+    dataset = load_dataset(&quot;json&quot;, data_files=dataset_path)
+
+    # Train
+    training_args = TrainingArguments(
+        output_dir=output_path,
+        per_device_train_batch_size=4,
+        num_train_epochs=3,
+        learning_rate=2e-4,
+        logging_steps=10,
+        save_strategy=&quot;epoch&quot;,
+        bf16=True,
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=dataset[&quot;train&quot;],
+    )
+
+    trainer.train()
+
+    # Save adapter
+    model.save_pretrained(output_path)
+    tokenizer.save_pretrained(output_path)
+
+    return {&quot;status&quot;: &quot;complete&quot;, &quot;path&quot;: output_path}</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>LoRA Rank Guidelines</h3>
+<pre><code>Rank (r) | Trainable Params | Storage  | Use Case
+---------|------------------|----------|---------------------------
+4-8      | ~1-2M            | ~10MB    | Simple tasks, proof-of-concept
+16       | ~4M              | ~50MB    | General fine-tuning
+32       | ~8M              | ~100MB   | Complex tasks
+64       | ~16M             | ~200MB   | Very complex, QLoRA compensation
+128+     | ~32M+            | ~400MB+  | Experimental, diminishing returns</code></pre>
+<h3>Target Module Recommendations</h3>
+<pre><code>Configuration           | Modules                          | Quality | Memory
+------------------------|----------------------------------|---------|--------
+Minimal                 | q_proj, v_proj                   | Good    | Low
+Recommended             | q_proj, k_proj, v_proj, o_proj   | Better  | Medium
+Full Attention + MLP    | All attention + gate/up/down     | Best    | High</code></pre>
+<h3>Alpha Selection</h3>
+<pre><code class="lang-python"># Common patterns
+lora_alpha = r          # 1:1 ratio (standard)
+lora_alpha = r * 2      # 2:1 ratio (stronger updates)
+lora_alpha = 32         # Fixed at 32 (some practitioners prefer)
+
+# Alpha / r ratio controls update magnitude
+# Higher ratio = stronger LoRA influence</code></pre>
+<h3>PEFT Methods Comparison</h3>
+<pre><code>Method      | Memory  | Quality | Speed | Use Case
+------------|---------|---------|-------|----------------------------
+LoRA        | Low     | High    | Fast  | General fine-tuning
+QLoRA       | Very Low| High    | Fast  | Large models, limited VRAM
+Prefix      | Low     | Medium  | Fast  | Prompt engineering
+Adapter     | Medium  | High    | Medium| Task-specific modules
+Full FT     | High    | Highest | Slow  | Maximum quality, unlimited compute</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Rank too low</strong>: Poor adaptation to task ✅ Start with r=16, increase if quality insufficient</p>
+<p>❌ <strong>Rank too high</strong>: Overfitting, wasted compute ✅ Rarely need r&gt;64 even for complex tasks</p>
+<p>❌ <strong>Wrong alpha/r ratio</strong>: Unstable training</p>
+<pre><code class="lang-python"># ❌ Bad: Alpha much larger than rank
+lora_config = LoraConfig(r=8, lora_alpha=128)
+
+# ✅ Good: Alpha = r or 2*r
+lora_config = LoraConfig(r=16, lora_alpha=32)</code></pre>
+<p>❌ <strong>Training all layers</strong>: Negates memory benefits ✅ Target only attention or attention+MLP</p>
+<p>❌ <strong>Not using gradient checkpointing</strong>: OOM on large models</p>
+<pre><code class="lang-python"># ✅ Enable gradient checkpointing
+model.gradient_checkpointing_enable()</code></pre>
+<p>❌ <strong>Merging without testing adapters separately</strong>: Can&#x27;t debug ✅ Test individual adapters before merging</p>
+<p>❌ <strong>Using LoRA for small models with plenty VRAM</strong>: Unnecessary ✅ Use full fine-tuning for models &lt;3B if VRAM allows</p>
+<p>❌ <strong>Not saving adapter separately</strong>: Lose flexibility ✅ Save adapter before merging for reusability</p>
+<p>❌ <strong>Ignoring base model precision</strong>: Quality/memory mismatch</p>
+<pre><code class="lang-python"># ❌ Bad: 4-bit model but fp32 LoRA
+# ✅ Good: Match compute dtype
+bnb_config = BitsAndBytesConfig(
+    bnb_4bit_compute_dtype=torch.bfloat16
+)</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>unsloth-finetuning.md</code> - Fast LoRA training with Unsloth</li><li><code>modal-gpu-workloads.md</code> - GPU selection for PEFT training</li><li><code>llm-dataset-preparation.md</code> - Preparing data for fine-tuning</li><li><code>huggingface-autotrain.md</code> - Automated LoRA training</li><li><code>model-merging.md</code> - Advanced adapter merging techniques</li><li><code>quantization-techniques.md</code> - Model quantization deep dive</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ml-lora-peft-techniques.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ml-stable-diffusion-deployment</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ml-stable-diffusion-deployment.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ml-stable-diffusion-deployment.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ml-stable-diffusion-deployment</h1><p class="lede">Deploying Stable Diffusion models to production environments</p><h1>Stable Diffusion Deployment</h1>
+<p><strong>Scope</strong>: Deploying Stable Diffusion to production, optimization techniques, scalable inference APIs <strong>Lines</strong>: ~350 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Deploying Stable Diffusion models to production environments</li><li>Building scalable image generation APIs and services</li><li>Optimizing diffusion model inference for speed and cost</li><li>Setting up batch processing pipelines for image generation</li><li>Implementing caching and warm-start strategies</li><li>Selecting appropriate GPU infrastructure for diffusion workloads</li><li>Debugging performance issues in diffusion deployments</li><li>Managing concurrent requests and queue systems</li></ul>
+<h2>Core Concepts</h2>
+<h3>VRAM Management</h3>
+<p><strong>Memory Requirements</strong>:</p>
+<ul><li><strong>SD 1.5 (fp16)</strong>: ~4GB VRAM for single inference</li><li><strong>SDXL (fp16)</strong>: ~8-12GB VRAM for single inference</li><li><strong>SD 3.0 (fp16)</strong>: ~10-14GB VRAM for single inference</li><li><strong>Batch processing</strong>: Multiply by batch size + overhead</li></ul>
+<p><strong>Optimization Techniques</strong>:</p>
+<ul><li><strong>Model precision</strong>: fp16 vs fp32 (2x memory savings)</li><li><strong>CPU offloading</strong>: Trade memory for speed</li><li><strong>Sequential offloading</strong>: Extreme memory savings (very slow)</li><li><strong>Attention slicing</strong>: Reduce memory for attention layers</li><li><strong>VAE tiling</strong>: Process large images in tiles</li></ul>
+<h3>Model Loading and Caching</h3>
+<p><strong>Cold Start Problem</strong>: Loading model from disk is slow (5-30 seconds)</p>
+<p><strong>Solutions</strong>:</p>
+<ul><li><strong>Keep model in VRAM</strong>: Never unload between requests</li><li><strong>Model caching</strong>: Load once, reuse for all requests</li><li><strong>Warm containers</strong>: Pre-load models before first request</li><li><strong>Multiple workers</strong>: Dedicated GPU per worker</li></ul>
+<p><strong>Best Practice</strong>: Load model at container startup, not per request</p>
+<h3>Inference Optimization</h3>
+<p><strong>Speed Optimization Hierarchy</strong>:</p>
+<ol><li><strong>xformers/flash-attention</strong>: 30-50% speedup, free</li><li><strong>torch.compile()</strong>: 20-30% speedup, PyTorch 2.0+</li><li><strong>Better scheduler</strong>: 2-5x speedup (fewer steps)</li><li><strong>Reduced resolution</strong>: 4x speedup (512 vs 1024)</li><li><strong>Lower precision</strong>: 2x speedup (fp16 vs fp32)</li></ol>
+<p><strong>Quality vs Speed Tradeoffs</strong>:</p>
+<ul><li>Fewer steps: Faster but lower quality</li><li>Lower guidance: Faster but less prompt adherence</li><li>Smaller model: Faster but reduced capabilities</li><li>Lower resolution: Faster but less detail</li></ul>
+<h3>API Design Patterns</h3>
+<p><strong>Synchronous API</strong>: Simple but blocks on long inference</p>
+<pre><code class="lang-python">@app.post(&quot;/generate&quot;)
+def generate(prompt: str):
+    image = pipe(prompt)  # Blocks for 3-10 seconds
+    return image</code></pre>
+<p><strong>Asynchronous API</strong>: Better for concurrent requests</p>
+<pre><code class="lang-python">@app.post(&quot;/generate&quot;)
+async def generate(prompt: str):
+    image = await async_pipe(prompt)
+    return image</code></pre>
+<p><strong>Queue-based API</strong>: Best for production</p>
+<pre><code class="lang-python">@app.post(&quot;/generate&quot;)
+def generate(prompt: str):
+    job_id = queue.enqueue(prompt)
+    return {&quot;job_id&quot;: job_id, &quot;status&quot;: &quot;pending&quot;}
+
+@app.get(&quot;/status/{job_id}&quot;)
+def status(job_id: str):
+    return queue.get_status(job_id)</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Basic Modal.com Deployment</h3>
+<pre><code class="lang-python">import modal
+from pathlib import Path
+
+# Define image with diffusers and optimizations
+image = (
+    modal.Image.debian_slim(python_version=&quot;3.11&quot;)
+    .pip_install(
+        &quot;diffusers==0.30.0&quot;,
+        &quot;transformers==4.44.0&quot;,
+        &quot;accelerate==0.33.0&quot;,
+        &quot;safetensors==0.4.4&quot;,
+        &quot;xformers==0.0.27&quot;,  # Memory efficient attention
+    )
+)
+
+app = modal.App(&quot;stable-diffusion&quot;)
+
+# Download model at build time
+with image.imports():
+    from diffusers import StableDiffusionPipeline
+    import torch
+
+@app.cls(
+    gpu=&quot;L40S&quot;,  # 48GB VRAM, cost-effective for SDXL
+    image=image,
+    timeout=600,  # 10 minute timeout
+)
+class StableDiffusionModel:
+    @modal.build()
+    def download_model(self):
+        &quot;&quot;&quot;Download model during image build&quot;&quot;&quot;
+        from diffusers import StableDiffusionPipeline
+
+        StableDiffusionPipeline.from_pretrained(
+            &quot;runwayml/stable-diffusion-v1-5&quot;,
+            torch_dtype=torch.float16,
+        )
+
+    @modal.enter()
+    def load_model(self):
+        &quot;&quot;&quot;Load model once when container starts&quot;&quot;&quot;
+        from diffusers import StableDiffusionPipeline
+        import torch
+
+        self.pipe = StableDiffusionPipeline.from_pretrained(
+            &quot;runwayml/stable-diffusion-v1-5&quot;,
+            torch_dtype=torch.float16,
+        ).to(&quot;cuda&quot;)
+
+        # Enable memory efficient attention
+        self.pipe.enable_xformers_memory_efficient_attention()
+
+    @modal.method()
+    def generate(
+        self,
+        prompt: str,
+        negative_prompt: str = &quot;blurry, low quality&quot;,
+        num_inference_steps: int = 30,
+        guidance_scale: float = 7.5,
+    ):
+        &quot;&quot;&quot;Generate single image&quot;&quot;&quot;
+        import torch
+
+        image = self.pipe(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+        ).images[0]
+
+        # Return as bytes
+        from io import BytesIO
+        buf = BytesIO()
+        image.save(buf, format=&quot;PNG&quot;)
+        return buf.getvalue()
+
+@app.local_entrypoint()
+def main():
+    model = StableDiffusionModel()
+    image_bytes = model.generate.remote(&quot;A serene mountain landscape&quot;)
+
+    # Save locally
+    with open(&quot;output.png&quot;, &quot;wb&quot;) as f:
+        f.write(image_bytes)</code></pre>
+<p><strong>Key Points</strong>:</p>
+<ul><li>Model downloaded during build (faster cold starts)</li><li>Model loaded once at container startup</li><li>GPU stays warm between requests</li><li>xformers enabled for memory efficiency</li></ul>
+<h3>SDXL Deployment with Optimization</h3>
+<pre><code class="lang-python">import modal
+
+image = (
+    modal.Image.debian_slim(python_version=&quot;3.11&quot;)
+    .pip_install(
+        &quot;diffusers==0.30.0&quot;,
+        &quot;transformers==4.44.0&quot;,
+        &quot;accelerate==0.33.0&quot;,
+        &quot;safetensors==0.4.4&quot;,
+        &quot;xformers==0.0.27&quot;,
+        &quot;torch==2.1.0&quot;,
+    )
+)
+
+app = modal.App(&quot;sdxl-optimized&quot;)
+
+@app.cls(
+    gpu=&quot;A100&quot;,  # 40GB VRAM needed for SDXL with optimizations
+    image=image,
+    timeout=900,
+    container_idle_timeout=300,  # Keep warm for 5 min
+)
+class SDXLModel:
+    @modal.build()
+    def download_models(self):
+        from diffusers import StableDiffusionXLPipeline
+        import torch
+
+        # Download base model
+        StableDiffusionXLPipeline.from_pretrained(
+            &quot;stabilityai/stable-diffusion-xl-base-1.0&quot;,
+            torch_dtype=torch.float16,
+            variant=&quot;fp16&quot;,
+            use_safetensors=True,
+        )
+
+    @modal.enter()
+    def load_model(self):
+        from diffusers import StableDiffusionXLPipeline, UniPCMultistepScheduler
+        import torch
+
+        # Load pipeline
+        self.pipe = StableDiffusionXLPipeline.from_pretrained(
+            &quot;stabilityai/stable-diffusion-xl-base-1.0&quot;,
+            torch_dtype=torch.float16,
+            variant=&quot;fp16&quot;,
+            use_safetensors=True,
+        ).to(&quot;cuda&quot;)
+
+        # Optimizations
+        self.pipe.enable_xformers_memory_efficient_attention()
+
+        # Fast scheduler (20-25 steps instead of 50)
+        self.pipe.scheduler = UniPCMultistepScheduler.from_config(
+            self.pipe.scheduler.config
+        )
+
+        # Compile UNet for speedup (PyTorch 2.0+)
+        # Adds ~60s warmup, saves 20-30% per inference
+        import torch._dynamo
+        torch._dynamo.config.suppress_errors = True
+        self.pipe.unet = torch.compile(
+            self.pipe.unet,
+            mode=&quot;reduce-overhead&quot;,
+            fullgraph=True,
+        )
+
+        # Warmup compilation
+        print(&quot;Warming up model...&quot;)
+        self.pipe(
+            &quot;warmup&quot;,
+            num_inference_steps=1,
+            guidance_scale=5.0,
+        )
+        print(&quot;Model ready!&quot;)
+
+    @modal.method()
+    def generate(
+        self,
+        prompt: str,
+        negative_prompt: str = &quot;blurry, low quality, distorted&quot;,
+        num_inference_steps: int = 25,  # Reduced with UniPC
+        guidance_scale: float = 6.0,    # Lower for SDXL
+        width: int = 1024,
+        height: int = 1024,
+        seed: int | None = None,
+    ):
+        import torch
+        from io import BytesIO
+
+        generator = None
+        if seed is not None:
+            generator = torch.Generator(&quot;cuda&quot;).manual_seed(seed)
+
+        image = self.pipe(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            width=width,
+            height=height,
+            generator=generator,
+        ).images[0]
+
+        buf = BytesIO()
+        image.save(buf, format=&quot;PNG&quot;)
+        return buf.getvalue()</code></pre>
+<p><strong>Optimizations applied</strong>:</p>
+<ul><li>xformers: 30-40% memory reduction</li><li>UniPC scheduler: 2x faster (25 steps vs 50)</li><li>torch.compile: 20-30% inference speedup</li><li>fp16: 50% memory reduction</li><li>Container idle timeout: Avoid cold starts</li></ul>
+<h3>FastAPI Web Endpoint</h3>
+<pre><code class="lang-python">import modal
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+from fastapi.responses import Response
+
+web_app = FastAPI()
+app = modal.App(&quot;sd-api&quot;)
+
+# [Same image and model class as above]
+
+class GenerationRequest(BaseModel):
+    prompt: str = Field(..., description=&quot;Text prompt for generation&quot;)
+    negative_prompt: str = Field(
+        default=&quot;blurry, low quality&quot;,
+        description=&quot;Negative prompt&quot;
+    )
+    num_inference_steps: int = Field(default=30, ge=10, le=100)
+    guidance_scale: float = Field(default=7.5, ge=1.0, le=20.0)
+    width: int = Field(default=512, ge=256, le=1024)
+    height: int = Field(default=512, ge=256, le=1024)
+    seed: int | None = Field(default=None, description=&quot;Random seed&quot;)
+
+@web_app.post(&quot;/generate&quot;)
+async def generate_image(request: GenerationRequest):
+    &quot;&quot;&quot;Generate image from text prompt&quot;&quot;&quot;
+    try:
+        # Call Modal function
+        model = StableDiffusionModel()
+        image_bytes = model.generate.remote(
+            prompt=request.prompt,
+            negative_prompt=request.negative_prompt,
+            num_inference_steps=request.num_inference_steps,
+            guidance_scale=request.guidance_scale,
+            width=request.width,
+            height=request.height,
+            seed=request.seed,
+        )
+
+        return Response(content=image_bytes, media_type=&quot;image/png&quot;)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@web_app.get(&quot;/health&quot;)
+async def health():
+    &quot;&quot;&quot;Health check endpoint&quot;&quot;&quot;
+    return {&quot;status&quot;: &quot;healthy&quot;}
+
+@app.function(image=image)
+@modal.asgi_app()
+def fastapi_app():
+    return web_app</code></pre>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-bash"># Deploy
+modal deploy stable_diffusion.py
+
+# Test
+curl -X POST https://your-app.modal.run/generate \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#x27;{&quot;prompt&quot;: &quot;A magical forest&quot;, &quot;seed&quot;: 42}&#x27; \
+  --output image.png</code></pre>
+<h3>Batch Processing Pipeline</h3>
+<pre><code class="lang-python">import modal
+
+app = modal.App(&quot;sd-batch&quot;)
+
+@app.cls(gpu=&quot;L40S&quot;, image=image)
+class BatchGenerator:
+    @modal.enter()
+    def load_model(self):
+        from diffusers import StableDiffusionPipeline
+        import torch
+
+        self.pipe = StableDiffusionPipeline.from_pretrained(
+            &quot;runwayml/stable-diffusion-v1-5&quot;,
+            torch_dtype=torch.float16,
+        ).to(&quot;cuda&quot;)
+
+        self.pipe.enable_xformers_memory_efficient_attention()
+
+    @modal.method()
+    def generate_batch(
+        self,
+        prompts: list[str],
+        batch_size: int = 4,  # Process 4 at a time
+    ):
+        &quot;&quot;&quot;Generate multiple images efficiently&quot;&quot;&quot;
+        import torch
+        from io import BytesIO
+
+        all_images = []
+
+        # Process in batches to manage VRAM
+        for i in range(0, len(prompts), batch_size):
+            batch_prompts = prompts[i:i + batch_size]
+
+            # Generate batch
+            images = self.pipe(
+                prompt=batch_prompts,
+                num_inference_steps=30,
+                guidance_scale=7.5,
+            ).images
+
+            # Convert to bytes
+            for image in images:
+                buf = BytesIO()
+                image.save(buf, format=&quot;PNG&quot;)
+                all_images.append(buf.getvalue())
+
+        return all_images
+
+@app.local_entrypoint()
+def main():
+    prompts = [
+        &quot;A red apple&quot;,
+        &quot;A blue car&quot;,
+        &quot;A green forest&quot;,
+        &quot;A yellow sunset&quot;,
+        &quot;A purple mountain&quot;,
+    ]
+
+    generator = BatchGenerator()
+    images = generator.generate_batch.remote(prompts, batch_size=2)
+
+    # Save all images
+    for i, img_bytes in enumerate(images):
+        with open(f&quot;batch_{i}.png&quot;, &quot;wb&quot;) as f:
+            f.write(img_bytes)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Amortize model loading across many images</li><li>Efficient VRAM usage with batching</li><li>Parallel processing on single GPU</li></ul>
+<h3>Memory-Constrained Deployment (CPU Offloading)</h3>
+<pre><code class="lang-python">@app.cls(
+    gpu=&quot;T4&quot;,  # Only 16GB VRAM
+    image=image,
+)
+class MemoryEfficientSDXL:
+    @modal.enter()
+    def load_model(self):
+        from diffusers import StableDiffusionXLPipeline
+        import torch
+
+        self.pipe = StableDiffusionXLPipeline.from_pretrained(
+            &quot;stabilityai/stable-diffusion-xl-base-1.0&quot;,
+            torch_dtype=torch.float16,
+            variant=&quot;fp16&quot;,
+        )
+
+        # Enable CPU offloading (slow but works on 16GB)
+        self.pipe.enable_model_cpu_offload()
+
+        # Enable VAE tiling for large images
+        self.pipe.enable_vae_tiling()
+
+        # Enable attention slicing
+        self.pipe.enable_attention_slicing(slice_size=1)
+
+    @modal.method()
+    def generate(self, prompt: str):
+        &quot;&quot;&quot;Generate with minimal VRAM&quot;&quot;&quot;
+        image = self.pipe(
+            prompt=prompt,
+            num_inference_steps=25,
+            guidance_scale=6.0,
+        ).images[0]
+
+        from io import BytesIO
+        buf = BytesIO()
+        image.save(buf, format=&quot;PNG&quot;)
+        return buf.getvalue()</code></pre>
+<p><strong>Tradeoffs</strong>:</p>
+<ul><li>✅ Works on smaller GPUs (T4, 16GB)</li><li>❌ 2-4x slower than full GPU</li><li>Use when: GPU budget limited, speed not critical</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>GPU Selection for Modal.com</h3>
+<pre><code>Model    | Min VRAM | Recommended GPU | Cost/Hour* | Speed
+---------|----------|-----------------|------------|-------
+SD 1.5   | 4GB      | L40S            | $1.60      | Fast
+SDXL     | 8GB      | L40S            | $1.60      | Medium
+SDXL Opt | 12GB     | A100 (40GB)     | $3.00      | Fast
+SD 3.0   | 12GB     | A100 (40GB)     | $3.00      | Medium
+
+*Approximate Modal.com pricing</code></pre>
+<h3>Optimization Techniques</h3>
+<pre><code>Technique                    | Memory Savings | Speed Improvement | Quality Impact
+-----------------------------|----------------|-------------------|---------------
+fp16 precision               | 50%            | 2x                | Minimal
+xformers attention           | 30-40%         | 1.3x              | None
+torch.compile()              | 0%             | 1.2-1.3x          | None
+Better scheduler (UniPC)     | 0%             | 2-3x              | Minimal
+CPU offloading               | 60-70%         | 0.3-0.5x (slower) | None
+Attention slicing            | 20-30%         | 0.9x              | None
+VAE tiling                   | 15-25%         | 0.95x             | None
+Reduced steps (50→25)        | 0%             | 2x                | Small</code></pre>
+<h3>Deployment Checklist</h3>
+<pre><code>✅ Model downloaded at build time (not runtime)
+✅ Model loaded in @modal.enter() (not per request)
+✅ xformers enabled for memory efficiency
+✅ Appropriate scheduler selected (UniPC/DPM-Solver)
+✅ torch.compile() applied (if using PyTorch 2.0+)
+✅ GPU selected based on VRAM needs
+✅ Container idle timeout set (avoid cold starts)
+✅ Error handling and logging implemented
+✅ Health check endpoint available
+✅ Monitoring for inference time and errors</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Loading model on every request</strong>: Cold start every time (5-30 seconds) ✅ Load once in @modal.enter(), reuse across requests</p>
+<p>❌ <strong>Not enabling xformers</strong>: Wasting 30-40% memory ✅ Always enable: <code>pipe.enable_xformers_memory_efficient_attention()</code></p>
+<p>❌ <strong>Using DDPM scheduler</strong>: 50-100 steps required ✅ Use UniPC, DPM-Solver (20-30 steps sufficient)</p>
+<p>❌ <strong>Running without torch.compile()</strong>: Missing free 20-30% speedup ✅ Compile UNet with PyTorch 2.0+ for production</p>
+<p>❌ <strong>Wrong GPU selection</strong>: Overpaying or OOM errors ✅ L40S for SD 1.5/SDXL with optimizations, A100 for max performance</p>
+<p>❌ <strong>Not setting container_idle_timeout</strong>: Constant cold starts ✅ Set to 300-600 seconds to keep container warm</p>
+<p>❌ <strong>Ignoring memory leaks</strong>: VRAM gradually fills ✅ Clear cache between requests: <code>torch.cuda.empty_cache()</code></p>
+<p>❌ <strong>Synchronous API blocking worker</strong>: Poor concurrency ✅ Use async or queue-based API for production</p>
+<p>❌ <strong>No warmup after torch.compile()</strong>: First request very slow ✅ Run dummy inference after compilation</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>diffusion-model-basics.md</code> - Core diffusion concepts and inference</li><li><code>diffusion-finetuning.md</code> - Fine-tuning models for custom use cases</li><li><code>modal-gpu-workloads.md</code> - GPU selection and configuration</li><li><code>modal-web-endpoints.md</code> - FastAPI endpoint patterns</li><li><code>modal-functions-basics.md</code> - Modal fundamentals and decorators</li><li><code>lora-peft-techniques.md</code> - LoRA for efficient fine-tuning</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ml-stable-diffusion-deployment.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>engineering-monitoring-alerts</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/engineering-monitoring-alerts.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/engineering-monitoring-alerts.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>engineering-monitoring-alerts</h1><p class="lede">Production-ready monitoring and alerting strategies</p><h1>Monitoring and Alerts</h1>
+<p><strong>Scope</strong>: Alert design, SLO-based alerting, alert fatigue prevention, Prometheus Alertmanager, PagerDuty, Opsgenie, escalation policies, oncall rotation, runbooks</p>
+<p><strong>Lines</strong>: 862</p>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Designing alerting strategy for services</li><li>Implementing SLO-based alerts with error budgets</li><li>Setting up Prometheus Alertmanager</li><li>Configuring PagerDuty or Opsgenie integration</li><li>Creating runbooks for alerts</li><li>Reducing alert fatigue and notification noise</li><li>Implementing escalation policies</li><li>Managing oncall rotations</li><li>Testing alert routing and delivery</li></ul>
+<p><strong>Don&#x27;t use</strong> for:</p>
+<ul><li>Metrics collection (use metrics-instrumentation.md)</li><li>Prometheus query language (use prometheus-monitoring.md)</li><li>Log-based alerting (use structured-logging.md)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Alert Design Principles</h3>
+<p><strong>1. Alert on symptoms, not causes</strong></p>
+<pre><code class="lang-yaml"># GOOD: User-facing symptom
+- alert: APIUnavailable
+  expr: probe_success{job=&quot;api&quot;} == 0
+  annotations:
+    impact: &quot;API is completely unavailable to customers&quot;
+
+# BAD: Internal cause
+- alert: HighCPU
+  expr: cpu_usage &gt; 80
+  # May not affect users</code></pre>
+<p><strong>2. Every alert must be actionable</strong></p>
+<ul><li>If no human action is needed → Don&#x27;t alert</li><li>If it&#x27;s informational → Send to dashboard/ticket, not page</li><li>If it&#x27;s not urgent → Adjust severity</li></ul>
+<p><strong>3. Provide context</strong></p>
+<pre><code class="lang-yaml">annotations:
+  summary: &quot;{{ $labels.service }} error rate high&quot;
+  description: &quot;Error rate {{ $value }}% (threshold: 5%)&quot;
+  impact: &quot;5% of customer requests failing&quot;
+  runbook_url: &quot;https://runbooks.example.com/high-error-rate&quot;
+  dashboard_url: &quot;https://grafana.example.com/d/service&quot;</code></pre>
+<h3>The Four Golden Signals</h3>
+<p>From Google SRE:</p>
+<ol><li><strong>Latency</strong>: Time to service requests</li><li><strong>Traffic</strong>: Demand on the system</li><li><strong>Errors</strong>: Rate of failed requests</li><li><strong>Saturation</strong>: Resource utilization</li></ol>
+<pre><code class="lang-yaml">groups:
+  - name: golden_signals
+    rules:
+      # Latency
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) &gt; 1.0
+        for: 10m
+
+      # Traffic anomaly
+      - alert: TrafficDrop
+        expr: sum(rate(http_requests_total[5m])) &lt; avg_over_time(rate(http_requests_total[5m])[1h:5m]) * 0.5
+        for: 10m
+
+      # Errors
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~&quot;5..&quot;}[5m])) / sum(rate(http_requests_total[5m])) &gt; 0.05
+        for: 5m
+
+      # Saturation
+      - alert: HighMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) &gt; 0.9
+        for: 5m</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: SLO-Based Alerting</h3>
+<p><strong>Multi-Window Multi-Burn Rate</strong> alerts:</p>
+<pre><code class="lang-yaml">groups:
+  - name: slo_alerts
+    interval: 30s
+    rules:
+      # Fast burn: 2% error budget in 1 hour (critical)
+      - alert: ErrorBudgetBurnRateFast
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~&quot;5..&quot;}[1h]))
+            /
+            sum(rate(http_requests_total[1h]))
+          ) &gt; 0.0144  # 14.4x burn rate
+        for: 2m
+        labels:
+          severity: critical
+          slo: availability
+        annotations:
+          summary: &quot;Fast error budget burn&quot;
+          description: &quot;Burning 2% error budget per hour (14.4x rate)&quot;
+          impact: &quot;Monthly error budget exhausted in 2 days at this rate&quot;
+          runbook_url: &quot;https://runbooks.example.com/error-budget-burn&quot;
+
+      # Slow burn: 10% error budget in 6 hours (warning)
+      - alert: ErrorBudgetBurnRateSlow
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~&quot;5..&quot;}[6h]))
+            /
+            sum(rate(http_requests_total[6h]))
+          ) &gt; 0.006  # 6x burn rate
+        for: 15m
+        labels:
+          severity: warning
+          slo: availability</code></pre>
+<p><strong>Why this works</strong>:</p>
+<ul><li>Catches both sudden outages (fast burn) and gradual degradation (slow burn)</li><li>Different severities and response times</li><li>Tied to error budget, not arbitrary thresholds</li></ul>
+<h3>Pattern 2: Alertmanager Configuration</h3>
+<pre><code class="lang-yaml">global:
+  resolve_timeout: 5m
+  pagerduty_url: &#x27;https://events.pagerduty.com/v2/enqueue&#x27;
+
+route:
+  receiver: &#x27;default&#x27;
+  group_by: [&#x27;alertname&#x27;, &#x27;cluster&#x27;, &#x27;service&#x27;]
+  group_wait: 30s        # Wait 30s before sending first notification
+  group_interval: 5m     # Wait 5m before sending new alerts in group
+  repeat_interval: 4h    # Repeat every 4h if still firing
+
+  routes:
+    # Critical → PagerDuty + Slack
+    - match:
+        severity: critical
+      receiver: &#x27;pagerduty&#x27;
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: true      # Also send to next route
+
+    - match:
+        severity: critical
+      receiver: &#x27;slack-incidents&#x27;
+
+    # Warnings → Slack only
+    - match:
+        severity: warning
+      receiver: &#x27;slack-warnings&#x27;
+      group_wait: 5m
+      repeat_interval: 12h
+
+# Suppress cascading alerts
+inhibit_rules:
+  # If node down, suppress resource alerts from that node
+  - source_match:
+      alertname: NodeDown
+    target_match_re:
+      alertname: &#x27;(HighCPU|HighMemory|DiskFull)&#x27;
+    equal: [&#x27;instance&#x27;]
+
+  # If critical firing, suppress warnings
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: [&#x27;alertname&#x27;, &#x27;service&#x27;]
+
+receivers:
+  - name: &#x27;pagerduty&#x27;
+    pagerduty_configs:
+      - service_key: &#x27;${PAGERDUTY_KEY}&#x27;
+        description: &#x27;{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}&#x27;
+        details:
+          firing: &#x27;{{ .Alerts.Firing | len }}&#x27;
+          runbook: &#x27;{{ .CommonAnnotations.runbook_url }}&#x27;
+
+  - name: &#x27;slack-incidents&#x27;
+    slack_configs:
+      - channel: &#x27;#incidents&#x27;
+        title: &#x27;CRITICAL: {{ .GroupLabels.alertname }}&#x27;
+        text: &#x27;{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}&#x27;
+        color: &#x27;danger&#x27;</code></pre>
+<h3>Pattern 3: Alert Fatigue Prevention</h3>
+<p><strong>Strategies</strong>:</p>
+<ol><li><strong>Increase &quot;for&quot; duration</strong>:</li></ol>
+<p>   ```yaml    # Before: Fires on transient spikes</p>
+<ul><li>alert: HighErrorRate</li></ul>
+<p>     expr: error_rate &gt; 0.01      for: 1m</p>
+<p>   # After: Filters transient issues</p>
+<ul><li>alert: HighErrorRate</li></ul>
+<p>     expr: error_rate &gt; 0.05  # Higher threshold      for: 10m                  # Longer duration    ```</p>
+<ol><li><strong>Use recording rules</strong>:</li></ol>
+<p>   ```yaml    # Pre-compute complex queries</p>
+<ul><li>record: service:error_rate:5m</li></ul>
+<p>     expr: |        sum(rate(http_requests_total{status=~&quot;5..&quot;}[5m])) by (service)        /        sum(rate(http_requests_total[5m])) by (service)</p>
+<p>   # Alert on recorded metric (faster, more stable)</p>
+<ul><li>alert: HighErrorRate</li></ul>
+<p>     expr: service:error_rate:5m &gt; 0.05      for: 5m    ```</p>
+<ol><li><strong>Group related alerts</strong>:</li></ol>
+<p>   ``<code>yaml    route:      group_by: [&#x27;alertname&#x27;, &#x27;service&#x27;, &#x27;datacenter&#x27;]      group_wait: 30s      group_interval: 5m    </code>``</p>
+<ul><li>10 pods crash → 1 grouped notification (not 10)</li></ul>
+<ol><li><strong>Remove non-actionable alerts</strong>:</li></ol>
+<ul><li>Monthly review: Which alerts fired but required no action?</li><li>Archive or adjust those alerts</li></ul>
+<h3>Pattern 4: Runbook Structure</h3>
+<pre><code class="lang-markdown"># Alert: [AlertName]
+
+## Overview
+What this alert means and why it exists.
+
+## Impact
+- User impact: [Service down | Performance degraded | No user impact]
+- Business impact: [Revenue/SLA impact]
+
+## Diagnosis
+### 1. Verify the alert
+\`\`\`bash
+# Check metric
+curl &#x27;http://prometheus:9090/api/v1/query?query=...&#x27;
+\`\`\`
+
+### 2. Check related systems
+\`\`\`bash
+kubectl get pods -n production
+kubectl logs [pod] --tail=100
+\`\`\`
+
+### 3. Identify root cause
+Common causes:
+1. Recent deployment
+2. Upstream dependency failure
+3. Resource exhaustion
+
+## Remediation
+
+### Immediate (&lt; 5 min)
+1. **Rollback deployment**:
+   \`\`\`bash
+   kubectl rollout undo deployment/api
+   \`\`\`
+
+2. **Scale horizontally**:
+   \`\`\`bash
+   kubectl scale deployment/api --replicas=10
+   \`\`\`
+
+### Short-term (&lt; 1 hour)
+- Investigate root cause
+- Apply workaround
+
+### Long-term
+- Permanent fix
+- Prevent recurrence
+
+## Validation
+\`\`\`bash
+# Verify service healthy
+curl https://api.example.com/health
+
+# Check metrics recovered
+# [Dashboard URL]
+\`\`\`
+
+## Related
+- Dashboards: [URLs]
+- Previous incidents: [INC-123, INC-456]
+- Team: #platform-team</code></pre>
+<h3>Pattern 5: Escalation Policies</h3>
+<pre><code class="lang-yaml"># PagerDuty escalation policy
+escalation_policy:
+  name: &quot;Platform Team 24/7&quot;
+  num_loops: 2  # Repeat entire chain twice
+  escalation_rules:
+    # Level 1: Primary oncall (immediate)
+    - escalation_delay_minutes: 0
+      targets:
+        - type: schedule
+          id: &quot;SCHEDULE_PRIMARY&quot;
+
+    # Level 2: Secondary oncall (after 15 min)
+    - escalation_delay_minutes: 15
+      targets:
+        - type: schedule
+          id: &quot;SCHEDULE_SECONDARY&quot;
+
+    # Level 3: Team lead (after 30 min total)
+    - escalation_delay_minutes: 15
+      targets:
+        - type: user
+          id: &quot;USER_TEAM_LEAD&quot;
+
+    # Level 4: Engineering manager (after 60 min)
+    - escalation_delay_minutes: 30
+      targets:
+        - type: user
+          id: &quot;USER_MANAGER&quot;</code></pre>
+<h3>Pattern 6: Testing Alert Routing</h3>
+<pre><code class="lang-python">#!/usr/bin/env python3
+&quot;&quot;&quot;Send test alert to Alertmanager.&quot;&quot;&quot;
+import requests
+from datetime import datetime, timedelta
+
+def send_test_alert():
+    alert = {
+        &quot;labels&quot;: {
+            &quot;alertname&quot;: &quot;TestAlert&quot;,
+            &quot;severity&quot;: &quot;warning&quot;,
+            &quot;service&quot;: &quot;test&quot;,
+            &quot;test&quot;: &quot;true&quot;  # Mark as test
+        },
+        &quot;annotations&quot;: {
+            &quot;summary&quot;: &quot;This is a test alert&quot;,
+            &quot;description&quot;: &quot;Testing alert routing&quot;
+        },
+        &quot;startsAt&quot;: datetime.utcnow().isoformat() + &#x27;Z&#x27;,
+        &quot;endsAt&quot;: (datetime.utcnow() + timedelta(minutes=5)).isoformat() + &#x27;Z&#x27;
+    }
+
+    response = requests.post(
+        &quot;http://alertmanager:9093/api/v1/alerts&quot;,
+        json=[alert]
+    )
+    return response.status_code == 200
+
+if __name__ == &quot;__main__&quot;:
+    if send_test_alert():
+        print(&quot;✓ Test alert sent&quot;)
+    else:
+        print(&quot;✗ Failed to send test alert&quot;)</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Alert Severity Levels</h3>
+<pre><code class="lang-yaml"># Critical/P1: Page immediately, 24/7
+severity: critical
+# - Service down
+# - Data loss risk
+# - Security breach
+# - SLA breach
+
+# Warning/P2: Page during business hours, ticket after hours
+severity: warning
+# - Performance degraded
+# - Approaching limits
+# - Non-critical failure
+
+# Info/P3: Ticket only
+severity: info
+# - Anomaly detected
+# - Maintenance reminder</code></pre>
+<h3>Alertmanager CLI (amtool)</h3>
+<pre><code class="lang-bash"># Check config
+amtool check-config alertmanager.yml
+
+# List active alerts
+amtool alert query
+
+# Create silence
+amtool silence add \
+  alertname=DiskFull \
+  instance=db-01 \
+  --duration=2h \
+  --author=&quot;alice@example.com&quot; \
+  --comment=&quot;Disk expansion in progress&quot;
+
+# List silences
+amtool silence query
+
+# Expire silence
+amtool silence expire &lt;silence-id&gt;</code></pre>
+<h3>PagerDuty Event API</h3>
+<pre><code class="lang-bash"># Send event
+curl -X POST https://events.pagerduty.com/v2/enqueue \
+  -H &#x27;Content-Type: application/json&#x27; \
+  -d &#x27;{
+    &quot;routing_key&quot;: &quot;YOUR_KEY&quot;,
+    &quot;event_action&quot;: &quot;trigger&quot;,
+    &quot;payload&quot;: {
+      &quot;summary&quot;: &quot;Test incident&quot;,
+      &quot;severity&quot;: &quot;critical&quot;,
+      &quot;source&quot;: &quot;alertmanager&quot;
+    }
+  }&#x27;</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Alert on Everything</h3>
+<pre><code class="lang-yaml"># WRONG: Too many alerts
+- alert: CPUUsageAbove50Percent
+  expr: cpu_usage &gt; 50
+  # Will fire constantly, causes alert fatigue
+
+# CORRECT: Alert on actionable thresholds
+- alert: CPUUsageCritical
+  expr: cpu_usage &gt; 90
+  for: 15m
+  # Only alerts when action needed</code></pre>
+<h3>Cause-Based Instead of Symptom-Based</h3>
+<pre><code class="lang-yaml"># WRONG: Alert on cause
+- alert: DatabaseConnectionPoolHigh
+  expr: db_connections &gt; 80
+
+# CORRECT: Alert on user-facing symptom
+- alert: DatabaseConnectionsExhausted
+  expr: db_connection_errors &gt; 0
+  annotations:
+    impact: &quot;Users unable to connect to service&quot;</code></pre>
+<h3>Missing Runbooks</h3>
+<pre><code class="lang-yaml"># WRONG: No guidance
+annotations:
+  summary: &quot;High error rate&quot;
+
+# CORRECT: Link to runbook
+annotations:
+  summary: &quot;High error rate on {{ $labels.service }}&quot;
+  description: &quot;Error rate {{ $value }}%&quot;
+  runbook_url: &quot;https://runbooks.example.com/high-error-rate&quot;
+  dashboard_url: &quot;https://grafana.example.com/d/errors&quot;</code></pre>
+<h3>Alert Flapping</h3>
+<pre><code class="lang-yaml"># WRONG: Fires on every transient spike
+- alert: HighLatency
+  expr: latency &gt; 500ms
+  for: 0s  # No duration
+
+# CORRECT: Filter transient issues
+- alert: HighLatency
+  expr: latency &gt; 500ms
+  for: 10m  # Sustained high latency</code></pre>
+<h3>Not Grouping Related Alerts</h3>
+<pre><code class="lang-yaml"># WRONG: 10 pods crash = 10 separate pages
+route:
+  group_by: []
+
+# CORRECT: Group by alertname
+route:
+  group_by: [&#x27;alertname&#x27;, &#x27;service&#x27;]
+  # 10 pods crash = 1 grouped notification</code></pre>
+<hr>
+<h2>Level 3: Resources</h2>
+<p>This skill has <strong>Level 3 Resources</strong> available with comprehensive reference material, production-ready scripts, and runnable examples.</p>
+<h3>Resource Structure</h3>
+<pre><code>monitoring-alerts/resources/
+├── REFERENCE.md                        # Comprehensive reference (3,842 lines)
+│   ├── Alert design principles and methodologies
+│   ├── SLO-based alerting with error budgets
+│   ├── Symptom-based vs cause-based alerts
+│   ├── Alert fatigue prevention strategies
+│   ├── Complete Alertmanager configuration
+│   ├── PagerDuty and Opsgenie integration
+│   ├── Alert routing, grouping, and inhibition
+│   ├── Escalation policies and oncall rotation
+│   ├── Runbook structure and examples
+│   ├── Notification channels (Slack, email, webhooks)
+│   ├── Silencing and muting strategies
+│   ├── Testing alerting systems
+│   ├── Metrics for alert health
+│   └── Production troubleshooting guide
+│
+├── scripts/                            # Production-ready tools
+│   ├── validate_alert_rules.py         # Validate Prometheus alert rules
+│   ├── analyze_alert_fatigue.py        # Analyze alert frequency and flapping
+│   └── test_alert_routing.py           # Test alert routing and escalation
+│
+└── examples/                           # Runnable examples
+    ├── prometheus/
+    │   └── alert-rules.yml             # Complete alert rules (SLO, symptoms, resources)
+    ├── alertmanager/
+    │   └── alertmanager.yml            # Full Alertmanager config with routing
+    ├── pagerduty/
+    │   └── integration-config.json     # PagerDuty services and schedules
+    ├── runbooks/
+    │   ├── template.md                 # Runbook template
+    │   └── high-memory-usage.md        # Complete runbook example
+    ├── escalation/
+    │   └── escalation-policies.yml     # Escalation and oncall schedules
+    └── dashboards/
+        └── alert-overview-dashboard.json  # Grafana alert dashboard</code></pre>
+<h3>Key Resources</h3>
+<p><strong>REFERENCE.md</strong> (3,842 lines): Comprehensive guide covering:</p>
+<ul><li>Alert design principles (Four Golden Signals, RED, USE methods)</li><li>SLO-based alerting with multi-window multi-burn rate</li><li>Symptom vs cause-based alerting patterns</li><li>Alert fatigue prevention (15+ strategies)</li><li>Complete Alertmanager architecture and configuration</li><li>PagerDuty integration (services, schedules, escalation)</li><li>Opsgenie integration and routing</li><li>Alert routing tree design</li><li>Grouping, inhibition, and silencing</li><li>Escalation policies (24/7, business hours, follow-the-sun)</li><li>Oncall rotation best practices</li><li>Runbook structure and templates</li><li>Notification channels (Slack, email, webhooks, Teams, Discord)</li><li>Testing alerting end-to-end</li><li>Alert health metrics</li><li>Production troubleshooting</li></ul>
+<p><strong>validate_alert_rules.py</strong>: Production-ready validator (578 lines)</p>
+<ul><li>Validates Prometheus alert rule syntax</li><li>Checks best practices (naming, labels, annotations)</li><li>Detects anti-patterns (high cardinality, missing runbooks)</li><li>Tests expressions against Prometheus API</li><li>Validates duration formats</li><li>Checks for flapping alerts (too short &quot;for&quot; duration)</li><li>Example: <code>validate_alert_rules.py --file alerts.yml --prometheus http://localhost:9090 --json</code></li></ul>
+<p><strong>analyze_alert_fatigue.py</strong>: Alert fatigue analyzer (534 lines)</p>
+<ul><li>Analyzes alert frequency over time</li><li>Detects flapping alerts (rapid state changes)</li><li>Identifies long-running alerts (&gt;24h)</li><li>Analyzes notification load by channel</li><li>Tracks notification success/failure rates</li><li>Generates actionable recommendations</li><li>Example: <code>analyze_alert_fatigue.py --prometheus http://localhost:9090 --days 7 --json</code></li></ul>
+<p><strong>test_alert_routing.py</strong>: Alert routing tester (597 lines)</p>
+<ul><li>Tests alert routing through Alertmanager</li><li>Validates routing tree matches</li><li>Tests inhibition rules</li><li>Checks active silences</li><li>Sends test alerts and verifies delivery</li><li>Comprehensive test suite for common scenarios</li><li>Example: <code>test_alert_routing.py --alertmanager http://localhost:9093 --labels &#x27;{&quot;severity&quot;:&quot;critical&quot;}&#x27;</code></li></ul>
+<p><strong>Runnable Examples</strong>:</p>
+<ul><li>Complete Prometheus alert rules (SLO-based, symptom-based, resource saturation)</li><li>Full Alertmanager configuration with routing, grouping, inhibition</li><li>PagerDuty integration config (services, schedules, escalation policies)</li><li>Runbook template and complete example (HighMemoryUsage)</li><li>Escalation policies (24/7, business hours, follow-the-sun)</li><li>Grafana dashboard for alert monitoring</li><li>Test scripts for alert routing and delivery</li></ul>
+<h3>Usage</h3>
+<pre><code class="lang-bash"># Access comprehensive reference
+cat monitoring-alerts/resources/REFERENCE.md
+
+# Validate alert rules
+./scripts/validate_alert_rules.py --file alerts.yml --prometheus http://localhost:9090
+
+# Analyze alert fatigue
+./scripts/analyze_alert_fatigue.py --prometheus http://localhost:9090 --days 30
+
+# Test alert routing
+./scripts/test_alert_routing.py --alertmanager http://localhost:9093
+
+# Send test alert
+./scripts/test_alert_routing.py --alertmanager http://localhost:9093 \
+  --send-test --labels &#x27;{&quot;severity&quot;:&quot;warning&quot;,&quot;service&quot;:&quot;test&quot;}&#x27;
+
+# Validate Alertmanager config
+amtool check-config alertmanager/alertmanager.yml</code></pre>
+<h3>When to Use Level 3 Resources</h3>
+<p>Use these resources when:</p>
+<ul><li>Designing alerting strategy for new services</li><li>Implementing SLO-based alerting</li><li>Setting up Alertmanager from scratch</li><li>Integrating with PagerDuty or Opsgenie</li><li>Creating runbooks for existing alerts</li><li>Debugging alert fatigue issues</li><li>Testing alert routing and escalation</li><li>Training team on alerting best practices</li><li>Reviewing and optimizing existing alerts</li><li>Setting up oncall rotation and schedules</li></ul>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>prometheus-monitoring.md</strong> - PromQL and recording rules</li><li><strong>metrics-instrumentation.md</strong> - Instrumenting applications</li><li><strong>observability-distributed-tracing.md</strong> - Request tracing</li><li><strong>structured-logging.md</strong> - Log-based alerting</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic) <strong>Level 3 Resources</strong>: Available</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/engineering-monitoring-alerts.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

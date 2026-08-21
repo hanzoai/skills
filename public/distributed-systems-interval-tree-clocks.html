@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distributed-systems-interval-tree-clocks</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/distributed-systems-interval-tree-clocks.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/distributed-systems-interval-tree-clocks.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>distributed-systems-interval-tree-clocks</h1><p class="lede">Interval tree clocks for dynamic systems, scalable causality tracking, fork/join operations, avoiding process ID exhaustion</p><h1>Interval Tree Clocks</h1>
+<p><strong>Scope</strong>: Interval tree clocks (ITC), dynamic causality, fork/join, scalable distributed time <strong>Lines</strong>: ~390 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Building systems with dynamic process creation</li><li>Avoiding vector clock ID exhaustion</li><li>Implementing fork/join parallelism tracking</li><li>Tracking causality without pre-assigned IDs</li><li>Building actor systems with spawn/terminate</li><li>Implementing causality in serverless functions</li><li>Managing ephemeral worker processes</li><li>Scaling beyond fixed process counts</li></ul>
+<h2>Core Concepts</h2>
+<h3>The Problem with Vector Clocks</h3>
+<p><strong>Fixed process ID requirement</strong>:</p>
+<pre><code>Vector Clock: {A:5, B:3, C:7}
+               ↑   ↑   ↑
+          Pre-assigned IDs
+
+Problems:
+1. Must know all process IDs upfront
+2. Adding new process → resize all vectors
+3. Short-lived processes waste space
+4. Can&#x27;t handle dynamic fork/join</code></pre>
+<p><strong>ID exhaustion</strong>:</p>
+<pre><code>Serverless functions: 1000s of ephemeral workers
+Actor systems: Actors spawn/terminate dynamically
+Microservices: Containers scale up/down
+
+Vector clock grows to 1000s of entries!</code></pre>
+<h3>Interval Tree Clocks Solution</h3>
+<p><strong>Key insight</strong>: Represent causality as intervals in ID space, not fixed IDs</p>
+<pre><code>ITC = (id_interval, event_tree)
+
+id_interval: Portion of ID space owned by this process
+event_tree: Binary tree tracking causal events
+
+Properties:
+1. Fork: Split ID interval between processes
+2. Join: Merge ID intervals when processes sync
+3. Event: Increment counter in owned interval
+4. O(log N) size for N events (not N processes!)</code></pre>
+<p><strong>Visual</strong>:</p>
+<pre><code>Process A owns [0, 1):
+  ITC_A = ([0, 1), tree)
+
+A forks to create B:
+  ITC_A = ([0, 0.5), tree_a)
+  ITC_B = ([0.5, 1), tree_b)
+
+A and B can fork further:
+  ITC_A1 = ([0, 0.25), ...)
+  ITC_A2 = ([0.25, 0.5), ...)</code></pre>
+<hr>
+<h2>Algorithm</h2>
+<h3>Data Structures</h3>
+<pre><code class="lang-python">from typing import Optional, Tuple
+from dataclasses import dataclass
+
+@dataclass
+class IDInterval:
+    &quot;&quot;&quot;Interval in ID space [start, end)&quot;&quot;&quot;
+    start: float
+    end: float
+
+    def __repr__(self):
+        return f&quot;[{self.start:.3f}, {self.end:.3f})&quot;
+
+    def is_empty(self) -&gt; bool:
+        return self.start &gt;= self.end
+
+    def split(self) -&gt; Tuple[&#x27;IDInterval&#x27;, &#x27;IDInterval&#x27;]:
+        &quot;&quot;&quot;Split interval in half&quot;&quot;&quot;
+        mid = (self.start + self.end) / 2
+        return IDInterval(self.start, mid), IDInterval(mid, self.end)
+
+    def merge(self, other: &#x27;IDInterval&#x27;) -&gt; Optional[&#x27;IDInterval&#x27;]:
+        &quot;&quot;&quot;Merge adjacent intervals&quot;&quot;&quot;
+        if self.end == other.start:
+            return IDInterval(self.start, other.end)
+        elif other.end == self.start:
+            return IDInterval(other.start, self.end)
+        return None
+
+class EventTree:
+    &quot;&quot;&quot;Binary tree tracking causal events&quot;&quot;&quot;
+
+    def __init__(self, value: int = 0, left: Optional[&#x27;EventTree&#x27;] = None,
+                 right: Optional[&#x27;EventTree&#x27;] = None):
+        self.value = value
+        self.left = left
+        self.right = right
+
+    def is_leaf(self) -&gt; bool:
+        return self.left is None and self.right is None
+
+    def __repr__(self):
+        if self.is_leaf():
+            return f&quot;{self.value}&quot;
+        return f&quot;({self.value}, {self.left}, {self.right})&quot;
+
+    def copy(self) -&gt; &#x27;EventTree&#x27;:
+        &quot;&quot;&quot;Deep copy of tree&quot;&quot;&quot;
+        if self.is_leaf():
+            return EventTree(self.value)
+        return EventTree(
+            self.value,
+            self.left.copy() if self.left else None,
+            self.right.copy() if self.right else None
+        )
+
+class ITC:
+    &quot;&quot;&quot;Interval Tree Clock&quot;&quot;&quot;
+
+    def __init__(self, interval: IDInterval, event: EventTree):
+        self.interval = interval
+        self.event = event
+
+    def __repr__(self):
+        return f&quot;ITC({self.interval}, {self.event})&quot;
+
+    @staticmethod
+    def seed() -&gt; &#x27;ITC&#x27;:
+        &quot;&quot;&quot;Create initial ITC with full ID space&quot;&quot;&quot;
+        return ITC(IDInterval(0.0, 1.0), EventTree(0))
+
+    def copy(self) -&gt; &#x27;ITC&#x27;:
+        &quot;&quot;&quot;Deep copy&quot;&quot;&quot;
+        return ITC(self.interval, self.event.copy())</code></pre>
+<hr>
+<h2>Core Operations</h2>
+<h3>Event (Increment)</h3>
+<pre><code class="lang-python">def event(self) -&gt; &#x27;ITC&#x27;:
+    &quot;&quot;&quot;
+    Increment event counter in owned interval
+
+    Returns new ITC with incremented event
+    &quot;&quot;&quot;
+    def increment_tree(tree: EventTree, interval: IDInterval,
+                      owned: IDInterval) -&gt; EventTree:
+        if tree.is_leaf():
+            # Leaf covers owned interval - increment
+            return EventTree(tree.value + 1)
+
+        # Split interval and recurse
+        mid = (interval.start + interval.end) / 2
+
+        if owned.end &lt;= mid:
+            # Owned interval in left half
+            left = increment_tree(tree.left, IDInterval(interval.start, mid), owned)
+            return EventTree(tree.value, left, tree.right.copy())
+        elif owned.start &gt;= mid:
+            # Owned interval in right half
+            right = increment_tree(tree.right, IDInterval(mid, interval.end), owned)
+            return EventTree(tree.value, tree.left.copy(), right)
+        else:
+            # Owned interval spans both halves - should not happen in normal use
+            raise ValueError(&quot;Owned interval spans tree split&quot;)
+
+    new_event = increment_tree(self.event, IDInterval(0.0, 1.0), self.interval)
+    return ITC(self.interval, new_event)
+
+# Usage
+itc = ITC.seed()
+print(f&quot;Initial: {itc}&quot;)  # ITC([0.000, 1.000), 0)
+
+itc = itc.event()
+print(f&quot;After event: {itc}&quot;)  # ITC([0.000, 1.000), 1)
+
+itc = itc.event()
+print(f&quot;After event: {itc}&quot;)  # ITC([0.000, 1.000), 2)</code></pre>
+<h3>Fork (Split ID Space)</h3>
+<pre><code class="lang-python">def fork(self) -&gt; Tuple[&#x27;ITC&#x27;, &#x27;ITC&#x27;]:
+    &quot;&quot;&quot;
+    Split ITC into two independent ITCs
+
+    Returns (itc1, itc2) where:
+    - itc1 and itc2 can make independent events
+    - Together they cover original ID space
+    &quot;&quot;&quot;
+    # Split ID interval
+    left_interval, right_interval = self.interval.split()
+
+    # Clone event tree for both
+    left_itc = ITC(left_interval, self.event.copy())
+    right_itc = ITC(right_interval, self.event.copy())
+
+    return left_itc, right_itc
+
+# Usage
+itc = ITC.seed()
+itc = itc.event()  # ITC([0.000, 1.000), 1)
+
+# Fork into two processes
+itc_a, itc_b = itc.fork()
+print(f&quot;Process A: {itc_a}&quot;)  # ITC([0.000, 0.500), 1)
+print(f&quot;Process B: {itc_b}&quot;)  # ITC([0.500, 1.000), 1)
+
+# Independent events
+itc_a = itc_a.event()  # A increments
+itc_b = itc_b.event()  # B increments (concurrent!)</code></pre>
+<h3>Join (Merge Clocks)</h3>
+<pre><code class="lang-python">def join(self, other: &#x27;ITC&#x27;) -&gt; &#x27;ITC&#x27;:
+    &quot;&quot;&quot;
+    Merge two ITCs on synchronization
+
+    Returns new ITC with:
+    - Merged ID intervals
+    - Combined event trees (max of both)
+    &quot;&quot;&quot;
+    def merge_trees(tree1: EventTree, tree2: EventTree,
+                   interval: IDInterval, int1: IDInterval,
+                   int2: IDInterval) -&gt; EventTree:
+        &quot;&quot;&quot;Merge two event trees&quot;&quot;&quot;
+        # Base case: both leaves
+        if tree1.is_leaf() and tree2.is_leaf():
+            return EventTree(max(tree1.value, tree2.value))
+
+        # Expand leaves to match structure
+        if tree1.is_leaf() and not tree2.is_leaf():
+            tree1 = EventTree(tree1.value, EventTree(0), EventTree(0))
+        if tree2.is_leaf() and not tree1.is_leaf():
+            tree2 = EventTree(tree2.value, EventTree(0), EventTree(0))
+
+        # Recursive merge
+        mid = (interval.start + interval.end) / 2
+        left_interval = IDInterval(interval.start, mid)
+        right_interval = IDInterval(mid, interval.end)
+
+        left = merge_trees(tree1.left, tree2.left, left_interval, int1, int2)
+        right = merge_trees(tree1.right, tree2.right, right_interval, int1, int2)
+
+        # Combine with max base
+        base = max(tree1.value, tree2.value)
+        return EventTree(base, left, right)
+
+    # Merge intervals
+    merged_interval = self._merge_intervals(self.interval, other.interval)
+
+    # Merge event trees
+    merged_event = merge_trees(
+        self.event, other.event,
+        IDInterval(0.0, 1.0),
+        self.interval, other.interval
+    )
+
+    return ITC(merged_interval, merged_event)
+
+def _merge_intervals(self, int1: IDInterval, int2: IDInterval) -&gt; IDInterval:
+    &quot;&quot;&quot;Merge two intervals (assumes adjacent or overlapping)&quot;&quot;&quot;
+    return IDInterval(min(int1.start, int2.start), max(int1.end, int2.end))
+
+# Usage
+itc_a, itc_b = ITC.seed().fork()
+itc_a = itc_a.event()  # A: 1
+itc_b = itc_b.event().event()  # B: 2
+
+# Synchronize
+itc_merged = itc_a.join(itc_b)
+print(f&quot;Merged: {itc_merged}&quot;)  # Captures both histories</code></pre>
+<hr>
+<h2>Comparison Operations</h2>
+<pre><code class="lang-python">def leq(self, other: &#x27;ITC&#x27;) -&gt; bool:
+    &quot;&quot;&quot;
+    Check if self ≤ other (happens-before or concurrent)
+
+    Returns True if self&#x27;s events are causally before or equal to other&#x27;s
+    &quot;&quot;&quot;
+    def compare_trees(tree1: EventTree, tree2: EventTree) -&gt; bool:
+        &quot;&quot;&quot;Check if tree1 ≤ tree2&quot;&quot;&quot;
+        if tree1.is_leaf() and tree2.is_leaf():
+            return tree1.value &lt;= tree2.value
+
+        if tree1.is_leaf():
+            # Expand tree1 to match structure
+            return compare_trees(
+                EventTree(tree1.value, EventTree(0), EventTree(0)),
+                tree2
+            )
+
+        if tree2.is_leaf():
+            # Expand tree2 to match structure
+            return compare_trees(
+                tree1,
+                EventTree(tree2.value, EventTree(0), EventTree(0))
+            )
+
+        # Both internal nodes
+        return (tree1.value &lt;= tree2.value and
+                compare_trees(tree1.left, tree2.left) and
+                compare_trees(tree1.right, tree2.right))
+
+    return compare_trees(self.event, other.event)
+
+def concurrent(self, other: &#x27;ITC&#x27;) -&gt; bool:
+    &quot;&quot;&quot;Check if self and other are concurrent&quot;&quot;&quot;
+    return not self.leq(other) and not other.leq(self)
+
+# Usage
+itc_a, itc_b = ITC.seed().fork()
+itc_a = itc_a.event()
+itc_b = itc_b.event()
+
+print(itc_a.concurrent(itc_b))  # True - concurrent events
+print(itc_a.leq(itc_b))  # False</code></pre>
+<hr>
+<h2>Practical Example: Actor System</h2>
+<pre><code class="lang-python">class Actor:
+    &quot;&quot;&quot;Actor with ITC for causality tracking&quot;&quot;&quot;
+
+    def __init__(self, actor_id: str, itc: ITC):
+        self.actor_id = actor_id
+        self.itc = itc
+        self.mailbox = []
+
+    def send_message(self, recipient: &#x27;Actor&#x27;, msg):
+        &quot;&quot;&quot;Send message with current ITC&quot;&quot;&quot;
+        # Local event (sending)
+        self.itc = self.itc.event()
+
+        # Include ITC snapshot in message
+        recipient.receive_message(msg, self.itc.copy())
+
+    def receive_message(self, msg, sender_itc: ITC):
+        &quot;&quot;&quot;Receive message and update ITC&quot;&quot;&quot;
+        # Merge with sender&#x27;s causality
+        self.itc = self.itc.join(sender_itc)
+
+        # Process message (local event)
+        self.itc = self.itc.event()
+
+        print(f&quot;[{self.actor_id}] Received: {msg}, ITC: {self.itc}&quot;)
+
+    def spawn_child(self) -&gt; &#x27;Actor&#x27;:
+        &quot;&quot;&quot;Spawn child actor with forked ITC&quot;&quot;&quot;
+        parent_itc, child_itc = self.itc.fork()
+
+        self.itc = parent_itc
+        child = Actor(f&quot;{self.actor_id}.child&quot;, child_itc)
+
+        print(f&quot;[{self.actor_id}] Spawned child with ITC: {child.itc}&quot;)
+        return child
+
+# Usage Example
+# Create initial actor
+root = Actor(&quot;root&quot;, ITC.seed())
+
+# Spawn children
+child1 = root.spawn_child()
+child2 = root.spawn_child()
+
+# Send messages
+root.send_message(child1, &quot;Hello from root&quot;)
+child1.send_message(child2, &quot;Hello from child1&quot;)
+child2.send_message(root, &quot;Reply from child2&quot;)
+
+# Spawn grandchild
+grandchild = child1.spawn_child()
+child1.send_message(grandchild, &quot;Message to grandchild&quot;)</code></pre>
+<hr>
+<h2>Serverless Function Example</h2>
+<pre><code class="lang-python">class ServerlessFunction:
+    &quot;&quot;&quot;Serverless function with ITC causality&quot;&quot;&quot;
+
+    def __init__(self, function_id: str):
+        self.function_id = function_id
+        self.itc = None  # Assigned dynamically
+
+    def invoke(self, request, context_itc: Optional[ITC] = None):
+        &quot;&quot;&quot;Invoke function with optional causal context&quot;&quot;&quot;
+        # Initialize or fork ITC
+        if context_itc is None:
+            # First invocation
+            self.itc = ITC.seed()
+        else:
+            # Fork from context
+            _, self.itc = context_itc.fork()
+
+        # Process request (local event)
+        self.itc = self.itc.event()
+
+        print(f&quot;[{self.function_id}] Processing request, ITC: {self.itc}&quot;)
+
+        # Return result with ITC
+        return {&quot;result&quot;: &quot;processed&quot;, &quot;itc&quot;: self.itc}
+
+    def chain_invoke(self, next_function: &#x27;ServerlessFunction&#x27;, request):
+        &quot;&quot;&quot;Invoke next function in chain&quot;&quot;&quot;
+        # Pass ITC context
+        return next_function.invoke(request, self.itc)
+
+# Usage: Serverless workflow
+fn1 = ServerlessFunction(&quot;process-order&quot;)
+fn2 = ServerlessFunction(&quot;send-email&quot;)
+fn3 = ServerlessFunction(&quot;update-inventory&quot;)
+
+# Cold start
+result1 = fn1.invoke({&quot;order_id&quot;: 123})
+
+# Chain invocations (causality preserved)
+result2 = fn1.chain_invoke(fn2, {&quot;email&quot;: &quot;user@example.com&quot;})
+result3 = fn1.chain_invoke(fn3, {&quot;item_id&quot;: 456})
+
+# Parallel invocations (concurrent)
+fn4 = ServerlessFunction(&quot;analytics&quot;)
+fn5 = ServerlessFunction(&quot;logging&quot;)
+fn1.chain_invoke(fn4, {})  # Concurrent
+fn1.chain_invoke(fn5, {})  # Concurrent</code></pre>
+<hr>
+<h2>Comparison: Vector Clocks vs ITC</h2>
+<p>| Aspect | Vector Clocks | Interval Tree Clocks | |--------|--------------|---------------------| | <strong>Process IDs</strong> | Pre-assigned, fixed | Dynamic, allocated on demand | | <strong>Size</strong> | O(N) processes | O(log E) events | | <strong>Fork</strong> | Not supported | O(1) | | <strong>Join</strong> | Element-wise max | Tree merge O(log E) | | <strong>Event</strong> | O(1) increment | O(log E) tree update | | <strong>Comparison</strong> | O(N) | O(E) | | <strong>Dynamic systems</strong> | Poor fit | Excellent fit | | <strong>Memory</strong> | High for many processes | Low, scales with events |</p>
+<p><strong>Space comparison</strong>:</p>
+<pre><code>System with 1000 short-lived processes:
+
+Vector Clock:
+- 1000 entries × 8 bytes = 8KB per version
+- 10 versions = 80KB
+
+ITC:
+- Tree depth ≈ log₂(1000) ≈ 10 levels
+- ~20 nodes × 8 bytes = 160 bytes per version
+- 10 versions = 1.6KB
+
+Savings: ~98% reduction!</code></pre>
+<hr>
+<h2>Optimizations</h2>
+<h3>Tree Normalization</h3>
+<pre><code class="lang-python">def normalize_tree(tree: EventTree) -&gt; EventTree:
+    &quot;&quot;&quot;
+    Normalize tree by lifting common values
+
+    (5, (5, (5, 0, 0))) → (10, 0, 0)
+    &quot;&quot;&quot;
+    if tree.is_leaf():
+        return tree
+
+    left = normalize_tree(tree.left) if tree.left else EventTree(0)
+    right = normalize_tree(tree.right) if tree.right else EventTree(0)
+
+    # Lift common value
+    if not left.is_leaf() or not right.is_leaf():
+        min_val = min(left.value, right.value)
+        if min_val &gt; 0:
+            left = _subtract_tree(left, min_val)
+            right = _subtract_tree(right, min_val)
+            return EventTree(tree.value + min_val, left, right)
+
+    return EventTree(tree.value, left, right)
+
+def _subtract_tree(tree: EventTree, value: int) -&gt; EventTree:
+    &quot;&quot;&quot;Subtract value from tree&quot;&quot;&quot;
+    if tree.is_leaf():
+        return EventTree(max(0, tree.value - value))
+    return EventTree(
+        max(0, tree.value - value),
+        _subtract_tree(tree.left, value),
+        _subtract_tree(tree.right, value)
+    )</code></pre>
+<h3>Interval Coalescing</h3>
+<pre><code class="lang-python">def coalesce_intervals(itcs: list) -&gt; ITC:
+    &quot;&quot;&quot;
+    Merge multiple ITCs with adjacent intervals
+
+    Useful after collecting IDs from terminated processes
+    &quot;&quot;&quot;
+    # Sort by interval start
+    sorted_itcs = sorted(itcs, key=lambda i: i.interval.start)
+
+    # Merge adjacent intervals
+    result = sorted_itcs[0]
+    for itc in sorted_itcs[1:]:
+        merged_interval = result.interval.merge(itc.interval)
+        if merged_interval:
+            result = ITC(merged_interval, result.event)
+            result = result.join(itc)
+        else:
+            # Non-adjacent, can&#x27;t merge
+            pass
+
+    return result</code></pre>
+<hr>
+<h2>Testing ITC</h2>
+<pre><code class="lang-python">import unittest
+
+class TestITC(unittest.TestCase):
+    def test_event_increments(self):
+        &quot;&quot;&quot;Test that event increments counter&quot;&quot;&quot;
+        itc = ITC.seed()
+        itc = itc.event()
+        itc = itc.event()
+
+        # Should have incremented
+        self.assertEqual(itc.event.value, 2)
+
+    def test_fork_splits_interval(self):
+        &quot;&quot;&quot;Test that fork splits ID interval&quot;&quot;&quot;
+        itc = ITC.seed()
+        itc1, itc2 = itc.fork()
+
+        # Check intervals split
+        self.assertLess(itc1.interval.end, itc2.interval.start + 0.01)
+        self.assertGreater(itc1.interval.end, itc2.interval.start - 0.01)
+
+    def test_concurrent_after_fork(self):
+        &quot;&quot;&quot;Test that independent events after fork are concurrent&quot;&quot;&quot;
+        itc = ITC.seed()
+        itc1, itc2 = itc.fork()
+
+        itc1 = itc1.event()
+        itc2 = itc2.event()
+
+        # Should be concurrent
+        self.assertTrue(itc1.concurrent(itc2))
+
+    def test_join_merges(self):
+        &quot;&quot;&quot;Test that join merges causality&quot;&quot;&quot;
+        itc = ITC.seed()
+        itc1, itc2 = itc.fork()
+
+        itc1 = itc1.event()
+        itc2 = itc2.event()
+
+        # Join
+        merged = itc1.join(itc2)
+
+        # Merged should dominate both
+        self.assertTrue(itc1.leq(merged))
+        self.assertTrue(itc2.leq(merged))
+
+    def test_happens_before(self):
+        &quot;&quot;&quot;Test happens-before relationship&quot;&quot;&quot;
+        itc = ITC.seed()
+        itc1 = itc.event()
+        itc2 = itc1.event()
+
+        # itc1 happened before itc2
+        self.assertTrue(itc1.leq(itc2))
+        self.assertFalse(itc2.leq(itc1))</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>distributed-systems-vector-clocks</code> - Fixed-process causality</li><li><code>distributed-systems-dotted-version-vectors</code> - Optimized vector clocks</li><li><code>distributed-systems-logical-clocks</code> - Lamport clocks</li><li><code>distributed-systems-crdt-fundamentals</code> - Causal CRDTs</li><li><code>distributed-systems-eventual-consistency</code> - Consistency models</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/distributed-systems-interval-tree-clocks.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

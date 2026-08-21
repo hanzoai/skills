@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>data-dataflow-coordination</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/data-dataflow-coordination.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/data-dataflow-coordination.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>data-dataflow-coordination</h1><p class="lede">Coordination patterns for distributed dataflow systems including barriers, epochs, and distributed snapshots</p><h1>Dataflow Coordination</h1>
+<p><strong>Scope</strong>: Coordination primitives, barrier synchronization, epoch markers, distributed snapshots, consistency <strong>Lines</strong>: 370 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Coordinating multiple parallel dataflow streams</li><li>Implementing barrier synchronization across workers</li><li>Managing epochs and checkpointing in distributed systems</li><li>Building consistent snapshots of distributed state</li><li>Coordinating multi-stage pipeline computations</li><li>Implementing exactly-once semantics with coordination</li><li>Synchronizing external systems with dataflow progress</li><li>Handling backpressure across distributed workers</li></ul>
+<h2>Core Concepts</h2>
+<h3>Coordination Mechanisms</h3>
+<pre><code>Barriers
+  → Synchronization points across parallel streams
+  → All workers must reach barrier before proceeding
+  → Use for: Global aggregations, checkpointing
+  → Cost: Latency spike at barrier
+
+Epochs
+  → Logical time units for batching
+  → Watermarks: &quot;No data before T will arrive&quot;
+  → Use for: Windowing, progress tracking
+  → Cost: Buffering until epoch closes
+
+Snapshots
+  → Consistent global state capture
+  → Chandy-Lamport algorithm
+  → Use for: Fault recovery, migration
+  → Cost: Storage and I/O overhead</code></pre>
+<h3>Progress Tracking Models</h3>
+<pre><code>Global Frontier
+  → Minimum timestamp across all workers
+  → Conservative: Waits for slowest worker
+  → Guarantees: Completeness at timestamp
+
+Per-Worker Frontiers
+  → Independent progress per worker
+  → Optimistic: Faster workers proceed
+  → Requires: Careful synchronization
+
+Hierarchical Frontiers
+  → Per-operator, per-worker tracking
+  → Fine-grained progress visibility
+  → Complex but enables optimization</code></pre>
+<h3>Consistency Models</h3>
+<pre><code>Strong Consistency
+  → All workers see same state
+  → Requires: Global coordination
+  → Use for: Financial transactions
+
+Eventual Consistency
+  → Workers converge over time
+  → Minimal coordination
+  → Use for: Analytics, monitoring
+
+Causal Consistency
+  → Respects causal relationships
+  → Vector clocks, happens-before
+  → Use for: Distributed collaboration</code></pre>
+<h2>Patterns</h2>
+<h3>Pattern 1: Barrier Synchronization (Rust/Timely)</h3>
+<pre><code class="lang-rust">use timely::dataflow::{Scope, Stream};
+use timely::dataflow::channels::pact::Pipeline;
+use timely::dataflow::operators::generic::operator::Operator;
+use std::collections::HashMap;
+
+// Barrier that emits when all inputs reach same timestamp
+fn barrier&lt;G: Scope&gt;(
+    streams: Vec&lt;&amp;Stream&lt;G, i32&gt;&gt;,
+) -&gt; Stream&lt;G, Vec&lt;i32&gt;&gt; {
+    assert!(!streams.is_empty());
+
+    let mut builder = timely::dataflow::operators::generic::builder_rc::OperatorBuilder::new(
+        &quot;Barrier&quot;.to_string(),
+        streams[0].scope(),
+    );
+
+    // Create inputs for all streams
+    let mut inputs: Vec&lt;_&gt; = streams.iter()
+        .map(|stream| builder.new_input(stream, Pipeline))
+        .collect();
+
+    let (mut output, stream) = builder.new_output();
+
+    builder.build(move |_capability| {
+        let num_inputs = inputs.len();
+        let mut buffers: HashMap&lt;G::Timestamp, Vec&lt;Vec&lt;i32&gt;&gt;&gt; = HashMap::new();
+
+        move |_frontiers| {
+            // Collect data from all inputs
+            for (idx, input) in inputs.iter_mut().enumerate() {
+                input.for_each(|time, data| {
+                    let entry = buffers.entry(time.time().clone())
+                        .or_insert_with(|| vec![Vec::new(); num_inputs]);
+                    entry[idx].extend(data.iter().cloned());
+                });
+            }
+
+            // Emit when all inputs have data at timestamp
+            let ready: Vec&lt;G::Timestamp&gt; = buffers.iter()
+                .filter(|(_, vecs)| vecs.iter().all(|v| !v.is_empty()))
+                .map(|(t, _)| t.clone())
+                .collect();
+
+            for time in ready {
+                if let Some(mut data_vecs) = buffers.remove(&amp;time) {
+                    let mut session = output.session(&amp;time);
+
+                    // Combine data from all inputs
+                    let combined: Vec&lt;i32&gt; = data_vecs.into_iter()
+                        .flat_map(|v| v)
+                        .collect();
+
+                    session.give(combined);
+                }
+            }
+        }
+    });
+
+    stream
+}
+
+// Usage
+fn main() {
+    use timely::dataflow::operators::{ToStream, Inspect};
+
+    timely::execute_from_args(std::env::args(), |worker| {
+        worker.dataflow::&lt;u64, _, _&gt;(|scope| {
+            let stream1 = (0..5).to_stream(scope);
+            let stream2 = (10..15).to_stream(scope);
+
+            barrier(vec![&amp;stream1, &amp;stream2])
+                .inspect(|data| println!(&quot;Barrier output: {:?}&quot;, data));
+        });
+    }).expect(&quot;Execution failed&quot;);
+}</code></pre>
+<h3>Pattern 2: Epoch Markers (Go)</h3>
+<pre><code class="lang-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;sync&quot;
+    &quot;time&quot;
+)
+
+// EpochCoordinator manages epoch transitions across workers
+type EpochCoordinator struct {
+    currentEpoch int64
+    numWorkers   int
+    barriers     map[int64]*sync.WaitGroup
+    mu           sync.Mutex
+}
+
+func NewEpochCoordinator(numWorkers int) *EpochCoordinator {
+    return &amp;EpochCoordinator{
+        currentEpoch: 0,
+        numWorkers:   numWorkers,
+        barriers:     make(map[int64]*sync.WaitGroup),
+    }
+}
+
+// ArriveAtEpoch signals that worker has reached epoch
+func (ec *EpochCoordinator) ArriveAtEpoch(workerID int, epoch int64) {
+    ec.mu.Lock()
+    defer ec.mu.Unlock()
+
+    // Create barrier for this epoch if needed
+    if _, exists := ec.barriers[epoch]; !exists {
+        ec.barriers[epoch] = &amp;sync.WaitGroup{}
+        ec.barriers[epoch].Add(ec.numWorkers)
+    }
+
+    fmt.Printf(&quot;Worker %d arrived at epoch %d\n&quot;, workerID, epoch)
+    ec.barriers[epoch].Done()
+}
+
+// WaitForEpoch blocks until all workers reach epoch
+func (ec *EpochCoordinator) WaitForEpoch(epoch int64) {
+    ec.mu.Lock()
+    barrier := ec.barriers[epoch]
+    ec.mu.Unlock()
+
+    if barrier != nil {
+        barrier.Wait()
+        fmt.Printf(&quot;Epoch %d complete\n&quot;, epoch)
+
+        // Clean up old barriers
+        ec.mu.Lock()
+        delete(ec.barriers, epoch)
+        ec.mu.Unlock()
+    }
+}
+
+// AdvanceEpoch moves to next epoch
+func (ec *EpochCoordinator) AdvanceEpoch() int64 {
+    ec.mu.Lock()
+    defer ec.mu.Unlock()
+
+    ec.currentEpoch++
+    return ec.currentEpoch
+}
+
+// Worker simulates dataflow worker with epoch coordination
+func worker(id int, coordinator *EpochCoordinator, wg *sync.WaitGroup) {
+    defer wg.Done()
+
+    for epoch := int64(0); epoch &lt; 5; epoch++ {
+        // Simulate work
+        time.Sleep(time.Duration(id*100) * time.Millisecond)
+        fmt.Printf(&quot;Worker %d processing epoch %d\n&quot;, id, epoch)
+
+        // Signal arrival at epoch barrier
+        coordinator.ArriveAtEpoch(id, epoch)
+
+        // Wait for all workers to reach epoch
+        coordinator.WaitForEpoch(epoch)
+    }
+}
+
+func main() {
+    numWorkers := 3
+    coordinator := NewEpochCoordinator(numWorkers)
+
+    var wg sync.WaitGroup
+    wg.Add(numWorkers)
+
+    for i := 0; i &lt; numWorkers; i++ {
+        go worker(i, coordinator, &amp;wg)
+    }
+
+    wg.Wait()
+    fmt.Println(&quot;All workers complete&quot;)
+}</code></pre>
+<h3>Pattern 3: Distributed Snapshot (Chandy-Lamport)</h3>
+<pre><code class="lang-python">import threading
+import queue
+from dataclasses import dataclass
+from typing import Dict, List, Set
+from enum import Enum
+
+class MessageType(Enum):
+    DATA = 1
+    MARKER = 2
+
+@dataclass
+class Message:
+    msg_type: MessageType
+    data: any
+    snapshot_id: int = 0
+
+class SnapshotWorker:
+    &quot;&quot;&quot;Implements Chandy-Lamport snapshot algorithm&quot;&quot;&quot;
+
+    def __init__(self, worker_id: int, neighbors: List[int]):
+        self.worker_id = worker_id
+        self.neighbors = neighbors
+        self.state = {}  # Local state
+        self.channels: Dict[int, queue.Queue] = {}  # Input channels
+
+        # Snapshot state
+        self.recording: Dict[int, bool] = {}  # Per snapshot
+        self.recorded_state: Dict[int, dict] = {}  # Snapshot ID -&gt; state
+        self.recorded_messages: Dict[int, Dict[int, List]] = {}  # Snapshot -&gt; channel -&gt; messages
+        self.markers_received: Dict[int, Set[int]] = {}  # Snapshot -&gt; set of channels
+
+        # Initialize channels
+        for neighbor in neighbors:
+            self.channels[neighbor] = queue.Queue()
+
+    def start_snapshot(self, snapshot_id: int):
+        &quot;&quot;&quot;Initiate snapshot (only by coordinator)&quot;&quot;&quot;
+        print(f&quot;Worker {self.worker_id}: Starting snapshot {snapshot_id}&quot;)
+
+        # Record local state
+        self.recorded_state[snapshot_id] = self.state.copy()
+        self.recording[snapshot_id] = True
+        self.recorded_messages[snapshot_id] = {n: [] for n in self.neighbors}
+        self.markers_received[snapshot_id] = set()
+
+        # Send markers to all neighbors
+        for neighbor in self.neighbors:
+            self.send_message(neighbor, Message(MessageType.MARKER, None, snapshot_id))
+
+    def receive_marker(self, snapshot_id: int, from_channel: int):
+        &quot;&quot;&quot;Handle marker message&quot;&quot;&quot;
+        if snapshot_id not in self.recording:
+            # First marker for this snapshot
+            print(f&quot;Worker {self.worker_id}: Received first marker for snapshot {snapshot_id}&quot;)
+
+            # Record state
+            self.recorded_state[snapshot_id] = self.state.copy()
+            self.recording[snapshot_id] = True
+            self.recorded_messages[snapshot_id] = {n: [] for n in self.neighbors}
+            self.markers_received[snapshot_id] = {from_channel}
+
+            # Channel from which marker arrived is empty
+            self.recorded_messages[snapshot_id][from_channel] = []
+
+            # Send markers to all neighbors
+            for neighbor in self.neighbors:
+                self.send_message(neighbor, Message(MessageType.MARKER, None, snapshot_id))
+        else:
+            # Subsequent marker
+            print(f&quot;Worker {self.worker_id}: Received marker from channel {from_channel}&quot;)
+            self.markers_received[snapshot_id].add(from_channel)
+
+        # Check if snapshot complete
+        if len(self.markers_received[snapshot_id]) == len(self.neighbors):
+            self.finalize_snapshot(snapshot_id)
+
+    def receive_data(self, data: any, from_channel: int):
+        &quot;&quot;&quot;Handle data message&quot;&quot;&quot;
+        # Process data (update state)
+        self.state[f&#x27;key_{len(self.state)}&#x27;] = data
+
+        # Record message if snapshot in progress
+        for snapshot_id, recording in self.recording.items():
+            if recording and from_channel not in self.markers_received.get(snapshot_id, set()):
+                # Recording messages on this channel
+                self.recorded_messages[snapshot_id][from_channel].append(data)
+
+    def finalize_snapshot(self, snapshot_id: int):
+        &quot;&quot;&quot;Snapshot complete for this worker&quot;&quot;&quot;
+        print(f&quot;Worker {self.worker_id}: Snapshot {snapshot_id} complete&quot;)
+        print(f&quot;  State: {self.recorded_state[snapshot_id]}&quot;)
+        print(f&quot;  Messages: {self.recorded_messages[snapshot_id]}&quot;)
+
+        self.recording[snapshot_id] = False
+
+    def send_message(self, to_worker: int, message: Message):
+        &quot;&quot;&quot;Send message to another worker (simulated)&quot;&quot;&quot;
+        # In real system, this would send over network
+        pass
+
+# Example usage
+def main():
+    # Create 3 workers in ring topology: 0 -&gt; 1 -&gt; 2 -&gt; 0
+    workers = [
+        SnapshotWorker(0, [1, 2]),
+        SnapshotWorker(1, [0, 2]),
+        SnapshotWorker(2, [0, 1]),
+    ]
+
+    # Simulate some processing
+    workers[0].state = {&#x27;count&#x27;: 10}
+    workers[1].state = {&#x27;count&#x27;: 20}
+    workers[2].state = {&#x27;count&#x27;: 30}
+
+    # Initiate snapshot from worker 0
+    workers[0].start_snapshot(snapshot_id=1)
+
+    # Simulate marker propagation
+    workers[1].receive_marker(snapshot_id=1, from_channel=0)
+    workers[2].receive_marker(snapshot_id=1, from_channel=1)
+    workers[0].receive_marker(snapshot_id=1, from_channel=2)
+    workers[1].receive_marker(snapshot_id=1, from_channel=2)
+    workers[2].receive_marker(snapshot_id=1, from_channel=0)
+
+if __name__ == &#x27;__main__&#x27;:
+    main()</code></pre>
+<h3>Pattern 4: Backpressure Coordination (Python)</h3>
+<pre><code class="lang-python">import asyncio
+from dataclasses import dataclass
+from typing import Optional
+import time
+
+@dataclass
+class Watermark:
+    &quot;&quot;&quot;Progress indicator for backpressure&quot;&quot;&quot;
+    timestamp: int
+    worker_id: int
+
+class BackpressureCoordinator:
+    &quot;&quot;&quot;Coordinates flow control across pipeline stages&quot;&quot;&quot;
+
+    def __init__(self, num_workers: int, buffer_size: int = 100):
+        self.num_workers = num_workers
+        self.buffer_size = buffer_size
+        self.worker_watermarks = [0] * num_workers
+        self.global_watermark = 0
+        self.lock = asyncio.Lock()
+
+    async def update_watermark(self, worker_id: int, timestamp: int):
+        &quot;&quot;&quot;Update watermark for worker&quot;&quot;&quot;
+        async with self.lock:
+            self.worker_watermarks[worker_id] = timestamp
+            old_global = self.global_watermark
+            self.global_watermark = min(self.worker_watermarks)
+
+            if self.global_watermark &gt; old_global:
+                print(f&quot;Global watermark advanced to {self.global_watermark}&quot;)
+
+    async def can_proceed(self, worker_id: int, timestamp: int) -&gt; bool:
+        &quot;&quot;&quot;Check if worker can proceed without overwhelming downstream&quot;&quot;&quot;
+        async with self.lock:
+            # Allow if within buffer_size of slowest worker
+            return timestamp &lt;= self.global_watermark + self.buffer_size
+
+    async def get_global_watermark(self) -&gt; int:
+        async with self.lock:
+            return self.global_watermark
+
+class PipelineStage:
+    &quot;&quot;&quot;Dataflow pipeline stage with backpressure&quot;&quot;&quot;
+
+    def __init__(
+        self,
+        stage_id: int,
+        coordinator: BackpressureCoordinator,
+        input_queue: asyncio.Queue,
+        output_queue: Optional[asyncio.Queue] = None
+    ):
+        self.stage_id = stage_id
+        self.coordinator = coordinator
+        self.input_queue = input_queue
+        self.output_queue = output_queue
+        self.current_timestamp = 0
+
+    async def process(self):
+        &quot;&quot;&quot;Process data with backpressure&quot;&quot;&quot;
+        while True:
+            try:
+                data = await asyncio.wait_for(
+                    self.input_queue.get(),
+                    timeout=1.0
+                )
+
+                if data is None:  # Shutdown signal
+                    if self.output_queue:
+                        await self.output_queue.put(None)
+                    break
+
+                timestamp, value = data
+
+                # Check backpressure before proceeding
+                while not await self.coordinator.can_proceed(self.stage_id, timestamp):
+                    print(f&quot;Stage {self.stage_id}: Backpressure at timestamp {timestamp}&quot;)
+                    await asyncio.sleep(0.1)
+
+                # Process data (simulate work)
+                await asyncio.sleep(0.01)
+                processed = value * 2
+
+                # Update watermark
+                self.current_timestamp = timestamp
+                await self.coordinator.update_watermark(self.stage_id, timestamp)
+
+                # Send to next stage
+                if self.output_queue:
+                    await self.output_queue.put((timestamp, processed))
+
+            except asyncio.TimeoutError:
+                continue
+
+async def main():
+    num_stages = 3
+    coordinator = BackpressureCoordinator(num_stages, buffer_size=50)
+
+    # Create pipeline: source -&gt; stage1 -&gt; stage2 -&gt; sink
+    queues = [asyncio.Queue() for _ in range(num_stages)]
+
+    stages = [
+        PipelineStage(0, coordinator, queues[0], queues[1]),
+        PipelineStage(1, coordinator, queues[1], queues[2]),
+        PipelineStage(2, coordinator, queues[2], None),
+    ]
+
+    # Start processing
+    tasks = [asyncio.create_task(stage.process()) for stage in stages]
+
+    # Feed data
+    for i in range(200):
+        await queues[0].put((i, i))
+        await asyncio.sleep(0.005)  # Fast producer
+
+    # Shutdown
+    await queues[0].put(None)
+
+    # Wait for completion
+    await asyncio.gather(*tasks)
+
+if __name__ == &#x27;__main__&#x27;:
+    asyncio.run(main())</code></pre>
+<h3>Pattern 5: Causal Consistency with Vector Clocks (Go)</h3>
+<pre><code class="lang-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;sync&quot;
+)
+
+// VectorClock tracks causal relationships
+type VectorClock map[int]int
+
+func (vc VectorClock) Copy() VectorClock {
+    copy := make(VectorClock)
+    for k, v := range vc {
+        copy[k] = v
+    }
+    return copy
+}
+
+func (vc VectorClock) Increment(nodeID int) {
+    vc[nodeID]++
+}
+
+func (vc VectorClock) Merge(other VectorClock) {
+    for nodeID, timestamp := range other {
+        if current, exists := vc[nodeID]; !exists || timestamp &gt; current {
+            vc[nodeID] = timestamp
+        }
+    }
+}
+
+func (vc VectorClock) HappensBefore(other VectorClock) bool {
+    lessOrEqual := true
+    strictlyLess := false
+
+    for nodeID := range vc {
+        if vc[nodeID] &gt; other[nodeID] {
+            return false // Not happens-before
+        }
+        if vc[nodeID] &lt; other[nodeID] {
+            strictlyLess = true
+        }
+    }
+
+    return lessOrEqual &amp;&amp; strictlyLess
+}
+
+// Event with causal timestamp
+type Event struct {
+    NodeID int
+    Data   string
+    Clock  VectorClock
+}
+
+// CausalBroadcast ensures causal ordering
+type CausalBroadcast struct {
+    nodeID   int
+    clock    VectorClock
+    pending  []Event
+    delivered map[string]bool
+    mu       sync.Mutex
+}
+
+func NewCausalBroadcast(nodeID int, numNodes int) *CausalBroadcast {
+    clock := make(VectorClock)
+    for i := 0; i &lt; numNodes; i++ {
+        clock[i] = 0
+    }
+
+    return &amp;CausalBroadcast{
+        nodeID:    nodeID,
+        clock:     clock,
+        pending:   []Event{},
+        delivered: make(map[string]bool),
+    }
+}
+
+func (cb *CausalBroadcast) Send(data string) Event {
+    cb.mu.Lock()
+    defer cb.mu.Unlock()
+
+    cb.clock.Increment(cb.nodeID)
+
+    event := Event{
+        NodeID: cb.nodeID,
+        Data:   data,
+        Clock:  cb.clock.Copy(),
+    }
+
+    fmt.Printf(&quot;Node %d: Sent event %s with clock %v\n&quot;,
+        cb.nodeID, data, event.Clock)
+
+    return event
+}
+
+func (cb *CausalBroadcast) Receive(event Event) {
+    cb.mu.Lock()
+    defer cb.mu.Unlock()
+
+    // Check if can deliver immediately
+    if cb.canDeliver(event) {
+        cb.deliver(event)
+        cb.checkPending()
+    } else {
+        // Buffer for later
+        cb.pending = append(cb.pending, event)
+        fmt.Printf(&quot;Node %d: Buffered event %s (waiting for causality)\n&quot;,
+            cb.nodeID, event.Data)
+    }
+}
+
+func (cb *CausalBroadcast) canDeliver(event Event) bool {
+    // Can deliver if:
+    // 1. Event from sender is next expected from that sender
+    // 2. All causally preceding events delivered
+
+    expected := cb.clock[event.NodeID] + 1
+    if event.Clock[event.NodeID] != expected {
+        return false
+    }
+
+    for nodeID, timestamp := range event.Clock {
+        if nodeID != event.NodeID &amp;&amp; timestamp &gt; cb.clock[nodeID] {
+            return false // Missing causal dependency
+        }
+    }
+
+    return true
+}
+
+func (cb *CausalBroadcast) deliver(event Event) {
+    cb.clock.Merge(event.Clock)
+    cb.delivered[event.Data] = true
+
+    fmt.Printf(&quot;Node %d: Delivered event %s with clock %v\n&quot;,
+        cb.nodeID, event.Data, event.Clock)
+}
+
+func (cb *CausalBroadcast) checkPending() {
+    // Try to deliver pending events
+    var stillPending []Event
+
+    for _, event := range cb.pending {
+        if cb.canDeliver(event) {
+            cb.deliver(event)
+        } else {
+            stillPending = append(stillPending, event)
+        }
+    }
+
+    cb.pending = stillPending
+}
+
+func main() {
+    // Create 3 nodes
+    nodes := []*CausalBroadcast{
+        NewCausalBroadcast(0, 3),
+        NewCausalBroadcast(1, 3),
+        NewCausalBroadcast(2, 3),
+    }
+
+    // Node 0 sends event A
+    eventA := nodes[0].Send(&quot;A&quot;)
+
+    // Node 0 sends event B (causally after A)
+    eventB := nodes[0].Send(&quot;B&quot;)
+
+    // Node 1 receives events out of order
+    nodes[1].Receive(eventB) // Should buffer
+    nodes[1].Receive(eventA) // Should deliver both A and B
+}</code></pre>
+<h2>Quick Reference</h2>
+<h3>Coordination Patterns</h3>
+<pre><code>Barrier: Wait for all workers at sync point
+Epoch: Logical time units for batching
+Watermark: &quot;No data before T will arrive&quot;
+Snapshot: Consistent global state capture
+Vector Clock: Track causal dependencies</code></pre>
+<h3>Trade-offs</h3>
+<pre><code>Strong Coordination
+  Pros: Consistency, simplicity
+  Cons: Latency, throughput impact
+
+Weak Coordination
+  Pros: Low latency, high throughput
+  Cons: Complex, eventual consistency</code></pre>
+<h2>Anti-Patterns</h2>
+<pre><code>❌ NEVER: Use global locks in hot path
+   → Use lock-free coordination or partitioning
+
+❌ NEVER: Block all workers for slow worker
+   → Use timeout or skip slow worker with compensation
+
+❌ NEVER: Ignore stragglers in barrier
+   → Implement timeout and speculative execution
+
+❌ NEVER: Take snapshots synchronously in critical path
+   → Use background checkpointing
+
+❌ NEVER: Use barriers for every record
+   → Batch into epochs for efficiency
+
+❌ NEVER: Assume synchronized clocks
+   → Use logical clocks (Lamport, vector)
+
+❌ NEVER: Coordinate without backpressure
+   → Fast producers overwhelm slow consumers
+
+❌ NEVER: Hardcode barrier counts
+   → Use dynamic registration for elasticity</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>timely-dataflow.md</code> - Progress tracking in timely dataflow</li><li><code>differential-dataflow.md</code> - Incremental computation</li><li><code>streaming-aggregations.md</code> - Windowing with watermarks</li><li><code>stream-processing.md</code> - High-level stream processing</li></ul>
+<p><strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/data-dataflow-coordination.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

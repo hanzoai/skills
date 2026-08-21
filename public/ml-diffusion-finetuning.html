@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ml-diffusion-finetuning</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ml-diffusion-finetuning.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ml-diffusion-finetuning.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ml-diffusion-finetuning</h1><p class="lede">Fine-tuning diffusion models for custom styles or subjects</p><h1>Diffusion Fine-Tuning</h1>
+<p><strong>Scope</strong>: Fine-tuning diffusion models with DreamBooth, LoRA, textual inversion, dataset preparation <strong>Lines</strong>: ~360 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Fine-tuning diffusion models for custom styles or subjects</li><li>Training DreamBooth models for specific people, objects, or concepts</li><li>Implementing LoRA (Low-Rank Adaptation) for efficient fine-tuning</li><li>Using textual inversion to add new concepts without model modification</li><li>Preparing datasets for diffusion model training</li><li>Debugging overfitting or underfitting in fine-tuned models</li><li>Merging multiple LoRAs or checkpoints</li><li>Optimizing training hyperparameters for quality and speed</li></ul>
+<h2>Core Concepts</h2>
+<h3>Fine-Tuning Approaches</h3>
+<p><strong>Full Fine-Tuning</strong>:</p>
+<ul><li>Train entire model (billions of parameters)</li><li>Requires massive compute (A100/H100 for days)</li><li>Best quality but extremely expensive</li><li>Risk of catastrophic forgetting</li></ul>
+<p><strong>DreamBooth</strong>:</p>
+<ul><li>Fine-tune subset of model on 3-20 images</li><li>Preserves general knowledge with regularization</li><li>Moderate compute (A100 for 30-60 minutes)</li><li>Best for specific subjects (people, pets, objects)</li></ul>
+<p><strong>LoRA (Low-Rank Adaptation)</strong>:</p>
+<ul><li>Train small adapter matrices (rank 4-128)</li><li>Only 0.5-5% of model parameters</li><li>Fast training (10-30 minutes on A100)</li><li>Easy to share and merge (10-100MB files)</li></ul>
+<p><strong>Textual Inversion</strong>:</p>
+<ul><li>Learn new token embedding (1-8 vectors)</li><li>Model weights frozen, only embedding trained</li><li>Very fast (5-15 minutes on A100)</li><li>Limited flexibility but lightweight</li></ul>
+<h3>DreamBooth Theory</h3>
+<p><strong>Core Idea</strong>: Fine-tune model to associate trigger word with specific subject</p>
+<p><strong>Training Process</strong>:</p>
+<ol><li>Collect 3-20 images of subject</li><li>Choose unique trigger word (e.g., &quot;sks person&quot;, &quot;xyz dog&quot;)</li><li>Fine-tune model with caption: &quot;[trigger] [class]&quot;</li><li>Use regularization images to prevent overfitting</li></ol>
+<p><strong>Regularization</strong>: Generate ~100-200 images of class (e.g., &quot;person&quot;, &quot;dog&quot;) to maintain general knowledge</p>
+<p><strong>Key Parameters</strong>:</p>
+<ul><li>Learning rate: 1e-6 to 5e-6 (lower = safer)</li><li>Training steps: 500-2000 (depends on dataset size)</li><li>Regularization weight: 0.5-1.0</li></ul>
+<h3>LoRA for Diffusion</h3>
+<p><strong>Architecture</strong>: Add low-rank matrices to attention layers</p>
+<pre><code>W_modified = W_pretrained + α * (A × B)
+where A is rxd, B is dxr (r &lt;&lt; d)</code></pre>
+<p><strong>Rank Selection</strong>:</p>
+<ul><li>Rank 4-8: Simple styles, fast training, small files</li><li>Rank 16-32: Complex styles, balanced</li><li>Rank 64-128: Maximum flexibility, slower training</li></ul>
+<p><strong>Benefits over Full Fine-Tuning</strong>:</p>
+<ul><li>100x faster training</li><li>1000x smaller files (10-100MB vs 2-7GB)</li><li>No catastrophic forgetting</li><li>Easy to merge multiple LoRAs</li><li>Can be applied/removed at inference</li></ul>
+<h3>Dataset Preparation</h3>
+<p><strong>Image Requirements</strong>:</p>
+<ul><li><strong>Quantity</strong>: 3-5 (minimum), 10-20 (ideal), 50+ (style training)</li><li><strong>Quality</strong>: High resolution, clear subject, good lighting</li><li><strong>Diversity</strong>: Different angles, poses, lighting, backgrounds</li><li><strong>Consistency</strong>: Same subject, avoid multiple people/objects</li></ul>
+<p><strong>Captioning</strong>:</p>
+<ul><li>DreamBooth: &quot;[trigger] [class]&quot; (e.g., &quot;sks person&quot;)</li><li>LoRA: Descriptive captions (helps generalization)</li><li>Textual Inversion: Fixed template with trigger word</li></ul>
+<p><strong>Data Augmentation</strong>: Not recommended (model handles variation)</p>
+<hr>
+<h2>Patterns</h2>
+<h3>DreamBooth Training (diffusers)</h3>
+<pre><code class="lang-python">from diffusers import StableDiffusionPipeline, DreamBoothTrainer
+from diffusers.utils import make_image_grid
+import torch
+
+# 1. Prepare dataset
+# - instance_images/: Your 10-20 images
+# - class_images/: 100-200 regularization images (generate with SD)
+
+# 2. Generate regularization images (one-time)
+pipe = StableDiffusionPipeline.from_pretrained(
+    &quot;runwayml/stable-diffusion-v1-5&quot;,
+    torch_dtype=torch.float16,
+).to(&quot;cuda&quot;)
+
+class_prompt = &quot;a photo of a person&quot;  # Match your subject class
+for i in range(200):
+    image = pipe(class_prompt, num_inference_steps=50).images[0]
+    image.save(f&quot;class_images/{i:04d}.png&quot;)
+
+# 3. Train DreamBooth
+from accelerate import Accelerator
+from diffusers import DDPMScheduler
+
+accelerator = Accelerator(mixed_precision=&quot;fp16&quot;)
+
+# Training config
+config = {
+    &quot;pretrained_model&quot;: &quot;runwayml/stable-diffusion-v1-5&quot;,
+    &quot;instance_data_dir&quot;: &quot;./instance_images&quot;,
+    &quot;class_data_dir&quot;: &quot;./class_images&quot;,
+    &quot;instance_prompt&quot;: &quot;a photo of sks person&quot;,  # Your trigger
+    &quot;class_prompt&quot;: &quot;a photo of a person&quot;,       # Class for regularization
+    &quot;learning_rate&quot;: 5e-6,
+    &quot;max_train_steps&quot;: 800,
+    &quot;train_batch_size&quot;: 1,
+    &quot;gradient_accumulation_steps&quot;: 1,
+    &quot;prior_preservation&quot;: True,
+    &quot;prior_preservation_weight&quot;: 1.0,
+    &quot;output_dir&quot;: &quot;./dreambooth_output&quot;,
+}
+
+# Note: Full training script requires ~200 lines
+# Use diffusers training script: examples/dreambooth/train_dreambooth.py</code></pre>
+<p><strong>Command-line training</strong> (recommended):</p>
+<pre><code class="lang-bash">accelerate launch train_dreambooth.py \
+  --pretrained_model_name_or_path=&quot;runwayml/stable-diffusion-v1-5&quot; \
+  --instance_data_dir=&quot;./instance_images&quot; \
+  --class_data_dir=&quot;./class_images&quot; \
+  --output_dir=&quot;./dreambooth_output&quot; \
+  --instance_prompt=&quot;a photo of sks person&quot; \
+  --class_prompt=&quot;a photo of a person&quot; \
+  --resolution=512 \
+  --train_batch_size=1 \
+  --gradient_accumulation_steps=1 \
+  --learning_rate=5e-6 \
+  --lr_scheduler=&quot;constant&quot; \
+  --lr_warmup_steps=0 \
+  --max_train_steps=800 \
+  --prior_preservation \
+  --prior_loss_weight=1.0</code></pre>
+<h3>LoRA Training (diffusers + PEFT)</h3>
+<pre><code class="lang-python">import modal
+from pathlib import Path
+
+# Modal deployment for LoRA training
+app = modal.App(&quot;lora-training&quot;)
+
+image = (
+    modal.Image.debian_slim(python_version=&quot;3.11&quot;)
+    .pip_install(
+        &quot;diffusers==0.30.0&quot;,
+        &quot;transformers==4.44.0&quot;,
+        &quot;accelerate==0.33.0&quot;,
+        &quot;peft==0.11.0&quot;,
+        &quot;bitsandbytes==0.43.0&quot;,
+        &quot;torch==2.1.0&quot;,
+        &quot;torchvision==0.16.0&quot;,
+        &quot;xformers==0.0.27&quot;,
+    )
+)
+
+@app.function(
+    gpu=&quot;A100&quot;,  # 40GB VRAM recommended
+    image=image,
+    timeout=3600,  # 1 hour
+    volumes={&quot;/data&quot;: modal.Volume.from_name(&quot;lora-data&quot;)},
+)
+def train_lora(
+    instance_images_dir: str,
+    instance_prompt: str,
+    output_name: str,
+    steps: int = 1000,
+    rank: int = 16,
+    learning_rate: float = 1e-4,
+):
+    &quot;&quot;&quot;Train LoRA for Stable Diffusion&quot;&quot;&quot;
+    from diffusers import StableDiffusionPipeline
+    from peft import LoraConfig, get_peft_model
+    import torch
+    from torch.utils.data import Dataset, DataLoader
+    from PIL import Image
+    import os
+
+    # Load base model
+    pipe = StableDiffusionPipeline.from_pretrained(
+        &quot;runwayml/stable-diffusion-v1-5&quot;,
+        torch_dtype=torch.float16,
+    ).to(&quot;cuda&quot;)
+
+    # Configure LoRA
+    lora_config = LoraConfig(
+        r=rank,                    # Rank (4-128)
+        lora_alpha=rank,           # Scaling factor
+        target_modules=[           # Which layers to adapt
+            &quot;to_q&quot;, &quot;to_k&quot;, &quot;to_v&quot;, &quot;to_out.0&quot;
+        ],
+        lora_dropout=0.0,
+        bias=&quot;none&quot;,
+    )
+
+    # Apply LoRA to UNet
+    pipe.unet = get_peft_model(pipe.unet, lora_config)
+    pipe.unet.print_trainable_parameters()
+
+    # Dataset
+    class DreamBoothDataset(Dataset):
+        def __init__(self, images_dir, prompt):
+            self.images = [
+                os.path.join(images_dir, f)
+                for f in os.listdir(images_dir)
+                if f.endswith((&#x27;.png&#x27;, &#x27;.jpg&#x27;, &#x27;.jpeg&#x27;))
+            ]
+            self.prompt = prompt
+
+        def __len__(self):
+            return len(self.images)
+
+        def __getitem__(self, idx):
+            image = Image.open(self.images[idx]).convert(&quot;RGB&quot;)
+            image = image.resize((512, 512))
+            return {&quot;image&quot;: image, &quot;prompt&quot;: self.prompt}
+
+    dataset = DreamBoothDataset(instance_images_dir, instance_prompt)
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+
+    # Optimizer
+    optimizer = torch.optim.AdamW(
+        pipe.unet.parameters(),
+        lr=learning_rate,
+        betas=(0.9, 0.999),
+        weight_decay=1e-2,
+    )
+
+    # Training loop
+    pipe.unet.train()
+    for step in range(steps):
+        batch = next(iter(dataloader))
+
+        # Forward pass
+        latents = pipe.vae.encode(batch[&quot;image&quot;]).latent_dist.sample()
+        latents = latents * pipe.vae.config.scaling_factor
+
+        # Add noise
+        noise = torch.randn_like(latents)
+        timesteps = torch.randint(0, pipe.scheduler.config.num_train_timesteps, (1,))
+
+        noisy_latents = pipe.scheduler.add_noise(latents, noise, timesteps)
+
+        # Predict noise
+        encoder_hidden_states = pipe.encode_prompt(batch[&quot;prompt&quot;])
+        noise_pred = pipe.unet(noisy_latents, timesteps, encoder_hidden_states).sample
+
+        # Loss
+        loss = torch.nn.functional.mse_loss(noise_pred, noise)
+
+        # Backward
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if step % 100 == 0:
+            print(f&quot;Step {step}/{steps}, Loss: {loss.item():.4f}&quot;)
+
+    # Save LoRA weights
+    output_path = f&quot;/data/{output_name}&quot;
+    pipe.unet.save_pretrained(output_path)
+    print(f&quot;LoRA saved to {output_path}&quot;)
+
+    return output_path</code></pre>
+<p><strong>Simpler approach using diffusers training script</strong>:</p>
+<pre><code class="lang-bash">accelerate launch train_dreambooth_lora.py \
+  --pretrained_model_name_or_path=&quot;runwayml/stable-diffusion-v1-5&quot; \
+  --instance_data_dir=&quot;./instance_images&quot; \
+  --output_dir=&quot;./lora_output&quot; \
+  --instance_prompt=&quot;a photo of sks person&quot; \
+  --resolution=512 \
+  --train_batch_size=1 \
+  --gradient_accumulation_steps=1 \
+  --learning_rate=1e-4 \
+  --lr_scheduler=&quot;constant&quot; \
+  --lr_warmup_steps=0 \
+  --max_train_steps=1000 \
+  --use_lora \
+  --lora_rank=16</code></pre>
+<h3>Using Trained LoRA</h3>
+<pre><code class="lang-python">from diffusers import StableDiffusionPipeline
+import torch
+
+# Load base model
+pipe = StableDiffusionPipeline.from_pretrained(
+    &quot;runwayml/stable-diffusion-v1-5&quot;,
+    torch_dtype=torch.float16,
+).to(&quot;cuda&quot;)
+
+# Load LoRA weights
+pipe.unet.load_attn_procs(&quot;./lora_output&quot;)
+
+# Generate with LoRA
+prompt = &quot;a photo of sks person as an astronaut&quot;
+image = pipe(
+    prompt=prompt,
+    num_inference_steps=30,
+    guidance_scale=7.5,
+).images[0]
+
+image.save(&quot;lora_output.png&quot;)</code></pre>
+<h3>Merging Multiple LoRAs</h3>
+<pre><code class="lang-python">from diffusers import StableDiffusionPipeline
+from safetensors.torch import load_file
+import torch
+
+pipe = StableDiffusionPipeline.from_pretrained(
+    &quot;runwayml/stable-diffusion-v1-5&quot;,
+    torch_dtype=torch.float16,
+).to(&quot;cuda&quot;)
+
+# Load multiple LoRAs with different weights
+lora_weights = [
+    (&quot;./lora_style_1&quot;, 0.7),   # 70% influence
+    (&quot;./lora_style_2&quot;, 0.5),   # 50% influence
+    (&quot;./lora_subject&quot;, 1.0),   # 100% influence
+]
+
+# Apply LoRAs
+for lora_path, weight in lora_weights:
+    pipe.load_lora_weights(lora_path, adapter_name=lora_path)
+    pipe.set_adapters([lora_path], adapter_weights=[weight])
+
+# Generate with merged LoRAs
+prompt = &quot;sks person in xyz style&quot;
+image = pipe(prompt).images[0]</code></pre>
+<h3>Textual Inversion</h3>
+<pre><code class="lang-python"># Textual inversion training (simplified)
+from diffusers import StableDiffusionPipeline
+import torch
+
+pipe = StableDiffusionPipeline.from_pretrained(
+    &quot;runwayml/stable-diffusion-v1-5&quot;,
+    torch_dtype=torch.float16,
+).to(&quot;cuda&quot;)
+
+# Initialize new token embedding
+placeholder_token = &quot;&lt;my-concept&gt;&quot;
+num_vectors = 1  # Can use 2-8 for complex concepts
+
+# Add token to tokenizer
+pipe.tokenizer.add_tokens([placeholder_token])
+pipe.text_encoder.resize_token_embeddings(len(pipe.tokenizer))
+
+# Initialize embedding (copy from similar word)
+token_id = pipe.tokenizer.convert_tokens_to_ids(placeholder_token)
+similar_token_id = pipe.tokenizer.convert_tokens_to_ids(&quot;person&quot;)
+
+with torch.no_grad():
+    pipe.text_encoder.get_input_embeddings().weight[token_id] = \
+        pipe.text_encoder.get_input_embeddings().weight[similar_token_id].clone()
+
+# Training: Only optimize new embedding, freeze rest
+# (Full training code ~150 lines, use diffusers script)</code></pre>
+<p><strong>Command-line training</strong>:</p>
+<pre><code class="lang-bash">accelerate launch textual_inversion.py \
+  --pretrained_model_name_or_path=&quot;runwayml/stable-diffusion-v1-5&quot; \
+  --train_data_dir=&quot;./instance_images&quot; \
+  --learnable_property=&quot;object&quot; \
+  --placeholder_token=&quot;&lt;my-concept&gt;&quot; \
+  --initializer_token=&quot;person&quot; \
+  --resolution=512 \
+  --train_batch_size=1 \
+  --learning_rate=5e-4 \
+  --max_train_steps=3000 \
+  --output_dir=&quot;./textual_inversion_output&quot;</code></pre>
+<h3>Dataset Preparation Script</h3>
+<pre><code class="lang-python">from PIL import Image
+import os
+from pathlib import Path
+
+def prepare_dreambooth_dataset(
+    input_dir: str,
+    output_dir: str,
+    target_size: int = 512,
+    min_images: int = 5,
+):
+    &quot;&quot;&quot;Prepare and validate DreamBooth dataset&quot;&quot;&quot;
+
+    input_path = Path(input_dir)
+    output_path = Path(output_dir)
+    output_path.mkdir(exist_ok=True)
+
+    # Supported formats
+    image_extensions = {&#x27;.jpg&#x27;, &#x27;.jpeg&#x27;, &#x27;.png&#x27;, &#x27;.webp&#x27;}
+
+    # Collect images
+    images = [
+        f for f in input_path.iterdir()
+        if f.suffix.lower() in image_extensions
+    ]
+
+    if len(images) &lt; min_images:
+        raise ValueError(f&quot;Need at least {min_images} images, found {len(images)}&quot;)
+
+    print(f&quot;Processing {len(images)} images...&quot;)
+
+    # Process each image
+    for i, img_path in enumerate(images):
+        img = Image.open(img_path).convert(&quot;RGB&quot;)
+
+        # Resize to square, maintaining aspect ratio
+        width, height = img.size
+        min_dim = min(width, height)
+
+        # Center crop to square
+        left = (width - min_dim) // 2
+        top = (height - min_dim) // 2
+        img = img.crop((left, top, left + min_dim, top + min_dim))
+
+        # Resize to target size
+        img = img.resize((target_size, target_size), Image.LANCZOS)
+
+        # Save
+        output_file = output_path / f&quot;{i:04d}.png&quot;
+        img.save(output_file, &quot;PNG&quot;)
+        print(f&quot;Processed: {output_file}&quot;)
+
+    print(f&quot;Dataset ready: {len(images)} images in {output_path}&quot;)
+
+    # Create caption file
+    caption_file = output_path / &quot;captions.txt&quot;
+    with open(caption_file, &quot;w&quot;) as f:
+        f.write(&quot;# Edit this file to add captions\n&quot;)
+        f.write(&quot;# Format: image_name.png: caption\n\n&quot;)
+        for i in range(len(images)):
+            f.write(f&quot;{i:04d}.png: a photo of sks person\n&quot;)
+
+    print(f&quot;Caption template created: {caption_file}&quot;)
+
+# Usage
+prepare_dreambooth_dataset(
+    input_dir=&quot;./raw_images&quot;,
+    output_dir=&quot;./instance_images&quot;,
+    target_size=512,
+)</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Method Comparison</h3>
+<pre><code>Method            | Train Time | File Size | Quality | Flexibility | Best For
+------------------|------------|-----------|---------|-------------|------------------
+Full Fine-Tune    | Days       | 2-7GB     | Best    | Highest     | Max quality, budget unlimited
+DreamBooth        | 30-60 min  | 2-7GB     | High    | High        | Specific subjects, traditional
+LoRA              | 10-30 min  | 10-100MB  | High    | High        | Modern default, shareable
+Textual Inversion | 5-15 min   | &lt;1MB      | Medium  | Low         | Simple concepts, lightweight</code></pre>
+<h3>Hyperparameter Guidelines</h3>
+<pre><code>Parameter                  | DreamBooth | LoRA     | Textual Inv
+---------------------------|------------|----------|-------------
+Learning Rate              | 5e-6       | 1e-4     | 5e-4
+Training Steps             | 800-2000   | 1000     | 3000
+Batch Size                 | 1          | 1-2      | 1
+Gradient Accumulation      | 1-4        | 1-2      | 1
+LoRA Rank                  | N/A        | 16-32    | N/A
+Number of Images           | 10-20      | 10-50    | 5-15
+Regularization Weight      | 1.0        | Optional | N/A</code></pre>
+<h3>Training Checklist</h3>
+<pre><code>✅ Dataset: 5-20 images, high quality, diverse angles
+✅ Images: Resized to 512x512, square crop, PNG format
+✅ Captions: Consistent format with trigger word
+✅ Regularization: 100-200 class images (DreamBooth)
+✅ GPU: A100 recommended (T4 works but slower)
+✅ Learning Rate: Start conservative (lower is safer)
+✅ Checkpoints: Save every 100-200 steps
+✅ Validation: Test generation every 200 steps
+✅ Monitoring: Track loss, watch for overfitting</code></pre>
+<h3>Overfitting Signs</h3>
+<pre><code>❌ Training loss near zero but validation loss high
+❌ Generated images identical to training images
+❌ Can only generate exact training poses/angles
+❌ Poor generalization to new prompts
+❌ Artifacts or distortions in novel scenes
+
+✅ Solution: Reduce steps, lower learning rate, add regularization, increase dataset diversity</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Too few training images</strong>: Using 1-3 images ✅ Use 5-10 minimum, 10-20 ideal for DreamBooth/LoRA</p>
+<p>❌ <strong>Overfitting with too many steps</strong>: Training until loss = 0 ✅ Monitor validation, stop at 800-1500 steps (DreamBooth), 1000 (LoRA)</p>
+<p>❌ <strong>No regularization (DreamBooth)</strong>: Model forgets general knowledge ✅ Always use prior preservation with 100-200 class images</p>
+<p>❌ <strong>Generic trigger words</strong>: Using &quot;person&quot;, &quot;dog&quot; (conflicts with model) ✅ Use unique identifiers: &quot;sks person&quot;, &quot;xyz dog&quot;</p>
+<p>❌ <strong>Wrong LoRA rank</strong>: Using rank 128 for simple styles ✅ Start with rank 16, increase only if needed</p>
+<p>❌ <strong>High learning rate</strong>: Using 1e-3 or higher ✅ Use 5e-6 (DreamBooth), 1e-4 (LoRA), 5e-4 (textual inversion)</p>
+<p>❌ <strong>Low quality dataset</strong>: Blurry, inconsistent, multiple subjects ✅ High resolution, clear subject, consistent lighting, single subject</p>
+<p>❌ <strong>No validation during training</strong>: Training blind ✅ Generate test images every 200 steps to monitor progress</p>
+<p>❌ <strong>Training on CPU or small GPU</strong>: T4 with SDXL ✅ Use A100 for SDXL, L40S/A100 for SD 1.5</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>diffusion-model-basics.md</code> - Core diffusion concepts and architecture</li><li><code>stable-diffusion-deployment.md</code> - Deploying fine-tuned models to production</li><li><code>lora-peft-techniques.md</code> - General LoRA/PEFT concepts</li><li><code>modal-gpu-workloads.md</code> - GPU training infrastructure</li><li><code>modal-functions-basics.md</code> - Modal deployment patterns</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ml-diffusion-finetuning.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

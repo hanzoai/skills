@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mobile-react-native-performance</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/mobile-react-native-performance.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/mobile-react-native-performance.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>mobile-react-native-performance</h1><p class="lede">App animations are dropping frames (not 60fps)</p><h1>React Native Performance</h1>
+<p><strong>Scope</strong>: React Native performance optimization, iOS-specific optimizations, profiling, memory management <strong>Lines</strong>: ~360 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>App animations are dropping frames (not 60fps)</li><li>Experiencing slow list scrolling or lag</li><li>High memory usage or crashes on iOS devices</li><li>Optimizing app for production release</li><li>JavaScript thread blocking or main thread blocking</li><li>Large bundle size impacting app startup time</li><li>Profiling and identifying performance bottlenecks</li></ul>
+<h2>Core Concepts</h2>
+<h3>React Native Architecture</h3>
+<p><strong>Thread Model</strong>:</p>
+<ul><li><strong>JavaScript Thread</strong>: Runs React code, business logic</li><li><strong>Main (UI) Thread</strong>: Native iOS UI rendering</li><li><strong>Shadow Thread</strong>: Layout calculations (Yoga)</li><li><strong>Bridge</strong>: Serializes data between JS and native (batched async)</li></ul>
+<p><strong>New Architecture (Fabric + TurboModules)</strong>:</p>
+<ul><li>Direct JSI (JavaScript Interface) communication</li><li>Synchronous native calls possible</li><li>Faster bridge, reduced overhead</li><li>Incremental adoption available</li></ul>
+<h3>Performance Bottlenecks</h3>
+<p><strong>Common Issues</strong>:</p>
+<ul><li>Bridge congestion (too many messages)</li><li>Excessive re-renders in React components</li><li>Heavy JavaScript computations blocking thread</li><li>Large lists without virtualization</li><li>Unoptimized images and assets</li><li>Memory leaks from listeners and timers</li></ul>
+<p><strong>iOS-Specific</strong>:</p>
+<ul><li>UIKit bridging overhead</li><li>CoreGraphics rendering costs</li><li>Allocation pressure (ARC overhead)</li><li>Disk I/O on main thread</li></ul>
+<h3>Hermes JavaScript Engine</h3>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Ahead-of-time compilation (faster startup)</li><li>Reduced memory footprint</li><li>Optimized bytecode</li><li>Better garbage collection</li></ul>
+<p><strong>Trade-offs</strong>:</p>
+<ul><li>No JIT (slightly slower runtime in some cases)</li><li>Default in React Native 0.70+</li><li>iOS 64-bit only</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: FlatList Optimization</h3>
+<pre><code class="lang-typescript">import React, { useCallback } from &#x27;react&#x27;;
+import { FlatList, View, Text, StyleSheet } from &#x27;react-native&#x27;;
+
+interface Item {
+  id: string;
+  title: string;
+  description: string;
+}
+
+// Memoized item component
+const ListItem = React.memo&lt;{ item: Item }&gt;(({ item }) =&gt; {
+  return (
+    &lt;View style={styles.item}&gt;
+      &lt;Text style={styles.title}&gt;{item.title}&lt;/Text&gt;
+      &lt;Text style={styles.description}&gt;{item.description}&lt;/Text&gt;
+    &lt;/View&gt;
+  );
+});
+
+function OptimizedList({ data }: { data: Item[] }) {
+  // Memoize key extractor
+  const keyExtractor = useCallback((item: Item) =&gt; item.id, []);
+
+  // Memoize render item
+  const renderItem = useCallback(
+    ({ item }: { item: Item }) =&gt; &lt;ListItem item={item} /&gt;,
+    []
+  );
+
+  return (
+    &lt;FlatList
+      data={data}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+
+      // Performance optimizations
+      removeClippedSubviews={true} // Unmount offscreen items
+      maxToRenderPerBatch={10} // Items per render batch
+      updateCellsBatchingPeriod={50} // ms between batches
+      initialNumToRender={10} // Initial render count
+      windowSize={5} // Viewports to render (3 = current + 1 above + 1 below)
+
+      // iOS-specific optimizations
+      maintainVisibleContentPosition={{
+        minIndexForVisible: 0,
+        autoscrollToTopThreshold: 10,
+      }}
+
+      // Prevent re-renders
+      getItemLayout={(data, index) =&gt; ({
+        length: 80, // Fixed item height
+        offset: 80 * index,
+        index,
+      })}
+    /&gt;
+  );
+}
+
+const styles = StyleSheet.create({
+  item: { height: 80, padding: 16 },
+  title: { fontSize: 16, fontWeight: &#x27;bold&#x27; },
+  description: { fontSize: 14, color: &#x27;#666&#x27; },
+});</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>60fps scrolling on large lists</li><li>Reduced memory usage</li><li>Efficient re-renders</li><li>iOS-optimized viewport handling</li></ul>
+<h3>Pattern 2: React.memo and useMemo</h3>
+<pre><code class="lang-typescript">import React, { useMemo, useCallback, useState } from &#x27;react&#x27;;
+import { View, Text, Pressable } from &#x27;react-native&#x27;;
+
+// Expensive computation
+function expensiveCalculation(items: number[]): number {
+  console.log(&#x27;Running expensive calculation...&#x27;);
+  return items.reduce((sum, item) =&gt; sum + item, 0);
+}
+
+// Memoized child component
+interface ChildProps {
+  count: number;
+  onIncrement: () =&gt; void;
+}
+
+const ChildComponent = React.memo&lt;ChildProps&gt;(({ count, onIncrement }) =&gt; {
+  console.log(&#x27;ChildComponent render&#x27;);
+  return (
+    &lt;View&gt;
+      &lt;Text&gt;Count: {count}&lt;/Text&gt;
+      &lt;Pressable onPress={onIncrement}&gt;
+        &lt;Text&gt;Increment&lt;/Text&gt;
+      &lt;/Pressable&gt;
+    &lt;/View&gt;
+  );
+});
+
+function ParentComponent() {
+  const [count, setCount] = useState(0);
+  const [items] = useState([1, 2, 3, 4, 5]);
+
+  // Memoize expensive computation
+  const total = useMemo(() =&gt; expensiveCalculation(items), [items]);
+
+  // Memoize callback to prevent child re-renders
+  const handleIncrement = useCallback(() =&gt; {
+    setCount((c) =&gt; c + 1);
+  }, []);
+
+  return (
+    &lt;View&gt;
+      &lt;Text&gt;Total: {total}&lt;/Text&gt;
+      &lt;ChildComponent count={count} onIncrement={handleIncrement} /&gt;
+    &lt;/View&gt;
+  );
+}</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Expensive computations</li><li>Preventing unnecessary re-renders</li><li>Child components receiving callback props</li><li>Lists with many items</li></ul>
+<h3>Pattern 3: React Native Reanimated 2</h3>
+<pre><code class="lang-typescript">import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+} from &#x27;react-native-reanimated&#x27;;
+import { Gesture, GestureDetector } from &#x27;react-native-gesture-handler&#x27;;
+
+function AnimatedBox() {
+  const offset = useSharedValue(0);
+  const scale = useSharedValue(1);
+
+  // Gesture runs on UI thread (no bridge)
+  const pan = Gesture.Pan()
+    .onChange((event) =&gt; {
+      offset.value += event.changeX;
+    })
+    .onEnd(() =&gt; {
+      offset.value = withSpring(0);
+    });
+
+  const tap = Gesture.Tap()
+    .onBegin(() =&gt; {
+      scale.value = withTiming(1.2, { duration: 100 });
+    })
+    .onFinalize(() =&gt; {
+      scale.value = withSpring(1);
+    });
+
+  // Animated style runs on UI thread
+  const animatedStyle = useAnimatedStyle(() =&gt; ({
+    transform: [
+      { translateX: offset.value },
+      { scale: scale.value },
+    ],
+  }));
+
+  const composed = Gesture.Simultaneous(pan, tap);
+
+  return (
+    &lt;GestureDetector gesture={composed}&gt;
+      &lt;Animated.View style={[styles.box, animatedStyle]} /&gt;
+    &lt;/GestureDetector&gt;
+  );
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>60fps animations (runs on UI thread)</li><li>No bridge communication during animation</li><li>Native iOS spring physics</li><li>Gesture-driven animations</li></ul>
+<h3>Pattern 4: Image Optimization</h3>
+<pre><code class="lang-typescript">import React from &#x27;react&#x27;;
+import { Image, Platform } from &#x27;react-native&#x27;;
+import FastImage from &#x27;react-native-fast-image&#x27;;
+
+// Use FastImage for better performance
+function OptimizedImage({ uri }: { uri: string }) {
+  return (
+    &lt;FastImage
+      source={{
+        uri,
+        priority: FastImage.priority.high,
+        cache: FastImage.cacheControl.immutable,
+      }}
+      style={{ width: 200, height: 200 }}
+      resizeMode={FastImage.resizeMode.cover}
+    /&gt;
+  );
+}
+
+// Image size optimization
+function ResponsiveImage({ baseUri }: { baseUri: string }) {
+  // Use appropriate image size for device
+  const scale = Platform.select({
+    ios: (Image as any).getSize ? &#x27;@3x&#x27; : &#x27;@2x&#x27;,
+    default: &#x27;@2x&#x27;,
+  });
+
+  return (
+    &lt;Image
+      source={{ uri: `${baseUri}${scale}.jpg` }}
+      style={{ width: 200, height: 200 }}
+      resizeMode=&quot;cover&quot;
+      // Load placeholder while loading
+      defaultSource={require(&#x27;./placeholder.png&#x27;)}
+    /&gt;
+  );
+}
+
+// Lazy image loading
+function LazyImage({ uri }: { uri: string }) {
+  const [loaded, setLoaded] = React.useState(false);
+
+  return (
+    &lt;&gt;
+      {!loaded &amp;&amp; &lt;Image source={require(&#x27;./placeholder.png&#x27;)} /&gt;}
+      &lt;Image
+        source={{ uri }}
+        style={{ display: loaded ? &#x27;flex&#x27; : &#x27;none&#x27; }}
+        onLoad={() =&gt; setLoaded(true)}
+      /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Multiple images on screen</li><li>Remote image loading</li><li>Large image files</li><li>Image-heavy feeds</li></ul>
+<h3>Pattern 5: Bundle Size Optimization</h3>
+<pre><code class="lang-javascript">// metro.config.js
+const { getDefaultConfig } = require(&#x27;expo/metro-config&#x27;);
+
+const config = getDefaultConfig(__dirname);
+
+// Enable tree shaking
+config.transformer.minifierConfig = {
+  keep_classnames: false,
+  keep_fnames: false,
+  mangle: {
+    keep_classnames: false,
+    keep_fnames: false,
+  },
+  compress: {
+    drop_console: true, // Remove console.log in production
+    dead_code: true,
+    collapse_vars: true,
+    reduce_vars: true,
+  },
+};
+
+// Enable inlining for smaller bundle
+config.transformer.experimentalImportSupport = true;
+config.transformer.inlineRequires = true;
+
+module.exports = config;</code></pre>
+<pre><code class="lang-typescript">// Dynamic imports for code splitting
+import React, { lazy, Suspense } from &#x27;react&#x27;;
+
+// Lazy load heavy screens
+const ProfileScreen = lazy(() =&gt; import(&#x27;./screens/ProfileScreen&#x27;));
+const SettingsScreen = lazy(() =&gt; import(&#x27;./screens/SettingsScreen&#x27;));
+
+function App() {
+  return (
+    &lt;Suspense fallback={&lt;LoadingScreen /&gt;}&gt;
+      &lt;ProfileScreen /&gt;
+    &lt;/Suspense&gt;
+  );
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Smaller app bundle</li><li>Faster app startup</li><li>Reduced memory footprint</li><li>On-demand feature loading</li></ul>
+<h3>Pattern 6: Memory Leak Prevention</h3>
+<pre><code class="lang-typescript">import React, { useEffect, useRef } from &#x27;react&#x27;;
+import { NativeEventEmitter, NativeModules, AppState } from &#x27;react-native&#x27;;
+
+function MemorySafeComponent() {
+  const isMounted = useRef(true);
+
+  useEffect(() =&gt; {
+    // Cleanup flag
+    return () =&gt; {
+      isMounted.current = false;
+    };
+  }, []);
+
+  useEffect(() =&gt; {
+    // Timer cleanup
+    const timer = setTimeout(() =&gt; {
+      if (isMounted.current) {
+        console.log(&#x27;Timer fired&#x27;);
+      }
+    }, 1000);
+
+    return () =&gt; clearTimeout(timer);
+  }, []);
+
+  useEffect(() =&gt; {
+    // Event listener cleanup
+    const eventEmitter = new NativeEventEmitter(NativeModules.MyModule);
+    const subscription = eventEmitter.addListener(&#x27;onEvent&#x27;, (data) =&gt; {
+      if (isMounted.current) {
+        console.log(data);
+      }
+    });
+
+    return () =&gt; subscription.remove();
+  }, []);
+
+  useEffect(() =&gt; {
+    // AppState listener cleanup
+    const subscription = AppState.addEventListener(&#x27;change&#x27;, (state) =&gt; {
+      console.log(&#x27;App state:&#x27;, state);
+    });
+
+    return () =&gt; subscription.remove();
+  }, []);
+
+  return null;
+}</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Components with timers</li><li>Event listeners</li><li>Network requests</li><li>Background tasks</li></ul>
+<h3>Pattern 7: iOS Performance Profiling</h3>
+<pre><code class="lang-typescript">// Using Performance API
+import { Performance } from &#x27;react-native-performance&#x27;;
+
+const perf = new Performance();
+
+// Measure component render time
+function MeasuredComponent() {
+  useEffect(() =&gt; {
+    perf.mark(&#x27;component-mount&#x27;);
+    return () =&gt; {
+      perf.mark(&#x27;component-unmount&#x27;);
+      perf.measure(&#x27;component-lifetime&#x27;, &#x27;component-mount&#x27;, &#x27;component-unmount&#x27;);
+    };
+  }, []);
+
+  return &lt;View /&gt;;
+}
+
+// Measure async operations
+async function fetchData() {
+  perf.mark(&#x27;fetch-start&#x27;);
+  const data = await fetch(&#x27;https://api.example.com/data&#x27;);
+  perf.mark(&#x27;fetch-end&#x27;);
+  perf.measure(&#x27;fetch-duration&#x27;, &#x27;fetch-start&#x27;, &#x27;fetch-end&#x27;);
+
+  const measures = perf.getEntriesByType(&#x27;measure&#x27;);
+  console.log(&#x27;Fetch took:&#x27;, measures[0].duration, &#x27;ms&#x27;);
+}</code></pre>
+<pre><code class="lang-bash"># iOS profiling with Xcode Instruments
+# 1. Run app in release mode
+npm run ios --configuration Release
+
+# 2. Open Xcode → Product → Profile
+# 3. Choose Instruments template:
+#    - Time Profiler (CPU usage)
+#    - Allocations (memory usage)
+#    - Leaks (memory leaks)
+#    - Core Animation (FPS, rendering)
+
+# 3. Analyze performance bottlenecks</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Production optimization</li><li>Identifying slow operations</li><li>Memory leak detection</li><li>Frame rate analysis</li></ul>
+<h3>Pattern 8: Bridge Optimization</h3>
+<pre><code class="lang-typescript">// ❌ Bad: Too many bridge calls
+function BadComponent({ items }: { items: string[] }) {
+  return (
+    &lt;View&gt;
+      {items.map((item) =&gt; (
+        &lt;NativeModule.processItem key={item} item={item} /&gt;
+      ))}
+    &lt;/View&gt;
+  );
+}
+
+// ✅ Good: Batch bridge calls
+function GoodComponent({ items }: { items: string[] }) {
+  useEffect(() =&gt; {
+    // Process all items in one native call
+    NativeModule.processItems(items);
+  }, [items]);
+
+  return &lt;View&gt;{/* render results */}&lt;/View&gt;;
+}
+
+// ❌ Bad: Frequent state updates across bridge
+const [data, setData] = useState([]);
+setInterval(() =&gt; {
+  NativeModule.getData().then(setData); // Bridge call every interval
+}, 100);
+
+// ✅ Good: Use event emitter for frequent updates
+useEffect(() =&gt; {
+  const subscription = NativeModule.subscribeToData((data) =&gt; {
+    setData(data); // Native pushes updates
+  });
+
+  return () =&gt; subscription.remove();
+}, []);</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Reduced bridge congestion</li><li>Better batching of operations</li><li>Lower overhead per operation</li><li>Improved responsiveness</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Performance Checklist</h3>
+<pre><code>✅ DO: Use FlatList/SectionList for long lists
+✅ DO: Memoize expensive computations (useMemo)
+✅ DO: Memoize callbacks (useCallback)
+✅ DO: Use React.memo for pure components
+✅ DO: Enable Hermes engine
+✅ DO: Use Reanimated 2 for animations
+✅ DO: Optimize images (FastImage, lazy loading)
+✅ DO: Clean up timers and listeners
+✅ DO: Profile with Xcode Instruments
+✅ DO: Remove console.log in production
+
+❌ DON&#x27;T: Render huge lists without virtualization
+❌ DON&#x27;T: Use inline functions in render
+❌ DON&#x27;T: Animate with setState (use Reanimated)
+❌ DON&#x27;T: Store large objects in state
+❌ DON&#x27;T: Make frequent bridge calls
+❌ DON&#x27;T: Block main thread with heavy operations
+❌ DON&#x27;T: Forget to clean up subscriptions
+❌ DON&#x27;T: Use development mode for benchmarking</code></pre>
+<h3>FlatList Props for Performance</h3>
+<pre><code>Prop                           | Value          | Effect
+-------------------------------|----------------|------------------
+removeClippedSubviews          | true           | Unmount offscreen
+maxToRenderPerBatch            | 10             | Items per batch
+updateCellsBatchingPeriod      | 50             | ms between batches
+initialNumToRender             | 10             | Initial items
+windowSize                     | 5              | Viewport multiplier
+getItemLayout                  | Function       | Skip measurement</code></pre>
+<h3>Profiling Commands</h3>
+<pre><code class="lang-bash"># iOS release build
+npm run ios --configuration Release
+
+# Bundle analyzer
+npx react-native-bundle-visualizer
+
+# Performance monitor (dev)
+# Shake device → Show Performance Monitor
+
+# Xcode Instruments
+# Product → Profile → Choose Instrument
+
+# Flipper profiling
+# React DevTools → Profiler</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Animating with setState</strong>: Causes bridge congestion and dropped frames ✅ Use Reanimated 2 for animations running on UI thread</p>
+<p>❌ <strong>Inline functions in FlatList renderItem</strong>: Creates new functions every render ✅ Use useCallback to memoize render functions</p>
+<p>❌ <strong>Loading all data at once</strong>: Memory issues with large datasets ✅ Use pagination, infinite scroll, or virtualized lists</p>
+<p>❌ <strong>Not cleaning up listeners</strong>: Memory leaks and performance degradation ✅ Return cleanup functions from useEffect hooks</p>
+<p>❌ <strong>console.log in production</strong>: Significant performance overhead ✅ Remove or use __DEV__ check, strip in Metro config</p>
+<p>❌ <strong>Synchronous bridge calls</strong>: Blocks JavaScript thread ✅ Use async/await with promises, batch operations</p>
+<p>❌ <strong>Large bundle with no code splitting</strong>: Slow startup time ✅ Use dynamic imports and lazy loading for heavy features</p>
+<p>❌ <strong>Profiling in development mode</strong>: Misleading results (dev warnings, no optimization) ✅ Always profile in release mode with production builds</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>react-native-setup.md</code> - Hermes configuration and optimization</li><li><code>react-native-navigation.md</code> - Navigation performance patterns</li><li><code>react-native-native-modules.md</code> - Optimizing bridge communication</li><li><code>frontend-performance.md</code> - General React optimization techniques</li><li><code>ios-testing.md</code> - Performance testing on iOS</li><li><code>swiftui-architecture.md</code> - Understanding iOS rendering pipeline</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/mobile-react-native-performance.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

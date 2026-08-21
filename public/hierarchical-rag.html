@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hierarchical-rag</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/hierarchical-rag.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hierarchical-rag.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hierarchical-rag</h1><p class="lede">Multi-level retrieval with recursive summarization and parent-child document structures for improved context selection</p><h1>Hierarchical RAG</h1>
+<p><strong>Scope</strong>: Multi-level document structures, recursive summarization, parent-child chunks, top-down/bottom-up retrieval <strong>Lines</strong>: ~420 <strong>Last Updated</strong>: 2025-10-26</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Documents have natural hierarchies (books → chapters → sections → paragraphs)</li><li>Need both high-level summaries and detailed content</li><li>Standard flat chunking loses document structure context</li><li>Queries vary in abstraction level (&quot;summarize the book&quot; vs &quot;explain section 3.2&quot;)</li><li>Working with long-form content (technical docs, research papers, books)</li><li>Want to preserve document structure for better context</li><li>Need to zoom in/out between summary and detail levels</li><li>Using LlamaIndex or LangChain hierarchical document loaders</li><li>Evaluating retrieval quality with RAGAS hierarchical metrics</li></ul>
+<h2>Core Concepts</h2>
+<h3>Hierarchical Document Structure</h3>
+<p><strong>Levels</strong> (example: technical documentation):</p>
+<pre><code>Level 0 (Root): Entire document
+Level 1 (Chapter): &quot;Chapter 3: Architecture&quot;
+Level 2 (Section): &quot;3.2 Database Design&quot;
+Level 3 (Subsection): &quot;3.2.1 Schema Optimization&quot;
+Level 4 (Paragraph): Individual paragraphs</code></pre>
+<p><strong>Why hierarchy matters</strong>:</p>
+<ul><li>Context: Section title provides context for paragraphs</li><li>Navigation: Can drill down from high-level to specific</li><li>Flexibility: Answer high-level or detailed queries</li></ul>
+<h3>Flat vs Hierarchical Chunking</h3>
+<p><strong>Flat chunking</strong> (standard RAG):</p>
+<pre><code>Document → [Chunk 1, Chunk 2, Chunk 3, ...]</code></pre>
+<ul><li>Each chunk independent</li><li>Loses document structure</li><li>Same chunk size for all content</li></ul>
+<p><strong>Hierarchical chunking</strong>:</p>
+<pre><code>Document (summary)
+  ├─ Chapter 1 (summary)
+  │   ├─ Section 1.1 (summary)
+  │   │   ├─ Paragraph 1
+  │   │   └─ Paragraph 2
+  │   └─ Section 1.2 (summary)
+  └─ Chapter 2 (summary)</code></pre>
+<ul><li>Parent-child relationships preserved</li><li>Each level has summaries</li><li>Can navigate up/down hierarchy</li></ul>
+<h3>Recursive Summarization</h3>
+<p><strong>Process</strong>: Bottom-up summary generation</p>
+<pre><code>1. Leaf nodes: Original text (paragraphs)
+2. Level 3: Summarize paragraphs → subsection summary
+3. Level 2: Summarize subsections → section summary
+4. Level 1: Summarize sections → chapter summary
+5. Level 0: Summarize chapters → document summary</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Multi-resolution: Query at any abstraction level</li><li>Context propagation: Parent summaries provide context</li><li>Efficient: Can answer high-level queries without reading all details</li></ul>
+<h3>Retrieval Strategies</h3>
+<p><strong>Top-down</strong> (coarse-to-fine):</p>
+<pre><code>1. Retrieve at high level (e.g., chapter summaries)
+2. If relevant, drill down to sections
+3. Continue until reaching paragraph level</code></pre>
+<ul><li>Use: Exploratory queries, broad questions</li></ul>
+<p><strong>Bottom-up</strong> (fine-to-coarse):</p>
+<pre><code>1. Retrieve at paragraph level (detailed)
+2. Include parent contexts (section, chapter)
+3. Return combined context</code></pre>
+<ul><li>Use: Specific queries, factual lookups</li></ul>
+<p><strong>Hybrid</strong> (both directions):</p>
+<pre><code>1. Retrieve at paragraph level
+2. Include parent summaries (section, chapter)
+3. Include sibling paragraphs (same section)
+4. Return enriched context</code></pre>
+<ul><li>Use: General-purpose (recommended)</li></ul>
+<h3>Parent-Child Chunks</h3>
+<p><strong>Parent</strong>: Higher-level summary or context <strong>Child</strong>: Detailed content within parent</p>
+<p><strong>Example</strong>:</p>
+<pre><code>Parent: &quot;Section 3.2: Database Design (Summary: This section covers...&quot;
+Children: [
+  &quot;Paragraph 1: PostgreSQL was chosen because...&quot;,
+  &quot;Paragraph 2: The schema includes five main tables...&quot;
+]</code></pre>
+<p><strong>Retrieval pattern</strong>:</p>
+<ol><li>Embed and retrieve child chunks</li><li>When child matches, include parent context</li><li>LLM sees both detail and surrounding context</li></ol>
+<hr>
+<h2>Implementation Patterns</h2>
+<h3>Pattern 1: Recursive Summarization with DSPy</h3>
+<pre><code class="lang-python">import dspy
+from typing import List, Dict
+
+class RecursiveSummarizer(dspy.Module):
+    &quot;&quot;&quot;Build hierarchical summaries bottom-up.&quot;&quot;&quot;
+
+    def __init__(self):
+        super().__init__()
+        self.summarize = dspy.ChainOfThought(&quot;text -&gt; summary&quot;)
+
+    def forward(self, text: str):
+        return self.summarize(text=text)
+
+
+class HierarchicalDocumentBuilder:
+    &quot;&quot;&quot;Build hierarchical document structure with summaries.&quot;&quot;&quot;
+
+    def __init__(self):
+        self.summarizer = RecursiveSummarizer()
+        self.hierarchy = {}
+
+    def build_hierarchy(self, document: str, levels: List[str]) -&gt; Dict:
+        &quot;&quot;&quot;
+        Build hierarchy from document.
+
+        Args:
+            document: Full document text
+            levels: Level definitions (e.g., [&quot;chapter&quot;, &quot;section&quot;, &quot;paragraph&quot;])
+        &quot;&quot;&quot;
+        # Parse document into hierarchy (simplified)
+        # In practice, use proper document parser
+        parsed = self._parse_document(document, levels)
+
+        # Build summaries bottom-up
+        self._build_summaries(parsed)
+
+        return parsed
+
+    def _parse_document(self, document: str, levels: List[str]) -&gt; Dict:
+        &quot;&quot;&quot;Parse document into hierarchical structure.&quot;&quot;&quot;
+        # Simplified: Split by headers/sections
+        # Real implementation: Use markdown parser, PDF parser, etc.
+
+        hierarchy = {
+            &quot;level&quot;: &quot;document&quot;,
+            &quot;text&quot;: document,
+            &quot;summary&quot;: None,
+            &quot;children&quot;: []
+        }
+
+        # Example: Split into chapters (level 1)
+        chapters = document.split(&quot;\n# &quot;)  # Markdown H1
+
+        for chapter_text in chapters[1:]:  # Skip first split
+            chapter_node = {
+                &quot;level&quot;: &quot;chapter&quot;,
+                &quot;text&quot;: chapter_text,
+                &quot;summary&quot;: None,
+                &quot;children&quot;: []
+            }
+
+            # Split into sections (level 2)
+            sections = chapter_text.split(&quot;\n## &quot;)  # Markdown H2
+
+            for section_text in sections[1:]:
+                section_node = {
+                    &quot;level&quot;: &quot;section&quot;,
+                    &quot;text&quot;: section_text,
+                    &quot;summary&quot;: None,
+                    &quot;children&quot;: []
+                }
+
+                # Split into paragraphs (level 3)
+                paragraphs = section_text.split(&quot;\n\n&quot;)
+
+                for para in paragraphs:
+                    para_node = {
+                        &quot;level&quot;: &quot;paragraph&quot;,
+                        &quot;text&quot;: para,
+                        &quot;summary&quot;: para,  # Paragraphs are leaf nodes
+                        &quot;children&quot;: []
+                    }
+                    section_node[&quot;children&quot;].append(para_node)
+
+                chapter_node[&quot;children&quot;].append(section_node)
+
+            hierarchy[&quot;children&quot;].append(chapter_node)
+
+        return hierarchy
+
+    def _build_summaries(self, node: Dict):
+        &quot;&quot;&quot;Recursively build summaries bottom-up.&quot;&quot;&quot;
+        # Base case: leaf nodes (paragraphs)
+        if not node[&quot;children&quot;]:
+            return
+
+        # Recursive case: summarize children first
+        for child in node[&quot;children&quot;]:
+            self._build_summaries(child)
+
+        # Summarize this level from children
+        if node[&quot;children&quot;]:
+            child_summaries = [child[&quot;summary&quot;] for child in node[&quot;children&quot;]]
+            combined = &quot;\n\n&quot;.join(child_summaries)
+
+            summary_result = self.summarizer(text=combined)
+            node[&quot;summary&quot;] = summary_result.summary
+
+
+# Usage
+lm = dspy.LM(&quot;openai/gpt-4o-mini&quot;)
+dspy.configure(lm=lm)
+
+document = &quot;&quot;&quot;
+# Chapter 1: Introduction
+## Section 1.1: Background
+This is paragraph 1 of section 1.1.
+
+This is paragraph 2 of section 1.1.
+
+## Section 1.2: Motivation
+This is paragraph 1 of section 1.2.
+
+# Chapter 2: Methods
+## Section 2.1: Approach
+This is paragraph 1 of section 2.1.
+&quot;&quot;&quot;
+
+builder = HierarchicalDocumentBuilder()
+hierarchy = builder.build_hierarchy(document, levels=[&quot;chapter&quot;, &quot;section&quot;, &quot;paragraph&quot;])
+
+print(&quot;Document summary:&quot;, hierarchy[&quot;summary&quot;])
+print(&quot;Chapter 1 summary:&quot;, hierarchy[&quot;children&quot;][0][&quot;summary&quot;])</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Building multi-level summaries for navigation</li><li>Need to answer queries at different abstraction levels</li><li>Want to preserve document structure</li></ul>
+<h3>Pattern 2: Parent-Child Chunk Retrieval with DSPy</h3>
+<pre><code class="lang-python">import dspy
+from typing import List, Dict, Tuple
+
+class ParentChildRetriever:
+    &quot;&quot;&quot;Retrieve child chunks with parent context.&quot;&quot;&quot;
+
+    def __init__(self, hierarchy: Dict):
+        self.hierarchy = hierarchy
+        self.chunks = []
+        self.parent_map = {}
+
+        # Flatten hierarchy into chunks with parent pointers
+        self._flatten_hierarchy(hierarchy, parent=None)
+
+    def _flatten_hierarchy(self, node: Dict, parent: Dict):
+        &quot;&quot;&quot;Flatten hierarchy into retrievable chunks.&quot;&quot;&quot;
+        # Add this node as chunk (except root)
+        if node[&quot;level&quot;] != &quot;document&quot;:
+            chunk_id = len(self.chunks)
+            self.chunks.append({
+                &quot;id&quot;: chunk_id,
+                &quot;level&quot;: node[&quot;level&quot;],
+                &quot;text&quot;: node[&quot;text&quot;],
+                &quot;summary&quot;: node[&quot;summary&quot;]
+            })
+
+            # Map to parent
+            if parent:
+                self.parent_map[chunk_id] = parent
+
+        # Recurse to children
+        for child in node[&quot;children&quot;]:
+            self._flatten_hierarchy(child, parent=node)
+
+    def retrieve(self, query: str, k=5) -&gt; List[Dict]:
+        &quot;&quot;&quot;Retrieve chunks with parent context.&quot;&quot;&quot;
+        # Simplified: Use embedding similarity (in practice, use vector DB)
+        # For demo, just return top chunks
+
+        retrieved_chunks = []
+
+        for chunk in self.chunks[:k]:  # Simplified selection
+            # Get parent context
+            parent_context = None
+            if chunk[&quot;id&quot;] in self.parent_map:
+                parent = self.parent_map[chunk[&quot;id&quot;]]
+                parent_context = parent[&quot;summary&quot;]
+
+            retrieved_chunks.append({
+                &quot;text&quot;: chunk[&quot;text&quot;],
+                &quot;summary&quot;: chunk[&quot;summary&quot;],
+                &quot;level&quot;: chunk[&quot;level&quot;],
+                &quot;parent_context&quot;: parent_context
+            })
+
+        return retrieved_chunks
+
+
+class HierarchicalRAG(dspy.Module):
+    &quot;&quot;&quot;RAG with hierarchical retrieval.&quot;&quot;&quot;
+
+    def __init__(self, retriever: ParentChildRetriever):
+        super().__init__()
+        self.retriever = retriever
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question: str):
+        # Retrieve chunks with parent context
+        retrieved = self.retriever.retrieve(question, k=5)
+
+        # Format context with hierarchy
+        context_parts = []
+        for chunk in retrieved:
+            if chunk[&quot;parent_context&quot;]:
+                context_parts.append(f&quot;[Parent: {chunk[&#x27;parent_context&#x27;]}]\n{chunk[&#x27;text&#x27;]}&quot;)
+            else:
+                context_parts.append(chunk[&quot;text&quot;])
+
+        context = &quot;\n\n---\n\n&quot;.join(context_parts)
+
+        return self.generate(context=context, question=question)
+
+
+# Usage
+retriever = ParentChildRetriever(hierarchy)
+rag = HierarchicalRAG(retriever)
+
+result = rag(question=&quot;What is section 1.1 about?&quot;)
+print(result.answer)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Want to preserve parent context in retrieval</li><li>Chunks benefit from surrounding section/chapter info</li><li>Standard flat retrieval loses important context</li></ul>
+<h3>Pattern 3: Top-Down Hierarchical Retrieval</h3>
+<pre><code class="lang-python">import dspy
+
+class TopDownRetriever(dspy.Module):
+    &quot;&quot;&quot;Top-down coarse-to-fine retrieval.&quot;&quot;&quot;
+
+    def __init__(self, hierarchy: Dict, max_depth=3):
+        super().__init__()
+        self.hierarchy = hierarchy
+        self.max_depth = max_depth
+
+        # LLM to decide if we need to drill down
+        self.should_drill = dspy.ChainOfThought(
+            &quot;question, summary -&gt; is_relevant: bool, drill_down: bool&quot;
+        )
+
+    def forward(self, question: str, current_depth=0):
+        &quot;&quot;&quot;Recursively drill down if relevant.&quot;&quot;&quot;
+        if current_depth &gt;= self.max_depth:
+            return []
+
+        relevant_nodes = []
+
+        # Check each node at current level
+        for node in self._get_nodes_at_depth(self.hierarchy, current_depth):
+            # Check if node is relevant
+            decision = self.should_drill(
+                question=question,
+                summary=node[&quot;summary&quot;]
+            )
+
+            if decision.is_relevant:
+                relevant_nodes.append(node)
+
+                # Drill down to children if needed
+                if decision.drill_down and node[&quot;children&quot;]:
+                    child_results = self._drill_down(question, node, current_depth + 1)
+                    relevant_nodes.extend(child_results)
+
+        return relevant_nodes
+
+    def _get_nodes_at_depth(self, node: Dict, target_depth: int, current_depth=0):
+        &quot;&quot;&quot;Get all nodes at target depth.&quot;&quot;&quot;
+        if current_depth == target_depth:
+            return [node]
+
+        nodes = []
+        for child in node[&quot;children&quot;]:
+            nodes.extend(self._get_nodes_at_depth(child, target_depth, current_depth + 1))
+
+        return nodes
+
+    def _drill_down(self, question: str, node: Dict, depth: int):
+        &quot;&quot;&quot;Drill down into node&#x27;s children.&quot;&quot;&quot;
+        relevant = []
+
+        for child in node[&quot;children&quot;]:
+            decision = self.should_drill(question=question, summary=child[&quot;summary&quot;])
+
+            if decision.is_relevant:
+                relevant.append(child)
+
+                if decision.drill_down and child[&quot;children&quot;]:
+                    relevant.extend(self._drill_down(question, child, depth + 1))
+
+        return relevant
+
+
+class TopDownRAG(dspy.Module):
+    &quot;&quot;&quot;RAG with top-down hierarchical retrieval.&quot;&quot;&quot;
+
+    def __init__(self, hierarchy: Dict):
+        super().__init__()
+        self.retriever = TopDownRetriever(hierarchy, max_depth=3)
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question: str):
+        # Top-down retrieval
+        relevant_nodes = self.retriever(question=question)
+
+        # Extract text from nodes
+        context_parts = [node[&quot;text&quot;] for node in relevant_nodes]
+        context = &quot;\n\n&quot;.join(context_parts)
+
+        return self.generate(context=context, question=question)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Exploratory queries (broad questions)</li><li>Want to avoid reading all details if high-level summary suffices</li><li>Efficient retrieval for large documents</li></ul>
+<h3>Pattern 4: LlamaIndex Hierarchical Document Loader</h3>
+<pre><code class="lang-python">import dspy
+from llama_index.core import Document, VectorStoreIndex
+from llama_index.core.node_parser import HierarchicalNodeParser
+
+class LlamaIndexHierarchicalRAG:
+    &quot;&quot;&quot;Hierarchical RAG using LlamaIndex.&quot;&quot;&quot;
+
+    def __init__(self, documents: List[str]):
+        # Parse documents hierarchically
+        parser = HierarchicalNodeParser.from_defaults(
+            chunk_sizes=[2048, 512, 128]  # Level sizes: chapter, section, paragraph
+        )
+
+        # Create LlamaIndex documents
+        docs = [Document(text=doc) for doc in documents]
+
+        # Parse into hierarchical nodes
+        nodes = parser.get_nodes_from_documents(docs)
+
+        # Build index
+        self.index = VectorStoreIndex(nodes)
+
+    def query(self, question: str, similarity_top_k=5):
+        &quot;&quot;&quot;Query with hierarchical retrieval.&quot;&quot;&quot;
+        query_engine = self.index.as_query_engine(
+            similarity_top_k=similarity_top_k,
+            response_mode=&quot;tree_summarize&quot;  # Use hierarchy for response
+        )
+
+        response = query_engine.query(question)
+        return response
+
+
+# Usage
+documents = [
+    &quot;Large document 1 with chapters and sections...&quot;,
+    &quot;Large document 2 with chapters and sections...&quot;,
+]
+
+rag = LlamaIndexHierarchicalRAG(documents)
+response = rag.query(&quot;What are the main themes?&quot;)
+print(response)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Using LlamaIndex ecosystem</li><li>Want built-in hierarchical parsing</li><li>Need tree summarization for responses</li></ul>
+<h3>Pattern 5: RAGAS Hierarchical Evaluation</h3>
+<pre><code class="lang-python">import dspy
+from ragas import evaluate
+from ragas.metrics import context_precision, context_recall, faithfulness
+
+class HierarchicalRAGEvaluator:
+    &quot;&quot;&quot;Evaluate hierarchical RAG quality.&quot;&quot;&quot;
+
+    def __init__(self, rag_system):
+        self.rag = rag_system
+
+    def evaluate(self, test_set):
+        &quot;&quot;&quot;Evaluate using RAGAS metrics.&quot;&quot;&quot;
+        predictions = []
+
+        for example in test_set:
+            result = self.rag(question=example.question)
+
+            predictions.append({
+                &quot;question&quot;: example.question,
+                &quot;answer&quot;: result.answer,
+                &quot;contexts&quot;: result.retrieved_contexts,  # Hierarchical contexts
+                &quot;ground_truth&quot;: example.ground_truth
+            })
+
+        # Evaluate with RAGAS
+        ragas_results = evaluate(
+            dataset=predictions,
+            metrics=[
+                context_precision,  # Precision of retrieved contexts
+                context_recall,     # Recall of relevant contexts
+                faithfulness        # Answer faithfulness to context
+            ]
+        )
+
+        print(&quot;RAGAS Results:&quot;)
+        print(f&quot;Context Precision: {ragas_results[&#x27;context_precision&#x27;]:.3f}&quot;)
+        print(f&quot;Context Recall: {ragas_results[&#x27;context_recall&#x27;]:.3f}&quot;)
+        print(f&quot;Faithfulness: {ragas_results[&#x27;faithfulness&#x27;]:.3f}&quot;)
+
+        return ragas_results</code></pre>
+<p><strong>Metrics</strong>:</p>
+<ul><li><strong>Context precision</strong>: Are retrieved chunks relevant?</li><li><strong>Context recall</strong>: Did we retrieve all relevant chunks?</li><li><strong>Faithfulness</strong>: Is answer grounded in retrieved context?</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Retrieval Strategy Selection</h3>
+<pre><code>Broad question → Top-down (coarse-to-fine)
+Specific question → Bottom-up (fine-to-coarse)
+General purpose → Hybrid (parent-child)</code></pre>
+<h3>Hierarchy Levels (Typical)</h3>
+<pre><code>Level 0: Document (1-10K tokens)
+Level 1: Chapter (1K-3K tokens)
+Level 2: Section (300-1K tokens)
+Level 3: Subsection (100-300 tokens)
+Level 4: Paragraph (50-150 tokens)</code></pre>
+<h3>Summary Generation</h3>
+<pre><code>Leaf nodes: Original text
+Internal nodes: Summarize children (recursive)
+Root: Overall document summary</code></pre>
+<h3>Platform Support</h3>
+<pre><code>LlamaIndex: HierarchicalNodeParser (built-in)
+LangChain: RecursiveCharacterTextSplitter (custom)
+DSPy: Custom hierarchy builders (this skill)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Losing parent context during retrieval</strong>:</p>
+<pre><code class="lang-python"># Bad - retrieve paragraphs without parent context
+chunks = retrieve(query, k=5)  # Just paragraphs
+context = &quot;\n&quot;.join(chunks)  # No section/chapter info</code></pre>
+<p>✅ Include parent context:</p>
+<pre><code class="lang-python"># Good - retrieve with parent summaries
+chunks = retrieve_with_parents(query, k=5)
+context = format_hierarchical_context(chunks)  # Includes parent info</code></pre>
+<p>❌ <strong>Flat chunking for hierarchical documents</strong>:</p>
+<pre><code class="lang-python"># Bad - split book into equal 512-token chunks
+chunks = split_text(book, chunk_size=512)  # Loses structure</code></pre>
+<p>✅ Preserve hierarchy:</p>
+<pre><code class="lang-python"># Good - parse hierarchy first
+hierarchy = parse_hierarchical(book)  # Chapters → sections → paragraphs
+chunks = hierarchical_chunks(hierarchy)</code></pre>
+<p>❌ <strong>Not summarizing intermediate levels</strong>:</p>
+<pre><code class="lang-python"># Bad - only store leaf paragraphs
+for paragraph in document:
+    store(paragraph)  # No chapter/section summaries</code></pre>
+<p>✅ Build summaries at all levels:</p>
+<pre><code class="lang-python"># Good - recursive summarization
+hierarchy = build_hierarchy(document)
+add_summaries_recursive(hierarchy)  # All levels have summaries</code></pre>
+<p>❌ <strong>Same chunk size for all levels</strong>:</p>
+<pre><code class="lang-python"># Bad - 512 tokens for everything
+chunks = [
+    {&quot;level&quot;: &quot;chapter&quot;, &quot;size&quot;: 512},  # Too small!
+    {&quot;level&quot;: &quot;paragraph&quot;, &quot;size&quot;: 512}  # Too large!
+]</code></pre>
+<p>✅ Level-appropriate sizes:</p>
+<pre><code class="lang-python"># Good - larger chunks for higher levels
+chunks = [
+    {&quot;level&quot;: &quot;chapter&quot;, &quot;size&quot;: 2048},
+    {&quot;level&quot;: &quot;section&quot;, &quot;size&quot;: 512},
+    {&quot;level&quot;: &quot;paragraph&quot;, &quot;size&quot;: 128}
+]</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>dspy-rag.md</code> - Basic RAG patterns and flat retrieval</li><li><code>hybrid-search-rag.md</code> - Combining vector and BM25 retrieval</li><li><code>rag-reranking-techniques.md</code> - Multi-stage retrieval</li><li><code>graph-rag.md</code> - Graph-based retrieval for relationships</li><li><code>database/postgres-schema-design.md</code> - Storing hierarchical data</li></ul>
+<hr>
+<h2>Summary</h2>
+<p>Hierarchical RAG preserves document structure for better context and flexible retrieval:</p>
+<ul><li><strong>Architecture</strong>: Parse hierarchy → Recursive summarization → Multi-level retrieval</li><li><strong>Parent-child chunks</strong>: Retrieve detailed content with surrounding context</li><li><strong>Retrieval strategies</strong>: Top-down (coarse-to-fine), bottom-up (fine-to-coarse), hybrid</li><li><strong>Typical levels</strong>: Document → Chapter → Section → Subsection → Paragraph</li><li><strong>Platforms</strong>: LlamaIndex HierarchicalNodeParser, LangChain recursive splitters, custom DSPy</li><li><strong>Evaluation</strong>: RAGAS metrics (context precision, recall, faithfulness)</li><li><strong>Best practice</strong>: Use hierarchy for structured documents (books, docs, papers), flat chunking for unstructured text</li><li><strong>Key advantage</strong>: Answer queries at any abstraction level (&quot;summarize book&quot; or &quot;explain section 3.2&quot;)</li></ul>
+<p>Hierarchical RAG is most valuable for long-form, structured documents where context and navigation matter.</p>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hierarchical-rag.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

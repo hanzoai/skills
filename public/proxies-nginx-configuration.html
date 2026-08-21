@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>proxies-nginx-configuration</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/proxies-nginx-configuration.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/proxies-nginx-configuration.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>proxies-nginx-configuration</h1><p class="lede">Nginx configuration including server blocks, locations, upstreams, caching, SSL/TLS, security headers, and performance optimization</p><h1>Nginx Configuration</h1>
+<p><strong>Scope</strong>: Nginx setup, configuration syntax, locations, upstreams, caching, SSL <strong>Lines</strong>: ~400 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Setting up nginx as reverse proxy or web server</li><li>Configuring load balancing</li><li>Implementing caching strategies</li><li>Setting up SSL/TLS termination</li><li>Optimizing nginx performance</li><li>Debugging nginx configuration issues</li><li>Implementing security headers</li><li>Configuring rate limiting</li></ul>
+<h2>Core Concepts</h2>
+<h3>Nginx Architecture</h3>
+<pre><code>nginx.conf
+├── events { }           # Connection processing
+├── http {               # HTTP server settings
+│   ├── upstream { }     # Backend server pools
+│   ├── server {         # Virtual host
+│   │   ├── listen       # Port and protocol
+│   │   ├── server_name  # Domain name
+│   │   └── location { } # Request matching
+│   └── server { }
+└── stream { }           # TCP/UDP load balancing</code></pre>
+<h3>Configuration Context Hierarchy</h3>
+<pre><code class="lang-nginx"># Main context
+user nginx;
+worker_processes auto;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    # HTTP context
+    include mime.types;
+    default_type application/octet-stream;
+
+    upstream backend {
+        # Upstream context
+        server 127.0.0.1:8080;
+    }
+
+    server {
+        # Server context
+        listen 80;
+        server_name example.com;
+
+        location / {
+            # Location context
+            proxy_pass http://backend;
+        }
+    }
+}</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Basic Reverse Proxy</h3>
+<p><strong>Use Case</strong>: Proxy requests to backend application</p>
+<pre><code class="lang-nginx"># ❌ Bad: Minimal configuration
+server {
+    listen 80;
+    location / {
+        proxy_pass http://localhost:8080;
+    }
+}</code></pre>
+<pre><code class="lang-nginx"># ✅ Good: Complete proxy configuration
+upstream backend {
+    server 127.0.0.1:8080;
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    server_name example.com;
+
+    # Logging
+    access_log /var/log/nginx/example.access.log;
+    error_log /var/log/nginx/example.error.log;
+
+    location / {
+        proxy_pass http://backend;
+
+        # Proxy headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Timeouts
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 10s;
+        proxy_read_timeout 10s;
+
+        # Buffering
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
+    }
+}</code></pre>
+<h3>Pattern 2: SSL/TLS Configuration</h3>
+<p><strong>Use Case</strong>: HTTPS with modern security settings</p>
+<pre><code class="lang-nginx">server {
+    listen 80;
+    server_name example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+
+    # SSL certificates
+    ssl_certificate /etc/ssl/certs/example.com.crt;
+    ssl_certificate_key /etc/ssl/private/example.com.key;
+
+    # SSL protocols and ciphers
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers &#x27;ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384&#x27;;
+    ssl_prefer_server_ciphers off;
+
+    # SSL session cache
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_session_tickets off;
+
+    # OCSP stapling
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    resolver 8.8.8.8 8.8.4.4 valid=300s;
+    resolver_timeout 5s;
+
+    # Security headers
+    add_header Strict-Transport-Security &quot;max-age=31536000; includeSubDomains&quot; always;
+    add_header X-Content-Type-Options &quot;nosniff&quot; always;
+    add_header X-Frame-Options &quot;SAMEORIGIN&quot; always;
+
+    location / {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}</code></pre>
+<h3>Pattern 3: Advanced Caching</h3>
+<p><strong>Use Case</strong>: Cache backend responses efficiently</p>
+<pre><code class="lang-nginx"># Define cache zone
+proxy_cache_path /var/cache/nginx/api
+    levels=1:2
+    keys_zone=api_cache:10m
+    max_size=1g
+    inactive=60m
+    use_temp_path=off;
+
+upstream backend {
+    server 127.0.0.1:8080;
+}
+
+server {
+    listen 80;
+    server_name api.example.com;
+
+    location /api/ {
+        proxy_pass http://backend;
+
+        # Caching
+        proxy_cache api_cache;
+        proxy_cache_key &quot;$scheme$request_method$host$request_uri&quot;;
+        proxy_cache_valid 200 10m;
+        proxy_cache_valid 404 1m;
+        proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+        proxy_cache_background_update on;
+        proxy_cache_lock on;
+
+        # Add cache status header
+        add_header X-Cache-Status $upstream_cache_status;
+
+        # Cache bypass conditions
+        proxy_cache_bypass $http_cache_control;
+        proxy_no_cache $http_pragma $http_authorization;
+    }
+}</code></pre>
+<hr>
+<h2>Location Matching</h2>
+<h3>Location Priority</h3>
+<pre><code class="lang-nginx"># 1. Exact match (highest priority)
+location = /exact {
+    return 200 &quot;Exact match&quot;;
+}
+
+# 2. Preferential prefix match
+location ^~ /images/ {
+    root /var/www;
+}
+
+# 3. Regex match (case-sensitive)
+location ~ \.php$ {
+    fastcgi_pass unix:/var/run/php-fpm.sock;
+}
+
+# 4. Regex match (case-insensitive)
+location ~* \.(jpg|jpeg|png|gif)$ {
+    expires 30d;
+}
+
+# 5. Prefix match (lowest priority)
+location /api/ {
+    proxy_pass http://backend;
+}</code></pre>
+<h3>Common Location Patterns</h3>
+<pre><code class="lang-nginx"># Static files
+location /static/ {
+    alias /var/www/static/;
+    expires 1y;
+    add_header Cache-Control &quot;public, immutable&quot;;
+}
+
+# SPA fallback
+location / {
+    try_files $uri $uri/ /index.html;
+}
+
+# API proxy
+location /api/ {
+    proxy_pass http://backend/;
+    proxy_redirect off;
+}
+
+# WebSocket
+location /ws/ {
+    proxy_pass http://websocket_backend;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection &quot;upgrade&quot;;
+}
+
+# Health check endpoint
+location = /health {
+    access_log off;
+    return 200 &quot;OK\n&quot;;
+    add_header Content-Type text/plain;
+}</code></pre>
+<hr>
+<h2>Upstream Configuration</h2>
+<h3>Load Balancing Methods</h3>
+<pre><code class="lang-nginx"># Round-robin (default)
+upstream backend {
+    server backend1.internal:8080;
+    server backend2.internal:8080;
+    server backend3.internal:8080;
+}
+
+# Least connections
+upstream backend {
+    least_conn;
+    server backend1.internal:8080;
+    server backend2.internal:8080;
+}
+
+# IP hash (sticky sessions)
+upstream backend {
+    ip_hash;
+    server backend1.internal:8080;
+    server backend2.internal:8080;
+}
+
+# Weighted round-robin
+upstream backend {
+    server backend1.internal:8080 weight=3;
+    server backend2.internal:8080 weight=2;
+    server backend3.internal:8080 weight=1;
+}
+
+# Health checks and failover
+upstream backend {
+    server backend1.internal:8080 max_fails=3 fail_timeout=30s;
+    server backend2.internal:8080 max_fails=3 fail_timeout=30s;
+    server backup.internal:8080 backup;
+
+    keepalive 32;
+}</code></pre>
+<hr>
+<h2>Complete Production Configuration</h2>
+<h3>Main Configuration (nginx.conf)</h3>
+<pre><code class="lang-nginx">user nginx;
+worker_processes auto;
+worker_rlimit_nofile 65535;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 4096;
+    use epoll;
+    multi_accept on;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Logging
+    log_format main &#x27;$remote_addr - $remote_user [$time_local] &quot;$request&quot; &#x27;
+                    &#x27;$status $body_bytes_sent &quot;$http_referer&quot; &#x27;
+                    &#x27;&quot;$http_user_agent&quot; &quot;$http_x_forwarded_for&quot; &#x27;
+                    &#x27;rt=$request_time uct=&quot;$upstream_connect_time&quot; &#x27;
+                    &#x27;uht=&quot;$upstream_header_time&quot; urt=&quot;$upstream_response_time&quot;&#x27;;
+
+    access_log /var/log/nginx/access.log main;
+
+    # Performance
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    client_max_body_size 10m;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css text/xml text/javascript
+               application/json application/javascript application/xml+rss
+               application/rss+xml font/truetype font/opentype
+               application/vnd.ms-fontobject image/svg+xml;
+
+    # Security
+    server_tokens off;
+    add_header X-Content-Type-Options &quot;nosniff&quot; always;
+    add_header X-Frame-Options &quot;SAMEORIGIN&quot; always;
+
+    # Rate limiting
+    limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
+
+    # Connection limiting
+    limit_conn_zone $binary_remote_addr zone=addr:10m;
+
+    # Include virtual hosts
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}</code></pre>
+<h3>Virtual Host Configuration</h3>
+<pre><code class="lang-nginx"># /etc/nginx/sites-available/example.com
+
+upstream app_backend {
+    least_conn;
+    server app1.internal:8080 max_fails=3 fail_timeout=30s;
+    server app2.internal:8080 max_fails=3 fail_timeout=30s;
+    server app3.internal:8080 max_fails=3 fail_timeout=30s;
+    keepalive 32;
+}
+
+# HTTP → HTTPS redirect
+server {
+    listen 80;
+    listen [::]:80;
+    server_name example.com www.example.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS server
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name example.com www.example.com;
+
+    # SSL configuration
+    ssl_certificate /etc/ssl/certs/example.com.crt;
+    ssl_certificate_key /etc/ssl/private/example.com.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    # Security headers
+    add_header Strict-Transport-Security &quot;max-age=31536000; includeSubDomains&quot; always;
+    add_header X-Content-Type-Options &quot;nosniff&quot; always;
+    add_header X-Frame-Options &quot;SAMEORIGIN&quot; always;
+    add_header X-XSS-Protection &quot;1; mode=block&quot; always;
+
+    # Logging
+    access_log /var/log/nginx/example.com.access.log main;
+    error_log /var/log/nginx/example.com.error.log;
+
+    # Static files
+    location /static/ {
+        alias /var/www/example.com/static/;
+        expires 1y;
+        add_header Cache-Control &quot;public, immutable&quot;;
+        access_log off;
+    }
+
+    # Media files
+    location /media/ {
+        alias /var/www/example.com/media/;
+        expires 1d;
+    }
+
+    # API with rate limiting
+    location /api/ {
+        limit_req zone=api burst=50 nodelay;
+        limit_conn addr 10;
+
+        proxy_pass http://app_backend/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection &quot;&quot;;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Timeouts
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+
+        # Error handling
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+    }
+
+    # Main application
+    location / {
+        limit_req zone=general burst=20 nodelay;
+
+        proxy_pass http://app_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection &quot;&quot;;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Health check
+    location = /health {
+        access_log off;
+        return 200 &quot;OK\n&quot;;
+        add_header Content-Type text/plain;
+    }
+}</code></pre>
+<hr>
+<h2>Security Configuration</h2>
+<h3>Rate Limiting and DDoS Protection</h3>
+<pre><code class="lang-nginx"># Define rate limit zones
+limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
+limit_req_zone $binary_remote_addr zone=search:10m rate=10r/s;
+
+server {
+    listen 443 ssl http2;
+    server_name example.com;
+
+    # Login endpoint - strict rate limit
+    location /login {
+        limit_req zone=login burst=2 nodelay;
+        limit_req_status 429;
+        proxy_pass http://backend;
+    }
+
+    # API endpoints - moderate rate limit
+    location /api/ {
+        limit_req zone=api burst=50 nodelay;
+        proxy_pass http://backend;
+    }
+
+    # Search endpoint - custom rate limit
+    location /search {
+        limit_req zone=search burst=5 delay=3;
+        proxy_pass http://backend;
+    }
+}</code></pre>
+<h3>IP Whitelisting/Blacklisting</h3>
+<pre><code class="lang-nginx"># Allow specific IPs
+geo $allowed_ip {
+    default 0;
+    10.0.0.0/8 1;
+    172.16.0.0/12 1;
+    192.168.0.0/16 1;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name admin.example.com;
+
+    location /admin/ {
+        if ($allowed_ip = 0) {
+            return 403;
+        }
+        proxy_pass http://backend;
+    }
+}
+
+# Or using allow/deny
+location /admin/ {
+    allow 10.0.0.0/8;
+    allow 172.16.0.0/12;
+    deny all;
+    proxy_pass http://backend;
+}</code></pre>
+<hr>
+<h2>Performance Optimization</h2>
+<h3>Connection Pooling</h3>
+<pre><code class="lang-nginx">upstream backend {
+    server backend1.internal:8080;
+    server backend2.internal:8080;
+
+    # Keep 32 idle connections to each backend
+    keepalive 32;
+    keepalive_requests 100;
+    keepalive_timeout 60s;
+}
+
+server {
+    location / {
+        proxy_pass http://backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection &quot;&quot;;  # Clear Connection header
+    }
+}</code></pre>
+<h3>Static Asset Optimization</h3>
+<pre><code class="lang-nginx">location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
+    root /var/www/static;
+    expires 1y;
+    add_header Cache-Control &quot;public, immutable&quot;;
+    access_log off;
+
+    # Gzip for compressible assets
+    gzip_static on;
+}</code></pre>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Issue 1: 502 Bad Gateway</h3>
+<p><strong>Symptoms</strong>: Nginx cannot connect to backend <strong>Debug Steps</strong>:</p>
+<pre><code class="lang-bash"># Check nginx error log
+tail -f /var/log/nginx/error.log
+
+# Test backend connectivity
+curl http://backend1.internal:8080/health
+
+# Check nginx configuration
+nginx -t
+
+# Reload configuration
+nginx -s reload</code></pre>
+<p><strong>Common Solutions</strong>:</p>
+<pre><code class="lang-nginx"># Increase timeouts
+proxy_connect_timeout 10s;
+proxy_read_timeout 60s;
+
+# Add backup server
+upstream backend {
+    server backend1.internal:8080;
+    server backup.internal:8080 backup;
+}</code></pre>
+<h3>Issue 2: Configuration Test Failures</h3>
+<p><strong>Debug Command</strong>:</p>
+<pre><code class="lang-bash"># Test configuration syntax
+nginx -t
+
+# Detailed configuration dump
+nginx -T</code></pre>
+<p><strong>Common Issues</strong>:</p>
+<ul><li>Missing semicolons</li><li>Wrong context for directive</li><li>Invalid regex in location</li><li>Duplicate listen directives</li></ul>
+<hr>
+<h2>Level 3: Resources</h2>
+<h3>Overview</h3>
+<p>This skill includes comprehensive resources in the <code>resources/</code> directory:</p>
+<ul><li><strong>REFERENCE.md</strong> (2,900+ lines): Complete Nginx configuration reference</li><li><strong>Scripts</strong> (3 production-ready tools)</li><li><strong>Examples</strong> (10+ configurations for different use cases)</li></ul>
+<h3>REFERENCE.md</h3>
+<p>Comprehensive 2,900+ line reference covering:</p>
+<p><strong>Core Topics</strong>:</p>
+<ul><li>Nginx architecture and event model</li><li>Configuration contexts and directive inheritance</li><li>Complete directive reference (main, events, http, server, location)</li><li>Server block configuration</li><li>Location matching (exact, prefix, regex)</li><li>Upstream configuration and load balancing</li><li>Proxy configuration (headers, timeouts, buffering)</li><li>SSL/TLS configuration (protocols, ciphers, OCSP stapling)</li><li>Caching strategies (proxy_cache, FastCGI cache)</li><li>Security configuration (rate limiting, IP filtering)</li><li>Performance optimization (workers, buffers, compression)</li></ul>
+<p><strong>Advanced Topics</strong>:</p>
+<ul><li>Variables reference (request, connection, upstream, SSL)</li><li>Module system (core and third-party modules)</li><li>Best practices and configuration organization</li><li>Anti-patterns and troubleshooting</li><li>Real-world production configurations</li></ul>
+<p><strong>Location</strong>: <code>skills/proxies/nginx-configuration/resources/REFERENCE.md</code></p>
+<h3>Scripts</h3>
+<h4>1. validate_config.py</h4>
+<p><strong>Purpose</strong>: Validate Nginx configuration files for security and best practices</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Syntax validation (braces, semicolons)</li><li>Deprecated directive detection</li><li>Security checks (server_tokens, headers, SSL)</li><li>SSL/TLS configuration validation</li><li>Performance settings analysis</li><li>Best practices enforcement</li><li>Categorized issues with suggestions</li></ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-bash"># Basic validation
+./validate_config.py --config-file /etc/nginx/nginx.conf
+
+# JSON output
+./validate_config.py --config-file nginx.conf --json
+
+# Strict mode (warnings as errors)
+./validate_config.py --config-file nginx.conf --strict</code></pre>
+<p><strong>Output</strong>: Detailed report with errors, warnings, and recommendations</p>
+<p><strong>Location</strong>: <code>skills/proxies/nginx-configuration/resources/scripts/validate_config.py</code></p>
+<h4>2. optimize_settings.py</h4>
+<p><strong>Purpose</strong>: Analyze system resources and recommend optimized Nginx settings</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Auto-detect system resources (CPU, memory)</li><li>Multiple traffic profiles (low, medium, high, api)</li><li>Calculates optimal worker_processes, worker_connections</li><li>Recommends buffer sizes based on request/response sizes</li><li>Optimizes keepalive, compression, and caching settings</li><li>Generates complete optimized configuration</li></ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-bash"># Optimize for high traffic
+./optimize_settings.py --traffic-profile high
+
+# Analyze current config
+./optimize_settings.py --current-config /etc/nginx/nginx.conf --traffic-profile medium
+
+# JSON output
+./optimize_settings.py --traffic-profile api --json</code></pre>
+<p><strong>Traffic Profiles</strong>:</p>
+<ul><li><code>low</code>: ~100 req/s, 500 concurrent connections</li><li><code>medium</code>: ~1,000 req/s, 2,000 concurrent connections</li><li><code>high</code>: ~10,000 req/s, 10,000 concurrent connections</li><li><code>api</code>: ~5,000 req/s, optimized for API workloads</li></ul>
+<p><strong>Location</strong>: <code>skills/proxies/nginx-configuration/resources/scripts/optimize_settings.py</code></p>
+<h4>3. test_performance.sh</h4>
+<p><strong>Purpose</strong>: Benchmark Nginx performance using wrk</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Connectivity testing</li><li>Load testing with configurable concurrency and duration</li><li>Latency percentiles (p50, p75, p90, p99)</li><li>Worker configuration testing</li><li>Cache effectiveness testing</li><li>SSL/TLS performance testing</li><li>JSON output support</li></ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-bash"># Basic test
+./test_performance.sh --url http://localhost
+
+# High concurrency test
+./test_performance.sh --url http://localhost --concurrency 100 --threads 4
+
+# Test cache effectiveness
+./test_performance.sh --url http://localhost --test-cache
+
+# JSON output
+./test_performance.sh --url http://localhost --json</code></pre>
+<p><strong>Requirements</strong>: wrk, curl</p>
+<p><strong>Location</strong>: <code>skills/proxies/nginx-configuration/resources/scripts/test_performance.sh</code></p>
+<h3>Examples</h3>
+<p>Production-ready configuration examples covering common use cases:</p>
+<h4>1. Reverse Proxy (<code>reverse-proxy/nginx.conf</code>)</h4>
+<p>Complete reverse proxy with:</p>
+<ul><li>Load balancing (least_conn)</li><li>Health checks and failover</li><li>Connection pooling (keepalive)</li><li>WebSocket support</li><li>Static file serving</li><li>HTTP to HTTPS redirect</li></ul>
+<h4>2. SSL Termination (<code>ssl-termination/nginx.conf</code>)</h4>
+<p>Security-focused SSL/TLS configuration:</p>
+<ul><li>TLS 1.2 and 1.3 only</li><li>Modern cipher suites (Mozilla Modern)</li><li>OCSP stapling</li><li>Complete security headers (HSTS, CSP, etc.)</li><li>Diffie-Hellman parameters</li></ul>
+<h4>3. Advanced Caching (<code>caching/nginx.conf</code>)</h4>
+<p>Comprehensive caching strategies:</p>
+<ul><li>Multiple cache zones (API, static, dynamic)</li><li>Cache bypass conditions</li><li>Stale cache serving</li><li>Background cache updates</li><li>Cache lock (prevent stampede)</li><li>Cache status monitoring</li></ul>
+<h4>4. Security Hardened (<code>security/hardened.conf</code>)</h4>
+<p>Production security configuration:</p>
+<ul><li>Rate limiting (login, API, general)</li><li>IP whitelisting/blacklisting</li><li>User-agent and referer filtering</li><li>Attack pattern detection</li><li>Connection limits</li><li>Security headers</li><li>Custom error pages</li></ul>
+<h4>5. High Performance (<code>high-performance/nginx.conf</code>)</h4>
+<p>Optimized for maximum throughput:</p>
+<ul><li>Worker tuning (auto-scaling, CPU affinity)</li><li>Optimized buffers and timeouts</li><li>File cache (open_file_cache)</li><li>Connection pooling (128 keepalive)</li><li>Compression tuning</li><li>HTTP/2 optimization</li><li>SO_REUSEPORT for multi-core</li></ul>
+<h4>6. Microservices Gateway (<code>microservices/nginx.conf</code>)</h4>
+<p>API gateway for microservices:</p>
+<ul><li>Service routing (auth, user, product, order, payment)</li><li>Per-service rate limiting</li><li>Distributed tracing (X-Trace-ID)</li><li>Service-specific timeouts</li><li>Circuit breaking (proxy_next_upstream)</li><li>Health check aggregation</li></ul>
+<h4>7. Docker Container (<code>docker/</code>)</h4>
+<p>Production Docker setup:</p>
+<ul><li>Multi-stage Dockerfile</li><li>Security hardening (non-root user)</li><li>Health check script</li><li>docker-compose.yml with volumes</li><li>Custom configuration mounting</li></ul>
+<h4>8. Python Config Generator (<code>python/config-generator.py</code>)</h4>
+<p>Programmatic configuration generation:</p>
+<ul><li>Templates: reverse-proxy, ssl, static, load-balancer</li><li>Parameterized generation</li><li>JSON backend configuration</li><li>Command-line interface</li></ul>
+<p><strong>Examples Location</strong>: <code>skills/proxies/nginx-configuration/resources/examples/</code></p>
+<h3>Quick Start</h3>
+<pre><code class="lang-bash"># 1. Read comprehensive reference
+cat skills/proxies/nginx-configuration/resources/REFERENCE.md
+
+# 2. Validate existing configuration
+.~/.hanzo/skills/proxies/nginx-configuration/resources/scripts/validate_config.py \
+  --config-file /etc/nginx/nginx.conf
+
+# 3. Generate optimized configuration
+.~/.hanzo/skills/proxies/nginx-configuration/resources/scripts/optimize_settings.py \
+  --traffic-profile high &gt; nginx-optimized.conf
+
+# 4. Test performance
+.~/.hanzo/skills/proxies/nginx-configuration/resources/scripts/test_performance.sh \
+  --url http://localhost --concurrency 100
+
+# 5. Use example configurations
+cp skills/proxies/nginx-configuration/resources/examples/reverse-proxy/nginx.conf \
+  /etc/nginx/nginx.conf
+
+# 6. Generate custom configuration
+.~/.hanzo/skills/proxies/nginx-configuration/resources/examples/python/config-generator.py \
+  --template ssl --domain mysite.com --output nginx.conf</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>proxies-reverse-proxy</code> - Reverse proxy patterns</li><li><code>proxies-cache-control</code> - HTTP caching strategies</li><li><code>cryptography-tls-ssl</code> - SSL/TLS configuration</li><li><code>observability-logging</code> - Log analysis and monitoring</li><li><code>infrastructure-performance-tuning</code> - System-level optimization</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/proxies-nginx-configuration.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

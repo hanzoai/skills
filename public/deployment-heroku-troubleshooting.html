@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>deployment-heroku-troubleshooting</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/deployment-heroku-troubleshooting.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/deployment-heroku-troubleshooting.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>deployment-heroku-troubleshooting</h1><p class="lede">Application crashes on Heroku with H10, H12, H13, H14 errors</p><h1>Heroku Troubleshooting</h1>
+<p><strong>Scope</strong>: Debugging Heroku apps, log analysis, crashes, performance issues, scaling strategies <strong>Lines</strong>: ~320 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Application crashes on Heroku with H10, H12, H13, H14 errors</li><li>Debugging slow response times or timeout errors (H12)</li><li>Investigating memory issues or R14/R15 errors</li><li>Troubleshooting deployment failures or build errors</li><li>Analyzing application logs for error patterns</li><li>Optimizing dyno performance and resource usage</li><li>Resolving database connection errors or pool exhaustion</li><li>Fixing failed release phase or migration errors</li></ul>
+<h2>Core Concepts</h2>
+<h3>Heroku Error Codes</h3>
+<p><strong>HTTP Status Errors (H-codes)</strong>:</p>
+<ul><li><code>H10</code>: App crashed (code error, missing dependency)</li><li><code>H12</code>: Request timeout (&gt;30s for web requests)</li><li><code>H13</code>: Connection closed without response</li><li><code>H14</code>: No web dynos running</li><li><code>H18</code>: Server request interrupted (client disconnect)</li><li><code>H20</code>: App boot timeout (&gt;60s to bind to $PORT)</li><li><code>H21</code>: Backend connection timeout</li><li><code>H22</code>: Connection limit reached</li><li><code>H23</code>: Endpoint exhaustion (all dynos busy)</li><li><code>H27</code>: Client request timeout (10s connection, 55s idle)</li></ul>
+<p><strong>Runtime Errors (R-codes)</strong>:</p>
+<ul><li><code>R10</code>: Boot timeout (app didn&#x27;t bind to $PORT in 60s)</li><li><code>R12</code>: Exit timeout (graceful shutdown exceeded 30s)</li><li><code>R13</code>: Attach error (couldn&#x27;t attach to process)</li><li><code>R14</code>: Memory quota exceeded (swap usage)</li><li><code>R15</code>: Memory quota vastly exceeded (killed immediately)</li><li><code>R16</code>: Detached (dyno receiving traffic but not running)</li></ul>
+<h3>Log Aggregation</h3>
+<p><strong>Log sources</strong>:</p>
+<ul><li>App logs: <code>stdout</code>/<code>stderr</code> from application code</li><li>System logs: Heroku platform events (dyno start/stop, deploy)</li><li>Router logs: HTTP request routing (path, status, duration)</li><li>Dyno logs: Process management events</li></ul>
+<p><strong>Log structure</strong> (Heroku format):</p>
+<pre><code>timestamp source[process]: message
+2025-10-18T12:34:56.789Z app[web.1]: Starting application...
+2025-10-18T12:34:57.123Z heroku[web.1]: State changed from starting to up
+2025-10-18T12:35:00.456Z heroku[router]: at=info method=GET path=&quot;/&quot; host=myapp.herokuapp.com</code></pre>
+<h3>Performance Metrics</h3>
+<p><strong>Response time components</strong>:</p>
+<ul><li>Queue time: Time waiting for available dyno</li><li>Service time: Dyno processing time</li><li>Connect time: Time establishing connection</li></ul>
+<p><strong>Key metrics</strong>:</p>
+<ul><li>Request throughput (requests/second)</li><li>Average response time (ms)</li><li>Error rate (%)</li><li>Dyno memory usage (MB)</li><li>Dyno CPU usage (%)</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Debugging Application Crashes (H10)</h3>
+<p><strong>View recent logs</strong>:</p>
+<pre><code class="lang-bash"># Tail logs (follow)
+heroku logs --tail --app myapp
+
+# Last 1000 lines
+heroku logs -n 1000
+
+# Filter by process
+heroku logs --dyno=web.1
+
+# Search for errors
+heroku logs --tail | grep -i error</code></pre>
+<p><strong>Common H10 causes and fixes</strong>:</p>
+<p><strong>1. Missing dependencies</strong>:</p>
+<pre><code class="lang-bash"># Error in logs:
+# ModuleNotFoundError: No module named &#x27;requests&#x27;
+
+# Fix: Add to requirements.txt
+echo &quot;requests==2.31.0&quot; &gt;&gt; requirements.txt
+git commit -am &quot;Add missing dependency&quot;
+git push heroku main</code></pre>
+<p><strong>2. Port binding error</strong>:</p>
+<pre><code class="lang-python"># ❌ Wrong: Hardcoded port
+app.run(host=&#x27;0.0.0.0&#x27;, port=5000)
+
+# ✅ Correct: Use $PORT environment variable
+import os
+port = int(os.environ.get(&#x27;PORT&#x27;, 5000))
+app.run(host=&#x27;0.0.0.0&#x27;, port=port)</code></pre>
+<p><strong>3. Syntax error or import error</strong>:</p>
+<pre><code class="lang-bash"># Test locally first
+heroku local web
+
+# Or run bash on dyno to debug
+heroku run bash
+python manage.py check</code></pre>
+<p><strong>4. Database connection failure</strong>:</p>
+<pre><code class="lang-bash"># Check DATABASE_URL is set
+heroku config:get DATABASE_URL
+
+# Test connection
+heroku run python manage.py dbshell</code></pre>
+<h3>Pattern 2: Fixing Request Timeouts (H12)</h3>
+<p><strong>Identify slow requests</strong> (router logs):</p>
+<pre><code class="lang-bash"># Filter for slow requests (&gt;5000ms)
+heroku logs --tail | grep &#x27;service=[5-9][0-9][0-9][0-9]ms&#x27;
+
+# Example output:
+# at=info method=GET path=&quot;/slow-endpoint&quot; service=12000ms status=200</code></pre>
+<p><strong>Common timeout causes</strong>:</p>
+<p><strong>1. Slow database queries</strong>:</p>
+<pre><code class="lang-python"># Diagnose with query logging
+import logging
+logging.getLogger(&#x27;django.db.backends&#x27;).setLevel(logging.DEBUG)
+
+# Or use Django Debug Toolbar locally
+# Install: pip install django-debug-toolbar</code></pre>
+<p><strong>2. Missing database indexes</strong>:</p>
+<pre><code class="lang-sql">-- Check slow queries (Postgres)
+SELECT * FROM pg_stat_statements
+ORDER BY total_time DESC
+LIMIT 10;
+
+-- Add index
+CREATE INDEX idx_users_email ON users(email);</code></pre>
+<p><strong>3. External API calls</strong>:</p>
+<pre><code class="lang-python"># ❌ Wrong: Blocking synchronous call
+response = requests.get(&#x27;https://slow-api.com/data&#x27;)
+
+# ✅ Correct: Timeout + async processing
+import requests
+
+try:
+    response = requests.get(&#x27;https://api.com/data&#x27;, timeout=5)
+except requests.Timeout:
+    # Fall back or retry later
+    logger.error(&quot;API timeout&quot;)
+    return default_response
+
+# Or move to background worker
+from celery import shared_task
+
+@shared_task
+def fetch_api_data():
+    response = requests.get(&#x27;https://slow-api.com/data&#x27;, timeout=30)
+    # Process response</code></pre>
+<p><strong>4. Heavy computation in request cycle</strong>:</p>
+<pre><code class="lang-python"># ❌ Wrong: CPU-intensive in request
+def report_view(request):
+    data = generate_complex_report()  # Takes 45 seconds
+    return JsonResponse(data)
+
+# ✅ Correct: Async job with status polling
+from celery import shared_task
+
+@shared_task
+def generate_report(report_id):
+    data = generate_complex_report()
+    Report.objects.filter(id=report_id).update(data=data, status=&#x27;complete&#x27;)
+
+def report_view(request):
+    report = Report.objects.create(status=&#x27;pending&#x27;)
+    generate_report.delay(report.id)
+    return JsonResponse({&#x27;status&#x27;: &#x27;pending&#x27;, &#x27;report_id&#x27;: report.id})
+
+def report_status_view(request, report_id):
+    report = Report.objects.get(id=report_id)
+    return JsonResponse({&#x27;status&#x27;: report.status, &#x27;data&#x27;: report.data})</code></pre>
+<h3>Pattern 3: Memory Issues (R14/R15)</h3>
+<p><strong>Check dyno memory usage</strong>:</p>
+<pre><code class="lang-bash"># View metrics in dashboard
+heroku logs --tail | grep &#x27;R14\|R15&#x27;
+
+# Example output:
+# Error R14 (Memory quota exceeded)
+# Error R15 (Memory quota vastly exceeded)</code></pre>
+<p><strong>Diagnose memory leaks</strong>:</p>
+<p><strong>Python (memory_profiler)</strong>:</p>
+<pre><code class="lang-python"># Install: pip install memory_profiler
+
+from memory_profiler import profile
+
+@profile
+def problematic_function():
+    # This decorator logs memory usage line-by-line
+    large_list = [i for i in range(10000000)]
+    return process_data(large_list)
+
+# Run locally to identify leaks
+python -m memory_profiler script.py</code></pre>
+<p><strong>Common memory issues</strong>:</p>
+<p><strong>1. Loading large datasets into memory</strong>:</p>
+<pre><code class="lang-python"># ❌ Wrong: Load entire dataset
+users = User.objects.all()  # Fetches all rows
+for user in users:
+    process_user(user)
+
+# ✅ Correct: Use iterator
+users = User.objects.all().iterator(chunk_size=1000)
+for user in users:
+    process_user(user)</code></pre>
+<p><strong>2. Not closing database connections</strong>:</p>
+<pre><code class="lang-python"># ❌ Wrong: Connection leak
+conn = psycopg2.connect(DATABASE_URL)
+cursor = conn.cursor()
+cursor.execute(&quot;SELECT * FROM users&quot;)
+# Missing conn.close()
+
+# ✅ Correct: Context manager
+import psycopg2
+from contextlib import closing
+
+with closing(psycopg2.connect(DATABASE_URL)) as conn:
+    with conn.cursor() as cursor:
+        cursor.execute(&quot;SELECT * FROM users&quot;)
+        results = cursor.fetchall()</code></pre>
+<p><strong>3. Caching too much data</strong>:</p>
+<pre><code class="lang-python"># ❌ Wrong: Unbounded cache
+cache = {}
+def get_user(user_id):
+    if user_id not in cache:
+        cache[user_id] = fetch_user(user_id)
+    return cache[user_id]
+
+# ✅ Correct: Use Redis or LRU cache
+from functools import lru_cache
+
+@lru_cache(maxsize=1000)
+def get_user(user_id):
+    return fetch_user(user_id)</code></pre>
+<p><strong>Fix: Upgrade dyno type</strong>:</p>
+<pre><code class="lang-bash"># Check current dyno type
+heroku ps
+
+# Upgrade to more memory
+# Basic: 512MB → Standard-1X: 512MB → Standard-2X: 1GB
+heroku ps:type standard-2x</code></pre>
+<h3>Pattern 4: Boot Timeout (R10)</h3>
+<p><strong>Common causes</strong>:</p>
+<p><strong>1. Not binding to $PORT</strong>:</p>
+<pre><code class="lang-javascript">// ❌ Wrong: Hardcoded port
+app.listen(3000);
+
+// ✅ Correct: Use PORT environment variable
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () =&gt; {
+  console.log(`Server running on port ${PORT}`);
+});</code></pre>
+<p><strong>2. Slow initialization</strong>:</p>
+<pre><code class="lang-python"># ❌ Wrong: Database migrations on startup
+# This can exceed 60s boot timeout
+def app_startup():
+    run_migrations()  # 90 seconds
+    app.run()
+
+# ✅ Correct: Use release phase in Procfile
+# Procfile:
+# release: python manage.py migrate
+# web: gunicorn myapp.wsgi</code></pre>
+<p><strong>3. Cold start with large dependencies</strong>:</p>
+<pre><code class="lang-bash"># Optimize build time
+# Cache dependencies, use pre-built wheels
+
+# Python: Use specific versions (faster resolution)
+# requirements.txt:
+Django==4.2.7  # Not Django&gt;=4.0
+psycopg2-binary==2.9.9  # Use binary (not source)</code></pre>
+<h3>Pattern 5: Database Connection Pool Exhaustion</h3>
+<p><strong>Symptom</strong>:</p>
+<pre><code class="lang-bash"># Error in logs:
+# OperationalError: FATAL: remaining connection slots are reserved
+# Or: psycopg2.pool.PoolError: connection pool exhausted</code></pre>
+<p><strong>Diagnose</strong>:</p>
+<pre><code class="lang-bash"># Check current connections
+heroku pg:info
+
+# Connections: 18/20 (Essential plan has 20 max)
+
+# Find long-running queries
+heroku pg:ps</code></pre>
+<p><strong>Fixes</strong>:</p>
+<p><strong>1. Enable connection pooling</strong>:</p>
+<pre><code class="lang-bash"># Increases effective connection limit
+heroku pg:connection-pooling:attach DATABASE --as DATABASE_CONNECTION_POOL
+
+# Update DATABASE_URL to use pooled connection
+heroku config:set DATABASE_URL=$(heroku config:get DATABASE_CONNECTION_POOL_URL)</code></pre>
+<p><strong>2. Reduce connection timeout</strong>:</p>
+<pre><code class="lang-python"># Django: Close connections after request
+DATABASES = {
+    &#x27;default&#x27;: {
+        # ... other settings
+        &#x27;CONN_MAX_AGE&#x27;: 60,  # Close idle connections after 60s
+    }
+}</code></pre>
+<p><strong>3. Use connection pooler in app</strong>:</p>
+<pre><code class="lang-python">from sqlalchemy.pool import QueuePool
+
+engine = create_engine(
+    DATABASE_URL,
+    poolclass=QueuePool,
+    pool_size=5,              # Max connections per worker
+    max_overflow=10,          # Extra connections when pool full
+    pool_recycle=3600,        # Recycle connections after 1 hour
+    pool_pre_ping=True        # Verify connections before use
+)</code></pre>
+<h3>Pattern 6: Failed Migrations</h3>
+<p><strong>Symptom</strong>:</p>
+<pre><code class="lang-bash"># Release phase failed
+# Error: relation &quot;new_table&quot; already exists</code></pre>
+<p><strong>Rollback failed release</strong>:</p>
+<pre><code class="lang-bash"># View releases
+heroku releases
+
+# Rollback to previous version
+heroku rollback v123</code></pre>
+<p><strong>Fix migration</strong>:</p>
+<pre><code class="lang-bash"># Run migration manually to diagnose
+heroku run python manage.py migrate --fake-initial
+
+# Or reset migration
+heroku run python manage.py migrate app_name zero
+heroku run python manage.py migrate</code></pre>
+<p><strong>Prevent future issues</strong>:</p>
+<pre><code class="lang-python"># Use idempotent migrations
+from django.db import migrations
+
+class Migration(migrations.Migration):
+    def forwards(self, apps, schema_editor):
+        # Check if table exists before creating
+        if not schema_editor.table_exists(&#x27;new_table&#x27;):
+            # Create table
+            pass</code></pre>
+<h3>Pattern 7: High Dyno Load (H23)</h3>
+<p><strong>Symptom</strong>:</p>
+<pre><code class="lang-bash"># Error H23 (Endpoint exhaustion)
+# All dynos busy, requests queuing</code></pre>
+<p><strong>Diagnose</strong>:</p>
+<pre><code class="lang-bash"># Check dyno metrics (requires app metrics add-on or dashboard)
+heroku logs --tail | grep &#x27;at=info&#x27;
+
+# Look for high service times and queue times
+# at=info method=GET path=&quot;/&quot; service=5000ms queue=2000ms</code></pre>
+<p><strong>Fixes</strong>:</p>
+<p><strong>1. Scale dynos horizontally</strong>:</p>
+<pre><code class="lang-bash"># Add more web dynos
+heroku ps:scale web=3
+
+# Or enable autoscaling (requires Performance dynos)
+heroku ps:autoscale:enable web --min=2 --max=5 --p95=200</code></pre>
+<p><strong>2. Optimize slow endpoints</strong>:</p>
+<pre><code class="lang-python"># Add caching
+from django.views.decorators.cache import cache_page
+
+@cache_page(60 * 5)  # Cache for 5 minutes
+def homepage(request):
+    return render(request, &#x27;home.html&#x27;)</code></pre>
+<p><strong>3. Move work to background</strong>:</p>
+<pre><code class="lang-python"># Use Celery for async processing
+from celery import shared_task
+
+@shared_task
+def send_notification_email(user_id):
+    # Offload email sending to worker dyno
+    user = User.objects.get(id=user_id)
+    send_email(user.email, &quot;Welcome!&quot;)
+
+def signup_view(request):
+    user = create_user(request.POST)
+    send_notification_email.delay(user.id)  # Async
+    return redirect(&#x27;home&#x27;)</code></pre>
+<h3>Pattern 8: Log Analysis for Patterns</h3>
+<p><strong>Extract key metrics</strong>:</p>
+<pre><code class="lang-bash"># Average response time for endpoint
+heroku logs -n 10000 | grep &#x27;path=&quot;/api/users&quot;&#x27; | \
+  awk &#x27;{print $11}&#x27; | sed &#x27;s/service=//;s/ms//&#x27; | \
+  awk &#x27;{sum+=$1; count++} END {print sum/count}&#x27;
+
+# Count errors by type
+heroku logs -n 10000 | grep -i error | \
+  awk &#x27;{print $5}&#x27; | sort | uniq -c | sort -rn
+
+# Top slowest endpoints
+heroku logs -n 10000 | grep &#x27;at=info&#x27; | \
+  awk &#x27;{print $8, $11}&#x27; | sed &#x27;s/path=//;s/service=//&#x27; | \
+  sort -t&#x27; &#x27; -k2 -rn | head -20</code></pre>
+<p><strong>Set up structured logging</strong>:</p>
+<pre><code class="lang-python">import structlog
+
+logger = structlog.get_logger()
+
+logger.info(
+    &quot;user_login&quot;,
+    user_id=user.id,
+    ip=request.META[&#x27;REMOTE_ADDR&#x27;],
+    duration_ms=elapsed_time * 1000
+)
+
+# Search in Papertrail: user_login user_id=123</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Error Code Quick Lookup</h3>
+<pre><code>Code  | Meaning                        | Common Fix
+------|--------------------------------|--------------------------------
+H10   | App crashed                    | Check logs for error, fix code
+H12   | Request timeout                | Optimize query, add timeout
+H13   | Connection closed              | Check dyno health
+H14   | No web dynos running           | heroku ps:scale web=1
+H18   | Request interrupted            | Client issue, not server
+R10   | Boot timeout                   | Bind to $PORT, speed up init
+R14   | Memory quota exceeded          | Optimize memory, upgrade dyno
+R15   | Memory killed immediately      | Fix memory leak urgently</code></pre>
+<h3>Essential Debugging Commands</h3>
+<pre><code>Command                              | Purpose
+-------------------------------------|----------------------------------------
+heroku logs --tail                   | Follow live logs
+heroku logs -n 5000                  | Last 5000 log lines
+heroku logs --dyno=web.1             | Filter by dyno
+heroku logs --source=app             | Filter by source
+heroku ps                            | Check dyno status
+heroku ps:restart                    | Restart all dynos
+heroku run bash                      | Open shell on dyno
+heroku run python manage.py shell    | Django shell
+heroku pg:ps                         | Active database queries
+heroku pg:kill 1234                  | Kill query by PID
+heroku releases                      | View deploy history
+heroku rollback v123                 | Rollback to version
+heroku maintenance:on                | Enable maintenance mode</code></pre>
+<h3>Performance Optimization Checklist</h3>
+<pre><code>✅ DO: Use database connection pooling
+✅ DO: Add indexes for frequent queries
+✅ DO: Cache expensive computations (Redis)
+✅ DO: Move long tasks to worker dynos (Celery)
+✅ DO: Set request timeouts on external APIs
+✅ DO: Use CDN for static assets (Cloudflare)
+✅ DO: Monitor memory usage over time
+✅ DO: Scale horizontally for traffic spikes
+
+❌ DON&#x27;T: Run CPU-intensive tasks in web dynos
+❌ DON&#x27;T: Load large datasets into memory
+❌ DON&#x27;T: Skip database indexes
+❌ DON&#x27;T: Leave connections open (use context managers)
+❌ DON&#x27;T: Ignore H12 timeout errors
+❌ DON&#x27;T: Run migrations in app startup code
+❌ DON&#x27;T: Deploy without testing locally first</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Ignoring H12 timeouts</strong>: Accepting slow responses as normal ✅ Profile and optimize slow endpoints, move work to background</p>
+<p>❌ <strong>No structured logging</strong>: Unstructured logs are hard to search/analyze ✅ Use JSON logging with context (user_id, request_id, duration)</p>
+<p>❌ <strong>Not monitoring memory usage</strong>: Only notice when R15 kills app ✅ Track memory metrics, optimize before hitting limits</p>
+<p>❌ <strong>Deploying on Friday afternoon</strong>: Risk of weekend outage ✅ Deploy early in week, monitor for 24h before weekend</p>
+<p>❌ <strong>No rollback plan</strong>: Broken deploy with no quick fix ✅ Test deploys in staging, keep rollback command ready</p>
+<p>❌ <strong>Running database queries in loops</strong>: N+1 query problem ✅ Use select_related/prefetch_related (Django) or JOIN queries</p>
+<p>❌ <strong>Hardcoded timeouts</strong>: External API outages cascade ✅ Set aggressive timeouts (5-10s), fail fast with retries</p>
+<p>❌ <strong>Single dyno for production</strong>: No redundancy, downtime on deploy ✅ Run 2+ web dynos for zero-downtime deploys</p>
+<p>❌ <strong>No error tracking</strong>: Unaware of user-facing errors ✅ Add Sentry or similar for exception monitoring</p>
+<p>❌ <strong>Guessing at problems</strong>: Trying random fixes ✅ Use logs, metrics, and profiling to diagnose root cause</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>heroku-deployment.md</code> - Deploying apps and configuring Procfile</li><li><code>heroku-addons.md</code> - Using Postgres, Redis, monitoring add-ons</li><li><code>postgres-query-optimization.md</code> - Optimizing slow database queries</li><li><code>structured-logging.md</code> - Best practices for application logging</li><li><code>performance-profiling.md</code> - Profiling CPU and memory usage</li><li><code>celery-background-jobs.md</code> - Moving work to background workers</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/deployment-heroku-troubleshooting.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

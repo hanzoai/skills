@@ -1,0 +1,998 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ml-rag-evaluation-metrics</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ml-rag-evaluation-metrics.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ml-rag-evaluation-metrics.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ml-rag-evaluation-metrics</h1><p class="lede">Comprehensive guide to RAG evaluation using RAGAS (Faithfulness, Answer Relevancy, Context Precision/Recall), LLM-as-judge patterns, synthetic datasets, and integration with Arize Phoenix and Langfuse</p><h1>RAG Evaluation Metrics</h1>
+<p>Last Updated: 2025-10-26</p>
+<h2>When to Use This Skill</h2>
+<p>Use RAG evaluation metrics when:</p>
+<ul><li><strong>Building RAG systems</strong>: Evaluating retrieval-augmented generation pipelines</li><li><strong>Optimizing retrieval</strong>: Tuning chunk size, embedding models, or retrieval strategies</li><li><strong>Measuring generation quality</strong>: Assessing answer faithfulness and relevance</li><li><strong>A/B testing</strong>: Comparing different RAG configurations or models</li><li><strong>Production monitoring</strong>: Tracking RAG performance in deployed applications</li><li><strong>Synthetic data evaluation</strong>: Testing with generated question-answer pairs</li><li><strong>End-to-end RAG</strong>: Evaluating both retrieval and generation components</li><li><strong>Context window optimization</strong>: Determining optimal number of retrieved chunks</li></ul>
+<p><strong>Anti-pattern</strong>: Evaluating RAG systems with only generation metrics. Always assess <strong>both</strong> retrieval quality and answer quality.</p>
+<h2>Core Concepts</h2>
+<h3>RAGAS Framework (2024-2025)</h3>
+<p><strong>RAGAS</strong> (Retrieval Augmented Generation Assessment) provides specialized metrics for RAG evaluation:</p>
+<p><strong>Generation Metrics</strong>:</p>
+<ol><li><strong>Faithfulness</strong>: Whether the answer is grounded in retrieved context (hallucination detection)</li><li><strong>Answer Relevancy</strong>: How relevant the answer is to the query</li></ol>
+<p><strong>Retrieval Metrics</strong>:</p>
+<ol><li><strong>Context Precision</strong>: Proportion of relevant chunks in retrieved context</li><li><strong>Context Recall</strong>: Whether all necessary information is retrieved</li></ol>
+<p><strong>End-to-End Metrics</strong>:</p>
+<ol><li><strong>Answer Correctness</strong>: Similarity between generated answer and ground truth</li><li><strong>Answer Semantic Similarity</strong>: Semantic alignment with expected answer</li></ol>
+<h3>RAG Evaluation Dimensions</h3>
+<pre><code>Query → Retrieval → Generation → Answer
+  ↓         ↓           ↓          ↓
+Eval:   Context     Faithfulness  Relevancy
+        Precision   (no halluc.)  (on-topic)
+        Recall</code></pre>
+<h3>LLM-as-Judge for RAG</h3>
+<p>RAG evaluation heavily uses LLM-as-judge patterns:</p>
+<ul><li><strong>Faithfulness</strong>: Judge checks if answer claims are supported by context</li><li><strong>Relevancy</strong>: Judge assesses if answer addresses the query</li><li><strong>Context Ranking</strong>: Judge evaluates which chunks are most relevant</li></ul>
+<h3>Synthetic Dataset Generation</h3>
+<p><strong>Problem</strong>: Real-world RAG datasets with ground truth are scarce</p>
+<p><strong>Solution</strong>: Generate synthetic question-answer pairs from documents</p>
+<ul><li>Extract key information from chunks</li><li>Generate questions that require that information</li><li>Create ground truth answers</li><li>Evaluate RAG system on synthetic dataset</li></ul>
+<h2>Implementation Patterns</h2>
+<h3>Pattern 1: RAGAS Basic Evaluation</h3>
+<p><strong>When to use</strong>: Standard RAG evaluation with all metrics</p>
+<pre><code class="lang-python">from ragas import evaluate
+from ragas.metrics import (
+    faithfulness,
+    answer_relevancy,
+    context_precision,
+    context_recall,
+    answer_correctness,
+)
+from datasets import Dataset
+
+# Prepare evaluation dataset
+eval_data = {
+    &quot;question&quot;: [
+        &quot;What is the capital of France?&quot;,
+        &quot;Who wrote Romeo and Juliet?&quot;,
+    ],
+    &quot;contexts&quot;: [
+        # Retrieved contexts (list of chunks)
+        [
+            &quot;Paris is the capital and largest city of France.&quot;,
+            &quot;France is a country in Western Europe.&quot;,
+        ],
+        [
+            &quot;William Shakespeare wrote Romeo and Juliet in the 1590s.&quot;,
+            &quot;Romeo and Juliet is a tragedy about two young lovers.&quot;,
+        ],
+    ],
+    &quot;answer&quot;: [
+        # Generated answers
+        &quot;The capital of France is Paris.&quot;,
+        &quot;Romeo and Juliet was written by William Shakespeare.&quot;,
+    ],
+    &quot;ground_truth&quot;: [
+        # Reference answers (optional, for answer_correctness)
+        &quot;Paris&quot;,
+        &quot;William Shakespeare&quot;,
+    ],
+}
+
+# Create dataset
+dataset = Dataset.from_dict(eval_data)
+
+# Run evaluation
+results = evaluate(
+    dataset,
+    metrics=[
+        faithfulness,
+        answer_relevancy,
+        context_precision,
+        context_recall,
+        answer_correctness,
+    ],
+)
+
+# View results
+print(results)
+print(f&quot;Faithfulness: {results[&#x27;faithfulness&#x27;]:.4f}&quot;)
+print(f&quot;Answer Relevancy: {results[&#x27;answer_relevancy&#x27;]:.4f}&quot;)
+print(f&quot;Context Precision: {results[&#x27;context_precision&#x27;]:.4f}&quot;)
+print(f&quot;Context Recall: {results[&#x27;context_recall&#x27;]:.4f}&quot;)
+print(f&quot;Answer Correctness: {results[&#x27;answer_correctness&#x27;]:.4f}&quot;)
+
+# Export results
+results_df = results.to_pandas()
+results_df.to_csv(&quot;ragas_results.csv&quot;, index=False)</code></pre>
+<p><strong>Interpreting scores</strong> (0.0 to 1.0 scale):</p>
+<ul><li><strong>Faithfulness &lt; 0.7</strong>: High hallucination risk, review generation prompts</li><li><strong>Answer Relevancy &lt; 0.7</strong>: Answers not addressing questions, review system prompt</li><li><strong>Context Precision &lt; 0.5</strong>: Too many irrelevant chunks, improve retrieval</li><li><strong>Context Recall &lt; 0.7</strong>: Missing information, retrieve more chunks or improve embeddings</li></ul>
+<h3>Pattern 2: Custom RAGAS Metrics</h3>
+<p><strong>When to use</strong>: Domain-specific RAG evaluation needs</p>
+<pre><code class="lang-python">from ragas.metrics.base import Metric
+from ragas.metrics._faithfulness import FaithfulnesswithHHEM
+from langchain_openai import ChatOpenAI
+
+# Custom metric: Code Correctness for code RAG
+class CodeCorrectness(Metric):
+    &quot;&quot;&quot;Evaluate whether code answer is correct and executable.&quot;&quot;&quot;
+
+    def __init__(self, llm=None):
+        self.llm = llm or ChatOpenAI(model=&quot;gpt-4-turbo-preview&quot;)
+
+    def score(self, row):
+        &quot;&quot;&quot;
+        Score code correctness.
+
+        Args:
+            row: Dict with &#x27;question&#x27;, &#x27;answer&#x27;, &#x27;contexts&#x27;, &#x27;ground_truth&#x27;
+
+        Returns:
+            Score from 0.0 to 1.0
+        &quot;&quot;&quot;
+        question = row[&quot;question&quot;]
+        code_answer = row[&quot;answer&quot;]
+        context = &quot;\n&quot;.join(row[&quot;contexts&quot;])
+
+        prompt = f&quot;&quot;&quot;Evaluate the correctness of the following code answer.
+
+Question: {question}
+
+Context: {context}
+
+Code Answer:
+{code_answer}
+
+Rate the code on:
+1. Syntactic correctness (no errors)
+2. Logical correctness (solves the problem)
+3. Best practices (follows conventions)
+
+Provide a score from 0.0 to 1.0, where:
+- 0.0 = Completely incorrect or won&#x27;t run
+- 0.5 = Partially correct but has issues
+- 1.0 = Perfect solution
+
+Return ONLY a number between 0.0 and 1.0.
+&quot;&quot;&quot;
+
+        response = self.llm.invoke(prompt)
+        score_text = response.content.strip()
+
+        try:
+            score = float(score_text)
+            return max(0.0, min(1.0, score))  # Clamp to [0, 1]
+        except ValueError:
+            # Fallback if LLM doesn&#x27;t return a number
+            return 0.5
+
+# Custom metric: Medical Accuracy
+class MedicalAccuracy(Metric):
+    &quot;&quot;&quot;Evaluate medical accuracy with safety checks.&quot;&quot;&quot;
+
+    def __init__(self, llm=None):
+        self.llm = llm or ChatOpenAI(model=&quot;gpt-4-turbo-preview&quot;)
+
+    def score(self, row):
+        &quot;&quot;&quot;Score medical accuracy and safety.&quot;&quot;&quot;
+        question = row[&quot;question&quot;]
+        answer = row[&quot;answer&quot;]
+        context = &quot;\n&quot;.join(row[&quot;contexts&quot;])
+
+        prompt = f&quot;&quot;&quot;You are a medical expert evaluator. Assess the following medical answer.
+
+Question: {question}
+
+Retrieved Medical Context:
+{context}
+
+Answer:
+{answer}
+
+Evaluate on:
+1. Medical accuracy (based on context)
+2. Safety (no harmful advice)
+3. Appropriate disclaimers (mentions consulting doctor if needed)
+
+Score from 0.0 to 1.0:
+- 0.0 = Medically incorrect or dangerous
+- 0.5 = Partially correct but incomplete or lacks safety disclaimers
+- 1.0 = Medically accurate, safe, and appropriately cautious
+
+Return ONLY a number between 0.0 and 1.0.
+&quot;&quot;&quot;
+
+        response = self.llm.invoke(prompt)
+
+        try:
+            score = float(response.content.strip())
+            return max(0.0, min(1.0, score))
+        except ValueError:
+            return 0.5
+
+# Use custom metrics
+from ragas import evaluate
+
+custom_results = evaluate(
+    dataset,
+    metrics=[
+        faithfulness,
+        answer_relevancy,
+        CodeCorrectness(),  # Custom metric
+    ],
+)
+
+print(f&quot;Code Correctness: {custom_results[&#x27;code_correctness&#x27;]:.4f}&quot;)</code></pre>
+<h3>Pattern 3: Synthetic Dataset Generation</h3>
+<p><strong>When to use</strong>: Creating test datasets from documents</p>
+<pre><code class="lang-python">from ragas.testset.generator import TestsetGenerator
+from ragas.testset.evolutions import simple, reasoning, multi_context
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_community.document_loaders import DirectoryLoader, TextLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+# Load documents
+loader = DirectoryLoader(&quot;./docs&quot;, glob=&quot;**/*.txt&quot;, loader_cls=TextLoader)
+documents = loader.load()
+
+# Split into chunks
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,
+    chunk_overlap=200,
+)
+chunks = text_splitter.split_documents(documents)
+
+# Setup generator
+generator = TestsetGenerator.from_langchain(
+    generator_llm=ChatOpenAI(model=&quot;gpt-4-turbo-preview&quot;),
+    critic_llm=ChatOpenAI(model=&quot;gpt-4-turbo-preview&quot;),
+    embeddings=OpenAIEmbeddings(),
+)
+
+# Generate test dataset
+testset = generator.generate_with_langchain_docs(
+    documents=chunks,
+    test_size=50,  # Generate 50 question-answer pairs
+    distributions={
+        simple: 0.5,         # 50% simple questions
+        reasoning: 0.25,     # 25% reasoning questions
+        multi_context: 0.25, # 25% questions requiring multiple chunks
+    },
+)
+
+# Convert to evaluation format
+testset_df = testset.to_pandas()
+
+print(f&quot;Generated {len(testset_df)} test cases&quot;)
+print(testset_df.head())
+
+# Save for later use
+testset_df.to_csv(&quot;synthetic_testset.csv&quot;, index=False)
+
+# Use for evaluation
+from datasets import Dataset
+
+eval_dataset = Dataset.from_pandas(testset_df)
+
+# Now evaluate your RAG system on synthetic data
+def run_rag(question):
+    &quot;&quot;&quot;Your RAG system.&quot;&quot;&quot;
+    # Retrieve contexts
+    contexts = retriever.get_relevant_documents(question)
+
+    # Generate answer
+    answer = generator.generate(question, contexts)
+
+    return {
+        &quot;question&quot;: question,
+        &quot;contexts&quot;: [c.page_content for c in contexts],
+        &quot;answer&quot;: answer,
+    }
+
+# Generate answers for synthetic questions
+eval_results = []
+
+for example in testset_df.itertuples():
+    rag_output = run_rag(example.question)
+    rag_output[&quot;ground_truth&quot;] = example.ground_truth
+
+    eval_results.append(rag_output)
+
+# Evaluate
+eval_dataset = Dataset.from_list(eval_results)
+results = evaluate(
+    eval_dataset,
+    metrics=[faithfulness, answer_relevancy, context_precision, context_recall],
+)
+
+print(results)</code></pre>
+<h3>Pattern 4: Arize Phoenix Integration</h3>
+<p><strong>When to use</strong>: Production RAG monitoring with tracing</p>
+<pre><code class="lang-python">import phoenix as px
+from phoenix.trace.langchain import LangChainInstrumentor
+from phoenix.evals import (
+    HallucinationEvaluator,
+    RelevanceEvaluator,
+    OpenAIModel,
+)
+from langchain_openai import ChatOpenAI
+from langchain.chains import RetrievalQA
+from langchain_community.vectorstores import Chroma
+
+# Start Phoenix
+session = px.launch_app()
+
+# Instrument LangChain
+LangChainInstrumentor().instrument()
+
+# Build RAG system (automatically traced)
+vectorstore = Chroma.from_documents(documents, OpenAIEmbeddings())
+retriever = vectorstore.as_retriever(search_kwargs={&quot;k&quot;: 5})
+
+qa_chain = RetrievalQA.from_chain_type(
+    llm=ChatOpenAI(model=&quot;gpt-4-turbo-preview&quot;),
+    chain_type=&quot;stuff&quot;,
+    retriever=retriever,
+    return_source_documents=True,
+)
+
+# Run queries (automatically traced)
+questions = [
+    &quot;What is the capital of France?&quot;,
+    &quot;Who wrote Romeo and Juliet?&quot;,
+    # ... more questions
+]
+
+for question in questions:
+    result = qa_chain({&quot;query&quot;: question})
+    print(f&quot;Q: {question}&quot;)
+    print(f&quot;A: {result[&#x27;result&#x27;]}\n&quot;)
+
+# Get traces from Phoenix
+traces_df = px.Client().get_trace_dataset()
+
+# Run Phoenix evaluations
+eval_model = OpenAIModel(model=&quot;gpt-4-turbo-preview&quot;)
+
+# Hallucination evaluation (Faithfulness)
+hallucination_eval = HallucinationEvaluator(eval_model)
+hallucination_results = hallucination_eval.evaluate(
+    dataframe=traces_df,
+    query_column=&quot;input&quot;,
+    response_column=&quot;output&quot;,
+    reference_column=&quot;retrieved_context&quot;,
+)
+
+# Relevance evaluation (Answer Relevancy)
+relevance_eval = RelevanceEvaluator(eval_model)
+relevance_results = relevance_eval.evaluate(
+    dataframe=traces_df,
+    query_column=&quot;input&quot;,
+    document_column=&quot;retrieved_context&quot;,
+)
+
+# Add scores to traces
+traces_df[&quot;hallucination_score&quot;] = hallucination_results[&quot;label&quot;]
+traces_df[&quot;relevance_score&quot;] = relevance_results[&quot;label&quot;]
+
+# Calculate metrics
+hallucination_rate = (hallucination_results[&quot;label&quot;] == &quot;hallucinated&quot;).sum() / len(traces_df)
+relevance_rate = (relevance_results[&quot;label&quot;] == &quot;relevant&quot;).sum() / len(traces_df)
+
+print(f&quot;Hallucination rate: {hallucination_rate:.2%}&quot;)
+print(f&quot;Relevance rate: {relevance_rate:.2%}&quot;)
+
+# Upload results back to Phoenix
+px.Client().log_evaluations(traces_df)
+
+print(f&quot;View results at {session.url}&quot;)</code></pre>
+<h3>Pattern 5: End-to-End RAG Pipeline Evaluation</h3>
+<p><strong>When to use</strong>: Comprehensive evaluation across RAG components</p>
+<pre><code class="lang-python">from typing import List, Dict, Tuple
+import numpy as np
+from ragas import evaluate
+from ragas.metrics import (
+    faithfulness,
+    answer_relevancy,
+    context_precision,
+    context_recall,
+)
+from datasets import Dataset
+
+class RAGEvaluationPipeline:
+    &quot;&quot;&quot;Comprehensive RAG evaluation pipeline.&quot;&quot;&quot;
+
+    def __init__(self, rag_system, test_dataset: List[Dict]):
+        &quot;&quot;&quot;
+        Args:
+            rag_system: Your RAG system with query(question) -&gt; (answer, contexts)
+            test_dataset: List of {question, ground_truth} dicts
+        &quot;&quot;&quot;
+        self.rag_system = rag_system
+        self.test_dataset = test_dataset
+
+    def run_rag_on_dataset(self) -&gt; List[Dict]:
+        &quot;&quot;&quot;Run RAG system on all test questions.&quot;&quot;&quot;
+        results = []
+
+        for example in self.test_dataset:
+            question = example[&quot;question&quot;]
+
+            # Run RAG
+            answer, contexts = self.rag_system.query(question)
+
+            results.append({
+                &quot;question&quot;: question,
+                &quot;answer&quot;: answer,
+                &quot;contexts&quot;: [c.page_content for c in contexts],
+                &quot;ground_truth&quot;: example[&quot;ground_truth&quot;],
+            })
+
+        return results
+
+    def evaluate_retrieval(self, results: List[Dict]) -&gt; Dict:
+        &quot;&quot;&quot;Evaluate retrieval quality.&quot;&quot;&quot;
+        # Context Precision: proportion of retrieved chunks that are relevant
+        # Context Recall: whether all needed info is retrieved
+
+        dataset = Dataset.from_list(results)
+
+        retrieval_metrics = evaluate(
+            dataset,
+            metrics=[context_precision, context_recall],
+        )
+
+        return {
+            &quot;context_precision&quot;: retrieval_metrics[&quot;context_precision&quot;],
+            &quot;context_recall&quot;: retrieval_metrics[&quot;context_recall&quot;],
+        }
+
+    def evaluate_generation(self, results: List[Dict]) -&gt; Dict:
+        &quot;&quot;&quot;Evaluate generation quality.&quot;&quot;&quot;
+        # Faithfulness: answer grounded in context
+        # Answer Relevancy: answer addresses question
+
+        dataset = Dataset.from_list(results)
+
+        generation_metrics = evaluate(
+            dataset,
+            metrics=[faithfulness, answer_relevancy],
+        )
+
+        return {
+            &quot;faithfulness&quot;: generation_metrics[&quot;faithfulness&quot;],
+            &quot;answer_relevancy&quot;: generation_metrics[&quot;answer_relevancy&quot;],
+        }
+
+    def evaluate_end_to_end(self, results: List[Dict]) -&gt; Dict:
+        &quot;&quot;&quot;Full RAG evaluation.&quot;&quot;&quot;
+        dataset = Dataset.from_list(results)
+
+        all_metrics = evaluate(
+            dataset,
+            metrics=[
+                faithfulness,
+                answer_relevancy,
+                context_precision,
+                context_recall,
+            ],
+        )
+
+        return {
+            &quot;faithfulness&quot;: all_metrics[&quot;faithfulness&quot;],
+            &quot;answer_relevancy&quot;: all_metrics[&quot;answer_relevancy&quot;],
+            &quot;context_precision&quot;: all_metrics[&quot;context_precision&quot;],
+            &quot;context_recall&quot;: all_metrics[&quot;context_recall&quot;],
+        }
+
+    def analyze_failures(self, results: List[Dict], threshold: float = 0.7):
+        &quot;&quot;&quot;Identify and analyze failure cases.&quot;&quot;&quot;
+        # Run detailed evaluation per example
+        failures = {
+            &quot;low_faithfulness&quot;: [],
+            &quot;low_relevancy&quot;: [],
+            &quot;low_context_precision&quot;: [],
+            &quot;low_context_recall&quot;: [],
+        }
+
+        dataset = Dataset.from_list(results)
+
+        # Get per-example scores
+        detailed_results = evaluate(
+            dataset,
+            metrics=[faithfulness, answer_relevancy, context_precision, context_recall],
+        )
+
+        df = detailed_results.to_pandas()
+
+        # Identify failures
+        for idx, row in df.iterrows():
+            example = results[idx]
+
+            if row[&quot;faithfulness&quot;] &lt; threshold:
+                failures[&quot;low_faithfulness&quot;].append({
+                    &quot;question&quot;: example[&quot;question&quot;],
+                    &quot;answer&quot;: example[&quot;answer&quot;],
+                    &quot;contexts&quot;: example[&quot;contexts&quot;],
+                    &quot;score&quot;: row[&quot;faithfulness&quot;],
+                })
+
+            if row[&quot;answer_relevancy&quot;] &lt; threshold:
+                failures[&quot;low_relevancy&quot;].append({
+                    &quot;question&quot;: example[&quot;question&quot;],
+                    &quot;answer&quot;: example[&quot;answer&quot;],
+                    &quot;score&quot;: row[&quot;answer_relevancy&quot;],
+                })
+
+            if row[&quot;context_precision&quot;] &lt; 0.5:  # Lower threshold
+                failures[&quot;low_context_precision&quot;].append({
+                    &quot;question&quot;: example[&quot;question&quot;],
+                    &quot;contexts&quot;: example[&quot;contexts&quot;],
+                    &quot;score&quot;: row[&quot;context_precision&quot;],
+                })
+
+            if row[&quot;context_recall&quot;] &lt; threshold:
+                failures[&quot;low_context_recall&quot;].append({
+                    &quot;question&quot;: example[&quot;question&quot;],
+                    &quot;contexts&quot;: example[&quot;contexts&quot;],
+                    &quot;ground_truth&quot;: example[&quot;ground_truth&quot;],
+                    &quot;score&quot;: row[&quot;context_recall&quot;],
+                })
+
+        return failures
+
+    def run_full_evaluation(self) -&gt; Dict:
+        &quot;&quot;&quot;Run complete evaluation pipeline.&quot;&quot;&quot;
+        print(&quot;Running RAG system on test dataset...&quot;)
+        results = self.run_rag_on_dataset()
+
+        print(&quot;Evaluating retrieval...&quot;)
+        retrieval_metrics = self.evaluate_retrieval(results)
+
+        print(&quot;Evaluating generation...&quot;)
+        generation_metrics = self.evaluate_generation(results)
+
+        print(&quot;Evaluating end-to-end...&quot;)
+        e2e_metrics = self.evaluate_end_to_end(results)
+
+        print(&quot;Analyzing failures...&quot;)
+        failures = self.analyze_failures(results)
+
+        # Compile report
+        report = {
+            &quot;overall_metrics&quot;: e2e_metrics,
+            &quot;retrieval_metrics&quot;: retrieval_metrics,
+            &quot;generation_metrics&quot;: generation_metrics,
+            &quot;failure_analysis&quot;: {
+                &quot;num_low_faithfulness&quot;: len(failures[&quot;low_faithfulness&quot;]),
+                &quot;num_low_relevancy&quot;: len(failures[&quot;low_relevancy&quot;]),
+                &quot;num_low_context_precision&quot;: len(failures[&quot;low_context_precision&quot;]),
+                &quot;num_low_context_recall&quot;: len(failures[&quot;low_context_recall&quot;]),
+            },
+            &quot;sample_failures&quot;: {
+                k: v[:3] for k, v in failures.items()  # Top 3 per category
+            },
+        }
+
+        return report
+
+# Usage
+class MyRAGSystem:
+    &quot;&quot;&quot;Your RAG system.&quot;&quot;&quot;
+
+    def query(self, question: str) -&gt; Tuple[str, List]:
+        &quot;&quot;&quot;Return (answer, contexts).&quot;&quot;&quot;
+        # Your RAG implementation
+        pass
+
+test_dataset = [
+    {&quot;question&quot;: &quot;What is photosynthesis?&quot;, &quot;ground_truth&quot;: &quot;Photosynthesis is...&quot;},
+    # ... more examples
+]
+
+pipeline = RAGEvaluationPipeline(
+    rag_system=MyRAGSystem(),
+    test_dataset=test_dataset,
+)
+
+report = pipeline.run_full_evaluation()
+
+print(&quot;\n=== RAG Evaluation Report ===&quot;)
+print(f&quot;Faithfulness: {report[&#x27;overall_metrics&#x27;][&#x27;faithfulness&#x27;]:.4f}&quot;)
+print(f&quot;Answer Relevancy: {report[&#x27;overall_metrics&#x27;][&#x27;answer_relevancy&#x27;]:.4f}&quot;)
+print(f&quot;Context Precision: {report[&#x27;overall_metrics&#x27;][&#x27;context_precision&#x27;]:.4f}&quot;)
+print(f&quot;Context Recall: {report[&#x27;overall_metrics&#x27;][&#x27;context_recall&#x27;]:.4f}&quot;)
+
+print(f&quot;\nFailure counts:&quot;)
+for metric, count in report[&quot;failure_analysis&quot;].items():
+    print(f&quot;  {metric}: {count}&quot;)</code></pre>
+<h2>Code Examples</h2>
+<h3>Example 1: Comparing RAG Configurations</h3>
+<pre><code class="lang-python">from ragas import evaluate
+from ragas.metrics import faithfulness, answer_relevancy, context_precision
+from datasets import Dataset
+import pandas as pd
+
+class RAGComparison:
+    &quot;&quot;&quot;Compare different RAG configurations.&quot;&quot;&quot;
+
+    def __init__(self, test_questions: List[str], ground_truths: List[str]):
+        self.test_questions = test_questions
+        self.ground_truths = ground_truths
+
+    def evaluate_configuration(
+        self,
+        config_name: str,
+        rag_system,
+    ) -&gt; pd.DataFrame:
+        &quot;&quot;&quot;Evaluate single RAG configuration.&quot;&quot;&quot;
+        results = []
+
+        for question, ground_truth in zip(self.test_questions, self.ground_truths):
+            answer, contexts = rag_system.query(question)
+
+            results.append({
+                &quot;question&quot;: question,
+                &quot;answer&quot;: answer,
+                &quot;contexts&quot;: [c.page_content for c in contexts],
+                &quot;ground_truth&quot;: ground_truth,
+            })
+
+        dataset = Dataset.from_list(results)
+
+        metrics = evaluate(
+            dataset,
+            metrics=[faithfulness, answer_relevancy, context_precision],
+        )
+
+        return pd.DataFrame({
+            &quot;config&quot;: config_name,
+            &quot;faithfulness&quot;: [metrics[&quot;faithfulness&quot;]],
+            &quot;answer_relevancy&quot;: [metrics[&quot;answer_relevancy&quot;]],
+            &quot;context_precision&quot;: [metrics[&quot;context_precision&quot;]],
+        })
+
+    def compare_configurations(
+        self,
+        configurations: Dict[str, object],
+    ) -&gt; pd.DataFrame:
+        &quot;&quot;&quot;
+        Compare multiple RAG configurations.
+
+        Args:
+            configurations: {config_name: rag_system} dict
+
+        Returns:
+            Comparison dataframe
+        &quot;&quot;&quot;
+        results = []
+
+        for config_name, rag_system in configurations.items():
+            print(f&quot;Evaluating: {config_name}&quot;)
+
+            config_results = self.evaluate_configuration(config_name, rag_system)
+            results.append(config_results)
+
+        comparison_df = pd.concat(results, ignore_index=True)
+
+        # Add ranking
+        comparison_df[&quot;avg_score&quot;] = comparison_df[
+            [&quot;faithfulness&quot;, &quot;answer_relevancy&quot;, &quot;context_precision&quot;]
+        ].mean(axis=1)
+
+        comparison_df = comparison_df.sort_values(&quot;avg_score&quot;, ascending=False)
+
+        return comparison_df
+
+# Usage
+test_questions = [
+    &quot;What is machine learning?&quot;,
+    &quot;How does a neural network work?&quot;,
+    # ... more
+]
+
+ground_truths = [
+    &quot;Machine learning is...&quot;,
+    &quot;Neural networks are...&quot;,
+    # ... more
+]
+
+comparator = RAGComparison(test_questions, ground_truths)
+
+# Different RAG configurations to compare
+configurations = {
+    &quot;base_rag&quot;: BaseRAGSystem(),
+    &quot;hybrid_search&quot;: HybridSearchRAG(),  # BM25 + vector
+    &quot;rerank&quot;: RerankRAG(),               # With reranker
+    &quot;large_chunks&quot;: LargeChunkRAG(),     # 1500 tokens
+    &quot;small_chunks&quot;: SmallChunkRAG(),     # 500 tokens
+}
+
+comparison = comparator.compare_configurations(configurations)
+
+print(&quot;\n=== RAG Configuration Comparison ===&quot;)
+print(comparison.to_string(index=False))
+
+# Save results
+comparison.to_csv(&quot;rag_comparison.csv&quot;, index=False)</code></pre>
+<h3>Example 2: Continuous RAG Monitoring</h3>
+<pre><code class="lang-python">import phoenix as px
+from phoenix.trace.langchain import LangChainInstrumentor
+from phoenix.evals import HallucinationEvaluator, OpenAIModel
+from datetime import datetime, timedelta
+import pandas as pd
+
+class RAGMonitor:
+    &quot;&quot;&quot;Continuous monitoring for production RAG systems.&quot;&quot;&quot;
+
+    def __init__(self, phoenix_endpoint: str = &quot;http://localhost:6006&quot;):
+        self.px_client = px.Client(endpoint=phoenix_endpoint)
+        self.eval_model = OpenAIModel(model=&quot;gpt-4-turbo-preview&quot;)
+        self.hallucination_eval = HallucinationEvaluator(self.eval_model)
+
+    def get_recent_traces(self, hours: int = 24) -&gt; pd.DataFrame:
+        &quot;&quot;&quot;Get RAG traces from last N hours.&quot;&quot;&quot;
+        end_time = datetime.now()
+        start_time = end_time - timedelta(hours=hours)
+
+        traces = self.px_client.get_trace_dataset(
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+        return traces
+
+    def evaluate_recent_performance(self, hours: int = 24) -&gt; Dict:
+        &quot;&quot;&quot;Evaluate RAG performance from recent traces.&quot;&quot;&quot;
+        traces = self.get_recent_traces(hours)
+
+        if len(traces) == 0:
+            return {&quot;error&quot;: &quot;No traces found&quot;}
+
+        # Run hallucination evaluation
+        hallucination_results = self.hallucination_eval.evaluate(
+            dataframe=traces,
+            query_column=&quot;input&quot;,
+            response_column=&quot;output&quot;,
+            reference_column=&quot;retrieved_context&quot;,
+        )
+
+        # Calculate metrics
+        hallucination_rate = (
+            (hallucination_results[&quot;label&quot;] == &quot;hallucinated&quot;).sum() / len(traces)
+        )
+
+        # Identify problematic queries
+        traces[&quot;hallucination&quot;] = hallucination_results[&quot;label&quot;]
+        hallucinated_queries = traces[traces[&quot;hallucination&quot;] == &quot;hallucinated&quot;]
+
+        return {
+            &quot;period_hours&quot;: hours,
+            &quot;total_queries&quot;: len(traces),
+            &quot;hallucination_rate&quot;: hallucination_rate,
+            &quot;num_hallucinations&quot;: len(hallucinated_queries),
+            &quot;sample_hallucinations&quot;: hallucinated_queries.head(5).to_dict(&quot;records&quot;),
+        }
+
+    def alert_on_degradation(
+        self,
+        threshold_hallucination: float = 0.1,
+        hours: int = 1,
+    ) -&gt; bool:
+        &quot;&quot;&quot;Alert if performance degrades beyond threshold.&quot;&quot;&quot;
+        metrics = self.evaluate_recent_performance(hours)
+
+        if metrics.get(&quot;hallucination_rate&quot;, 0) &gt; threshold_hallucination:
+            print(f&quot;ALERT: Hallucination rate {metrics[&#x27;hallucination_rate&#x27;]:.2%} exceeds threshold {threshold_hallucination:.2%}&quot;)
+            print(f&quot;Sample hallucinations:&quot;)
+            for sample in metrics[&quot;sample_hallucinations&quot;]:
+                print(f&quot;  Query: {sample[&#x27;input&#x27;]}&quot;)
+                print(f&quot;  Answer: {sample[&#x27;output&#x27;]}\n&quot;)
+
+            return True
+
+        return False
+
+# Usage (run periodically)
+monitor = RAGMonitor()
+
+# Check every hour
+metrics = monitor.evaluate_recent_performance(hours=1)
+print(f&quot;Last hour performance:&quot;)
+print(f&quot;  Total queries: {metrics[&#x27;total_queries&#x27;]}&quot;)
+print(f&quot;  Hallucination rate: {metrics[&#x27;hallucination_rate&#x27;]:.2%}&quot;)
+
+# Alert if degraded
+monitor.alert_on_degradation(threshold_hallucination=0.1)</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>Anti-Pattern 1: Only Evaluating Generation</h3>
+<p><strong>Wrong</strong>: Ignoring retrieval quality</p>
+<pre><code class="lang-python"># BAD: Only measure answer quality
+results = evaluate(dataset, metrics=[answer_relevancy])
+# Misses retrieval failures!</code></pre>
+<p><strong>Right</strong>: Evaluate both retrieval and generation</p>
+<pre><code class="lang-python"># GOOD: Measure both components
+results = evaluate(
+    dataset,
+    metrics=[
+        context_precision,  # Retrieval
+        context_recall,     # Retrieval
+        faithfulness,       # Generation
+        answer_relevancy,   # Generation
+    ],
+)</code></pre>
+<h3>Anti-Pattern 2: No Synthetic Data</h3>
+<p><strong>Wrong</strong>: Waiting for labeled data</p>
+<pre><code class="lang-python"># BAD: Can&#x27;t evaluate without manual labels
+# Wait months for human annotations...</code></pre>
+<p><strong>Right</strong>: Generate synthetic datasets</p>
+<pre><code class="lang-python"># GOOD: Generate test data from documents
+testset = generator.generate_with_langchain_docs(
+    documents=chunks,
+    test_size=100,
+)
+# Evaluate immediately!</code></pre>
+<h3>Anti-Pattern 3: Ignoring Context Window</h3>
+<p><strong>Wrong</strong>: Always retrieving fixed number of chunks</p>
+<pre><code class="lang-python"># BAD: Always retrieve 10 chunks
+retriever = vectorstore.as_retriever(k=10)
+# May exceed context window or waste tokens</code></pre>
+<p><strong>Right</strong>: Optimize based on context precision/recall</p>
+<pre><code class="lang-python"># GOOD: Experiment with different k values
+for k in [3, 5, 7, 10]:
+    retriever = vectorstore.as_retriever(k=k)
+    # Evaluate context precision vs recall
+    # Find optimal k that balances both</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>llm-benchmarks-evaluation.md</code>: Standard benchmarks for LLM capabilities</li><li><code>llm-evaluation-frameworks.md</code>: Arize Phoenix, Braintrust for production monitoring</li><li><code>llm-as-judge.md</code>: LLM-as-judge patterns used in RAGAS metrics</li><li><code>custom-llm-evaluation.md</code>: Domain-specific RAG evaluation metrics</li><li><code>dspy-evaluation.md</code>: DSPy evaluation for RAG optimization</li></ul>
+<h2>Summary</h2>
+<p>RAG evaluation requires specialized metrics for both retrieval and generation:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ol><li><strong>RAGAS metrics</strong>: Faithfulness (hallucination), Answer Relevancy, Context Precision/Recall</li><li><strong>LLM-as-judge</strong>: Core technique for evaluating semantic quality in RAG</li><li><strong>Synthetic datasets</strong>: Generate test data from documents when labels unavailable</li><li><strong>Production monitoring</strong>: Integrate with Phoenix/Langfuse for continuous evaluation</li><li><strong>Component-level</strong>: Always evaluate retrieval AND generation separately</li></ol>
+<p><strong>RAGAS Metrics Summary</strong>:</p>
+<ul><li><strong>Faithfulness</strong>: Answer grounded in retrieved context (no hallucination)</li><li><strong>Answer Relevancy</strong>: Answer addresses the query</li><li><strong>Context Precision</strong>: Retrieved chunks are relevant (low noise)</li><li><strong>Context Recall</strong>: All needed information is retrieved (no gaps)</li></ul>
+<p><strong>Best Practices</strong>:</p>
+<ul><li>Use synthetic data generation for rapid testing</li><li>Monitor both retrieval and generation quality</li><li>Optimize chunk size and retrieval count based on metrics</li><li>Set up continuous monitoring for production RAG systems</li><li>Combine RAGAS with domain-specific metrics for comprehensive evaluation</li></ul>
+<p><strong>When to combine with other skills</strong>:</p>
+<ul><li>Use <code>llm-as-judge.md</code> for custom RAG quality criteria</li><li>Use <code>llm-evaluation-frameworks.md</code> for Phoenix/Langfuse integration</li><li>Use <code>custom-llm-evaluation.md</code> for domain-specific RAG metrics</li><li>Use <code>dspy-evaluation.md</code> when using DSPy for RAG optimization</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ml-rag-evaluation-metrics.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

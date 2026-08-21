@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>testing-unit-testing-patterns</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/testing-unit-testing-patterns.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/testing-unit-testing-patterns.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>testing-unit-testing-patterns</h1><p class="lede">Write isolated tests for individual functions, classes, or modules</p><h1>Unit Testing Patterns</h1>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when you need to:</p>
+<ul><li>Write isolated tests for individual functions, classes, or modules</li><li>Design testable code with proper separation of concerns</li><li>Choose between mocks, stubs, spies, and fakes</li><li>Test asynchronous code (promises, async/await, callbacks)</li><li>Implement parametrized tests for multiple input scenarios</li><li>Structure test suites for maintainability and clarity</li><li>Debug failing unit tests efficiently</li></ul>
+<p><strong>ACTIVATE THIS SKILL</strong>: When writing or reviewing unit tests in any language</p>
+<h2>Core Concepts</h2>
+<h3>The AAA Pattern (Arrange-Act-Assert)</h3>
+<p><strong>Arrange</strong>: Set up test data and dependencies <strong>Act</strong>: Execute the code under test <strong>Assert</strong>: Verify the expected outcome</p>
+<pre><code class="lang-python"># Python (pytest)
+def test_calculate_discount():
+    # Arrange
+    cart = ShoppingCart()
+    cart.add_item(Item(&quot;Laptop&quot;, price=1000))
+    discount_service = DiscountService(rate=0.1)
+
+    # Act
+    final_price = discount_service.apply_discount(cart)
+
+    # Assert
+    assert final_price == 900</code></pre>
+<pre><code class="lang-typescript">// TypeScript (Vitest)
+describe(&#x27;calculateDiscount&#x27;, () =&gt; {
+  it(&#x27;applies 10% discount correctly&#x27;, () =&gt; {
+    // Arrange
+    const cart = new ShoppingCart();
+    cart.addItem(new Item(&#x27;Laptop&#x27;, 1000));
+    const discountService = new DiscountService(0.1);
+
+    // Act
+    const finalPrice = discountService.applyDiscount(cart);
+
+    // Assert
+    expect(finalPrice).toBe(900);
+  });
+});</code></pre>
+<h3>Test Doubles: Mocks vs Stubs vs Spies vs Fakes</h3>
+<p><strong>Stub</strong>: Provides canned responses to calls <strong>Mock</strong>: Verifies behavior (calls, arguments, order) <strong>Spy</strong>: Wraps real object, records interactions <strong>Fake</strong>: Working implementation (simpler than real)</p>
+<pre><code class="lang-python"># Python (unittest.mock)
+from unittest.mock import Mock, patch, MagicMock
+
+# STUB: Returns predetermined values
+email_service = Mock()
+email_service.send_email.return_value = True
+
+# MOCK: Verifies interactions
+email_service = Mock()
+user_service.register(user, email_service)
+email_service.send_email.assert_called_once_with(
+    to=user.email,
+    subject=&quot;Welcome&quot;
+)
+
+# SPY: Wraps real object
+with patch(&#x27;requests.get&#x27;, wraps=requests.get) as spy:
+    response = api_client.fetch_user(123)
+    spy.assert_called_with(&#x27;https://api.example.com/users/123&#x27;)
+
+# FAKE: In-memory implementation
+class FakeUserRepository:
+    def __init__(self):
+        self.users = {}
+
+    def save(self, user):
+        self.users[user.id] = user
+
+    def find_by_id(self, user_id):
+        return self.users.get(user_id)</code></pre>
+<pre><code class="lang-typescript">// TypeScript (Vitest)
+import { vi } from &#x27;vitest&#x27;;
+
+// STUB
+const emailService = {
+  sendEmail: vi.fn().mockResolvedValue(true)
+};
+
+// MOCK
+const emailService = {
+  sendEmail: vi.fn()
+};
+await userService.register(user, emailService);
+expect(emailService.sendEmail).toHaveBeenCalledWith({
+  to: user.email,
+  subject: &#x27;Welcome&#x27;
+});
+
+// SPY
+const spy = vi.spyOn(apiClient, &#x27;fetchUser&#x27;);
+await service.getUser(123);
+expect(spy).toHaveBeenCalledWith(123);</code></pre>
+<h3>Parametrized Tests</h3>
+<p><strong>Run same test with multiple inputs</strong></p>
+<pre><code class="lang-python"># Python (pytest)
+import pytest
+
+@pytest.mark.parametrize(&quot;input,expected&quot;, [
+    (0, 0),
+    (1, 1),
+    (2, 4),
+    (3, 9),
+    (-2, 4),
+])
+def test_square(input, expected):
+    assert square(input) == expected
+
+@pytest.mark.parametrize(&quot;email&quot;, [
+    &quot;user@example.com&quot;,
+    &quot;test.user+tag@domain.co.uk&quot;,
+    &quot;name_123@test-domain.com&quot;,
+])
+def test_valid_emails(email):
+    assert is_valid_email(email) is True
+
+@pytest.mark.parametrize(&quot;email&quot;, [
+    &quot;invalid&quot;,
+    &quot;@example.com&quot;,
+    &quot;user@&quot;,
+    &quot;user space@example.com&quot;,
+])
+def test_invalid_emails(email):
+    assert is_valid_email(email) is False</code></pre>
+<pre><code class="lang-rust">// Rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_square() {
+        let cases = vec![
+            (0, 0),
+            (1, 1),
+            (2, 4),
+            (3, 9),
+            (-2, 4),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(square(input), expected);
+        }
+    }
+}</code></pre>
+<pre><code class="lang-go">// Go (table-driven tests)
+func TestSquare(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    int
+        expected int
+    }{
+        {&quot;zero&quot;, 0, 0},
+        {&quot;positive&quot;, 2, 4},
+        {&quot;negative&quot;, -2, 4},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result := Square(tt.input)
+            if result != tt.expected {
+                t.Errorf(&quot;got %d, want %d&quot;, result, tt.expected)
+            }
+        })
+    }
+}</code></pre>
+<h2>Patterns</h2>
+<h3>Testing Async Code</h3>
+<pre><code class="lang-python"># Python (pytest-asyncio)
+import pytest
+
+@pytest.mark.asyncio
+async def test_fetch_user():
+    # Arrange
+    user_id = 123
+    mock_api = Mock()
+    mock_api.get_user = AsyncMock(return_value={&quot;id&quot;: 123, &quot;name&quot;: &quot;Alice&quot;})
+
+    # Act
+    result = await fetch_user(user_id, mock_api)
+
+    # Assert
+    assert result[&quot;name&quot;] == &quot;Alice&quot;
+    mock_api.get_user.assert_awaited_once_with(123)</code></pre>
+<pre><code class="lang-typescript">// TypeScript (Vitest)
+describe(&#x27;fetchUser&#x27;, () =&gt; {
+  it(&#x27;fetches user data&#x27;, async () =&gt; {
+    // Arrange
+    const mockApi = {
+      getUser: vi.fn().mockResolvedValue({ id: 123, name: &#x27;Alice&#x27; })
+    };
+
+    // Act
+    const result = await fetchUser(123, mockApi);
+
+    // Assert
+    expect(result.name).toBe(&#x27;Alice&#x27;);
+    expect(mockApi.getUser).toHaveBeenCalledWith(123);
+  });
+
+  it(&#x27;handles fetch errors&#x27;, async () =&gt; {
+    // Arrange
+    const mockApi = {
+      getUser: vi.fn().mockRejectedValue(new Error(&#x27;Network error&#x27;))
+    };
+
+    // Act &amp; Assert
+    await expect(fetchUser(123, mockApi)).rejects.toThrow(&#x27;Network error&#x27;);
+  });
+});</code></pre>
+<h3>Testing Error Conditions</h3>
+<pre><code class="lang-python"># Python
+import pytest
+
+def test_divide_by_zero():
+    with pytest.raises(ZeroDivisionError):
+        divide(10, 0)
+
+def test_invalid_input_message():
+    with pytest.raises(ValueError, match=&quot;must be positive&quot;):
+        process_age(-5)
+
+def test_error_handling_returns_none():
+    result = safe_divide(10, 0)
+    assert result is None</code></pre>
+<pre><code class="lang-typescript">// TypeScript
+describe(&#x27;error handling&#x27;, () =&gt; {
+  it(&#x27;throws on divide by zero&#x27;, () =&gt; {
+    expect(() =&gt; divide(10, 0)).toThrow(&#x27;Division by zero&#x27;);
+  });
+
+  it(&#x27;returns null on invalid input&#x27;, () =&gt; {
+    const result = safeDivide(10, 0);
+    expect(result).toBeNull();
+  });
+});</code></pre>
+<h3>Fixtures and Setup/Teardown</h3>
+<pre><code class="lang-python"># Python (pytest fixtures)
+import pytest
+
+@pytest.fixture
+def user():
+    &quot;&quot;&quot;Provides a test user instance&quot;&quot;&quot;
+    return User(id=1, name=&quot;Alice&quot;, email=&quot;alice@example.com&quot;)
+
+@pytest.fixture
+def database():
+    &quot;&quot;&quot;Provides an in-memory database&quot;&quot;&quot;
+    db = Database(&quot;:memory:&quot;)
+    db.migrate()
+    yield db
+    db.close()
+
+def test_save_user(database, user):
+    database.save(user)
+    retrieved = database.find_by_id(user.id)
+    assert retrieved.name == user.name
+
+# Fixture scope
+@pytest.fixture(scope=&quot;module&quot;)
+def expensive_resource():
+    &quot;&quot;&quot;Created once per test module&quot;&quot;&quot;
+    resource = ExpensiveResource()
+    resource.initialize()
+    yield resource
+    resource.cleanup()</code></pre>
+<pre><code class="lang-typescript">// TypeScript (Vitest)
+import { describe, it, beforeEach, afterEach } from &#x27;vitest&#x27;;
+
+describe(&#x27;UserService&#x27;, () =&gt; {
+  let database: Database;
+  let userService: UserService;
+
+  beforeEach(() =&gt; {
+    database = new Database(&#x27;:memory:&#x27;);
+    database.migrate();
+    userService = new UserService(database);
+  });
+
+  afterEach(() =&gt; {
+    database.close();
+  });
+
+  it(&#x27;saves user correctly&#x27;, () =&gt; {
+    const user = new User(1, &#x27;Alice&#x27;, &#x27;alice@example.com&#x27;);
+    userService.save(user);
+    const retrieved = userService.findById(1);
+    expect(retrieved.name).toBe(&#x27;Alice&#x27;);
+  });
+});</code></pre>
+<h3>Testing Private Methods (Antipattern)</h3>
+<pre><code class="lang-python"># ❌ WRONG: Testing private methods directly
+def test_private_validate_email():
+    service = UserService()
+    assert service._validate_email(&quot;test@example.com&quot;) is True
+
+# ✅ CORRECT: Test through public interface
+def test_register_user_validates_email():
+    service = UserService()
+    with pytest.raises(ValueError, match=&quot;Invalid email&quot;):
+        service.register(&quot;Alice&quot;, &quot;invalid-email&quot;)</code></pre>
+<h3>Testing State Changes</h3>
+<pre><code class="lang-python"># Python
+def test_cart_state_changes():
+    # Arrange
+    cart = ShoppingCart()
+    item = Item(&quot;Laptop&quot;, 1000)
+
+    # Act &amp; Assert: Initial state
+    assert cart.item_count == 0
+    assert cart.total == 0
+
+    # Act &amp; Assert: After adding item
+    cart.add_item(item)
+    assert cart.item_count == 1
+    assert cart.total == 1000
+
+    # Act &amp; Assert: After removing item
+    cart.remove_item(item)
+    assert cart.item_count == 0
+    assert cart.total == 0</code></pre>
+<h2>Examples by Language</h2>
+<h3>Python (pytest)</h3>
+<pre><code class="lang-python"># test_calculator.py
+import pytest
+from calculator import Calculator
+
+class TestCalculator:
+    def test_add(self):
+        calc = Calculator()
+        assert calc.add(2, 3) == 5
+
+    def test_subtract(self):
+        calc = Calculator()
+        assert calc.subtract(5, 3) == 2
+
+    @pytest.mark.parametrize(&quot;a,b,expected&quot;, [
+        (2, 3, 6),
+        (5, 4, 20),
+        (0, 10, 0),
+        (-2, 3, -6),
+    ])
+    def test_multiply(self, a, b, expected):
+        calc = Calculator()
+        assert calc.multiply(a, b) == expected
+
+# Run with: pytest test_calculator.py -v</code></pre>
+<h3>Rust</h3>
+<pre><code class="lang-rust">// lib.rs
+pub fn add(a: i32, b: i32) -&gt; i32 {
+    a + b
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add() {
+        assert_eq!(add(2, 3), 5);
+    }
+
+    #[test]
+    #[should_panic(expected = &quot;overflow&quot;)]
+    fn test_overflow() {
+        add(i32::MAX, 1);
+    }
+
+    #[test]
+    fn test_multiple_cases() {
+        let cases = vec![
+            (2, 3, 5),
+            (0, 0, 0),
+            (-1, 1, 0),
+        ];
+
+        for (a, b, expected) in cases {
+            assert_eq!(add(a, b), expected);
+        }
+    }
+}</code></pre>
+<h3>Go</h3>
+<pre><code class="lang-go">// calculator_test.go
+package calculator
+
+import &quot;testing&quot;
+
+func TestAdd(t *testing.T) {
+    result := Add(2, 3)
+    if result != 5 {
+        t.Errorf(&quot;Add(2, 3) = %d; want 5&quot;, result)
+    }
+}
+
+func TestSubtract(t *testing.T) {
+    tests := []struct {
+        name     string
+        a, b     int
+        expected int
+    }{
+        {&quot;positive&quot;, 5, 3, 2},
+        {&quot;negative&quot;, 3, 5, -2},
+        {&quot;zero&quot;, 0, 0, 0},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result := Subtract(tt.a, tt.b)
+            if result != tt.expected {
+                t.Errorf(&quot;got %d, want %d&quot;, result, tt.expected)
+            }
+        })
+    }
+}</code></pre>
+<h3>TypeScript (Vitest)</h3>
+<pre><code class="lang-typescript">// calculator.test.ts
+import { describe, it, expect } from &#x27;vitest&#x27;;
+import { Calculator } from &#x27;./calculator&#x27;;
+
+describe(&#x27;Calculator&#x27;, () =&gt; {
+  it(&#x27;adds two numbers&#x27;, () =&gt; {
+    const calc = new Calculator();
+    expect(calc.add(2, 3)).toBe(5);
+  });
+
+  it.each([
+    [2, 3, 6],
+    [5, 4, 20],
+    [0, 10, 0],
+    [-2, 3, -6],
+  ])(&#x27;multiplies %i and %i to get %i&#x27;, (a, b, expected) =&gt; {
+    const calc = new Calculator();
+    expect(calc.multiply(a, b)).toBe(expected);
+  });
+});</code></pre>
+<h2>Checklist</h2>
+<p><strong>Before Writing Tests</strong>:</p>
+<ul><li>[ ] Understand what behavior you&#x27;re testing (not implementation)</li><li>[ ] Identify dependencies to mock/stub</li><li>[ ] Plan test cases (happy path, edge cases, errors)</li><li>[ ] Choose appropriate test double (mock/stub/spy/fake)</li></ul>
+<p><strong>Writing Tests</strong>:</p>
+<ul><li>[ ] Follow AAA pattern (Arrange, Act, Assert)</li><li>[ ] One assertion concept per test</li><li>[ ] Descriptive test names (test_should_X_when_Y)</li><li>[ ] Test behavior, not implementation details</li><li>[ ] Use parametrized tests for multiple inputs</li><li>[ ] Handle async code properly (await, done callbacks)</li></ul>
+<p><strong>Test Quality</strong>:</p>
+<ul><li>[ ] Tests are independent (no shared state)</li><li>[ ] Tests are repeatable (same result every time)</li><li>[ ] Tests are fast (&lt; 100ms for unit tests)</li><li>[ ] Mock external dependencies (DB, API, filesystem)</li><li>[ ] Clear failure messages</li></ul>
+<p><strong>After Writing Tests</strong>:</p>
+<ul><li>[ ] All tests pass</li><li>[ ] Tests fail when code is broken (verify test validity)</li><li>[ ] No flaky tests (intermittent failures)</li><li>[ ] Tests run in CI/CD pipeline</li></ul>
+<h2>Anti-Patterns</h2>
+<pre><code>❌ NEVER: Test implementation details
+   → Breaks when refactoring internal code
+
+❌ NEVER: Share state between tests
+   → Causes flaky tests, order dependencies
+
+❌ NEVER: Test private methods directly
+   → Test through public interface instead
+
+❌ NEVER: Multiple unrelated assertions in one test
+   → Hard to diagnose failures
+
+❌ NEVER: Use real external services in unit tests
+   → Slow, flaky, expensive
+
+❌ NEVER: Ignore test failures
+   → Technical debt accumulates
+
+❌ NEVER: Write tests without making them fail first
+   → Can&#x27;t verify test validity</code></pre>
+<h2>Related Skills</h2>
+<p><strong>Foundation</strong>:</p>
+<ul><li><code>test-driven-development.md</code> - TDD workflow and red-green-refactor</li><li><code>test-coverage-strategy.md</code> - What to test and coverage goals</li></ul>
+<p><strong>Integration</strong>:</p>
+<ul><li><code>integration-testing.md</code> - Testing component interactions</li><li><code>e2e-testing.md</code> - Full system testing</li></ul>
+<p><strong>Advanced</strong>:</p>
+<ul><li><code>performance-testing.md</code> - Load and stress testing</li><li><code>testing-databases.md</code> - Database-specific testing patterns</li></ul>
+<p><strong>Language-Specific</strong>:</p>
+<ul><li>Python: pytest, unittest.mock, pytest-asyncio</li><li>TypeScript: Vitest, Jest, Testing Library</li><li>Rust: Built-in test framework, mockall</li><li>Go: testing package, testify, gomock</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/testing-unit-testing-patterns.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

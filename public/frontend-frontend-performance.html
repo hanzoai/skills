@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>frontend-frontend-performance</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/frontend-frontend-performance.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/frontend-frontend-performance.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>frontend-frontend-performance</h1><p class="lede">Optimizing application performance</p><h1>Frontend Performance</h1>
+<p><strong>Scope</strong>: Bundle optimization, code splitting, image optimization, Core Web Vitals, lazy loading <strong>Lines</strong>: ~310 <strong>Last Updated</strong>: 2025-10-18</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Optimizing application performance</li><li>Reducing bundle size</li><li>Improving Core Web Vitals</li><li>Implementing lazy loading</li><li>Optimizing images and assets</li><li>Diagnosing performance issues</li></ul>
+<h2>Core Concepts</h2>
+<h3>Core Web Vitals</h3>
+<p><strong>LCP</strong> (Largest Contentful Paint) - Loading performance</p>
+<ul><li>Target: &lt; 2.5 seconds</li><li>Measures: Time to render largest content</li></ul>
+<p><strong>FID</strong> (First Input Delay) - Interactivity</p>
+<ul><li>Target: &lt; 100ms</li><li>Measures: Time from interaction to response</li></ul>
+<p><strong>CLS</strong> (Cumulative Layout Shift) - Visual stability</p>
+<ul><li>Target: &lt; 0.1</li><li>Measures: Unexpected layout shifts</li></ul>
+<p><strong>INP</strong> (Interaction to Next Paint) - Replacing FID</p>
+<ul><li>Target: &lt; 200ms</li><li>Measures: Overall responsiveness</li></ul>
+<hr>
+<h2>Bundle Optimization</h2>
+<h3>Analyze Bundle Size</h3>
+<pre><code class="lang-bash"># Next.js
+npm run build
+# Output shows bundle sizes
+
+# Webpack Bundle Analyzer
+npm install --save-dev webpack-bundle-analyzer
+
+# Vite
+npm run build
+vite-bundle-visualizer</code></pre>
+<h3>Code Splitting</h3>
+<p><strong>Route-based splitting</strong> (automatic in Next.js):</p>
+<pre><code class="lang-tsx">// app/dashboard/page.tsx
+// Automatically code-split by route
+export default function Dashboard() {
+  return &lt;div&gt;Dashboard&lt;/div&gt;;
+}</code></pre>
+<p><strong>Component-based splitting</strong>:</p>
+<pre><code class="lang-tsx">import { lazy, Suspense } from &#x27;react&#x27;;
+
+// Lazy load heavy component
+const HeavyChart = lazy(() =&gt; import(&#x27;./components/HeavyChart&#x27;));
+
+function Dashboard() {
+  return (
+    &lt;div&gt;
+      &lt;Suspense fallback={&lt;div&gt;Loading chart...&lt;/div&gt;}&gt;
+        &lt;HeavyChart /&gt;
+      &lt;/Suspense&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+<p><strong>Dynamic imports</strong>:</p>
+<pre><code class="lang-tsx">// Load library only when needed
+async function handleExport() {
+  const { exportToPDF } = await import(&#x27;./lib/pdf-export&#x27;);
+  exportToPDF(data);
+}</code></pre>
+<h3>Tree Shaking</h3>
+<pre><code class="lang-tsx">// ❌ Bad: Imports entire library
+import _ from &#x27;lodash&#x27;;
+_.debounce(fn, 300);
+
+// ✅ Good: Import only what you need
+import debounce from &#x27;lodash/debounce&#x27;;
+debounce(fn, 300);
+
+// ✅ Better: Use modern alternative
+import { debounce } from &#x27;es-toolkit&#x27;;</code></pre>
+<h3>Remove Unused Code</h3>
+<pre><code class="lang-tsx">// ❌ Bad: Importing unused code
+import { Button, Card, Table, Modal, Tabs } from &#x27;ui-library&#x27;;
+// Only using Button
+
+// ✅ Good: Only import what&#x27;s used
+import { Button } from &#x27;ui-library&#x27;;</code></pre>
+<p><strong>Tools</strong>:</p>
+<ul><li>ESLint <code>no-unused-vars</code></li><li>Webpack <code>sideEffects: false</code> in package.json</li><li>PurgeCSS for unused CSS</li></ul>
+<hr>
+<h2>Image Optimization</h2>
+<h3>Next.js Image Component</h3>
+<pre><code class="lang-tsx">import Image from &#x27;next/image&#x27;;
+
+// ❌ Bad: Regular img tag
+&lt;img src=&quot;/photo.jpg&quot; alt=&quot;Photo&quot; /&gt;
+
+// ✅ Good: Next.js Image (automatic optimization)
+&lt;Image
+  src=&quot;/photo.jpg&quot;
+  alt=&quot;Photo&quot;
+  width={800}
+  height={600}
+  priority // Load eagerly (above fold)
+/&gt;
+
+// Responsive image
+&lt;Image
+  src=&quot;/photo.jpg&quot;
+  alt=&quot;Photo&quot;
+  fill
+  sizes=&quot;(max-width: 768px) 100vw, 50vw&quot;
+  style={{ objectFit: &#x27;cover&#x27; }}
+/&gt;</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Automatic WebP/AVIF conversion</li><li>Lazy loading by default</li><li>Responsive images</li><li>Blur placeholder</li></ul>
+<h3>Image Formats</h3>
+<pre><code>Format    | Use Case           | Savings vs PNG
+----------|--------------------|--------------
+WebP      | General purpose    | 25-35%
+AVIF      | Modern browsers    | 50%
+PNG       | Transparency       | Baseline
+JPEG      | Photos             | Smaller than PNG
+SVG       | Icons, logos       | Scalable</code></pre>
+<h3>Lazy Loading</h3>
+<pre><code class="lang-tsx">// Images (native)
+&lt;img src=&quot;photo.jpg&quot; loading=&quot;lazy&quot; alt=&quot;Photo&quot; /&gt;
+
+// Next.js Image (lazy by default)
+&lt;Image src=&quot;/photo.jpg&quot; alt=&quot;Photo&quot; width={800} height={600} /&gt;
+
+// Eager loading (above fold)
+&lt;Image src=&quot;/hero.jpg&quot; alt=&quot;Hero&quot; width={1200} height={600} priority /&gt;</code></pre>
+<h3>Image Optimization Tools</h3>
+<pre><code class="lang-bash"># Compress images
+npx @squoosh/cli --webp auto *.jpg
+
+# Optimize SVGs
+npx svgo *.svg
+
+# Generate responsive images
+npx sharp-cli resize 800 600 --input photo.jpg --output photo-800.jpg</code></pre>
+<hr>
+<h2>JavaScript Optimization</h2>
+<h3>Debouncing and Throttling</h3>
+<pre><code class="lang-tsx">import { debounce } from &#x27;es-toolkit&#x27;;
+
+function SearchInput() {
+  const [query, setQuery] = useState(&#x27;&#x27;);
+
+  // Debounce API calls
+  const debouncedSearch = useMemo(
+    () =&gt; debounce((value: string) =&gt; {
+      fetch(`/api/search?q=${value}`);
+    }, 300),
+    []
+  );
+
+  const handleChange = (e: React.ChangeEvent&lt;HTMLInputElement&gt;) =&gt; {
+    const value = e.target.value;
+    setQuery(value);
+    debouncedSearch(value);
+  };
+
+  return &lt;input value={query} onChange={handleChange} /&gt;;
+}</code></pre>
+<pre><code class="lang-tsx">import { throttle } from &#x27;es-toolkit&#x27;;
+
+function ScrollTracker() {
+  const handleScroll = useMemo(
+    () =&gt; throttle(() =&gt; {
+      console.log(&#x27;Scroll position:&#x27;, window.scrollY);
+    }, 100),
+    []
+  );
+
+  useEffect(() =&gt; {
+    window.addEventListener(&#x27;scroll&#x27;, handleScroll);
+    return () =&gt; window.removeEventListener(&#x27;scroll&#x27;, handleScroll);
+  }, [handleScroll]);
+
+  return &lt;div&gt;Content&lt;/div&gt;;
+}</code></pre>
+<h3>Memoization</h3>
+<pre><code class="lang-tsx">import { memo, useMemo, useCallback } from &#x27;react&#x27;;
+
+// Memoize expensive component
+const ExpensiveList = memo(function ExpensiveList({ items }: { items: Item[] }) {
+  return (
+    &lt;ul&gt;
+      {items.map(item =&gt; (
+        &lt;li key={item.id}&gt;{item.name}&lt;/li&gt;
+      ))}
+    &lt;/ul&gt;
+  );
+});
+
+// Memoize expensive computation
+function ProductList({ products }: { products: Product[] }) {
+  const sortedProducts = useMemo(() =&gt; {
+    return [...products].sort((a, b) =&gt; b.price - a.price);
+  }, [products]);
+
+  return &lt;div&gt;{sortedProducts.map(p =&gt; &lt;div key={p.id}&gt;{p.name}&lt;/div&gt;)}&lt;/div&gt;;
+}
+
+// Memoize callbacks
+function TodoList({ todos }: { todos: Todo[] }) {
+  const [filter, setFilter] = useState(&#x27;all&#x27;);
+
+  const handleToggle = useCallback((id: string) =&gt; {
+    // Toggle todo logic
+  }, []);
+
+  return (
+    &lt;div&gt;
+      {todos.map(todo =&gt; (
+        &lt;TodoItem key={todo.id} todo={todo} onToggle={handleToggle} /&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}</code></pre>
+<p><strong>When to memoize</strong>:</p>
+<ul><li>Expensive calculations</li><li>Large lists</li><li>Stable callback references for child components</li><li>NOT for cheap operations (overhead &gt; benefit)</li></ul>
+<h3>Virtual Lists</h3>
+<pre><code class="lang-tsx">import { useVirtualizer } from &#x27;@tanstack/react-virtual&#x27;;
+
+function VirtualList({ items }: { items: Item[] }) {
+  const parentRef = useRef&lt;HTMLDivElement&gt;(null);
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () =&gt; parentRef.current,
+    estimateSize: () =&gt; 50, // Estimated row height
+  });
+
+  return (
+    &lt;div ref={parentRef} style={{ height: &#x27;400px&#x27;, overflow: &#x27;auto&#x27; }}&gt;
+      &lt;div style={{ height: `${virtualizer.getTotalSize()}px`, position: &#x27;relative&#x27; }}&gt;
+        {virtualizer.getVirtualItems().map(virtualItem =&gt; (
+          &lt;div
+            key={virtualItem.index}
+            style={{
+              position: &#x27;absolute&#x27;,
+              top: 0,
+              left: 0,
+              width: &#x27;100%&#x27;,
+              height: `${virtualItem.size}px`,
+              transform: `translateY(${virtualItem.start}px)`,
+            }}
+          &gt;
+            {items[virtualItem.index].name}
+          &lt;/div&gt;
+        ))}
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+<p><strong>Use when</strong>:</p>
+<ul><li>Rendering &gt;100 items</li><li>Items have consistent height</li><li>Scrolling performance is critical</li></ul>
+<hr>
+<h2>CSS Optimization</h2>
+<h3>Critical CSS</h3>
+<pre><code class="lang-tsx">// app/layout.tsx
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    &lt;html&gt;
+      &lt;head&gt;
+        {/* Inline critical CSS */}
+        &lt;style dangerouslySetInnerHTML={{ __html: criticalCSS }} /&gt;
+      &lt;/head&gt;
+      &lt;body&gt;{children}&lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</code></pre>
+<h3>CSS-in-JS Performance</h3>
+<pre><code class="lang-tsx">// ❌ Bad: Inline styles (no caching, creates new object every render)
+&lt;div style={{ color: &#x27;red&#x27;, fontSize: 16 }}&gt;Text&lt;/div&gt;
+
+// ✅ Good: CSS modules or Tailwind (cached, reusable)
+&lt;div className=&quot;text-red-500 text-base&quot;&gt;Text&lt;/div&gt;
+
+// ✅ Good: Extract constant styles
+const styles = { color: &#x27;red&#x27;, fontSize: 16 };
+&lt;div style={styles}&gt;Text&lt;/div&gt;</code></pre>
+<h3>Remove Unused CSS</h3>
+<pre><code class="lang-tsx">// Tailwind CSS (automatic purging)
+// tailwind.config.js
+module.exports = {
+  content: [
+    &#x27;./app/**/*.{js,ts,jsx,tsx}&#x27;,
+    &#x27;./components/**/*.{js,ts,jsx,tsx}&#x27;,
+  ],
+  // Purges unused classes in production
+};</code></pre>
+<hr>
+<h2>Network Optimization</h2>
+<h3>Prefetching</h3>
+<pre><code class="lang-tsx">import Link from &#x27;next/link&#x27;;
+
+// Next.js prefetches linked pages on hover
+&lt;Link href=&quot;/dashboard&quot; prefetch={true}&gt;
+  Dashboard
+&lt;/Link&gt;
+
+// Manual prefetch
+import { useRouter } from &#x27;next/navigation&#x27;;
+
+function NavItem() {
+  const router = useRouter();
+
+  return (
+    &lt;button
+      onMouseEnter={() =&gt; router.prefetch(&#x27;/dashboard&#x27;)}
+      onClick={() =&gt; router.push(&#x27;/dashboard&#x27;)}
+    &gt;
+      Dashboard
+    &lt;/button&gt;
+  );
+}</code></pre>
+<h3>Resource Hints</h3>
+<pre><code class="lang-tsx">// app/layout.tsx
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    &lt;html&gt;
+      &lt;head&gt;
+        {/* Preconnect to external domains */}
+        &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot; /&gt;
+        &lt;link rel=&quot;preconnect&quot; href=&quot;https://api.example.com&quot; /&gt;
+
+        {/* DNS prefetch */}
+        &lt;link rel=&quot;dns-prefetch&quot; href=&quot;https://cdn.example.com&quot; /&gt;
+
+        {/* Preload critical resources */}
+        &lt;link rel=&quot;preload&quot; href=&quot;/fonts/main.woff2&quot; as=&quot;font&quot; type=&quot;font/woff2&quot; crossOrigin=&quot;anonymous&quot; /&gt;
+      &lt;/head&gt;
+      &lt;body&gt;{children}&lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</code></pre>
+<h3>Caching Strategies</h3>
+<pre><code class="lang-tsx">// Next.js fetch with caching
+async function getData() {
+  // Static (cached forever)
+  const res = await fetch(&#x27;https://api.example.com/data&#x27;, {
+    cache: &#x27;force-cache&#x27;
+  });
+
+  // Dynamic (no cache)
+  const res = await fetch(&#x27;https://api.example.com/data&#x27;, {
+    cache: &#x27;no-store&#x27;
+  });
+
+  // Revalidate (time-based)
+  const res = await fetch(&#x27;https://api.example.com/data&#x27;, {
+    next: { revalidate: 60 } // Revalidate every 60 seconds
+  });
+
+  return res.json();
+}</code></pre>
+<hr>
+<h2>Rendering Optimization</h2>
+<h3>Server Components (Next.js)</h3>
+<pre><code class="lang-tsx">// ✅ Server Component (default)
+async function PostList() {
+  const posts = await getPosts(); // Fetches on server
+
+  return (
+    &lt;div&gt;
+      {posts.map(post =&gt; (
+        &lt;PostCard key={post.id} post={post} /&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}
+
+// ✅ Client Component (when needed)
+&#x27;use client&#x27;;
+
+import { useState } from &#x27;react&#x27;;
+
+function InteractiveButton() {
+  const [count, setCount] = useState(0);
+  return &lt;button onClick={() =&gt; setCount(count + 1)}&gt;{count}&lt;/button&gt;;
+}</code></pre>
+<p><strong>Server Components benefits</strong>:</p>
+<ul><li>Zero JavaScript sent to client</li><li>Direct database access</li><li>Automatic code splitting</li></ul>
+<h3>Streaming and Suspense</h3>
+<pre><code class="lang-tsx">import { Suspense } from &#x27;react&#x27;;
+
+export default function Page() {
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;Dashboard&lt;/h1&gt;
+
+      {/* Fast component renders immediately */}
+      &lt;UserGreeting /&gt;
+
+      {/* Slow component streams in */}
+      &lt;Suspense fallback={&lt;Spinner /&gt;}&gt;
+        &lt;SlowAnalytics /&gt;
+      &lt;/Suspense&gt;
+
+      &lt;Suspense fallback={&lt;Spinner /&gt;}&gt;
+        &lt;SlowRecentOrders /&gt;
+      &lt;/Suspense&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+<hr>
+<h2>Performance Monitoring</h2>
+<h3>Web Vitals Tracking</h3>
+<pre><code class="lang-tsx">// app/components/WebVitals.tsx
+&#x27;use client&#x27;;
+
+import { useReportWebVitals } from &#x27;next/web-vitals&#x27;;
+
+export function WebVitals() {
+  useReportWebVitals((metric) =&gt; {
+    console.log(metric);
+
+    // Send to analytics
+    fetch(&#x27;/api/analytics&#x27;, {
+      method: &#x27;POST&#x27;,
+      body: JSON.stringify(metric),
+    });
+  });
+
+  return null;
+}
+
+// app/layout.tsx
+import { WebVitals } from &#x27;./components/WebVitals&#x27;;
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    &lt;html&gt;
+      &lt;body&gt;
+        {children}
+        &lt;WebVitals /&gt;
+      &lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</code></pre>
+<h3>Performance Profiling</h3>
+<pre><code class="lang-tsx">// React DevTools Profiler
+import { Profiler } from &#x27;react&#x27;;
+
+function onRenderCallback(
+  id: string,
+  phase: &#x27;mount&#x27; | &#x27;update&#x27;,
+  actualDuration: number,
+  baseDuration: number,
+  startTime: number,
+  commitTime: number
+) {
+  console.log({ id, phase, actualDuration });
+}
+
+&lt;Profiler id=&quot;Dashboard&quot; onRender={onRenderCallback}&gt;
+  &lt;Dashboard /&gt;
+&lt;/Profiler&gt;</code></pre>
+<h3>Browser Performance API</h3>
+<pre><code class="lang-tsx">// Measure custom metrics
+performance.mark(&#x27;data-fetch-start&#x27;);
+await fetchData();
+performance.mark(&#x27;data-fetch-end&#x27;);
+
+performance.measure(&#x27;data-fetch&#x27;, &#x27;data-fetch-start&#x27;, &#x27;data-fetch-end&#x27;);
+
+const measure = performance.getEntriesByName(&#x27;data-fetch&#x27;)[0];
+console.log(&#x27;Fetch took:&#x27;, measure.duration, &#x27;ms&#x27;);</code></pre>
+<hr>
+<h2>Font Optimization</h2>
+<h3>Next.js Font Optimization</h3>
+<pre><code class="lang-tsx">// app/layout.tsx
+import { Inter, Roboto_Mono } from &#x27;next/font/google&#x27;;
+
+const inter = Inter({
+  subsets: [&#x27;latin&#x27;],
+  display: &#x27;swap&#x27;,
+  variable: &#x27;--font-inter&#x27;,
+});
+
+const robotoMono = Roboto_Mono({
+  subsets: [&#x27;latin&#x27;],
+  display: &#x27;swap&#x27;,
+  variable: &#x27;--font-roboto-mono&#x27;,
+});
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    &lt;html className={`${inter.variable} ${robotoMono.variable}`}&gt;
+      &lt;body&gt;{children}&lt;/body&gt;
+    &lt;/html&gt;
+  );
+}
+
+// globals.css
+body {
+  font-family: var(--font-inter), sans-serif;
+}
+
+code {
+  font-family: var(--font-roboto-mono), monospace;
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Self-hosted fonts (no external request)</li><li>Automatic font subsetting</li><li>Zero layout shift</li></ul>
+<h3>Font Loading Strategies</h3>
+<pre><code class="lang-css">/* font-display: swap - Show fallback, swap when loaded */
+@font-face {
+  font-family: &#x27;CustomFont&#x27;;
+  src: url(&#x27;/fonts/custom.woff2&#x27;);
+  font-display: swap;
+}
+
+/* font-display: optional - Use only if cached */
+@font-face {
+  font-family: &#x27;OptionalFont&#x27;;
+  src: url(&#x27;/fonts/optional.woff2&#x27;);
+  font-display: optional;
+}</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Core Web Vitals Targets</h3>
+<pre><code>LCP (Largest Contentful Paint): &lt; 2.5s
+FID (First Input Delay): &lt; 100ms
+CLS (Cumulative Layout Shift): &lt; 0.1
+INP (Interaction to Next Paint): &lt; 200ms</code></pre>
+<h3>Optimization Checklist</h3>
+<pre><code>[ ] Code splitting (route-based, component-based)
+[ ] Image optimization (Next.js Image, WebP/AVIF)
+[ ] Lazy loading (images, components)
+[ ] Bundle size &lt; 200KB (initial load)
+[ ] Memoization (React.memo, useMemo, useCallback)
+[ ] Virtual lists (for &gt;100 items)
+[ ] Remove unused code (tree shaking)
+[ ] Prefetch linked pages
+[ ] Resource hints (preconnect, dns-prefetch)
+[ ] Font optimization (self-hosted, subsetting)
+[ ] Critical CSS inlined
+[ ] Streaming and Suspense
+[ ] Server Components (where possible)</code></pre>
+<h3>Performance Tools</h3>
+<pre><code>Chrome DevTools Lighthouse
+WebPageTest
+PageSpeed Insights
+Next.js Bundle Analyzer
+React DevTools Profiler
+Web Vitals Chrome Extension</code></pre>
+<hr>
+<h2>Common Anti-Patterns</h2>
+<p>❌ <strong>Large bundle sizes</strong>: Split code, remove unused dependencies ✅ Analyze and optimize bundle</p>
+<p>❌ <strong>Unoptimized images</strong>: Use Next.js Image component ✅ Automatic optimization</p>
+<p>❌ <strong>Blocking scripts</strong>: Use async/defer or move to end of body ✅ Non-blocking script loading</p>
+<p>❌ <strong>No lazy loading</strong>: Load everything upfront ✅ Lazy load non-critical content</p>
+<p>❌ <strong>Premature optimization</strong>: Optimize without measuring ✅ Profile first, then optimize</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>react-component-patterns.md</code> - Memoization, code splitting</li><li><code>nextjs-app-router.md</code> - Server Components, streaming</li><li><code>react-data-fetching.md</code> - Caching, prefetching</li><li><code>web-accessibility.md</code> - Performance affects accessibility</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/frontend-frontend-performance.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>advanced-graph-algorithms</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/advanced-graph-algorithms.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/advanced-graph-algorithms.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>advanced-graph-algorithms</h1><p class="lede">Specialized graph algorithms including graph decomposition, vertex coloring, matching algorithms, and 2024 research advances</p><h1>Advanced Graph Algorithms</h1>
+<p><strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p><strong>Activate when</strong>:</p>
+<ul><li>Solving graph coloring and scheduling problems</li><li>Computing matchings in general graphs</li><li>Decomposing graphs into components</li><li>Finding cliques and independent sets</li><li>Solving vertex cover and dominating set problems</li><li>Implementing latest graph algorithm research</li></ul>
+<p><strong>Prerequisites</strong>: <code>graph-theory-fundamentals.md</code>, <code>graph-data-structures.md</code>, <code>graph-traversal-algorithms.md</code>, <code>network-flow-algorithms.md</code></p>
+<p><strong>Related Skills</strong>: <code>shortest-path-algorithms.md</code>, <code>minimum-spanning-tree.md</code>, <code>graph-applications.md</code></p>
+<hr>
+<h2>Core Algorithms</h2>
+<h3>1. Graph Coloring</h3>
+<p><strong>Concept</strong>: Assign colors to vertices such that no adjacent vertices share same color</p>
+<p><strong>Chromatic Number</strong>: χ(G) = minimum number of colors needed</p>
+<pre><code class="lang-python">from typing import Dict, Set, Optional, List
+
+def greedy_coloring(graph: &#x27;AdjacencyList&#x27;) -&gt; Dict[int, int]:
+    &quot;&quot;&quot;
+    Greedy graph coloring algorithm
+
+    Time: O(V + E)
+    Approximation: Uses at most Δ(G) + 1 colors where Δ = max degree
+    &quot;&quot;&quot;
+    coloring = {}
+
+    for v in range(graph.num_vertices):
+        # Find colors used by neighbors
+        neighbor_colors = {coloring[u] for u in graph.neighbors(v)
+                          if u in coloring}
+
+        # Assign smallest available color
+        color = 0
+        while color in neighbor_colors:
+            color += 1
+
+        coloring[v] = color
+
+    return coloring
+
+def welsh_powell_coloring(graph: &#x27;AdjacencyList&#x27;) -&gt; Dict[int, int]:
+    &quot;&quot;&quot;
+    Welsh-Powell algorithm: Color vertices in degree-descending order
+
+    Often produces better coloring than simple greedy
+    &quot;&quot;&quot;
+    # Sort vertices by degree (descending)
+    vertices_by_degree = sorted(
+        range(graph.num_vertices),
+        key=lambda v: graph.degree(v),
+        reverse=True
+    )
+
+    coloring = {}
+
+    for v in vertices_by_degree:
+        # Find colors used by neighbors
+        neighbor_colors = {coloring[u] for u in graph.neighbors(v)
+                          if u in coloring}
+
+        # Assign smallest available color
+        color = 0
+        while color in neighbor_colors:
+            color += 1
+
+        coloring[v] = color
+
+    return coloring
+
+def is_valid_coloring(graph: &#x27;AdjacencyList&#x27;, coloring: Dict[int, int]) -&gt; bool:
+    &quot;&quot;&quot;Verify that coloring is valid (no adjacent vertices same color)&quot;&quot;&quot;
+    for u in range(graph.num_vertices):
+        for v in graph.neighbors(u):
+            if coloring[u] == coloring[v]:
+                return False
+    return True
+
+def chromatic_number_bound(graph: &#x27;AdjacencyList&#x27;) -&gt; tuple[int, int]:
+    &quot;&quot;&quot;
+    Compute bounds on chromatic number
+
+    Returns: (lower_bound, upper_bound)
+    &quot;&quot;&quot;
+    # Lower bound: size of maximum clique
+    # Upper bound: Δ(G) + 1 (greedy bound)
+
+    max_degree = max(graph.degree(v) for v in range(graph.num_vertices))
+    upper_bound = max_degree + 1
+
+    # Simple lower bound: 2 if graph has edges, 1 otherwise
+    lower_bound = 2 if graph.edge_count() &gt; 0 else 1
+
+    return lower_bound, upper_bound
+
+# Example usage
+from graph_data_structures import AdjacencyList
+
+graph = AdjacencyList(5, directed=False)
+graph.add_edge(0, 1)
+graph.add_edge(0, 2)
+graph.add_edge(1, 2)
+graph.add_edge(1, 3)
+graph.add_edge(2, 3)
+graph.add_edge(3, 4)
+
+coloring = welsh_powell_coloring(graph)
+num_colors = max(coloring.values()) + 1
+print(f&quot;Coloring uses {num_colors} colors&quot;)
+print(f&quot;Valid: {is_valid_coloring(graph, coloring)}&quot;)</code></pre>
+<p><strong>Edge Coloring</strong>:</p>
+<pre><code class="lang-python">def edge_coloring_vizing(graph: &#x27;AdjacencyList&#x27;) -&gt; Dict[tuple[int, int], int]:
+    &quot;&quot;&quot;
+    Edge coloring using Vizing&#x27;s algorithm
+
+    Vizing&#x27;s Theorem: χ&#x27;(G) ∈ {Δ(G), Δ(G) + 1}
+    where χ&#x27;(G) = edge chromatic number, Δ(G) = max degree
+
+    Time: O(V × E)
+    &quot;&quot;&quot;
+    if graph.directed:
+        raise ValueError(&quot;Edge coloring for undirected graphs only&quot;)
+
+    edge_colors = {}
+    max_degree = max(graph.degree(v) for v in range(graph.num_vertices))
+
+    # Process edges one by one
+    edges = graph.all_edges()
+
+    for u, v, _ in edges:
+        edge = tuple(sorted([u, v]))
+
+        # Find colors used at u and v
+        colors_at_u = {edge_colors.get(tuple(sorted([u, w])))
+                      for w in graph.neighbors(u)
+                      if tuple(sorted([u, w])) in edge_colors}
+
+        colors_at_v = {edge_colors.get(tuple(sorted([v, w])))
+                      for w in graph.neighbors(v)
+                      if tuple(sorted([v, w])) in edge_colors}
+
+        # Assign smallest color not used at u or v
+        used_colors = colors_at_u | colors_at_v
+        color = 0
+        while color in used_colors:
+            color += 1
+
+        edge_colors[edge] = color
+
+    return edge_colors</code></pre>
+<h3>2. Maximum Matching (General Graphs)</h3>
+<p><strong>Concept</strong>: Maximum set of edges with no shared vertices</p>
+<p><strong>Blossom Algorithm</strong> (Edmonds, 1965): Polynomial-time maximum matching for general graphs</p>
+<pre><code class="lang-python">class BlossomMatching:
+    &quot;&quot;&quot;
+    Edmonds&#x27; blossom algorithm for maximum matching
+
+    Simplified implementation - full version is complex
+
+    Time: O(V² × E)
+    &quot;&quot;&quot;
+
+    def __init__(self, graph: &#x27;AdjacencyList&#x27;):
+        if graph.directed:
+            raise ValueError(&quot;Matching for undirected graphs only&quot;)
+
+        self.graph = graph
+        self.matching = {}  # matching[u] = v if (u,v) in matching
+
+    def is_matched(self, v: int) -&gt; bool:
+        &quot;&quot;&quot;Check if vertex is matched&quot;&quot;&quot;
+        return v in self.matching
+
+    def find_augmenting_path_simple(self) -&gt; Optional[List[int]]:
+        &quot;&quot;&quot;
+        Find augmenting path (simple version, doesn&#x27;t handle blossoms)
+
+        Augmenting path: Path with alternating unmatched/matched edges
+        starting and ending at unmatched vertices
+        &quot;&quot;&quot;
+        # Start from unmatched vertex
+        for start in range(self.graph.num_vertices):
+            if self.is_matched(start):
+                continue
+
+            # BFS to find augmenting path
+            from collections import deque
+            queue = deque([(start, [start])])
+            visited = {start}
+
+            while queue:
+                u, path = queue.popleft()
+
+                for v in self.graph.neighbors(u):
+                    if v == start:
+                        continue
+
+                    if v in visited:
+                        continue
+
+                    new_path = path + [v]
+
+                    # Check if path alternates between matched/unmatched
+                    if len(new_path) % 2 == 0:
+                        # Even length - should be matched edge
+                        if self.matching.get(u) == v:
+                            visited.add(v)
+                            queue.append((v, new_path))
+                    else:
+                        # Odd length - should be unmatched edge
+                        if self.matching.get(u) != v:
+                            if not self.is_matched(v):
+                                # Found augmenting path!
+                                return new_path
+
+                            visited.add(v)
+                            queue.append((v, new_path))
+
+        return None
+
+    def augment_along_path(self, path: List[int]):
+        &quot;&quot;&quot;Flip matched/unmatched edges along path&quot;&quot;&quot;
+        for i in range(0, len(path) - 1, 2):
+            u, v = path[i], path[i + 1]
+            # Add edge to matching
+            self.matching[u] = v
+            self.matching[v] = u
+
+    def maximum_matching(self) -&gt; Set[tuple[int, int]]:
+        &quot;&quot;&quot;
+        Compute maximum matching (simplified, no blossom contraction)
+
+        Full blossom algorithm handles odd cycles (blossoms)
+        &quot;&quot;&quot;
+        # Repeatedly find and augment along augmenting paths
+        while True:
+            path = self.find_augmenting_path_simple()
+
+            if path is None:
+                break  # No more augmenting paths
+
+            self.augment_along_path(path)
+
+        # Convert to set of edges
+        matching_edges = set()
+        seen = set()
+
+        for u in self.matching:
+            if u not in seen:
+                v = self.matching[u]
+                matching_edges.add(tuple(sorted([u, v])))
+                seen.add(u)
+                seen.add(v)
+
+        return matching_edges
+
+# Example usage
+graph_match = AdjacencyList(6, directed=False)
+graph_match.add_edge(0, 1)
+graph_match.add_edge(0, 2)
+graph_match.add_edge(1, 3)
+graph_match.add_edge(2, 3)
+graph_match.add_edge(3, 4)
+graph_match.add_edge(4, 5)
+
+blossom = BlossomMatching(graph_match)
+matching = blossom.maximum_matching()
+print(f&quot;Maximum matching: {matching}&quot;)
+print(f&quot;Matching size: {len(matching)}&quot;)</code></pre>
+<h3>3. Vertex Cover</h3>
+<p><strong>Concept</strong>: Minimum set of vertices such that every edge has at least one endpoint in set</p>
+<p><strong>NP-Complete</strong>: No polynomial exact algorithm (unless P=NP)</p>
+<pre><code class="lang-python">def vertex_cover_approximation(graph: &#x27;AdjacencyList&#x27;) -&gt; Set[int]:
+    &quot;&quot;&quot;
+    2-approximation for minimum vertex cover
+
+    Algorithm: Maximal matching gives 2-approximation
+    (Include both endpoints of each matching edge)
+
+    Time: O(E)
+    Approximation ratio: 2
+    &quot;&quot;&quot;
+    if graph.directed:
+        raise ValueError(&quot;Vertex cover for undirected graphs&quot;)
+
+    cover = set()
+    remaining_edges = set(graph.all_edges())
+
+    while remaining_edges:
+        # Pick arbitrary edge
+        u, v, _ = remaining_edges.pop()
+
+        # Add both endpoints to cover
+        cover.add(u)
+        cover.add(v)
+
+        # Remove all edges incident to u or v
+        remaining_edges = {(a, b, w) for a, b, w in remaining_edges
+                          if a != u and a != v and b != u and b != v}
+
+    return cover
+
+def is_vertex_cover(graph: &#x27;AdjacencyList&#x27;, cover: Set[int]) -&gt; bool:
+    &quot;&quot;&quot;Verify that cover is valid&quot;&quot;&quot;
+    for u in range(graph.num_vertices):
+        for v in graph.neighbors(u):
+            if u not in cover and v not in cover:
+                return False
+    return True
+
+# Example
+graph_vc = AdjacencyList(5, directed=False)
+graph_vc.add_edge(0, 1)
+graph_vc.add_edge(0, 2)
+graph_vc.add_edge(1, 3)
+graph_vc.add_edge(2, 3)
+graph_vc.add_edge(3, 4)
+
+cover = vertex_cover_approximation(graph_vc)
+print(f&quot;Vertex cover (size {len(cover)}): {cover}&quot;)
+print(f&quot;Valid: {is_vertex_cover(graph_vc, cover)}&quot;)</code></pre>
+<h3>4. Clique Finding</h3>
+<p><strong>Concept</strong>: Find maximum complete subgraph (all vertices connected)</p>
+<p><strong>NP-Complete</strong>: Finding maximum clique is NP-hard</p>
+<pre><code class="lang-python">def find_all_cliques_bron_kerbosch(graph: &#x27;AdjacencyList&#x27;
+                                  ) -&gt; List[Set[int]]:
+    &quot;&quot;&quot;
+    Bron-Kerbosch algorithm for finding all maximal cliques
+
+    Time: O(3^(V/3)) worst case (exponential)
+    &quot;&quot;&quot;
+    cliques = []
+
+    def bronker bosch(R: Set[int], P: Set[int], X: Set[int]):
+        &quot;&quot;&quot;
+        R = current clique being built
+        P = candidates for extension
+        X = already processed vertices
+        &quot;&quot;&quot;
+        if not P and not X:
+            # R is maximal clique
+            cliques.append(R.copy())
+            return
+
+        # Choose pivot to minimize iterations
+        pivot = max(P | X, key=lambda v: len(set(graph.neighbors(v)) &amp; P),
+                   default=None)
+
+        if pivot is None:
+            return
+
+        pivot_neighbors = set(graph.neighbors(pivot))
+
+        # Process vertices not adjacent to pivot
+        for v in list(P - pivot_neighbors):
+            v_neighbors = set(graph.neighbors(v))
+
+            bronkerbosch(
+                R | {v},
+                P &amp; v_neighbors,
+                X &amp; v_neighbors
+            )
+
+            P.remove(v)
+            X.add(v)
+
+    # Initialize: R = empty, P = all vertices, X = empty
+    all_vertices = set(range(graph.num_vertices))
+    bronkerbosch(set(), all_vertices, set())
+
+    return cliques
+
+def maximum_clique(graph: &#x27;AdjacencyList&#x27;) -&gt; Set[int]:
+    &quot;&quot;&quot;Find maximum clique (largest complete subgraph)&quot;&quot;&quot;
+    all_cliques = find_all_cliques_bron_kerbosch(graph)
+
+    if not all_cliques:
+        return set()
+
+    return max(all_cliques, key=len)
+
+# Example
+graph_clique = AdjacencyList(5, directed=False)
+graph_clique.add_edge(0, 1)
+graph_clique.add_edge(0, 2)
+graph_clique.add_edge(0, 3)
+graph_clique.add_edge(1, 2)
+graph_clique.add_edge(1, 3)
+graph_clique.add_edge(2, 3)
+graph_clique.add_edge(3, 4)
+
+max_clique = maximum_clique(graph_clique)
+print(f&quot;Maximum clique: {max_clique}&quot;)  # {0, 1, 2, 3}</code></pre>
+<hr>
+<h2>2024 Research Advances</h2>
+<h3>Graph Neural Networks Integration</h3>
+<pre><code class="lang-python">class GraphAttentionNetwork:
+    &quot;&quot;&quot;
+    Graph Attention Network (GAT) integration
+
+    2024 advances: Multi-head attention, edge features, heterogeneous graphs
+    &quot;&quot;&quot;
+
+    def __init__(self, num_features: int, num_heads: int = 4):
+        self.num_features = num_features
+        self.num_heads = num_heads
+        # Would integrate with PyTorch/TensorFlow in practice
+
+    def attention_coefficients(self, node_features, neighbors):
+        &quot;&quot;&quot;
+        Compute attention coefficients using self-attention
+
+        2024 approach: Learned edge weights for graph algorithms
+        &quot;&quot;&quot;
+        # Simplified - actual implementation uses neural networks
+        pass
+
+    def aggregate_features(self, graph, node_features):
+        &quot;&quot;&quot;
+        Aggregate neighbor features using attention
+
+        Applications:
+        - Node classification
+        - Link prediction
+        - Graph classification
+        &quot;&quot;&quot;
+        pass</code></pre>
+<h3>Quantum-Inspired Algorithms (2024)</h3>
+<pre><code class="lang-python">def quantum_inspired_max_cut(graph: &#x27;WeightedGraph&#x27;) -&gt; tuple[Set[int], Set[int]]:
+    &quot;&quot;&quot;
+    Quantum-inspired approximation for maximum cut
+
+    Based on 2024 research: Classical simulation of quantum algorithms
+    Achieves better approximation ratios than classical methods
+
+    Max cut: Partition vertices to maximize edges between partitions
+    &quot;&quot;&quot;
+    # Simplified version - full implementation uses tensor networks
+
+    import random
+
+    # Initialize random partition
+    S = set(random.sample(range(graph.num_vertices),
+                         graph.num_vertices // 2))
+    T = set(range(graph.num_vertices)) - S
+
+    improved = True
+
+    while improved:
+        improved = False
+
+        # Try moving each vertex
+        for v in range(graph.num_vertices):
+            current_cut = compute_cut_value(graph, S, T)
+
+            # Move v to other partition
+            if v in S:
+                S.remove(v)
+                T.add(v)
+            else:
+                T.remove(v)
+                S.add(v)
+
+            new_cut = compute_cut_value(graph, S, T)
+
+            if new_cut &gt; current_cut:
+                improved = True
+            else:
+                # Move back
+                if v in S:
+                    S.remove(v)
+                    T.add(v)
+                else:
+                    T.remove(v)
+                    S.add(v)
+
+    return S, T
+
+def compute_cut_value(graph: &#x27;WeightedGraph&#x27;, S: Set[int], T: Set[int]) -&gt; float:
+    &quot;&quot;&quot;Compute total weight of edges crossing cut&quot;&quot;&quot;
+    cut_value = 0.0
+
+    for u in S:
+        for edge in graph.adj[u]:
+            v = edge.dest
+            if v in T:
+                cut_value += edge.weight
+
+    return cut_value</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: NP-Hard Problem Strategies</h3>
+<pre><code class="lang-python">class NPHardGraphProblems:
+    &quot;&quot;&quot;Strategies for NP-hard graph problems&quot;&quot;&quot;
+
+    @staticmethod
+    def choose_approach(problem: str, graph_size: int) -&gt; str:
+        &quot;&quot;&quot;Select approach based on problem and size&quot;&quot;&quot;
+
+        if graph_size &lt;= 20:
+            return &quot;exact_exponential&quot;  # Brute force, backtracking
+
+        elif graph_size &lt;= 100:
+            return &quot;exact_bounded&quot;  # Branch and bound, ILP
+
+        elif graph_size &lt;= 1000:
+            return &quot;approximation&quot;  # Polynomial approximations
+
+        else:
+            return &quot;heuristic&quot;  # Fast heuristics, local search
+
+    @staticmethod
+    def vertex_cover_strategy(graph):
+        &quot;&quot;&quot;Example: Choosing vertex cover approach&quot;&quot;&quot;
+        n = graph.num_vertices
+
+        if n &lt;= 20:
+            return &quot;exact_backtracking&quot;
+        else:
+            return vertex_cover_approximation(graph)</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Complexity Classes</h3>
+<p>| Problem | Complexity | Best Algorithm | |---------|-----------|----------------| | Graph Coloring | NP-Complete | Greedy (Δ+1 colors) | | Chromatic Number | NP-Complete | Bounds + backtracking | | Maximum Matching | P | Blossom (O(V²E)) | | Vertex Cover | NP-Complete | 2-approximation | | Maximum Clique | NP-Complete | Bron-Kerbosch | | Independent Set | NP-Complete | Complement of vertex cover |</p>
+<h3>Approximation Ratios</h3>
+<p>| Problem | Algorithm | Ratio | |---------|-----------|-------| | Vertex Cover | Maximal matching | 2 | | Graph Coloring | Greedy | Δ + 1 | | Max Cut | Randomized | 0.5 | | TSP (metric) | Christofides | 1.5 |</p>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>❌ Using Exponential Algorithms on Large Graphs</h3>
+<pre><code class="lang-python"># WRONG: Bron-Kerbosch on large graph
+large_graph = AdjacencyList(1000)
+# ... add edges ...
+cliques = find_all_cliques_bron_kerbosch(large_graph)  # May never finish!
+
+# CORRECT: Use heuristics or approximate for large graphs
+if graph.num_vertices &gt; 100:
+    # Use greedy or sampling-based approach
+    pass</code></pre>
+<h3>❌ Assuming Optimal Solution Exists Quickly</h3>
+<pre><code class="lang-python"># WRONG: Expect exact minimum vertex cover
+cover = minimum_vertex_cover_exact(graph)  # NP-hard!
+
+# CORRECT: Use approximation with known bounds
+cover = vertex_cover_approximation(graph)  # 2-approximation</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<p><strong>Next Steps</strong>:</p>
+<ul><li><code>graph-applications.md</code> → Real-world applications of these algorithms</li></ul>
+<p><strong>Foundations</strong>:</p>
+<ul><li><code>graph-theory-fundamentals.md</code> → Basic graph concepts</li><li><code>graph-traversal-algorithms.md</code> → BFS and DFS</li><li><code>network-flow-algorithms.md</code> → Maximum matching via flow</li></ul>
+<hr>
+<h2>Summary</h2>
+<p>Advanced graph algorithms tackle complex combinatorial problems:</p>
+<ul><li><strong>Graph Coloring</strong>: NP-complete, greedy gives Δ+1 approximation</li><li><strong>Maximum Matching</strong>: Polynomial via Edmonds&#x27; blossom algorithm</li><li><strong>Vertex Cover</strong>: NP-complete, 2-approximation via maximal matching</li><li><strong>Clique Finding</strong>: NP-complete, Bron-Kerbosch finds all maximal cliques</li><li><strong>2024 Advances</strong>: GNNs, quantum-inspired algorithms</li></ul>
+<p><strong>Key takeaways</strong>:</p>
+<ol><li>Many graph problems are NP-complete - use approximations</li><li>Greedy coloring uses at most Δ+1 colors</li><li>Blossom algorithm solves maximum matching in polynomial time</li><li>Vertex cover has 2-approximation, clique finding is exponential</li><li>Recent advances use machine learning and quantum-inspired methods</li></ol>
+<p><strong>Next</strong>: Move to <code>graph-applications.md</code> for real-world use cases.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/advanced-graph-algorithms.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

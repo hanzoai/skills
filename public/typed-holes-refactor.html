@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>typed-holes-refactor</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/typed-holes-refactor.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/typed-holes-refactor.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>typed-holes-refactor</h1><p class="lede">Refactor codebases using Design by Typed Holes methodology - iterative, test-driven refactoring with formal hole resolution, constraint propagation, and continuous validation. Use when refactoring existing code, optimizing architecture, or consolidating technical debt through systematic hole-driven development.</p><h1>Typed Holes Refactoring</h1>
+<p>Systematically refactor codebases using the Design by Typed Holes meta-framework: treat architectural unknowns as typed holes, resolve them iteratively with test-driven validation, and propagate constraints through dependency graphs.</p>
+<h2>Core Workflow</h2>
+<h3>Phase 0: Hole Discovery &amp; Setup</h3>
+<p><strong>1. Create safe working branch:</strong></p>
+<pre><code class="lang-bash">git checkout -b refactor/typed-holes-v1
+# CRITICAL: Never work in main, never touch .beads/ in main</code></pre>
+<p><strong>2. Analyze current state and identify holes:</strong></p>
+<pre><code class="lang-bash">python scripts/discover_holes.py
+# Creates REFACTOR_IR.md with hole catalog</code></pre>
+<p>The Refactor IR documents:</p>
+<ul><li><strong>Current State Holes</strong>: What&#x27;s unknown about the current system?</li><li><strong>Refactor Holes</strong>: What needs resolution to reach the ideal state?</li><li><strong>Constraints</strong>: What must be preserved/improved/maintained?</li><li><strong>Dependencies</strong>: Which holes block which others?</li></ul>
+<p><strong>3. Write baseline characterization tests:</strong></p>
+<p>Create <code>tests/characterization/</code> to capture exact current behavior:</p>
+<pre><code class="lang-python"># tests/characterization/test_current_behavior.py
+def test_api_contracts():
+    &quot;&quot;&quot;All public APIs must behave identically post-refactor&quot;&quot;&quot;
+    for endpoint in discover_public_apis():
+        old_result = run_current(endpoint, test_inputs)
+        save_baseline(endpoint, old_result)
+
+def test_performance_baselines():
+    &quot;&quot;&quot;Record current performance - don&#x27;t regress&quot;&quot;&quot;
+    baselines = measure_all_operations()
+    save_json(&quot;baselines.json&quot;, baselines)</code></pre>
+<p>Run tests on main branch - they should all pass. These are your safety net.</p>
+<h3>Phase 1-N: Iterative Hole Resolution</h3>
+<p>For each hole (in dependency order):</p>
+<p><strong>1. Select next ready hole:</strong></p>
+<pre><code class="lang-bash">python scripts/next_hole.py
+# Shows holes whose dependencies are resolved</code></pre>
+<p><strong>2. Write validation tests FIRST (test-driven):</strong></p>
+<pre><code class="lang-python"># tests/refactor/test_h{N}_resolution.py
+def test_h{N}_resolved():
+    &quot;&quot;&quot;Define what &#x27;resolved correctly&#x27; means&quot;&quot;&quot;
+    # This should FAIL initially
+    assert desired_state_achieved()
+
+def test_h{N}_equivalence():
+    &quot;&quot;&quot;Ensure no behavioral regressions&quot;&quot;&quot;
+    old_behavior = load_baseline()
+    new_behavior = run_refactored()
+    assert old_behavior == new_behavior</code></pre>
+<p><strong>3. Implement resolution:</strong></p>
+<ul><li>Refactor code to make tests pass</li><li>Keep characterization tests passing</li><li>Commit incrementally with clear messages</li></ul>
+<p><strong>4. Validate resolution:</strong></p>
+<pre><code class="lang-bash">python scripts/validate_resolution.py H{N}
+# Checks: tests pass, constraints satisfied, main untouched</code></pre>
+<p><strong>5. Propagate constraints:</strong></p>
+<pre><code class="lang-bash">python scripts/propagate.py H{N}
+# Updates dependent holes based on resolution</code></pre>
+<p><strong>6. Document and commit:</strong></p>
+<pre><code class="lang-bash">git add .
+git commit -m &quot;Resolve H{N}: {description}
+
+- Tests: tests/refactor/test_h{N}_*.py pass
+- Constraints: {constraints satisfied}
+- Propagates to: {dependent holes}&quot;</code></pre>
+<h3>Phase Final: Reporting</h3>
+<p><strong>Generate comprehensive delta report:</strong></p>
+<pre><code class="lang-bash">python scripts/generate_report.py &gt; REFACTOR_REPORT.md</code></pre>
+<p>Report includes:</p>
+<ul><li>Hole resolution summary with validation evidence</li><li>Metrics delta (LOC, complexity, coverage, performance)</li><li>Behavioral analysis (intentional changes documented)</li><li>Constraint validation (all satisfied)</li><li>Risk assessment and migration guide</li></ul>
+<h2>Key Principles</h2>
+<h3>1. Test-Driven Everything</h3>
+<ul><li>Write validation criteria BEFORE implementing</li><li>Tests define &quot;correct resolution&quot;</li><li>Characterization tests are sacred - never let them fail</li></ul>
+<h3>2. Hole-Driven Progress</h3>
+<ul><li>Resolve holes in dependency order</li><li>Each resolution propagates constraints</li><li>Track everything formally in Refactor IR</li></ul>
+<h3>3. Continuous Validation</h3>
+<p>Every commit must validate:</p>
+<ul><li>✅ Characterization tests pass (behavior preserved)</li><li>✅ Resolution tests pass (hole resolved correctly)</li><li>✅ Constraints satisfied</li><li>✅ Main branch untouched</li><li>✅ <code>.beads/</code> intact in main</li></ul>
+<h3>4. Safe by Construction</h3>
+<ul><li>Work only in refactor branch</li><li>Main is read-only reference</li><li>Beads are untouchable historical artifacts</li></ul>
+<h3>5. Formal Completeness</h3>
+<p>Design complete when:</p>
+<ul><li>All holes resolved and validated</li><li>All constraints satisfied</li><li>All phase gates passed</li><li>Metrics improved or maintained</li></ul>
+<h2>Hole Quality Framework</h2>
+<h3>SMART Criteria for Good Holes</h3>
+<p>Every hole must be:</p>
+<ul><li><strong>Specific</strong>: Clear, bounded question with concrete answer</li><li>✓ Good: &quot;How should error handling work in the API layer?&quot;</li><li>✗ Bad: &quot;How to improve the code?&quot;</li></ul>
+<ul><li><strong>Measurable</strong>: Has testable validation criteria</li><li>✓ Good: &quot;Reduce duplication from 60% to &lt;15%&quot;</li><li>✗ Bad: &quot;Make code better&quot;</li></ul>
+<ul><li><strong>Achievable</strong>: Can be resolved with available information</li><li>✓ Good: &quot;Extract parsing logic to separate module&quot;</li><li>✗ Bad: &quot;Predict all future requirements&quot;</li></ul>
+<ul><li><strong>Relevant</strong>: Blocks meaningful progress on refactoring</li><li>✓ Good: &quot;Define core interface (blocks 5 other holes)&quot;</li><li>✗ Bad: &quot;Decide variable naming convention&quot;</li></ul>
+<ul><li><strong>Typed</strong>: Clear type/structure for resolution</li><li>✓ Good: <code>interface Architecture = { layers: Layer[], rules: Rule[] }</code></li><li>✗ Bad: &quot;Some kind of structure?&quot;</li></ul>
+<h3>Hole Estimation Framework</h3>
+<p>Size holes using these categories:</p>
+<p>| Size | Duration | Characteristics | Examples | |------|----------|-----------------|----------| | <strong>Nano</strong> | 1-2 hours | Simple, mechanical changes | Rename files, update imports | | <strong>Small</strong> | 4-8 hours | Single module refactor | Extract class, consolidate functions | | <strong>Medium</strong> | 1-3 days | Cross-module changes | Define interfaces, reorganize packages | | <strong>Large</strong> | 4-7 days | Architecture changes | Layer extraction, pattern implementation | | <strong>Epic</strong> | &gt;7 days | <strong>SPLIT THIS HOLE</strong> | Too large, break into smaller holes |</p>
+<p><strong>Estimation Red Flags</strong>:</p>
+<ul><li>More than 3 dependencies → Likely Medium+</li><li>Unclear validation → Add time for discovery</li><li>New patterns/tools → Add learning overhead</li></ul>
+<h3>Hole Splitting Guidelines</h3>
+<p><strong>Split a hole when</strong>:</p>
+<ol><li>Estimate exceeds 7 days</li><li>More than 5 dependencies</li><li>Validation criteria unclear</li><li>Multiple distinct concerns mixed</li></ol>
+<p><strong>Splitting strategy</strong>:</p>
+<pre><code>Epic hole: &quot;Refactor entire authentication system&quot;
+→ Split into:
+  R10_auth_interface: Define new auth interface (Medium)
+  R11_token_handling: Implement JWT tokens (Small)
+  R12_session_management: Refactor sessions (Medium)
+  R13_auth_middleware: Update middleware (Small)
+  R14_auth_testing: Comprehensive test suite (Medium)</code></pre>
+<p><strong>After splitting</strong>:</p>
+<ul><li>Update dependencies in REFACTOR_IR.md</li><li>Run <code>python scripts/propagate.py</code> to update graph</li><li>Re-sync with beads: <code>python scripts/holes_to_beads.py</code></li></ul>
+<h2>Common Hole Types</h2>
+<h3>Architecture Holes</h3>
+<pre><code class="lang-python">&quot;?R1_target_architecture&quot;: &quot;What should the ideal structure be?&quot;
+&quot;?R2_module_boundaries&quot;: &quot;How should modules be organized?&quot;
+&quot;?R3_abstraction_layers&quot;: &quot;What layers/interfaces are needed?&quot;</code></pre>
+<p><strong>Validation:</strong> Architecture tests, dependency analysis, layer violation checks</p>
+<h3>Implementation Holes</h3>
+<pre><code class="lang-python">&quot;?R4_consolidation_targets&quot;: &quot;What code should merge?&quot;
+&quot;?R5_extraction_targets&quot;: &quot;What code should split out?&quot;
+&quot;?R6_elimination_targets&quot;: &quot;What code should be removed?&quot;</code></pre>
+<p><strong>Validation:</strong> Duplication detection, equivalence tests, dead code analysis</p>
+<h3>Quality Holes</h3>
+<pre><code class="lang-python">&quot;?R7_test_strategy&quot;: &quot;How to validate equivalence?&quot;
+&quot;?R8_migration_path&quot;: &quot;How to safely transition?&quot;
+&quot;?R9_rollback_mechanism&quot;: &quot;How to undo if needed?&quot;</code></pre>
+<p><strong>Validation:</strong> Test coverage metrics, migration dry-runs, rollback tests</p>
+<p>See <a href="references/HOLE_TYPES.md">HOLE_TYPES.md</a> for complete catalog.</p>
+<h2>Constraint Propagation Rules</h2>
+<h3>Rule 1: Interface Resolution → Type Constraints</h3>
+<pre><code>When: Interface hole resolved with concrete types
+Then: Propagate type requirements to all consumers
+
+Example:
+  Resolve R6: NodeInterface = BaseNode with async run()
+  Propagates to:
+    → R4: Parallel execution must handle async
+    → R5: Error recovery must handle async exceptions</code></pre>
+<h3>Rule 2: Implementation → Performance Constraints</h3>
+<pre><code>When: Implementation resolved with resource usage
+Then: Propagate limits to dependent holes
+
+Example:
+  Resolve R4: Parallelization with max_concurrent=3
+  Propagates to:
+    → R8: Rate limit = provider_limit / 3
+    → R7: Memory budget = 3 * single_operation_memory</code></pre>
+<h3>Rule 3: Validation → Test Requirements</h3>
+<pre><code>When: Validation resolved with test requirements
+Then: Propagate data needs upstream
+
+Example:
+  Resolve R9: Testing needs 50 examples
+  Propagates to:
+    → R7: Metrics must support batch evaluation
+    → R8: Test data collection strategy needed</code></pre>
+<p>See <a href="references/CONSTRAINT_RULES.md">CONSTRAINT_RULES.md</a> for complete propagation rules.</p>
+<h2>Success Indicators</h2>
+<h3>Weekly Progress</h3>
+<ul><li>2-4 holes resolved</li><li>All tests passing</li><li>Constraints satisfied</li><li>Measurable improvements</li></ul>
+<h3>Red Flags (Stop &amp; Reassess)</h3>
+<ul><li>❌ Characterization tests fail</li><li>❌ Hole can&#x27;t be resolved within constraints</li><li>❌ Constraints contradict each other</li><li>❌ No progress for 3+ days</li><li>❌ Main branch accidentally modified</li></ul>
+<h2>Validation Gates</h2>
+<p>| Gate | Criteria | Check | |------|----------|-------| | Gate 1: Discovery Complete | All holes cataloged, dependencies mapped | <code>python scripts/check_discovery.py</code> | | Gate 2: Foundation Holes | Core interfaces resolved, tests pass | <code>python scripts/check_foundation.py</code> | | Gate 3: Implementation | All refactor holes resolved, metrics improved | <code>python scripts/check_implementation.py</code> | | Gate 4: Production Ready | Migration tested, rollback verified | <code>python scripts/check_production.py</code> |</p>
+<h2>Claude-Assisted Workflow</h2>
+<p>This skill is designed for effective Claude/LLM collaboration. Here&#x27;s how to divide work:</p>
+<h3>Phase 0: Discovery</h3>
+<p><strong>Claude&#x27;s Role</strong>:</p>
+<ul><li>Run <code>discover_holes.py</code> to analyze codebase</li><li>Suggest holes based on code analysis</li><li>Generate initial REFACTOR_IR.md structure</li><li>Write characterization tests to capture current behavior</li><li>Set up test infrastructure</li></ul>
+<p><strong>Your Role</strong>:</p>
+<ul><li>Confirm holes are well-scoped</li><li>Prioritize which holes to tackle first</li><li>Review and approve REFACTOR_IR.md</li><li>Define critical constraints</li></ul>
+<h3>Phase 1-N: Hole Resolution</h3>
+<p><strong>Claude&#x27;s Role</strong>:</p>
+<ul><li>Write resolution tests (TDD) BEFORE implementation</li><li>Implement hole resolution to make tests pass</li><li>Run validation scripts: <code>validate_resolution.py</code>, <code>check_foundation.py</code></li><li>Update REFACTOR_IR.md with resolution details</li><li>Propagate constraints: <code>python scripts/propagate.py H{N}</code></li><li>Generate commit messages documenting changes</li></ul>
+<p><strong>Your Role</strong>:</p>
+<ul><li>Make architecture decisions (which pattern, which approach)</li><li>Assess risk and determine constraint priorities</li><li>Review code changes for correctness</li><li>Approve merge to main when complete</li></ul>
+<h3>Phase Final: Reporting</h3>
+<p><strong>Claude&#x27;s Role</strong>:</p>
+<ul><li>Generate comprehensive REFACTOR_REPORT.md</li><li>Document all metrics deltas</li><li>List all validation evidence</li><li>Create migration guides</li><li>Prepare PR description</li></ul>
+<p><strong>Your Role</strong>:</p>
+<ul><li>Final review of report accuracy</li><li>Approve for production deployment</li><li>Conduct post-refactor retrospective</li></ul>
+<h3>Effective Prompting Patterns</h3>
+<p><strong>Starting a session</strong>:</p>
+<pre><code>&quot;I need to refactor [description]. Use typed-holes-refactor skill.
+Start with discovery phase.&quot;</code></pre>
+<p><strong>Resolving a hole</strong>:</p>
+<pre><code>&quot;Resolve H3 (target_architecture). Write tests first, then implement.
+Use [specific pattern/approach].&quot;</code></pre>
+<p><strong>Checking progress</strong>:</p>
+<pre><code>&quot;Run check_completeness.py and show me the dashboard.
+What&#x27;s ready to work on next?&quot;</code></pre>
+<p><strong>Generating visualizations</strong>:</p>
+<pre><code>&quot;Generate dependency graph showing bottlenecks and critical path.
+Use visualize_graph.py with --analyze.&quot;</code></pre>
+<h3>Claude&#x27;s Limitations</h3>
+<p><strong>Claude CANNOT</strong>:</p>
+<ul><li>Make subjective architecture decisions (you must decide)</li><li>Determine business-critical constraints (you must specify)</li><li>Run tests that require external services (mock or you run them)</li><li>Merge to main (you must approve and merge)</li></ul>
+<p><strong>Claude CAN</strong>:</p>
+<ul><li>Analyze code and suggest holes</li><li>Write comprehensive test suites</li><li>Implement resolutions within your constraints</li><li>Generate reports and documentation</li><li>Track progress across sessions (via beads + REFACTOR_IR.md)</li></ul>
+<h3>Multi-Session Continuity</h3>
+<p><strong>At session start</strong>:</p>
+<pre><code>&quot;Continue typed-holes refactoring. Import beads state and
+show current status from REFACTOR_IR.md.&quot;</code></pre>
+<p><strong>Claude will</strong>:</p>
+<ul><li>Read REFACTOR_IR.md to understand current state</li><li>Check which holes are resolved</li><li>Identify next ready holes</li><li>Resume where previous session left off</li></ul>
+<p><strong>You should</strong>:</p>
+<ul><li>Keep REFACTOR_IR.md and .beads/ committed to git</li><li>Export beads state at session end: <code>bd export -o .beads/issues.jsonl</code></li><li>Use /context before starting to ensure Claude has full context</li></ul>
+<h2>Beads Integration</h2>
+<p><strong>Why beads + typed holes?</strong></p>
+<ul><li>Beads tracks issues across sessions (prevents lost work)</li><li>Holes track refactoring-specific state (dependencies, constraints)</li><li>Together: Complete continuity for long-running refactors</li></ul>
+<h3>Setup</h3>
+<pre><code class="lang-bash"># Install beads (once)
+go install github.com/steveyegge/beads/cmd/bd@latest
+
+# After running discover_holes.py
+python scripts/holes_to_beads.py
+
+# Check what&#x27;s ready
+bd ready --json</code></pre>
+<h3>Workflow Integration</h3>
+<p><strong>During hole resolution</strong>:</p>
+<pre><code class="lang-bash"># Start work on a hole
+bd update bd-5 --status in_progress --json
+
+# Implement resolution
+# ... write tests, implement code ...
+
+# Validate resolution
+python scripts/validate_resolution.py H3
+
+# Close bead
+bd close bd-5 --reason &quot;Resolved H3: target_architecture&quot; --json
+
+# Export state
+bd export -o .beads/issues.jsonl
+git add .beads/issues.jsonl REFACTOR_IR.md
+git commit -m &quot;Resolve H3: Define target architecture&quot;</code></pre>
+<p><strong>Syncing holes ↔ beads</strong>:</p>
+<pre><code class="lang-bash"># After updating REFACTOR_IR.md manually
+python scripts/holes_to_beads.py  # Sync changes to beads
+
+# After resolving holes
+python scripts/holes_to_beads.py  # Update bead statuses</code></pre>
+<p><strong>Cross-session continuity</strong>:</p>
+<pre><code class="lang-bash"># Session start
+bd import -i .beads/issues.jsonl
+bd ready --json  # Shows ready holes
+python scripts/check_completeness.py  # Shows overall progress
+
+# Session end
+bd export -o .beads/issues.jsonl
+git add .beads/issues.jsonl
+git commit -m &quot;Session checkpoint: 3 holes resolved&quot;</code></pre>
+<p><strong>Bead advantages</strong>:</p>
+<ul><li>Tracks work across days/weeks</li><li>Shows dependency graph: <code>bd deps bd-5</code></li><li>Prevents context loss</li><li>Integrates with overall project management</li></ul>
+<h2>Scripts Reference</h2>
+<p>All scripts are in <code>scripts/</code>:</p>
+<ul><li><code>discover_holes.py</code> - Analyze codebase and generate REFACTOR_IR.md</li><li><code>next_hole.py</code> - Show next resolvable holes based on dependencies</li><li><code>validate_resolution.py</code> - Check if hole resolution satisfies constraints</li><li><code>propagate.py</code> - Update dependent holes after resolution</li><li><code>generate_report.py</code> - Create comprehensive delta report</li><li><code>check_discovery.py</code> - Validate Phase 0 completeness (Gate 1)</li><li><code>check_foundation.py</code> - Validate Phase 1 completeness (Gate 2)</li><li><code>check_implementation.py</code> - Validate Phase 2 completeness (Gate 3)</li><li><code>check_production.py</code> - Validate Phase 3 readiness (Gate 4)</li><li><code>check_completeness.py</code> - Overall progress dashboard</li><li><code>visualize_graph.py</code> - Generate hole dependency visualization</li><li><code>holes_to_beads.py</code> - Sync holes with beads issues</li></ul>
+<p>Run any script with <code>--help</code> for detailed usage.</p>
+<h2>Meta-Consistency</h2>
+<p>This skill uses its own principles:</p>
+<p>| Typed Holes Principle | Application to Refactoring | |-----------------------|----------------------------| | Typed Holes | Architectural unknowns cataloged with types | | Constraint Propagation | Design constraints flow through dependency graph | | Iterative Refinement | Hole-by-hole resolution cycles | | Test-Driven Validation | Tests define correctness | | Formal Completeness | Gates verify design completeness |</p>
+<p><strong>We use the system to refactor the system.</strong></p>
+<h2>Advanced Topics</h2>
+<p>For complex scenarios, see:</p>
+<ul><li><a href="references/HOLE_TYPES.md">HOLE_TYPES.md</a> - Detailed hole taxonomy</li><li><a href="references/CONSTRAINT_RULES.md">CONSTRAINT_RULES.md</a> - Complete propagation rules</li><li><a href="references/VALIDATION_PATTERNS.md">VALIDATION_PATTERNS.md</a> - Test patterns for different hole types</li><li><a href="references/EXAMPLES.md">EXAMPLES.md</a> - Complete worked examples</li></ul>
+<h2>Quick Start Example</h2>
+<pre><code class="lang-bash"># 1. Setup
+git checkout -b refactor/typed-holes-v1
+python scripts/discover_holes.py
+
+# 2. Write baseline tests
+# Create tests/characterization/test_*.py
+
+# 3. Resolve first hole
+python scripts/next_hole.py  # Shows H1 is ready
+# Write tests/refactor/test_h1_*.py (fails initially)
+# Refactor code until tests pass
+python scripts/validate_resolution.py H1
+python scripts/propagate.py H1
+git commit -m &quot;Resolve H1: ...&quot;
+
+# 4. Repeat for each hole
+# ...
+
+# 5. Generate report
+python scripts/generate_report.py &gt; REFACTOR_REPORT.md</code></pre>
+<h2>Troubleshooting</h2>
+<h3>Characterization tests fail</h3>
+<p><strong>Symptom</strong>: Tests that captured baseline behavior now fail</p>
+<p><strong>Resolution</strong>:</p>
+<ol><li>Revert changes: <code>git diff</code> to see what changed</li><li>Investigate: What behavior changed and why?</li><li>Decision tree:</li></ol>
+<ul><li><strong>Intentional change</strong>: Update baselines with documentation</li></ul>
+<p>     ``<code>python      # Update baseline with reason      save_baseline(&quot;v2_api&quot;, new_behavior,                    reason=&quot;Switched to async implementation&quot;)      </code>``</p>
+<ul><li><strong>Unintentional regression</strong>: Fix the code, tests must pass</li></ul>
+<p><strong>Prevention</strong>: Run characterization tests before AND after each hole resolution.</p>
+<h3>Hole can&#x27;t be resolved</h3>
+<p><strong>Symptom</strong>: Stuck on a hole for &gt;3 days, unclear how to proceed</p>
+<p><strong>Resolution</strong>:</p>
+<ol><li><strong>Check dependencies</strong>: Are they actually resolved?</li></ol>
+<p>   ``<code>bash    python scripts/visualize_graph.py --analyze    # Look for unresolved dependencies    </code>``</p>
+<ol><li><strong>Review constraints</strong>: Are they contradictory?</li></ol>
+<ul><li>Example: C1 &quot;preserve all behavior&quot; + C5 &quot;change API contract&quot; → Contradictory</li><li><strong>Fix</strong>: Renegotiate constraints with stakeholders</li></ul>
+<ol><li><strong>Split the hole</strong>: If hole is too large</li></ol>
+<p>   ``<code>bash    # Original: R4_consolidate_all (Epic, 10+ days)    # Split into:    R4a_consolidate_parsers (Medium, 2 days)    R4b_consolidate_validators (Small, 1 day)    R4c_consolidate_handlers (Medium, 2 days)    </code>``</p>
+<ol><li><strong>Check for circular dependencies</strong>:</li></ol>
+<p>   ``<code>bash    python scripts/visualize_graph.py    # Look for cycles: R4 → R5 → R6 → R4    </code>``</p>
+<ul><li><strong>Fix</strong>: Break cycle by introducing intermediate hole or redefining dependencies</li></ul>
+<p><strong>Escalation</strong>: If still stuck after 5 days, consider alternative refactoring approach.</p>
+<h3>Contradictory Constraints</h3>
+<p><strong>Symptom</strong>: Cannot satisfy all constraints simultaneously</p>
+<p><strong>Example</strong>:</p>
+<ul><li>C1: &quot;Preserve exact current behavior&quot; (backward compatibility)</li><li>C5: &quot;Reduce response time by 50%&quot; (performance improvement)</li><li>Current behavior includes slow, synchronous operations</li></ul>
+<p><strong>Resolution Framework</strong>:</p>
+<ol><li><strong>Identify the conflict</strong>:</li></ol>
+<p>   ``<code>markdown    C1 requires: Keep synchronous operations    C5 requires: Switch to async operations    → Contradiction: Can&#x27;t be both sync and async    </code>``</p>
+<ol><li><strong>Negotiate priorities</strong>:</li></ol>
+<p>   | Option | C1 | C5 | Tradeoff |    |--------|----|----|----------|    | A: Keep sync | ✓ | ✗ | No performance gain |    | B: Switch to async | ✗ | ✓ | Breaking change |    | C: Add async, deprecate sync | ⚠️ | ✓ | Migration burden |</p>
+<ol><li><strong>Choose resolution strategy</strong>:</li></ol>
+<ul><li><strong>Relax constraint</strong>: Change C1 to &quot;Preserve behavior where possible&quot;</li><li><strong>Add migration period</strong>: C implemented over 2 releases</li><li><strong>Split into phases</strong>: Phase 1 (C1), Phase 2 (C5)</li></ul>
+<ol><li><strong>Document decision</strong>:</li></ol>
+<p>   ```markdown    ## Constraint Resolution: C1 vs C5</p>
+<p>   <strong>Decision</strong>: Relax C1 to allow async migration    <strong>Rationale</strong>: Performance critical for user experience    <strong>Migration</strong>: 3-month deprecation period for sync API    <strong>Approved by</strong>: [Stakeholder], [Date]    ```</p>
+<h3>Circular Dependencies</h3>
+<p><strong>Symptom</strong>: <code>visualize_graph.py</code> shows cycles</p>
+<p><strong>Example</strong>:</p>
+<pre><code>R4 (consolidate parsers) → depends on R6 (define interface)
+R6 (define interface) → depends on R4 (needs parser examples)</code></pre>
+<p><strong>Resolution strategies</strong>:</p>
+<ol><li><strong>Introduce intermediate hole</strong>:</li></ol>
+<p>   ``<code>    H0_parser_analysis: Analyze existing parsers (no dependencies)    R6_interface: Define interface using H0 analysis    R4_consolidate: Implement using R6 interface    </code>``</p>
+<ol><li><strong>Redefine dependencies</strong>:</li></ol>
+<ul><li>Maybe R4 doesn&#x27;t actually need R6</li><li>Or R6 only needs partial R4 (split R4)</li></ul>
+<ol><li><strong>Accept iterative refinement</strong>:</li></ol>
+<p>   ``<code>    R6_interface_v1: Initial interface (simple)    R4_consolidate: Implement with v1 interface    R6_interface_v2: Refine based on R4 learnings    </code>``</p>
+<p><strong>Prevention</strong>: Define architecture holes before implementation holes.</p>
+<h3>No Progress for 3+ Days</h3>
+<p><strong>Symptom</strong>: Feeling stuck, no commits, uncertain how to proceed</p>
+<p><strong>Resolution checklist</strong>:</p>
+<ul><li>[ ] <strong>Review REFACTOR_IR.md</strong>: Are holes well-defined (SMART criteria)?</li><li>If not: Rewrite holes to be more specific</li></ul>
+<ul><li>[ ] <strong>Check hole size</strong>: Is current hole &gt;7 days estimate?</li><li>If yes: Split into smaller holes</li></ul>
+<ul><li>[ ] <strong>Run dashboard</strong>: <code>python scripts/check_completeness.py</code></li><li>Are you working on a blocked hole?</li><li>Switch to a ready hole instead</li></ul>
+<ul><li>[ ] <strong>Visualize dependencies</strong>: <code>python scripts/visualize_graph.py --analyze</code></li><li>Identify bottlenecks</li><li>Look for parallel work opportunities</li></ul>
+<ul><li>[ ] <strong>Review constraints</strong>: Are they achievable?</li><li>Renegotiate if necessary</li></ul>
+<ul><li>[ ] <strong>Seek external review</strong>:</li><li>Share REFACTOR_IR.md with colleague</li><li>Get feedback on approach</li></ul>
+<ul><li>[ ] <strong>Consider alternative</strong>: Maybe this refactor isn&#x27;t feasible</li><li>Document why</li><li>Propose different approach</li></ul>
+<p><strong>Reset protocol</strong>: If still stuck, revert to last working state and try different approach.</p>
+<h3>Estimation Failures</h3>
+<p><strong>Symptom</strong>: Hole taking 3x longer than estimated</p>
+<p><strong>Analysis</strong>:</p>
+<ol><li><strong>Why did estimate fail?</strong></li></ol>
+<ul><li>Underestimated complexity</li><li>Unforeseen dependencies</li><li>Unclear requirements</li><li>Technical issues (tool problems, infrastructure)</li></ul>
+<ol><li><strong>Immediate actions</strong>:</li></ol>
+<ul><li>Update REFACTOR_IR.md with revised estimate</li><li>If &gt;7 days, split the hole</li><li>Update beads: <code>bd update bd-5 --note &quot;Revised estimate: 5 days (was 2)&quot;</code></li></ul>
+<ol><li><strong>Future improvements</strong>:</li></ol>
+<ul><li>Use actual times to calibrate future estimates</li><li>Add buffer for discovery (20% overhead)</li><li>Note uncertainty in IR: &quot;Estimate: 2-4 days (high uncertainty)&quot;</li></ul>
+<p><strong>Learning</strong>: Track actual vs estimated time in REFACTOR_REPORT.md for future reference.</p>
+<hr>
+<p><strong>Begin with Phase 0: Discovery. Always work in a branch. Test first, refactor second.</strong></p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/typed-holes-refactor.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

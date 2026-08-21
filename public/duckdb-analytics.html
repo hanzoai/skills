@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>duckdb-analytics</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/duckdb-analytics.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/duckdb-analytics.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>duckdb-analytics</h1><p class="lede">Skill: duckdb-analytics Category: Data/Analytics Related: Python, SQL, Parquet, data pipelines</p><h1>DuckDB Analytics</h1>
+<p><strong>Skill</strong>: duckdb-analytics <strong>Category</strong>: Data/Analytics <strong>Related</strong>: Python, SQL, Parquet, data pipelines</p>
+<h2>When to Use This Skill</h2>
+<h3>Triggers</h3>
+<ul><li>&quot;analyze this dataset&quot;</li><li>&quot;query Parquet files&quot;</li><li>&quot;embedded analytics database&quot;</li><li>&quot;fast SQL on CSV/JSON&quot;</li><li>&quot;convert Pandas to SQL&quot;</li><li>&quot;OLAP queries&quot;</li><li>&quot;aggregate large files&quot;</li><li>&quot;analytical workload&quot;</li><li>&quot;columnar database&quot;</li><li>&quot;serverless analytics&quot;</li></ul>
+<h3>Use Cases</h3>
+<ul><li><strong>Ad-hoc analysis</strong>: Query CSV/Parquet files without loading into database</li><li><strong>ETL pipelines</strong>: Transform data with SQL, export to various formats</li><li><strong>Data science</strong>: Bridge between Pandas/Polars and SQL analytics</li><li><strong>Embedded analytics</strong>: Add SQL engine to Python/Node.js applications</li><li><strong>Data exploration</strong>: Fast aggregations and window functions on large datasets</li><li><strong>Prototyping</strong>: Replace complex data pipelines with SQL queries</li><li><strong>Local development</strong>: Test analytics queries before deploying to warehouse</li></ul>
+<h3>When NOT to Use</h3>
+<ul><li>Need distributed/clustered database (use ClickHouse, Spark)</li><li>Multi-user concurrent writes (use PostgreSQL, MySQL)</li><li>Real-time transactional workload (use PostgreSQL, OLTP database)</li><li>Gigantic datasets (&gt;1TB single-node) (use BigQuery, Snowflake)</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Architecture</h3>
+<p><strong>In-Process Embedded Database</strong>:</p>
+<pre><code>Application Process
+├─ DuckDB Engine (embedded library)
+├─ Columnar Storage
+├─ Vectorized Execution
+└─ Direct File Access (Parquet, CSV, JSON)
+
+NO separate server process required</code></pre>
+<p><strong>Key Characteristics</strong>:</p>
+<ul><li><strong>Embedded</strong>: Runs inside application process (like SQLite)</li><li><strong>Columnar</strong>: Stores data in columns (OLAP-optimized)</li><li><strong>Vectorized</strong>: Processes data in batches (SIMD-accelerated)</li><li><strong>Zero-copy</strong>: Query files directly without import</li><li><strong>ACID</strong>: Full transactional support</li></ul>
+<h3>Columnar Storage</h3>
+<pre><code>Row-Oriented (OLTP):          Columnar (OLAP):
+ID | Name  | Age | City       ID:   [1, 2, 3, 4]
+1  | Alice | 30  | NYC        Name: [&#x27;Alice&#x27;, &#x27;Bob&#x27;, ...]
+2  | Bob   | 25  | LA         Age:  [30, 25, 28, 35]
+3  | Carol | 28  | SF         City: [&#x27;NYC&#x27;, &#x27;LA&#x27;, &#x27;SF&#x27;, ...]
+
+Access pattern: Full rows      Access pattern: Specific columns
+Use case: CRUD operations      Use case: Aggregations, analytics</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Better compression (similar values grouped)</li><li>Faster aggregations (scan only needed columns)</li><li>Efficient analytics (skip irrelevant columns)</li></ul>
+<h3>SQL Dialect</h3>
+<p><strong>PostgreSQL-Compatible</strong>:</p>
+<ul><li>Standard SQL-92/99/2003 features</li><li>Window functions, CTEs, LATERAL joins</li><li>JSON operators, full-text search</li><li>Array/struct types, nested data</li><li>Extensions via SQL (like PostgreSQL)</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Installation &amp; Setup</h3>
+<pre><code class="lang-bash"># Python
+pip install duckdb
+# or with uv
+uv add duckdb
+
+# CLI
+brew install duckdb
+# or
+curl -OL https://github.com/duckdb/duckdb/releases/latest/download/duckdb_cli-linux-amd64.zip
+unzip duckdb_cli-linux-amd64.zip</code></pre>
+<h3>Pattern 1: Direct File Querying</h3>
+<p><strong>Query CSV Without Import</strong>:</p>
+<pre><code class="lang-sql">-- No CREATE TABLE needed!
+SELECT city, COUNT(*), AVG(age)
+FROM &#x27;data/users.csv&#x27;
+GROUP BY city
+ORDER BY COUNT(*) DESC;</code></pre>
+<p><strong>Query Parquet Files</strong>:</p>
+<pre><code class="lang-sql">-- Single file
+SELECT * FROM &#x27;sales.parquet&#x27; WHERE year = 2024;
+
+-- Multiple files (glob pattern)
+SELECT product_id, SUM(revenue)
+FROM &#x27;sales/*.parquet&#x27;
+GROUP BY product_id;
+
+-- S3/HTTP files (requires httpfs extension)
+INSTALL httpfs;
+LOAD httpfs;
+
+SELECT * FROM &#x27;s3://mybucket/data/*.parquet&#x27;
+WHERE date &gt;= &#x27;2024-01-01&#x27;;</code></pre>
+<p><strong>Query JSON/JSONL</strong>:</p>
+<pre><code class="lang-sql">-- JSON array
+SELECT * FROM &#x27;data.json&#x27;;
+
+-- JSON Lines (newline-delimited)
+SELECT event_type, COUNT(*)
+FROM read_json_auto(&#x27;events.jsonl&#x27;)
+GROUP BY event_type;</code></pre>
+<h3>Pattern 2: Python Integration</h3>
+<p><strong>Basic Usage</strong>:</p>
+<pre><code class="lang-python">import duckdb
+
+# In-memory database
+con = duckdb.connect()
+
+# Persistent database
+con = duckdb.connect(&#x27;analytics.db&#x27;)
+
+# Execute query
+result = con.execute(&quot;SELECT 42 AS answer&quot;).fetchall()
+print(result)  # [(42,)]
+
+# Fetch as DataFrame
+df = con.execute(&quot;SELECT * FROM &#x27;data.csv&#x27;&quot;).df()</code></pre>
+<p><strong>Query Pandas DataFrames Directly</strong>:</p>
+<pre><code class="lang-python">import pandas as pd
+import duckdb
+
+# Create DataFrame
+df = pd.DataFrame({
+    &#x27;name&#x27;: [&#x27;Alice&#x27;, &#x27;Bob&#x27;, &#x27;Carol&#x27;],
+    &#x27;age&#x27;: [30, 25, 28],
+    &#x27;city&#x27;: [&#x27;NYC&#x27;, &#x27;LA&#x27;, &#x27;SF&#x27;]
+})
+
+# Query DataFrame as if it&#x27;s a table
+result = duckdb.query(&quot;&quot;&quot;
+    SELECT city, AVG(age) as avg_age
+    FROM df
+    GROUP BY city
+&quot;&quot;&quot;).df()
+
+print(result)</code></pre>
+<p><strong>Pandas/Polars/Arrow Integration</strong>:</p>
+<pre><code class="lang-python">import duckdb
+import pandas as pd
+import polars as pl
+
+# Pandas
+df_pandas = pd.read_csv(&#x27;data.csv&#x27;)
+result = duckdb.query(&quot;SELECT * FROM df_pandas WHERE age &gt; 25&quot;).df()
+
+# Polars
+df_polars = pl.read_csv(&#x27;data.csv&#x27;)
+result = duckdb.query(&quot;SELECT * FROM df_polars WHERE age &gt; 25&quot;).pl()
+
+# Arrow
+result_arrow = duckdb.query(&quot;SELECT * FROM &#x27;data.parquet&#x27;&quot;).arrow()</code></pre>
+<h3>Pattern 3: ETL and Transformations</h3>
+<p><strong>Load Data</strong>:</p>
+<pre><code class="lang-python">import duckdb
+
+con = duckdb.connect(&#x27;warehouse.db&#x27;)
+
+# Create table from CSV
+con.execute(&quot;&quot;&quot;
+    CREATE TABLE users AS
+    SELECT * FROM read_csv_auto(&#x27;users.csv&#x27;)
+&quot;&quot;&quot;)
+
+# Create table from Parquet
+con.execute(&quot;&quot;&quot;
+    CREATE TABLE sales AS
+    SELECT * FROM &#x27;sales.parquet&#x27;
+&quot;&quot;&quot;)
+
+# Create table from DataFrame
+import pandas as pd
+df = pd.read_json(&#x27;events.json&#x27;)
+con.execute(&quot;CREATE TABLE events AS SELECT * FROM df&quot;)</code></pre>
+<p><strong>Export Data</strong>:</p>
+<pre><code class="lang-python"># Export to Parquet
+con.execute(&quot;&quot;&quot;
+    COPY (SELECT * FROM users WHERE active = true)
+    TO &#x27;active_users.parquet&#x27; (FORMAT PARQUET)
+&quot;&quot;&quot;)
+
+# Export to CSV
+con.execute(&quot;&quot;&quot;
+    COPY users TO &#x27;users.csv&#x27; (HEADER, DELIMITER &#x27;,&#x27;)
+&quot;&quot;&quot;)
+
+# Export to JSON
+con.execute(&quot;&quot;&quot;
+    COPY (SELECT * FROM events WHERE date &gt;= &#x27;2024-01-01&#x27;)
+    TO &#x27;recent_events.json&#x27; (ARRAY true)
+&quot;&quot;&quot;)</code></pre>
+<p><strong>Complex Transformations</strong>:</p>
+<pre><code class="lang-python"># Multi-stage ETL
+con.execute(&quot;&quot;&quot;
+    -- Stage 1: Clean data
+    CREATE TABLE clean_users AS
+    SELECT
+        LOWER(TRIM(email)) AS email,
+        name,
+        age,
+        created_at::DATE AS signup_date
+    FROM &#x27;raw_users.csv&#x27;
+    WHERE email IS NOT NULL;
+
+    -- Stage 2: Aggregate
+    CREATE TABLE user_stats AS
+    SELECT
+        DATE_TRUNC(&#x27;month&#x27;, signup_date) AS month,
+        COUNT(*) AS signups,
+        AVG(age) AS avg_age
+    FROM clean_users
+    GROUP BY month
+    ORDER BY month;
+&quot;&quot;&quot;)
+
+# Export final result
+result = con.execute(&quot;SELECT * FROM user_stats&quot;).df()</code></pre>
+<h3>Pattern 4: Advanced Analytics</h3>
+<p><strong>Window Functions</strong>:</p>
+<pre><code class="lang-sql">SELECT
+    user_id,
+    order_date,
+    amount,
+    -- Running total
+    SUM(amount) OVER (
+        PARTITION BY user_id
+        ORDER BY order_date
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS running_total,
+    -- Moving average
+    AVG(amount) OVER (
+        PARTITION BY user_id
+        ORDER BY order_date
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+    ) AS moving_avg_7d,
+    -- Rank within partition
+    ROW_NUMBER() OVER (
+        PARTITION BY user_id
+        ORDER BY amount DESC
+    ) AS amount_rank
+FROM orders;</code></pre>
+<p><strong>CTEs and Complex Queries</strong>:</p>
+<pre><code class="lang-sql">WITH monthly_sales AS (
+    SELECT
+        DATE_TRUNC(&#x27;month&#x27;, order_date) AS month,
+        product_id,
+        SUM(quantity) AS units_sold,
+        SUM(revenue) AS total_revenue
+    FROM sales
+    GROUP BY month, product_id
+),
+ranked_products AS (
+    SELECT
+        month,
+        product_id,
+        total_revenue,
+        ROW_NUMBER() OVER (
+            PARTITION BY month
+            ORDER BY total_revenue DESC
+        ) AS revenue_rank
+    FROM monthly_sales
+)
+SELECT
+    month,
+    product_id,
+    total_revenue,
+    revenue_rank
+FROM ranked_products
+WHERE revenue_rank &lt;= 10
+ORDER BY month DESC, revenue_rank;</code></pre>
+<p><strong>Pivot and Unpivot</strong>:</p>
+<pre><code class="lang-sql">-- Pivot
+PIVOT (
+    SELECT category, year, revenue
+    FROM sales
+) ON year
+USING SUM(revenue);
+
+-- Unpivot
+UNPIVOT (
+    SELECT * FROM quarterly_sales
+) ON q1, q2, q3, q4
+INTO NAME quarter VALUE revenue;</code></pre>
+<h3>Pattern 5: Extensions</h3>
+<p><strong>Installing Extensions</strong>:</p>
+<pre><code class="lang-sql">-- HTTP/S3 file access
+INSTALL httpfs;
+LOAD httpfs;
+
+-- PostgreSQL scanner
+INSTALL postgres_scanner;
+LOAD postgres_scanner;
+
+-- Spatial/GIS
+INSTALL spatial;
+LOAD spatial;
+
+-- Full-text search
+INSTALL fts;
+LOAD fts;
+
+-- Excel files
+INSTALL spatial;  -- Includes Excel support
+LOAD spatial;</code></pre>
+<p><strong>Using Extensions</strong>:</p>
+<pre><code class="lang-python">import duckdb
+
+con = duckdb.connect()
+
+# Read from PostgreSQL
+con.execute(&quot;INSTALL postgres_scanner&quot;)
+con.execute(&quot;LOAD postgres_scanner&quot;)
+
+result = con.execute(&quot;&quot;&quot;
+    SELECT * FROM postgres_scan(
+        &#x27;host=localhost port=5432 dbname=mydb user=user password=pass&#x27;,
+        &#x27;public&#x27;,
+        &#x27;users&#x27;
+    )
+&quot;&quot;&quot;).df()
+
+# Read from S3
+con.execute(&quot;INSTALL httpfs&quot;)
+con.execute(&quot;LOAD httpfs&quot;)
+con.execute(&quot;&quot;&quot;
+    SET s3_access_key_id=&#x27;YOUR_KEY&#x27;;
+    SET s3_secret_access_key=&#x27;YOUR_SECRET&#x27;;
+&quot;&quot;&quot;)
+
+df = con.execute(&quot;SELECT * FROM &#x27;s3://bucket/data.parquet&#x27;&quot;).df()
+
+# Spatial queries
+con.execute(&quot;INSTALL spatial&quot;)
+con.execute(&quot;LOAD spatial&quot;)
+
+con.execute(&quot;&quot;&quot;
+    SELECT
+        city,
+        ST_Distance(
+            ST_Point(lon, lat),
+            ST_Point(-74.006, 40.7128)  -- NYC coordinates
+        ) AS distance_from_nyc
+    FROM cities
+    ORDER BY distance_from_nyc
+    LIMIT 10;
+&quot;&quot;&quot;)</code></pre>
+<h3>Pattern 6: Performance Optimization</h3>
+<p><strong>Persistent Database with Indexes</strong>:</p>
+<pre><code class="lang-python">import duckdb
+
+con = duckdb.connect(&#x27;analytics.db&#x27;)
+
+# Create table
+con.execute(&quot;&quot;&quot;
+    CREATE TABLE events (
+        event_id INTEGER,
+        user_id INTEGER,
+        event_type VARCHAR,
+        timestamp TIMESTAMP,
+        data JSON
+    )
+&quot;&quot;&quot;)
+
+# Load data
+con.execute(&quot;INSERT INTO events SELECT * FROM &#x27;events.parquet&#x27;&quot;)
+
+# Create indexes (ART - Adaptive Radix Tree)
+con.execute(&quot;CREATE INDEX idx_user ON events(user_id)&quot;)
+con.execute(&quot;CREATE INDEX idx_timestamp ON events(timestamp)&quot;)</code></pre>
+<p><strong>Query Optimization</strong>:</p>
+<pre><code class="lang-python"># Use EXPLAIN to analyze query plan
+plan = con.execute(&quot;EXPLAIN SELECT * FROM events WHERE user_id = 123&quot;).fetchall()
+print(plan)
+
+# Use PRAGMA for optimization settings
+con.execute(&quot;PRAGMA threads=8&quot;)  # Use 8 threads
+con.execute(&quot;PRAGMA memory_limit=&#x27;4GB&#x27;&quot;)  # Set memory limit</code></pre>
+<p><strong>Partitioned Data</strong>:</p>
+<pre><code class="lang-sql">-- Export partitioned by date
+COPY (SELECT * FROM events)
+TO &#x27;events_partitioned&#x27;
+(FORMAT PARQUET, PARTITION_BY (DATE_TRUNC(&#x27;day&#x27;, timestamp)));
+
+-- Query specific partitions
+SELECT * FROM &#x27;events_partitioned/timestamp=2024-01-*/*.parquet&#x27;;</code></pre>
+<h3>Pattern 7: WASM/Browser Deployment</h3>
+<p><strong>DuckDB in Browser</strong>:</p>
+<pre><code class="lang-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;script src=&quot;https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/dist/duckdb-mvp.wasm.js&quot;&gt;&lt;/script&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;script type=&quot;module&quot;&gt;
+        import * as duckdb from &#x27;https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/dist/duckdb-mvp.wasm.js&#x27;;
+
+        const WASM_URL = &#x27;https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/dist/duckdb-mvp.wasm&#x27;;
+        const worker = new Worker(&#x27;duckdb-browser.worker.js&#x27;);
+        const logger = new duckdb.ConsoleLogger();
+        const db = new duckdb.AsyncDuckDB(logger, worker);
+        await db.instantiate(WASM_URL);
+
+        const conn = await db.connect();
+
+        // Query CSV from URL
+        await conn.query(`
+            SELECT * FROM &#x27;https://example.com/data.csv&#x27;
+            LIMIT 10
+        `);
+
+        const result = await conn.query(`
+            SELECT COUNT(*) as count FROM &#x27;https://example.com/data.csv&#x27;
+        `);
+        console.log(result.toArray());
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<h3>Pattern 8: Full-Text Search</h3>
+<pre><code class="lang-python">import duckdb
+
+con = duckdb.connect()
+con.execute(&quot;INSTALL fts&quot;)
+con.execute(&quot;LOAD fts&quot;)
+
+# Create FTS index
+con.execute(&quot;&quot;&quot;
+    CREATE TABLE documents (
+        id INTEGER,
+        title VARCHAR,
+        content VARCHAR
+    )
+&quot;&quot;&quot;)
+
+con.execute(&quot;INSERT INTO documents VALUES (1, &#x27;DuckDB Guide&#x27;, &#x27;DuckDB is an analytics database&#x27;)&quot;)
+con.execute(&quot;INSERT INTO documents VALUES (2, &#x27;SQL Tutorial&#x27;, &#x27;Learn SQL with examples&#x27;)&quot;)
+
+# Create full-text search index
+con.execute(&quot;&quot;&quot;
+    PRAGMA create_fts_index(&#x27;documents&#x27;, &#x27;id&#x27;, &#x27;title&#x27;, &#x27;content&#x27;)
+&quot;&quot;&quot;)
+
+# Search
+results = con.execute(&quot;&quot;&quot;
+    SELECT * FROM (
+        SELECT *, fts_main_documents.match_bm25(id, &#x27;analytics&#x27;) AS score
+        FROM documents
+    ) sq
+    WHERE score IS NOT NULL
+    ORDER BY score DESC
+&quot;&quot;&quot;).fetchall()</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>CLI Commands</h3>
+<pre><code class="lang-bash"># Start interactive shell
+duckdb
+
+# Open database file
+duckdb analytics.db
+
+# Execute query and exit
+duckdb -c &quot;SELECT * FROM &#x27;data.csv&#x27;&quot; analytics.db
+
+# Run SQL file
+duckdb analytics.db &lt; script.sql
+
+# Export to CSV
+duckdb -c &quot;COPY (SELECT * FROM table) TO &#x27;output.csv&#x27; (HEADER)&quot; analytics.db</code></pre>
+<h3>Python API</h3>
+<pre><code class="lang-python">import duckdb
+
+# Connect
+con = duckdb.connect()  # In-memory
+con = duckdb.connect(&#x27;file.db&#x27;)  # Persistent
+
+# Execute
+con.execute(&quot;SELECT 42&quot;)
+result = con.execute(&quot;SELECT * FROM table&quot;).fetchall()
+df = con.execute(&quot;SELECT * FROM table&quot;).df()  # Pandas
+pl_df = con.execute(&quot;SELECT * FROM table&quot;).pl()  # Polars
+arrow = con.execute(&quot;SELECT * FROM table&quot;).arrow()  # Arrow
+
+# Query shorthand
+duckdb.query(&quot;SELECT * FROM df&quot;).df()  # df is Pandas DataFrame
+
+# Close
+con.close()</code></pre>
+<h3>Common Functions</h3>
+<pre><code class="lang-sql">-- Date/Time
+DATE_TRUNC(&#x27;month&#x27;, timestamp_col)
+EXTRACT(year FROM date_col)
+AGE(end_date, start_date)
+
+-- String
+CONCAT(str1, str2)
+LOWER(str), UPPER(str)
+REGEXP_MATCHES(str, pattern)
+
+-- Aggregate
+COUNT(*), SUM(col), AVG(col), MIN(col), MAX(col)
+STDDEV(col), VARIANCE(col)
+STRING_AGG(col, &#x27;,&#x27;)  -- Concatenate strings
+ARRAY_AGG(col)  -- Collect into array
+
+-- Window
+ROW_NUMBER(), RANK(), DENSE_RANK()
+LAG(col, 1), LEAD(col, 1)
+FIRST_VALUE(col), LAST_VALUE(col)
+
+-- JSON
+json_col-&gt;&#x27;key&#x27;  -- Extract JSON field
+json_col-&gt;&gt;&#x27;key&#x27;  -- Extract as text
+JSON_EXTRACT(json_col, &#x27;$.path&#x27;)</code></pre>
+<h3>Data Import/Export</h3>
+<pre><code class="lang-sql">-- CSV
+CREATE TABLE t AS SELECT * FROM read_csv_auto(&#x27;file.csv&#x27;);
+COPY table TO &#x27;output.csv&#x27; (HEADER, DELIMITER &#x27;,&#x27;);
+
+-- Parquet
+CREATE TABLE t AS SELECT * FROM &#x27;file.parquet&#x27;;
+COPY table TO &#x27;output.parquet&#x27; (FORMAT PARQUET);
+
+-- JSON
+CREATE TABLE t AS SELECT * FROM read_json_auto(&#x27;file.json&#x27;);
+COPY table TO &#x27;output.json&#x27; (ARRAY true);
+
+-- Excel
+INSTALL spatial;
+LOAD spatial;
+SELECT * FROM st_read(&#x27;file.xlsx&#x27;);</code></pre>
+<h3>Configuration</h3>
+<pre><code class="lang-sql">-- Threads
+PRAGMA threads=8;
+
+-- Memory limit
+PRAGMA memory_limit=&#x27;4GB&#x27;;
+
+-- Progress bar
+PRAGMA enable_progress_bar;
+
+-- Show settings
+PRAGMA database_size;
+PRAGMA table_info(&#x27;table_name&#x27;);</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Don&#x27;t Use DuckDB for OLTP</h3>
+<pre><code class="lang-python"># WRONG: High-frequency transactional updates
+for user_id in range(10000):
+    con.execute(f&quot;UPDATE users SET last_active = NOW() WHERE id = {user_id}&quot;)
+
+# RIGHT: Use PostgreSQL/MySQL for OLTP, or batch updates
+con.execute(&quot;&quot;&quot;
+    UPDATE users
+    SET last_active = NOW()
+    WHERE id IN (SELECT id FROM active_users)
+&quot;&quot;&quot;)</code></pre>
+<h3>Don&#x27;t Import Data Unnecessarily</h3>
+<pre><code class="lang-sql">-- WRONG: Import before querying
+CREATE TABLE data AS SELECT * FROM &#x27;large_file.parquet&#x27;;
+SELECT AVG(value) FROM data;
+
+-- RIGHT: Query directly
+SELECT AVG(value) FROM &#x27;large_file.parquet&#x27;;</code></pre>
+<h3>Don&#x27;t Ignore Query Plans</h3>
+<pre><code class="lang-python"># WRONG: Run slow query without investigation
+result = con.execute(&quot;SELECT * FROM huge_table WHERE col = &#x27;value&#x27;&quot;).fetchall()
+
+# RIGHT: Analyze and optimize
+plan = con.execute(&quot;EXPLAIN SELECT * FROM huge_table WHERE col = &#x27;value&#x27;&quot;).fetchall()
+# Create index if needed
+con.execute(&quot;CREATE INDEX idx_col ON huge_table(col)&quot;)</code></pre>
+<h3>Don&#x27;t Mix Multiple Connections Unsafely</h3>
+<pre><code class="lang-python"># WRONG: Multiple connections to same file without coordination
+con1 = duckdb.connect(&#x27;db.db&#x27;)
+con2 = duckdb.connect(&#x27;db.db&#x27;)
+con1.execute(&quot;INSERT INTO table VALUES (1)&quot;)
+con2.execute(&quot;INSERT INTO table VALUES (2)&quot;)  # Potential conflict
+
+# RIGHT: Use single connection or read-only mode
+con = duckdb.connect(&#x27;db.db&#x27;)
+# Or
+con_readonly = duckdb.connect(&#x27;db.db&#x27;, read_only=True)</code></pre>
+<h3>Don&#x27;t Forget to Close Connections</h3>
+<pre><code class="lang-python"># WRONG: Leave connections open
+con = duckdb.connect(&#x27;file.db&#x27;)
+con.execute(&quot;SELECT * FROM table&quot;)
+# ... never close
+
+# RIGHT: Use context manager
+with duckdb.connect(&#x27;file.db&#x27;) as con:
+    result = con.execute(&quot;SELECT * FROM table&quot;).df()</code></pre>
+<h3>Don&#x27;t Use SELECT * in Production</h3>
+<pre><code class="lang-sql">-- WRONG: Fetch unnecessary columns
+SELECT * FROM &#x27;huge_file.parquet&#x27; WHERE id = 123;
+
+-- RIGHT: Select only needed columns (columnar optimization)
+SELECT id, name, email FROM &#x27;huge_file.parquet&#x27; WHERE id = 123;</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>python</strong> - DuckDB Python API integration</li><li><strong>sql</strong> - SQL fundamentals, query optimization</li><li><strong>pandas-data-analysis</strong> - DataFrame integration patterns</li><li><strong>parquet-columnar</strong> - Parquet file format, columnar storage</li><li><strong>modal-functions-basics</strong> - Deploy DuckDB analytics on Modal</li><li><strong>data-pipeline-design</strong> - ETL patterns, data workflows</li><li><strong>postgresql</strong> - PostgreSQL scanner, SQL compatibility</li><li><strong>arrow-interop</strong> - Apache Arrow integration</li></ul>
+<hr>
+<h2>Examples</h2>
+<h3>Example 1: Sales Analytics Pipeline</h3>
+<pre><code class="lang-python">import duckdb
+import pandas as pd
+
+# Connect to persistent database
+con = duckdb.connect(&#x27;sales_analytics.db&#x27;)
+
+# Load raw data from multiple sources
+con.execute(&quot;&quot;&quot;
+    CREATE OR REPLACE TABLE raw_sales AS
+    SELECT * FROM &#x27;s3://mybucket/sales/*.parquet&#x27;
+&quot;&quot;&quot;)
+
+con.execute(&quot;&quot;&quot;
+    CREATE OR REPLACE TABLE raw_customers AS
+    SELECT * FROM postgres_scan(
+        &#x27;host=db.example.com dbname=prod&#x27;,
+        &#x27;public&#x27;,
+        &#x27;customers&#x27;
+    )
+&quot;&quot;&quot;)
+
+# Transform and aggregate
+con.execute(&quot;&quot;&quot;
+    CREATE OR REPLACE TABLE sales_summary AS
+    WITH daily_sales AS (
+        SELECT
+            s.customer_id,
+            c.customer_name,
+            c.segment,
+            DATE_TRUNC(&#x27;day&#x27;, s.order_date) AS sale_date,
+            SUM(s.amount) AS daily_revenue,
+            COUNT(*) AS num_orders
+        FROM raw_sales s
+        JOIN raw_customers c ON s.customer_id = c.id
+        GROUP BY s.customer_id, c.customer_name, c.segment, sale_date
+    )
+    SELECT
+        customer_id,
+        customer_name,
+        segment,
+        sale_date,
+        daily_revenue,
+        num_orders,
+        SUM(daily_revenue) OVER (
+            PARTITION BY customer_id
+            ORDER BY sale_date
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS cumulative_revenue
+    FROM daily_sales
+    ORDER BY customer_id, sale_date
+&quot;&quot;&quot;)
+
+# Export results
+con.execute(&quot;&quot;&quot;
+    COPY sales_summary TO &#x27;sales_summary.parquet&#x27; (FORMAT PARQUET)
+&quot;&quot;&quot;)
+
+# Get insights as DataFrame for visualization
+insights = con.execute(&quot;&quot;&quot;
+    SELECT
+        segment,
+        COUNT(DISTINCT customer_id) AS customers,
+        SUM(daily_revenue) AS total_revenue,
+        AVG(daily_revenue) AS avg_daily_revenue
+    FROM sales_summary
+    GROUP BY segment
+    ORDER BY total_revenue DESC
+&quot;&quot;&quot;).df()
+
+print(insights)</code></pre>
+<h3>Example 2: Log Analysis</h3>
+<pre><code class="lang-python">import duckdb
+
+con = duckdb.connect()
+
+# Query logs directly (JSON Lines format)
+con.execute(&quot;&quot;&quot;
+    CREATE VIEW parsed_logs AS
+    SELECT
+        timestamp::TIMESTAMP AS ts,
+        level,
+        message,
+        user_id,
+        request_path
+    FROM read_json_auto(&#x27;logs/*.jsonl&#x27;)
+    WHERE timestamp IS NOT NULL
+&quot;&quot;&quot;)
+
+# Find error patterns
+errors = con.execute(&quot;&quot;&quot;
+    SELECT
+        DATE_TRUNC(&#x27;hour&#x27;, ts) AS hour,
+        level,
+        COUNT(*) AS count,
+        STRING_AGG(DISTINCT request_path, &#x27;, &#x27;) AS paths
+    FROM parsed_logs
+    WHERE level IN (&#x27;ERROR&#x27;, &#x27;CRITICAL&#x27;)
+    GROUP BY hour, level
+    ORDER BY hour DESC, count DESC
+    LIMIT 20
+&quot;&quot;&quot;).df()
+
+print(&quot;Error Summary:&quot;)
+print(errors)
+
+# User activity analysis
+activity = con.execute(&quot;&quot;&quot;
+    SELECT
+        user_id,
+        COUNT(*) AS requests,
+        COUNT(DISTINCT request_path) AS unique_paths,
+        MIN(ts) AS first_seen,
+        MAX(ts) AS last_seen
+    FROM parsed_logs
+    WHERE user_id IS NOT NULL
+    GROUP BY user_id
+    HAVING requests &gt; 100
+    ORDER BY requests DESC
+    LIMIT 10
+&quot;&quot;&quot;).df()
+
+print(&quot;\nTop Active Users:&quot;)
+print(activity)</code></pre>
+<hr>
+<p><strong>End of Skill: duckdb-analytics</strong></p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/duckdb-analytics.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

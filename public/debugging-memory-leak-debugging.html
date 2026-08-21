@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>debugging-memory-leak-debugging</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/debugging-memory-leak-debugging.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/debugging-memory-leak-debugging.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>debugging-memory-leak-debugging</h1><p class="lede">Comprehensive memory leak detection and debugging using heap profiling tools across multiple languages</p><h1>Memory Leak Debugging</h1>
+<p><strong>Scope</strong>: Heap profiling, memory leak detection patterns, and tools for Python, Go, Rust, C/C++, and .NET <strong>Lines</strong>: ~440 <strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Application memory usage grows unbounded over time</li><li>Out-of-memory errors occur in production or long-running processes</li><li>Need to profile heap allocations and identify leak sources</li><li>Investigating memory bloat in microservices or servers</li><li>Validating memory cleanup in resource-intensive applications</li><li>Debugging reference cycles or unreleased resources</li><li>Optimizing memory footprint for containerized applications</li><li>Analyzing memory patterns in Python, Go, Rust, C/C++, or .NET</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>Concept 1: Memory Leak Types</h3>
+<p><strong>Leak Categories</strong>:</p>
+<ul><li><strong>Direct leaks</strong>: Allocated memory never freed (no references)</li><li><strong>Indirect leaks</strong>: Memory reachable only through leaked blocks</li><li><strong>Still-reachable</strong>: Memory with valid references but not freed at exit</li><li><strong>Definitely lost</strong>: No pointers to allocated blocks</li><li><strong>Possibly lost</strong>: Interior pointers only (offset from allocation start)</li></ul>
+<p><strong>Common Causes</strong>:</p>
+<ul><li>Forgotten deallocations (missing free/delete)</li><li>Reference cycles in garbage-collected languages</li><li>Event listener leaks (unsubscribed callbacks)</li><li>Cache unbounded growth</li><li>Thread-local storage leaks</li><li>Static container growth</li></ul>
+<pre><code class="lang-python"># ❌ Memory leak: cached data never evicted
+cache = {}
+
+def get_user(user_id):
+    if user_id not in cache:
+        cache[user_id] = fetch_user(user_id)  # Cache grows forever
+    return cache[user_id]
+
+# ✅ Fixed: use LRU cache with size limit
+from functools import lru_cache
+
+@lru_cache(maxsize=1000)
+def get_user(user_id):
+    return fetch_user(user_id)</code></pre>
+<h3>Concept 2: Heap Profiling Workflow</h3>
+<p><strong>Standard Process</strong>:</p>
+<ol><li><strong>Establish baseline</strong>: Measure initial memory usage</li><li><strong>Run workload</strong>: Execute representative operations</li><li><strong>Capture snapshot</strong>: Take heap dump at intervals</li><li><strong>Compare snapshots</strong>: Identify growing allocations</li><li><strong>Analyze backtraces</strong>: Find allocation call stacks</li><li><strong>Fix and verify</strong>: Patch leaks, re-profile to confirm</li></ol>
+<p><strong>Sampling vs Tracking</strong>:</p>
+<ul><li><strong>Sampling</strong>: Periodic snapshots, lower overhead (production-safe)</li><li><strong>Tracking</strong>: Record every allocation, high overhead (dev/staging only)</li></ul>
+<pre><code class="lang-bash"># Production-safe sampling (low overhead)
+py-spy record -o profile.svg --duration 60 python app.py
+
+# Development tracking (high overhead)
+valgrind --leak-check=full --track-origins=yes ./binary</code></pre>
+<h3>Concept 3: Leak Detection Tools by Language</h3>
+<p><strong>Tool Selection Matrix</strong>:</p>
+<p>| Language | Primary Tool | Secondary Tool | Production-Safe | |----------|--------------|----------------|-----------------| | C/C++ | Valgrind | AddressSanitizer | ASan only | | Python | tracemalloc | memory_profiler | tracemalloc yes | | Go | pprof heap | heapster | pprof yes | | Rust | MIRI | valgrind | No (dev only) | | .NET | dotnet-dump | PerfView | dotnet-dump yes | | Java | VisualVM | Eclipse MAT | Both yes |</p>
+<p><strong>Key Characteristics</strong>:</p>
+<ul><li><strong>Valgrind</strong>: Zero code changes, high overhead (10-30x slowdown)</li><li><strong>ASan</strong>: Compile-time instrumentation, moderate overhead (2x slowdown)</li><li><strong>tracemalloc</strong>: Python stdlib, snapshot comparison, minimal overhead</li><li><strong>pprof</strong>: Go runtime profiling, live process inspection</li><li><strong>MIRI</strong>: Rust interpreter, catches undefined behavior</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Valgrind Leak Detection (C/C++)</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>C/C++ applications with suspected memory leaks</li><li>Need detailed leak reports without code changes</li><li>Development/staging environments (overhead acceptable)</li></ul>
+<pre><code class="lang-bash"># Full leak check with origins tracking
+valgrind --leak-check=full \
+         --show-leak-kinds=all \
+         --track-origins=yes \
+         --log-file=valgrind.log \
+         ./myapp arg1 arg2
+
+# Analyze log file
+grep &quot;definitely lost&quot; valgrind.log
+grep &quot;indirectly lost&quot; valgrind.log
+
+# Example output interpretation:
+# ==12345== LEAK SUMMARY:
+# ==12345==    definitely lost: 4,096 bytes in 1 blocks
+# ==12345==    indirectly lost: 8,192 bytes in 2 blocks
+# ==12345==      possibly lost: 0 bytes in 0 blocks
+# ==12345==    still reachable: 512 bytes in 4 blocks</code></pre>
+<p><strong>Key Options</strong>:</p>
+<ul><li><code>--leak-check=full</code>: Show detailed leak backtraces</li><li><code>--track-origins=yes</code>: Track uninitialized value origins</li><li><code>--show-leak-kinds=all</code>: Show all leak types (not just definite)</li><li><code>--suppressions=file.supp</code>: Suppress known library leaks</li></ul>
+<p><strong>Benefits</strong>:</p>
+<ul><li>No recompilation required</li><li>Precise leak location reporting</li><li>Handles C libraries transparently</li></ul>
+<h3>Pattern 2: AddressSanitizer (ASan) for C/C++</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Faster leak detection than Valgrind (2x vs 10-30x overhead)</li><li>Integration testing with moderate performance impact</li><li>Compile-time instrumentation acceptable</li></ul>
+<pre><code class="lang-bash"># Compile with ASan
+g++ -fsanitize=address -g -O1 app.cpp -o app
+# or
+clang++ -fsanitize=address -g -O1 app.cpp -o app
+
+# Run instrumented binary
+ASAN_OPTIONS=detect_leaks=1:log_path=asan.log ./app
+
+# Example ASan report:
+# =================================================================
+# ==12345==ERROR: LeakSanitizer: detected memory leaks
+#
+# Direct leak of 4096 byte(s) in 1 object(s) allocated from:
+#     #0 0x7f1234567890 in malloc (/lib/x86_64-linux-gnu/libasan.so.5+0x...)
+#     #1 0x5678901234ab in allocate_buffer app.cpp:42
+#     #2 0x5678901234cd in main app.cpp:123</code></pre>
+<p><strong>Configuration via ASAN_OPTIONS</strong>:</p>
+<pre><code class="lang-bash"># Common ASan options
+export ASAN_OPTIONS=&quot;detect_leaks=1:\
+                     fast_unwind_on_malloc=0:\
+                     malloc_context_size=30:\
+                     log_path=asan.log&quot;</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>10-15x faster than Valgrind</li><li>Catches use-after-free, buffer overflows simultaneously</li><li>Integrates with CI/CD pipelines</li></ul>
+<h3>Pattern 3: Python tracemalloc</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Python applications with growing memory usage</li><li>Need allocation snapshots without external tools</li><li>Production environments (low overhead)</li></ul>
+<pre><code class="lang-python">import tracemalloc
+import linecache
+
+def display_top(snapshot, key_type=&#x27;lineno&#x27;, limit=10):
+    &quot;&quot;&quot;Display top memory allocations.&quot;&quot;&quot;
+    snapshot = snapshot.filter_traces((
+        tracemalloc.Filter(False, &quot;&lt;frozen importlib._bootstrap&gt;&quot;),
+        tracemalloc.Filter(False, &quot;&lt;unknown&gt;&quot;),
+    ))
+    top_stats = snapshot.statistics(key_type)
+
+    print(f&quot;Top {limit} lines:&quot;)
+    for index, stat in enumerate(top_stats[:limit], 1):
+        frame = stat.traceback[0]
+        filename = frame.filename
+        lineno = frame.lineno
+        print(f&quot;#{index}: {filename}:{lineno}: {stat.size / 1024:.1f} KiB&quot;)
+        line = linecache.getline(filename, lineno).strip()
+        if line:
+            print(f&quot;    {line}&quot;)
+
+# Start tracing
+tracemalloc.start()
+
+# Take snapshot before operation
+snapshot1 = tracemalloc.take_snapshot()
+
+# Run workload
+run_application()
+
+# Take snapshot after operation
+snapshot2 = tracemalloc.take_snapshot()
+
+# Compare snapshots
+top_stats = snapshot2.compare_to(snapshot1, &#x27;lineno&#x27;)
+
+print(&quot;[ Top 10 differences ]&quot;)
+for stat in top_stats[:10]:
+    print(stat)
+
+# Stop tracing
+tracemalloc.stop()</code></pre>
+<p><strong>Snapshot Comparison</strong>:</p>
+<pre><code class="lang-python"># Identify memory growth between snapshots
+for stat in top_stats[:10]:
+    print(f&quot;{stat.size_diff / 1024:.1f} KiB | {stat.count_diff:+} allocations&quot;)
+    print(f&quot;  {stat.traceback.format()[0]}&quot;)</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Built into Python stdlib (no dependencies)</li><li>Low overhead (suitable for production)</li><li>Precise line-level allocation tracking</li></ul>
+<h3>Pattern 4: Python memory_profiler</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Line-by-line memory profiling needed</li><li>Debugging specific function memory usage</li><li>Development environments (higher overhead)</li></ul>
+<pre><code class="lang-python"># Install: pip install memory_profiler
+
+from memory_profiler import profile
+
+@profile
+def process_data(data):
+    &quot;&quot;&quot;Process large dataset.&quot;&quot;&quot;
+    result = []
+    for item in data:
+        # This line allocates heavily
+        result.append(expensive_transform(item))
+    return result
+
+# Run with: python -m memory_profiler script.py
+# Output:
+# Line #    Mem usage    Increment  Occurrences   Line Contents
+# ================================================================
+#      5   38.816 MiB   38.816 MiB           1   @profile
+#      6                                         def process_data(data):
+#      7   38.816 MiB    0.000 MiB           1       result = []
+#      8  156.234 MiB  117.418 MiB        1001       for item in data:
+#      9  156.234 MiB    0.000 MiB        1000           result.append(expensive_transform(item))
+#     10  156.234 MiB    0.000 MiB           1       return result</code></pre>
+<p><strong>mprof Command-Line Tool</strong>:</p>
+<pre><code class="lang-bash"># Record memory usage over time
+mprof run python script.py
+
+# Plot memory usage graph
+mprof plot
+
+# Show peak memory
+mprof peak</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Line-by-line granularity</li><li>Visual plots of memory over time</li><li>Easy decorator-based profiling</li></ul>
+<h3>Pattern 5: Go pprof Heap Profiling</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Go services with memory growth issues</li><li>Live production profiling (minimal overhead)</li><li>Need allocation flame graphs</li></ul>
+<pre><code class="lang-go">package main
+
+import (
+    &quot;net/http&quot;
+    _ &quot;net/http/pprof&quot;  // Registers /debug/pprof/* handlers
+    &quot;runtime&quot;
+)
+
+func main() {
+    // Enable pprof HTTP endpoint
+    go func() {
+        http.ListenAndServe(&quot;localhost:6060&quot;, nil)
+    }()
+
+    // Your application code
+    runServer()
+}
+
+// Programmatic heap profiling
+func captureHeapProfile() {
+    runtime.GC()  // Get up-to-date statistics
+    f, _ := os.Create(&quot;heap.prof&quot;)
+    defer f.Close()
+    runtime.WriteHeapProfile(f)
+}</code></pre>
+<p><strong>Analyzing Heap Profiles</strong>:</p>
+<pre><code class="lang-bash"># Capture heap profile from running service
+curl http://localhost:6060/debug/pprof/heap &gt; heap.prof
+
+# Interactive analysis
+go tool pprof heap.prof
+# Commands in interactive mode:
+# &gt; top10        # Show top 10 memory consumers
+# &gt; list funcName  # Show source with allocations
+# &gt; web          # Open browser with call graph
+
+# Generate flame graph
+go tool pprof -http=:8080 heap.prof
+
+# Compare two heap snapshots (find memory growth)
+curl http://localhost:6060/debug/pprof/heap &gt; heap1.prof
+# ... wait and let app run ...
+curl http://localhost:6060/debug/pprof/heap &gt; heap2.prof
+go tool pprof -base=heap1.prof heap2.prof</code></pre>
+<p><strong>Key pprof Commands</strong>:</p>
+<ul><li><code>top</code>: Show functions with highest memory usage</li><li><code>list &lt;func&gt;</code>: Source code with allocation annotations</li><li><code>web</code>: Visual call graph in browser</li><li><code>pdf</code>: Export call graph as PDF</li></ul>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Production-safe (sampling, low overhead)</li><li>Live process inspection</li><li>Visual call graphs and flame graphs</li></ul>
+<h3>Pattern 6: Rust MIRI for Memory Debugging</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Rust unsafe code memory validation</li><li>Development/testing environments only</li><li>Need to catch undefined behavior</li></ul>
+<pre><code class="lang-bash"># Install MIRI
+rustup +nightly component add miri
+
+# Run tests with MIRI
+cargo +nightly miri test
+
+# Run specific binary with MIRI
+cargo +nightly miri run
+
+# Example MIRI output for use-after-free:
+# error: Undefined Behavior: pointer to alloc123 was dereferenced after this allocation got freed
+#  --&gt; src/main.rs:10:13
+#   |
+# 10|     println!(&quot;{}&quot;, *ptr);
+#   |     ^^^^^^^^^^^^^^^^^ pointer to alloc123 was dereferenced after this allocation got freed</code></pre>
+<p><strong>MIRI Capabilities</strong>:</p>
+<ul><li>Detects use-after-free</li><li>Detects invalid pointer arithmetic</li><li>Detects data races (limited)</li><li>Validates unsafe code invariants</li></ul>
+<p><strong>Limitations</strong>:</p>
+<ul><li>Slow (interpreter, not profiler)</li><li>Dev/test only (cannot run in production)</li><li>Cannot analyze external C libraries</li></ul>
+<h3>Pattern 7: .NET Memory Diagnostics</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>.NET Core/5+ applications with memory issues</li><li>Production memory dumps analysis</li><li>Cross-platform .NET diagnostics</li></ul>
+<pre><code class="lang-bash"># Install dotnet-dump
+dotnet tool install --global dotnet-dump
+
+# Capture memory dump from running process
+dotnet-dump collect --process-id 12345
+
+# Analyze dump
+dotnet-dump analyze core_20251026_123456
+
+# Inside analysis session:
+&gt; dumpheap -stat                    # Heap statistics by type
+&gt; dumpheap -mt &lt;MethodTable&gt;        # Objects of specific type
+&gt; gcroot &lt;address&gt;                  # Find roots keeping object alive
+&gt; eeheap -gc                        # GC heap statistics
+&gt; objsize &lt;address&gt;                 # Total size including referenced objects</code></pre>
+<p><strong>Example Analysis</strong>:</p>
+<pre><code class="lang-bash"># Find objects consuming most memory
+&gt; dumpheap -stat
+# Output shows types sorted by total size:
+# MT            Count    TotalSize Class Name
+# 00007f1234567890  50000  12800000 System.String
+# 00007f1234567891  10000  10240000 MyApp.LargeObject
+
+# Investigate specific type
+&gt; dumpheap -mt 00007f1234567891
+# Shows all instances of MyApp.LargeObject
+
+# Find what&#x27;s keeping them alive
+&gt; gcroot 00007f9876543210
+# Shows reference chain from GC root to object</code></pre>
+<p><strong>Eclipse MAT (Memory Analyzer Tool)</strong>:</p>
+<ul><li>Cross-platform Java/.NET heap dump analysis</li><li>Leak suspects report (automatic leak detection)</li><li>Dominator tree (memory ownership visualization)</li></ul>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Production dump analysis</li><li>No application restart needed</li><li>Cross-platform support</li></ul>
+<h3>Pattern 8: Heaptrack for C/C++</h3>
+<p><strong>When to use</strong>:</p>
+<ul><li>Linux C/C++ memory profiling</li><li>Need GUI visualization of allocations</li><li>Alternative to Valgrind with better performance</li></ul>
+<pre><code class="lang-bash"># Install heaptrack
+sudo apt install heaptrack heaptrack-gui
+
+# Record heap allocations
+heaptrack ./myapp arg1 arg2
+# Creates heaptrack.myapp.XXXXX.gz
+
+# Analyze with GUI
+heaptrack_gui heaptrack.myapp.12345.gz
+
+# Command-line analysis
+heaptrack_print heaptrack.myapp.12345.gz</code></pre>
+<p><strong>Heaptrack Features</strong>:</p>
+<ul><li>Flame graph visualization</li><li>Timeline of allocations</li><li>Peak memory analysis</li><li>Call stack attribution</li><li>Leak detection</li></ul>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Lower overhead than Valgrind</li><li>Excellent GUI for visual analysis</li><li>Timeline view shows allocation patterns</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Tool Selection by Use Case</h3>
+<pre><code>Use Case                    | Tool                      | Overhead  | Production-Safe
+----------------------------|---------------------------|-----------|----------------
+C/C++ leak detection        | Valgrind                  | 10-30x    | No
+C/C++ faster detection      | AddressSanitizer          | 2x        | Maybe (staging)
+C/C++ with GUI              | heaptrack                 | Low       | Yes
+Python stdlib               | tracemalloc               | &lt;5%       | Yes
+Python line-by-line         | memory_profiler           | Medium    | No
+Go live profiling           | pprof                     | &lt;3%       | Yes
+Rust unsafe validation      | MIRI                      | 100x+     | No (dev only)
+.NET production dumps       | dotnet-dump               | N/A       | Yes
+Java heap analysis          | Eclipse MAT, VisualVM     | N/A       | Yes (dumps)</code></pre>
+<h3>Key Guidelines</h3>
+<pre><code>✅ DO: Establish memory baseline before profiling
+✅ DO: Use sampling profilers in production (pprof, tracemalloc)
+✅ DO: Compare heap snapshots to identify growth
+✅ DO: Run leak detectors in CI/CD (ASan, Valgrind in tests)
+✅ DO: Set memory limits for caches and containers
+✅ DO: Profile representative workloads (not synthetic tests)
+✅ DO: Suppress known library leaks in Valgrind
+
+❌ DON&#x27;T: Run Valgrind in production (too slow)
+❌ DON&#x27;T: Ignore &quot;still-reachable&quot; leaks (may indicate issues)
+❌ DON&#x27;T: Profile debug builds (optimizations affect allocations)
+❌ DON&#x27;T: Assume GC languages never leak (reference cycles do leak)
+❌ DON&#x27;T: Profile with insufficient workload (leaks may not appear)
+❌ DON&#x27;T: Mix profiler data from different runs (inconsistent)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-python"># ❌ NEVER: Unbounded cache growth
+class UserService:
+    def __init__(self):
+        self.cache = {}  # Grows forever
+
+    def get_user(self, user_id):
+        if user_id not in self.cache:
+            self.cache[user_id] = self.fetch_user(user_id)
+        return self.cache[user_id]
+
+# ✅ CORRECT: Use LRU cache with size limit
+from functools import lru_cache
+
+class UserService:
+    @lru_cache(maxsize=1000)
+    def get_user(self, user_id):
+        return self.fetch_user(user_id)</code></pre>
+<p>❌ <strong>Unbounded caching</strong>: Cache grows indefinitely, causing OOM ✅ <strong>Correct approach</strong>: Use LRU cache with max size, TTL eviction, or weak references</p>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-go">// ❌ Don&#x27;t: Forget to close resources in goroutines
+func processFiles(files []string) {
+    for _, file := range files {
+        go func(f string) {
+            data, _ := os.ReadFile(f)  // Leaks if goroutine never exits
+            process(data)
+        }(file)
+    }
+}
+
+// ✅ Correct: Use context and cleanup
+func processFiles(ctx context.Context, files []string) {
+    var wg sync.WaitGroup
+    for _, file := range files {
+        wg.Add(1)
+        go func(f string) {
+            defer wg.Done()
+            data, err := os.ReadFile(f)
+            if err != nil {
+                return
+            }
+            process(data)
+        }(file)
+    }
+    wg.Wait()
+}</code></pre>
+<p>❌ <strong>Unclosed resources in goroutines</strong>: File handles, connections leak ✅ <strong>Better</strong>: Use defer, WaitGroup, and context cancellation</p>
+<pre><code class="lang-c++">// ❌ Don&#x27;t: Raw pointers without ownership
+class Service {
+    std::vector&lt;Connection*&gt; connections;  // Who owns these?
+
+    void add_connection(Connection* conn) {
+        connections.push_back(conn);  // Leak risk
+    }
+};
+
+// ✅ Correct: Use smart pointers with clear ownership
+class Service {
+    std::vector&lt;std::unique_ptr&lt;Connection&gt;&gt; connections;
+
+    void add_connection(std::unique_ptr&lt;Connection&gt; conn) {
+        connections.push_back(std::move(conn));  // Clear ownership
+    }
+};</code></pre>
+<p>❌ <strong>Raw pointer ownership unclear</strong>: Memory leaks from ambiguous ownership ✅ <strong>Better</strong>: Use unique_ptr/shared_ptr for automatic cleanup</p>
+<pre><code class="lang-python"># ❌ Don&#x27;t: Create reference cycles without weak references
+class Node:
+    def __init__(self, value):
+        self.value = value
+        self.parent = None  # Strong reference
+        self.children = []
+
+    def add_child(self, child):
+        child.parent = self  # Cycle: parent &lt;-&gt; child
+        self.children.append(child)
+
+# ✅ Correct: Use weak references to break cycles
+import weakref
+
+class Node:
+    def __init__(self, value):
+        self.value = value
+        self.parent = None  # Will be weakref
+        self.children = []
+
+    def add_child(self, child):
+        child.parent = weakref.ref(self)  # Weak reference
+        self.children.append(child)</code></pre>
+<p>❌ <strong>Reference cycles</strong>: Python GC can&#x27;t collect cyclic references efficiently ✅ <strong>Better</strong>: Use weakref to break cycles in parent-child relationships</p>
+<pre><code class="lang-bash"># ❌ Don&#x27;t: Run production with tracking profilers
+valgrind ./production-server  # 10-30x slowdown!
+
+# ✅ Correct: Use sampling profilers in production
+# Go
+curl http://localhost:6060/debug/pprof/heap &gt; heap.prof
+
+# Python
+python -X tracemalloc=5 app.py  # Minimal overhead</code></pre>
+<p>❌ <strong>Tracking profilers in production</strong>: Valgrind, MIRI unusable in production ✅ <strong>Better</strong>: Use sampling profilers (pprof, tracemalloc, dotnet-dump)</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>testing/performance-testing.md</code> - Memory profiling integrates with performance tests</li><li><code>observability/metrics-instrumentation.md</code> - Export memory metrics to monitoring systems</li><li><code>containers/docker-optimization.md</code> - Container memory limits and OOM debugging</li><li><code>plt/rust-memory-safety.md</code> - Rust ownership model prevents many leaks</li><li><code>debugging/crash-debugging.md</code> - OOM crashes require memory analysis</li><li><code>cicd/testing-strategy.md</code> - Integrate ASan/Valgrind into CI pipelines</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-26 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/debugging-memory-leak-debugging.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

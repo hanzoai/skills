@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>proxies-reverse-proxy</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/proxies-reverse-proxy.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/proxies-reverse-proxy.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>proxies-reverse-proxy</h1><p class="lede">Reverse proxy patterns including load balancing, SSL termination, request routing, health checks, and high availability configurations</p><h1>Reverse Proxy</h1>
+<p><strong>Scope</strong>: Reverse proxy concepts, load balancing, SSL termination, routing patterns <strong>Lines</strong>: ~380 <strong>Last Updated</strong>: 2025-10-27 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Implementing load balancing across backend servers</li><li>Setting up SSL/TLS termination</li><li>Building API gateways</li><li>Configuring request routing and rewriting</li><li>Implementing caching layers</li><li>Setting up health checks and failover</li><li>Protecting backend services</li><li>Adding rate limiting and security headers</li></ul>
+<h2>Core Concepts</h2>
+<h3>Reverse Proxy Architecture</h3>
+<pre><code>Internet → Reverse Proxy → Backend Pool
+                         → [ Server 1 ]
+                         → [ Server 2 ]
+                         → [ Server 3 ]</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li><strong>Load Balancing</strong>: Distribute traffic across servers</li><li><strong>SSL Termination</strong>: Handle TLS at proxy, plain HTTP to backends</li><li><strong>Caching</strong>: Cache responses, reduce backend load</li><li><strong>Security</strong>: Hide backend topology, add security headers</li><li><strong>Compression</strong>: Compress responses before sending to clients</li><li><strong>URL Rewriting</strong>: Transform requests before forwarding</li></ul>
+<h3>Load Balancing Algorithms</h3>
+<p><strong>Round Robin</strong>:</p>
+<pre><code>Request 1 → Server 1
+Request 2 → Server 2
+Request 3 → Server 3
+Request 4 → Server 1 (cycle repeats)</code></pre>
+<p><strong>Least Connections</strong>:</p>
+<pre><code>Server 1: 5 connections  ← Request goes here
+Server 2: 10 connections
+Server 3: 8 connections</code></pre>
+<p><strong>IP Hash</strong>:</p>
+<pre><code>Client IP → Hash → Consistent server assignment
+Same client → Always same server (session affinity)</code></pre>
+<p><strong>Weighted Round Robin</strong>:</p>
+<pre><code>Server 1 (weight: 3) → 3x more traffic
+Server 2 (weight: 1) → 1x traffic
+Server 3 (weight: 2) → 2x traffic</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: SSL Termination</h3>
+<p><strong>Use Case</strong>: Handle TLS at proxy, plain HTTP to backends</p>
+<pre><code class="lang-nginx"># ✅ Good: SSL termination at proxy
+upstream backend {
+    server backend1.internal:8080;
+    server backend2.internal:8080;
+    server backend3.internal:8080;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.example.com;
+
+    ssl_certificate /etc/ssl/certs/api.example.com.crt;
+    ssl_certificate_key /etc/ssl/private/api.example.com.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location / {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Centralized certificate management</li><li>Reduced CPU load on backends</li><li>Easier certificate rotation</li><li>Backend servers can be simpler</li></ul>
+<h3>Pattern 2: Health Checks and Failover</h3>
+<p><strong>Use Case</strong>: Automatic detection of unhealthy backends</p>
+<pre><code class="lang-nginx">upstream backend {
+    server backend1.internal:8080 max_fails=3 fail_timeout=30s;
+    server backend2.internal:8080 max_fails=3 fail_timeout=30s;
+    server backend3.internal:8080 backup;  # Only used if others fail
+
+    keepalive 32;
+}
+
+server {
+    listen 80;
+
+    location / {
+        proxy_pass http://backend;
+        proxy_next_upstream error timeout http_500 http_502 http_503;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 10s;
+        proxy_read_timeout 10s;
+    }
+}</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Automatic failover</li><li>No manual intervention</li><li>Improved availability</li><li>Graceful degradation</li></ul>
+<h3>Pattern 3: Path-Based Routing</h3>
+<p><strong>Use Case</strong>: Route requests to different backends by path</p>
+<pre><code class="lang-nginx">upstream api_backend {
+    server api1.internal:8080;
+    server api2.internal:8080;
+}
+
+upstream web_backend {
+    server web1.internal:3000;
+    server web2.internal:3000;
+}
+
+upstream admin_backend {
+    server admin.internal:4000;
+}
+
+server {
+    listen 80;
+    server_name example.com;
+
+    location /api/ {
+        proxy_pass http://api_backend/;
+        proxy_set_header Host $host;
+    }
+
+    location /admin/ {
+        proxy_pass http://admin_backend/;
+        # Add authentication
+        auth_basic &quot;Admin Area&quot;;
+        auth_basic_user_file /etc/nginx/.htpasswd;
+    }
+
+    location / {
+        proxy_pass http://web_backend;
+        proxy_set_header Host $host;
+    }
+}</code></pre>
+<hr>
+<h2>Implementation Examples</h2>
+<h3>Python Reverse Proxy (with aiohttp)</h3>
+<pre><code class="lang-python">import asyncio
+from aiohttp import web, ClientSession
+from typing import List
+import itertools
+
+class ReverseProxy:
+    def __init__(self, backends: List[str]):
+        self.backends = backends
+        self.backend_cycle = itertools.cycle(backends)
+        self.session = None
+
+    async def start(self):
+        self.session = ClientSession()
+
+    async def stop(self):
+        if self.session:
+            await self.session.close()
+
+    async def health_check(self, backend: str) -&gt; bool:
+        &quot;&quot;&quot;Check if backend is healthy&quot;&quot;&quot;
+        try:
+            async with self.session.get(f&quot;{backend}/health&quot;, timeout=2) as resp:
+                return resp.status == 200
+        except:
+            return False
+
+    async def get_healthy_backend(self) -&gt; str:
+        &quot;&quot;&quot;Round-robin with health checks&quot;&quot;&quot;
+        for _ in range(len(self.backends)):
+            backend = next(self.backend_cycle)
+            if await self.health_check(backend):
+                return backend
+        raise web.HTTPServiceUnavailable(text=&quot;No healthy backends&quot;)
+
+    async def proxy_handler(self, request: web.Request) -&gt; web.Response:
+        &quot;&quot;&quot;Proxy request to backend&quot;&quot;&quot;
+        backend = await self.get_healthy_backend()
+        url = f&quot;{backend}{request.path_qs}&quot;
+
+        # Forward headers
+        headers = {
+            k: v for k, v in request.headers.items()
+            if k.lower() not in (&#x27;host&#x27;, &#x27;connection&#x27;)
+        }
+        headers[&#x27;X-Forwarded-For&#x27;] = request.remote
+        headers[&#x27;X-Real-IP&#x27;] = request.remote
+
+        try:
+            async with self.session.request(
+                method=request.method,
+                url=url,
+                headers=headers,
+                data=await request.read(),
+                timeout=10
+            ) as backend_resp:
+                # Forward response
+                body = await backend_resp.read()
+                return web.Response(
+                    body=body,
+                    status=backend_resp.status,
+                    headers=backend_resp.headers
+                )
+        except asyncio.TimeoutError:
+            raise web.HTTPGatewayTimeout(text=&quot;Backend timeout&quot;)
+        except Exception as e:
+            raise web.HTTPBadGateway(text=f&quot;Backend error: {e}&quot;)
+
+async def init_app():
+    proxy = ReverseProxy([
+        &quot;http://backend1:8080&quot;,
+        &quot;http://backend2:8080&quot;,
+        &quot;http://backend3:8080&quot;
+    ])
+
+    await proxy.start()
+
+    app = web.Application()
+    app.router.add_route(&#x27;*&#x27;, &#x27;/{tail:.*}&#x27;, proxy.proxy_handler)
+    app.on_cleanup.append(lambda app: proxy.stop())
+
+    return app
+
+if __name__ == &#x27;__main__&#x27;:
+    web.run_app(init_app(), port=8000)</code></pre>
+<h3>Go Reverse Proxy with Load Balancing</h3>
+<pre><code class="lang-go">package main
+
+import (
+    &quot;log&quot;
+    &quot;net&quot;
+    &quot;net/http&quot;
+    &quot;net/http/httputil&quot;
+    &quot;net/url&quot;
+    &quot;sync&quot;
+    &quot;time&quot;
+)
+
+type Backend struct {
+    URL          *url.URL
+    Alive        bool
+    mux          sync.RWMutex
+    ReverseProxy *httputil.ReverseProxy
+}
+
+func (b *Backend) SetAlive(alive bool) {
+    b.mux.Lock()
+    defer b.mux.Unlock()
+    b.Alive = alive
+}
+
+func (b *Backend) IsAlive() bool {
+    b.mux.RLock()
+    defer b.mux.RUnlock()
+    return b.Alive
+}
+
+type LoadBalancer struct {
+    backends []*Backend
+    current  int
+    mux      sync.Mutex
+}
+
+func NewLoadBalancer(backendURLs []string) *LoadBalancer {
+    lb := &amp;LoadBalancer{
+        backends: make([]*Backend, len(backendURLs)),
+    }
+
+    for i, urlStr := range backendURLs {
+        backendURL, _ := url.Parse(urlStr)
+        lb.backends[i] = &amp;Backend{
+            URL:          backendURL,
+            Alive:        true,
+            ReverseProxy: httputil.NewSingleHostReverseProxy(backendURL),
+        }
+    }
+
+    // Start health checks
+    go lb.healthCheck()
+
+    return lb
+}
+
+func (lb *LoadBalancer) nextBackend() *Backend {
+    lb.mux.Lock()
+    defer lb.mux.Unlock()
+
+    // Round-robin through healthy backends
+    start := lb.current
+    for {
+        backend := lb.backends[lb.current]
+        lb.current = (lb.current + 1) % len(lb.backends)
+
+        if backend.IsAlive() {
+            return backend
+        }
+
+        // Tried all backends
+        if lb.current == start {
+            return nil
+        }
+    }
+}
+
+func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    backend := lb.nextBackend()
+    if backend == nil {
+        http.Error(w, &quot;Service Unavailable&quot;, http.StatusServiceUnavailable)
+        return
+    }
+
+    // Add forwarding headers
+    r.Header.Set(&quot;X-Forwarded-For&quot;, r.RemoteAddr)
+    r.Header.Set(&quot;X-Real-IP&quot;, r.RemoteAddr)
+
+    backend.ReverseProxy.ServeHTTP(w, r)
+}
+
+func (lb *LoadBalancer) healthCheck() {
+    ticker := time.NewTicker(10 * time.Second)
+    defer ticker.Stop()
+
+    for range ticker.C {
+        for _, backend := range lb.backends {
+            go func(b *Backend) {
+                alive := isBackendAlive(b.URL)
+                b.SetAlive(alive)
+                status := &quot;up&quot;
+                if !alive {
+                    status = &quot;down&quot;
+                }
+                log.Printf(&quot;Backend %s is %s&quot;, b.URL, status)
+            }(backend)
+        }
+    }
+}
+
+func isBackendAlive(u *url.URL) bool {
+    timeout := 2 * time.Second
+    conn, err := net.DialTimeout(&quot;tcp&quot;, u.Host, timeout)
+    if err != nil {
+        return false
+    }
+    defer conn.Close()
+    return true
+}
+
+func main() {
+    backends := []string{
+        &quot;http://localhost:8081&quot;,
+        &quot;http://localhost:8082&quot;,
+        &quot;http://localhost:8083&quot;,
+    }
+
+    lb := NewLoadBalancer(backends)
+
+    server := &amp;http.Server{
+        Addr:         &quot;:8080&quot;,
+        Handler:      lb,
+        ReadTimeout:  10 * time.Second,
+        WriteTimeout: 10 * time.Second,
+    }
+
+    log.Printf(&quot;Load balancer starting on :8080&quot;)
+    log.Fatal(server.ListenAndServe())
+}</code></pre>
+<h3>Caddy Configuration</h3>
+<pre><code class="lang-caddy"># Caddyfile - Simple reverse proxy with auto HTTPS
+example.com {
+    reverse_proxy backend1:8080 backend2:8080 backend3:8080 {
+        lb_policy round_robin
+        health_uri /health
+        health_interval 10s
+        health_timeout 2s
+    }
+
+    # Add security headers
+    header {
+        Strict-Transport-Security &quot;max-age=31536000; includeSubDomains&quot;
+        X-Content-Type-Options &quot;nosniff&quot;
+        X-Frame-Options &quot;DENY&quot;
+        -Server
+    }
+}
+
+# Path-based routing
+api.example.com {
+    reverse_proxy /v1/* backend-v1:8080
+    reverse_proxy /v2/* backend-v2:8080
+}</code></pre>
+<hr>
+<h2>Advanced Patterns</h2>
+<h3>Session Affinity (Sticky Sessions)</h3>
+<pre><code class="lang-nginx">upstream backend {
+    ip_hash;  # Same IP → same backend
+    server backend1.internal:8080;
+    server backend2.internal:8080;
+}
+
+# Or using cookies
+upstream backend {
+    server backend1.internal:8080;
+    server backend2.internal:8080;
+    sticky cookie srv_id expires=1h domain=.example.com path=/;
+}</code></pre>
+<h3>Rate Limiting</h3>
+<pre><code class="lang-nginx"># Define rate limit zone
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+
+server {
+    listen 80;
+
+    location /api/ {
+        limit_req zone=api_limit burst=20 nodelay;
+
+        proxy_pass http://backend;
+    }
+}</code></pre>
+<h3>Request Buffering</h3>
+<pre><code class="lang-nginx">server {
+    listen 80;
+
+    # Buffer large uploads
+    client_body_buffer_size 128k;
+    client_max_body_size 10m;
+
+    location / {
+        proxy_pass http://backend;
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
+        proxy_busy_buffers_size 8k;
+    }
+}</code></pre>
+<h3>WebSocket Proxying</h3>
+<pre><code class="lang-nginx">upstream websocket_backend {
+    server ws1.internal:8080;
+    server ws2.internal:8080;
+}
+
+server {
+    listen 80;
+
+    location /ws/ {
+        proxy_pass http://websocket_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection &quot;upgrade&quot;;
+        proxy_set_header Host $host;
+        proxy_read_timeout 86400;  # 24 hours
+    }
+}</code></pre>
+<hr>
+<h2>Best Practices</h2>
+<h3>1. Always Set Forwarding Headers</h3>
+<pre><code class="lang-nginx"># ✅ Good: Preserve client information
+location / {
+    proxy_pass http://backend;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
+}</code></pre>
+<h3>2. Configure Timeouts</h3>
+<pre><code class="lang-nginx"># ✅ Good: Prevent hanging connections
+location / {
+    proxy_pass http://backend;
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 10s;
+    proxy_read_timeout 10s;
+}</code></pre>
+<h3>3. Use Health Checks</h3>
+<pre><code class="lang-python"># ✅ Good: Active health monitoring
+async def health_check_loop(backends: List[str]):
+    while True:
+        for backend in backends:
+            try:
+                async with session.get(f&quot;{backend}/health&quot;, timeout=2) as resp:
+                    healthy = resp.status == 200
+                    backend_status[backend] = healthy
+            except:
+                backend_status[backend] = False
+        await asyncio.sleep(10)</code></pre>
+<hr>
+<h2>Troubleshooting</h2>
+<h3>Issue 1: 502 Bad Gateway</h3>
+<p><strong>Symptoms</strong>: Proxy cannot reach backend <strong>Common Causes</strong>:</p>
+<ul><li>Backend server down</li><li>Network connectivity issues</li><li>Wrong backend address/port</li><li>Backend timeout</li></ul>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-nginx"># Add retry logic and backup servers
+upstream backend {
+    server backend1.internal:8080 max_fails=3 fail_timeout=30s;
+    server backend2.internal:8080 max_fails=3 fail_timeout=30s;
+    server backup.internal:8080 backup;
+}
+
+server {
+    location / {
+        proxy_pass http://backend;
+        proxy_next_upstream error timeout http_502;
+    }
+}</code></pre>
+<h3>Issue 2: Lost Client IP Address</h3>
+<p><strong>Symptoms</strong>: Backend sees proxy IP, not client IP <strong>Common Causes</strong>:</p>
+<ul><li>Missing X-Forwarded-For header</li><li>Backend not reading forwarded headers</li></ul>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-nginx"># Nginx configuration
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;</code></pre>
+<pre><code class="lang-python"># Backend application (Flask)
+from flask import Flask, request
+
+app = Flask(__name__)
+
+@app.route(&#x27;/&#x27;)
+def index():
+    # Get real client IP
+    client_ip = request.headers.get(&#x27;X-Real-IP&#x27;) or \
+                request.headers.get(&#x27;X-Forwarded-For&#x27;, &#x27;&#x27;).split(&#x27;,&#x27;)[0] or \
+                request.remote_addr
+    return f&quot;Your IP: {client_ip}&quot;</code></pre>
+<h3>Issue 3: Session Affinity Issues</h3>
+<p><strong>Symptoms</strong>: User session lost between requests <strong>Common Causes</strong>:</p>
+<ul><li>Load balancer distributing to different backends</li><li>No sticky sessions configured</li></ul>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-nginx"># Cookie-based sticky sessions
+upstream backend {
+    server backend1.internal:8080;
+    server backend2.internal:8080;
+    sticky cookie srv_id expires=1h;
+}
+
+# Or IP-based
+upstream backend {
+    ip_hash;
+    server backend1.internal:8080;
+    server backend2.internal:8080;
+}</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>proxies-forward-proxy</code> - Forward proxy concepts</li><li><code>proxies-nginx-configuration</code> - Detailed nginx configuration</li><li><code>proxies-traefik-configuration</code> - Traefik setup and configuration</li><li><code>proxies-envoy-proxy</code> - Envoy proxy architecture</li><li><code>proxies-cache-control</code> - Caching strategies</li><li><code>networking-load-balancing</code> - Load balancing algorithms</li><li><code>cryptography-tls-ssl</code> - TLS/SSL configuration</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-27</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/proxies-reverse-proxy.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

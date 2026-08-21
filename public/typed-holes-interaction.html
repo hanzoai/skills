@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>typed-holes-interaction</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/typed-holes-interaction.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/typed-holes-interaction.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>typed-holes-interaction</h1><p class="lede">IDE integration with typed holes - goal-directed programming, hole refinement, case splitting, proof search, tactics, elaborator reflection (Agda, Idris, Lean models)</p><h1>Typed Holes: IDE Interaction</h1>
+<p><strong>Scope</strong>: IDE integration, goal-directed development, hole commands, tactics, elaborator reflection, proof search <strong>Lines</strong>: ~380 <strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Implementing IDE features for typed holes</li><li>Building interactive development environments</li><li>Working with proof assistants (Agda, Idris, Lean)</li><li>Designing goal-directed programming workflows</li><li>Implementing auto-completion with type information</li><li>Adding tactics and proof automation</li></ul>
+<h2>Core Concepts</h2>
+<h3>Hole as Interaction Point</h3>
+<p><strong>Key idea</strong>: Holes are not just placeholders - they&#x27;re interactive development tools</p>
+<pre><code class="lang-python">from dataclasses import dataclass
+from typing import List, Optional, Dict
+
+@dataclass
+class InteractiveHole:
+    &quot;&quot;&quot;Hole with IDE integration&quot;&quot;&quot;
+    name: str
+    expected_type: &#x27;Type&#x27;
+    context: Dict[str, &#x27;Type&#x27;]  # Variables in scope
+    position: tuple  # (line, column) in source
+
+    # IDE features
+    def show_goal(self) -&gt; str:
+        &quot;&quot;&quot;Display what this hole needs to produce&quot;&quot;&quot;
+        return f&quot;Goal: {self.expected_type}&quot;
+
+    def show_context(self) -&gt; List[str]:
+        &quot;&quot;&quot;Display available variables&quot;&quot;&quot;
+        return [f&quot;{var} : {typ}&quot; for var, typ in self.context.items()]
+
+    def suggest_completions(self) -&gt; List[str]:
+        &quot;&quot;&quot;Type-driven code suggestions&quot;&quot;&quot;
+        suggestions = []
+
+        # Suggest variables of compatible type
+        for var, typ in self.context.items():
+            if consistent(typ, self.expected_type):
+                suggestions.append(var)
+
+        # Suggest constructors for expected type
+        if isinstance(self.expected_type, DataType):
+            suggestions.extend(self.expected_type.constructors)
+
+        return suggestions
+
+# Example: Agda-style interaction
+def agda_hole_interaction():
+    &quot;&quot;&quot;
+    In Agda:
+
+    f : ℕ → ℕ
+    f x = {! !}
+
+    C-c C-l (load): Shows hole with index
+    f x = { }0
+
+    C-c C-, (goal): Show goal and context
+      Goal: ℕ
+      ————————————————
+      x : ℕ
+
+    C-c C-r (refine): Try to refine hole
+    C-c C-a (auto): Search for solution
+    &quot;&quot;&quot;
+    pass
+
+print(&quot;Holes are interaction points for development&quot;)</code></pre>
+<h3>Goal-Directed Programming Workflow</h3>
+<p><strong>Workflow</strong>: Types guide development through holes</p>
+<pre><code class="lang-python">class GoalDirectedDevelopment:
+    &quot;&quot;&quot;Goal-directed programming using holes&quot;&quot;&quot;
+
+    @staticmethod
+    def workflow_example():
+        &quot;&quot;&quot;
+        Example: Implement map for lists
+
+        Step 1: Write type signature
+          map : (A → B) → List A → List B
+
+        Step 2: Write skeleton with holes
+          map f xs = ?goal
+
+        Step 3: Inspect goal
+          ?goal : List B
+          Context: f : A → B, xs : List A
+
+        Step 4: Case split on xs
+          map f [] = ?nil-case
+          map f (x :: xs&#x27;) = ?cons-case
+
+        Step 5: Fill each hole
+          ?nil-case : List B
+          Context: f : A → B
+          → Solution: []
+
+          ?cons-case : List B
+          Context: f : A → B, x : A, xs&#x27; : List A
+          → Solution: f x :: map f xs&#x27;
+
+        Step 6: Complete!
+          map f [] = []
+          map f (x :: xs&#x27;) = f x :: map f xs&#x27;
+        &quot;&quot;&quot;
+        pass
+
+    @staticmethod
+    def type_driven_steps():
+        &quot;&quot;&quot;
+        At each hole:
+        1. Inspect goal type
+        2. Check available variables
+        3. Determine possible actions:
+           - Use variable (if type matches)
+           - Apply constructor
+           - Case split on variable
+           - Refine hole structure
+        &quot;&quot;&quot;
+        pass
+
+print(&quot;Goal-directed: types → holes → refinement → solution&quot;)</code></pre>
+<h3>Hole Commands (IDE Protocol)</h3>
+<p><strong>Language Server Protocol</strong> extensions for holes</p>
+<pre><code class="lang-python">@dataclass
+class HoleCommand:
+    &quot;&quot;&quot;IDE command for hole manipulation&quot;&quot;&quot;
+    command_type: str
+    hole_id: str
+    parameters: dict
+
+# Common hole commands
+class HoleCommands:
+    &quot;&quot;&quot;Standard IDE hole commands&quot;&quot;&quot;
+
+    @staticmethod
+    def show_goal(hole: InteractiveHole) -&gt; str:
+        &quot;&quot;&quot;
+        Display goal and context
+
+        Output:
+          Goal: String
+          ————————————————
+          x : Int
+          y : Bool
+        &quot;&quot;&quot;
+        goal = f&quot;Goal: {hole.expected_type}&quot;
+        divider = &quot;—&quot; * 20
+        context_lines = [f&quot;{var} : {typ}&quot; for var, typ in hole.context.items()]
+        return f&quot;{goal}\n{divider}\n&quot; + &quot;\n&quot;.join(context_lines)
+
+    @staticmethod
+    def refine(hole: InteractiveHole, constructor: str) -&gt; &#x27;Expr&#x27;:
+        &quot;&quot;&quot;
+        Refine hole with constructor
+
+        Example:
+          ?h : Bool
+          refine True → True
+          refine if → if ?cond then ?then else ?else
+        &quot;&quot;&quot;
+        match constructor:
+            case &quot;if&quot;:
+                return IfExpr(
+                    Hole(&quot;cond&quot;, TBool(), hole.context),
+                    Hole(&quot;then&quot;, hole.expected_type, hole.context),
+                    Hole(&quot;else&quot;, hole.expected_type, hole.context)
+                )
+            case _:
+                # Apply constructor, create holes for arguments
+                return construct_with_holes(constructor, hole.expected_type)
+
+    @staticmethod
+    def case_split(hole: InteractiveHole, var: str) -&gt; List[tuple[&#x27;Pattern&#x27;, InteractiveHole]]:
+        &quot;&quot;&quot;
+        Case split on variable
+
+        Example:
+          ?h : Bool
+          Context: x : Maybe Int
+
+          case_split on x:
+          →  case x of
+               Nothing → ?nothing-case : Bool
+               Just y  → ?just-case : Bool  (with y : Int)
+        &quot;&quot;&quot;
+        var_type = hole.context[var]
+        constructors = get_constructors(var_type)
+
+        branches = []
+        for ctor in constructors:
+            # Create pattern
+            pattern = make_pattern(ctor)
+            # Create hole for this branch
+            new_context = extend_context(hole.context, pattern)
+            branch_hole = InteractiveHole(
+                name=f&quot;{hole.name}-{ctor.name}&quot;,
+                expected_type=hole.expected_type,
+                context=new_context,
+                position=hole.position
+            )
+            branches.append((pattern, branch_hole))
+
+        return branches
+
+    @staticmethod
+    def auto_solve(hole: InteractiveHole, max_depth: int = 3) -&gt; Optional[&#x27;Expr&#x27;]:
+        &quot;&quot;&quot;
+        Automated proof search / term synthesis
+
+        Try to fill hole automatically using:
+        - Variables in context
+        - Constructor combinations
+        - Recursive calls (if applicable)
+
+        Uses bounded search (max_depth)
+        &quot;&quot;&quot;
+        return proof_search(hole.expected_type, hole.context, max_depth)
+
+print(&quot;IDE commands: show goal, refine, case split, auto-solve&quot;)</code></pre>
+<h3>Proof Search and Auto-Filling</h3>
+<p><strong>Automated hole filling</strong> via search</p>
+<pre><code class="lang-python">class ProofSearch:
+    &quot;&quot;&quot;Automatic term synthesis for holes&quot;&quot;&quot;
+
+    def __init__(self, max_depth: int = 3):
+        self.max_depth = max_depth
+        self.cache = {}  # Memoization
+
+    def search(self, goal: &#x27;Type&#x27;, context: dict, depth: int = 0) -&gt; Optional[&#x27;Expr&#x27;]:
+        &quot;&quot;&quot;
+        Search for term of given type
+
+        Strategy:
+        1. Check context variables (depth 0)
+        2. Try constructors (depth 1)
+        3. Try function application (depth 2+)
+        4. Recursive search on sub-goals
+        &quot;&quot;&quot;
+        if depth &gt; self.max_depth:
+            return None
+
+        # Check cache
+        cache_key = (goal, tuple(context.items()), depth)
+        if cache_key in self.cache:
+            return self.cache[cache_key]
+
+        # Try context variables
+        for var, var_type in context.items():
+            if var_type == goal:
+                return Var(var)
+
+        # Try constructors
+        if isinstance(goal, DataType):
+            for ctor in goal.constructors:
+                term = self.try_constructor(ctor, goal, context, depth)
+                if term:
+                    self.cache[cache_key] = term
+                    return term
+
+        # Try function application
+        for var, var_type in context.items():
+            if isinstance(var_type, TArrow) and var_type.result == goal:
+                # Try to construct argument
+                arg = self.search(var_type.param, context, depth + 1)
+                if arg:
+                    term = App(Var(var), arg)
+                    self.cache[cache_key] = term
+                    return term
+
+        return None
+
+    def try_constructor(self, ctor: &#x27;Constructor&#x27;, goal: &#x27;Type&#x27;, context: dict, depth: int):
+        &quot;&quot;&quot;
+        Try to apply constructor
+
+        For constructor: C : T₁ → ... → Tₙ → G
+        Search for terms of types T₁, ..., Tₙ
+        &quot;&quot;&quot;
+        arg_types = ctor.argument_types()
+        args = []
+
+        for arg_type in arg_types:
+            arg = self.search(arg_type, context, depth + 1)
+            if arg is None:
+                return None  # Can&#x27;t find this argument
+            args.append(arg)
+
+        # Success! Build constructor application
+        return ConstructorApp(ctor, args)
+
+# Example: Auto-solving in Agda
+def agda_auto_example():
+    &quot;&quot;&quot;
+    In Agda:
+
+    sym : {A : Set} {x y : A} → x ≡ y → y ≡ x
+    sym p = {! !}
+
+    C-c C-a (auto):
+    → Tries: refl? No, wrong type.
+    → Tries: case split on p
+    → Tries: pattern match p = refl
+    → Success: sym refl = refl
+    &quot;&quot;&quot;
+    pass
+
+print(&quot;Proof search: automated hole filling within depth bound&quot;)</code></pre>
+<h3>Tactics and Elaborator Reflection</h3>
+<p><strong>Tactics</strong>: Meta-programs that construct terms</p>
+<pre><code class="lang-python"># Idris/Lean style tactics
+@dataclass
+class Tactic:
+    &quot;&quot;&quot;Tactic: function from goal to term (or new goals)&quot;&quot;&quot;
+    name: str
+    implementation: &#x27;Callable&#x27;
+
+class TacticEngine:
+    &quot;&quot;&quot;Execute tactics to fill holes&quot;&quot;&quot;
+
+    def __init__(self):
+        self.tactics = {}
+
+    def register_tactic(self, name: str, impl):
+        &quot;&quot;&quot;Register new tactic&quot;&quot;&quot;
+        self.tactics[name] = Tactic(name, impl)
+
+    def apply_tactic(self, tactic_name: str, hole: InteractiveHole) -&gt; &#x27;TacticResult&#x27;:
+        &quot;&quot;&quot;
+        Apply tactic to hole
+
+        Returns:
+        - Success(expr): Hole filled with expr
+        - NewGoals([hole1, ...]): Hole refined into sub-holes
+        - Failure(msg): Tactic failed
+        &quot;&quot;&quot;
+        tactic = self.tactics[tactic_name]
+        return tactic.implementation(hole)
+
+# Built-in tactics
+def tactic_intro(hole: InteractiveHole) -&gt; &#x27;TacticResult&#x27;:
+    &quot;&quot;&quot;
+    intro: Introduce lambda or forall
+
+    Goal: A → B
+    intro → λx. ?goal&#x27; where ?goal&#x27; : B (x : A)
+    &quot;&quot;&quot;
+    if isinstance(hole.expected_type, TArrow):
+        param_name = fresh_var()
+        new_context = hole.context | {param_name: hole.expected_type.param}
+        new_hole = InteractiveHole(
+            name=f&quot;{hole.name}-body&quot;,
+            expected_type=hole.expected_type.result,
+            context=new_context,
+            position=hole.position
+        )
+        return NewGoals([new_hole])
+    else:
+        return Failure(&quot;intro requires arrow type&quot;)
+
+def tactic_exact(hole: InteractiveHole, term: &#x27;Expr&#x27;) -&gt; &#x27;TacticResult&#x27;:
+    &quot;&quot;&quot;
+    exact: Provide exact term
+
+    Check term has correct type, fill hole
+    &quot;&quot;&quot;
+    if typecheck(term, hole.context) == hole.expected_type:
+        return Success(term)
+    else:
+        return Failure(f&quot;Term has wrong type&quot;)
+
+def tactic_apply(hole: InteractiveHole, func: str) -&gt; &#x27;TacticResult&#x27;:
+    &quot;&quot;&quot;
+    apply: Apply function from context
+
+    Goal: G
+    Context: f : A → B → G
+
+    apply f → New goals: ?arg1 : A, ?arg2 : B
+    &quot;&quot;&quot;
+    func_type = hole.context.get(func)
+    if not func_type:
+        return Failure(f&quot;Unknown function: {func}&quot;)
+
+    # Extract argument types
+    args, result = decompose_arrow(func_type)
+
+    if result != hole.expected_type:
+        return Failure(f&quot;Result type mismatch&quot;)
+
+    # Create holes for arguments
+    new_holes = [
+        InteractiveHole(f&quot;{hole.name}-arg{i}&quot;, arg_type, hole.context, hole.position)
+        for i, arg_type in enumerate(args)
+    ]
+
+    return NewGoals(new_holes)
+
+# Elaborator reflection (Lean/Idris)
+def elaborator_reflection_example():
+    &quot;&quot;&quot;
+    In Lean 4:
+
+    theorem my_theorem : P → Q := by
+      intro p        -- Tactic: introduce hypothesis
+      apply h p      -- Tactic: apply function h
+      exact e        -- Tactic: provide exact term e
+
+    Elaborator reflection: Tactics are functions in meta-level language
+    Access to:
+    - Goal state (holes)
+    - Context
+    - Type information
+    - Can construct terms programmatically
+    &quot;&quot;&quot;
+    pass
+
+print(&quot;Tactics: meta-programs that construct proof terms&quot;)</code></pre>
+<h3>Hole Refinement Strategies</h3>
+<p><strong>Interactive refinement</strong>: Transform holes step-by-step</p>
+<pre><code class="lang-python">class HoleRefinement:
+    &quot;&quot;&quot;Strategies for refining holes&quot;&quot;&quot;
+
+    @staticmethod
+    def by_cases(hole: InteractiveHole, var: str):
+        &quot;&quot;&quot;
+        Refine by case analysis
+
+        Before:
+          ?h : Bool
+          Context: x : Maybe Int
+
+        After (case split on x):
+          case x of
+            Nothing → ?h-nothing : Bool
+            Just y  → ?h-just : Bool  (y : Int in context)
+        &quot;&quot;&quot;
+        pass
+
+    @staticmethod
+    def by_induction(hole: InteractiveHole, var: str):
+        &quot;&quot;&quot;
+        Refine by induction on variable
+
+        Before:
+          ?h : List Int → Int
+          Context: xs : List Int
+
+        After (induction on xs):
+          ?h [] = ?base : Int
+          ?h (x :: xs&#x27;) = ?step : Int
+            where IH : List Int → Int (inductive hypothesis)
+        &quot;&quot;&quot;
+        pass
+
+    @staticmethod
+    def by_computation(hole: InteractiveHole):
+        &quot;&quot;&quot;
+        Refine by normalizing expected type
+
+        Goal: 2 + 2
+        Normalize → Goal: 4
+        Suggest: 4
+        &quot;&quot;&quot;
+        normalized = normalize(hole.expected_type)
+        return InteractiveHole(
+            hole.name,
+            normalized,
+            hole.context,
+            hole.position
+        )
+
+    @staticmethod
+    def by_unification(hole: InteractiveHole, template: &#x27;Expr&#x27;):
+        &quot;&quot;&quot;
+        Refine using template with fresh holes
+
+        Template: f ?x ?y
+        Goal: Int
+
+        Unify: f ?x ?y : Int
+        → ?x : ?, ?y : ?  (infer types)
+        &quot;&quot;&quot;
+        pass
+
+print(&quot;Refinement strategies: cases, induction, computation, unification&quot;)</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Incremental Development</h3>
+<pre><code class="lang-python">def incremental_development_workflow():
+    &quot;&quot;&quot;
+    1. Write top-level type
+    2. Create hole for implementation
+    3. Inspect hole goal
+    4. Refine hole (case split, construct, etc.)
+    5. Repeat for new holes
+    6. Eventually: all holes filled!
+
+    Advantage: Always have well-typed intermediate states
+    &quot;&quot;&quot;
+    print(&quot;Incremental: type → hole → refine → repeat&quot;)</code></pre>
+<h3>Pattern 2: Type-Driven Test Generation</h3>
+<pre><code class="lang-python">def test_generation_from_holes(hole: InteractiveHole):
+    &quot;&quot;&quot;
+    Use hole type to generate tests
+
+    Hole: ?h : Int → Int
+
+    Generate tests:
+    - ?h 0 = ?result0 : Int
+    - ?h 1 = ?result1 : Int
+    - ?h (-1) = ?result-1 : Int
+
+    Fill results interactively, then synthesize implementation
+    &quot;&quot;&quot;
+    test_inputs = generate_test_inputs(hole.expected_type.param)
+
+    tests = []
+    for input_val in test_inputs:
+        result_hole = InteractiveHole(
+            f&quot;result-{input_val}&quot;,
+            hole.expected_type.result,
+            {},
+            hole.position
+        )
+        tests.append((input_val, result_hole))
+
+    return tests
+
+print(&quot;Test generation: use types to create test cases&quot;)</code></pre>
+<h3>Pattern 3: Collaborative Proof Development</h3>
+<pre><code class="lang-python">def collaborative_proof_with_holes():
+    &quot;&quot;&quot;
+    Multiple developers working on proof
+
+    Developer A: Writes theorem statement, creates hole
+    Developer B: Refines hole into cases
+    Developer C: Fills first case
+    Developer D: Fills second case
+
+    Holes enable decomposition of proof work
+    &quot;&quot;&quot;
+    print(&quot;Collaboration: holes split proof into independent pieces&quot;)</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>IDE Commands</h3>
+<p>| Command | Shortcut (Agda) | Purpose | |---------|-----------------|---------| | show goal | C-c C-, | Display goal and context | | refine | C-c C-r | Refine hole with constructor | | case split | C-c C-c | Split on variable | | auto | C-c C-a | Automated search | | give | C-c C-SPC | Fill hole with term |</p>
+<h3>Common Tactics</h3>
+<p>| Tactic | Purpose | Example | |--------|---------|---------| | intro | Introduce binder | λx. ?goal | | exact | Provide exact term | exact: x | | apply | Apply function | apply: f → new goals | | cases | Case analysis | cases x → branches | | induction | Inductive proof | induction xs → base + step | | refl | Reflexivity | prove: x = x |</p>
+<h3>Refinement Strategies</h3>
+<pre><code>By cases: Split on sum/bool type
+By induction: Split on inductive type
+By computation: Normalize and simplify
+By unification: Match pattern template</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Ignoring hole context</strong>: Can&#x27;t provide good suggestions ✅ Show available variables and their types</p>
+<p>❌ <strong>Unbounded proof search</strong>: Hangs IDE ✅ Use depth limit, timeout, resource limits</p>
+<p>❌ <strong>Poor error messages</strong>: &quot;Tactic failed&quot; ✅ Explain why tactic failed, suggest alternatives</p>
+<p>❌ <strong>No undo</strong>: Can&#x27;t backtrack from bad refinement ✅ Support undo/redo for hole operations</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>typed-holes-foundations.md</code> - Basic holes concepts</li><li><code>hazelnut-calculus.md</code> - Edit actions for holes</li><li><code>typed-holes-semantics.md</code> - Advanced type theory</li><li><code>dependent-types.md</code> - Holes in Lean/Agda/Idris</li><li><code>program-verification.md</code> - Tactics for proofs</li><li><code>typed-holes-llm.md</code> - AI-assisted hole filling</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/typed-holes-interaction.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

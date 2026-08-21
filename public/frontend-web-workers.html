@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>frontend-web-workers</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/frontend-web-workers.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/frontend-web-workers.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>frontend-web-workers</h1><p class="lede">Offloading computation with Web Workers API, SharedArrayBuffer, and message passing patterns</p><h1>Web Workers</h1>
+<p><strong>Scope</strong>: Web Workers API, Dedicated Workers, message passing, transferable objects, SharedArrayBuffer, worker lifecycle, React integration <strong>Lines</strong>: ~380 <strong>Last Updated</strong>: 2025-10-27</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Offloading heavy computation from the main thread</li><li>Processing large datasets without blocking UI</li><li>Implementing real-time data processing</li><li>Building CPU-intensive features (image processing, cryptography, parsing)</li><li>Preventing UI jank during complex operations</li><li>Integrating workers with React applications</li><li>Need parallel computation in the browser</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>What Are Web Workers?</h3>
+<p>Web Workers run JavaScript in background threads separate from the main UI thread:</p>
+<p><strong>Benefits</strong>:</p>
+<ul><li>Non-blocking computation</li><li>Parallel processing</li><li>Improved responsiveness</li><li>Better Core Web Vitals (FID/INP)</li></ul>
+<p><strong>Limitations</strong>:</p>
+<ul><li>No DOM access</li><li>No direct access to main thread variables</li><li>Message passing overhead</li><li>Separate global scope</li></ul>
+<p><strong>Use Cases</strong>:</p>
+<ul><li>Image/video processing</li><li>Data parsing (CSV, JSON, XML)</li><li>Cryptography and hashing</li><li>Complex calculations</li><li>Search and filtering large datasets</li><li>Real-time data analysis</li></ul>
+<hr>
+<h2>Creating Web Workers</h2>
+<h3>Basic Worker Setup</h3>
+<p><strong>worker.ts</strong>:</p>
+<pre><code class="lang-typescript">// Worker code runs in separate thread
+self.addEventListener(&#x27;message&#x27;, (event: MessageEvent) =&gt; {
+  const { type, payload } = event.data;
+
+  switch (type) {
+    case &#x27;COMPUTE&#x27;:
+      const result = performHeavyComputation(payload);
+      self.postMessage({ type: &#x27;RESULT&#x27;, payload: result });
+      break;
+
+    case &#x27;CANCEL&#x27;:
+      self.close(); // Terminate worker
+      break;
+  }
+});
+
+function performHeavyComputation(data: number[]): number {
+  // CPU-intensive work
+  return data.reduce((sum, val) =&gt; sum + Math.sqrt(val), 0);
+}
+
+// Signal worker is ready
+self.postMessage({ type: &#x27;READY&#x27; });</code></pre>
+<p><strong>main.ts</strong>:</p>
+<pre><code class="lang-typescript">// Create worker from file
+const worker = new Worker(new URL(&#x27;./worker.ts&#x27;, import.meta.url), {
+  type: &#x27;module&#x27; // Enable ES modules in worker
+});
+
+// Listen for messages
+worker.addEventListener(&#x27;message&#x27;, (event: MessageEvent) =&gt; {
+  const { type, payload } = event.data;
+
+  if (type === &#x27;READY&#x27;) {
+    console.log(&#x27;Worker ready&#x27;);
+  } else if (type === &#x27;RESULT&#x27;) {
+    console.log(&#x27;Result:&#x27;, payload);
+  }
+});
+
+// Handle errors
+worker.addEventListener(&#x27;error&#x27;, (error: ErrorEvent) =&gt; {
+  console.error(&#x27;Worker error:&#x27;, error.message);
+});
+
+// Send message to worker
+worker.postMessage({
+  type: &#x27;COMPUTE&#x27;,
+  payload: [1, 2, 3, 4, 5]
+});
+
+// Cleanup
+worker.terminate();</code></pre>
+<hr>
+<h2>Type-Safe Workers with TypeScript</h2>
+<h3>Strongly Typed Message Protocol</h3>
+<p><strong>types.ts</strong>:</p>
+<pre><code class="lang-typescript">// Define message types
+export type WorkerRequest =
+  | { type: &#x27;COMPUTE&#x27;; payload: number[] }
+  | { type: &#x27;PROCESS_IMAGE&#x27;; payload: ImageData }
+  | { type: &#x27;CANCEL&#x27; };
+
+export type WorkerResponse =
+  | { type: &#x27;READY&#x27; }
+  | { type: &#x27;RESULT&#x27;; payload: number }
+  | { type: &#x27;IMAGE_RESULT&#x27;; payload: ImageData }
+  | { type: &#x27;PROGRESS&#x27;; payload: number }
+  | { type: &#x27;ERROR&#x27;; payload: string };
+
+// Worker context type
+export interface WorkerContext {
+  postMessage(message: WorkerResponse): void;
+  addEventListener(type: &#x27;message&#x27;, listener: (e: MessageEvent&lt;WorkerRequest&gt;) =&gt; void): void;
+}</code></pre>
+<p><strong>typed-worker.ts</strong>:</p>
+<pre><code class="lang-typescript">import type { WorkerRequest, WorkerResponse } from &#x27;./types&#x27;;
+
+const ctx: Worker = self as any;
+
+ctx.addEventListener(&#x27;message&#x27;, (event: MessageEvent&lt;WorkerRequest&gt;) =&gt; {
+  const message = event.data;
+
+  switch (message.type) {
+    case &#x27;COMPUTE&#x27;:
+      const result = compute(message.payload);
+      ctx.postMessage({ type: &#x27;RESULT&#x27;, payload: result });
+      break;
+
+    case &#x27;PROCESS_IMAGE&#x27;:
+      processImage(message.payload);
+      break;
+
+    case &#x27;CANCEL&#x27;:
+      self.close();
+      break;
+  }
+});
+
+function compute(data: number[]): number {
+  return data.reduce((sum, val) =&gt; sum + val, 0);
+}
+
+function processImage(imageData: ImageData): void {
+  // Process image pixels
+  for (let i = 0; i &lt; imageData.data.length; i += 4) {
+    // Apply grayscale
+    const avg = (imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2]) / 3;
+    imageData.data[i] = imageData.data[i + 1] = imageData.data[i + 2] = avg;
+  }
+
+  ctx.postMessage({ type: &#x27;IMAGE_RESULT&#x27;, payload: imageData });
+}
+
+ctx.postMessage({ type: &#x27;READY&#x27; });</code></pre>
+<hr>
+<h2>Transferable Objects</h2>
+<h3>Zero-Copy Message Passing</h3>
+<p>Instead of copying large data, <strong>transfer ownership</strong>:</p>
+<pre><code class="lang-typescript">// Without transfer (copies data - slow)
+worker.postMessage({ imageData: largeImageData });
+
+// With transfer (zero-copy - fast)
+worker.postMessage(
+  { imageData: largeImageData },
+  [largeImageData.data.buffer] // Transfer ownership
+);
+
+// After transfer, largeImageData.data.buffer is neutered (length = 0)
+// Worker now owns the buffer</code></pre>
+<p><strong>Transferable Types</strong>:</p>
+<ul><li><code>ArrayBuffer</code></li><li><code>MessagePort</code></li><li><code>ImageBitmap</code></li><li><code>OffscreenCanvas</code></li></ul>
+<p><strong>Example with ArrayBuffer</strong>:</p>
+<pre><code class="lang-typescript">const data = new Float32Array(1_000_000);
+// Fill with data...
+
+// Transfer buffer to worker
+worker.postMessage(
+  { type: &#x27;PROCESS&#x27;, data: data.buffer },
+  [data.buffer]
+);
+
+// data.buffer is now empty (neutered)
+console.log(data.byteLength); // 0</code></pre>
+<p><strong>Worker receives buffer</strong>:</p>
+<pre><code class="lang-typescript">self.addEventListener(&#x27;message&#x27;, (event) =&gt; {
+  const { data } = event.data;
+  const array = new Float32Array(data);
+
+  // Process array...
+  const result = processArray(array);
+
+  // Transfer back
+  self.postMessage({ result: result.buffer }, [result.buffer]);
+});</code></pre>
+<hr>
+<h2>React Integration</h2>
+<h3>Custom Hook for Workers</h3>
+<p><strong>useWorker.ts</strong>:</p>
+<pre><code class="lang-typescript">import { useEffect, useRef, useState } from &#x27;react&#x27;;
+import type { WorkerRequest, WorkerResponse } from &#x27;./types&#x27;;
+
+export function useWorker&lt;T = any&gt;(workerUrl: string) {
+  const workerRef = useRef&lt;Worker | null&gt;(null);
+  const [isReady, setIsReady] = useState(false);
+  const [result, setResult] = useState&lt;T | null&gt;(null);
+  const [error, setError] = useState&lt;string | null&gt;(null);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() =&gt; {
+    // Create worker
+    const worker = new Worker(new URL(workerUrl, import.meta.url), {
+      type: &#x27;module&#x27;
+    });
+    workerRef.current = worker;
+
+    // Handle messages
+    worker.addEventListener(&#x27;message&#x27;, (event: MessageEvent&lt;WorkerResponse&gt;) =&gt; {
+      const message = event.data;
+
+      switch (message.type) {
+        case &#x27;READY&#x27;:
+          setIsReady(true);
+          break;
+        case &#x27;RESULT&#x27;:
+          setResult(message.payload as T);
+          break;
+        case &#x27;PROGRESS&#x27;:
+          setProgress(message.payload);
+          break;
+        case &#x27;ERROR&#x27;:
+          setError(message.payload);
+          break;
+      }
+    });
+
+    // Handle errors
+    worker.addEventListener(&#x27;error&#x27;, (error: ErrorEvent) =&gt; {
+      setError(error.message);
+    });
+
+    // Cleanup
+    return () =&gt; {
+      worker.terminate();
+      workerRef.current = null;
+    };
+  }, [workerUrl]);
+
+  const postMessage = (message: WorkerRequest, transfer?: Transferable[]) =&gt; {
+    if (workerRef.current &amp;&amp; isReady) {
+      workerRef.current.postMessage(message, transfer || []);
+    }
+  };
+
+  const terminate = () =&gt; {
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      workerRef.current = null;
+      setIsReady(false);
+    }
+  };
+
+  return { postMessage, terminate, isReady, result, error, progress };
+}</code></pre>
+<p><strong>Component usage</strong>:</p>
+<pre><code class="lang-typescript">import { useWorker } from &#x27;./useWorker&#x27;;
+
+export function ImageProcessor() {
+  const { postMessage, result, isReady, progress } = useWorker&lt;ImageData&gt;(&#x27;./image-worker.ts&#x27;);
+  const [imageData, setImageData] = useState&lt;ImageData | null&gt;(null);
+
+  const handleImageUpload = async (file: File) =&gt; {
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement(&#x27;canvas&#x27;);
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext(&#x27;2d&#x27;)!;
+    ctx.drawImage(bitmap, 0, 0);
+
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    setImageData(data);
+
+    // Send to worker with transfer
+    postMessage(
+      { type: &#x27;PROCESS_IMAGE&#x27;, payload: data },
+      [data.data.buffer]
+    );
+  };
+
+  return (
+    &lt;div&gt;
+      &lt;input type=&quot;file&quot; onChange={(e) =&gt; handleImageUpload(e.target.files![0])} /&gt;
+      {!isReady &amp;&amp; &lt;p&gt;Loading worker...&lt;/p&gt;}
+      {progress &gt; 0 &amp;&amp; &lt;progress value={progress} max={100} /&gt;}
+      {result &amp;&amp; &lt;canvas ref={(canvas) =&gt; {
+        if (canvas) {
+          const ctx = canvas.getContext(&#x27;2d&#x27;)!;
+          canvas.width = result.width;
+          canvas.height = result.height;
+          ctx.putImageData(result, 0, 0);
+        }
+      }} /&gt;}
+    &lt;/div&gt;
+  );
+}</code></pre>
+<hr>
+<h2>Worker Pool Pattern</h2>
+<h3>Managing Multiple Workers</h3>
+<pre><code class="lang-typescript">class WorkerPool {
+  private workers: Worker[] = [];
+  private queue: Array&lt;{ task: any; resolve: (value: any) =&gt; void; reject: (reason: any) =&gt; void }&gt; = [];
+  private busyWorkers = new Set&lt;Worker&gt;();
+
+  constructor(
+    private workerUrl: string,
+    private poolSize: number = navigator.hardwareConcurrency || 4
+  ) {
+    for (let i = 0; i &lt; poolSize; i++) {
+      this.createWorker();
+    }
+  }
+
+  private createWorker(): void {
+    const worker = new Worker(new URL(this.workerUrl, import.meta.url), {
+      type: &#x27;module&#x27;
+    });
+
+    worker.addEventListener(&#x27;message&#x27;, (event) =&gt; {
+      this.busyWorkers.delete(worker);
+
+      // Process result and check queue
+      this.processNext();
+    });
+
+    this.workers.push(worker);
+  }
+
+  async execute&lt;T&gt;(task: any): Promise&lt;T&gt; {
+    return new Promise((resolve, reject) =&gt; {
+      this.queue.push({ task, resolve, reject });
+      this.processNext();
+    });
+  }
+
+  private processNext(): void {
+    if (this.queue.length === 0) return;
+
+    const availableWorker = this.workers.find(w =&gt; !this.busyWorkers.has(w));
+    if (!availableWorker) return;
+
+    const { task, resolve, reject } = this.queue.shift()!;
+    this.busyWorkers.add(availableWorker);
+
+    const handler = (event: MessageEvent) =&gt; {
+      availableWorker.removeEventListener(&#x27;message&#x27;, handler);
+      resolve(event.data);
+    };
+
+    availableWorker.addEventListener(&#x27;message&#x27;, handler);
+    availableWorker.postMessage(task);
+  }
+
+  terminate(): void {
+    this.workers.forEach(w =&gt; w.terminate());
+    this.workers = [];
+    this.busyWorkers.clear();
+    this.queue = [];
+  }
+}
+
+// Usage
+const pool = new WorkerPool(&#x27;./compute-worker.ts&#x27;, 4);
+
+async function processBatch(items: number[][]): Promise&lt;number[]&gt; {
+  const results = await Promise.all(
+    items.map(item =&gt; pool.execute({ type: &#x27;COMPUTE&#x27;, payload: item }))
+  );
+  return results;
+}</code></pre>
+<hr>
+<h2>Performance Comparison</h2>
+<h3>Main Thread vs Worker</h3>
+<p><strong>Main thread (blocking)</strong>:</p>
+<pre><code class="lang-typescript">function processDataMainThread(data: number[]): number {
+  console.time(&#x27;main-thread&#x27;);
+  const result = data.reduce((sum, val) =&gt; sum + Math.sqrt(val), 0);
+  console.timeEnd(&#x27;main-thread&#x27;);
+  return result;
+}
+
+// UI becomes unresponsive during processing
+const result = processDataMainThread(new Array(10_000_000).fill(0).map((_, i) =&gt; i));</code></pre>
+<p><strong>Worker (non-blocking)</strong>:</p>
+<pre><code class="lang-typescript">async function processDataWorker(data: number[]): Promise&lt;number&gt; {
+  console.time(&#x27;worker&#x27;);
+
+  const worker = new Worker(new URL(&#x27;./compute-worker.ts&#x27;, import.meta.url), {
+    type: &#x27;module&#x27;
+  });
+
+  const result = await new Promise&lt;number&gt;((resolve) =&gt; {
+    worker.addEventListener(&#x27;message&#x27;, (event) =&gt; {
+      console.timeEnd(&#x27;worker&#x27;);
+      resolve(event.data.payload);
+      worker.terminate();
+    });
+
+    worker.postMessage({ type: &#x27;COMPUTE&#x27;, payload: data });
+  });
+
+  return result;
+}
+
+// UI remains responsive during processing
+const result = await processDataWorker(new Array(10_000_000).fill(0).map((_, i) =&gt; i));</code></pre>
+<p><strong>Benchmark Results</strong> (10M operations):</p>
+<pre><code>Main thread: 450ms (UI blocked)
+Worker:      480ms (UI responsive) + ~5ms setup overhead
+Worker Pool: 120ms (4 workers in parallel)</code></pre>
+<hr>
+<h2>Common Patterns</h2>
+<h3>1. Long-Running Task with Progress</h3>
+<pre><code class="lang-typescript">// worker.ts
+self.addEventListener(&#x27;message&#x27;, (event) =&gt; {
+  const { type, payload } = event.data;
+
+  if (type === &#x27;PROCESS&#x27;) {
+    const total = payload.length;
+    let processed = 0;
+
+    const results = payload.map((item: any) =&gt; {
+      const result = processItem(item);
+      processed++;
+
+      // Report progress every 1000 items
+      if (processed % 1000 === 0) {
+        self.postMessage({
+          type: &#x27;PROGRESS&#x27;,
+          payload: Math.floor((processed / total) * 100)
+        });
+      }
+
+      return result;
+    });
+
+    self.postMessage({ type: &#x27;RESULT&#x27;, payload: results });
+  }
+});</code></pre>
+<h3>2. Cancellable Worker</h3>
+<pre><code class="lang-typescript">// worker.ts
+let cancelled = false;
+
+self.addEventListener(&#x27;message&#x27;, (event) =&gt; {
+  const { type, payload } = event.data;
+
+  if (type === &#x27;CANCEL&#x27;) {
+    cancelled = true;
+    return;
+  }
+
+  if (type === &#x27;COMPUTE&#x27;) {
+    cancelled = false;
+
+    for (let i = 0; i &lt; payload.length; i++) {
+      if (cancelled) {
+        self.postMessage({ type: &#x27;CANCELLED&#x27; });
+        return;
+      }
+
+      // Process item...
+    }
+
+    self.postMessage({ type: &#x27;RESULT&#x27;, payload: results });
+  }
+});</code></pre>
+<h3>3. Worker with Initialization</h3>
+<pre><code class="lang-typescript">// worker.ts
+let initialized = false;
+let wasmModule: any = null;
+
+self.addEventListener(&#x27;message&#x27;, async (event) =&gt; {
+  const { type, payload } = event.data;
+
+  if (type === &#x27;INIT&#x27;) {
+    // Load WASM or other resources
+    wasmModule = await loadWasm(payload.wasmUrl);
+    initialized = true;
+    self.postMessage({ type: &#x27;READY&#x27; });
+    return;
+  }
+
+  if (!initialized) {
+    self.postMessage({ type: &#x27;ERROR&#x27;, payload: &#x27;Not initialized&#x27; });
+    return;
+  }
+
+  // Process with WASM...
+});</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p><strong>Bad: Creating workers repeatedly</strong></p>
+<pre><code class="lang-typescript">❌ // Creates new worker on every call
+function process(data: any) {
+  const worker = new Worker(&#x27;./worker.ts&#x27;);
+  worker.postMessage(data);
+}</code></pre>
+<p><strong>Good: Reuse workers or use pool</strong></p>
+<pre><code class="lang-typescript">✅ const worker = new Worker(&#x27;./worker.ts&#x27;);
+
+function process(data: any) {
+  worker.postMessage(data);
+}
+
+// Or use worker pool for multiple parallel tasks</code></pre>
+<p><strong>Bad: Passing large objects by copy</strong></p>
+<pre><code class="lang-typescript">❌ worker.postMessage({ data: largeArrayBuffer });</code></pre>
+<p><strong>Good: Use transferable objects</strong></p>
+<pre><code class="lang-typescript">✅ worker.postMessage({ data: largeArrayBuffer }, [largeArrayBuffer]);</code></pre>
+<p><strong>Bad: Accessing DOM in worker</strong></p>
+<pre><code class="lang-typescript">❌ // Worker context - NO DOM ACCESS
+document.getElementById(&#x27;result&#x27;); // ERROR</code></pre>
+<p><strong>Good: Pass results to main thread</strong></p>
+<pre><code class="lang-typescript">✅ // Worker sends data
+self.postMessage({ result: computedValue });
+
+// Main thread updates DOM
+worker.addEventListener(&#x27;message&#x27;, (e) =&gt; {
+  document.getElementById(&#x27;result&#x27;).textContent = e.data.result;
+});</code></pre>
+<hr>
+<h2>Browser Compatibility</h2>
+<p>| Feature | Chrome | Firefox | Safari | Edge | |---------|--------|---------|--------|------| | Web Workers | 4+ | 3.5+ | 4+ | 12+ | | Module Workers | 80+ | 114+ | 15+ | 80+ | | Transferable Objects | 13+ | 18+ | 6+ | 12+ | | SharedArrayBuffer | 68+ | 79+ | 15.2+ | 79+ |</p>
+<p><strong>Feature Detection</strong>:</p>
+<pre><code class="lang-typescript">if (typeof Worker !== &#x27;undefined&#x27;) {
+  // Workers supported
+  const worker = new Worker(&#x27;./worker.ts&#x27;, { type: &#x27;module&#x27; });
+} else {
+  // Fallback to main thread
+  const result = processSync(data);
+}</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>browser-concurrency.md</strong> - Service Workers, SharedWorkers, advanced concurrency</li><li><strong>frontend-performance.md</strong> - Overall performance optimization strategies</li><li><strong>react-component-patterns.md</strong> - React patterns and hooks for worker integration</li><li><strong>wasm-basics.md</strong> - Combining WebAssembly with workers for maximum performance</li></ul>
+<hr>
+<h2>Summary</h2>
+<p>Web Workers enable non-blocking computation in the browser:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ul><li>Use workers for CPU-intensive tasks (&gt;50ms)</li><li>Transfer large data instead of copying</li><li>Implement type-safe message protocols</li><li>Use worker pools for parallel processing</li><li>Integrate with React through custom hooks</li><li>Always handle errors and cleanup properly</li><li>Measure actual performance impact</li></ul>
+<p><strong>When to Use</strong>:</p>
+<ul><li>Image/video processing</li><li>Large dataset parsing</li><li>Cryptography</li><li>Search/filtering</li><li>Real-time analytics</li><li>Any computation &gt;50ms</li></ul>
+<p><strong>When NOT to Use</strong>:</p>
+<ul><li>Simple, fast operations (&lt;50ms)</li><li>When you need DOM access</li><li>Frequent small messages (overhead &gt; benefit)</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/frontend-web-workers.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dspy-optimizers</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/dspy-optimizers.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/dspy-optimizers.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>dspy-optimizers</h1><p class="lede">Optimizing DSPy programs with teleprompters, BootstrapFewShot, MIPROv2, and compilation</p><h1>DSPy Optimizers</h1>
+<p><strong>Scope</strong>: Teleprompters, BootstrapFewShot, MIPROv2, COPRO, compilation, metrics <strong>Lines</strong>: ~440 <strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Improving DSPy program accuracy with automatic optimization</li><li>Compiling modules with training examples</li><li>Generating optimized few-shot demonstrations</li><li>Tuning prompts and LM weights programmatically</li><li>Bootstrapping training data from small seed sets</li><li>Evaluating and iterating on DSPy programs</li></ul>
+<h2>Core Concepts</h2>
+<h3>What are Optimizers (Teleprompters)?</h3>
+<p><strong>Definition</strong>: Optimizers automatically improve DSPy programs by finding better prompts, demonstrations, and parameters</p>
+<p><strong>Original term</strong>: &quot;Teleprompters&quot; (legacy name, now called optimizers)</p>
+<p><strong>Purpose</strong>:</p>
+<ul><li><strong>Auto-tune</strong>: Find optimal prompts without manual engineering</li><li><strong>Few-shot learning</strong>: Generate effective demonstrations</li><li><strong>Weight tuning</strong>: Fine-tune model weights (if supported)</li><li><strong>Metric optimization</strong>: Maximize custom metrics</li></ul>
+<p><strong>Key insight</strong>: Instead of manually tweaking prompts, define a metric and let DSPy optimize</p>
+<h3>Optimization Process</h3>
+<p><strong>Compilation workflow</strong>:</p>
+<ol><li><strong>Define metric</strong>: Function that scores predictions</li><li><strong>Prepare dataset</strong>: Training/validation examples</li><li><strong>Choose optimizer</strong>: BootstrapFewShot, MIPROv2, etc.</li><li><strong>Compile</strong>: <code>optimizer.compile(module, trainset=data, metric=metric)</code></li><li><strong>Evaluate</strong>: Test on held-out data</li></ol>
+<h3>Common Optimizers</h3>
+<p><strong>BootstrapFewShot</strong>: Generate few-shot examples</p>
+<ul><li>Simplest optimizer</li><li>Creates demonstrations from successful predictions</li><li>Works with any module</li><li>Fast, effective</li></ul>
+<p><strong>MIPROv2</strong>: Multi-prompt instruction optimization</p>
+<ul><li>Optimizes instructions AND demonstrations</li><li>More sophisticated than BootstrapFewShot</li><li>Better for complex tasks</li><li>Slower but higher quality</li></ul>
+<p><strong>COPRO</strong>: Coordinate prompt optimization</p>
+<ul><li>Optimizes prompts across multiple modules</li><li>Good for multi-stage pipelines</li><li>Considers module interactions</li></ul>
+<p><strong>BootstrapFinetune</strong>: Generate data for fine-tuning</p>
+<ul><li>Creates training data for model fine-tuning</li><li>Requires fine-tunable model</li><li>Best accuracy but most expensive</li></ul>
+<hr>
+<h2>Patterns</h2>
+<h3>Pattern 1: Basic BootstrapFewShot</h3>
+<pre><code class="lang-python">import dspy
+
+# Configure LM
+lm = dspy.LM(&quot;openai/gpt-4o-mini&quot;)
+dspy.configure(lm=lm)
+
+# Define module
+qa = dspy.ChainOfThought(&quot;question -&gt; answer&quot;)
+
+# Prepare training data
+trainset = [
+    dspy.Example(question=&quot;What is the capital of France?&quot;, answer=&quot;Paris&quot;).with_inputs(&quot;question&quot;),
+    dspy.Example(question=&quot;What is 2+2?&quot;, answer=&quot;4&quot;).with_inputs(&quot;question&quot;),
+    dspy.Example(question=&quot;Who wrote Hamlet?&quot;, answer=&quot;William Shakespeare&quot;).with_inputs(&quot;question&quot;),
+]
+
+# Define metric (validation function)
+def validate_answer(example, pred, trace=None):
+    &quot;&quot;&quot;Return True if prediction is correct.&quot;&quot;&quot;
+    return example.answer.lower() == pred.answer.lower()
+
+# Create optimizer
+optimizer = dspy.BootstrapFewShot(metric=validate_answer)
+
+# Compile (optimize) the module
+compiled_qa = optimizer.compile(
+    student=qa,
+    trainset=trainset,
+)
+
+# Use optimized module
+result = compiled_qa(question=&quot;What is the capital of Germany?&quot;)
+print(result.answer)</code></pre>
+<p><strong>What happens</strong>:</p>
+<ul><li>Runs module on training examples</li><li>Keeps successful predictions as demonstrations</li><li>Optimized module uses these as few-shot examples</li><li>Better accuracy on similar tasks</li></ul>
+<h3>Pattern 2: MIPROv2 Optimization</h3>
+<pre><code class="lang-python">import dspy
+
+# More sophisticated optimization
+qa = dspy.ChainOfThought(&quot;question, context -&gt; answer&quot;)
+
+trainset = [
+    dspy.Example(
+        question=&quot;What is DSPy?&quot;,
+        context=&quot;DSPy is a framework for programming language models.&quot;,
+        answer=&quot;A framework for programming language models&quot;
+    ).with_inputs(&quot;question&quot;, &quot;context&quot;),
+    # ... more examples
+]
+
+devset = [
+    # Validation examples (separate from training)
+]
+
+# Define metric with partial credit
+def qa_metric(example, pred, trace=None):
+    &quot;&quot;&quot;Score prediction quality (0.0 to 1.0).&quot;&quot;&quot;
+    answer = pred.answer.lower()
+    gold = example.answer.lower()
+
+    # Exact match
+    if answer == gold:
+        return 1.0
+
+    # Partial match (contains key words)
+    if gold in answer or answer in gold:
+        return 0.5
+
+    return 0.0
+
+# MIPROv2 optimizer
+optimizer = dspy.MIPROv2(
+    metric=qa_metric,
+    auto=&quot;light&quot;,  # or &quot;medium&quot;, &quot;heavy&quot; for more optimization
+    num_candidates=10,  # Number of prompt variations to try
+)
+
+# Compile with training and validation sets
+compiled_qa = optimizer.compile(
+    student=qa,
+    trainset=trainset,
+    valset=devset,  # Used for selecting best prompts
+    max_bootstrapped_demos=4,  # Max few-shot examples
+    max_labeled_demos=2,  # Max examples from trainset
+)
+
+# Optimized module now has better prompts and demonstrations
+result = compiled_qa(question=&quot;What is DSPy?&quot;, context=&quot;...&quot;)</code></pre>
+<p><strong>Benefits over BootstrapFewShot</strong>:</p>
+<ul><li>Optimizes instruction text, not just examples</li><li>Tries multiple prompt variations</li><li>Uses validation set to pick best prompts</li><li>Higher quality but slower</li></ul>
+<h3>Pattern 3: Custom Metric Functions</h3>
+<pre><code class="lang-python">import dspy
+
+# Metric with detailed scoring
+def complex_metric(example, pred, trace=None):
+    &quot;&quot;&quot;Multi-factor metric for comprehensive evaluation.&quot;&quot;&quot;
+    score = 0.0
+
+    # Factor 1: Answer correctness (0.5 weight)
+    if example.answer.lower() in pred.answer.lower():
+        score += 0.5
+
+    # Factor 2: Confidence (0.2 weight)
+    if hasattr(pred, &#x27;confidence&#x27;):
+        try:
+            conf = float(pred.confidence)
+            if 0.7 &lt;= conf &lt;= 1.0:
+                score += 0.2
+        except:
+            pass
+
+    # Factor 3: Reasoning quality (0.3 weight)
+    if hasattr(pred, &#x27;reasoning&#x27;):
+        if len(pred.reasoning.split()) &gt; 10:  # Detailed reasoning
+            score += 0.15
+        if &quot;because&quot; in pred.reasoning.lower():  # Causal reasoning
+            score += 0.15
+
+    return score
+
+# Use metric with optimizer
+optimizer = dspy.BootstrapFewShot(
+    metric=complex_metric,
+    metric_threshold=0.7,  # Only keep examples scoring &gt;= 0.7
+)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Multi-factor quality assessment</li><li>Domain-specific requirements</li><li>Nuanced evaluation beyond exact match</li></ul>
+<h3>Pattern 4: Optimizing Multi-Module Pipelines</h3>
+<pre><code class="lang-python">import dspy
+
+class RAGPipeline(dspy.Module):
+    &quot;&quot;&quot;Retrieval-Augmented Generation pipeline.&quot;&quot;&quot;
+
+    def __init__(self):
+        super().__init__()
+        self.retrieve = dspy.Retrieve(k=3)
+        self.generate = dspy.ChainOfThought(&quot;context, question -&gt; answer&quot;)
+
+    def forward(self, question):
+        passages = self.retrieve(question).passages
+        context = &quot;\n&quot;.join(passages)
+        return self.generate(context=context, question=question)
+
+# Prepare data
+trainset = [
+    dspy.Example(
+        question=&quot;What is DSPy?&quot;,
+        answer=&quot;A framework for programming language models&quot;
+    ).with_inputs(&quot;question&quot;),
+]
+
+# Metric for RAG
+def rag_metric(example, pred, trace=None):
+    # Check if answer is in prediction
+    return example.answer.lower() in pred.answer.lower()
+
+# COPRO optimizer (coordinates across modules)
+optimizer = dspy.COPRO(
+    metric=rag_metric,
+    breadth=10,  # Number of prompt variations per module
+    depth=3,  # Optimization iterations
+)
+
+# Compile entire pipeline
+pipeline = RAGPipeline()
+compiled_pipeline = optimizer.compile(
+    student=pipeline,
+    trainset=trainset,
+)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Multi-stage pipelines (RAG, agents, etc.)</li><li>Need to optimize module interactions</li><li>Complex workflows</li></ul>
+<h3>Pattern 5: BootstrapFinetune (Model Fine-tuning)</h3>
+<pre><code class="lang-python">import dspy
+
+# Requires fine-tunable model
+teacher = dspy.ChainOfThought(&quot;question -&gt; answer&quot;)
+
+# Large training dataset
+trainset = [
+    # Hundreds or thousands of examples
+]
+
+# Generate fine-tuning data
+optimizer = dspy.BootstrapFinetune(
+    metric=lambda ex, pred, trace: ex.answer == pred.answer,
+)
+
+# Creates fine-tuning dataset
+compiled_teacher = optimizer.compile(
+    student=teacher,
+    trainset=trainset,
+    target=&quot;openai/gpt-4o-mini-finetuned&quot;,  # Your fine-tuned model
+)
+
+# Now use fine-tuned model
+finetuned_lm = dspy.LM(&quot;openai/gpt-4o-mini-finetuned&quot;)
+dspy.configure(lm=finetuned_lm)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Have large training dataset (1000+ examples)</li><li>Need maximum accuracy</li><li>Can afford fine-tuning cost</li><li>Task is well-defined and stable</li></ul>
+<h3>Pattern 6: Evaluation-Driven Optimization</h3>
+<pre><code class="lang-python">import dspy
+from dspy.evaluate import Evaluate
+
+# Define program
+program = dspy.ChainOfThought(&quot;question -&gt; answer&quot;)
+
+# Prepare datasets
+trainset = [...]  # Training examples
+valset = [...]    # Validation examples
+testset = [...]   # Test examples (never use for optimization!)
+
+# Define metric
+def accuracy(example, pred, trace=None):
+    return example.answer.lower() == pred.answer.lower()
+
+# Baseline evaluation
+evaluator = Evaluate(
+    devset=testset,
+    metric=accuracy,
+    num_threads=4,  # Parallel evaluation
+)
+
+baseline_score = evaluator(program)
+print(f&quot;Baseline accuracy: {baseline_score:.2%}&quot;)
+
+# Optimize
+optimizer = dspy.MIPROv2(metric=accuracy, auto=&quot;medium&quot;)
+optimized = optimizer.compile(
+    student=program,
+    trainset=trainset,
+    valset=valset,
+)
+
+# Evaluate optimized version
+optimized_score = evaluator(optimized)
+print(f&quot;Optimized accuracy: {optimized_score:.2%}&quot;)
+print(f&quot;Improvement: {(optimized_score - baseline_score):.2%}&quot;)</code></pre>
+<p><strong>Best practice workflow</strong>:</p>
+<ol><li>Baseline evaluation</li><li>Optimize on train/val sets</li><li>Final evaluation on test set</li><li>Compare before/after</li></ol>
+<h3>Pattern 7: Saving and Loading Compiled Programs</h3>
+<pre><code class="lang-python">import dspy
+
+# Compile program
+optimizer = dspy.MIPROv2(metric=my_metric)
+compiled = optimizer.compile(student=program, trainset=trainset)
+
+# Save compiled program
+compiled.save(&quot;optimized_qa.json&quot;)
+
+# Later, load compiled program
+loaded_program = dspy.ChainOfThought(&quot;question -&gt; answer&quot;)
+loaded_program.load(&quot;optimized_qa.json&quot;)
+
+# Use loaded program (has optimized prompts/demos)
+result = loaded_program(question=&quot;What is DSPy?&quot;)</code></pre>
+<p><strong>When to use</strong>:</p>
+<ul><li>Production deployment</li><li>Avoid re-optimizing every run</li><li>Share optimized programs with team</li><li>Version control for prompts</li></ul>
+<h3>Pattern 8: Iterative Optimization</h3>
+<pre><code class="lang-python">import dspy
+
+program = dspy.ChainOfThought(&quot;question -&gt; answer&quot;)
+
+# Start with simple optimizer
+optimizer1 = dspy.BootstrapFewShot(metric=my_metric)
+v1 = optimizer1.compile(student=program, trainset=trainset)
+score_v1 = evaluate(v1)
+
+# If not good enough, try more sophisticated optimizer
+if score_v1 &lt; 0.8:
+    optimizer2 = dspy.MIPROv2(metric=my_metric, auto=&quot;medium&quot;)
+    v2 = optimizer2.compile(student=v1, trainset=trainset, valset=valset)
+    score_v2 = evaluate(v2)
+
+    # If still not good enough, use heavy optimization
+    if score_v2 &lt; 0.9:
+        optimizer3 = dspy.MIPROv2(metric=my_metric, auto=&quot;heavy&quot;)
+        v3 = optimizer3.compile(student=v2, trainset=trainset, valset=valset)
+        score_v3 = evaluate(v3)
+
+# Use best version
+best = max([(score_v1, v1), (score_v2, v2), (score_v3, v3)], key=lambda x: x[0])
+print(f&quot;Best score: {best[0]:.2%}&quot;)
+final_program = best[1]</code></pre>
+<p><strong>Strategy</strong>: Progressive optimization</p>
+<ul><li>Start fast and simple</li><li>Increase sophistication if needed</li><li>Compare results at each stage</li></ul>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Optimizer Comparison</h3>
+<p>| Optimizer | Speed | Quality | Use Case | |-----------|-------|---------|----------| | BootstrapFewShot | Fast | Good | Simple tasks, quick iteration | | MIPROv2 | Medium | Better | Complex tasks, production | | COPRO | Slow | Best (pipelines) | Multi-module workflows | | BootstrapFinetune | Slowest | Best (single module) | Large datasets, max accuracy |</p>
+<h3>Optimization Workflow</h3>
+<pre><code>1. Define metric function
+2. Prepare trainset (and valset)
+3. Choose optimizer
+4. Compile: optimizer.compile(student, trainset)
+5. Evaluate on testset
+6. Save optimized program</code></pre>
+<h3>Metric Function Template</h3>
+<pre><code class="lang-python">def my_metric(example, pred, trace=None):
+    &quot;&quot;&quot;
+    Args:
+        example: Ground truth example
+        pred: Model prediction
+        trace: Execution trace (optional)
+
+    Returns:
+        float: Score between 0.0 and 1.0
+        OR
+        bool: True if correct, False otherwise
+    &quot;&quot;&quot;
+    # Implement scoring logic
+    return score</code></pre>
+<h3>Best Practices</h3>
+<pre><code>✅ DO: Start with BootstrapFewShot for quick iteration
+✅ DO: Use separate train/val/test sets
+✅ DO: Define clear, measurable metrics
+✅ DO: Save optimized programs for production
+✅ DO: Evaluate baseline before optimizing
+
+❌ DON&#x27;T: Optimize on test set (data leakage!)
+❌ DON&#x27;T: Use tiny training sets (&lt;10 examples)
+❌ DON&#x27;T: Ignore metric design (affects optimization)
+❌ DON&#x27;T: Re-optimize in production (pre-compile)</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>Optimizing on test set</strong>: Data leakage, inflated scores</p>
+<pre><code class="lang-python"># Bad
+optimizer.compile(student=program, trainset=testset)  # WRONG!</code></pre>
+<p>✅ Use separate train/val/test splits:</p>
+<pre><code class="lang-python"># Good
+compiled = optimizer.compile(student=program, trainset=trainset, valset=valset)
+final_score = evaluate(compiled, testset)  # Honest evaluation</code></pre>
+<p>❌ <strong>Vague metrics</strong>: Optimizer can&#x27;t improve what it can&#x27;t measure</p>
+<pre><code class="lang-python"># Bad
+def bad_metric(example, pred, trace=None):
+    return True  # Always returns True, useless!</code></pre>
+<p>✅ Define clear, discriminative metrics:</p>
+<pre><code class="lang-python"># Good
+def good_metric(example, pred, trace=None):
+    return example.answer.lower() == pred.answer.lower()</code></pre>
+<p>❌ <strong>Not evaluating baseline</strong>: Don&#x27;t know if optimization helped</p>
+<pre><code class="lang-python"># Bad - skip straight to optimization
+optimized = optimizer.compile(...)  # Did it improve? Unknown!</code></pre>
+<p>✅ Always evaluate baseline first:</p>
+<pre><code class="lang-python"># Good
+baseline_score = evaluate(program, testset)
+optimized = optimizer.compile(program, trainset)
+optimized_score = evaluate(optimized, testset)
+print(f&quot;Improvement: {optimized_score - baseline_score}&quot;)</code></pre>
+<p>❌ <strong>Tiny training sets</strong>: Not enough signal for optimization</p>
+<pre><code class="lang-python"># Bad
+trainset = [example1, example2]  # Only 2 examples</code></pre>
+<p>✅ Use adequate training data:</p>
+<pre><code class="lang-python"># Good
+trainset = [...]  # 50+ examples for BootstrapFewShot, 500+ for MIPROv2</code></pre>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><code>dspy-evaluation.md</code> - Evaluating DSPy programs with metrics</li><li><code>dspy-modules.md</code> - Modules to optimize</li><li><code>dspy-signatures.md</code> - Signatures affected by optimization</li><li><code>llm-dataset-preparation.md</code> - Preparing training datasets</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-25 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/dspy-optimizers.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,1116 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ml-llm-as-judge</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ml-llm-as-judge.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ml-llm-as-judge.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ml-llm-as-judge</h1><p class="lede">Comprehensive guide to LLM-as-judge evaluation patterns including Prometheus 2 models, G-Eval framework, pairwise/pointwise/reference-guided methods, bias mitigation, and uncertainty quantification</p><h1>LLM-as-Judge Evaluation</h1>
+<p>Last Updated: 2025-10-26</p>
+<h2>When to Use This Skill</h2>
+<p>Use LLM-as-judge evaluation when:</p>
+<ul><li><strong>Subjective quality metrics</strong>: Evaluating helpfulness, coherence, creativity, tone</li><li><strong>Open-ended generation</strong>: Assessing essay writing, creative content, dialogue quality</li><li><strong>No ground truth</strong>: Tasks where reference answers don&#x27;t exist or are insufficient</li><li><strong>Human preference alignment</strong>: Approximating human judgments at scale</li><li><strong>Rapid iteration</strong>: Quick feedback on prompt or model changes without human annotation</li><li><strong>Multi-dimensional evaluation</strong>: Assessing multiple quality aspects simultaneously</li><li><strong>Pairwise comparison</strong>: A/B testing between model outputs or prompt variations</li><li><strong>Cost-effective scaling</strong>: Replacing expensive human evaluation for certain tasks</li></ul>
+<p><strong>Anti-pattern</strong>: Using LLM-as-judge for tasks with <strong>objective ground truth</strong> (use exact match, BLEU, etc. instead). Never rely solely on LLM judges without validation against human judgments.</p>
+<h2>Core Concepts</h2>
+<h3>Evaluation Paradigms</h3>
+<p><strong>1. Pointwise Evaluation</strong></p>
+<ul><li>Judge evaluates single output independently</li><li>Assigns absolute score (e.g., 1-5 rating)</li><li>Simple but prone to inconsistent scale usage</li></ul>
+<p><strong>2. Pairwise Evaluation</strong></p>
+<ul><li>Judge compares two outputs (A vs B)</li><li>Determines which is better or if tied</li><li>More reliable than pointwise (relative comparison easier than absolute)</li><li>Can suffer from position bias</li></ul>
+<p><strong>3. Reference-Guided Evaluation</strong></p>
+<ul><li>Judge has access to reference answer</li><li>Evaluates output quality against reference</li><li>Useful for factual accuracy, task completion</li></ul>
+<h3>LLM Judge Models (2024-2025)</h3>
+<p><strong>Prometheus 2 (Fine-tuned Evaluators)</strong></p>
+<ul><li><strong>Models</strong>: prometheus-7b-v2.0, prometheus-8x7b-v2.0</li><li><strong>Specialty</strong>: Fine-tuned specifically for evaluation tasks</li><li><strong>Strengths</strong>: Consistent scoring, explicit rubrics, reduced bias</li><li><strong>Variants</strong>: BGB (Best-of-n Greedy + Backtracking) for improved accuracy</li><li><strong>Open source</strong>: Full control and transparency</li></ul>
+<p><strong>G-Eval (GPT-based)</strong></p>
+<ul><li><strong>Framework</strong>: Uses GPT-4 for evaluation with chain-of-thought</li><li><strong>Strengths</strong>: High correlation with human judgments, flexible criteria</li><li><strong>Weaknesses</strong>: More expensive, potential GPT-4 biases</li></ul>
+<p><strong>GPT-4 / Claude 3 Opus (General-purpose)</strong></p>
+<ul><li><strong>Use case</strong>: Quick prototyping, high-quality evaluations</li><li><strong>Strengths</strong>: Strong reasoning, nuanced judgments</li><li><strong>Weaknesses</strong>: Expensive, API-dependent, potential biases</li></ul>
+<p><strong>Llama-3-70B-Instruct / Mixtral-8x7B</strong></p>
+<ul><li><strong>Use case</strong>: Cost-effective, self-hosted evaluation</li><li><strong>Strengths</strong>: Good performance for many tasks, lower cost</li><li><strong>Weaknesses</strong>: Lower quality than specialized models</li></ul>
+<h3>Bias Mitigation Strategies</h3>
+<p><strong>Position Bias</strong>: Judge favors first/second position in pairwise comparisons</p>
+<ul><li><strong>Solution</strong>: Swap positions and average scores</li></ul>
+<p><strong>Verbosity Bias</strong>: Judge favors longer responses</p>
+<ul><li><strong>Solution</strong>: Include length-agnostic criteria, normalize by length</li></ul>
+<p><strong>Self-Enhancement Bias</strong>: Judge favors outputs from same model family</p>
+<ul><li><strong>Solution</strong>: Use different model for judging than generation</li></ul>
+<p><strong>Scale Inconsistency</strong>: Judge uses rating scale inconsistently</p>
+<ul><li><strong>Solution</strong>: Use pairwise comparisons or calibration sets</li></ul>
+<h3>Uncertainty Quantification</h3>
+<p><strong>Self-Consistency</strong>: Sample multiple judgments and measure agreement <strong>Confidence Scoring</strong>: Ask judge to provide confidence level <strong>Multi-Judge Ensemble</strong>: Use multiple judges and measure consensus</p>
+<h2>Implementation Patterns</h2>
+<h3>Pattern 1: Prometheus 2 Pointwise Evaluation</h3>
+<p><strong>When to use</strong>: Fine-tuned evaluator with explicit rubrics</p>
+<pre><code class="lang-python">from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+class PrometheusEvaluator:
+    &quot;&quot;&quot;Prometheus 2 evaluator for pointwise assessment.&quot;&quot;&quot;
+
+    def __init__(self, model_name=&quot;prometheus-eval/prometheus-7b-v2.0&quot;):
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype=torch.bfloat16,
+            device_map=&quot;auto&quot;,
+        )
+
+    def evaluate(
+        self,
+        instruction: str,
+        response: str,
+        reference_answer: str = None,
+        rubric: str = None,
+    ) -&gt; dict:
+        &quot;&quot;&quot;
+        Evaluate response using Prometheus format.
+
+        Args:
+            instruction: The task instruction
+            response: The response to evaluate
+            reference_answer: Optional reference answer
+            rubric: Evaluation rubric (5-point scale by default)
+
+        Returns:
+            Dict with score and feedback
+        &quot;&quot;&quot;
+        # Default rubric
+        if rubric is None:
+            rubric = &quot;&quot;&quot;
+1: The response is completely incorrect or irrelevant.
+2: The response has major errors or misses key points.
+3: The response is acceptable but has some mistakes or lacks detail.
+4: The response is good with minor issues.
+5: The response is excellent, accurate, and comprehensive.
+&quot;&quot;&quot;
+
+        # Prometheus prompt format
+        if reference_answer:
+            prompt = f&quot;&quot;&quot;###Task Description:
+An instruction (might include an Input inside it), a response to evaluate, and a score rubric representing a evaluation criteria are given.
+
+1. Write a detailed feedback that assess the quality of the response strictly based on the given score rubric, not evaluating in general.
+2. After writing a feedback, write a score that is an integer between 1 and 5. You should refer to the score rubric.
+3. The output format should look as follows: \&quot;Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)\&quot;
+
+###The instruction to evaluate:
+{instruction}
+
+###Response to evaluate:
+{response}
+
+###Reference Answer (Score 5):
+{reference_answer}
+
+###Score Rubrics:
+{rubric}
+
+###Feedback:&quot;&quot;&quot;
+        else:
+            prompt = f&quot;&quot;&quot;###Task Description:
+An instruction (might include an Input inside it), a response to evaluate, and a score rubric representing a evaluation criteria are given.
+
+1. Write a detailed feedback that assess the quality of the response strictly based on the given score rubric, not evaluating in general.
+2. After writing a feedback, write a score that is an integer between 1 and 5. You should refer to the score rubric.
+3. The output format should look as follows: \&quot;Feedback: (write a feedback for criteria) [RESULT] (an integer number between 1 and 5)\&quot;
+
+###The instruction to evaluate:
+{instruction}
+
+###Response to evaluate:
+{response}
+
+###Score Rubrics:
+{rubric}
+
+###Feedback:&quot;&quot;&quot;
+
+        # Generate evaluation
+        inputs = self.tokenizer(prompt, return_tensors=&quot;pt&quot;).to(self.model.device)
+
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=512,
+                temperature=0.0,
+                do_sample=False,
+            )
+
+        evaluation = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+        # Extract score and feedback
+        feedback = evaluation.split(&quot;###Feedback:&quot;)[-1].strip()
+
+        # Parse score
+        import re
+        score_match = re.search(r&#x27;\[RESULT\]\s*(\d+)&#x27;, feedback)
+        score = int(score_match.group(1)) if score_match else None
+
+        return {
+            &quot;score&quot;: score,
+            &quot;feedback&quot;: feedback.split(&quot;[RESULT]&quot;)[0].strip() if score else feedback,
+            &quot;raw_output&quot;: evaluation,
+        }
+
+# Usage
+evaluator = PrometheusEvaluator()
+
+result = evaluator.evaluate(
+    instruction=&quot;Explain photosynthesis in simple terms.&quot;,
+    response=&quot;Photosynthesis is the process where plants use sunlight to make food from water and carbon dioxide.&quot;,
+    reference_answer=&quot;Photosynthesis is the process by which plants convert light energy into chemical energy. Plants use sunlight, water, and carbon dioxide to produce glucose (sugar) and oxygen.&quot;,
+)
+
+print(f&quot;Score: {result[&#x27;score&#x27;]}/5&quot;)
+print(f&quot;Feedback: {result[&#x27;feedback&#x27;]}&quot;)</code></pre>
+<h3>Pattern 2: G-Eval Framework</h3>
+<p><strong>When to use</strong>: GPT-4 based evaluation with chain-of-thought</p>
+<pre><code class="lang-python">from openai import OpenAI
+import json
+
+class GEvalEvaluator:
+    &quot;&quot;&quot;G-Eval framework using GPT-4 with chain-of-thought.&quot;&quot;&quot;
+
+    def __init__(self, model=&quot;gpt-4-turbo-preview&quot;):
+        self.client = OpenAI()
+        self.model = model
+
+    def evaluate(
+        self,
+        task_description: str,
+        criteria: str,
+        response: str,
+        context: str = None,
+        min_score: int = 1,
+        max_score: int = 5,
+    ) -&gt; dict:
+        &quot;&quot;&quot;
+        Evaluate response using G-Eval with chain-of-thought.
+
+        Args:
+            task_description: What the task is
+            criteria: What to evaluate (coherence, fluency, etc.)
+            response: The response to evaluate
+            context: Optional context (e.g., prompt, reference)
+            min_score: Minimum score
+            max_score: Maximum score
+
+        Returns:
+            Dict with score, reasoning, and confidence
+        &quot;&quot;&quot;
+        # G-Eval prompt with chain-of-thought
+        prompt = f&quot;&quot;&quot;You will be given a task description and evaluation criteria. Your job is to evaluate the given response based on the criteria.
+
+Task Description:
+{task_description}
+
+Evaluation Criteria:
+{criteria}
+
+{f&quot;Context: {context}&quot; if context else &quot;&quot;}
+
+Response to Evaluate:
+{response}
+
+Please evaluate step-by-step:
+1. First, identify the key aspects of the evaluation criteria
+2. Analyze how well the response meets each aspect
+3. Provide a final score from {min_score} to {max_score}
+
+Your response MUST be valid JSON in this format:
+{{
+  &quot;reasoning&quot;: &quot;Detailed step-by-step analysis&quot;,
+  &quot;score&quot;: &lt;integer from {min_score} to {max_score}&gt;,
+  &quot;confidence&quot;: &lt;float from 0.0 to 1.0&gt;
+}}
+&quot;&quot;&quot;
+
+        # Call GPT-4 with JSON mode
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    &quot;role&quot;: &quot;system&quot;,
+                    &quot;content&quot;: &quot;You are an expert evaluator. Provide thoughtful, unbiased assessments.&quot;,
+                },
+                {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: prompt},
+            ],
+            response_format={&quot;type&quot;: &quot;json_object&quot;},
+            temperature=0.0,
+        )
+
+        result = json.loads(response.choices[0].message.content)
+
+        return result
+
+    def evaluate_with_uncertainty(
+        self,
+        task_description: str,
+        criteria: str,
+        response: str,
+        num_samples: int = 5,
+    ) -&gt; dict:
+        &quot;&quot;&quot;
+        Evaluate with uncertainty quantification via self-consistency.
+
+        Args:
+            task_description: Task description
+            criteria: Evaluation criteria
+            response: Response to evaluate
+            num_samples: Number of evaluations to sample
+
+        Returns:
+            Dict with mean score, std, and all samples
+        &quot;&quot;&quot;
+        scores = []
+        reasonings = []
+
+        for _ in range(num_samples):
+            result = self.evaluate(task_description, criteria, response)
+            scores.append(result[&quot;score&quot;])
+            reasonings.append(result[&quot;reasoning&quot;])
+
+        import numpy as np
+
+        return {
+            &quot;mean_score&quot;: np.mean(scores),
+            &quot;std_score&quot;: np.std(scores),
+            &quot;min_score&quot;: np.min(scores),
+            &quot;max_score&quot;: np.max(scores),
+            &quot;all_scores&quot;: scores,
+            &quot;sample_reasonings&quot;: reasonings,
+            &quot;confidence&quot;: 1.0 - (np.std(scores) / np.mean(scores)) if np.mean(scores) &gt; 0 else 0.0,
+        }
+
+# Usage
+evaluator = GEvalEvaluator()
+
+# Single evaluation
+result = evaluator.evaluate(
+    task_description=&quot;Summarize a scientific article for general audience&quot;,
+    criteria=&quot;Evaluate based on: 1) Accuracy of scientific content, 2) Clarity for non-experts, 3) Conciseness&quot;,
+    response=&quot;Researchers found that exercise increases brain health by promoting neurogenesis. Regular physical activity can improve memory and reduce dementia risk.&quot;,
+    context=&quot;Original article discusses BDNF protein and hippocampal neurogenesis in exercise studies.&quot;,
+)
+
+print(f&quot;Score: {result[&#x27;score&#x27;]}/5&quot;)
+print(f&quot;Reasoning: {result[&#x27;reasoning&#x27;]}&quot;)
+
+# Evaluation with uncertainty
+uncertain_result = evaluator.evaluate_with_uncertainty(
+    task_description=&quot;Summarize a scientific article for general audience&quot;,
+    criteria=&quot;Evaluate based on accuracy, clarity, and conciseness&quot;,
+    response=&quot;Researchers found that exercise increases brain health...&quot;,
+    num_samples=5,
+)
+
+print(f&quot;Mean score: {uncertain_result[&#x27;mean_score&#x27;]:.2f} ± {uncertain_result[&#x27;std_score&#x27;]:.2f}&quot;)
+print(f&quot;Confidence: {uncertain_result[&#x27;confidence&#x27;]:.2f}&quot;)</code></pre>
+<h3>Pattern 3: Pairwise Comparison with Bias Mitigation</h3>
+<p><strong>When to use</strong>: A/B testing with position bias correction</p>
+<pre><code class="lang-python">from openai import OpenAI
+import json
+
+class PairwiseJudge:
+    &quot;&quot;&quot;Pairwise comparison with position bias mitigation.&quot;&quot;&quot;
+
+    def __init__(self, model=&quot;gpt-4-turbo-preview&quot;):
+        self.client = OpenAI()
+        self.model = model
+
+    def compare(
+        self,
+        instruction: str,
+        response_a: str,
+        response_b: str,
+        criteria: str = &quot;overall quality&quot;,
+    ) -&gt; dict:
+        &quot;&quot;&quot;
+        Compare two responses with bias mitigation.
+
+        Args:
+            instruction: The task instruction
+            response_a: First response
+            response_b: Second response
+            criteria: What to compare on
+
+        Returns:
+            Dict with winner and reasoning
+        &quot;&quot;&quot;
+        # First comparison (A first, B second)
+        result_ab = self._single_comparison(
+            instruction, response_a, response_b, criteria, &quot;A&quot;, &quot;B&quot;
+        )
+
+        # Second comparison (B first, A second) to mitigate position bias
+        result_ba = self._single_comparison(
+            instruction, response_b, response_a, criteria, &quot;B&quot;, &quot;A&quot;
+        )
+
+        # Aggregate results
+        if result_ab[&quot;winner&quot;] == result_ba[&quot;winner&quot;]:
+            # Consistent winner
+            winner = result_ab[&quot;winner&quot;]
+            confidence = &quot;high&quot;
+        elif result_ab[&quot;winner&quot;] == &quot;tie&quot; or result_ba[&quot;winner&quot;] == &quot;tie&quot;:
+            # One or both say tie
+            winner = &quot;tie&quot;
+            confidence = &quot;medium&quot;
+        else:
+            # Disagreement - position bias detected
+            winner = &quot;tie&quot;
+            confidence = &quot;low&quot;
+
+        return {
+            &quot;winner&quot;: winner,
+            &quot;confidence&quot;: confidence,
+            &quot;reasoning_ab&quot;: result_ab[&quot;reasoning&quot;],
+            &quot;reasoning_ba&quot;: result_ba[&quot;reasoning&quot;],
+            &quot;position_bias_detected&quot;: result_ab[&quot;winner&quot;] != result_ba[&quot;winner&quot;] and &quot;tie&quot; not in [result_ab[&quot;winner&quot;], result_ba[&quot;winner&quot;]],
+        }
+
+    def _single_comparison(
+        self,
+        instruction: str,
+        response_first: str,
+        response_second: str,
+        criteria: str,
+        first_label: str,
+        second_label: str,
+    ) -&gt; dict:
+        &quot;&quot;&quot;Single pairwise comparison.&quot;&quot;&quot;
+        prompt = f&quot;&quot;&quot;Compare the following two responses to the given instruction based on {criteria}.
+
+Instruction:
+{instruction}
+
+Response {first_label}:
+{response_first}
+
+Response {second_label}:
+{response_second}
+
+Which response is better? Provide your answer as JSON:
+{{
+  &quot;winner&quot;: &quot;{first_label}&quot; or &quot;{second_label}&quot; or &quot;tie&quot;,
+  &quot;reasoning&quot;: &quot;Detailed explanation of why&quot;
+}}
+&quot;&quot;&quot;
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    &quot;role&quot;: &quot;system&quot;,
+                    &quot;content&quot;: &quot;You are an objective evaluator. Provide fair, unbiased comparisons.&quot;,
+                },
+                {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: prompt},
+            ],
+            response_format={&quot;type&quot;: &quot;json_object&quot;},
+            temperature=0.0,
+        )
+
+        result = json.loads(response.choices[0].message.content)
+        return result
+
+# Usage
+judge = PairwiseJudge()
+
+result = judge.compare(
+    instruction=&quot;Write a haiku about spring&quot;,
+    response_a=&quot;Cherry blossoms bloom\nGentle breeze carries petals\nSpring has come again&quot;,
+    response_b=&quot;Flowers are blooming\nIt is springtime outside now\nNature is pretty&quot;,
+    criteria=&quot;poetic quality and imagery&quot;,
+)
+
+print(f&quot;Winner: {result[&#x27;winner&#x27;]}&quot;)
+print(f&quot;Confidence: {result[&#x27;confidence&#x27;]}&quot;)
+print(f&quot;Position bias detected: {result[&#x27;position_bias_detected&#x27;]}&quot;)
+print(f&quot;Reasoning (A-B): {result[&#x27;reasoning_ab&#x27;]}&quot;)</code></pre>
+<h3>Pattern 4: Multi-Dimensional Evaluation</h3>
+<p><strong>When to use</strong>: Assessing multiple quality aspects simultaneously</p>
+<pre><code class="lang-python">from typing import List, Dict
+from openai import OpenAI
+import json
+
+class MultiDimensionalJudge:
+    &quot;&quot;&quot;Evaluate response across multiple dimensions.&quot;&quot;&quot;
+
+    def __init__(self, model=&quot;gpt-4-turbo-preview&quot;):
+        self.client = OpenAI()
+        self.model = model
+
+    def evaluate(
+        self,
+        instruction: str,
+        response: str,
+        dimensions: List[Dict[str, str]],
+    ) -&gt; dict:
+        &quot;&quot;&quot;
+        Evaluate response across multiple dimensions.
+
+        Args:
+            instruction: Task instruction
+            response: Response to evaluate
+            dimensions: List of {name, description, min_score, max_score} dicts
+
+        Returns:
+            Dict with scores per dimension and overall
+        &quot;&quot;&quot;
+        # Build dimension descriptions
+        dimension_descriptions = []
+        for dim in dimensions:
+            dimension_descriptions.append(
+                f&quot;- {dim[&#x27;name&#x27;]}: {dim[&#x27;description&#x27;]} (scale: {dim.get(&#x27;min_score&#x27;, 1)}-{dim.get(&#x27;max_score&#x27;, 5)})&quot;
+            )
+
+        prompt = f&quot;&quot;&quot;Evaluate the following response across multiple dimensions.
+
+Instruction:
+{instruction}
+
+Response:
+{response}
+
+Evaluation Dimensions:
+{chr(10).join(dimension_descriptions)}
+
+For each dimension:
+1. Provide a score within the specified range
+2. Explain your reasoning
+
+Return your evaluation as JSON:
+{{
+  &quot;dimensions&quot;: [
+    {{
+      &quot;name&quot;: &quot;dimension_name&quot;,
+      &quot;score&quot;: &lt;score&gt;,
+      &quot;reasoning&quot;: &quot;explanation&quot;
+    }},
+    ...
+  ],
+  &quot;overall_score&quot;: &lt;average score&gt;,
+  &quot;summary&quot;: &quot;overall assessment&quot;
+}}
+&quot;&quot;&quot;
+
+        response_eval = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    &quot;role&quot;: &quot;system&quot;,
+                    &quot;content&quot;: &quot;You are an expert evaluator. Assess each dimension independently.&quot;,
+                },
+                {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: prompt},
+            ],
+            response_format={&quot;type&quot;: &quot;json_object&quot;},
+            temperature=0.0,
+        )
+
+        result = json.loads(response_eval.choices[0].message.content)
+
+        # Calculate weighted overall score if weights provided
+        if any(&quot;weight&quot; in dim for dim in dimensions):
+            weighted_score = sum(
+                dim_result[&quot;score&quot;] * next((d[&quot;weight&quot;] for d in dimensions if d[&quot;name&quot;] == dim_result[&quot;name&quot;]), 1.0)
+                for dim_result in result[&quot;dimensions&quot;]
+            ) / sum(dim.get(&quot;weight&quot;, 1.0) for dim in dimensions)
+
+            result[&quot;weighted_overall_score&quot;] = weighted_score
+
+        return result
+
+# Usage
+judge = MultiDimensionalJudge()
+
+result = judge.evaluate(
+    instruction=&quot;Explain quantum entanglement to a high school student&quot;,
+    response=&quot;Quantum entanglement is when two particles are connected in a weird way. If you measure one particle, it instantly affects the other, even if they&#x27;re far apart. Einstein called it &#x27;spooky action at a distance.&#x27; It&#x27;s like having two magic coins that always land on opposite sides.&quot;,
+    dimensions=[
+        {
+            &quot;name&quot;: &quot;accuracy&quot;,
+            &quot;description&quot;: &quot;Scientific accuracy of the explanation&quot;,
+            &quot;min_score&quot;: 1,
+            &quot;max_score&quot;: 5,
+            &quot;weight&quot;: 2.0,  # Most important
+        },
+        {
+            &quot;name&quot;: &quot;clarity&quot;,
+            &quot;description&quot;: &quot;How clear and understandable the explanation is&quot;,
+            &quot;min_score&quot;: 1,
+            &quot;max_score&quot;: 5,
+            &quot;weight&quot;: 1.5,
+        },
+        {
+            &quot;name&quot;: &quot;engagement&quot;,
+            &quot;description&quot;: &quot;How engaging and interesting the explanation is&quot;,
+            &quot;min_score&quot;: 1,
+            &quot;max_score&quot;: 5,
+            &quot;weight&quot;: 1.0,
+        },
+        {
+            &quot;name&quot;: &quot;appropriate_level&quot;,
+            &quot;description&quot;: &quot;Whether the explanation is appropriate for high school students&quot;,
+            &quot;min_score&quot;: 1,
+            &quot;max_score&quot;: 5,
+            &quot;weight&quot;: 1.5,
+        },
+    ],
+)
+
+print(&quot;Dimension scores:&quot;)
+for dim in result[&quot;dimensions&quot;]:
+    print(f&quot;  {dim[&#x27;name&#x27;]}: {dim[&#x27;score&#x27;]}/5 - {dim[&#x27;reasoning&#x27;]}&quot;)
+
+print(f&quot;\nOverall score: {result[&#x27;overall_score&#x27;]:.2f}&quot;)
+print(f&quot;Weighted score: {result.get(&#x27;weighted_overall_score&#x27;, &#x27;N/A&#x27;):.2f}&quot;)
+print(f&quot;Summary: {result[&#x27;summary&#x27;]}&quot;)</code></pre>
+<h3>Pattern 5: Expert-in-the-Loop Validation</h3>
+<p><strong>When to use</strong>: Validating LLM judge against human experts</p>
+<pre><code class="lang-python">import pandas as pd
+from sklearn.metrics import cohen_kappa_score
+from typing import List, Dict
+import json
+
+class JudgeValidator:
+    &quot;&quot;&quot;Validate LLM judge against human annotations.&quot;&quot;&quot;
+
+    def __init__(self, llm_judge):
+        &quot;&quot;&quot;
+        Args:
+            llm_judge: Any judge class with evaluate() method
+        &quot;&quot;&quot;
+        self.llm_judge = llm_judge
+
+    def validate_against_humans(
+        self,
+        test_cases: List[Dict],
+        human_annotations: List[int],
+    ) -&gt; dict:
+        &quot;&quot;&quot;
+        Validate LLM judge against human expert annotations.
+
+        Args:
+            test_cases: List of {instruction, response} dicts
+            human_annotations: List of human scores (same order as test_cases)
+
+        Returns:
+            Validation metrics
+        &quot;&quot;&quot;
+        llm_scores = []
+
+        for case in test_cases:
+            result = self.llm_judge.evaluate(
+                instruction=case[&quot;instruction&quot;],
+                response=case[&quot;response&quot;],
+            )
+            llm_scores.append(result[&quot;score&quot;])
+
+        # Calculate agreement metrics
+        from scipy.stats import pearsonr, spearmanr
+
+        # Pearson correlation (linear relationship)
+        pearson_corr, pearson_p = pearsonr(llm_scores, human_annotations)
+
+        # Spearman correlation (rank-order relationship)
+        spearman_corr, spearman_p = spearmanr(llm_scores, human_annotations)
+
+        # Cohen&#x27;s Kappa (categorical agreement)
+        kappa = cohen_kappa_score(human_annotations, llm_scores)
+
+        # Mean Absolute Error
+        mae = sum(abs(h - l) for h, l in zip(human_annotations, llm_scores)) / len(human_annotations)
+
+        # Identify disagreements
+        disagreements = [
+            {
+                &quot;case&quot;: test_cases[i],
+                &quot;human_score&quot;: human_annotations[i],
+                &quot;llm_score&quot;: llm_scores[i],
+                &quot;difference&quot;: abs(human_annotations[i] - llm_scores[i]),
+            }
+            for i in range(len(test_cases))
+            if abs(human_annotations[i] - llm_scores[i]) &gt;= 2  # Significant disagreement
+        ]
+
+        return {
+            &quot;pearson_correlation&quot;: pearson_corr,
+            &quot;spearman_correlation&quot;: spearman_corr,
+            &quot;cohens_kappa&quot;: kappa,
+            &quot;mean_absolute_error&quot;: mae,
+            &quot;num_significant_disagreements&quot;: len(disagreements),
+            &quot;disagreement_rate&quot;: len(disagreements) / len(test_cases),
+            &quot;sample_disagreements&quot;: disagreements[:5],  # Top 5 for review
+        }
+
+    def calibrate_judge(
+        self,
+        calibration_set: List[Dict],
+        human_scores: List[int],
+        target_correlation: float = 0.8,
+    ) -&gt; str:
+        &quot;&quot;&quot;
+        Generate calibration recommendations based on validation.
+
+        Args:
+            calibration_set: Test cases for calibration
+            human_scores: Human expert scores
+            target_correlation: Desired correlation threshold
+
+        Returns:
+            Calibration recommendations
+        &quot;&quot;&quot;
+        validation = self.validate_against_humans(calibration_set, human_scores)
+
+        recommendations = []
+
+        if validation[&quot;pearson_correlation&quot;] &lt; target_correlation:
+            recommendations.append(
+                f&quot;Low correlation ({validation[&#x27;pearson_correlation&#x27;]:.2f}). Consider:\n&quot;
+                &quot;  - Using a more capable judge model (e.g., GPT-4 instead of GPT-3.5)\n&quot;
+                &quot;  - Refining evaluation criteria/rubrics\n&quot;
+                &quot;  - Adding more examples to the prompt&quot;
+            )
+
+        if validation[&quot;mean_absolute_error&quot;] &gt; 1.0:
+            recommendations.append(
+                f&quot;High MAE ({validation[&#x27;mean_absolute_error&#x27;]:.2f}). The judge is often off by &gt;1 point.\n&quot;
+                &quot;  - Review sample disagreements\n&quot;
+                &quot;  - Clarify scoring rubric\n&quot;
+                &quot;  - Use reference-guided evaluation if possible&quot;
+            )
+
+        if validation[&quot;disagreement_rate&quot;] &gt; 0.2:
+            recommendations.append(
+                f&quot;High disagreement rate ({validation[&#x27;disagreement_rate&#x27;]:.1%}).\n&quot;
+                &quot;  - Review cases where judge disagrees significantly\n&quot;
+                &quot;  - Add calibration examples to prompt\n&quot;
+                &quot;  - Consider ensemble of multiple judges&quot;
+            )
+
+        if not recommendations:
+            recommendations.append(
+                &quot;Judge performance is acceptable. Continue monitoring on production data.&quot;
+            )
+
+        return &quot;\n\n&quot;.join(recommendations)
+
+# Usage
+from geval_evaluator import GEvalEvaluator  # From Pattern 2
+
+judge = GEvalEvaluator()
+validator = JudgeValidator(judge)
+
+# Test cases with human expert scores
+test_cases = [
+    {
+        &quot;instruction&quot;: &quot;Explain photosynthesis&quot;,
+        &quot;response&quot;: &quot;Photosynthesis is how plants make food using sunlight...&quot;,
+    },
+    # ... more cases
+]
+
+human_scores = [4, 5, 3, 2, 4, 5, 3, 4]  # From expert annotations
+
+# Validate
+validation_results = validator.validate_against_humans(test_cases, human_scores)
+
+print(f&quot;Pearson correlation: {validation_results[&#x27;pearson_correlation&#x27;]:.3f}&quot;)
+print(f&quot;Spearman correlation: {validation_results[&#x27;spearman_correlation&#x27;]:.3f}&quot;)
+print(f&quot;Cohen&#x27;s Kappa: {validation_results[&#x27;cohens_kappa&#x27;]:.3f}&quot;)
+print(f&quot;MAE: {validation_results[&#x27;mean_absolute_error&#x27;]:.2f}&quot;)
+
+# Get calibration recommendations
+recommendations = validator.calibrate_judge(test_cases, human_scores)
+print(f&quot;\nRecommendations:\n{recommendations}&quot;)</code></pre>
+<h2>Code Examples</h2>
+<h3>Example 1: Production LLM-as-Judge Pipeline</h3>
+<pre><code class="lang-python">from typing import List, Dict, Optional
+from dataclasses import dataclass
+import json
+from datetime import datetime
+
+@dataclass
+class JudgmentResult:
+    &quot;&quot;&quot;Result from LLM judge.&quot;&quot;&quot;
+    score: float
+    reasoning: str
+    confidence: float
+    judge_model: str
+    timestamp: str
+    metadata: Dict = None
+
+class ProductionJudgePipeline:
+    &quot;&quot;&quot;Production-ready LLM-as-judge pipeline with logging and monitoring.&quot;&quot;&quot;
+
+    def __init__(
+        self,
+        judge_model: str = &quot;gpt-4-turbo-preview&quot;,
+        enable_uncertainty: bool = True,
+        enable_bias_mitigation: bool = True,
+        log_path: str = &quot;judge_logs.jsonl&quot;,
+    ):
+        self.judge = GEvalEvaluator(model=judge_model)
+        self.pairwise_judge = PairwiseJudge(model=judge_model)
+        self.enable_uncertainty = enable_uncertainty
+        self.enable_bias_mitigation = enable_bias_mitigation
+        self.log_path = log_path
+
+    def judge_single(
+        self,
+        task_description: str,
+        criteria: str,
+        response: str,
+        context: Optional[str] = None,
+    ) -&gt; JudgmentResult:
+        &quot;&quot;&quot;Judge single response with optional uncertainty quantification.&quot;&quot;&quot;
+
+        if self.enable_uncertainty:
+            result = self.judge.evaluate_with_uncertainty(
+                task_description=task_description,
+                criteria=criteria,
+                response=response,
+                num_samples=3,
+            )
+
+            judgment = JudgmentResult(
+                score=result[&quot;mean_score&quot;],
+                reasoning=result[&quot;sample_reasonings&quot;][0],  # First reasoning
+                confidence=result[&quot;confidence&quot;],
+                judge_model=self.judge.model,
+                timestamp=datetime.now().isoformat(),
+                metadata={
+                    &quot;std_score&quot;: result[&quot;std_score&quot;],
+                    &quot;all_scores&quot;: result[&quot;all_scores&quot;],
+                },
+            )
+        else:
+            result = self.judge.evaluate(
+                task_description=task_description,
+                criteria=criteria,
+                response=response,
+                context=context,
+            )
+
+            judgment = JudgmentResult(
+                score=result[&quot;score&quot;],
+                reasoning=result[&quot;reasoning&quot;],
+                confidence=result.get(&quot;confidence&quot;, 1.0),
+                judge_model=self.judge.model,
+                timestamp=datetime.now().isoformat(),
+            )
+
+        # Log judgment
+        self._log_judgment(judgment, task_description, response)
+
+        return judgment
+
+    def judge_pairwise(
+        self,
+        instruction: str,
+        response_a: str,
+        response_b: str,
+        criteria: str = &quot;overall quality&quot;,
+    ) -&gt; Dict:
+        &quot;&quot;&quot;Judge pairwise comparison with bias mitigation.&quot;&quot;&quot;
+
+        result = self.pairwise_judge.compare(
+            instruction=instruction,
+            response_a=response_a,
+            response_b=response_b,
+            criteria=criteria,
+        )
+
+        # Log comparison
+        self._log_comparison(result, instruction, response_a, response_b)
+
+        return result
+
+    def batch_evaluate(
+        self,
+        examples: List[Dict],
+        task_description: str,
+        criteria: str,
+    ) -&gt; List[JudgmentResult]:
+        &quot;&quot;&quot;Evaluate batch of examples.&quot;&quot;&quot;
+
+        results = []
+
+        for i, example in enumerate(examples):
+            judgment = self.judge_single(
+                task_description=task_description,
+                criteria=criteria,
+                response=example[&quot;response&quot;],
+                context=example.get(&quot;context&quot;),
+            )
+
+            results.append(judgment)
+
+            # Progress
+            if (i + 1) % 10 == 0:
+                print(f&quot;Evaluated {i + 1}/{len(examples)} examples&quot;)
+
+        # Calculate statistics
+        scores = [r.score for r in results]
+        avg_score = sum(scores) / len(scores)
+        avg_confidence = sum(r.confidence for r in results) / len(results)
+
+        print(f&quot;\nBatch statistics:&quot;)
+        print(f&quot;  Average score: {avg_score:.2f}&quot;)
+        print(f&quot;  Average confidence: {avg_confidence:.2f}&quot;)
+        print(f&quot;  Score range: {min(scores):.2f} - {max(scores):.2f}&quot;)
+
+        return results
+
+    def _log_judgment(self, judgment: JudgmentResult, task: str, response: str):
+        &quot;&quot;&quot;Log judgment to file.&quot;&quot;&quot;
+        log_entry = {
+            &quot;type&quot;: &quot;single_judgment&quot;,
+            &quot;task&quot;: task,
+            &quot;response&quot;: response,
+            &quot;score&quot;: judgment.score,
+            &quot;confidence&quot;: judgment.confidence,
+            &quot;judge_model&quot;: judgment.judge_model,
+            &quot;timestamp&quot;: judgment.timestamp,
+        }
+
+        with open(self.log_path, &quot;a&quot;) as f:
+            f.write(json.dumps(log_entry) + &quot;\n&quot;)
+
+    def _log_comparison(self, result: Dict, instruction: str, response_a: str, response_b: str):
+        &quot;&quot;&quot;Log pairwise comparison.&quot;&quot;&quot;
+        log_entry = {
+            &quot;type&quot;: &quot;pairwise_comparison&quot;,
+            &quot;instruction&quot;: instruction,
+            &quot;response_a&quot;: response_a,
+            &quot;response_b&quot;: response_b,
+            &quot;winner&quot;: result[&quot;winner&quot;],
+            &quot;confidence&quot;: result[&quot;confidence&quot;],
+            &quot;position_bias_detected&quot;: result[&quot;position_bias_detected&quot;],
+            &quot;timestamp&quot;: datetime.now().isoformat(),
+        }
+
+        with open(self.log_path, &quot;a&quot;) as f:
+            f.write(json.dumps(log_entry) + &quot;\n&quot;)
+
+# Usage
+pipeline = ProductionJudgePipeline(
+    judge_model=&quot;gpt-4-turbo-preview&quot;,
+    enable_uncertainty=True,
+    enable_bias_mitigation=True,
+)
+
+# Single judgment
+judgment = pipeline.judge_single(
+    task_description=&quot;Summarize scientific article&quot;,
+    criteria=&quot;Accuracy, clarity, and conciseness&quot;,
+    response=&quot;Researchers found exercise promotes brain health...&quot;,
+)
+
+print(f&quot;Score: {judgment.score:.2f} (confidence: {judgment.confidence:.2f})&quot;)
+
+# Batch evaluation
+examples = [
+    {&quot;response&quot;: &quot;Response 1...&quot;},
+    {&quot;response&quot;: &quot;Response 2...&quot;},
+    # ... more
+]
+
+batch_results = pipeline.batch_evaluate(
+    examples=examples,
+    task_description=&quot;Question answering&quot;,
+    criteria=&quot;Correctness and completeness&quot;,
+)</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>Anti-Pattern 1: Using LLM Judge for Objective Tasks</h3>
+<p><strong>Wrong</strong>: Using judge for tasks with clear right/wrong answers</p>
+<pre><code class="lang-python"># BAD: LLM judge for exact match tasks
+judgment = judge.evaluate(
+    task=&quot;What is 2+2?&quot;,
+    response=&quot;4&quot;,
+)  # Expensive and unnecessary</code></pre>
+<p><strong>Right</strong>: Use deterministic metrics</p>
+<pre><code class="lang-python"># GOOD: Exact match for objective tasks
+def evaluate_math(response, expected):
+    return {&quot;score&quot;: 1.0 if response.strip() == expected.strip() else 0.0}</code></pre>
+<h3>Anti-Pattern 2: Ignoring Position Bias</h3>
+<p><strong>Wrong</strong>: Single pairwise comparison</p>
+<pre><code class="lang-python"># BAD: Position bias not addressed
+winner = judge.compare(response_a, response_b)  # May favor first position</code></pre>
+<p><strong>Right</strong>: Swap positions and aggregate</p>
+<pre><code class="lang-python"># GOOD: Mitigate position bias
+result_ab = judge.compare(response_a, response_b)
+result_ba = judge.compare(response_b, response_a)
+
+if result_ab[&quot;winner&quot;] == result_ba[&quot;winner&quot;]:
+    winner = result_ab[&quot;winner&quot;]  # Consistent
+else:
+    winner = &quot;tie&quot;  # Disagreement = bias detected</code></pre>
+<h3>Anti-Pattern 3: Not Validating Against Humans</h3>
+<p><strong>Wrong</strong>: Blind trust in LLM judge</p>
+<pre><code class="lang-python"># BAD: No validation
+scores = [judge.evaluate(case) for case in test_cases]
+# Are these scores reliable? Unknown!</code></pre>
+<p><strong>Right</strong>: Validate on calibration set</p>
+<pre><code class="lang-python"># GOOD: Validate against human experts
+validator = JudgeValidator(judge)
+validation = validator.validate_against_humans(test_cases, human_scores)
+
+if validation[&quot;pearson_correlation&quot;] &lt; 0.7:
+    print(&quot;WARNING: Low correlation with humans. Review calibration.&quot;)</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>llm-benchmarks-evaluation.md</code>: Standard benchmarks for objective capability testing</li><li><code>llm-evaluation-frameworks.md</code>: Arize Phoenix, Braintrust for production evaluation</li><li><code>rag-evaluation-metrics.md</code>: RAGAS metrics combining LLM-as-judge with retrieval evaluation</li><li><code>custom-llm-evaluation.md</code>: Domain-specific evaluation metrics and continuous evaluation</li><li><code>dspy-evaluation.md</code>: DSPy metric functions and prompt optimization</li></ul>
+<h2>Summary</h2>
+<p>LLM-as-judge provides scalable, flexible evaluation for subjective quality metrics:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ol><li><strong>Specialized models</strong>: Prometheus 2 (fine-tuned), G-Eval (GPT-4 CoT), general-purpose (Claude/GPT-4)</li><li><strong>Paradigms</strong>: Pointwise (absolute), pairwise (comparative), reference-guided (factual)</li><li><strong>Bias mitigation</strong>: Position swapping, verbosity normalization, multi-judge ensemble</li><li><strong>Uncertainty</strong>: Self-consistency sampling, confidence scoring, agreement metrics</li><li><strong>Validation</strong>: Always validate against human experts on calibration set</li></ol>
+<p><strong>Best Practices</strong>:</p>
+<ul><li>Use pairwise comparison when possible (more reliable than pointwise)</li><li>Always mitigate position bias by swapping positions</li><li>Quantify uncertainty with multi-sample evaluation</li><li>Validate judge against human annotations before production use</li><li>Use specialized models (Prometheus) for consistent, transparent evaluation</li><li>Reserve LLM judges for subjective tasks (use deterministic metrics for objective tasks)</li></ul>
+<p><strong>When to combine with other skills</strong>:</p>
+<ul><li>Use <code>llm-benchmarks-evaluation.md</code> for objective capability testing (MMLU, HumanEval)</li><li>Use <code>llm-evaluation-frameworks.md</code> to integrate judges with Phoenix/Braintrust pipelines</li><li>Use <code>rag-evaluation-metrics.md</code> for RAG-specific metrics with LLM-as-judge components</li><li>Use <code>custom-llm-evaluation.md</code> for domain-specific rubrics and safety evaluation</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ml-llm-as-judge.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

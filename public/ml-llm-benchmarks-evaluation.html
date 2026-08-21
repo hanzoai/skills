@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ml-llm-benchmarks-evaluation</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/ml-llm-benchmarks-evaluation.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ml-llm-benchmarks-evaluation.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ml-llm-benchmarks-evaluation</h1><p class="lede">Comprehensive guide to evaluating LLMs using standard benchmarks including MMLU, HellaSwag, BBH, HumanEval, TruthfulQA, and GSM8K, with practical implementation using LightEval and lm-evaluation-harness</p><h1>LLM Benchmarks Evaluation</h1>
+<p>Last Updated: 2025-10-26</p>
+<h2>When to Use This Skill</h2>
+<p>Use LLM benchmark evaluation when:</p>
+<ul><li><strong>Comparing model capabilities</strong>: Measuring performance across different LLMs or model versions</li><li><strong>Tracking training progress</strong>: Monitoring improvements during fine-tuning or continued pre-training</li><li><strong>Validating model releases</strong>: Ensuring models meet minimum quality thresholds before deployment</li><li><strong>Research validation</strong>: Reproducing published results or establishing baselines</li><li><strong>Domain transfer</strong>: Assessing model performance on new tasks or domains</li><li><strong>Resource optimization</strong>: Determining if a smaller/faster model meets accuracy requirements</li><li><strong>Detecting contamination</strong>: Identifying potential training data leakage in benchmarks</li></ul>
+<p><strong>Anti-pattern</strong>: Using benchmarks as the <strong>only</strong> evaluation metric. Always complement with domain-specific tests, human evaluation, and production metrics.</p>
+<h2>Core Concepts</h2>
+<h3>Standard Benchmark Categories</h3>
+<p><strong>1. Knowledge &amp; Reasoning</strong></p>
+<ul><li><strong>MMLU</strong> (Massive Multitask Language Understanding): 57 subjects across STEM, humanities, social sciences</li><li><strong>BBH</strong> (BIG-Bench Hard): 23 challenging tasks from BIG-Bench that require multi-step reasoning</li><li><strong>TruthfulQA</strong>: 817 questions testing model truthfulness and resistance to falsehoods</li></ul>
+<p><strong>2. Code Generation</strong></p>
+<ul><li><strong>HumanEval</strong>: 164 Python programming problems with test cases</li><li><strong>MBPP</strong> (Mostly Basic Python Problems): 974 entry-level programming tasks</li><li><strong>CodeContests</strong>: Competitive programming problems requiring algorithmic reasoning</li></ul>
+<p><strong>3. Math Reasoning</strong></p>
+<ul><li><strong>GSM8K</strong>: 8,500 grade school math word problems</li><li><strong>MATH</strong>: 12,500 challenging competition mathematics problems</li><li><strong>MathQA</strong>: Math word problems with multiple-choice answers</li></ul>
+<p><strong>4. Common Sense &amp; NLU</strong></p>
+<ul><li><strong>HellaSwag</strong>: Commonsense inference about physical situations</li><li><strong>PIQA</strong> (Physical Interaction QA): Physical commonsense reasoning</li><li><strong>WinoGrande</strong>: Winograd schema challenge for pronoun resolution</li><li><strong>ARC</strong> (AI2 Reasoning Challenge): Science questions for grade school students</li></ul>
+<p><strong>5. Safety &amp; Alignment</strong></p>
+<ul><li><strong>ToxiGen</strong>: Detecting implicit toxicity and hate speech</li><li><strong>BBQ</strong> (Bias Benchmark for QA): Measuring social biases</li><li><strong>BOLD</strong>: Measuring biases in open-ended language generation</li></ul>
+<h3>Evaluation Frameworks</h3>
+<p><strong>lm-evaluation-harness</strong> (EleutherAI):</p>
+<ul><li>Unified framework for 200+ tasks</li><li>Standardized prompting and scoring</li><li>Reproducible evaluation pipeline</li><li>Supports HuggingFace models, OpenAI API, Anthropic, etc.</li></ul>
+<p><strong>LightEval</strong> (HuggingFace):</p>
+<ul><li>Lightweight, fast evaluation framework</li><li>Easy integration with HuggingFace Hub</li><li>Custom task creation</li><li>Efficient multi-GPU evaluation</li></ul>
+<h3>Key Metrics</h3>
+<p><strong>Accuracy</strong>: Percentage of correct answers (most common) <strong>Exact Match (EM)</strong>: Exact string match for generation tasks <strong>Pass@k</strong>: Percentage of problems solved with k samples (code generation) <strong>F1 Score</strong>: Harmonic mean of precision and recall (span-based tasks) <strong>BLEU/ROUGE</strong>: N-gram overlap for generation (less common in modern evals) <strong>Normalized Accuracy</strong>: Accounting for random guessing baseline</p>
+<h2>Implementation Patterns</h2>
+<h3>Pattern 1: lm-evaluation-harness Setup</h3>
+<p><strong>When to use</strong>: Industry-standard benchmark evaluation with reproducibility</p>
+<pre><code class="lang-bash"># Installation
+pip install lm-eval
+
+# Basic evaluation (HuggingFace model)
+lm_eval --model hf \
+    --model_args pretrained=meta-llama/Llama-2-7b-hf \
+    --tasks mmlu,hellaswag,truthfulqa_mc2 \
+    --device cuda:0 \
+    --batch_size 8
+
+# Multiple tasks with custom settings
+lm_eval --model hf \
+    --model_args pretrained=mistralai/Mistral-7B-v0.1,dtype=bfloat16 \
+    --tasks mmlu,arc_challenge,hellaswag,gsm8k,humaneval \
+    --num_fewshot 5 \
+    --device cuda:0 \
+    --batch_size auto \
+    --output_path results/mistral-7b-eval.json
+
+# OpenAI API models
+lm_eval --model openai-completions \
+    --model_args model=gpt-4-turbo-preview \
+    --tasks mmlu,truthfulqa_mc2 \
+    --output_path results/gpt4-eval.json
+
+# Anthropic Claude
+lm_eval --model anthropic \
+    --model_args model=claude-3-opus-20240229 \
+    --tasks mmlu,truthfulqa_mc2</code></pre>
+<p><strong>Python API usage</strong>:</p>
+<pre><code class="lang-python">from lm_eval import evaluator, tasks
+from lm_eval.models.huggingface import HFLM
+
+# Initialize model
+model = HFLM(pretrained=&quot;meta-llama/Llama-2-7b-hf&quot;, device=&quot;cuda:0&quot;)
+
+# Run evaluation
+results = evaluator.simple_evaluate(
+    model=model,
+    tasks=[&quot;mmlu&quot;, &quot;hellaswag&quot;, &quot;truthfulqa_mc2&quot;, &quot;gsm8k&quot;],
+    num_fewshot=5,
+    batch_size=8,
+    device=&quot;cuda:0&quot;,
+)
+
+# Access results
+print(f&quot;MMLU Accuracy: {results[&#x27;results&#x27;][&#x27;mmlu&#x27;][&#x27;acc&#x27;]:.4f}&quot;)
+print(f&quot;HellaSwag Accuracy: {results[&#x27;results&#x27;][&#x27;hellaswag&#x27;][&#x27;acc_norm&#x27;]:.4f}&quot;)
+print(f&quot;TruthfulQA MC2: {results[&#x27;results&#x27;][&#x27;truthfulqa_mc2&#x27;][&#x27;acc&#x27;]:.4f}&quot;)
+print(f&quot;GSM8K: {results[&#x27;results&#x27;][&#x27;gsm8k&#x27;][&#x27;exact_match&#x27;]:.4f}&quot;)
+
+# Save results
+import json
+with open(&quot;eval_results.json&quot;, &quot;w&quot;) as f:
+    json.dump(results, f, indent=2)</code></pre>
+<h3>Pattern 2: LightEval Framework</h3>
+<p><strong>When to use</strong>: Fast evaluation with HuggingFace integration</p>
+<pre><code class="lang-python">from lighteval.tasks.lighteval_task import LightevalTaskConfig
+from lighteval.models.model_loader import load_model
+from lighteval.main_lighteval import main_evaluate
+
+# Define evaluation config
+tasks = [
+    &quot;mmlu:all&quot;,
+    &quot;hellaswag&quot;,
+    &quot;arc:challenge&quot;,
+    &quot;truthfulqa:mc2&quot;,
+    &quot;gsm8k&quot;,
+]
+
+# Load model
+model_config = {
+    &quot;model_name&quot;: &quot;meta-llama/Llama-2-7b-hf&quot;,
+    &quot;dtype&quot;: &quot;bfloat16&quot;,
+    &quot;device_map&quot;: &quot;auto&quot;,
+}
+
+# Run evaluation
+results = main_evaluate(
+    model_config=model_config,
+    tasks=tasks,
+    batch_size=8,
+    num_fewshot=5,
+    output_dir=&quot;lighteval_results&quot;,
+    save_details=True,
+)
+
+# Results structure
+for task_name, task_results in results.items():
+    print(f&quot;{task_name}: {task_results[&#x27;acc&#x27;]:.4f}&quot;)</code></pre>
+<h3>Pattern 3: Custom Task Creation</h3>
+<p><strong>When to use</strong>: Evaluating on domain-specific or custom benchmarks</p>
+<pre><code class="lang-python"># lm-evaluation-harness custom task
+from lm_eval.api.task import Task
+from lm_eval.api.instance import Instance
+
+class CustomMedicalQA(Task):
+    VERSION = 0
+    DATASET_PATH = &quot;custom/medical_qa&quot;
+    DATASET_NAME = None
+
+    def has_training_docs(self):
+        return True
+
+    def has_validation_docs(self):
+        return True
+
+    def has_test_docs(self):
+        return True
+
+    def training_docs(self):
+        return self.dataset[&quot;train&quot;]
+
+    def validation_docs(self):
+        return self.dataset[&quot;validation&quot;]
+
+    def test_docs(self):
+        return self.dataset[&quot;test&quot;]
+
+    def doc_to_text(self, doc):
+        # Format prompt
+        return f&quot;Question: {doc[&#x27;question&#x27;]}\nAnswer:&quot;
+
+    def doc_to_target(self, doc):
+        # Correct answer
+        return doc[&quot;answer&quot;]
+
+    def construct_requests(self, doc, ctx):
+        # Create evaluation request
+        ll, is_greedy = self.get_request_type()
+        return Instance(
+            request_type=ll,
+            doc=doc,
+            arguments=(ctx, {&quot;until&quot;: [&quot;\n&quot;]}),
+            idx=0,
+        )
+
+    def process_results(self, doc, results):
+        # Score the result
+        gold = self.doc_to_target(doc)
+        pred = results[0].strip()
+
+        return {
+            &quot;acc&quot;: int(pred.lower() == gold.lower()),
+            &quot;exact_match&quot;: int(pred == gold),
+        }
+
+    def aggregation(self):
+        return {
+            &quot;acc&quot;: mean,
+            &quot;exact_match&quot;: mean,
+        }
+
+    def higher_is_better(self):
+        return {
+            &quot;acc&quot;: True,
+            &quot;exact_match&quot;: True,
+        }
+
+# Register and use
+from lm_eval.tasks import TaskManager
+task_manager = TaskManager()
+task_manager.register_task(&quot;custom_medical_qa&quot;, CustomMedicalQA)
+
+# Evaluate
+results = evaluator.simple_evaluate(
+    model=model,
+    tasks=[&quot;custom_medical_qa&quot;],
+    num_fewshot=3,
+)</code></pre>
+<h3>Pattern 4: HumanEval Code Generation</h3>
+<p><strong>When to use</strong>: Evaluating code generation capabilities</p>
+<pre><code class="lang-python">from human_eval.data import write_jsonl, read_problems
+from human_eval.evaluation import evaluate_functional_correctness
+
+# Generate completions
+def generate_one_completion(prompt, model, tokenizer):
+    &quot;&quot;&quot;Generate a single completion for a code prompt.&quot;&quot;&quot;
+    inputs = tokenizer(prompt, return_tensors=&quot;pt&quot;).to(model.device)
+
+    outputs = model.generate(
+        **inputs,
+        max_new_tokens=512,
+        temperature=0.2,
+        top_p=0.95,
+        do_sample=True,
+        stop_sequences=[&quot;```&quot;, &quot;\nclass&quot;, &quot;\ndef&quot;, &quot;\nif __name__&quot;],
+    )
+
+    completion = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return completion[len(prompt):]
+
+# Evaluate on HumanEval
+problems = read_problems()
+samples = []
+
+for task_id, problem in problems.items():
+    prompt = problem[&quot;prompt&quot;]
+
+    # Generate multiple samples (pass@k)
+    for _ in range(10):  # Generate 10 samples for pass@10
+        completion = generate_one_completion(prompt, model, tokenizer)
+
+        samples.append({
+            &quot;task_id&quot;: task_id,
+            &quot;completion&quot;: completion,
+        })
+
+# Write samples
+write_jsonl(&quot;samples.jsonl&quot;, samples)
+
+# Evaluate correctness
+results = evaluate_functional_correctness(
+    sample_file=&quot;samples.jsonl&quot;,
+    k=[1, 10, 100],  # pass@1, pass@10, pass@100
+    n_workers=4,
+    timeout=3.0,
+)
+
+print(f&quot;Pass@1: {results[&#x27;pass@1&#x27;]:.4f}&quot;)
+print(f&quot;Pass@10: {results[&#x27;pass@10&#x27;]:.4f}&quot;)</code></pre>
+<h3>Pattern 5: GSM8K Math Evaluation</h3>
+<p><strong>When to use</strong>: Evaluating mathematical reasoning with chain-of-thought</p>
+<pre><code class="lang-python">from datasets import load_dataset
+
+# Load GSM8K
+dataset = load_dataset(&quot;gsm8k&quot;, &quot;main&quot;)
+
+def extract_answer(text):
+    &quot;&quot;&quot;Extract numerical answer from GSM8K format.&quot;&quot;&quot;
+    # GSM8K answers are in format &quot;#### 42&quot;
+    if &quot;####&quot; in text:
+        return text.split(&quot;####&quot;)[1].strip()
+
+    # Extract last number if no ####
+    import re
+    numbers = re.findall(r&quot;-?\d+\.?\d*&quot;, text)
+    return numbers[-1] if numbers else &quot;&quot;
+
+def evaluate_gsm8k(model, tokenizer, num_samples=100):
+    &quot;&quot;&quot;Evaluate model on GSM8K with chain-of-thought prompting.&quot;&quot;&quot;
+
+    # Chain-of-thought prompt
+    few_shot_examples = &quot;&quot;&quot;
+Q: There are 15 trees in the grove. Grove workers will plant trees in the grove today. After they are done, there will be 21 trees. How many trees did the grove workers plant today?
+A: There are 15 trees originally. Then there were 21 trees after some more were planted. So there must have been 21 - 15 = 6. #### 6
+
+Q: If there are 3 cars in the parking lot and 2 more cars arrive, how many cars are in the parking lot?
+A: There are originally 3 cars. 2 more cars arrive. 3 + 2 = 5. #### 5
+&quot;&quot;&quot;
+
+    correct = 0
+    total = 0
+
+    for example in dataset[&quot;test&quot;].select(range(num_samples)):
+        question = example[&quot;question&quot;]
+        gold_answer = extract_answer(example[&quot;answer&quot;])
+
+        # Create prompt with few-shot examples
+        prompt = f&quot;{few_shot_examples}\nQ: {question}\nA:&quot;
+
+        # Generate
+        inputs = tokenizer(prompt, return_tensors=&quot;pt&quot;).to(model.device)
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=512,
+            temperature=0.0,  # Greedy for math
+            do_sample=False,
+        )
+
+        completion = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        pred_answer = extract_answer(completion)
+
+        # Check correctness
+        if pred_answer == gold_answer:
+            correct += 1
+        total += 1
+
+        # Debug output
+        if total &lt;= 5:
+            print(f&quot;Question: {question}&quot;)
+            print(f&quot;Gold: {gold_answer}, Pred: {pred_answer}&quot;)
+            print(f&quot;Completion: {completion}\n&quot;)
+
+    accuracy = correct / total
+    print(f&quot;GSM8K Accuracy: {accuracy:.4f} ({correct}/{total})&quot;)
+    return accuracy</code></pre>
+<h2>Code Examples</h2>
+<h3>Example 1: Comprehensive Benchmark Suite</h3>
+<pre><code class="lang-python">from lm_eval import evaluator
+from lm_eval.models.huggingface import HFLM
+import json
+from datetime import datetime
+
+class BenchmarkRunner:
+    &quot;&quot;&quot;Run comprehensive LLM benchmark suite.&quot;&quot;&quot;
+
+    def __init__(self, model_name, output_dir=&quot;benchmark_results&quot;):
+        self.model_name = model_name
+        self.output_dir = output_dir
+        self.model = None
+
+    def load_model(self):
+        &quot;&quot;&quot;Load model for evaluation.&quot;&quot;&quot;
+        self.model = HFLM(
+            pretrained=self.model_name,
+            device=&quot;cuda:0&quot;,
+            dtype=&quot;bfloat16&quot;,
+        )
+
+    def run_knowledge_benchmarks(self):
+        &quot;&quot;&quot;Run knowledge and reasoning benchmarks.&quot;&quot;&quot;
+        tasks = [
+            &quot;mmlu&quot;,
+            &quot;truthfulqa_mc2&quot;,
+            &quot;arc_challenge&quot;,
+            &quot;hellaswag&quot;,
+            &quot;winogrande&quot;,
+        ]
+
+        results = evaluator.simple_evaluate(
+            model=self.model,
+            tasks=tasks,
+            num_fewshot=5,
+            batch_size=8,
+        )
+
+        return results
+
+    def run_code_benchmarks(self):
+        &quot;&quot;&quot;Run code generation benchmarks.&quot;&quot;&quot;
+        tasks = [
+            &quot;humaneval&quot;,
+            &quot;mbpp&quot;,
+        ]
+
+        results = evaluator.simple_evaluate(
+            model=self.model,
+            tasks=tasks,
+            num_fewshot=0,  # Zero-shot for code
+            batch_size=1,
+        )
+
+        return results
+
+    def run_math_benchmarks(self):
+        &quot;&quot;&quot;Run math reasoning benchmarks.&quot;&quot;&quot;
+        tasks = [
+            &quot;gsm8k&quot;,
+            &quot;math_algebra&quot;,
+        ]
+
+        results = evaluator.simple_evaluate(
+            model=self.model,
+            tasks=tasks,
+            num_fewshot=8,  # More examples for math
+            batch_size=4,
+        )
+
+        return results
+
+    def generate_report(self, all_results):
+        &quot;&quot;&quot;Generate comprehensive evaluation report.&quot;&quot;&quot;
+        report = {
+            &quot;model&quot;: self.model_name,
+            &quot;timestamp&quot;: datetime.now().isoformat(),
+            &quot;results&quot;: {},
+            &quot;summary&quot;: {},
+        }
+
+        # Extract key metrics
+        for task_name, task_results in all_results[&quot;results&quot;].items():
+            report[&quot;results&quot;][task_name] = task_results
+
+            # Primary metric per task
+            if &quot;acc&quot; in task_results:
+                report[&quot;summary&quot;][task_name] = task_results[&quot;acc&quot;]
+            elif &quot;exact_match&quot; in task_results:
+                report[&quot;summary&quot;][task_name] = task_results[&quot;exact_match&quot;]
+            elif &quot;pass@1&quot; in task_results:
+                report[&quot;summary&quot;][task_name] = task_results[&quot;pass@1&quot;]
+
+        # Calculate category averages
+        knowledge_tasks = [&quot;mmlu&quot;, &quot;truthfulqa_mc2&quot;, &quot;arc_challenge&quot;, &quot;hellaswag&quot;]
+        knowledge_avg = sum(
+            report[&quot;summary&quot;][t] for t in knowledge_tasks if t in report[&quot;summary&quot;]
+        ) / len([t for t in knowledge_tasks if t in report[&quot;summary&quot;]])
+
+        report[&quot;category_averages&quot;] = {
+            &quot;knowledge_reasoning&quot;: knowledge_avg,
+        }
+
+        # Save report
+        output_path = f&quot;{self.output_dir}/{self.model_name.replace(&#x27;/&#x27;, &#x27;_&#x27;)}_report.json&quot;
+        with open(output_path, &quot;w&quot;) as f:
+            json.dump(report, f, indent=2)
+
+        return report
+
+    def run_full_suite(self):
+        &quot;&quot;&quot;Run complete benchmark suite.&quot;&quot;&quot;
+        print(f&quot;Starting evaluation for {self.model_name}&quot;)
+
+        self.load_model()
+
+        print(&quot;Running knowledge benchmarks...&quot;)
+        knowledge_results = self.run_knowledge_benchmarks()
+
+        print(&quot;Running code benchmarks...&quot;)
+        code_results = self.run_code_benchmarks()
+
+        print(&quot;Running math benchmarks...&quot;)
+        math_results = self.run_math_benchmarks()
+
+        # Combine results
+        all_results = {
+            &quot;results&quot;: {
+                **knowledge_results[&quot;results&quot;],
+                **code_results[&quot;results&quot;],
+                **math_results[&quot;results&quot;],
+            }
+        }
+
+        report = self.generate_report(all_results)
+
+        print(&quot;\n=== Evaluation Summary ===&quot;)
+        for task, score in report[&quot;summary&quot;].items():
+            print(f&quot;{task}: {score:.4f}&quot;)
+
+        return report
+
+# Usage
+runner = BenchmarkRunner(&quot;mistralai/Mistral-7B-v0.1&quot;)
+report = runner.run_full_suite()</code></pre>
+<h3>Example 2: Contamination Detection</h3>
+<pre><code class="lang-python">from lm_eval.api.metrics import perplexity
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import numpy as np
+
+class ContaminationDetector:
+    &quot;&quot;&quot;Detect potential benchmark contamination in training data.&quot;&quot;&quot;
+
+    def __init__(self, model_name):
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            device_map=&quot;auto&quot;,
+        )
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    def calculate_perplexity(self, texts):
+        &quot;&quot;&quot;Calculate perplexity for list of texts.&quot;&quot;&quot;
+        perplexities = []
+
+        for text in texts:
+            inputs = self.tokenizer(text, return_tensors=&quot;pt&quot;).to(self.model.device)
+
+            with torch.no_grad():
+                outputs = self.model(**inputs, labels=inputs[&quot;input_ids&quot;])
+                loss = outputs.loss
+                perplexity = torch.exp(loss).item()
+
+            perplexities.append(perplexity)
+
+        return perplexities
+
+    def detect_contamination(self, benchmark_samples, baseline_samples):
+        &quot;&quot;&quot;
+        Detect contamination by comparing perplexity on benchmark vs baseline.
+
+        Suspiciously low perplexity on benchmark suggests potential memorization.
+        &quot;&quot;&quot;
+        benchmark_ppl = self.calculate_perplexity(benchmark_samples)
+        baseline_ppl = self.calculate_perplexity(baseline_samples)
+
+        benchmark_mean = np.mean(benchmark_ppl)
+        baseline_mean = np.mean(baseline_ppl)
+
+        # Calculate ratio
+        ratio = baseline_mean / benchmark_mean
+
+        # Flag if benchmark perplexity is suspiciously lower
+        contamination_flag = ratio &gt; 1.5  # Threshold based on empirical studies
+
+        report = {
+            &quot;benchmark_perplexity&quot;: {
+                &quot;mean&quot;: benchmark_mean,
+                &quot;std&quot;: np.std(benchmark_ppl),
+                &quot;min&quot;: np.min(benchmark_ppl),
+                &quot;max&quot;: np.max(benchmark_ppl),
+            },
+            &quot;baseline_perplexity&quot;: {
+                &quot;mean&quot;: baseline_mean,
+                &quot;std&quot;: np.std(baseline_ppl),
+            },
+            &quot;ratio&quot;: ratio,
+            &quot;contamination_suspected&quot;: contamination_flag,
+        }
+
+        return report
+
+# Usage
+detector = ContaminationDetector(&quot;meta-llama/Llama-2-7b-hf&quot;)
+
+# Sample from MMLU test set
+mmlu_samples = [
+    &quot;Question: What is the capital of France?\nA. London\nB. Paris\nC. Berlin\nD. Madrid\nAnswer: B&quot;,
+    # ... more MMLU examples
+]
+
+# Baseline: Similar format but different questions
+baseline_samples = [
+    &quot;Question: What color is the sky?\nA. Red\nB. Blue\nC. Green\nD. Yellow\nAnswer: B&quot;,
+    # ... more baseline examples
+]
+
+contamination_report = detector.detect_contamination(mmlu_samples, baseline_samples)
+print(contamination_report)</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>Anti-Pattern 1: Benchmark Overfitting</h3>
+<p><strong>Wrong</strong>: Optimizing exclusively for benchmark performance</p>
+<pre><code class="lang-python"># BAD: Training specifically to improve MMLU score
+train_on_mmlu_like_data()  # Creates overfit model</code></pre>
+<p><strong>Right</strong>: Use benchmarks as one signal among many</p>
+<pre><code class="lang-python"># GOOD: Balanced evaluation strategy
+benchmark_scores = evaluate_benchmarks(model)
+domain_scores = evaluate_domain_tasks(model)
+human_eval_scores = get_human_ratings(model)
+
+overall_score = weighted_average([benchmark_scores, domain_scores, human_eval_scores])</code></pre>
+<h3>Anti-Pattern 2: Ignoring Benchmark Limitations</h3>
+<p><strong>Wrong</strong>: Treating benchmark scores as absolute truth</p>
+<pre><code class="lang-python"># BAD: Assuming higher MMLU = better model for all use cases
+if model_a_mmlu &gt; model_b_mmlu:
+    deploy(model_a)  # May not be better for your specific task</code></pre>
+<p><strong>Right</strong>: Validate on target domain</p>
+<pre><code class="lang-python"># GOOD: Test on actual use case
+benchmark_scores = evaluate_benchmarks([model_a, model_b])
+domain_scores = evaluate_on_real_data([model_a, model_b])
+
+# Choose based on domain performance
+best_model = max([model_a, model_b], key=lambda m: domain_scores[m])</code></pre>
+<h3>Anti-Pattern 3: Inconsistent Evaluation Settings</h3>
+<p><strong>Wrong</strong>: Comparing results with different configurations</p>
+<pre><code class="lang-python"># BAD: Inconsistent few-shot settings
+model_a_results = evaluate(model_a, num_fewshot=5)
+model_b_results = evaluate(model_b, num_fewshot=0)  # Not comparable!</code></pre>
+<p><strong>Right</strong>: Standardize evaluation protocol</p>
+<pre><code class="lang-python"># GOOD: Consistent settings
+EVAL_CONFIG = {
+    &quot;num_fewshot&quot;: 5,
+    &quot;batch_size&quot;: 8,
+    &quot;temperature&quot;: 0.0,
+    &quot;tasks&quot;: [&quot;mmlu&quot;, &quot;hellaswag&quot;, &quot;truthfulqa_mc2&quot;],
+}
+
+model_a_results = evaluate(model_a, **EVAL_CONFIG)
+model_b_results = evaluate(model_b, **EVAL_CONFIG)</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>llm-evaluation-frameworks.md</code>: Arize Phoenix, Braintrust, LangSmith for production evaluation</li><li><code>llm-as-judge.md</code>: Using LLMs to evaluate LLM outputs with Prometheus and G-Eval</li><li><code>rag-evaluation-metrics.md</code>: RAGAS metrics for RAG system evaluation</li><li><code>custom-llm-evaluation.md</code>: Domain-specific and custom evaluation metrics</li><li><code>dspy-evaluation.md</code>: DSPy metric functions and evaluation patterns</li></ul>
+<h2>Summary</h2>
+<p>LLM benchmark evaluation provides standardized, reproducible metrics for model capabilities:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ol><li><strong>Standard benchmarks</strong>: MMLU (knowledge), HumanEval (code), GSM8K (math), HellaSwag (common sense)</li><li><strong>Frameworks</strong>: lm-evaluation-harness (200+ tasks), LightEval (HuggingFace integration)</li><li><strong>Metrics</strong>: Accuracy, pass@k, exact match, F1 depending on task type</li><li><strong>Contamination risk</strong>: Always check for training data leakage using perplexity analysis</li><li><strong>Limitations</strong>: Benchmarks are proxies, not guarantees of real-world performance</li></ol>
+<p><strong>Best Practices</strong>:</p>
+<ul><li>Use consistent evaluation settings for fair comparisons</li><li>Combine multiple benchmarks covering different capabilities</li><li>Always validate on domain-specific tasks before deployment</li><li>Monitor for contamination using perplexity or membership inference</li><li>Report full evaluation details (num_fewshot, temperature, etc.) for reproducibility</li></ul>
+<p><strong>When to combine with other skills</strong>:</p>
+<ul><li>Use <code>llm-evaluation-frameworks.md</code> for production monitoring and tracing</li><li>Use <code>llm-as-judge.md</code> when benchmark metrics don&#x27;t capture quality (e.g., creative writing)</li><li>Use <code>rag-evaluation-metrics.md</code> for retrieval-augmented generation systems</li><li>Use <code>custom-llm-evaluation.md</code> for domain-specific or safety evaluations</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ml-llm-benchmarks-evaluation.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>infrastructure-terraform-patterns</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/infrastructure-terraform-patterns.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/infrastructure-terraform-patterns.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>infrastructure-terraform-patterns</h1><p class="lede">Provisioning cloud infrastructure (AWS, GCP, Azure, Cloudflare)</p><h1>Terraform Patterns</h1>
+<p><strong>Scope</strong>: Infrastructure as Code with Terraform - modules, state management, workspaces, backends <strong>Lines</strong>: 387 <strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<hr>
+<h2>When to Use This Skill</h2>
+<p><strong>Activate when</strong>:</p>
+<ul><li>Provisioning cloud infrastructure (AWS, GCP, Azure, Cloudflare)</li><li>Managing infrastructure state across environments</li><li>Creating reusable infrastructure modules</li><li>Implementing infrastructure as code workflows</li><li>Managing multi-environment deployments</li><li>Migrating from manual infrastructure management</li></ul>
+<p><strong>Prerequisites</strong>:</p>
+<ul><li>Terraform CLI installed (<code>brew install terraform</code> or download from terraform.io)</li><li>Cloud provider credentials configured</li><li>Basic understanding of target cloud platform</li><li>Version control system (Git) for state tracking</li></ul>
+<p><strong>Common scenarios</strong>:</p>
+<ul><li>Setting up staging/production environments</li><li>Creating repeatable infrastructure patterns</li><li>Managing infrastructure across multiple regions</li><li>Implementing infrastructure versioning and rollback</li><li>Collaborating on infrastructure changes with teams</li></ul>
+<hr>
+<h2>Core Concepts</h2>
+<h3>1. Provider Configuration</h3>
+<pre><code class="lang-hcl"># versions.tf
+terraform {
+  required_version = &quot;&gt;= 1.6&quot;
+
+  required_providers {
+    aws = {
+      source  = &quot;hashicorp/aws&quot;
+      version = &quot;~&gt; 5.0&quot;
+    }
+    cloudflare = {
+      source  = &quot;cloudflare/cloudflare&quot;
+      version = &quot;~&gt; 4.0&quot;
+    }
+  }
+
+  backend &quot;s3&quot; {
+    bucket         = &quot;my-terraform-state&quot;
+    key            = &quot;production/terraform.tfstate&quot;
+    region         = &quot;us-east-1&quot;
+    encrypt        = true
+    dynamodb_table = &quot;terraform-lock&quot;
+  }
+}
+
+provider &quot;aws&quot; {
+  region = var.aws_region
+
+  default_tags {
+    tags = {
+      Environment = var.environment
+      ManagedBy   = &quot;Terraform&quot;
+      Project     = var.project_name
+    }
+  }
+}</code></pre>
+<h3>2. Variable Definitions</h3>
+<pre><code class="lang-hcl"># variables.tf
+variable &quot;environment&quot; {
+  description = &quot;Environment name (dev, staging, production)&quot;
+  type        = string
+  validation {
+    condition     = contains([&quot;dev&quot;, &quot;staging&quot;, &quot;production&quot;], var.environment)
+    error_message = &quot;Environment must be dev, staging, or production&quot;
+  }
+}
+
+variable &quot;aws_region&quot; {
+  description = &quot;AWS region for resources&quot;
+  type        = string
+  default     = &quot;us-east-1&quot;
+}
+
+variable &quot;instance_config&quot; {
+  description = &quot;EC2 instance configuration&quot;
+  type = object({
+    instance_type = string
+    volume_size   = number
+    enable_monitoring = bool
+  })
+  default = {
+    instance_type     = &quot;t3.micro&quot;
+    volume_size       = 20
+    enable_monitoring = false
+  }
+}
+
+variable &quot;tags&quot; {
+  description = &quot;Additional tags for resources&quot;
+  type        = map(string)
+  default     = {}
+}</code></pre>
+<h3>3. State Management</h3>
+<pre><code class="lang-hcl"># Remote state with S3 backend
+terraform {
+  backend &quot;s3&quot; {
+    bucket         = &quot;company-terraform-state&quot;
+    key            = &quot;env/${var.environment}/terraform.tfstate&quot;
+    region         = &quot;us-east-1&quot;
+    encrypt        = true
+    dynamodb_table = &quot;terraform-state-lock&quot;
+
+    # Enable versioning for state file recovery
+    versioning = true
+  }
+}
+
+# State locking with DynamoDB
+resource &quot;aws_dynamodb_table&quot; &quot;terraform_lock&quot; {
+  name         = &quot;terraform-state-lock&quot;
+  billing_mode = &quot;PAY_PER_REQUEST&quot;
+  hash_key     = &quot;LockID&quot;
+
+  attribute {
+    name = &quot;LockID&quot;
+    type = &quot;S&quot;
+  }
+
+  tags = {
+    Name = &quot;Terraform State Lock&quot;
+  }
+}</code></pre>
+<h3>4. Data Sources</h3>
+<pre><code class="lang-hcl"># Fetch existing resources
+data &quot;aws_vpc&quot; &quot;main&quot; {
+  id = var.vpc_id
+}
+
+data &quot;aws_subnets&quot; &quot;private&quot; {
+  filter {
+    name   = &quot;vpc-id&quot;
+    values = [data.aws_vpc.main.id]
+  }
+
+  tags = {
+    Tier = &quot;private&quot;
+  }
+}
+
+data &quot;aws_ami&quot; &quot;amazon_linux&quot; {
+  most_recent = true
+  owners      = [&quot;amazon&quot;]
+
+  filter {
+    name   = &quot;name&quot;
+    values = [&quot;amzn2-ami-hvm-*-x86_64-gp2&quot;]
+  }
+}
+
+# Remote state data source
+data &quot;terraform_remote_state&quot; &quot;networking&quot; {
+  backend = &quot;s3&quot;
+
+  config = {
+    bucket = &quot;company-terraform-state&quot;
+    key    = &quot;networking/terraform.tfstate&quot;
+    region = &quot;us-east-1&quot;
+  }
+}</code></pre>
+<hr>
+<h2>Patterns</h2>
+<h3>Module Structure</h3>
+<pre><code class="lang-hcl"># modules/web-app/main.tf
+resource &quot;aws_security_group&quot; &quot;web&quot; {
+  name        = &quot;${var.name}-web-sg&quot;
+  description = &quot;Security group for ${var.name} web tier&quot;
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = &quot;tcp&quot;
+    cidr_blocks = var.allowed_cidrs
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = &quot;-1&quot;
+    cidr_blocks = [&quot;0.0.0.0/0&quot;]
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = &quot;${var.name}-web-sg&quot;
+    }
+  )
+}
+
+resource &quot;aws_lb&quot; &quot;web&quot; {
+  name               = &quot;${var.name}-alb&quot;
+  internal           = false
+  load_balancer_type = &quot;application&quot;
+  security_groups    = [aws_security_group.web.id]
+  subnets            = var.subnet_ids
+
+  enable_deletion_protection = var.environment == &quot;production&quot;
+
+  tags = merge(
+    var.tags,
+    {
+      Name = &quot;${var.name}-alb&quot;
+    }
+  )
+}
+
+# modules/web-app/variables.tf
+variable &quot;name&quot; {
+  description = &quot;Application name&quot;
+  type        = string
+}
+
+variable &quot;environment&quot; {
+  description = &quot;Environment name&quot;
+  type        = string
+}
+
+variable &quot;vpc_id&quot; {
+  description = &quot;VPC ID&quot;
+  type        = string
+}
+
+variable &quot;subnet_ids&quot; {
+  description = &quot;Subnet IDs for load balancer&quot;
+  type        = list(string)
+}
+
+variable &quot;allowed_cidrs&quot; {
+  description = &quot;Allowed CIDR blocks for ingress&quot;
+  type        = list(string)
+  default     = [&quot;0.0.0.0/0&quot;]
+}
+
+variable &quot;tags&quot; {
+  description = &quot;Additional tags&quot;
+  type        = map(string)
+  default     = {}
+}
+
+# modules/web-app/outputs.tf
+output &quot;alb_dns_name&quot; {
+  description = &quot;DNS name of the load balancer&quot;
+  value       = aws_lb.web.dns_name
+}
+
+output &quot;alb_arn&quot; {
+  description = &quot;ARN of the load balancer&quot;
+  value       = aws_lb.web.arn
+}
+
+output &quot;security_group_id&quot; {
+  description = &quot;Security group ID&quot;
+  value       = aws_security_group.web.id
+}</code></pre>
+<h3>Using Modules</h3>
+<pre><code class="lang-hcl"># main.tf
+module &quot;web_app&quot; {
+  source = &quot;./modules/web-app&quot;
+
+  name        = &quot;my-app&quot;
+  environment = var.environment
+  vpc_id      = data.aws_vpc.main.id
+  subnet_ids  = data.aws_subnets.public.ids
+
+  allowed_cidrs = var.environment == &quot;production&quot; ? var.allowed_cidrs : [&quot;0.0.0.0/0&quot;]
+
+  tags = {
+    Team  = &quot;Platform&quot;
+    Owner = &quot;DevOps&quot;
+  }
+}
+
+# Use module outputs
+resource &quot;aws_route53_record&quot; &quot;web&quot; {
+  zone_id = var.route53_zone_id
+  name    = &quot;app.${var.domain}&quot;
+  type    = &quot;A&quot;
+
+  alias {
+    name                   = module.web_app.alb_dns_name
+    zone_id                = module.web_app.alb_zone_id
+    evaluate_target_health = true
+  }
+}</code></pre>
+<h3>Workspace Management</h3>
+<pre><code class="lang-bash"># Create workspaces for environments
+terraform workspace new dev
+terraform workspace new staging
+terraform workspace new production
+
+# Switch between workspaces
+terraform workspace select dev
+
+# List workspaces
+terraform workspace list
+
+# Use workspace in configuration
+locals {
+  environment = terraform.workspace
+
+  instance_counts = {
+    dev        = 1
+    staging    = 2
+    production = 5
+  }
+
+  instance_count = local.instance_counts[terraform.workspace]
+}
+
+resource &quot;aws_instance&quot; &quot;app&quot; {
+  count         = local.instance_count
+  ami           = data.aws_ami.amazon_linux.id
+  instance_type = var.instance_type
+
+  tags = {
+    Name        = &quot;${terraform.workspace}-app-${count.index + 1}&quot;
+    Environment = terraform.workspace
+  }
+}</code></pre>
+<h3>Dynamic Blocks</h3>
+<pre><code class="lang-hcl"># Dynamic ingress rules
+variable &quot;ingress_rules&quot; {
+  type = list(object({
+    from_port   = number
+    to_port     = number
+    protocol    = string
+    cidr_blocks = list(string)
+    description = string
+  }))
+  default = [
+    {
+      from_port   = 443
+      to_port     = 443
+      protocol    = &quot;tcp&quot;
+      cidr_blocks = [&quot;0.0.0.0/0&quot;]
+      description = &quot;HTTPS&quot;
+    },
+    {
+      from_port   = 80
+      to_port     = 80
+      protocol    = &quot;tcp&quot;
+      cidr_blocks = [&quot;0.0.0.0/0&quot;]
+      description = &quot;HTTP&quot;
+    }
+  ]
+}
+
+resource &quot;aws_security_group&quot; &quot;dynamic&quot; {
+  name        = &quot;dynamic-sg&quot;
+  description = &quot;Security group with dynamic rules&quot;
+  vpc_id      = var.vpc_id
+
+  dynamic &quot;ingress&quot; {
+    for_each = var.ingress_rules
+    content {
+      from_port   = ingress.value.from_port
+      to_port     = ingress.value.to_port
+      protocol    = ingress.value.protocol
+      cidr_blocks = ingress.value.cidr_blocks
+      description = ingress.value.description
+    }
+  }
+}</code></pre>
+<h3>For Each Patterns</h3>
+<pre><code class="lang-hcl"># Create resources from map
+variable &quot;s3_buckets&quot; {
+  type = map(object({
+    versioning = bool
+    encryption = bool
+  }))
+  default = {
+    &quot;logs&quot; = {
+      versioning = true
+      encryption = true
+    }
+    &quot;backups&quot; = {
+      versioning = true
+      encryption = true
+    }
+    &quot;assets&quot; = {
+      versioning = false
+      encryption = false
+    }
+  }
+}
+
+resource &quot;aws_s3_bucket&quot; &quot;buckets&quot; {
+  for_each = var.s3_buckets
+
+  bucket = &quot;${var.project}-${each.key}-${var.environment}&quot;
+
+  tags = {
+    Name = each.key
+    Type = each.key
+  }
+}
+
+resource &quot;aws_s3_bucket_versioning&quot; &quot;buckets&quot; {
+  for_each = {
+    for k, v in var.s3_buckets : k =&gt; v if v.versioning
+  }
+
+  bucket = aws_s3_bucket.buckets[each.key].id
+
+  versioning_configuration {
+    status = &quot;Enabled&quot;
+  }
+}</code></pre>
+<h3>Conditional Resources</h3>
+<pre><code class="lang-hcl"># Create resource only in production
+resource &quot;aws_cloudwatch_dashboard&quot; &quot;main&quot; {
+  count          = var.environment == &quot;production&quot; ? 1 : 0
+  dashboard_name = &quot;${var.project}-dashboard&quot;
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type = &quot;metric&quot;
+        properties = {
+          metrics = [
+            [&quot;AWS/Lambda&quot;, &quot;Invocations&quot;]
+          ]
+        }
+      }
+    ]
+  })
+}
+
+# Conditional values
+locals {
+  instance_type = var.environment == &quot;production&quot; ? &quot;t3.large&quot; : &quot;t3.micro&quot;
+
+  backup_retention = {
+    dev        = 7
+    staging    = 14
+    production = 30
+  }[var.environment]
+}</code></pre>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Essential Commands</h3>
+<pre><code class="lang-bash"># Initialize Terraform
+terraform init
+
+# Validate configuration
+terraform validate
+
+# Format configuration
+terraform fmt -recursive
+
+# Plan changes
+terraform plan -out=tfplan
+
+# Apply changes
+terraform apply tfplan
+
+# Destroy infrastructure
+terraform destroy
+
+# Show current state
+terraform show
+
+# List resources in state
+terraform state list
+
+# Remove resource from state
+terraform state rm aws_instance.example
+
+# Import existing resource
+terraform import aws_instance.example i-1234567890abcdef0
+
+# Refresh state
+terraform refresh
+
+# Output values
+terraform output
+terraform output -json</code></pre>
+<h3>State Management</h3>
+<pre><code class="lang-bash"># Pull remote state
+terraform state pull &gt; terraform.tfstate.backup
+
+# Push local state to remote
+terraform state push terraform.tfstate
+
+# Move resource in state
+terraform state mv aws_instance.old aws_instance.new
+
+# Replace provider in state
+terraform state replace-provider hashicorp/aws registry.terraform.io/hashicorp/aws</code></pre>
+<h3>Workspace Commands</h3>
+<pre><code class="lang-bash"># Create workspace
+terraform workspace new staging
+
+# Select workspace
+terraform workspace select production
+
+# List workspaces
+terraform workspace list
+
+# Show current workspace
+terraform workspace show
+
+# Delete workspace
+terraform workspace delete dev</code></pre>
+<h3>Module Commands</h3>
+<pre><code class="lang-bash"># Initialize and download modules
+terraform init
+
+# Update modules
+terraform get -update
+
+# Show module tree
+terraform providers</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Critical Violations</h3>
+<pre><code class="lang-hcl"># ❌ NEVER: Hardcode credentials
+provider &quot;aws&quot; {
+  access_key = &quot;AKIAIOSFODNN7EXAMPLE&quot;  # NEVER do this
+  secret_key = &quot;wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY&quot;
+}
+
+# ✅ CORRECT: Use environment variables or instance profiles
+provider &quot;aws&quot; {
+  # Uses AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+  region = var.aws_region
+}</code></pre>
+<pre><code class="lang-hcl"># ❌ NEVER: Store state locally for team projects
+terraform {
+  # No backend configuration - uses local state
+}
+
+# ✅ CORRECT: Use remote backend with locking
+terraform {
+  backend &quot;s3&quot; {
+    bucket         = &quot;terraform-state&quot;
+    key            = &quot;prod/terraform.tfstate&quot;
+    region         = &quot;us-east-1&quot;
+    encrypt        = true
+    dynamodb_table = &quot;terraform-lock&quot;
+  }
+}</code></pre>
+<pre><code class="lang-hcl"># ❌ NEVER: Use count for resources that might be reordered
+resource &quot;aws_instance&quot; &quot;app&quot; {
+  count = 3  # Risky - reordering changes indices
+  # ...
+}
+
+# ✅ CORRECT: Use for_each with stable keys
+resource &quot;aws_instance&quot; &quot;app&quot; {
+  for_each = toset([&quot;web-1&quot;, &quot;web-2&quot;, &quot;web-3&quot;])
+
+  tags = {
+    Name = each.key
+  }
+}</code></pre>
+<h3>Common Mistakes</h3>
+<pre><code class="lang-hcl"># ❌ Don&#x27;t ignore .terraform directory in git
+# .gitignore missing .terraform/
+
+# ✅ CORRECT: Proper .gitignore
+# .gitignore
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl  # or commit for version locking
+tfplan</code></pre>
+<pre><code class="lang-hcl"># ❌ Don&#x27;t create circular dependencies
+resource &quot;aws_security_group&quot; &quot;a&quot; {
+  ingress {
+    security_groups = [aws_security_group.b.id]
+  }
+}
+
+resource &quot;aws_security_group&quot; &quot;b&quot; {
+  ingress {
+    security_groups = [aws_security_group.a.id]
+  }
+}
+
+# ✅ CORRECT: Use separate rules
+resource &quot;aws_security_group_rule&quot; &quot;a_to_b&quot; {
+  type                     = &quot;ingress&quot;
+  security_group_id        = aws_security_group.b.id
+  source_security_group_id = aws_security_group.a.id
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = &quot;tcp&quot;
+}</code></pre>
+<h3>Best Practices</h3>
+<pre><code class="lang-hcl"># Use consistent naming
+locals {
+  name_prefix = &quot;${var.project}-${var.environment}&quot;
+
+  common_tags = {
+    Project     = var.project
+    Environment = var.environment
+    ManagedBy   = &quot;Terraform&quot;
+    Timestamp   = timestamp()
+  }
+}
+
+# Version pin providers
+terraform {
+  required_providers {
+    aws = {
+      source  = &quot;hashicorp/aws&quot;
+      version = &quot;~&gt; 5.0&quot;  # Allow minor updates only
+    }
+  }
+}
+
+# Use lifecycle rules for safety
+resource &quot;aws_db_instance&quot; &quot;main&quot; {
+  # ...
+
+  lifecycle {
+    prevent_destroy = true  # Prevent accidental deletion
+    create_before_destroy = true  # Zero-downtime updates
+    ignore_changes = [
+      tags[&quot;LastModified&quot;]  # Ignore external changes
+    ]
+  }
+}</code></pre>
+<hr>
+<h2>Level 3: Resources</h2>
+<p><strong>Location</strong>: <code>~/.hanzo/skills/infrastructure/terraform-best-practices/resources/</code></p>
+<h3>Comprehensive Reference</h3>
+<p><strong><code>REFERENCE.md</code></strong> (1,875 lines)</p>
+<ul><li>Complete Terraform best practices guide</li><li>State management strategies and troubleshooting</li><li>Module design patterns and composition</li><li>Variable management and validation</li><li>Security best practices and encryption</li><li>Cost optimization techniques</li><li>CI/CD integration patterns</li><li>Multi-environment strategies</li><li>Performance optimization</li><li>Disaster recovery procedures</li></ul>
+<h3>Executable Scripts</h3>
+<p><strong><code>scripts/analyze_terraform.py</code></strong> - Terraform code analyzer</p>
+<ul><li>Detects security vulnerabilities and anti-patterns</li><li>Checks for hardcoded secrets, unencrypted resources</li><li>Validates naming conventions and tagging</li><li>Identifies overly permissive IAM policies and security groups</li><li>Suggests improvements and best practices</li><li>Supports JSON and table output formats</li></ul>
+<pre><code class="lang-bash">./analyze_terraform.py .
+./analyze_terraform.py --json --output report.json terraform/
+./analyze_terraform.py --severity high --format table .</code></pre>
+<p><strong><code>scripts/validate_state.py</code></strong> - State file health checker</p>
+<ul><li>Validates state file integrity and structure</li><li>Detects orphaned resources and duplicates</li><li>Checks for circular dependencies</li><li>Analyzes state lineage and serial numbers</li><li>Identifies sensitive data exposure</li><li>Optionally checks for infrastructure drift</li></ul>
+<pre><code class="lang-bash">./validate_state.py
+./validate_state.py --remote --json
+./validate_state.py --check-drift --output state-report.json</code></pre>
+<p><strong><code>scripts/cost_estimate.sh</code></strong> - Infrastructure cost estimator</p>
+<ul><li>Estimates monthly costs from Terraform plans</li><li>Integrates with Infracost for accurate pricing</li><li>Provides cost breakdowns by resource type</li><li>Compares costs across environments</li><li>Supports budget limits and threshold alerts</li><li>Outputs in table, JSON, or CSV formats</li></ul>
+<pre><code class="lang-bash">./cost_estimate.sh
+./cost_estimate.sh --json --output costs.json
+./cost_estimate.sh --budget 5000 --threshold 80
+./cost_estimate.sh --compare production-costs.json</code></pre>
+<h3>Production Examples</h3>
+<p><strong>Reusable Modules</strong>:</p>
+<ul><li><code>examples/modules/vpc/</code> - Production-ready VPC with multi-AZ, NAT gateways, flow logs</li><li><code>examples/modules/eks/</code> - EKS cluster with node groups and IRSA</li><li><code>examples/modules/rds/</code> - RDS with encryption, backups, monitoring</li></ul>
+<p><strong>Environment Configurations</strong>:</p>
+<ul><li><code>examples/environments/dev/</code> - Development environment (cost-optimized)</li><li><code>examples/environments/prod/</code> - Production environment (HA, redundant)</li></ul>
+<p><strong>Best Practices Examples</strong>:</p>
+<ul><li><code>examples/good-practices/security.tf</code> - Encryption, least privilege IAM, secure networking</li><li><code>examples/bad-practices/anti-patterns.tf</code> - Common mistakes with explanations and fixes</li></ul>
+<h3>Usage</h3>
+<ol><li><strong>Code Quality Analysis</strong>:</li></ol>
+<p>   ``<code>bash    cd /path/to/terraform/project    /path/to/analyze_terraform.py . --severity high    </code>``</p>
+<ol><li><strong>State Validation</strong>:</li></ol>
+<p>   ``<code>bash    cd /path/to/terraform/project    /path/to/validate_state.py --check-drift    </code>``</p>
+<ol><li><strong>Cost Estimation</strong>:</li></ol>
+<p>   ``<code>bash    cd /path/to/terraform/project    /path/to/cost_estimate.sh --budget 10000 --json    </code>``</p>
+<ol><li><strong>Module Reuse</strong>:</li></ol>
+<p>   ```hcl    module &quot;vpc&quot; {      source = &quot;/path/to/terraform-best-practices/resources/examples/modules/vpc&quot;</p>
+<p>     name               = &quot;production&quot;      cidr_block         = &quot;10.0.0.0/16&quot;      availability_zones = [&quot;us-east-1a&quot;, &quot;us-east-1b&quot;, &quot;us-east-1c&quot;]    }    ```</p>
+<p>All scripts support <code>--help</code> for detailed usage information.</p>
+<hr>
+<h2>Related Skills</h2>
+<p><strong>Infrastructure</strong>:</p>
+<ul><li><code>aws-serverless.md</code> - AWS Lambda, API Gateway, DynamoDB integration</li><li><code>kubernetes-basics.md</code> - Container orchestration with Terraform Kubernetes provider</li><li><code>infrastructure-security.md</code> - IAM roles, security groups, secrets management</li><li><code>cost-optimization.md</code> - Resource sizing, reserved instances</li></ul>
+<p><strong>Development</strong>:</p>
+<ul><li><code>modal-functions-basics.md</code> - Alternative serverless platform</li><li><code>cloudflare-workers.md</code> - Edge computing with Terraform Cloudflare provider</li></ul>
+<p><strong>Standards from CLAUDE.md</strong>:</p>
+<ul><li>Use Terraform for infrastructure as code</li><li>Remote state with S3 backend mandatory for team projects</li><li>Version pin all providers</li><li>Tag all resources consistently</li><li>Enable state locking with DynamoDB</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-10-18 <strong>Format Version</strong>: 1.0 (Atomic)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/infrastructure-terraform-patterns.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>

@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>caching-redis-caching-patterns</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none}
+.brand i{font-style:normal;color:var(--faint)}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;padding:.8rem 1.3rem;border:1px solid var(--line-hi);
+  color:var(--ink);text-decoration:none;background:transparent}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:1rem 1.75rem;display:flex;
+  align-items:center;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;border-right:1px solid var(--line);
+  padding-right:1.5rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  padding:.95rem 1.1rem;font-family:var(--mono);font-size:.8rem;color:var(--soft);
+  overflow-x:auto;margin:0 0 2.5rem;white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem 0;border-bottom:1px solid var(--line);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+</style>
+<link rel="alternate" type="text/markdown" href="/caching-redis-caching-patterns.md">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/caching-redis-caching-patterns.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Send no Accept: text/html and any path returns markdown. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/">HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>caching-redis-caching-patterns</h1><p class="lede">Application-level caching with Redis - patterns, distributed caching, cache stampede prevention, and integration strategies for high-performance applications.</p><h1>Redis Caching Patterns</h1>
+<p><strong>Last Updated</strong>: 2025-10-25</p>
+<h2>When to Use This Skill</h2>
+<p>Use this skill when:</p>
+<ul><li>Building applications that need fast, distributed in-memory caching</li><li>Implementing session storage, rate limiting, or leaderboards</li><li>Preventing database overload with application-level caching</li><li>Needing cache with data structure support (lists, sets, sorted sets, hashes)</li><li>Scaling beyond single-server caching (Redis Cluster)</li><li>Implementing cache invalidation strategies with pub/sub</li><li>Migrating from Memcached to Redis (2024-2025 standard)</li></ul>
+<p><strong>Prerequisites</strong>: Understanding of <code>caching-fundamentals.md</code> (Cache-Aside, Write-Through, Write-Behind patterns)</p>
+<h2>Core Concepts</h2>
+<h3>Redis vs Memcached (2024-2025 Decision Matrix)</h3>
+<p>| Feature | Redis | Memcached | |---------|-------|-----------| | <strong>Data Structures</strong> | Strings, Lists, Sets, Sorted Sets, Hashes, Bitmaps, HyperLogLog, Streams | Key-value only (strings) | | <strong>Persistence</strong> | RDB snapshots + AOF log (optional) | None (pure in-memory) | | <strong>Replication</strong> | Built-in primary-replica | None | | <strong>Clustering</strong> | Redis Cluster (automatic sharding) | Client-side sharding | | <strong>Use Case</strong> | General-purpose caching, sessions, queues, pub/sub, real-time analytics | Simple key-value caching only | | <strong>Performance</strong> | ~110K ops/sec (single-threaded) | ~150K ops/sec (multi-threaded) | | <strong>Industry Standard (2024)</strong> | ✅ Default choice | ⚠️ Legacy systems only |</p>
+<p><strong>2024-2025 Recommendation</strong>: Use Redis unless you have a very specific use case requiring Memcached&#x27;s slight performance edge for simple key-value operations.</p>
+<h3>Redis Connection Patterns</h3>
+<pre><code class="lang-python"># redis-py (Python standard library for Redis)
+import redis
+from redis.connection import ConnectionPool
+
+# Single connection (development)
+r = redis.Redis(host=&#x27;localhost&#x27;, port=6379, db=0, decode_responses=True)
+
+# Connection pooling (production)
+pool = ConnectionPool(host=&#x27;localhost&#x27;, port=6379, db=0,
+                      max_connections=50, decode_responses=True)
+r = redis.Redis(connection_pool=pool)
+
+# Async support (redis-py 4.2+)
+import redis.asyncio as aioredis
+
+async def async_cache():
+    r = await aioredis.from_url(&quot;redis://localhost:6379&quot;, decode_responses=True)
+    await r.set(&quot;key&quot;, &quot;value&quot;)
+    value = await r.get(&quot;key&quot;)
+    await r.close()</code></pre>
+<h2>Pattern Implementations</h2>
+<h3>1. Cache-Aside (Lazy Loading)</h3>
+<p><strong>Most common pattern</strong> - application manages both cache and database.</p>
+<pre><code class="lang-python">import redis
+import json
+from typing import Optional, Any
+from dataclasses import dataclass, asdict
+
+@dataclass
+class User:
+    id: int
+    username: str
+    email: str
+
+class CacheAsidePattern:
+    def __init__(self, redis_client: redis.Redis):
+        self.cache = redis_client
+        self.ttl = 3600  # 1 hour
+
+    def get_user(self, user_id: int) -&gt; Optional[User]:
+        &quot;&quot;&quot;Cache-Aside read pattern&quot;&quot;&quot;
+        # 1. Try cache first
+        cache_key = f&quot;user:{user_id}&quot;
+        cached_data = self.cache.get(cache_key)
+
+        if cached_data:
+            print(f&quot;Cache HIT: {cache_key}&quot;)
+            return User(**json.loads(cached_data))
+
+        # 2. Cache miss - load from database
+        print(f&quot;Cache MISS: {cache_key}&quot;)
+        user = self._load_from_db(user_id)
+
+        if user:
+            # 3. Populate cache for next request
+            self.cache.setex(cache_key, self.ttl, json.dumps(asdict(user)))
+
+        return user
+
+    def update_user(self, user: User) -&gt; None:
+        &quot;&quot;&quot;Cache-Aside write pattern&quot;&quot;&quot;
+        # 1. Update database
+        self._save_to_db(user)
+
+        # 2. Invalidate cache (let next read repopulate)
+        cache_key = f&quot;user:{user.id}&quot;
+        self.cache.delete(cache_key)
+
+        # Alternative: Update cache immediately
+        # self.cache.setex(cache_key, self.ttl, json.dumps(asdict(user)))
+
+    def _load_from_db(self, user_id: int) -&gt; Optional[User]:
+        # Simulate database load
+        return User(id=user_id, username=f&quot;user{user_id}&quot;, email=f&quot;user{user_id}@example.com&quot;)
+
+    def _save_to_db(self, user: User):
+        # Simulate database save
+        pass</code></pre>
+<h3>2. Write-Through Pattern</h3>
+<p><strong>Synchronous cache + database writes</strong> - guarantees consistency.</p>
+<pre><code class="lang-python">class WriteThroughCache:
+    def __init__(self, redis_client: redis.Redis):
+        self.cache = redis_client
+        self.ttl = 3600
+
+    def save_product(self, product_id: int, product_data: dict) -&gt; None:
+        &quot;&quot;&quot;Write to cache and database simultaneously&quot;&quot;&quot;
+        cache_key = f&quot;product:{product_id}&quot;
+
+        # 1. Write to cache
+        self.cache.setex(cache_key, self.ttl, json.dumps(product_data))
+
+        # 2. Write to database (synchronously)
+        self._save_to_db(product_id, product_data)
+
+        print(f&quot;Write-Through: {cache_key} saved to cache + DB&quot;)
+
+    def get_product(self, product_id: int) -&gt; Optional[dict]:
+        &quot;&quot;&quot;Read from cache (always up-to-date due to write-through)&quot;&quot;&quot;
+        cache_key = f&quot;product:{product_id}&quot;
+        cached = self.cache.get(cache_key)
+
+        if cached:
+            return json.loads(cached)
+
+        # Fallback to database if cache expired
+        return self._load_from_db(product_id)
+
+    def _save_to_db(self, product_id: int, data: dict):
+        # Database write
+        pass
+
+    def _load_from_db(self, product_id: int) -&gt; Optional[dict]:
+        # Database read
+        return None</code></pre>
+<h3>3. Write-Behind (Write-Back) Pattern</h3>
+<p><strong>Asynchronous database writes</strong> - fast writes, eventual consistency.</p>
+<pre><code class="lang-python">import asyncio
+from collections import deque
+
+class WriteBehindCache:
+    def __init__(self, redis_client: redis.Redis):
+        self.cache = redis_client
+        self.write_queue = deque()
+        self.batch_size = 100
+        self.flush_interval = 5  # seconds
+
+    def save_event(self, event_id: str, event_data: dict) -&gt; None:
+        &quot;&quot;&quot;Write to cache immediately, queue database write&quot;&quot;&quot;
+        cache_key = f&quot;event:{event_id}&quot;
+
+        # 1. Write to cache immediately
+        self.cache.setex(cache_key, 3600, json.dumps(event_data))
+
+        # 2. Queue database write
+        self.write_queue.append((event_id, event_data))
+        print(f&quot;Write-Behind: {cache_key} cached, queued for DB&quot;)
+
+    async def flush_worker(self):
+        &quot;&quot;&quot;Background worker to flush queue to database&quot;&quot;&quot;
+        while True:
+            await asyncio.sleep(self.flush_interval)
+
+            if not self.write_queue:
+                continue
+
+            # Batch writes
+            batch = []
+            while self.write_queue and len(batch) &lt; self.batch_size:
+                batch.append(self.write_queue.popleft())
+
+            # Write batch to database
+            await self._batch_save_to_db(batch)
+            print(f&quot;Flushed {len(batch)} items to database&quot;)
+
+    async def _batch_save_to_db(self, batch):
+        # Simulate batch database write
+        await asyncio.sleep(0.1)</code></pre>
+<h2>Cache Key Design</h2>
+<h3>Naming Conventions</h3>
+<pre><code class="lang-python">class CacheKeyDesign:
+    &quot;&quot;&quot;Best practices for Redis key naming&quot;&quot;&quot;
+
+    # Hierarchical keys with colons
+    USER_KEY = &quot;user:{user_id}&quot;                    # user:123
+    USER_PROFILE = &quot;user:{user_id}:profile&quot;        # user:123:profile
+    USER_POSTS = &quot;user:{user_id}:posts&quot;            # user:123:posts
+
+    # Multi-level hierarchies
+    PRODUCT_KEY = &quot;product:{category}:{product_id}&quot;  # product:electronics:456
+
+    # Versioned keys
+    API_RESPONSE = &quot;api:v1:users:{user_id}&quot;        # api:v1:users:123
+
+    # Namespaced keys
+    SESSION_KEY = &quot;session:web:{session_id}&quot;       # session:web:abc123
+    RATE_LIMIT = &quot;ratelimit:{ip}:{endpoint}&quot;       # ratelimit:1.2.3.4:/api/data
+
+    @staticmethod
+    def build_key(pattern: str, **kwargs) -&gt; str:
+        &quot;&quot;&quot;Safe key building with validation&quot;&quot;&quot;
+        return pattern.format(**kwargs)
+
+# Usage
+key = CacheKeyDesign.build_key(CacheKeyDesign.USER_PROFILE, user_id=123)
+# Returns: &quot;user:123:profile&quot;</code></pre>
+<h3>Key Namespacing Best Practices</h3>
+<pre><code class="lang-python"># Use environment-specific prefixes
+ENV = &quot;prod&quot;  # or &quot;dev&quot;, &quot;staging&quot;
+
+def namespaced_key(key: str) -&gt; str:
+    return f&quot;{ENV}:{key}&quot;
+
+# prod:user:123 vs dev:user:123</code></pre>
+<h2>TTL Strategies</h2>
+<h3>Sliding Expiration</h3>
+<pre><code class="lang-python">class SlidingExpirationCache:
+    def __init__(self, redis_client: redis.Redis, ttl: int = 1800):
+        self.cache = redis_client
+        self.ttl = ttl  # 30 minutes
+
+    def get_with_sliding_expiration(self, key: str) -&gt; Optional[str]:
+        &quot;&quot;&quot;Reset TTL on every access (sliding window)&quot;&quot;&quot;
+        value = self.cache.get(key)
+
+        if value:
+            # Reset expiration on access
+            self.cache.expire(key, self.ttl)
+            print(f&quot;Sliding expiration: {key} TTL reset to {self.ttl}s&quot;)
+
+        return value
+
+    def set_sliding(self, key: str, value: str) -&gt; None:
+        self.cache.setex(key, self.ttl, value)</code></pre>
+<h3>Probabilistic Early Expiration</h3>
+<p>Prevents cache stampede by refreshing before expiration.</p>
+<pre><code class="lang-python">import random
+import time
+
+class ProbabilisticExpiration:
+    def __init__(self, redis_client: redis.Redis, ttl: int = 3600):
+        self.cache = redis_client
+        self.ttl = ttl
+        self.beta = 1.0  # Tuning parameter
+
+    def get_with_early_refresh(self, key: str, refresh_fn) -&gt; Any:
+        &quot;&quot;&quot;XFetch algorithm - probabilistic early refresh&quot;&quot;&quot;
+        cached = self.cache.get(key)
+        ttl_remaining = self.cache.ttl(key)
+
+        if cached and ttl_remaining &gt; 0:
+            # Calculate refresh probability
+            delta = time.time() - random.random()
+            if delta * self.beta * math.log(random.random()) &gt;= ttl_remaining:
+                # Refresh early
+                print(f&quot;Early refresh triggered for {key}&quot;)
+                return self._refresh_cache(key, refresh_fn)
+
+            return json.loads(cached)
+
+        # Cache miss or expired
+        return self._refresh_cache(key, refresh_fn)
+
+    def _refresh_cache(self, key: str, refresh_fn) -&gt; Any:
+        value = refresh_fn()
+        self.cache.setex(key, self.ttl, json.dumps(value))
+        return value</code></pre>
+<h2>Cache Stampede Prevention</h2>
+<h3>Locking Pattern</h3>
+<pre><code class="lang-python">import time
+import uuid
+
+class CacheStampedePrevention:
+    def __init__(self, redis_client: redis.Redis):
+        self.cache = redis_client
+
+    def get_with_lock(self, key: str, refresh_fn, ttl: int = 3600) -&gt; Any:
+        &quot;&quot;&quot;Prevent stampede with distributed lock&quot;&quot;&quot;
+        cached = self.cache.get(key)
+        if cached:
+            return json.loads(cached)
+
+        # Try to acquire lock
+        lock_key = f&quot;lock:{key}&quot;
+        lock_value = str(uuid.uuid4())
+        lock_acquired = self.cache.set(lock_key, lock_value, nx=True, ex=10)  # 10s lock
+
+        if lock_acquired:
+            try:
+                # This thread refreshes the cache
+                print(f&quot;Lock acquired for {key}, refreshing...&quot;)
+                value = refresh_fn()
+                self.cache.setex(key, ttl, json.dumps(value))
+                return value
+            finally:
+                # Release lock
+                self._release_lock(lock_key, lock_value)
+        else:
+            # Another thread is refreshing, wait and retry
+            print(f&quot;Lock held by another thread for {key}, waiting...&quot;)
+            time.sleep(0.1)
+            return self.get_with_lock(key, refresh_fn, ttl)
+
+    def _release_lock(self, lock_key: str, lock_value: str):
+        &quot;&quot;&quot;Safely release lock (only if we own it)&quot;&quot;&quot;
+        lua_script = &quot;&quot;&quot;
+        if redis.call(&quot;get&quot;, KEYS[1]) == ARGV[1] then
+            return redis.call(&quot;del&quot;, KEYS[1])
+        else
+            return 0
+        end
+        &quot;&quot;&quot;
+        self.cache.eval(lua_script, 1, lock_key, lock_value)</code></pre>
+<h2>Session Storage Patterns</h2>
+<pre><code class="lang-python">import hashlib
+from datetime import datetime, timedelta
+
+class RedisSessionStore:
+    def __init__(self, redis_client: redis.Redis):
+        self.cache = redis_client
+        self.session_ttl = 86400  # 24 hours
+
+    def create_session(self, user_id: int) -&gt; str:
+        &quot;&quot;&quot;Create new session with unique ID&quot;&quot;&quot;
+        session_id = self._generate_session_id(user_id)
+        session_data = {
+            &quot;user_id&quot;: user_id,
+            &quot;created_at&quot;: datetime.utcnow().isoformat(),
+            &quot;last_accessed&quot;: datetime.utcnow().isoformat()
+        }
+
+        session_key = f&quot;session:{session_id}&quot;
+        self.cache.setex(session_key, self.session_ttl, json.dumps(session_data))
+        return session_id
+
+    def get_session(self, session_id: str) -&gt; Optional[dict]:
+        &quot;&quot;&quot;Retrieve session and extend TTL&quot;&quot;&quot;
+        session_key = f&quot;session:{session_id}&quot;
+        session_data = self.cache.get(session_key)
+
+        if session_data:
+            # Extend session TTL on access
+            self.cache.expire(session_key, self.session_ttl)
+            data = json.loads(session_data)
+            data[&quot;last_accessed&quot;] = datetime.utcnow().isoformat()
+            self.cache.setex(session_key, self.session_ttl, json.dumps(data))
+            return data
+
+        return None
+
+    def destroy_session(self, session_id: str) -&gt; None:
+        &quot;&quot;&quot;Logout - delete session&quot;&quot;&quot;
+        session_key = f&quot;session:{session_id}&quot;
+        self.cache.delete(session_key)
+
+    def _generate_session_id(self, user_id: int) -&gt; str:
+        &quot;&quot;&quot;Generate secure session ID&quot;&quot;&quot;
+        data = f&quot;{user_id}:{datetime.utcnow().isoformat()}:{uuid.uuid4()}&quot;
+        return hashlib.sha256(data.encode()).hexdigest()</code></pre>
+<h2>Rate Limiting Patterns</h2>
+<h3>Fixed Window Rate Limiting</h3>
+<pre><code class="lang-python">class FixedWindowRateLimiter:
+    def __init__(self, redis_client: redis.Redis):
+        self.cache = redis_client
+
+    def is_allowed(self, user_id: int, limit: int = 100, window: int = 60) -&gt; bool:
+        &quot;&quot;&quot;Allow &#x27;limit&#x27; requests per &#x27;window&#x27; seconds&quot;&quot;&quot;
+        key = f&quot;ratelimit:{user_id}&quot;
+
+        # Increment counter
+        current = self.cache.incr(key)
+
+        if current == 1:
+            # First request in window - set expiration
+            self.cache.expire(key, window)
+
+        if current &gt; limit:
+            print(f&quot;Rate limit exceeded for user {user_id}: {current}/{limit}&quot;)
+            return False
+
+        print(f&quot;Request allowed for user {user_id}: {current}/{limit}&quot;)
+        return True</code></pre>
+<h3>Sliding Window Rate Limiting</h3>
+<pre><code class="lang-python">import time
+
+class SlidingWindowRateLimiter:
+    def __init__(self, redis_client: redis.Redis):
+        self.cache = redis_client
+
+    def is_allowed(self, user_id: int, limit: int = 100, window: int = 60) -&gt; bool:
+        &quot;&quot;&quot;Sliding window using sorted set&quot;&quot;&quot;
+        key = f&quot;ratelimit:sliding:{user_id}&quot;
+        now = time.time()
+        window_start = now - window
+
+        # Remove old entries
+        self.cache.zremrangebyscore(key, 0, window_start)
+
+        # Count requests in current window
+        count = self.cache.zcard(key)
+
+        if count &gt;= limit:
+            return False
+
+        # Add current request
+        self.cache.zadd(key, {str(uuid.uuid4()): now})
+        self.cache.expire(key, window)
+
+        return True</code></pre>
+<h2>Distributed Caching with Redis Cluster</h2>
+<pre><code class="lang-python">from rediscluster import RedisCluster
+
+class DistributedCache:
+    def __init__(self):
+        # Connect to Redis Cluster
+        startup_nodes = [
+            {&quot;host&quot;: &quot;127.0.0.1&quot;, &quot;port&quot;: &quot;7000&quot;},
+            {&quot;host&quot;: &quot;127.0.0.1&quot;, &quot;port&quot;: &quot;7001&quot;},
+            {&quot;host&quot;: &quot;127.0.0.1&quot;, &quot;port&quot;: &quot;7002&quot;}
+        ]
+        self.cache = RedisCluster(
+            startup_nodes=startup_nodes,
+            decode_responses=True,
+            skip_full_coverage_check=True
+        )
+
+    def set_distributed(self, key: str, value: str, ttl: int = 3600):
+        &quot;&quot;&quot;Set key in cluster (automatically sharded)&quot;&quot;&quot;
+        self.cache.setex(key, ttl, value)
+
+    def get_distributed(self, key: str) -&gt; Optional[str]:
+        &quot;&quot;&quot;Get key from cluster&quot;&quot;&quot;
+        return self.cache.get(key)
+
+    def get_cluster_info(self) -&gt; dict:
+        &quot;&quot;&quot;Get cluster node information&quot;&quot;&quot;
+        return self.cache.cluster_info()</code></pre>
+<h2>Integration with Web Frameworks</h2>
+<h3>FastAPI Integration</h3>
+<pre><code class="lang-python">from fastapi import FastAPI, Depends
+import redis.asyncio as aioredis
+
+app = FastAPI()
+
+# Dependency injection for Redis
+async def get_redis():
+    redis = await aioredis.from_url(&quot;redis://localhost:6379&quot;, decode_responses=True)
+    try:
+        yield redis
+    finally:
+        await redis.close()
+
+@app.get(&quot;/users/{user_id}&quot;)
+async def get_user(user_id: int, redis: aioredis.Redis = Depends(get_redis)):
+    &quot;&quot;&quot;Cache-Aside pattern with FastAPI&quot;&quot;&quot;
+    cache_key = f&quot;user:{user_id}&quot;
+
+    # Try cache
+    cached = await redis.get(cache_key)
+    if cached:
+        return {&quot;source&quot;: &quot;cache&quot;, &quot;data&quot;: json.loads(cached)}
+
+    # Load from database
+    user_data = {&quot;id&quot;: user_id, &quot;name&quot;: f&quot;User {user_id}&quot;}
+
+    # Populate cache
+    await redis.setex(cache_key, 3600, json.dumps(user_data))
+
+    return {&quot;source&quot;: &quot;database&quot;, &quot;data&quot;: user_data}</code></pre>
+<h3>Flask Integration</h3>
+<pre><code class="lang-python">from flask import Flask
+import redis
+
+app = Flask(__name__)
+
+# Initialize Redis connection pool
+redis_pool = redis.ConnectionPool(host=&#x27;localhost&#x27;, port=6379, db=0, decode_responses=True)
+
+def get_redis():
+    return redis.Redis(connection_pool=redis_pool)
+
+@app.route(&#x27;/products/&lt;int:product_id&gt;&#x27;)
+def get_product(product_id):
+    r = get_redis()
+    cache_key = f&quot;product:{product_id}&quot;
+
+    cached = r.get(cache_key)
+    if cached:
+        return {&quot;source&quot;: &quot;cache&quot;, &quot;data&quot;: json.loads(cached)}
+
+    product_data = {&quot;id&quot;: product_id, &quot;name&quot;: f&quot;Product {product_id}&quot;}
+    r.setex(cache_key, 3600, json.dumps(product_data))
+
+    return {&quot;source&quot;: &quot;database&quot;, &quot;data&quot;: product_data}</code></pre>
+<h2>Anti-Patterns</h2>
+<h3>❌ Not Using Connection Pooling</h3>
+<pre><code class="lang-python"># WRONG: Creating new connection for each request
+def bad_cache_usage():
+    r = redis.Redis(host=&#x27;localhost&#x27;, port=6379)  # New connection each time
+    return r.get(&quot;key&quot;)
+
+# CORRECT: Use connection pool
+pool = ConnectionPool(host=&#x27;localhost&#x27;, port=6379, max_connections=50)
+r = redis.Redis(connection_pool=pool)</code></pre>
+<h3>❌ Ignoring Cache Stampede</h3>
+<pre><code class="lang-python"># WRONG: No protection against stampede
+def bad_cache_refresh(key):
+    cached = cache.get(key)
+    if not cached:
+        # Many threads will hit database simultaneously
+        return expensive_db_query()
+
+# CORRECT: Use locking or probabilistic expiration</code></pre>
+<h3>❌ Using Redis as a Database</h3>
+<pre><code class="lang-python"># WRONG: Treating Redis as durable storage without persistence
+def bad_critical_data():
+    cache.set(&quot;critical_order&quot;, order_data)  # No persistence configured!
+    # Data lost on Redis restart
+
+# CORRECT: Use Redis with AOF persistence + RDB, or use proper database</code></pre>
+<h3>❌ Not Setting TTL</h3>
+<pre><code class="lang-python"># WRONG: Keys without expiration fill up memory
+cache.set(&quot;user:123&quot;, data)  # No TTL - lives forever
+
+# CORRECT: Always set appropriate TTL
+cache.setex(&quot;user:123&quot;, 3600, data)  # 1 hour TTL</code></pre>
+<h2>Quick Reference</h2>
+<p>| Pattern | Use Case | Consistency | Latency | |---------|----------|-------------|---------| | Cache-Aside | Read-heavy workloads | Eventual | Low (cache hit) | | Write-Through | Read-heavy, strong consistency | Strong | Medium (sync writes) | | Write-Behind | Write-heavy, eventual consistency OK | Eventual | Very Low (async writes) | | Read-Through | Transparent caching | Eventual | Low |</p>
+<p><strong>Cache Stampede Prevention</strong>:</p>
+<ul><li>Locking: Distributed lock with 10s timeout</li><li>Probabilistic: XFetch algorithm with beta=1.0</li><li>Refresh ahead: Background job refreshes before expiration</li></ul>
+<p><strong>TTL Strategies</strong>:</p>
+<ul><li>Fixed: <code>setex(key, ttl, value)</code> - expires after TTL</li><li>Sliding: <code>expire(key, ttl)</code> on each access</li><li>No expiration: Only for permanent data (use sparingly)</li></ul>
+<p><strong>Rate Limiting</strong>:</p>
+<ul><li>Fixed window: Simple counter with INCR + EXPIRE</li><li>Sliding window: Sorted set with ZADD + ZREMRANGEBYSCORE</li></ul>
+<h2>Related Skills</h2>
+<ul><li><code>caching-fundamentals.md</code> - Core caching concepts and patterns</li><li><code>cache-invalidation-strategies.md</code> - Time-based, event-based, version-based invalidation</li><li><code>database-connection-pooling.md</code> - Connection pool sizing for cache + DB</li><li><code>api-rate-limiting.md</code> - API rate limiting strategies</li></ul>
+<h2>Summary</h2>
+<p>Redis caching patterns are essential for high-performance applications in 2024-2025:</p>
+<p><strong>Key Takeaways</strong>:</p>
+<ol><li><strong>Redis is the standard</strong> - Use Redis over Memcached for new projects</li><li><strong>Cache-Aside is most common</strong> - Simple, flexible, works for 80% of use cases</li><li><strong>Always use connection pooling</strong> - Critical for production performance</li><li><strong>Prevent cache stampede</strong> - Use locking or probabilistic expiration</li><li><strong>Design cache keys carefully</strong> - Hierarchical, namespaced, versioned</li><li><strong>Set TTL on everything</strong> - Prevent unbounded memory growth</li><li><strong>Use Redis for more than caching</strong> - Sessions, rate limiting, pub/sub, leaderboards</li></ol>
+<p>Redis provides the foundation for application-level performance optimization. Combine with HTTP caching and CDN edge caching for a complete caching strategy.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/caching-redis-caching-patterns.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"d33bb30aef6a45f98e5eb853d09f9c8f","r":1}' crossorigin="anonymous"></script>
+</body></html>
