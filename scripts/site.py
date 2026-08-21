@@ -454,10 +454,23 @@ def patch(path):
     return False
 
 
+def sitemap(files):
+    urls = []
+    for f in files:
+        n = os.path.basename(f)[:-5]
+        urls.append("https://hanzoskills.com/" + ("" if n == "index" else n))
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            + "".join("<url><loc>%s</loc></url>\n" % html.escape(u) for u in sorted(urls))
+            + "</urlset>\n")
+
+
 def main():
     with open(os.path.join(ROOT, "favicon.svg"), "w", encoding="utf-8") as f:
         f.write(FAVICON)
     files = sorted(glob.glob(os.path.join(ROOT, "*.html")))
+    with open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf-8") as f:
+        f.write(sitemap(files))
     changed = sum(patch(f) for f in files)
     print("%d/%d pages rewritten" % (changed, len(files)))
 
