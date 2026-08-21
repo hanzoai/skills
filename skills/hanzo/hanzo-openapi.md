@@ -91,7 +91,7 @@ Repo: `hanzoai/openapi` (1.8MB, 3 stars).
 | KV | `kv/openapi.yaml` | `kv.hanzo.ai` |
 | MQ | `mq/openapi.yaml` | `mq.hanzo.ai` |
 | Edge | `edge/openapi.yaml` | `edge.hanzo.ai` |
-| Registry | `registry/openapi.yaml` | `registry.hanzo.ai` |
+| Registry | `registry/openapi.yaml` | `oci.hanzo.ai` |
 | Visor | `visor/openapi.yaml` | `vm.hanzo.ai` |
 
 ### Operations
