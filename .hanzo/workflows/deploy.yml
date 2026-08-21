@@ -95,11 +95,18 @@ jobs:
           if [ -z "${KMS_CLIENT_ID:-}" ] || [ -z "${KMS_CLIENT_SECRET:-}" ]; then
             echo "::error::no KMS_CLIENT_ID/KMS_CLIENT_SECRET on this repo — seal them to publish"; exit 1
           fi
-          tok=$(curl -fsS -X POST "$KMS_ENDPOINT/v1/kms/auth/login" \
-                -H 'Content-Type: application/json' \
-                -d "{\"clientId\":\"$KMS_CLIENT_ID\",\"clientSecret\":\"$KMS_CLIENT_SECRET\"}" \
-                | jq -r '.accessToken // empty')
-          [ -n "$tok" ] || { echo "::error::KMS login failed at $KMS_ENDPOINT"; exit 1; }
+          # Say what the endpoint answered. `curl -f` reports a bare exit 22 and
+          # hides which hop refused, which is how a 502 here reads as a mystery.
+          code=$(curl -sS -o /tmp/kms.json -w '%{http_code}' -X POST "$KMS_ENDPOINT/v1/kms/auth/login" \
+                 -H 'Content-Type: application/json' \
+                 -d "{\"clientId\":\"$KMS_CLIENT_ID\",\"clientSecret\":\"$KMS_CLIENT_SECRET\"}" || echo 000)
+          tok=$(jq -r '.accessToken // empty' /tmp/kms.json 2>/dev/null || true)
+          if [ -z "$tok" ]; then
+            echo "::error::KMS login to $KMS_ENDPOINT/v1/kms/auth/login returned $code"
+            echo "resolved: $(getent hosts "${KMS_ENDPOINT#https://}" || echo unresolved)"
+            head -c 300 /tmp/kms.json || true
+            exit 1
+          fi
           # Two shapes answer here: the unscoped path and the org-scoped one.
           read_secret() {
             v=$(curl -fsS "$KMS_ENDPOINT/v1/kms/secrets/deploy/cf-pages/$1?env=prod" \
@@ -120,11 +127,36 @@ jobs:
           echo "api=$api" >> "$GITHUB_OUTPUT"
           echo "acct=$acct" >> "$GITHUB_OUTPUT"
 
+      # Pages and Workers both serve static assets and this host has been read
+      # as each. Ask Cloudflare which one owns the name and publish that way,
+      # so the answer comes from the account rather than from a comment.
       - name: publish
         env:
           CLOUDFLARE_API_TOKEN: ${{ steps.cf.outputs.api }}
           CLOUDFLARE_ACCOUNT_ID: ${{ steps.cf.outputs.acct }}
-        run: npx wrangler@3 deploy
+          CF: ${{ steps.cf.outputs.api }}
+          ACCT: ${{ steps.cf.outputs.acct }}
+        run: |
+          set -euo pipefail
+          proj=$(curl -sS -H "Authorization: Bearer $CF" \
+                 "https://api.cloudflare.com/client/v4/accounts/$ACCT/pages/projects?per_page=100" \
+                 | jq -r --arg h "$HOSTNAME_APEX" \
+                   'first(.result[]? | select((.domains // []) | index($h)) | .name) // empty')
+          if [ -n "$proj" ]; then
+            echo "Pages project $proj serves $HOSTNAME_APEX"
+            npx wrangler@3 pages deploy public --project-name "$proj" --branch main
+            dom="https://api.cloudflare.com/client/v4/accounts/$ACCT/pages/projects/$proj/domains"
+            if curl -sS -H "Authorization: Bearer $CF" "$dom" \
+               | jq -e --arg h "$HOSTNAME_WWW" '.result[]? | select(.name == $h)' >/dev/null; then
+              echo "$HOSTNAME_WWW already attached"
+            else
+              curl -sS -X POST -H "Authorization: Bearer $CF" -H "Content-Type: application/json" \
+                --data "{\"name\":\"$HOSTNAME_WWW\"}" "$dom" | head -c 400
+            fi
+          else
+            echo "no Pages project holds $HOSTNAME_APEX — publishing the Worker in wrangler.toml"
+            npx wrangler@3 deploy
+          fi
 
       # Cloudflare answers this host with `cf-cache-status: HIT`, so a fresh
       # deploy is not a fresh response. Best-effort: the token may not carry
