@@ -449,9 +449,26 @@ def patch(path):
         out = re.sub(r"\s*</body>", COPY_JS + "</body>", out, count=1)
 
     if out != src:
-        open(path, "w", encoding="utf-8").write(out)
+        write(path, out)
         return True
     return False
+
+
+def write(path, text):
+    """Replace a file's contents, never truncate them in place.
+
+    `open(path, "w")` empties the file and then fills it, so anything reading it
+    in that window gets zero bytes — and this generator rewrites each page after
+    writing it, with the publish reading the same directory. hanzoskills.com went
+    out with a 0-byte index.html that way: every other object uploaded intact,
+    and the one file this pass rewrites twice did not.
+    """
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
 
 
 def sitemap(files):
@@ -466,11 +483,9 @@ def sitemap(files):
 
 
 def main():
-    with open(os.path.join(ROOT, "favicon.svg"), "w", encoding="utf-8") as f:
-        f.write(FAVICON)
+    write(os.path.join(ROOT, "favicon.svg"), FAVICON)
     files = sorted(glob.glob(os.path.join(ROOT, "*.html")))
-    with open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf-8") as f:
-        f.write(sitemap(files))
+    write(os.path.join(ROOT, "sitemap.xml"), sitemap(files))
     changed = sum(patch(f) for f in files)
     print("%d/%d pages rewritten" % (changed, len(files)))
 
