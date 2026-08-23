@@ -123,7 +123,7 @@ The document partitions its operations by the app that serves them. That partiti
 | `platform.md` *(not yet written)* | `/v1/builds`, `/v1/environments`, `/v1/git-webhook`, `/v1/pipelines`,  | 37 | Hanzo PaaS: deploy containers to your own tenant namespace — builds, releases,… |
 | `cloudflare.md` *(not yet written)* | `/v1/cloudflare` | 33 | Your Cloudflare account, managed from Hanzo: zones, Pages, Workers, Workers AI, R2, KV… |
 | `deploy.md` *(not yet written)* | `/v1/deploy` | 21 | Hanzo CD: see what each app is running, sync it, and roll back a bad release. |
-| `ingress.md` *(not yet written)* | `/v1/ingress` | 18 | Your front door: automatic TLS certificates and hostname routing to any backend, changed… |
+| `ingress.md` *(not yet written)* | `/v1/ingress` | 18 | Your entry point: automatic TLS certificates and hostname routing to any backend, changed… |
 | `function.md` *(not yet written)* | `/v1/functions` | 11 | Your serverless code: publish it, call it over HTTP, watch every run and what it cost. |
 | `domain.md` *(not yet written)* | `/v1/domain` | 7 | Hanzo Domains: search a name, see the price, buy it from your prepaid wallet. |
 | `dns.md` *(not yet written)* | `/v1/dns` | 5 | Your DNS records: the zones and records behind every name you point at Hanzo. |
@@ -189,7 +189,7 @@ The document partitions its operations by the app that serves them. That partiti
 
 | Skill | Serves | Operations | Purpose |
 |---|---|---|---|
-| `web3.md` *(not yet written)* | `/v1/chains`, `/v1/rpc`, `/v1/tokens` | 4 | The chain-access surface: which chains this deployment can reach, a JSON-RPC door onto… |
+| `web3.md` *(not yet written)* | `/v1/chains`, `/v1/rpc`, `/v1/tokens` | 4 | The chain-access surface: which chains this deployment can reach, a JSON-RPC endpoint onto… |
 | `validator.md` *(not yet written)* | `/v1/validators` | 4 | One-click validator onboarding: prove your Genesis NFT, get a node provisioned, queue its… |
 | `explorer.md` *(not yet written)* | `/v1/indexers`, `/v1/oracles` | 2 | Chain data: your block indexers and how far each has caught up, plus the on-chain price… |
 

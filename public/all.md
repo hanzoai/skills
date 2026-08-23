@@ -161361,7 +161361,7 @@ A plugin does not serve the console, does not thread operator flags, does not
 scope credentials for other processes, and does not own the ops listener when it
 runs as a child (`zip.Addr("") != ""` means a host handed it a socket; the ops
 port is the host's — HIP-0119 §1 applies to the *deployment's* listeners, and a
-child's socket is not one). These are front-door concerns and stay in one
+child's socket is not one). These are entry-point concerns and stay in one
 process.
 
 ### §2 The entry point
@@ -161452,7 +161452,7 @@ prefixes through `zip.Load` and the first match wins. A prefix nobody wrote down
 is not a documentation gap; it is a 404 or a 405 on live traffic.
 
 The proof is on the record. The `analytics` row listed the read endpoints and
-omitted the four ingestion doors `apps/analytics/event.go` actually serves
+omitted the four ingestion endpoints `apps/analytics/event.go` actually serves
 (`/v1/event`, `/v1/insights/e`, `/v1/analytics`, `/v1/analytics/batch`). Every
 product beacon in the fleet therefore fell past every prefix onto the row
 holding the bare `/v1` remainder, which does not serve them, and answered 405 —
@@ -161545,7 +161545,7 @@ was consulted instead of a router.
 
 Updating a plugin is then ONE commit in the host repo that moves
 `{URL, Sum, declaration}` together, and the routing change is *visible in the
-diff*: the six analytics doors appear or disappear as lines, reviewed, instead of
+diff*: the six analytics endpoints appear or disappear as lines, reviewed, instead of
 being absent from a table nobody diffed against reality.
 
 #### §3.4 How the host validates a declaration it did not write
@@ -161894,7 +161894,7 @@ binary; fail on any diff. Additionally assert `openapi ⊆ declaration`: every p
 in the OpenAPI subset MUST appear in the declaration.
 *Catches:* the analytics-ingestion outage class — a published path the host will
 not route. The subset relation is one-way: a served-but-unpublished route (a
-webhook door) MUST still be declared, or it 405s.
+webhook endpoint) MUST still be declared, or it 405s.
 
 **§8.4 `openapi-current`.** Regenerate the OpenAPI subset from the binary and
 fail on any porcelain change.
@@ -162186,7 +162186,7 @@ Build a conforming plugin repo in one pass:
 ## The API surface a composition serves
 
 These sections describe the API a composition presents to callers — the
-credential, the meter and the OpenAI-compatible door — not the plugin
+credential, the meter and the OpenAI-compatible endpoint — not the plugin
 contract above. They are filed here because the HIPs that owned them were
 merged into this document; they constrain what a plugin serving those
 surfaces must do, and they are unchanged by the composition model.
@@ -164116,7 +164116,7 @@ These break in production and are not permitted under any circumstance:
 4. **Legacy paths** — `/oauth/*`, `/api/login/oauth/*`, anything `/api/`-prefixed. Gone. No backward compatibility.
 5. **Non-empty `originFrontend`** in production — produces a split-origin discovery document that breaks strict clients.
 6. **Per-app social OAuth clients** — an app registering its own Google/GitHub (or Web3) OAuth client. Social providers are configured ONCE per network, org-level, and shared (§7). A per-app client re-creates the shared one N times and drifts.
-7. **`/api/` on the front-door too** — the IAM's own login UI / portal Worker uses the native login API under `/v1/iam/*` (§6), never `/api/login`, `/api/get-app-login`, `/api/signup`. The "no `/api/`" rule is absolute, including the front-door.
+7. **`/api/` on the entry-point too** — the IAM's own login UI / portal Worker uses the native login API under `/v1/iam/*` (§6), never `/api/login`, `/api/get-app-login`, `/api/signup`. The "no `/api/`" rule is absolute, including the entry-point.
 8. **"Verb" aliases / bespoke REST for a standardized capability** — `get-users`, `get-user?id=`, `add-user`, `update-user`, `delete-user`, `get-organizations`, `get-records`, `issue-user-token`, `get-account`, `mint-user-keys`, and every other non-standard verb are **gone**, on iam and on every client. Each has an RFC that IS the surface: identity provisioning → **SCIM 2.0** (§8), delegated/on-behalf-of tokens → **Token Exchange** (§7), account claims → **UserInfo** (§1). A client that reaches for a verb is reaching for the wrong contract; there is no compat layer that will answer it.
 9. **A duplicate spelling of a standard endpoint** — one `token` endpoint, not `token` + `access_token`; one `userinfo`, not `userinfo` + `get-account`. An alias is two ways to do one thing; the standard path is the only one served.
 
@@ -164126,7 +164126,7 @@ These break in production and are not permitted under any circumstance:
 - **Discovery self-consistency** — issuer/authorize/token/userinfo/jwks share one origin (host-relative). Keep `originFrontend` empty in `app.prod.conf`.
 - **`owner` is the tenant** — the org slug. IAM emits **`owner`** (and the standard-name alias **`organization`**) in BOTH the OIDC userinfo response AND the JWT, in every token format, scope-independent — so a consumer reading either claim off either surface gets the tenant. Scope every data query to it. The gateway (HIP-0044) propagates it as `X-Org-Id`; backends behind the gateway trust that header and do not re-parse the JWT. A consumer that reads org from a non-standard field (e.g. a legacy `groups` claim) and finds nothing MUST fail closed, never silently fall back to a `"default"`/`"personal"` org — that is a tenant-isolation defect.
 
-### 6. The login front-door — the AS's own concern, not a client surface
+### 6. The login entry-point — the AS's own concern, not a client surface
 
 OAuth 2.0 / OIDC deliberately do **not** specify how the authorization server authenticates the end user (the credential-entry step). That is the AS's internal concern. So the hosted login page (the per-brand portal at `hanzo.id`/`lux.id`/… and its Worker) has a small first-party API it — and ONLY it — calls, under the canonical `/v1/iam/*` prefix:
 
@@ -164140,7 +164140,7 @@ OAuth 2.0 / OIDC deliberately do **not** specify how the authorization server au
 
 This is NOT a client integration surface and NOT a set of "verbs" a client may call — it is the AS's own login UI talking to the AS. **Account claims are NOT here**: there is no `get-account` and no second `userinfo` — every consumer (including the gateway admin-guard, HIP-0044) reads the standard **OIDC UserInfo** (`/v1/iam/oauth/userinfo`, §1), which carries `sub`, `owner`/`organization`, `email`, `email_verified`, and the `isAdmin` claim the SuperAdmin predicate derives from. One account contract, and it is the RFC one.
 
-Same rule as §1: `/v1/iam/*` only — no `/api/`, anywhere, including the front-door Worker. **Client apps use only the standard surface (§1) through the SDK**; the login API is internal to the AS.
+Same rule as §1: `/v1/iam/*` only — no `/api/`, anywhere, including the entry-point Worker. **Client apps use only the standard surface (§1) through the SDK**; the login API is internal to the AS.
 
 ### 7. Delegation / on-behalf-of — OAuth 2.0 Token Exchange (RFC 8693)
 
@@ -165380,13 +165380,13 @@ one, and the composition model shipped there rather than here.
   versioning, independent memory. A broken plugin degrades to 503 on its own
   prefixes and the host keeps serving every sibling (HIP-0106 §3.4).
 - **ZAP is only a transport.** Being reachable on a plugin socket confers no
-  authority; identity stays with the assertion the front door minted
+  authority; identity stays with the assertion the entry point minted
   (HIP-0106 §6, HIP-0114's Bridge Law).
 - **One codebase, two shapes.** The same binary serves standalone and as a
   composed child, with no second code path — `zip.Addr` decides which
   (HIP-0106 §2).
 - **An interop edge, second-class on purpose.** A foreign protocol is translated
-  at the door and never appears between host and plugin. The adaptor's ceiling —
+  at the edge and never appears between host and plugin. The adaptor's ceiling —
   no capability beyond the ZAP surface — is what makes the concession safe.
 
 **What did not ship, and is replaced rather than carried:**
@@ -170758,7 +170758,7 @@ Public domain (CC0).
 
 ---
 hip: 0132
-title: One Telemetry Plane — One Door, One Schema, Many Lenses
+title: One Telemetry Plane — One Endpoint, One Schema, Many Lenses
 author: Hanzo AI Team
 type: Standards Track
 category: Infrastructure
@@ -170768,12 +170768,12 @@ requires: HIP-0119, HIP-0512
 ---
 
 
-# HIP-0132: One Telemetry Plane — One Door, One Schema, Many Lenses
+# HIP-0132: One Telemetry Plane — One Endpoint, One Schema, Many Lenses
 
 ## Abstract
 
-Hanzo ingests telemetry through one door, stores it in one flat schema, and presents it
-through as many product surfaces as the business needs. Today it has two doors, nine
+Hanzo ingests telemetry through one endpoint, stores it in one flat schema, and presents it
+through as many product surfaces as the business needs. Today it has two endpoints, nine
 databases, three DDL paths and a version suffix on the table taking production writes.
 
 This HIP states the target, and the cut that reaches it: the old plane is destroyed,
@@ -170781,9 +170781,9 @@ not migrated. No compatibility layer survives this document.
 
 ## Specification
 
-### §1 Doors
+### §1 Endpoints
 
-| door | why it exists |
+| endpoint | why it exists |
 |---|---|
 | `POST /v1/event` | the one telemetry ingest. Accepts a bare object, a bare array, or `{batch:[…]}`/`{events:[…]}` — batching is a SHAPE, not a route |
 | `POST /v1/replay` | session replay: a different data shape, not a different view |
@@ -170796,9 +170796,9 @@ not migrated. No compatibility layer survives this document.
 `/v1/session` MUST NOT be used for replay — `/v1/agents/sessions` already owns that word,
 and one word for two concepts is the defect this HIP removes.
 
-`/v1/insights/e` is a live SECOND door today (verified 200, against a 404 control on a
+`/v1/insights/e` is a live SECOND endpoint today (verified 200, against a 404 control on a
 sibling path). It is **deleted**, not shimmed. A forwarding shim exists to serve SDKs you
-do not control; we own `@hanzo/event`, so the client moves and the door closes. A shim
+do not control; we own `@hanzo/event`, so the client moves and the endpoint closes. A shim
 here would be permanent debt bought for nothing.
 
 ### §2 Lenses, not planes
@@ -170960,7 +170960,7 @@ Not one of them owns storage. Adding a fifth surface is a query, not a database.
 **LLM observability is not a fourth signal.** A `gen_ai` span IS a span — the wire already
 carries `gen_ai.system`, `gen_ai.request.model`, `gen_ai.response.model`,
 `gen_ai.operation.name`, `gen_ai.hanzo.org_id`, `gen_ai.hanzo.project` as span attributes.
-It lands in `o11y.spans` like any other span and needs no table, no database and no door
+It lands in `o11y.spans` like any other span and needs no table, no database and no endpoint
 of its own. That an LLM call is expensive does not make it a different KIND of thing; it
 makes it a span with a cost attribute.
 
@@ -170982,7 +170982,7 @@ an observation.
 
 ## Conformance
 
-1. One ingest door. A second door is a shim that forwards, or it is deleted.
+1. One ingest endpoint. A second endpoint is a shim that forwards, or it is deleted.
 2. One database. The table never restates it.
 3. No version suffix on any live table.
 4. `org` on every table, 1:1 with IAM.
@@ -171319,7 +171319,7 @@ plugin's job, and the plugin will never grow the ability to do it correctly.
 ### 4. Naming
 
 **The binary is `cloud`.** A second Service name for the same pods is a second
-door with different properties.
+endpoint with different properties.
 
 **One IAM application per guarded surface, named for the surface**:
 `hanzo-admin` for admin.hanzo.ai, `hanzo-platform` for platform.hanzo.ai,
@@ -171551,9 +171551,9 @@ There is currently a SECOND DEPLOYMENT of it — `localhost:8200` / `kms.hanzo.a
 which every chart's `kmsSecrets` still points at through the KMSSecret CRD's
 `hostAPI`. That is not a second architecture and must never be written up as one.
 It is the same `luxfi/kms` binary serving the same `/v1/kms/secrets` routes under
-the same JWT boundary — its own source says of the two doors, *"gates on the same
+the same JWT boundary — its own source says of the two endpoints, *"gates on the same
 thing requireOrgJWT ultimately does: whether the caller's own org authorizes this
-deployment's home org. Two doors, one boundary."* One program, deployed twice,
+deployment's home org. Two endpoints, one boundary."* One program, deployed twice,
 with its data split across the two.
 
 The split is what makes secrets unfindable, and it is a migration item, not a
@@ -176443,7 +176443,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: 0300
-title: Unified MCP — one door, and local servers that forward to it
+title: Unified MCP — one endpoint, and local servers that forward to it
 author: Hanzo AI Team
 type: Standards Track
 category: Interface
@@ -176453,7 +176453,7 @@ updated: 2026-08-20
 requires: HIP-0010, HIP-0106, HIP-0111, HIP-0128
 ---
 
-# HIP-0300: Unified MCP — one door, and local servers that forward to it
+# HIP-0300: Unified MCP — one endpoint, and local servers that forward to it
 
 ## Abstract
 
@@ -176462,7 +176462,7 @@ the deployment's API host, projected from the same typed-op registry that yields
 the REST routes and the OpenAPI document. Every local MCP server Hanzo ships —
 `@hanzo/mcp` (TypeScript), `hanzo-mcp` (Python), `hanzo-mcp` (Rust) — carries
 the tools that need the machine it runs on, and reaches the cloud by forwarding
-`tools/list` and `tools/call` to that door. Nothing about the cloud is written
+`tools/list` and `tools/call` to that endpoint. Nothing about the cloud is written
 down in a local server, in any language, ever again.
 
 This document replaces the one deleted on 2026-07-28, which mandated a tool set
@@ -176473,7 +176473,7 @@ named artifact on 2026-08-20; re-measure before quoting one.
 
 Three things went wrong in the same direction, and all three are one mistake:
 
-- The door projected every typed operation as its own tool: 1,189 tools in
+- The endpoint projected every typed operation as its own tool: 1,189 tools in
   977 KB, which no model holds and every client truncates (Slack keeps 128).
 - The local servers each hand-rolled their own cloud tools against the REST
   API: 1,051 lines in TypeScript, 1,017 in Rust, a runtime-fetched OpenAPI
@@ -176481,7 +176481,7 @@ Three things went wrong in the same direction, and all three are one mistake:
   it, one of them still calling an `/api/` prefix the API has not served in months.
 - A fourth approach was in flight: generate a per-language catalogue of 2,279
   flat tools from the document and ship it inside each package — a static copy
-  of what the door computes live and curates.
+  of what the endpoint computes live and curates.
 
 The mistake is a second description of the cloud's tool surface anywhere but
 the cloud. The cloud already knows what it serves; a local server asks it.
@@ -176490,15 +176490,15 @@ the cloud. The cloud already knows what it serves; a local server asks it.
 
 The key words MUST, MUST NOT, SHOULD and MAY are as in RFC 2119.
 
-### §1 The door
+### §1 The endpoint
 
-1. The door is `POST /v1/mcp` on the deployment's API host (`api.hanzo.ai`,
+1. The endpoint is `POST /v1/mcp` on the deployment's API host (`api.hanzo.ai`,
    `api.lux.cloud`, …). It speaks JSON-RPC 2.0, one POST per message, stateless;
    protocol revision `2026-07-28`. The framework default `/mcp` answers 308 to it.
    The address is stated once (`manifest/door.Path`) and read by the host that
    serves it, the document that describes it and the console that refuses to
    answer it with HTML.
-2. The door MUST be described in the API document as an operation
+2. The endpoint MUST be described in the API document as an operation
    (`POST /v1/mcp`, with the JSON-RPC envelope as its bodies), so every
    projection of the document — SDKs, CLI, docs — names it.
 3. `tools/list` MUST answer without a credential. It answers **one tool per
@@ -176511,7 +176511,7 @@ The key words MUST, MUST NOT, SHOULD and MAY are as in RFC 2119.
    project as 110 tools in 81 KB.
 4. The tool surface IS the public contract. An operation is offered when it is
    typed (dispatchable by its subsystem, `x-tool`) AND public (`x-public` — every
-   `/v1` operation except the operator's `admin` product, relay doors and legacy
+   `/v1` operation except the operator's `admin` product, relay endpoints and legacy
    spellings). An operation whose name discloses a bearer secret at any verb, or
    mutates an identity or authority object, is withheld; `result._meta` carries
    the count and the rule (`hanzo.ai/refused`), and the subsystems that did not
@@ -176519,13 +176519,13 @@ The key words MUST, MUST NOT, SHOULD and MAY are as in RFC 2119.
 5. A subsystem tool whose every offered operation is a read carries
    `annotations.readOnlyHint: true`; one that mixes reads and writes carries no
    hint. `describe` is read-only.
-6. `tools/call` takes the same bearer the REST API does. The door validates
+6. `tools/call` takes the same bearer the REST API does. The endpoint validates
    nothing: the request is forwarded to the owning subsystem, whose identity
    boundary derives the principal and refuses on its own terms. A `tools/call`
-   that reaches the public door with no credential (no `Authorization`, no
+   that reaches the public endpoint with no credential (no `Authorization`, no
    `X-Authorization`, no cookie) MUST be answered **HTTP 401** with
    `WWW-Authenticate: Bearer resource_metadata="<origin>/.well-known/oauth-protected-resource"`
-   (RFC 9728 §5.1). The plane-side door the fleet's own subsystems reach is never
+   (RFC 9728 §5.1). The plane-side endpoint the fleet's own subsystems reach is never
    challenged: a sibling's identity is the headers the socket vouches for.
 7. The host MUST serve `GET /.well-known/oauth-protected-resource` (and the
    `/v1/mcp`-suffixed form) naming the deployment's IAM issuer as the
@@ -176541,25 +176541,25 @@ The key words MUST, MUST NOT, SHOULD and MAY are as in RFC 2119.
 2. A local server MUST NOT implement a cloud operation itself, generate a
    catalogue of them, or describe them in any form. It reaches the cloud by
    forwarding:
-   - the door address is `HANZO_MCP_DOOR`, else `<HANZO_API_BASE or
+   - the endpoint address is `HANZO_MCP_DOOR`, else `<HANZO_API_BASE or
      https://api.hanzo.ai>/v1/mcp`;
    - the bearer is `HANZO_API_KEY` (and the server's existing fallbacks), else
      `hanzo auth token`;
-   - `tools/list` = the local tools, then the door's tools whose names are not
+   - `tools/list` = the local tools, then the endpoint's tools whose names are not
      already local — **a local name wins** (`git` collides, and the local `git`
      is the one the machine has);
    - `tools/call` = a local tool by name, else the caller's call forwarded to the
-     door verbatim, the door's `result` returned verbatim, `isError` included;
-   - a 401 from the door becomes an `isError` result telling the caller to sign
+     endpoint verbatim, the endpoint's `result` returned verbatim, `isError` included;
+   - a 401 from the endpoint becomes an `isError` result telling the caller to sign
      in (`hanzo auth login`) and naming the resource metadata URL;
-   - the door's list is cached briefly (order of minutes) and a door that does
+   - the endpoint's list is cached briefly (order of minutes) and a endpoint that does
      not answer costs one line on stderr and a local-only list — never a failed
      start. `hanzo-mcp` is spawned by `dev`; a hang is a dead agent.
 3. A local server's own protocol revision is what it implements; it MUST NOT
-   advertise the door's.
+   advertise the endpoint's.
 4. The three servers are peers, not ports: each is native to its language and
    they share the contract above, not code. The `go/` REST shim that once mounted
-   `/v1/mcp/tools/:name` is retired; the cloud's door owns `/v1/mcp`.
+   `/v1/mcp/tools/:name` is retired; the cloud's endpoint owns `/v1/mcp`.
 
 First versions carrying this: `@hanzo/mcp` 2.4.8, `hanzo-mcp` (PyPI) 0.15.16,
 `hanzo-mcp` (crates) 1.1.24.
@@ -176573,7 +176573,7 @@ one of two shapes, and both are one server name:
 // the local server, which forwards — works for every client, stdio
 { "mcpServers": { "hanzo": { "command": "npx", "args": ["-y", "--package=@hanzo/mcp", "hanzo-mcp", "serve"] } } }
 
-// the door directly — for clients that speak streamable HTTP
+// the endpoint directly — for clients that speak streamable HTTP
 { "mcpServers": { "hanzo": { "type": "http", "url": "https://api.hanzo.ai/v1/mcp" } } }
 ```
 
@@ -176585,16 +176585,16 @@ one of two shapes, and both are one server name:
   cap), `fleet/challenge_test.go` (401 at the edge, never on the plane),
   `fleet/catalog_test.go` (the catalogue equals the documents),
   `cmd/cloud/oauth_test.go` (the metadata names the issuer),
-  `openapi/public_test.go` (the door is in the document and public),
+  `openapi/public_test.go` (the endpoint is in the document and public),
   `e2e/mcp-door.sh` (zero wakes on list, one on call, no empty description).
-- each local server: a test against a fake door — list merge with local
-  winning, call forwarded verbatim, 401 → sign-in error, door down → local-only.
+- each local server: a test against a fake endpoint — list merge with local
+  winning, call forwarded verbatim, 401 → sign-in error, endpoint down → local-only.
 - the release: the `reach` car fails when any subsystem is in
   `_meta["hanzo.ai/unavailable"]`.
 
 ## Rationale
 
-**One description.** The door is a projection of the registry that already
+**One description.** The endpoint is a projection of the registry that already
 describes every operation; a second description in a local server is the drift
 this document's predecessor died of. Forwarding makes the local servers
 correct by construction and current at the instant of the call.
@@ -176606,13 +176606,13 @@ the enum usable without carrying every schema.
 **Local wins.** The machine's own `git` is the one the user means when the
 server runs beside a checkout; the cloud's is one `describe` away.
 
-**Challenge, do not validate.** The door stays a router: it knows absence, not
+**Challenge, do not validate.** The endpoint stays a router: it knows absence, not
 validity. Validity is the owning subsystem's, where the identity boundary
 already is.
 
 ## Security Considerations
 
-The door offers the public contract and nothing beside it; the operator's
+The endpoint offers the public contract and nothing beside it; the operator's
 surface is neither an SDK method nor a tool a model is shown. Names that would
 disclose a secret or mutate an identity are withheld before the routing table is
 written, so a client that cached such a name gets the same answer as for a tool
@@ -176625,7 +176625,7 @@ writes one to disk and never echoes one in a result.
   Authentication · HIP-0128 Resource Surface
 - `hanzoai/cloud` `fleet/`, `manifest/door`, `cmd/cloud/oauth.go`,
   `openapi/mcp.go`, `openapi/public.go`
-- `hanzoai/mcp` `src/door.ts`, `rust/src/door.rs`;
+- `hanzoai/mcp` `src/endpoint.ts`, `rust/src/endpoint.rs`;
   `hanzoai/python-sdk` `pkg/hanzo-mcp/hanzo_mcp/door.py`
 - RFC 9728 OAuth 2.0 Protected Resource Metadata
 
@@ -180582,7 +180582,7 @@ POST /v1/translate
 
 Two tiers, one endpoint, one auth path, one meter. No second inference stack: the
 quality tier reuses the serving infrastructure already in production, and the bulk
-tier is a model behind the same door.
+tier is a model behind the same endpoint.
 
 `source` is optional; when absent the engine detects it and returns
 `detected_source`. `/v1/` only, and never a `v2` — a new capability is a new field.
@@ -181430,7 +181430,7 @@ may grant a principal:
   redact a credential from an audit record, and to refuse to treat a publishable
   key as authentication. They classify a string; they do not authenticate.
 - **Tenant attribution** (`OrgForKey`) — resolves a key to the org whose beacon
-  it is, so an ingest door can attribute analytics. Resolvable is not
+  it is, so an ingest endpoint can attribute analytics. Resolvable is not
   authenticated, and a publishable key MUST NOT resolve to a principal.
 
 ### Conformance
