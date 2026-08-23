@@ -114,7 +114,7 @@ The document partitions its operations by the app that serves them. That partiti
 | `sync.md` *(not yet written)* | `/v1/sync` | 6 | Data sync: link two endpoints and keep them in step, on a webhook, on a schedule, or on… |
 | `venue.md` *(not yet written)* | `/v1/cloud` | 5 | Bring your own cloud: link a DigitalOcean, AWS or GCP account and its clusters show up… |
 
-### Shipping and the front door (16 skills)
+### Shipping and the edge (16 skills)
 
 | Skill | Serves | Operations | Purpose |
 |---|---|---|---|

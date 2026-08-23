@@ -161,7 +161,7 @@ hanzo up cloud                        # the whole /v1 API on one listener, local
 export HANZO_BASE_URL=http://localhost:8080
 ```
 
-`hanzoai/cloud` is one binary serving every capability. Develop against it — same addresses, same CLI, same MCP door — then ship:
+`hanzoai/cloud` is one binary serving every capability. Develop against it — same addresses, same CLI, same MCP server — then ship:
 
 1. **`git push`** to `git.hanzo.ai`. The forge is a capability (`/v1/git` serves the smart-HTTP endpoints), so an ordinary push **is** the deploy — it fires the platform hook. There is no separate deploy command.
 2. **`ci.hanzo.ai`** builds — `hanzo platform builds`.
@@ -170,14 +170,14 @@ export HANZO_BASE_URL=http://localhost:8080
 
 ## MCP — the tighter binding
 
-One door: `POST https://api.hanzo.ai/v1/mcp`, JSON-RPC 2.0 over ZAP. One tool per capability plus `describe`, so a model searches the list and fetches the schema for the one it picked.
+One endpoint: `POST https://api.hanzo.ai/v1/mcp`, JSON-RPC 2.0 over ZAP. One tool per capability plus `describe`, so a model searches the list and fetches the schema for the one it picked.
 
 ```bash
 hanzo code                            # a coding session with the toolset attached
 hanzo code --no-mcp                   # opt out
 ```
 
-Any MCP-native agent reaches the same door:
+Any MCP-native agent reaches the same endpoint:
 
 ```json
 { "mcpServers": { "hanzo": { "type": "http", "url": "https://api.hanzo.ai/v1/mcp",

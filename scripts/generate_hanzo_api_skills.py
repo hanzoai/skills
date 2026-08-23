@@ -249,7 +249,7 @@ DOMAIN_ORDER = [
     ("secret", "Secrets and assurance"),
     ("money", "Money"),
     ("compute", "Compute and data plumbing"),
-    ("deploy", "Shipping and the front door"),
+    ("deploy", "Shipping and the edge"),
     ("telemetry", "Telemetry"),
     ("reach", "Reaching people"),
     ("company", "Running a company"),

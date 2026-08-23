@@ -33,7 +33,7 @@ This skill auto-activates when you're working with:
 
 **Compute and data plumbing** — `visor`, `provisioning`, `pubsub`, `mq`, `storage`, `registry`, `sync`, `venue`
 
-**Shipping and the front door** — `git`, `project`, `platform`, `cloudflare`, `deploy`, `ingress`, `function`, `domain`, `dns`, `template`, `zt`, `blueprint`, `gateway`, `share`, `base`, `catalog`
+**Shipping and the edge** — `git`, `project`, `platform`, `cloudflare`, `deploy`, `ingress`, `function`, `domain`, `dns`, `template`, `zt`, `blueprint`, `gateway`, `share`, `base`, `catalog`
 
 **Telemetry** — `o11y`, `analytics`, `metric`, `destination`
 

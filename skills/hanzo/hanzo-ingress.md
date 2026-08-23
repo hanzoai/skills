@@ -5,7 +5,7 @@
 
 ## Overview
 
-Hanzo Ingress is a **Kubernetes-native L7 reverse proxy and load balancer** that serves as the front door for all Hanzo production traffic. Fork of Traefik. Watches Kubernetes Ingress resources, auto-provisions TLS certificates via Let's Encrypt, routes traffic to internal services. Single static Go binary, zero runtime dependencies. Default IngressClass (`hanzo`) on hanzo-k8s cluster.
+Hanzo Ingress is a **Kubernetes-native L7 reverse proxy and load balancer** that serves as the entry point for all Hanzo production traffic. Fork of Traefik. Watches Kubernetes Ingress resources, auto-provisions TLS certificates via Let's Encrypt, routes traffic to internal services. Single static Go binary, zero runtime dependencies. Default IngressClass (`hanzo`) on hanzo-k8s cluster.
 
 ## When to use
 
