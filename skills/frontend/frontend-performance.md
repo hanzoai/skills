@@ -621,7 +621,7 @@ console.log('Fetch took:', measure.duration, 'ms');
 
 ```tsx
 // app/layout.tsx
-import { Inter, Roboto_Mono } from 'next/font/google';
+import { Inter, Roboto_Mono } from '@hanzo/font';
 
 const inter = Inter({
   subsets: ['latin'],

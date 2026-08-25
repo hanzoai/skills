@@ -20,7 +20,7 @@
 ## Typography
 
 **Fonts:**
-- Geist (https://vercel.com/font)
+- Zen (https://hanzo.ai/font)
 - JetBrains Mono (https://jetbrains.com/mono)
 - Google Fonts (https://fonts.google.com)
 - Modern Font Stacks (https://modernfontstacks.com)

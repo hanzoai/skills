@@ -6,9 +6,10 @@ Elegant, modern typography sets the foundation for professional interfaces.
 
 ### Primary Fonts
 
-**1. Geist (https://vercel.com/font) - USE FOR ALL UI TEXT**
+**1. Zen (https://hanzo.ai/font) - USE FOR ALL UI TEXT**
 
-Designed by Vercel specifically for interfaces.
+Hanzo's own family, drawn for interfaces. It ships in @hanzo/font, so a
+project carries it rather than fetching it.
 
 **Characteristics:**
 - Excellent legibility at all sizes
@@ -16,7 +17,7 @@ Designed by Vercel specifically for interfaces.
 - Crisp rendering on all displays
 - Variable font with flexible weights
 
-**Use Geist for:**
+**Use Zen for:**
 - Body text and paragraphs
 - Headings and titles
 - UI labels and buttons
@@ -25,7 +26,7 @@ Designed by Vercel specifically for interfaces.
 - **95% of all typography**
 
 ```css
-font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+font-family: 'Zen', -apple-system, BlinkMacSystemFont, sans-serif;
 ```
 
 **2. JetBrains Mono (https://jetbrains.com/mono) - USE FOR ALL CODE/TECHNICAL**
@@ -55,16 +56,16 @@ font-variant-ligatures: common-ligatures; /* enable ligatures */
 
 ### Alternative Elegant Fonts
 
-If Geist or JetBrains Mono are unavailable:
+If Zen or JetBrains Mono are unavailable:
 
 **Sans-serif alternatives:**
-- **Geist Mono** - Companion monospace to Geist (code alternative)
+- **Zen Mono** - Companion monospace to Zen (code alternative)
 - **Inter** - Highly legible, great metrics, excellent fallback
 - **IBM Plex Sans** - Professional, humanist, good brand font
 - **Space Grotesk** - Modern, geometric, good for headlines
 
 **Monospace alternatives:**
-- **Geist Mono** - Vercel's monospace companion
+- **Zen Mono** - the companion monospace
 - **Fira Code** - Excellent ligatures, widely supported
 - **Berkeley Mono** - Premium option if budget allows
 - **Cascadia Code** - Microsoft's code font with ligatures
@@ -81,7 +82,7 @@ Use optimal loading to prevent FOIT (Flash of Invisible Text):
 
 ```css
 @font-face {
-  font-family: 'Geist';
+  font-family: 'Zen';
   src: url('/fonts/geist.woff2') format('woff2');
   font-display: swap; /* Show fallback immediately, swap when loaded */
   font-weight: 100 900; /* Variable font weight range */
@@ -157,7 +158,7 @@ code, pre {
 
 ## Font Weights
 
-**Geist supports variable weights (100-900):**
+**Zen supports variable weights (100-900):**
 - 300 (light) - Use sparingly
 - 400 (regular) - Body text
 - 500 (medium) - UI emphasis
@@ -182,7 +183,7 @@ code, pre {
 
 ### Do:
 - ✅ Limit to 2 font families maximum (one sans, one mono)
-- ✅ Use Geist for 95% of text
+- ✅ Use Zen for 95% of text
 - ✅ Reserve JetBrains Mono exclusively for code
 - ✅ Use font-display: swap for faster rendering
 - ✅ Prefer variable fonts (smaller file size, flexible weights)
@@ -217,7 +218,7 @@ code, pre {
 /* CSS Variables */
 :root {
   /* Font families */
-  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Zen', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
   
   /* Font sizes (1.25 scale) */
@@ -277,10 +278,10 @@ h3 {
 
 ```typescript
 // app/layout.tsx or _app.tsx
-import { Geist } from 'next/font/google';
+import { Zen } from '@hanzo/font';
 import localFont from 'next/font/local';
 
-const geist = Geist({
+const geist = Zen({
   subsets: ['latin'],
   variable: '--font-sans',
   display: 'swap',
@@ -305,10 +306,10 @@ export default function RootLayout({ children }) {
 
 | Element | Font | Size | Weight |
 |---------|------|------|--------|
-| Body text | Geist | 16px (1rem) | 400 |
-| UI labels | Geist | 14-16px | 500 |
-| Headings | Geist | Scale-based | 600-700 |
-| Buttons | Geist | 14-16px | 500-600 |
+| Body text | Zen | 16px (1rem) | 400 |
+| UI labels | Zen | 14-16px | 500 |
+| Headings | Zen | Scale-based | 600-700 |
+| Buttons | Zen | 14-16px | 500-600 |
 | Code blocks | JetBrains Mono | 14px min | 400 |
 | Terminal | JetBrains Mono | 14px | 400 |
-| Small text | Geist | 14px min | 400 |
+| Small text | Zen | 14px min | 400 |

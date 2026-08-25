@@ -31,7 +31,7 @@
 ## Typography
 
 ❌ **Mixing multiple sans-serif or monospace fonts**
-- Use Geist for UI, JetBrains Mono for code
+- Use Zen for UI, JetBrains Mono for code
 - Consistency is key
 
 ❌ **Using fonts smaller than 14px for code**
@@ -163,7 +163,7 @@
 ✅ Animate with transform and opacity
 ✅ Handle all states
 ✅ Measure performance
-✅ Use Geist for UI, JetBrains Mono for code
+✅ Use Zen for UI, JetBrains Mono for code
 ✅ Support keyboard navigation
 ✅ Stream content when possible
 ✅ Provide copy buttons for code

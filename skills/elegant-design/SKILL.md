@@ -83,12 +83,12 @@ Identify every UI element needed:
 **Establish Visual System:**
 
 Read the detailed foundation guides:
-- `foundation/typography.md` - Font selection (Geist, JetBrains Mono), scales, loading
+- `foundation/typography.md` - Font selection (Zen, JetBrains Mono), scales, loading
 - `foundation/colors-and-spacing.md` - Color palettes, spacing systems, dark mode
 - `foundation/layout-patterns.md` - Grids, containers, white space, responsive breakpoints
 
 **Quick Reference:**
-- **Typography**: Geist for UI, JetBrains Mono for code (14px minimum)
+- **Typography**: Zen for UI, JetBrains Mono for code (14px minimum)
 - **Spacing**: 8px base system (0.5rem, 1rem, 1.5rem, 2rem, 3rem, 4rem, 6rem, 8rem)
 - **Colors**: Semantic tokens (--color-background, --color-primary, --color-error, etc.)
 - **Layout**: Mobile-first, 12-column grid, generous white space
@@ -136,7 +136,7 @@ For sophisticated interactive features, reference the specialized guides:
 - [ ] Mobile responsive (tested on real devices)
 - [ ] Accessibility compliant (WCAG AA)
 - [ ] Performance measured (Lighthouse score > 90)
-- [ ] Geist used for UI, JetBrains Mono for code
+- [ ] Zen used for UI, JetBrains Mono for code
 - [ ] Design system components used where possible
 - [ ] Consistent spacing and typography
 - [ ] Both light and dark modes work
@@ -190,7 +190,7 @@ See `reference/design-systems.md` for detailed comparison and usage patterns.
 
 **Use these fonts exclusively:**
 
-- **Geist** (https://vercel.com/font) - For ALL interface text
+- **Zen** (https://hanzo.ai/font) - For ALL interface text
   - UI labels, body text, headings
   - 95% of your typography
   

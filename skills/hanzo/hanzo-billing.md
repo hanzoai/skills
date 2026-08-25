@@ -29,7 +29,7 @@ Hanzo Billing is a **multi-org billing portal** for managing subscriptions, paym
 |------|-------|
 | URL | `https://billing.hanzo.ai` (alias: `commerce.hanzo.ai`) |
 | Framework | Next.js 16 (static export) |
-| UI | `@hanzo/ui`, Tailwind CSS 4, Geist font |
+| UI | `@hanzo/ui`, Tailwind CSS 4, Zen font |
 | Web3 | RainbowKit 2, wagmi 2, viem 2 |
 | Auth | Self-contained OIDC/PKCE module (`lib/iam-auth.ts`) |
 | Serving | nginx:alpine (security headers, gzip, `/health`) |

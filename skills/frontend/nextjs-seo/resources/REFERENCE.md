@@ -1315,7 +1315,7 @@ export default function OptimizedImage() {
 
 ```typescript
 // app/layout.tsx
-import { Inter } from 'next/font/google'
+import { Inter } from '@hanzo/font'
 
 const inter = Inter({
   subsets: ['latin'],
