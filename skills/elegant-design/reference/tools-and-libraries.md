@@ -21,7 +21,7 @@
 
 **Fonts:**
 - Zen (https://hanzo.ai/font)
-- JetBrains Mono (https://jetbrains.com/mono)
+- Zen Mono (https://hanzo.ai/font)
 - Google Fonts (https://fonts.google.com)
 - Modern Font Stacks (https://modernfontstacks.com)
 

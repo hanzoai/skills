@@ -16,7 +16,7 @@ Show changes clearly and elegantly.
   background: var(--color-border);
   border-radius: 8px;
   overflow: hidden;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Zen Mono', monospace;
   font-size: 14px;
 }
 
@@ -55,7 +55,7 @@ Show changes clearly and elegantly.
 
 ```css
 .diff-unified {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Zen Mono', monospace;
   font-size: 14px;
   line-height: 1.6;
 }
@@ -151,7 +151,7 @@ Logs need to be scannable, searchable, and filterable.
 
 ```css
 .log-viewer {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Zen Mono', monospace;
   font-size: 13px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
@@ -208,7 +208,7 @@ Logs need to be scannable, searchable, and filterable.
 }
 
 .log-message {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Zen Mono', monospace;
   word-break: break-word;
 }
 
@@ -308,7 +308,7 @@ function LogMessage({ message }: { message: string }) {
 - ✅ Highlight character-level changes
 - ✅ Use subtle background colors
 - ✅ Make line numbers non-selectable
-- ✅ Use JetBrains Mono for consistent character width
+- ✅ Use Zen Mono for consistent character width
 - ✅ Support both light and dark modes
 
 ### Logs:

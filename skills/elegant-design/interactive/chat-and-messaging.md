@@ -85,7 +85,7 @@ interface Message {
 .message-streaming::after {
   content: '▊';
   animation: pulse 1s ease-in-out infinite;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Zen Mono', monospace;
 }
 ```
 

@@ -29,7 +29,7 @@ project carries it rather than fetching it.
 font-family: 'Zen', -apple-system, BlinkMacSystemFont, sans-serif;
 ```
 
-**2. JetBrains Mono (https://jetbrains.com/mono) - USE FOR ALL CODE/TECHNICAL**
+**2. Zen Mono (https://hanzo.ai/font) - USE FOR ALL CODE/TECHNICAL**
 
 Purpose-built for developers.
 
@@ -39,7 +39,7 @@ Purpose-built for developers.
 - Clear distinction between similar characters (0/O, 1/l/I)
 - Optimized for long reading sessions
 
-**Use JetBrains Mono for:**
+**Use Zen Mono for:**
 - Code blocks and snippets
 - Terminal output
 - Log viewers
@@ -49,14 +49,14 @@ Purpose-built for developers.
 - **Minimum 14px font size**
 
 ```css
-font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+font-family: 'Zen Mono', 'Fira Code', Consolas, monospace;
 font-size: 14px; /* minimum */
 font-variant-ligatures: common-ligatures; /* enable ligatures */
 ```
 
 ### Alternative Elegant Fonts
 
-If Zen or JetBrains Mono are unavailable:
+If Zen or Zen Mono are unavailable:
 
 **Sans-serif alternatives:**
 - **Zen Mono** - Companion monospace to Zen (code alternative)
@@ -89,7 +89,7 @@ Use optimal loading to prevent FOIT (Flash of Invisible Text):
 }
 
 @font-face {
-  font-family: 'JetBrains Mono';
+  font-family: 'Zen Mono';
   src: url('/fonts/jetbrains-mono.woff2') format('woff2');
   font-display: swap;
   font-weight: 400 700;
@@ -165,7 +165,7 @@ code, pre {
 - 600 (semibold) - Headings, buttons
 - 700 (bold) - Strong emphasis
 
-**JetBrains Mono:**
+**Zen Mono:**
 - 400 (regular) - Most code
 - 700 (bold) - Emphasis in code
 
@@ -184,7 +184,7 @@ code, pre {
 ### Do:
 - ✅ Limit to 2 font families maximum (one sans, one mono)
 - ✅ Use Zen for 95% of text
-- ✅ Reserve JetBrains Mono exclusively for code
+- ✅ Reserve Zen Mono exclusively for code
 - ✅ Use font-display: swap for faster rendering
 - ✅ Prefer variable fonts (smaller file size, flexible weights)
 - ✅ Set minimum 14px for code fonts
@@ -219,7 +219,7 @@ code, pre {
 :root {
   /* Font families */
   --font-sans: 'Zen', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-mono: 'Zen Mono', 'Fira Code', Consolas, monospace;
   
   /* Font sizes (1.25 scale) */
   --font-size-xs: 0.64rem;
@@ -310,6 +310,6 @@ export default function RootLayout({ children }) {
 | UI labels | Zen | 14-16px | 500 |
 | Headings | Zen | Scale-based | 600-700 |
 | Buttons | Zen | 14-16px | 500-600 |
-| Code blocks | JetBrains Mono | 14px min | 400 |
-| Terminal | JetBrains Mono | 14px | 400 |
+| Code blocks | Zen Mono | 14px min | 400 |
+| Terminal | Zen Mono | 14px | 400 |
 | Small text | Zen | 14px min | 400 |

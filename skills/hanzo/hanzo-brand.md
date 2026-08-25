@@ -96,7 +96,7 @@ import { HanzoLogo, HanzoMark } from "@hanzo/logo"
 |---------|------|--------|
 | Headings | Inter | 600 (Semibold) |
 | Body | Inter | 400 (Regular) |
-| Code | JetBrains Mono | 400 |
+| Code | Zen Mono | 400 |
 | Marketing | Inter | 700 (Bold) |
 
 ## Brand Policy: No Upstream References
