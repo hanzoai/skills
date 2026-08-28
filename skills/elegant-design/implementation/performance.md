@@ -112,7 +112,7 @@ npm install -D webpack-bundle-analyzer
 
 ```html
 <!-- Preload critical fonts -->
-<link rel="preload" href="/fonts/geist.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/zen-sans/Zen-Variable.woff2" as="font" type="font/woff2" crossorigin>
 
 <!-- Preconnect to external domains -->
 <link rel="preconnect" href="https://api.example.com">

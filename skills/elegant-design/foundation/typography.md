@@ -59,8 +59,6 @@ font-variant-ligatures: common-ligatures; /* enable ligatures */
 If Zen or Zen Mono are unavailable:
 
 **Sans-serif alternatives:**
-- **Zen Mono** - Companion monospace to Zen (code alternative)
-- **Inter** - Highly legible, great metrics, excellent fallback
 - **IBM Plex Sans** - Professional, humanist, good brand font
 - **Space Grotesk** - Modern, geometric, good for headlines
 
@@ -80,19 +78,28 @@ If Zen or Zen Mono are unavailable:
 
 Use optimal loading to prevent FOIT (Flash of Invisible Text):
 
+One import declares both faces, already set to `font-display: swap`:
+
+```ts
+import '@hanzo/font/css';
+```
+
+It expands to this, which is what to write by hand if you are self-hosting the
+files rather than taking the package:
+
 ```css
 @font-face {
   font-family: 'Zen';
-  src: url('/fonts/geist.woff2') format('woff2');
+  src: url('/fonts/zen-sans/Zen-Variable.woff2') format('woff2');
   font-display: swap; /* Show fallback immediately, swap when loaded */
   font-weight: 100 900; /* Variable font weight range */
 }
 
 @font-face {
   font-family: 'Zen Mono';
-  src: url('/fonts/jetbrains-mono.woff2') format('woff2');
+  src: url('/fonts/zen-mono/ZenMono-Variable.woff2') format('woff2');
   font-display: swap;
-  font-weight: 400 700;
+  font-weight: 100 900;
 }
 ```
 
@@ -276,31 +283,23 @@ h3 {
 
 ## Loading Fonts in Next.js/React
 
+`Zen` and `ZenMono` arrive already built — subsetting, `display: swap` and the
+fallback metrics are baked in, so there is nothing to call and nothing to pass.
+
 ```typescript
 // app/layout.tsx or _app.tsx
-import { Zen } from '@hanzo/font';
-import localFont from 'next/font/local';
-
-const geist = Zen({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const jetbrainsMono = localFont({
-  src: '../public/fonts/jetbrains-mono.woff2',
-  variable: '--font-mono',
-  display: 'swap',
-});
+import { Zen, ZenMono } from '@hanzo/font';
 
 export default function RootLayout({ children }) {
   return (
-    <html className={`${geist.variable} ${jetbrainsMono.variable}`}>
+    <html className={`${Zen.variable} ${ZenMono.variable}`}>
       <body>{children}</body>
     </html>
   );
 }
 ```
+
+They publish `--font-zen-sans` and `--font-zen-mono`.
 
 ## Quick Reference
 

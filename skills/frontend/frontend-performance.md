@@ -621,23 +621,11 @@ console.log('Fetch took:', measure.duration, 'ms');
 
 ```tsx
 // app/layout.tsx
-import { Inter, Roboto_Mono } from '@hanzo/font';
-
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-});
-
-const robotoMono = Roboto_Mono({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-roboto-mono',
-});
+import { Zen, ZenMono } from '@hanzo/font';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html className={`${inter.variable} ${robotoMono.variable}`}>
+    <html className={`${Zen.variable} ${ZenMono.variable}`}>
       <body>{children}</body>
     </html>
   );
@@ -645,11 +633,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 // globals.css
 body {
-  font-family: var(--font-inter), sans-serif;
+  font-family: var(--font-zen-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 code {
-  font-family: var(--font-roboto-mono), monospace;
+  font-family: var(--font-zen-mono), ui-monospace, monospace;
 }
 ```
 

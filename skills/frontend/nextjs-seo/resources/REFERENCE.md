@@ -1315,18 +1315,13 @@ export default function OptimizedImage() {
 
 ```typescript
 // app/layout.tsx
-import { Inter } from '@hanzo/font'
-
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap', // Prevent FOIT (Flash of Invisible Text)
-  preload: true,
-  variable: '--font-inter',
-})
+// Zen arrives preloaded, subsetted and on font-display: swap, so there is no
+// FOIT to prevent and nothing to configure.
+import { Zen } from '@hanzo/font'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={Zen.variable}>
       <body>{children}</body>
     </html>
   )
