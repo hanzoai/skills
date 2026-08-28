@@ -54,8 +54,8 @@ export async function GET_BlogPost(request: NextRequest) {
   const date = searchParams.get('date') || new Date().toLocaleDateString()
 
   // Load custom font
-  const interSemiBold = fetch(
-    new URL('../../../assets/Inter-SemiBold.ttf', import.meta.url)
+  const zenSemiBold = fetch(
+    new URL('../../../assets/Zen-SemiBold.ttf', import.meta.url)
   ).then((res) => res.arrayBuffer())
 
   return new ImageResponse(
@@ -123,8 +123,8 @@ export async function GET_BlogPost(request: NextRequest) {
       height: 630,
       fonts: [
         {
-          name: 'Inter',
-          data: await interSemiBold,
+          name: 'Zen',
+          data: await zenSemiBold,
           style: 'normal',
           weight: 600,
         },
