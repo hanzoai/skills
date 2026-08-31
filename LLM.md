@@ -2,7 +2,7 @@
 
 ## Overview
 
-A skill is a directory: {name}/SKILL.md says what it covers and names the files beside it. 45 skills, 678 files covering the entire Hanzo AI ecosystem.
+A skill is a directory: {name}/SKILL.md says what it covers and names the files beside it. 59 skills, 780 markdown files covering the entire Hanzo AI ecosystem. Forty-five are ours; fourteen are Anthropic's, redistributed under Apache-2.0 — see NOTICE and the section below.
 
 ## The Architecture (current truth)
 
@@ -53,6 +53,35 @@ skills/
   scripts/              # Helper scripts
   tests/                # Test suite
 ```
+
+## The fourteen skills that are not ours
+
+`academy-guide`, `algorithmic-art`, `brand-guidelines`, `canvas-design`,
+`claude-api`, `discernment-nudge`, `frontend-design`, `internal-comms`,
+`mcp-builder`, `skill-creator`, `slack-gif-creator`, `theme-factory`,
+`webapp-testing` and `web-artifacts-builder` come from
+github.com/anthropics/skills under Apache-2.0, merged at upstream
+`3b3fad96af16a10759d930941b4520ba0c40edae`. They sit flat in `skills/` like
+every other skill, each with the upstream `LICENSE.txt` beside its
+`SKILL.md`. **That LICENSE.txt is load-bearing — the repository's MIT
+licence does not cover those directories.** Never delete one to tidy up, and
+carry it through any move. `NOTICE` at the root is the attribution and lists
+the two frontmatter changes we made; `THIRD_PARTY_NOTICES.md` is Anthropic's,
+verbatim.
+
+Re-syncing means copying the directory again and re-applying exactly two
+things: the `license:` frontmatter line, which upstream leaves unnamed, and
+`claude-api`'s description, which upstream ships at 1068 characters against a
+1024 cap that makes it unloadable as-is.
+
+**Five upstream skills are absent on purpose.** `docx`, `pdf`, `pptx` and
+`xlsx` are source-available, not open source: their LICENSE.txt forbids
+copying them, keeping them outside Anthropic's services, deriving from them
+and distributing them, so merging them here would violate it four ways.
+`doc-coauthoring` ships with no LICENSE.txt and the upstream repository has
+no root licence, so nothing grants us the right — that one is a question for
+Anthropic rather than a settled no. Do not add any of the five because they
+look like a gap.
 
 ## The site — hanzoskills.com
 
