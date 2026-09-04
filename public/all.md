@@ -136388,7 +136388,7 @@ rpc:
 # Settlement configuration (Lux L1 bridge)
 settlement:
   # Lux RPC endpoint
-  lux_rpc: https://api.lux.network/ext/bc/C/rpc
+  lux_rpc: https://api.lux.network/v1/chain/c
   # Checkpoint interval (in Hanzo blocks)
   checkpoint_interval: 100  # ~20 seconds
   # Bridge contract address on Lux
@@ -136738,8 +136738,8 @@ consensus:
 
 | Network | Chain ID | RPC Endpoint |
 |---------|----------|--------------|
-| Mainnet | 36963 | `https://api.hanzo.ai/ext/bc/hanzo/rpc` |
-| Testnet | 36962 | `https://testnet.hanzo.ai/ext/bc/hanzotest/rpc` |
+| Mainnet | 36963 | `https://api.hanzo.ai/v1/chain/hanzo` |
+| Testnet | 36962 | `https://testnet.hanzo.ai/v1/chain/hanzo` |
 
 ### Validator Requirements
 
@@ -179940,7 +179940,7 @@ spec:
   replicas: 1
   env:
     - name: RPC_URL
-      value: https://api.lux.network/mainnet/ext/bc/hanzo/rpc
+      value: https://api.lux.network/v1/chain/hanzo
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef: { name: indexer-db, key: url }
@@ -180019,7 +180019,7 @@ spec:
     - name: INDEXER_URL
       value: http://localhost:80
     - name: RPC_URL
-      value: https://api.lux.network/mainnet/ext/bc/hanzo/rpc
+      value: https://api.lux.network/v1/chain/hanzo
   ingress:
     enabled: true
     hosts:
