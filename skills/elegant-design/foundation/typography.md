@@ -6,9 +6,10 @@ Elegant, modern typography sets the foundation for professional interfaces.
 
 ### Primary Fonts
 
-**1. Geist (https://vercel.com/font) - USE FOR ALL UI TEXT**
+**1. Zen (https://hanzo.ai/font) - USE FOR ALL UI TEXT**
 
-Designed by Vercel specifically for interfaces.
+Hanzo's own family, drawn for interfaces. It ships in @hanzo/font, so a
+project carries it rather than fetching it.
 
 **Characteristics:**
 - Excellent legibility at all sizes
@@ -16,7 +17,7 @@ Designed by Vercel specifically for interfaces.
 - Crisp rendering on all displays
 - Variable font with flexible weights
 
-**Use Geist for:**
+**Use Zen for:**
 - Body text and paragraphs
 - Headings and titles
 - UI labels and buttons
@@ -25,10 +26,10 @@ Designed by Vercel specifically for interfaces.
 - **95% of all typography**
 
 ```css
-font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+font-family: 'Zen', -apple-system, BlinkMacSystemFont, sans-serif;
 ```
 
-**2. JetBrains Mono (https://jetbrains.com/mono) - USE FOR ALL CODE/TECHNICAL**
+**2. Zen Mono (https://hanzo.ai/font) - USE FOR ALL CODE/TECHNICAL**
 
 Purpose-built for developers.
 
@@ -38,7 +39,7 @@ Purpose-built for developers.
 - Clear distinction between similar characters (0/O, 1/l/I)
 - Optimized for long reading sessions
 
-**Use JetBrains Mono for:**
+**Use Zen Mono for:**
 - Code blocks and snippets
 - Terminal output
 - Log viewers
@@ -48,23 +49,21 @@ Purpose-built for developers.
 - **Minimum 14px font size**
 
 ```css
-font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+font-family: 'Zen Mono', 'Fira Code', Consolas, monospace;
 font-size: 14px; /* minimum */
 font-variant-ligatures: common-ligatures; /* enable ligatures */
 ```
 
 ### Alternative Elegant Fonts
 
-If Geist or JetBrains Mono are unavailable:
+If Zen or Zen Mono are unavailable:
 
 **Sans-serif alternatives:**
-- **Geist Mono** - Companion monospace to Geist (code alternative)
-- **Inter** - Highly legible, great metrics, excellent fallback
 - **IBM Plex Sans** - Professional, humanist, good brand font
 - **Space Grotesk** - Modern, geometric, good for headlines
 
 **Monospace alternatives:**
-- **Geist Mono** - Vercel's monospace companion
+- **Zen Mono** - the companion monospace
 - **Fira Code** - Excellent ligatures, widely supported
 - **Berkeley Mono** - Premium option if budget allows
 - **Cascadia Code** - Microsoft's code font with ligatures
@@ -79,19 +78,28 @@ If Geist or JetBrains Mono are unavailable:
 
 Use optimal loading to prevent FOIT (Flash of Invisible Text):
 
+One import declares both faces, already set to `font-display: swap`:
+
+```ts
+import '@hanzo/font/css';
+```
+
+It expands to this, which is what to write by hand if you are self-hosting the
+files rather than taking the package:
+
 ```css
 @font-face {
-  font-family: 'Geist';
-  src: url('/fonts/geist.woff2') format('woff2');
+  font-family: 'Zen';
+  src: url('/fonts/zen-sans/Zen-Variable.woff2') format('woff2');
   font-display: swap; /* Show fallback immediately, swap when loaded */
   font-weight: 100 900; /* Variable font weight range */
 }
 
 @font-face {
-  font-family: 'JetBrains Mono';
-  src: url('/fonts/jetbrains-mono.woff2') format('woff2');
+  font-family: 'Zen Mono';
+  src: url('/fonts/zen-mono/ZenMono-Variable.woff2') format('woff2');
   font-display: swap;
-  font-weight: 400 700;
+  font-weight: 100 900;
 }
 ```
 
@@ -157,14 +165,14 @@ code, pre {
 
 ## Font Weights
 
-**Geist supports variable weights (100-900):**
+**Zen supports variable weights (100-900):**
 - 300 (light) - Use sparingly
 - 400 (regular) - Body text
 - 500 (medium) - UI emphasis
 - 600 (semibold) - Headings, buttons
 - 700 (bold) - Strong emphasis
 
-**JetBrains Mono:**
+**Zen Mono:**
 - 400 (regular) - Most code
 - 700 (bold) - Emphasis in code
 
@@ -182,8 +190,8 @@ code, pre {
 
 ### Do:
 - ✅ Limit to 2 font families maximum (one sans, one mono)
-- ✅ Use Geist for 95% of text
-- ✅ Reserve JetBrains Mono exclusively for code
+- ✅ Use Zen for 95% of text
+- ✅ Reserve Zen Mono exclusively for code
 - ✅ Use font-display: swap for faster rendering
 - ✅ Prefer variable fonts (smaller file size, flexible weights)
 - ✅ Set minimum 14px for code fonts
@@ -217,8 +225,8 @@ code, pre {
 /* CSS Variables */
 :root {
   /* Font families */
-  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-sans: 'Zen', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Zen Mono', 'Fira Code', Consolas, monospace;
   
   /* Font sizes (1.25 scale) */
   --font-size-xs: 0.64rem;
@@ -275,40 +283,32 @@ h3 {
 
 ## Loading Fonts in Next.js/React
 
+`Zen` and `ZenMono` arrive already built — subsetting, `display: swap` and the
+fallback metrics are baked in, so there is nothing to call and nothing to pass.
+
 ```typescript
 // app/layout.tsx or _app.tsx
-import { Geist } from 'next/font/google';
-import localFont from 'next/font/local';
-
-const geist = Geist({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const jetbrainsMono = localFont({
-  src: '../public/fonts/jetbrains-mono.woff2',
-  variable: '--font-mono',
-  display: 'swap',
-});
+import { Zen, ZenMono } from '@hanzo/font';
 
 export default function RootLayout({ children }) {
   return (
-    <html className={`${geist.variable} ${jetbrainsMono.variable}`}>
+    <html className={`${Zen.variable} ${ZenMono.variable}`}>
       <body>{children}</body>
     </html>
   );
 }
 ```
 
+They publish `--font-zen-sans` and `--font-zen-mono`.
+
 ## Quick Reference
 
 | Element | Font | Size | Weight |
 |---------|------|------|--------|
-| Body text | Geist | 16px (1rem) | 400 |
-| UI labels | Geist | 14-16px | 500 |
-| Headings | Geist | Scale-based | 600-700 |
-| Buttons | Geist | 14-16px | 500-600 |
-| Code blocks | JetBrains Mono | 14px min | 400 |
-| Terminal | JetBrains Mono | 14px | 400 |
-| Small text | Geist | 14px min | 400 |
+| Body text | Zen | 16px (1rem) | 400 |
+| UI labels | Zen | 14-16px | 500 |
+| Headings | Zen | Scale-based | 600-700 |
+| Buttons | Zen | 14-16px | 500-600 |
+| Code blocks | Zen Mono | 14px min | 400 |
+| Terminal | Zen Mono | 14px | 400 |
+| Small text | Zen | 14px min | 400 |

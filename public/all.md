@@ -43077,12 +43077,12 @@ Identify every UI element needed:
 **Establish Visual System:**
 
 Read the detailed foundation guides:
-- `foundation/typography.md` - Font selection (Geist, JetBrains Mono), scales, loading
+- `foundation/typography.md` - Font selection (Zen, Zen Mono), scales, loading
 - `foundation/colors-and-spacing.md` - Color palettes, spacing systems, dark mode
 - `foundation/layout-patterns.md` - Grids, containers, white space, responsive breakpoints
 
 **Quick Reference:**
-- **Typography**: Geist for UI, JetBrains Mono for code (14px minimum)
+- **Typography**: Zen for UI, Zen Mono for code (14px minimum)
 - **Spacing**: 8px base system (0.5rem, 1rem, 1.5rem, 2rem, 3rem, 4rem, 6rem, 8rem)
 - **Colors**: Semantic tokens (--color-background, --color-primary, --color-error, etc.)
 - **Layout**: Mobile-first, 12-column grid, generous white space
@@ -43130,7 +43130,7 @@ For sophisticated interactive features, reference the specialized guides:
 - [ ] Mobile responsive (tested on real devices)
 - [ ] Accessibility compliant (WCAG AA)
 - [ ] Performance measured (Lighthouse score > 90)
-- [ ] Geist used for UI, JetBrains Mono for code
+- [ ] Zen used for UI, Zen Mono for code
 - [ ] Design system components used where possible
 - [ ] Consistent spacing and typography
 - [ ] Both light and dark modes work
@@ -43184,11 +43184,11 @@ See `reference/design-systems.md` for detailed comparison and usage patterns.
 
 **Use these fonts exclusively:**
 
-- **Geist** (https://vercel.com/font) - For ALL interface text
+- **Zen** (https://hanzo.ai/font) - For ALL interface text
   - UI labels, body text, headings
   - 95% of your typography
   
-- **JetBrains Mono** (https://jetbrains.com/mono) - For ALL code/technical content
+- **Zen Mono** (https://hanzo.ai/font) - For ALL code/technical content
   - Code blocks, terminals, logs, diffs
   - 14px minimum size
   - Enable ligatures
@@ -44685,7 +44685,7 @@ Check existing: modal-*.md (Modal deployment), but no generic Python deployment
   ↓
 Proposed scope: python-deployment-patterns.md
   ↓
-Contents: Fly.io, Railway, Render, Modal, AWS Lambda deployment
+Contents: Fly.io, Render, Modal, AWS Lambda deployment
 ```
 
 **Generalization Decision Tree**:
@@ -44903,7 +44903,7 @@ User request:
 1. Setup Postgres database
 2. Create Drizzle schema
 3. Build FastAPI backend
-4. Deploy to Railway
+4. Deploy the backend
 5. Connect Next.js frontend
 6. Deploy frontend to Vercel
 7. Setup CI/CD for both"
@@ -44916,12 +44916,12 @@ Analysis:
 
 Planned Skill: fullstack-deployment-workflow.md
 Scope:
-  - Database setup (Railway Postgres, Supabase, Neon)
+  - Database setup (Supabase, Neon)
   - ORM integration (Drizzle, Prisma)
-  - Backend deployment (Railway, Render, Fly.io)
+  - Backend deployment (Render, Fly.io)
   - Frontend deployment (Vercel, Netlify, Cloudflare Pages)
   - Environment variable management
-  - CI/CD patterns (GitHub Actions, Railway/Vercel auto-deploy)
+  - CI/CD patterns (GitHub Actions, Vercel auto-deploy)
   - Monitoring and debugging
 ```
 
@@ -119069,23 +119069,11 @@ console.log('Fetch took:', measure.duration, 'ms');
 
 ```tsx
 // app/layout.tsx
-import { Inter, Roboto_Mono } from 'next/font/google';
-
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-});
-
-const robotoMono = Roboto_Mono({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-roboto-mono',
-});
+import { Zen, ZenMono } from '@hanzo/font';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html className={`${inter.variable} ${robotoMono.variable}`}>
+    <html className={`${Zen.variable} ${ZenMono.variable}`}>
       <body>{children}</body>
     </html>
   );
@@ -119093,11 +119081,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 // globals.css
 body {
-  font-family: var(--font-inter), sans-serif;
+  font-family: var(--font-zen-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 code {
-  font-family: var(--font-roboto-mono), monospace;
+  font-family: var(--font-zen-mono), ui-monospace, monospace;
 }
 ```
 
@@ -136400,7 +136388,7 @@ rpc:
 # Settlement configuration (Lux L1 bridge)
 settlement:
   # Lux RPC endpoint
-  lux_rpc: https://api.lux.network/ext/bc/C/rpc
+  lux_rpc: https://api.lux.network/v1/chain/c
   # Checkpoint interval (in Hanzo blocks)
   checkpoint_interval: 100  # ~20 seconds
   # Bridge contract address on Lux
@@ -136750,8 +136738,8 @@ consensus:
 
 | Network | Chain ID | RPC Endpoint |
 |---------|----------|--------------|
-| Mainnet | 36963 | `https://api.hanzo.ai/ext/bc/hanzo/rpc` |
-| Testnet | 36962 | `https://testnet.hanzo.ai/ext/bc/hanzotest/rpc` |
+| Mainnet | 36963 | `https://api.hanzo.ai/v1/chain/hanzo` |
+| Testnet | 36962 | `https://testnet.hanzo.ai/v1/chain/hanzo` |
 
 ### Validator Requirements
 
@@ -179952,7 +179940,7 @@ spec:
   replicas: 1
   env:
     - name: RPC_URL
-      value: https://api.lux.network/mainnet/ext/bc/hanzo/rpc
+      value: https://api.lux.network/v1/chain/hanzo
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef: { name: indexer-db, key: url }
@@ -180031,7 +180019,7 @@ spec:
     - name: INDEXER_URL
       value: http://localhost:80
     - name: RPC_URL
-      value: https://api.lux.network/mainnet/ext/bc/hanzo/rpc
+      value: https://api.lux.network/v1/chain/hanzo
   ingress:
     enabled: true
     hosts:

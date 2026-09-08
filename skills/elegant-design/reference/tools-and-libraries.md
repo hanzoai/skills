@@ -20,8 +20,8 @@
 ## Typography
 
 **Fonts:**
-- Geist (https://vercel.com/font)
-- JetBrains Mono (https://jetbrains.com/mono)
+- Zen (https://hanzo.ai/font)
+- Zen Mono (https://hanzo.ai/font)
 - Google Fonts (https://fonts.google.com)
 - Modern Font Stacks (https://modernfontstacks.com)
 

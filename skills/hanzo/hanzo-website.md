@@ -19,7 +19,7 @@ The Hanzo AI corporate website at **hanzo.ai**. A Next.js 16 App Router site wit
 - **Forms**: React Hook Form + Zod validation
 - **Flow diagrams**: @xyflow/react 12.4.4
 - **Testing**: Playwright (e2e)
-- **Font**: Geist Sans + Geist Mono (via next/font/google)
+- **Font**: Zen + Zen Mono (via @hanzo/font)
 - **Analytics**: Hanzo Insights (`insights.hanzo.ai`)
 - **Package manager**: npm (has both package-lock.json and pnpm-lock.yaml)
 
@@ -104,7 +104,7 @@ mkdir -p components/my-product
 │ Next.js 16 App Router (Static Export) │
 │ │
 │ app/ │
-│ layout.tsx Root layout (Geist font, theme) │
+│ layout.tsx Root layout (Zen font, theme) │
 │ (marketing)/ │
 │ layout.tsx Marketing layout (Navbar+Footer) │
 │ page.tsx Homepage │

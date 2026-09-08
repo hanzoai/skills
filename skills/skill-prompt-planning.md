@@ -106,7 +106,7 @@ Check existing: modal-*.md (Modal deployment), but no generic Python deployment
   ↓
 Proposed scope: python-deployment-patterns.md
   ↓
-Contents: Fly.io, Railway, Render, Modal, AWS Lambda deployment
+Contents: Fly.io, Render, Modal, AWS Lambda deployment
 ```
 
 **Generalization Decision Tree**:
@@ -324,7 +324,7 @@ User request:
 1. Setup Postgres database
 2. Create Drizzle schema
 3. Build FastAPI backend
-4. Deploy to Railway
+4. Deploy the backend
 5. Connect Next.js frontend
 6. Deploy frontend to Vercel
 7. Setup CI/CD for both"
@@ -337,12 +337,12 @@ Analysis:
 
 Planned Skill: fullstack-deployment-workflow.md
 Scope:
-  - Database setup (Railway Postgres, Supabase, Neon)
+  - Database setup (Supabase, Neon)
   - ORM integration (Drizzle, Prisma)
-  - Backend deployment (Railway, Render, Fly.io)
+  - Backend deployment (Render, Fly.io)
   - Frontend deployment (Vercel, Netlify, Cloudflare Pages)
   - Environment variable management
-  - CI/CD patterns (GitHub Actions, Railway/Vercel auto-deploy)
+  - CI/CD patterns (GitHub Actions, Vercel auto-deploy)
   - Monitoring and debugging
 ```
 

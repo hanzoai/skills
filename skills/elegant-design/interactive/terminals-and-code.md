@@ -4,7 +4,7 @@ Terminals and code blocks need to be readable, beautiful, and functional.
 
 ## Terminal Interfaces
 
-Terminals are where developers feel at home. Make them beautiful with JetBrains Mono.
+Terminals are where developers feel at home. Make them beautiful with Zen Mono.
 
 ### Visual Design
 
@@ -12,7 +12,7 @@ Terminals are where developers feel at home. Make them beautiful with JetBrains 
 .terminal {
   background: #0d1117; /* GitHub dark background */
   color: #c9d1d9;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Zen Mono', monospace;
   font-size: 14px;
   line-height: 1.5;
   padding: 1rem;
@@ -240,7 +240,7 @@ async function highlightCode(code: string, lang: string) {
   overflow: hidden;
   margin: 1.5rem 0;
   box-shadow: var(--shadow-lg);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Zen Mono', monospace;
 }
 
 .code-header {
@@ -363,7 +363,7 @@ function applySemanticHighlighting(tokens: Token[]) {
 ## Best Practices
 
 ### Do:
-- ✅ Use JetBrains Mono at 14px minimum
+- ✅ Use Zen Mono at 14px minimum
 - ✅ Support ANSI colors in terminals
 - ✅ Provide copy buttons on code blocks
 - ✅ Enable ligatures in monospace fonts

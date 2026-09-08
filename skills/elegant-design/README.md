@@ -10,7 +10,7 @@ This skill follows Anthropic's best practices with progressive disclosure:
 elegant-design/
 ├── SKILL.md (302 lines - main entry point)
 ├── foundation/ (design system basics)
-│   ├── typography.md (Geist, JetBrains Mono, scales)
+│   ├── typography.md (Zen, Zen Mono, scales)
 │   ├── colors-and-spacing.md (palettes, tokens, dark mode)
 │   └── layout-patterns.md (grids, responsive, containers)
 ├── interactive/ (sophisticated UI elements)
@@ -48,7 +48,7 @@ elegant-design/
 
 ### Key Features
 
-- **Typography**: Geist for UI, JetBrains Mono for code
+- **Typography**: Zen for UI, Zen Mono for code
 - **Chat interfaces**: Streaming, auto-scroll, markdown rendering
 - **Terminals**: ANSI colors, command history, beautiful aesthetics
 - **Code display**: Shiki syntax highlighting, copy buttons, line numbers
@@ -86,8 +86,8 @@ This skill follows all Anthropic best practices:
 
 ## Typography Standards
 
-- **Geist** (https://vercel.com/font) - ALL UI text
-- **JetBrains Mono** (https://jetbrains.com/mono) - ALL code (14px min)
+- **Zen** (https://hanzo.ai/font) - ALL UI text
+- **Zen Mono** (https://hanzo.ai/font) - ALL code (14px min)
 
 Never mix multiple sans-serif or monospace fonts.
 

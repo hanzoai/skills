@@ -31,12 +31,12 @@
 ## Typography
 
 ❌ **Mixing multiple sans-serif or monospace fonts**
-- Use Geist for UI, JetBrains Mono for code
+- Use Zen for UI, Zen Mono for code
 - Consistency is key
 
 ❌ **Using fonts smaller than 14px for code**
 - Code needs to be readable
-- 14px minimum for JetBrains Mono
+- 14px minimum for Zen Mono
 
 ❌ **Forgetting font fallbacks**
 - Always provide system font fallbacks
@@ -163,7 +163,7 @@
 ✅ Animate with transform and opacity
 ✅ Handle all states
 ✅ Measure performance
-✅ Use Geist for UI, JetBrains Mono for code
+✅ Use Zen for UI, Zen Mono for code
 ✅ Support keyboard navigation
 ✅ Stream content when possible
 ✅ Provide copy buttons for code

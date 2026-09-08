@@ -54,7 +54,7 @@ function StreamingText({ stream }: { stream: ReadableStream<Uint8Array> }) {
 ```css
 .cursor-blink {
   animation: blink 1s ease-in-out infinite;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Zen Mono', monospace;
 }
 
 @keyframes blink {
