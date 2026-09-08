@@ -1,7 +1,7 @@
 # Hanzo Functions - Serverless Compute Platform
 
 **Category**: Hanzo Ecosystem
-**Related Skills**: `hanzo/hanzo-platform.md`, `hanzo/hanzo-universe.md`, `hanzo/hanzo-runtime.md`
+**Related Skills**: `hanzo/hanzo-platform.md`, `hanzo/hanzo-universe.md`
 
 ## Overview
 
@@ -233,7 +233,6 @@ make skaffold-deploy SKAFFOLD_PROFILE=kind
 
 - `hanzo/hanzo-platform.md` - PaaS deployment platform
 - `hanzo/hanzo-universe.md` - K8s infrastructure
-- `hanzo/hanzo-runtime.md` - Container runtime
 - `hanzo/hanzo-stream.md` - Kafka wire protocol (MQ trigger source)
 - `hanzo/hanzo-pubsub.md` - NATS messaging (event source)
 

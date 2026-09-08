@@ -347,10 +347,7 @@ Foundry contracts (AIToken, AIFaucet, HanzoRegistry).
 **Hanzo NChain** (`hanzo-nchain.md`)
 Blockchain node operator.
 
-### Infrastructure Utilities (5 skills)
-
-**Hanzo Runtime** (`hanzo-runtime.md`)
-Runtime environment for AI workloads.
+### Infrastructure Utilities (4 skills)
 
 **Hanzo Extract** (`hanzo-extract.md`)
 Content extraction and sanitization.
