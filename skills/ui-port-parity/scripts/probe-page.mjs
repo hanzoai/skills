@@ -30,6 +30,28 @@ const result = await page.evaluate((sels) => {
     'letterSpacing','color','backgroundColor','border','borderRadius','boxShadow',
     'opacity','overflow','zIndex','transform','transition'
   ];
+  // A layout box is not visibility. A screen-reader wrapper clips its child to
+  // one pixel and the child still reports a box; a closed <details> keeps its
+  // contents laid out and paints none of them. So ask the text: take the Range
+  // rects over the node and require one that survives every clipping ancestor.
+  const painted = (el) => {
+    const cuts = [];
+    for (let n = el.parentElement; n; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.visibility === 'collapse') return false;
+      if (parseFloat(cs.opacity || '1') < 0.01) return false;
+      if (n.tagName === 'DETAILS' && !n.open) return false;
+      if (n.tagName === 'SUMMARY') continue;
+      if (cs.overflow !== 'visible' || cs.clipPath !== 'none') cuts.push(n.getBoundingClientRect());
+    }
+    const own = getComputedStyle(el);
+    if (own.display === 'none' || own.visibility === 'hidden' || parseFloat(own.opacity || '1') < 0.01) return false;
+    const meets = (a, b) => a.bottom > b.top + 0.5 && a.top < b.bottom - 0.5 && a.right > b.left + 0.5 && a.left < b.right - 0.5;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const rects = [...range.getClientRects(), el.getBoundingClientRect()];
+    return rects.some((b) => b.width > 1 && b.height > 1 && cuts.every((c) => meets(b, c)));
+  };
   const out = {};
   for (const selector of sels) {
     const nodes = [...document.querySelectorAll(selector)];
@@ -41,6 +63,7 @@ const result = await page.evaluate((sels) => {
       return {
         parityKey: el.getAttribute('data-parity-key'),
         tag: el.tagName.toLowerCase(),
+        painted: painted(el),
         rect: { x: r.x, y: r.y, width: r.width, height: r.height },
         styles,
       };
