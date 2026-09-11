@@ -200,20 +200,26 @@ footer a{color:var(--soft)}
 <p>Run the cloud on the machine in front of you.</p>
 <p>Everything below is what the tree does today, checked against it. Where a thing does not work locally this says so rather than describing the intent.</p>
 <h2>Start here</h2>
-<pre><code>hanzo host serve</code></pre>
-<p>That is the local cloud API. It speaks ZAP — the fleet&#x27;s own transport — and binds a <strong>unix socket</strong>, not a port on an interface. Where the origin is loopback it binds <code>127.0.0.1</code> and nothing wider. A bound TCP port is not what &quot;running&quot; means here, which is why the default exposes none.</p>
-<p>This command is the answer to &quot;how do I run the cloud locally&quot;, and it is the one an outside adopter did not find: they wrote four launcher scripts, each minting a master key by hand, and shipped every service unauthenticated on loopback to get where this gets you.</p>
+<p>From a checkout of <code>hanzoai/cloud</code>:</p>
+<pre><code>make build &amp;&amp; CLOUD_DEV_UNENCRYPTED=1 CLOUD_LISTEN=127.0.0.1:8080 CLOUD_DATA_DIR=.dev/data ./cloud</code></pre>
+<p>That serves the API and the embedded console on <code>http://127.0.0.1:8080</code>, and <code>/v1/openapi.json</code> lists every route the process serves. The README&#x27;s <code>make dev</code> is meant to be this command; today it stops with <code>cek: this build cannot encrypt a store</code> (see <em>What does not work locally yet</em>).</p>
+<p>The CLI has two local modes, and neither builds anything:</p>
+<ul><li><strong><code>hanzo host serve [service]</code></strong> runs a cloud binary you already have, in the</li></ul>
+<p>  foreground: <code>HANZO_CLOUD_BIN</code>, else <code>hanzo-cloud</code> or <code>cloud</code> on <code>PATH</code>.</p>
+<ul><li><strong><code>hanzo host start</code></strong> runs the host as a daemon. After</li></ul>
+<p>  <code>hanzo network use local</code>, every cloud command reaches it over a unix socket in   the CLI&#x27;s state directory, with no TCP port. It starts <code>HANZO_HOST_BIN</code>, default   <code>~/work/hanzo/cloud/bin/host</code>, which <code>make host</code> builds; <code>hanzoai/cloud</code> has no   <code>make host</code> target yet.</p>
+<p>An outside adopter who found none of this wrote four launcher scripts, each minting a master key by hand, and shipped every service unauthenticated on loopback.</p>
 <h3>When you want the cluster shape instead</h3>
 <pre><code>hanzo up</code></pre>
 <p>Boots k3s inside a microVM and deploys the cloud into it as the cluster&#x27;s first workload, then hands back a kubeconfig. First boot downloads k3s once, in the foreground, so the wait is visible; later boots start from a disk checkpoint. <code>hanzo up down</code> is one signal — the supervisor holds the VM&#x27;s stdin as a leash, so the guest stops when the supervisor does.</p>
-<p>Use this when you are testing something that depends on being in a cluster. For everything else <code>hanzo host serve</code> is lighter and binds less.</p>
+<p>Use this when you are testing something that depends on being in a cluster. For everything else one process is lighter and binds less.</p>
 <p><code>hanzo up &lt;service&gt;</code> forwards to <code>hanzo host serve</code> for one release. Do not write new scripts against that spelling.</p>
 <h2>Ports</h2>
 <p>One number to know: <strong>3690</strong>. That is what <code>local</code> means to <code>hanzo network</code> — <code>hanzo network use local</code> names <code>http://localhost:3690</code>, and <code>hanzo up</code> pins the same port so the two cannot disagree.</p>
-<p><code>8080</code> is the container&#x27;s default and appears in the cloud README&#x27;s <code>docker run</code>. It is not the local-network port, and a URL built from one while the other is running is a connection to nothing. If you are mixing the two, that is the first thing to check.</p>
-<p>The README&#x27;s quick start is <code>docker run … :latest</code>. Prefer a pinned <code>vX.Y.Z</code>: floating tags are against policy everywhere else in this estate, and a <code>:latest</code> you cannot name is a bug you cannot reproduce.</p>
+<p><code>8080</code> is where the cloud serves when you start it from a checkout. It is not the local-network port, and a URL built from one while the other is running is a connection to nothing. If you are mixing the two, that is the first thing to check.</p>
 <h2>Listeners, and reading the right file</h2>
-<p>The cloud&#x27;s listeners default to loopback, and the reason is specific: the ZAP listener serves the <strong>identical route surface as HTTP over plaintext TCP</strong>, including arbitrary process execution. A bare <code>:9653</code> binds every interface, and that port has been reached from another host on the same subnet with no credential.</p>
+<p>The ZAP and health listeners default to loopback, <code>127.0.0.1:9653</code> and <code>127.0.0.1:9090</code>, and the reason is specific: the ZAP listener serves the <strong>identical route surface as HTTP over plaintext TCP</strong>, including arbitrary process execution. A bare <code>:9653</code> binds every interface, and that port has been reached from another host on the same subnet with no credential.</p>
+<p>The HTTP listener is the exception. With neither <code>CLOUD_LISTEN</code> nor <code>PORT</code> set it binds <code>:8080</code>, every interface, which is why the command in <em>Start here</em> sets <code>CLOUD_LISTEN</code>.</p>
 <p>Clusters set <code>CLOUD_ZAP_LISTEN</code> explicitly and have a network policy in front, so the safe default costs them nothing. On a laptop you have neither, which is the case the default has to be safe for.</p>
 <p>Two things to know when you check this yourself:</p>
 <ul><li>The environment wins over the flag default. <code>CLOUD_ZAP_LISTEN</code>,</li></ul>
@@ -226,12 +232,12 @@ footer a{color:var(--soft)}
 <h2>What does not work locally yet</h2>
 <p>Say so in your notes rather than working around it quietly.</p>
 <ul><li><strong>KMS needs an IAM principal, and there is no IAM locally.</strong> <code>/v1/kms</code> is</li></ul>
-<p>  guarded, correctly, and the guard has nothing to check against on a laptop.   The in-process client skips the guard, which is why reaching for it is   tempting and why doing so means your local path and your deployed path are   different code. Until a local IAM superuser is seeded, keep secrets in   something you control and do not build on the bypass.</p>
-<ul><li><strong>At-rest encryption has been reported as active over plaintext files.</strong> One</li></ul>
-<p>  adopter&#x27;s second boot failed with <code>sqlcipher_export: no such function</code>, and   their notes record every <code>*.db</code> carrying the plaintext SQLite header while   the boot log said encryption was on. <strong>We have not reproduced this.</strong> Treat a   boot log claiming encryption as unverified until you have read the first   sixteen bytes of the file yourself.</p>
+<p>  guarded, correctly, and the guard has nothing to check against on a laptop.   The in-process client skips the guard, which is why reaching for it is   tempting and why doing so means your local path and your deployed path are   different code. Until a local IAM superuser is seeded, keep secrets in   something you control and do not build on the bypass. With no master key   set, as in <em>Start here</em>, secret operations fail closed as well.</p>
+<ul><li><strong>The default build cannot encrypt its stores.</strong> On <code>main</code>, <code>make dev</code> stops</li></ul>
+<p>  with <code>cek: this build cannot encrypt a store — a keyed database was written   with a plaintext header</code>. <code>CLOUD_DEV_UNENCRYPTED=1</code> does not get past it under   <code>make dev</code>, which always passes a key; it applies only when no key is set,   which is how <em>Start here</em> runs, and the files are then plaintext. One adopter   also saw <code>sqlcipher_export: no such function</code> on a second boot, and every   <code>*.db</code> carrying the plaintext SQLite header while the boot log said encryption   was on. Trust a claim of encryption only after reading the first sixteen bytes   of the file.</p>
 <h2>Do not rebuild these</h2>
 <p>Each of these was written from scratch by an adopter who could not find ours. If you are about to write one, read this row first.</p>
-<p>| Before you write | We ship | Why it was missed | |---|---|---| | A launcher script | <code>hanzo host serve</code> | Not in any README | | A KMS CLI | <code>/v1/kms</code>, <code>hanzo kms</code> | Needs IAM, absent locally | | An SDK generator | <code>zip/cmd/zipgen</code> | Not in the zip README | | An LLM client | <code>python-sdk</code>, <code>hanzo-agent</code> | The packages failed to import | | A CDP relay or browser MCP | the bot relay, <code>extension/packages/browser</code> | Relay lives inside the gateway; no README | | Compose or Terraform for one box | nothing, honestly | There is no self-host guide yet |</p>
+<p>| Before you write | We ship | Why it was missed | |---|---|---| | A launcher script | the command in <em>Start here</em> | The skills described only the hosted cloud | | A KMS CLI | <code>/v1/kms</code>, <code>hanzo kms</code> | Needs IAM, absent locally | | An SDK generator | <code>zip/cmd/zipgen</code> | Not in the zip README | | An LLM client | <code>python-sdk</code>, <code>hanzo-agent</code> | The packages failed to import | | A CDP relay or browser MCP | the bot relay, <code>extension/packages/browser</code> | Relay lives inside the gateway; no README | | Compose or Terraform for one box | nothing, honestly | There is no self-host guide yet |</p>
 <p>The last row is the real gap. If you build a single-box deploy, it is worth upstreaming.</p>
 <h2>If something here is wrong</h2>
 <p>Open a pull request. This stack is open source and the team reviews, helps finish and merges — you do not need permission first, and you do not need to be on the team. Report a security issue privately to the repository&#x27;s security contact rather than in a public issue.</p>

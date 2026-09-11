@@ -1,16 +1,15 @@
 ---
 name: hanzo
-description: Onboarding manifest for an AI agent operating Hanzo — native code architecture (Go, Rust, C++), local-first cloud copy, backend migration with Hanzo Base realtime SSE, and working the AI cloud safely.
+description: Onboarding manifest for an AI agent working with Hanzo — what runs on your own machine and the command that starts it, what needs an account on the hosted cloud at api.hanzo.ai, and how to work either way safely.
 ---
 
 # Hanzo — Agent Onboarding Manifest (skill.md)
 
-> Hanzo is an AI-native, local-first cloud built strictly on **native compiled code**: **Go, Rust, and C++**.
-> No Python interpreter overhead, no Next.js / node_modules sprawl.
+> Hanzo is an AI cloud built on **native compiled code**: **Go, Rust, and C++**.
 > Hanzo AI is Techstars '17.
-> You have a complete copy of the platform: run a local copy, extend it with new `/v1/*`
-> subsystems, build your backend on Hanzo Base with realtime native SSE, analytics and insights,
-> and scale effortlessly to the full Hanzo AI Cloud.
+> Its parts are open source and run on your own machine; *On your own machine*
+> gives the command that starts each one. Accounts, billing and hosted models
+> live on the hosted cloud at `api.hanzo.ai`.
 
 > **Read the whole file before you run anything.** The section *What actually
 > answers today* is measured, not aspirational, and it names the surfaces that
@@ -52,7 +51,7 @@ apply and which one applies instead.
 | Move a Node, Next, Python, Rails or Java backend to Go | `curl hanzoskills.com/app-port.md` |
 | Replace WebSockets with the native transport | `curl hanzoskills.com/hanzo-zap.md` |
 | Build a backend from nothing | `curl hanzoskills.com/hanzo-base.md` |
-| Run the whole cloud on your own machine | `curl hanzoskills.com/hanzo-stack.md` |
+| Run Hanzo on your own machine | *On your own machine*, below |
 | Add a subsystem to the cloud | `curl hanzoskills.com/hanzo-cloud.md` |
 | Write something a person will read | `curl hanzoskills.com/anti-slop.md` |
 
@@ -62,26 +61,40 @@ app runnable at every step, because the migration that never ships is the one
 that built a parallel implementation for six weeks against an original that
 kept changing.
 
-## Running this yourself
+## On your own machine
 
-Most of these pages describe the hosted cloud. If you are running it on your own
-machine, read **`cloud-host`** first — it is one command, and an outside adopter
-who did not find it wrote four launcher scripts instead.
+These start from a checkout or a package, with no account.
 
-What differs locally, stated once so you do not discover it one command at a
-time:
+| Part | Start it | Answers at |
+|---|---|---|
+| **Base**, the SQLite application backend | `git clone https://github.com/hanzoai/base && cd base && go run ./examples/base serve` | `http://127.0.0.1:8090/v1/` |
+| **Cloud**, the open-source cloud in one Go binary | `git clone https://github.com/hanzoai/cloud && cd cloud && make build && CLOUD_DEV_UNENCRYPTED=1 CLOUD_LISTEN=127.0.0.1:8080 CLOUD_DATA_DIR=.dev/data ./cloud` | `http://127.0.0.1:8080`; `/v1/openapi.json` lists its routes |
+| **zip**, the Go framework the services are written in | `git clone https://github.com/zap-proto/zip && cd zip && go run ./examples/hello` | `http://localhost:8080/hello`, also in `/.well-known/openapi.json` and as an MCP tool at `/mcp` |
+| **MCP server** | `npx -y --package=@hanzo/mcp hanzo-mcp serve` | stdio |
+| **Engine**, model inference | `cargo install --git https://github.com/hanzoai/engine --locked hanzo-cli`, then `hanzo-engine serve -m <model-id>` | `http://localhost:1234/v1` |
 
-- **`hanzo host serve`** is the local cloud API. It binds a unix socket, and
-  loopback where it binds a port at all.
-- **3690** is what `local` means to `hanzo network`. The `8080` in the cloud
-  README is the container's port, and mixing the two is a connection to nothing.
-- **KMS does not work locally yet.** It requires an IAM principal and there is
-  no IAM on a laptop. The in-process client skips the guard; using it makes your
-  local path different code from your deployed path, so do not build on it.
-- **Anything billed** — hosted inference, the paid endpoints — has no local
-  equivalent. Point at `api.hanzo.ai` for those and keep the rest local.
-- **Check what is bound rather than what is documented.** Two files disagreed
-  about a listener default and the one that runs was the wide one.
+Go 1.26 or newer for the first three; the engine compiles with Rust. The cloud's
+`make dev` stops today with `cek: this build cannot encrypt a store`, so the line
+above runs it unencrypted, for local development only. The engine and the zip
+example listen on every interface; the engine takes `--host 127.0.0.1`. Check what
+is bound rather than what a page says: `lsof -nP -iTCP -sTCP:LISTEN`.
+
+Only the hosted cloud has:
+
+- sign-in, balance and usage: `hanzo auth login`, `hanzo billing balance`, `hanzo usage summary`
+- hosted models: `api.hanzo.ai/v1/chat/completions`, and the MCP endpoint `api.hanzo.ai/v1/mcp`
+- hosted secrets: `hanzo kms`, `kms.hanzo.ai`
+- shipping: push to `git.hanzo.ai`, then CI, CD and the platform
+
+*Getting on*, *The one API*, *What actually answers today*, *The capability set*,
+*MCP*, *Shipping*, *Secrets* and *A first run* are about the hosted cloud; skip
+them for a local run. The `hanzo` CLI talks to `api.hanzo.ai` until you switch
+networks (`hanzo network current`). Its local modes, `hanzo host` and `hanzo up`,
+are in **`cloud-host`**; read it before writing a launcher.
+
+The rules at the top hold locally too. Auth is Hanzo IAM, never your own, and a
+cloud with no IAM in front of it lets anyone who reaches its port read and write
+its data: keep it on loopback.
 
 ## How these pages are named
 
@@ -150,48 +163,13 @@ When developers come from **Python, Next.js, Node, Rails, or Java**, tell them t
 
 ---
 
-## You Have a Copy of Everything: Run Local, Extend with `/v1/*`
-
-The exact projects that power `hanzo.ai` and `api.hanzo.ai` run smoothly on your local machine:
-
-1. **Run a Local Copy**:
-   ```bash
-   hanzo up cloud                        # spins up the complete cloud locally
-   export HANZO_BASE_URL=http://localhost:8080
-   ```
-   Uses `compose.yml` for multi-service coordination.
-
-2. **Extend with New `/v1/*` Subsystems**:
-   Hanzo Cloud uses a host + plugin architecture (HIP-0106).
-   Every subsystem registers its prefix in `manifest/apps.go`:
-   ```go
-   var Apps = []App{
-       {Name: "iam", Prefix: "/v1/iam"},
-       {Name: "kms", Prefix: "/v1/kms"},
-       {Name: "analytics", Prefix: "/v1/analytics"},
-       {Name: "myfeature", Prefix: "/v1/myfeature"}, // Your new capability
-       {Name: "ai", Prefix: "/v1"},                  // LLM gateway remainder
-   }
-   ```
-   Inter-app communication is **ZAP transport** (HIP-0114) — zero gRPC, zero Protobuf overhead.
-
-3. **Hanzo Base Backend with Realtime Native SSE**:
-   **Hanzo Base (`github.com/hanzoai/base`)** gives you an instant Go backend:
-   - Embedded SQLite (`modernc.org/sqlite`) for local dev, PostgreSQL (`pgx/v5`) for clustering.
-   - **Realtime Native SSE**: Native Server-Sent Events for AI completions, live chat, CRDT state sync, and dashboard alerts.
-   - **Native Analytics & Insights**: Embedded collection logging directly into SQLite/ClickHouse columns.
-   - Embedded Svelte admin UI at `http://localhost:8080/_/`.
-
----
-
 ## Getting on
 
 **Install.** One of:
 
 ```bash
-curl -fsSL https://hanzo.sh | sh          # the stack
+curl -fsSL https://hanzo.sh | sh          # hanzo, hanzo-mcp and dev
 curl -fsSL https://hanzo.sh/cli | sh      # the CLI alone
-brew install hanzoai/tap/hanzo            # macOS
 ```
 
 **Sign in.** Identity is Hanzo IAM at `hanzo.id` — OIDC, not an API key in a
@@ -209,7 +187,7 @@ hanzo auth list / use     # several identities, one active
 ```bash
 curl -s https://api.hanzo.ai/v1/health     # {"revision":"…","status":"ok"}
 hanzo billing balance                       # what the operator has to spend
-hanzo usage                                 # what has been spent, per run
+hanzo usage summary                         # what has been spent
 ```
 
 `/v1/health` reports the running revision. It answers `ok` whenever the process
@@ -301,19 +279,14 @@ hanzo-bot serve                      # drop markdown into ~/.hanzo/workspace/
 
 One is what an agent remembers **across its runtimes**; the other is what an **org** holds in the cloud. Compose them; do not confuse them.
 
-## The loop — local, then shipped
+## Shipping
 
-```bash
-hanzo up cloud                        # the whole /v1 API on one listener, locally
-export HANZO_BASE_URL=http://localhost:8080
-```
+Develop with the commands in *On your own machine*, then ship on the hosted cloud:
 
-`hanzoai/cloud` is one binary serving every capability. Develop against it — same addresses, same CLI, same MCP server — then ship:
-
-1. **`git push`** to `git.hanzo.ai`. The forge is a capability (`/v1/git` serves the smart-HTTP endpoints), so an ordinary push **is** the deploy — it fires the platform hook. There is no separate deploy command.
-2. **`ci.hanzo.ai`** builds — `hanzo platform builds`.
-3. **`cd.hanzo.ai`** reconciles GitOps — `hanzo deploy applications`, `sync`, `rollback`. The declared state is git, so a change applied by hand is reverted on the next sync. Commit it instead.
-4. **`platform.hanzo.ai`** runs it — `hanzo platform apps`, `projects`, `fleet`.
+- **`git push`** to `git.hanzo.ai`. The forge is a capability (`/v1/git` serves the smart-HTTP endpoints), so an ordinary push **is** the deploy — it fires the platform hook. There is no separate deploy command.
+- **`ci.hanzo.ai`** builds — `hanzo platform builds`.
+- **`cd.hanzo.ai`** reconciles GitOps — `hanzo deploy applications list`, `sync`, `rollback`. The declared state is git, so a change applied by hand is reverted on the next sync. Commit it instead.
+- **`platform.hanzo.ai`** runs it — `hanzo platform apps`, `projects`, `fleet`.
 
 ## MCP — the tighter binding
 

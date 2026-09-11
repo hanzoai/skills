@@ -12,7 +12,7 @@ description: Port an existing application onto the Hanzo stack — Hanzo Base an
 
 Modernizing your stack means moving away from interpreted, slow runtimes. Hanzo enforces an unapologetic architectural standard across its entire ecosystem: **native compiled code only — in C++, Rust, and Go.** No multi-gigabyte `node_modules`, no Python GIL or virtualenv fragility, and no bloated Next.js SSR servers.
 
-With Hanzo, **you get a complete local copy of the platform**. The exact stack, tools, and projects that power the Hanzo AI Cloud (`hanzo.ai` and `api.hanzo.ai`) run smoothly on your local machine. You can run locally, extend the cloud with new `/v1/*` subsystems, and build on **Hanzo Base** (`github.com/hanzoai/base`) with native realtime Server-Sent Events (SSE), analytics, and insights.
+Hanzo's parts are open source and run on your own machine; `skill.md` gives the command that starts each. You can run locally, extend the cloud with new `/v1/*` subsystems, and build on **Hanzo Base** (`github.com/hanzoai/base`) with native realtime Server-Sent Events (SSE), analytics, and insights.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -29,10 +29,10 @@ With Hanzo, **you get a complete local copy of the platform**. The exact stack, 
 │   ⚡ C++:  Hardware tensor kernels, CUDA, Metal & Apple Neural Engine (ANE) │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │                 RUN A COMPLETE LOCAL COPY OF THE CLOUD              │   │
-│   │   - hanzo up cloud / base serve                                     │   │
-│   │   - 100% offline-ready, identical to production                     │   │
-│   │   - Zero cloud lock-in, compose.yml orchestration                   │   │
+│   │                      RUN IT ON YOUR OWN MACHINE                     │   │
+│   │   - Base, Cloud, zip, MCP server, Engine: checkout or package       │   │
+│   │   - start commands: skill.md, section On your own machine           │   │
+│   │   - sign-in, billing and hosted models: api.hanzo.ai                │   │
 │   └──────────────────────────────────┬──────────────────────────────────┘   │
 │                                      │                                      │
 │                ┌─────────────────────┴─────────────────────┐                │
@@ -171,37 +171,12 @@ failure is attributable to the transport rather than to everything at once.
 
 ---
 
-## Step 1: Run a Complete Local Copy of the Cloud
+## Step 1: Run the Stack Locally
 
-Hanzo is designed to be local-first (HIP-0117 Cloud-in-a-Box). You have a copy of the entire stack:
-
-```bash
-# Start the full local cloud environment
-hanzo up cloud
-
-# Point your environment locally
-export HANZO_BASE_URL=http://localhost:8080
-export HANZO_API_KEY=sk-local-dev
-```
-
-When orchestrating local services, use `compose.yml`:
-
-```yaml
-# compose.yml
-services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    environment:
-      - HANZO_ENV=local
-      - HANZO_BASE_URL=http://localhost:8080
-    volumes:
-      - ./hz_data:/app/hz_data
-    restart: unless-stopped
-```
+Start the parts you are porting onto with the commands in `skill.md`, under
+*On your own machine* (`curl hanzoskills.com/skill.md`). Base and the cloud start
+from a checkout with no account, and the same section lists what needs the
+hosted cloud.
 
 ---
 
@@ -299,8 +274,6 @@ app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 	return se.Next()
 })
 ```
-
-View analytics directly in the embedded Svelte dashboard at `http://localhost:8080/_/`.
 
 ---
 

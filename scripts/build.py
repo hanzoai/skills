@@ -451,9 +451,9 @@ def main():
     hero = ('<div class="hero"><div class="wrap">'
             '<h1>The native cloud in a single binary.<br>Go. Rust. C++. '
             '<em>Zero interpreter bloat.</em></h1>'
-            '<p class="lede">Run a local copy of the complete cloud, extend with <code>/v1/*</code>, '
-            'and migrate your backend to Hanzo Base with realtime native SSE, analytics, and insights. '
-            'Built for native performance from local-first to the full Hanzo AI cloud.</p>'
+            '<p class="lede">Run the open-source parts on your own machine, extend the cloud with <code>/v1/*</code>, '
+            'and move your backend to Hanzo Base. <a href="/skill">skill.md</a> gives the command that starts '
+            'each part and says what needs the hosted cloud.</p>'
             '<div class="btns">'
             '<a class="btn solid" href="/hanzo-base">Upgrade to Native Go</a>'
             '<a class="btn" href="/app-port">Port an app</a>'
@@ -476,17 +476,18 @@ def main():
     mi = [
         "# Hanzo Skills\n\n",
         "The native cloud in a single binary. Go, Rust, C++. Zero interpreter bloat.\n",
-        "Run a local copy of the cloud, extend with /v1/*, and migrate your backend to Hanzo Base with realtime native SSE, analytics, and insights.\n\n",
+        "Run the open-source parts on your own machine, extend the cloud with /v1/*, and move your backend to Hanzo Base. skill.md gives the command that starts each part and says what needs the hosted cloud.\n\n",
         "    curl hanzoskills.com/llms.txt          # the index, for an agent\n",
         "    curl hanzoskills.com/<skill>.md        # one skill\n",
         "    curl hanzoskills.com/all.md            # the whole corpus, one file\n\n",
         "Every page is `text/markdown`. Paths work with or without the `.md`.\n\n",
         "## Start Here: Migrate to Native Go with Hanzo Base\n\n",
-        "- [`hanzo-base`](hanzo-base.md) — Open-source single-binary Go backend with embedded SQLite/Postgres, auth, admin UI, realtime native SSE.\n",
+        "- [`skill`](skill.md) — What runs on your own machine, the command that starts each part, and what needs the hosted cloud.\n",
+        "- [`hanzo-base`](hanzo-base.md) — The SQLite application backend in one Go binary, with Hanzo IAM for auth and realtime subscriptions.\n",
         "- [`app-port`](app-port.md) — Bring an existing app onto this stack: backend to Go, transport to ZAP, runtime out of Python or JavaScript.\n",
+        "- [`cloud-host`](cloud-host.md) — Run the cloud on your own machine: the command, the ports, the listeners, and what does not work locally yet.\n",
         "- [`ui-port`](ui-port.md) — Make a rewritten interface match the one it replaces, by measurement rather than by eye.\n",
         "- [`hanzo-cloud`](hanzo-cloud.md) — Unified cloud platform: host + plugins over ZAP transport.\n",
-        "- [`hanzo-stack`](hanzo-stack.md) — Full integrated local development environment (compose.yml).\n",
         "- [`go-sdk`](go-sdk.md) — Generated Go client library for the Hanzo AI API.\n\n",
         "## Everything\n"
     ]
@@ -496,16 +497,16 @@ def main():
         f"> {len(docs)} skills and architectural specifications for building apps, backends, agents and agentic companies on Hanzo.\n",
         "> Native compiled code only (Go, Rust, C++). Local-first cloud, realtime SSE, zero interpreter bloat. Plain markdown, curl-able, no auth.\n\n",
         "## Hanzo\n\n",
+        "- [Run it locally](https://hanzoskills.com/skill.md): what runs on your own machine, the command that starts each part, and what needs the hosted cloud.\n",
         "- [Install](https://hanzo.sh): `curl -fsSL hanzo.sh | sh` puts the CLI, MCP server and dev agent on this machine.\n",
         "- [API reference](https://docs.hanzo.ai/llms.txt): every endpoint api.hanzo.ai serves, one page per operation.\n",
         "- [Company](https://hanzo.ai/llms.txt): what Hanzo is and runs.\n\n",
         "## Upgrade to Native Go with Hanzo Base\n\n",
-        "- [hanzo-base](https://hanzoskills.com/hanzo-base.md): Open-source single-binary Go backend with embedded SQLite/Postgres, auth, admin UI, realtime native SSE.\n",
+        "- [hanzo-base](https://hanzoskills.com/hanzo-base.md): The SQLite application backend in one Go binary, with Hanzo IAM for auth and realtime subscriptions.\n",
         "- [app-port](https://hanzoskills.com/app-port.md): Bring an existing app onto this stack — backend to Go, transport to ZAP, runtime out of Python or JavaScript.\n",
-        "- [cloud-host](https://hanzoskills.com/cloud-host.md): Run the cloud on your own machine — the local API, ports, keys, and what already exists so you do not rebuild it.\n",
+        "- [cloud-host](https://hanzoskills.com/cloud-host.md): Run the cloud on your own machine: the command, the ports, the listeners, and what does not work locally yet.\n",
         "- [ui-port](https://hanzoskills.com/ui-port.md): Make a rewritten interface match the one it replaces, by measurement rather than by eye.\n",
-        "- [hanzo-cloud](https://hanzoskills.com/hanzo-cloud.md): Unified cloud platform: host + plugins over ZAP transport.\n",
-        "- [hanzo-stack](https://hanzoskills.com/hanzo-stack.md): Full integrated local development environment (compose.yml).\n\n",
+        "- [hanzo-cloud](https://hanzoskills.com/hanzo-cloud.md): Unified cloud platform: host + plugins over ZAP transport.\n\n",
         "## Skills & Standards\n\n"
     ]
 

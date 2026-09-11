@@ -46812,7 +46812,7 @@ description: Port an existing application onto the Hanzo stack — Hanzo Base an
 
 Modernizing your stack means moving away from interpreted, slow runtimes. Hanzo enforces an unapologetic architectural standard across its entire ecosystem: **native compiled code only — in C++, Rust, and Go.** No multi-gigabyte `node_modules`, no Python GIL or virtualenv fragility, and no bloated Next.js SSR servers.
 
-With Hanzo, **you get a complete local copy of the platform**. The exact stack, tools, and projects that power the Hanzo AI Cloud (`hanzo.ai` and `api.hanzo.ai`) run smoothly on your local machine. You can run locally, extend the cloud with new `/v1/*` subsystems, and build on **Hanzo Base** (`github.com/hanzoai/base`) with native realtime Server-Sent Events (SSE), analytics, and insights.
+Hanzo's parts are open source and run on your own machine; `skill.md` gives the command that starts each. You can run locally, extend the cloud with new `/v1/*` subsystems, and build on **Hanzo Base** (`github.com/hanzoai/base`) with native realtime Server-Sent Events (SSE), analytics, and insights.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -46829,10 +46829,10 @@ With Hanzo, **you get a complete local copy of the platform**. The exact stack, 
 │   ⚡ C++:  Hardware tensor kernels, CUDA, Metal & Apple Neural Engine (ANE) │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │                 RUN A COMPLETE LOCAL COPY OF THE CLOUD              │   │
-│   │   - hanzo up cloud / base serve                                     │   │
-│   │   - 100% offline-ready, identical to production                     │   │
-│   │   - Zero cloud lock-in, compose.yml orchestration                   │   │
+│   │                      RUN IT ON YOUR OWN MACHINE                     │   │
+│   │   - Base, Cloud, zip, MCP server, Engine: checkout or package       │   │
+│   │   - start commands: skill.md, section On your own machine           │   │
+│   │   - sign-in, billing and hosted models: api.hanzo.ai                │   │
 │   └──────────────────────────────────┬──────────────────────────────────┘   │
 │                                      │                                      │
 │                ┌─────────────────────┴─────────────────────┐                │
@@ -46971,37 +46971,12 @@ failure is attributable to the transport rather than to everything at once.
 
 ---
 
-## Step 1: Run a Complete Local Copy of the Cloud
+## Step 1: Run the Stack Locally
 
-Hanzo is designed to be local-first (HIP-0117 Cloud-in-a-Box). You have a copy of the entire stack:
-
-```bash
-# Start the full local cloud environment
-hanzo up cloud
-
-# Point your environment locally
-export HANZO_BASE_URL=http://localhost:8080
-export HANZO_API_KEY=sk-local-dev
-```
-
-When orchestrating local services, use `compose.yml`:
-
-```yaml
-# compose.yml
-services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    environment:
-      - HANZO_ENV=local
-      - HANZO_BASE_URL=http://localhost:8080
-    volumes:
-      - ./hz_data:/app/hz_data
-    restart: unless-stopped
-```
+Start the parts you are porting onto with the commands in `skill.md`, under
+*On your own machine* (`curl hanzoskills.com/skill.md`). Base and the cloud start
+from a checkout with no account, and the same section lists what needs the
+hosted cloud.
 
 ---
 
@@ -47099,8 +47074,6 @@ app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 	return se.Next()
 })
 ```
-
-View analytics directly in the embedded Svelte dashboard at `http://localhost:8080/_/`.
 
 ---
 
@@ -48321,19 +48294,29 @@ does not work locally this says so rather than describing the intent.
 
 ## Start here
 
+From a checkout of `hanzoai/cloud`:
+
 ```
-hanzo host serve
+make build && CLOUD_DEV_UNENCRYPTED=1 CLOUD_LISTEN=127.0.0.1:8080 CLOUD_DATA_DIR=.dev/data ./cloud
 ```
 
-That is the local cloud API. It speaks ZAP — the fleet's own transport — and
-binds a **unix socket**, not a port on an interface. Where the origin is
-loopback it binds `127.0.0.1` and nothing wider. A bound TCP port is not what
-"running" means here, which is why the default exposes none.
+That serves the API and the embedded console on `http://127.0.0.1:8080`, and
+`/v1/openapi.json` lists every route the process serves. The README's `make dev` is meant to be this command; today it stops with
+`cek: this build cannot encrypt a store` (see *What does not work locally yet*).
 
-This command is the answer to "how do I run the cloud locally", and it is the
-one an outside adopter did not find: they wrote four launcher scripts, each
+The CLI has two local modes, and neither builds anything:
+
+- **`hanzo host serve [service]`** runs a cloud binary you already have, in the
+  foreground: `HANZO_CLOUD_BIN`, else `hanzo-cloud` or `cloud` on `PATH`.
+- **`hanzo host start`** runs the host as a daemon. After
+  `hanzo network use local`, every cloud command reaches it over a unix socket in
+  the CLI's state directory, with no TCP port. It starts `HANZO_HOST_BIN`, default
+  `~/work/hanzo/cloud/bin/host`, which `make host` builds; `hanzoai/cloud` has no
+  `make host` target yet.
+
+An outside adopter who found none of this wrote four launcher scripts, each
 minting a master key by hand, and shipped every service unauthenticated on
-loopback to get where this gets you.
+loopback.
 
 ### When you want the cluster shape instead
 
@@ -48348,7 +48331,7 @@ foreground, so the wait is visible; later boots start from a disk checkpoint.
 so the guest stops when the supervisor does.
 
 Use this when you are testing something that depends on being in a cluster.
-For everything else `hanzo host serve` is lighter and binds less.
+For everything else one process is lighter and binds less.
 
 `hanzo up <service>` forwards to `hanzo host serve` for one release. Do not
 write new scripts against that spelling.
@@ -48359,22 +48342,22 @@ One number to know: **3690**. That is what `local` means to `hanzo network` —
 `hanzo network use local` names `http://localhost:3690`, and `hanzo up` pins the
 same port so the two cannot disagree.
 
-`8080` is the container's default and appears in the cloud README's
-`docker run`. It is not the local-network port, and a URL built from one while
-the other is running is a connection to nothing. If you are mixing the two, that
-is the first thing to check.
-
-The README's quick start is `docker run … :latest`. Prefer a pinned `vX.Y.Z`:
-floating tags are against policy everywhere else in this estate, and a `:latest`
-you cannot name is a bug you cannot reproduce.
+`8080` is where the cloud serves when you start it from a checkout. It is not
+the local-network port, and a URL built from one while the other is running is a
+connection to nothing. If you are mixing the two, that is the first thing to
+check.
 
 ## Listeners, and reading the right file
 
-The cloud's listeners default to loopback, and the reason is specific: the ZAP
-listener serves the **identical route surface as HTTP over plaintext TCP**,
-including arbitrary process execution. A bare `:9653` binds every interface, and
-that port has been reached from another host on the same subnet with no
-credential.
+The ZAP and health listeners default to loopback, `127.0.0.1:9653` and
+`127.0.0.1:9090`, and the reason is specific: the ZAP listener serves the
+**identical route surface as HTTP over plaintext TCP**, including arbitrary
+process execution. A bare `:9653` binds every interface, and that port has been
+reached from another host on the same subnet with no credential.
+
+The HTTP listener is the exception. With neither `CLOUD_LISTEN` nor `PORT` set
+it binds `:8080`, every interface, which is why the command in *Start here* sets
+`CLOUD_LISTEN`.
 
 Clusters set `CLOUD_ZAP_LISTEN` explicitly and have a network policy in front,
 so the safe default costs them nothing. On a laptop you have neither, which is
@@ -48410,13 +48393,17 @@ Say so in your notes rather than working around it quietly.
   The in-process client skips the guard, which is why reaching for it is
   tempting and why doing so means your local path and your deployed path are
   different code. Until a local IAM superuser is seeded, keep secrets in
-  something you control and do not build on the bypass.
-- **At-rest encryption has been reported as active over plaintext files.** One
-  adopter's second boot failed with `sqlcipher_export: no such function`, and
-  their notes record every `*.db` carrying the plaintext SQLite header while
-  the boot log said encryption was on. **We have not reproduced this.** Treat a
-  boot log claiming encryption as unverified until you have read the first
-  sixteen bytes of the file yourself.
+  something you control and do not build on the bypass. With no master key
+  set, as in *Start here*, secret operations fail closed as well.
+- **The default build cannot encrypt its stores.** On `main`, `make dev` stops
+  with `cek: this build cannot encrypt a store — a keyed database was written
+  with a plaintext header`. `CLOUD_DEV_UNENCRYPTED=1` does not get past it under
+  `make dev`, which always passes a key; it applies only when no key is set,
+  which is how *Start here* runs, and the files are then plaintext. One adopter
+  also saw `sqlcipher_export: no such function` on a second boot, and every
+  `*.db` carrying the plaintext SQLite header while the boot log said encryption
+  was on. Trust a claim of encryption only after reading the first sixteen bytes
+  of the file.
 
 ## Do not rebuild these
 
@@ -48425,7 +48412,7 @@ If you are about to write one, read this row first.
 
 | Before you write | We ship | Why it was missed |
 |---|---|---|
-| A launcher script | `hanzo host serve` | Not in any README |
+| A launcher script | the command in *Start here* | The skills described only the hosted cloud |
 | A KMS CLI | `/v1/kms`, `hanzo kms` | Needs IAM, absent locally |
 | An SDK generator | `zip/cmd/zipgen` | Not in the zip README |
 | An LLM client | `python-sdk`, `hanzo-agent` | The packages failed to import |
@@ -155864,8 +155851,8 @@ This coursework trains engineering teams migrating from slow, interpreted, memor
 │              - Benchmarking: 15ms cold starts vs 6s Next.js SSR             │
 │                                                                             │
 │   [MODULE 2] Running Your Own Cloud Locally                                 │
-│              - Complete local copy of the Hanzo AI Cloud                    │
-│              - `hanzo up cloud` / `base serve` with compose.yml             │
+│              - Base and the open-source cloud, from a checkout              │
+│              - start commands: skill.md, On your own machine                │
 │                                                                             │
 │   [MODULE 3] Realtime SSE Streaming & State Synchronization                 │
 │              - Native Server-Sent Events (SSE) in Go                        │
@@ -155917,60 +155904,27 @@ time ./bin/server --healthcheck
 
 ---
 
-## Module 2: Local-First Cloud (Run a Complete Copy)
+## Module 2: Run It Locally
 
-Hanzo Cloud is engineered so every developer runs a complete copy locally.
+Base and the open-source cloud start from a checkout, with no account.
 
-### 2.1 The Philosophy
-Never mock third-party cloud APIs. Run the actual Hanzo services in-process or via lightweight local containers.
+### The Philosophy
+Never mock third-party cloud APIs. Run the actual Hanzo services in-process.
 
-### 2.2 Local Orchestration with `compose.yml`
-Always use `compose.yml` (never `docker-compose.yml`):
-
-```yaml
-# compose.yml - Complete Hanzo Local Cloud
-services:
-  cloud:
-    image: ghcr.io/hanzoai/cloud:latest
-    ports:
-      - "8080:8080"
-      - "9090:9090"
-    environment:
-      - HANZO_ENV=local
-      - HANZO_PORT=8080
-      - HANZO_STORAGE=sqlite
-      - HANZO_SQLITE_PATH=/data/hanzo.db
-      - HANZO_ZAP_PORT=9090
-    volumes:
-      - hanzo-data:/data
-    restart: unless-stopped
-
-  base:
-    image: ghcr.io/hanzoai/base:latest
-    ports:
-      - "8090:8090"
-    environment:
-      - BASE_PORT=8090
-      - BASE_DB=/data/base.db
-      - BASE_REALTIME_SSE=true
-      - BASE_CLOUD_URL=http://cloud:8080
-    volumes:
-      - base-data:/data
-
-volumes:
-  hanzo-data:
-  base-data:
-```
-
-### 2.3 Lab 2: Launch & Healthcheck
+### Lab 2: Launch & Healthcheck
 ```bash
-# Start your local cloud
-hanzo up cloud
+# Base, in a checkout of github.com/hanzoai/base
+go run ./examples/base serve
+curl -i http://127.0.0.1:8090/v1/health           # from a second terminal
 
-# Verify control plane and base services
-curl -i http://localhost:8080/v1/health
-curl -i http://localhost:8090/v1/health
+# the cloud, in a checkout of github.com/hanzoai/cloud
+make build && CLOUD_DEV_UNENCRYPTED=1 CLOUD_LISTEN=127.0.0.1:8080 CLOUD_DATA_DIR=.dev/data ./cloud
+curl -s http://127.0.0.1:8080/v1/openapi.json     # from a second terminal
 ```
+
+The cloud runs unencrypted this way, for local development only. Every part that
+runs locally, and what needs the hosted cloud, is in `skill.md` under
+*On your own machine*.
 
 ---
 
@@ -184071,17 +184025,16 @@ server.serve_stdio().await?;
 
 ---
 name: hanzo
-description: Onboarding manifest for an AI agent operating Hanzo — native code architecture (Go, Rust, C++), local-first cloud copy, backend migration with Hanzo Base realtime SSE, and working the AI cloud safely.
+description: Onboarding manifest for an AI agent working with Hanzo — what runs on your own machine and the command that starts it, what needs an account on the hosted cloud at api.hanzo.ai, and how to work either way safely.
 ---
 
 # Hanzo — Agent Onboarding Manifest (skill.md)
 
-> Hanzo is an AI-native, local-first cloud built strictly on **native compiled code**: **Go, Rust, and C++**.
-> No Python interpreter overhead, no Next.js / node_modules sprawl.
+> Hanzo is an AI cloud built on **native compiled code**: **Go, Rust, and C++**.
 > Hanzo AI is Techstars '17.
-> You have a complete copy of the platform: run a local copy, extend it with new `/v1/*`
-> subsystems, build your backend on Hanzo Base with realtime native SSE, analytics and insights,
-> and scale effortlessly to the full Hanzo AI Cloud.
+> Its parts are open source and run on your own machine; *On your own machine*
+> gives the command that starts each one. Accounts, billing and hosted models
+> live on the hosted cloud at `api.hanzo.ai`.
 
 > **Read the whole file before you run anything.** The section *What actually
 > answers today* is measured, not aspirational, and it names the surfaces that
@@ -184123,7 +184076,7 @@ apply and which one applies instead.
 | Move a Node, Next, Python, Rails or Java backend to Go | `curl hanzoskills.com/app-port.md` |
 | Replace WebSockets with the native transport | `curl hanzoskills.com/hanzo-zap.md` |
 | Build a backend from nothing | `curl hanzoskills.com/hanzo-base.md` |
-| Run the whole cloud on your own machine | `curl hanzoskills.com/hanzo-stack.md` |
+| Run Hanzo on your own machine | *On your own machine*, below |
 | Add a subsystem to the cloud | `curl hanzoskills.com/hanzo-cloud.md` |
 | Write something a person will read | `curl hanzoskills.com/anti-slop.md` |
 
@@ -184133,26 +184086,40 @@ app runnable at every step, because the migration that never ships is the one
 that built a parallel implementation for six weeks against an original that
 kept changing.
 
-## Running this yourself
+## On your own machine
 
-Most of these pages describe the hosted cloud. If you are running it on your own
-machine, read **`cloud-host`** first — it is one command, and an outside adopter
-who did not find it wrote four launcher scripts instead.
+These start from a checkout or a package, with no account.
 
-What differs locally, stated once so you do not discover it one command at a
-time:
+| Part | Start it | Answers at |
+|---|---|---|
+| **Base**, the SQLite application backend | `git clone https://github.com/hanzoai/base && cd base && go run ./examples/base serve` | `http://127.0.0.1:8090/v1/` |
+| **Cloud**, the open-source cloud in one Go binary | `git clone https://github.com/hanzoai/cloud && cd cloud && make build && CLOUD_DEV_UNENCRYPTED=1 CLOUD_LISTEN=127.0.0.1:8080 CLOUD_DATA_DIR=.dev/data ./cloud` | `http://127.0.0.1:8080`; `/v1/openapi.json` lists its routes |
+| **zip**, the Go framework the services are written in | `git clone https://github.com/zap-proto/zip && cd zip && go run ./examples/hello` | `http://localhost:8080/hello`, also in `/.well-known/openapi.json` and as an MCP tool at `/mcp` |
+| **MCP server** | `npx -y --package=@hanzo/mcp hanzo-mcp serve` | stdio |
+| **Engine**, model inference | `cargo install --git https://github.com/hanzoai/engine --locked hanzo-cli`, then `hanzo-engine serve -m <model-id>` | `http://localhost:1234/v1` |
 
-- **`hanzo host serve`** is the local cloud API. It binds a unix socket, and
-  loopback where it binds a port at all.
-- **3690** is what `local` means to `hanzo network`. The `8080` in the cloud
-  README is the container's port, and mixing the two is a connection to nothing.
-- **KMS does not work locally yet.** It requires an IAM principal and there is
-  no IAM on a laptop. The in-process client skips the guard; using it makes your
-  local path different code from your deployed path, so do not build on it.
-- **Anything billed** — hosted inference, the paid endpoints — has no local
-  equivalent. Point at `api.hanzo.ai` for those and keep the rest local.
-- **Check what is bound rather than what is documented.** Two files disagreed
-  about a listener default and the one that runs was the wide one.
+Go 1.26 or newer for the first three; the engine compiles with Rust. The cloud's
+`make dev` stops today with `cek: this build cannot encrypt a store`, so the line
+above runs it unencrypted, for local development only. The engine and the zip
+example listen on every interface; the engine takes `--host 127.0.0.1`. Check what
+is bound rather than what a page says: `lsof -nP -iTCP -sTCP:LISTEN`.
+
+Only the hosted cloud has:
+
+- sign-in, balance and usage: `hanzo auth login`, `hanzo billing balance`, `hanzo usage summary`
+- hosted models: `api.hanzo.ai/v1/chat/completions`, and the MCP endpoint `api.hanzo.ai/v1/mcp`
+- hosted secrets: `hanzo kms`, `kms.hanzo.ai`
+- shipping: push to `git.hanzo.ai`, then CI, CD and the platform
+
+*Getting on*, *The one API*, *What actually answers today*, *The capability set*,
+*MCP*, *Shipping*, *Secrets* and *A first run* are about the hosted cloud; skip
+them for a local run. The `hanzo` CLI talks to `api.hanzo.ai` until you switch
+networks (`hanzo network current`). Its local modes, `hanzo host` and `hanzo up`,
+are in **`cloud-host`**; read it before writing a launcher.
+
+The rules at the top hold locally too. Auth is Hanzo IAM, never your own, and a
+cloud with no IAM in front of it lets anyone who reaches its port read and write
+its data: keep it on loopback.
 
 ## How these pages are named
 
@@ -184221,48 +184188,13 @@ When developers come from **Python, Next.js, Node, Rails, or Java**, tell them t
 
 ---
 
-## You Have a Copy of Everything: Run Local, Extend with `/v1/*`
-
-The exact projects that power `hanzo.ai` and `api.hanzo.ai` run smoothly on your local machine:
-
-1. **Run a Local Copy**:
-   ```bash
-   hanzo up cloud                        # spins up the complete cloud locally
-   export HANZO_BASE_URL=http://localhost:8080
-   ```
-   Uses `compose.yml` for multi-service coordination.
-
-2. **Extend with New `/v1/*` Subsystems**:
-   Hanzo Cloud uses a host + plugin architecture (HIP-0106).
-   Every subsystem registers its prefix in `manifest/apps.go`:
-   ```go
-   var Apps = []App{
-       {Name: "iam", Prefix: "/v1/iam"},
-       {Name: "kms", Prefix: "/v1/kms"},
-       {Name: "analytics", Prefix: "/v1/analytics"},
-       {Name: "myfeature", Prefix: "/v1/myfeature"}, // Your new capability
-       {Name: "ai", Prefix: "/v1"},                  // LLM gateway remainder
-   }
-   ```
-   Inter-app communication is **ZAP transport** (HIP-0114) — zero gRPC, zero Protobuf overhead.
-
-3. **Hanzo Base Backend with Realtime Native SSE**:
-   **Hanzo Base (`github.com/hanzoai/base`)** gives you an instant Go backend:
-   - Embedded SQLite (`modernc.org/sqlite`) for local dev, PostgreSQL (`pgx/v5`) for clustering.
-   - **Realtime Native SSE**: Native Server-Sent Events for AI completions, live chat, CRDT state sync, and dashboard alerts.
-   - **Native Analytics & Insights**: Embedded collection logging directly into SQLite/ClickHouse columns.
-   - Embedded Svelte admin UI at `http://localhost:8080/_/`.
-
----
-
 ## Getting on
 
 **Install.** One of:
 
 ```bash
-curl -fsSL https://hanzo.sh | sh          # the stack
+curl -fsSL https://hanzo.sh | sh          # hanzo, hanzo-mcp and dev
 curl -fsSL https://hanzo.sh/cli | sh      # the CLI alone
-brew install hanzoai/tap/hanzo            # macOS
 ```
 
 **Sign in.** Identity is Hanzo IAM at `hanzo.id` — OIDC, not an API key in a
@@ -184280,7 +184212,7 @@ hanzo auth list / use     # several identities, one active
 ```bash
 curl -s https://api.hanzo.ai/v1/health     # {"revision":"…","status":"ok"}
 hanzo billing balance                       # what the operator has to spend
-hanzo usage                                 # what has been spent, per run
+hanzo usage summary                         # what has been spent
 ```
 
 `/v1/health` reports the running revision. It answers `ok` whenever the process
@@ -184372,19 +184304,14 @@ hanzo-bot serve                      # drop markdown into ~/.hanzo/workspace/
 
 One is what an agent remembers **across its runtimes**; the other is what an **org** holds in the cloud. Compose them; do not confuse them.
 
-## The loop — local, then shipped
+## Shipping
 
-```bash
-hanzo up cloud                        # the whole /v1 API on one listener, locally
-export HANZO_BASE_URL=http://localhost:8080
-```
+Develop with the commands in *On your own machine*, then ship on the hosted cloud:
 
-`hanzoai/cloud` is one binary serving every capability. Develop against it — same addresses, same CLI, same MCP server — then ship:
-
-1. **`git push`** to `git.hanzo.ai`. The forge is a capability (`/v1/git` serves the smart-HTTP endpoints), so an ordinary push **is** the deploy — it fires the platform hook. There is no separate deploy command.
-2. **`ci.hanzo.ai`** builds — `hanzo platform builds`.
-3. **`cd.hanzo.ai`** reconciles GitOps — `hanzo deploy applications`, `sync`, `rollback`. The declared state is git, so a change applied by hand is reverted on the next sync. Commit it instead.
-4. **`platform.hanzo.ai`** runs it — `hanzo platform apps`, `projects`, `fleet`.
+- **`git push`** to `git.hanzo.ai`. The forge is a capability (`/v1/git` serves the smart-HTTP endpoints), so an ordinary push **is** the deploy — it fires the platform hook. There is no separate deploy command.
+- **`ci.hanzo.ai`** builds — `hanzo platform builds`.
+- **`cd.hanzo.ai`** reconciles GitOps — `hanzo deploy applications list`, `sync`, `rollback`. The declared state is git, so a change applied by hand is reverted on the next sync. Commit it instead.
+- **`platform.hanzo.ai`** runs it — `hanzo platform apps`, `projects`, `fleet`.
 
 ## MCP — the tighter binding
 
@@ -280930,7 +280857,7 @@ Output from post-hoc analyzer. Located at `<grading-dir>/analysis.json`.
 
 ---
 hip: "0124"
-title: Bring Your Own Provider and AI — Unified Usage
+title: Bring-Your-Own Provider & AI — Unified Dashboard and Usage
 author: Hanzo AI Team
 type: Standards Track
 category: Platform
@@ -280941,7 +280868,7 @@ requires: HIP-0004, HIP-0018, HIP-0121, HIP-0123
 ---
 
 
-# HIP-0124: Bring Your Own Provider and AI — Unified Usage
+# HIP-0124: Bring-Your-Own Provider & AI — Unified Dashboard and Usage
 
 ## Abstract
 
@@ -282537,7 +282464,7 @@ Implemented in `hanzoai/operator` v0.3.0+. Primarily deployed on `lux-k8s`.
 
 ---
 hip: 0449
-title: Hanzo Login
+title: hanzo-login
 author: Hanzo Platform Team
 type: Informational
 category: Application
@@ -282545,7 +282472,7 @@ status: Final
 created: 2026-05-19
 ---
 
-# HIP-0449: Hanzo Login
+# HIP-0449: hanzo-login
 
 ## Abstract
 
@@ -282589,7 +282516,7 @@ Active in cluster `do-sfo3-hanzo-k8s` at replicas=2 as of 2026-05-18 snapshot.
 
 ---
 hip: "0506"
-title: Hanzo Studio — Agentic Multimodal Creative Runtime
+title: Hanzo Studio — Agentic Multi-Modal Creative Runtime
 author: Hanzo AI Team
 type: Standards Track
 category: Application
@@ -282599,7 +282526,7 @@ requires: HIP-0106, HIP-0504
 ---
 
 
-# HIP-0506: Hanzo Studio — Agentic Multimodal Creative Runtime
+# HIP-0506: Hanzo Studio — Agentic Multi-Modal Creative Runtime
 
 ## Abstract
 
@@ -282967,7 +282894,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1001
-title: Books — Double Entry Ledger
+title: Books — The Double-Entry Ledger
 author: Hanzo AI
 type: Standards Track
 category: Application
@@ -282978,7 +282905,7 @@ requires: HIP-0139
 capability: books
 ---
 
-# HIP-1001: Books — Double Entry Ledger
+# HIP-1001: Books — The Double-Entry Ledger
 
 ## Abstract
 
@@ -283905,78 +283832,6 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 
-<!-- hip-1193 -->
-
----
-hip: 1193
-title: Standing — Entity Upkeep and Annual Filings
-author: Hanzo AI
-type: Standards Track
-category: Application
-capability: standing
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
----
-
-# HIP-1193: Standing — Entity Upkeep and Annual Filings
-
-## Abstract
-
-`/v1/standing` is the canonical capability for standing within the Hanzo Cloud platform.
-Package standing prices and tracks what it costs to KEEP a company, as distinct from what it cost to form one.
-The implementation is `hanzoai/cloud` `apps/standing` and `plugin/standing` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
-
-## Motivation
-
-Before this specification, standing operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
-
-## Specification
-
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
-
-### §1 Addresses and Operations
-
-The `standing` capability answers exclusively under its assigned route prefixes:
-
-| Method | Path | Summary |
-|---|---|---|
-| `POST` | `/v1/standing/upkeep` | Reports what keeping this entity costs every year, itemised. |
-
-### §2 Storage and Physical Isolation
-
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/standing.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
-
-### §3 Authentication and Principal
-
-Every request reaching `/v1/standing` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
-
-## Security Considerations
-
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
-
-## References
-
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
-
-
----
-
 <!-- hip-1200 -->
 
 ---
@@ -284543,7 +284398,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1210
-title: Agent — Define and Run Agents
+title: Agents — Define, Run, Keep the Run
 author: Hanzo AI
 type: Standards Track
 category: Application
@@ -284551,10 +284406,10 @@ status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0139, HIP-0026, HIP-0106
-capability: agent
+capability: agents
 ---
 
-# HIP-1210: Agent — Define and Run Agents
+# HIP-1210: Agents — Define, Run, Keep the Run
 
 ## Abstract
 
@@ -285304,7 +285159,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1231
-title: Project — Static Site Store
+title: Projects — The Site Store
 author: Hanzo AI
 type: Standards Track
 category: Application
@@ -285312,10 +285167,10 @@ status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
-capability: project
+capability: projects
 ---
 
-# HIP-1231: Project — Static Site Store
+# HIP-1231: Projects — The Site Store
 
 ## Abstract
 
@@ -287276,7 +287131,7 @@ class HLLM_Jin(HLLM):
 
 ---
 hip: "0006"
-title: Personalized Model Tuning Architecture
+title: Per-User Fine-Tuning Architecture for Personalized AI
 author: Hanzo AI Team
 type: Standards Track
 category: Core
@@ -287286,7 +287141,7 @@ requires: HIP-0001, LP-102
 ---
 
 
-# HIP-0006: Personalized Model Tuning Architecture
+# HIP-0006: Per-User Fine-Tuning Architecture for Personalized AI
 
 ## Abstract
 
@@ -288371,7 +288226,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0009"
-title: Agent SDK — Multiagent Orchestration Framework
+title: Agent SDK - Multi-Agent Orchestration Framework
 author: Hanzo AI Team
 type: Standards Track
 category: Core
@@ -288382,7 +288237,7 @@ requires: HIP-0001, HIP-0002, HIP-0004
 ---
 
 
-# HIP-0009: Agent SDK — Multiagent Orchestration Framework
+# HIP-0009: Agent SDK - Multi-Agent Orchestration Framework
 
 ## Abstract
 
@@ -291411,7 +291266,6 @@ category: Core
 status: Final
 created: 2025-01-15
 requires: HIP-0002, HIP-0004
-capability: zen
 ---
 
 
@@ -296227,7 +296081,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0114"
-title: ZAP — Cognitive Transport for Thinking Chains
+title: ZAP — Inter-VM Cognitive Transport for Thinking Chains
 author: Hanzo AI
 type: Standards Track
 category: Core
@@ -296239,7 +296093,7 @@ requires: HIP-0113
 ---
 
 
-# HIP-0114: ZAP — Cognitive Transport for Thinking Chains
+# HIP-0114: ZAP — Inter-VM Cognitive Transport for Thinking Chains
 
 ## Abstract
 
@@ -296462,7 +296316,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0120"
-title: ZAP Native Transport and gRPC Elimination
+title: ZAP-Native Transport & gRPC Elimination
 author: Hanzo AI
 type: Standards Track
 category: Core
@@ -296475,7 +296329,7 @@ requires: HIP-0106, HIP-0114
 ---
 
 
-# HIP-0120: ZAP Native Transport and gRPC Elimination
+# HIP-0120: ZAP-Native Transport & gRPC Elimination
 
 ## Abstract
 
@@ -297876,7 +297730,7 @@ change to a route surface:
 
 ---
 hip: "0130"
-title: Open Core Split — Tenancy Line and Composition Root
+title: "Open-Core Split — the Tenancy Line, the Composition Root, and Lazy Subsystems"
 author: Hanzo AI Team
 type: Standards Track
 category: Core
@@ -297887,7 +297741,7 @@ requires: HIP-0106, HIP-0127
 ---
 
 
-# HIP-0130: Open Core Split — Tenancy Line and Composition Root
+# HIP-0130: Open-Core Split — the Tenancy Line, the Composition Root, and Lazy Subsystems
 
 ## Abstract
 
@@ -300751,7 +300605,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: "0301"
-title: Agent Runtime Protocols and Cross Platform Parity
+title: Agent Runtime Protocols & Cross-Platform Parity
 author: Hanzo AI
 type: Standards Track
 category: Core
@@ -300761,7 +300615,7 @@ requires: HIP-0009, HIP-0010
 ---
 
 
-# HIP-0301: Agent Runtime Protocols and Cross Platform Parity
+# HIP-0301: Agent Runtime Protocols & Cross-Platform Parity
 
 ## Abstract
 
@@ -301490,7 +301344,7 @@ This document records Hanzo-specific adoption details and the commit log; the no
 
 ---
 hip: 0510
-title: Enso — Learned Model Routing and Flywheel
+title: Enso — Learned Per-Request Model Routing and the Recursive Router–Model Flywheel
 author: Hanzo AI Team
 type: Standards Track
 category: Core
@@ -301500,7 +301354,7 @@ created: 2026-07-17
 requires: HIP-0001
 ---
 
-# HIP-0510: Enso — Learned Model Routing and Flywheel
+# HIP-0510: Enso — Learned Per-Request Model Routing and the Recursive Router–Model Flywheel
 
 ## Abstract
 
@@ -304287,7 +304141,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: "0901"
-title: Proof of AI — Native Execution Proofs and Governance
+title: Proof of AI (PoAI) — Native Execution Proofs, Canonical Contract & Operator-LLM Governance
 author: Hanzo AI Team
 type: Standards Track
 category: Core
@@ -304300,7 +304154,7 @@ requires: HIP-0001, HIP-0005
 ---
 
 
-# HIP-0901: Proof of AI — Native Execution Proofs and Governance
+# HIP-0901: Proof of AI (PoAI) — Native Execution Proofs, Canonical Contract & Operator-LLM Governance
 
 ## Abstract
 
@@ -307989,82 +307843,6 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 
-<!-- hip-1195 -->
-
----
-hip: 1195
-title: Market — Rate Oracles and Exchange Pools
-author: Hanzo AI
-type: Standards Track
-category: Core
-capability: market
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
----
-
-# HIP-1195: Market — Rate Oracles and Exchange Pools
-
-## Abstract
-
-`/v1/market` is the canonical capability for market within the Hanzo Cloud platform.
-Package market is what trades on each chain, and how far the read of it got.
-The implementation is `hanzoai/cloud` `apps/market` and `plugin/market` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
-
-## Motivation
-
-Before this specification, market operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
-
-## Specification
-
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
-
-### §1 Addresses and Operations
-
-The `market` capability answers exclusively under its assigned route prefixes:
-
-| Method | Path | Summary |
-|---|---|---|
-| `GET` | `/v1/market/chains` | Answers every chain this deployment can read, what is deployed on each, and what its au... |
-| `GET` | `/v1/market/pools` | Answers the automated market makers on one chain: their two tokens, their fee tier, and... |
-| `GET` | `/v1/market/survey` | Answers which of the four settlement precompiles carry code on one chain. |
-| `GET` | `/v1/market/token` | Answers one token's daily history — open, high, low, close, price and volume per UTC da... |
-| `GET` | `/v1/market/tokens` | Answers the tokens one chain's indexer has seen, with the decimals a caller needs to re... |
-
-### §2 Storage and Physical Isolation
-
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/market.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
-
-### §3 Authentication and Principal
-
-Every request reaching `/v1/market` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
-
-## Security Considerations
-
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
-
-## References
-
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
-
-
----
-
 <!-- hip-1327 -->
 
 ---
@@ -308073,6 +307851,7 @@ title: Public Channels — Finding a Room in Another Org
 author: Hanzo AI
 type: Standards Track
 category: Core
+capability: team
 status: Draft
 created: 2026-09-01
 requires: HIP-0139, HIP-0523, HIP-1048
@@ -309560,7 +309339,6 @@ status: Final
 implementation-go: partial
 created: 2025-01-15
 requires: HIP-0027, HIP-0033, HIP-0142
-capability: ci
 ---
 
 
@@ -311562,7 +311340,7 @@ status: Final
 implementation-go: shipped
 created: 2026-02-23
 requires: HIP-1061, HIP-0050, HIP-0139
-capability: function
+capability: functions
 ---
 
 
@@ -313804,7 +313582,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0069"
-title: Service Discovery and Automated Bridge
+title: Service Discovery & Auto-Bridge
 type: Standards Track
 category: Infrastructure
 status: Final
@@ -313815,7 +313593,7 @@ requires: HIP-0007, HIP-0010, HIP-0068
 ---
 
 
-# HIP-0069: Service Discovery and Automated Bridge
+# HIP-0069: Service Discovery & Auto-Bridge
 
 ## Abstract
 
@@ -314985,7 +314763,7 @@ and the HIP both cite from the same authoritative source.
 
 ---
 hip: "0078"
-title: Z-Chain — Post Quantum Identity and Attestation Rollup
+title: Z-Chain — Post-Quantum Identity & Attestation Rollup
 type: Standards Track
 category: Infrastructure
 status: Draft
@@ -314995,7 +314773,7 @@ created: 2026-05-10
 ---
 
 
-# HIP-0078: Z-Chain — Post Quantum Identity and Attestation Rollup
+# HIP-0078: Z-Chain — Post-Quantum Identity & Attestation Rollup
 
 ## Abstract
 
@@ -315496,7 +315274,7 @@ the prior HIP-0077 is retired with the migration to Z-Chain v1
 
 ---
 hip: "0101"
-title: Hanzo Lux Bridge Protocol Integration
+title: Hanzo-Lux Bridge Protocol Integration
 description: Lock-and-mint bridge between Hanzo's AI-optimized L1 and Lux Network's settlement layer
 author: Hanzo AI Team
 type: Standards Track
@@ -315508,7 +315286,7 @@ requires: HIP-0001, HIP-0005, HIP-0008, HIP-0024
 ---
 
 
-# HIP-0101: Hanzo Lux Bridge Protocol Integration
+# HIP-0101: Hanzo-Lux Bridge Protocol Integration
 
 ## Abstract
 
@@ -316694,7 +316472,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0103"
-title: Bridge Post Quantum Profile
+title: Bridge PQ-Only Profile
 type: Standards Track
 category: Infrastructure
 status: Final
@@ -316704,7 +316482,7 @@ requires: HIP-0005, HIP-0077, HIP-0078, HIP-0079, HIP-0084, HIP-0085, HIP-0086, 
 ---
 
 
-# HIP-0103: Bridge Post Quantum Profile
+# HIP-0103: Bridge PQ-Only Profile
 
 ## Abstract
 
@@ -316968,7 +316746,7 @@ CC0.
 
 ---
 hip: "0105"
-title: In Process Extension Runtime Standard
+title: In-Process Extension Runtime Standard
 author: Hanzo AI Team
 type: Standards Track
 category: Infrastructure
@@ -316981,7 +316759,7 @@ requires: HIP-0026
 
 
 
-# HIP-0105: In Process Extension Runtime Standard
+# HIP-0105: In-Process Extension Runtime Standard
 
 ## Abstract
 
@@ -319334,7 +319112,7 @@ follows the phases below.
 
 ---
 hip: "0108"
-title: On Demand Subsystem Supervisor and Warm Pool
+title: On-Demand Subsystem Supervisor + Warm Pool
 author: Hanzo AI Team
 type: Standards Track
 category: Infrastructure
@@ -319345,7 +319123,7 @@ requires: HIP-0105, HIP-0106, HIP-0107, HIP-0302
 ---
 
 
-# HIP-0108: On Demand Subsystem Supervisor and Warm Pool
+# HIP-0108: On-Demand Subsystem Supervisor + Warm Pool
 
 ## Abstract
 
@@ -320385,7 +320163,7 @@ this HIP by reference and MUST NOT restate or fork it.
 
 ---
 hip: "0117"
-title: Cloud in a Box — One Binary Three Modes
+title: Cloud-in-a-Box — One Binary, Three Modes
 author: Hanzo AI Team
 type: Standards Track
 category: Infrastructure
@@ -320397,7 +320175,7 @@ requires: HIP-0036, HIP-0106, HIP-0400
 ---
 
 
-# HIP-0117: Cloud in a Box — One Binary Three Modes
+# HIP-0117: Cloud-in-a-Box — One Binary, Three Modes
 
 ## Abstract
 
@@ -320752,7 +320530,7 @@ listener. iam and gateway follow the same split.
 
 ---
 hip: "0122"
-title: zip — The ZAP Native Application Server Core
+title: zip — The ZAP-Native Application Server Core
 author: Hanzo AI Team
 type: Standards Track
 category: Infrastructure
@@ -320764,7 +320542,7 @@ requires: HIP-0026, HIP-0105, HIP-0114, HIP-0120
 ---
 
 
-# HIP-0122: zip — The ZAP Native Application Server Core
+# HIP-0122: zip — The ZAP-Native Application Server Core
 
 ## Abstract
 
@@ -321210,7 +320988,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0125"
-title: Consensus Plugin Placement Platform
+title: Consensus-Backed Plugin-Placement Platform
 author: Hanzo AI Team
 type: Standards Track
 category: Infrastructure
@@ -321222,7 +321000,7 @@ requires: HIP-0026, HIP-0027, HIP-0105, HIP-0106, HIP-0107, HIP-0114, HIP-0302
 
 
 
-# HIP-0125: Consensus Plugin Placement Platform
+# HIP-0125: Consensus-Backed Plugin-Placement Platform
 
 ## Abstract
 
@@ -327162,7 +326940,7 @@ This standard is adopted by LP-102 (Lux) and ZIP-0803 (Zoo) with ecosystem-speci
 
 ---
 hip: "0305"
-title: esign — Shared Database Tenancy
+title: "esign: shared-DB tenancy via team-where, not file-per-tenant"
 author: Zach Kelling (zach@hanzo.ai)
 type: Standards Track
 category: Infrastructure
@@ -327172,7 +326950,7 @@ requires: HIP-0302
 ---
 
 
-# HIP-0305: esign — Shared Database Tenancy
+# HIP-0305: esign: shared-DB tenancy via team-where, not file-per-tenant
 
 ## Abstract
 
@@ -329786,7 +329564,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1103
-title: Audit — Tamper Evident Trail
+title: Audit — The Tamper-Evident Trail
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -329797,7 +329575,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
 ---
 
-# HIP-1103: Audit — Tamper Evident Trail
+# HIP-1103: Audit — The Tamper-Evident Trail
 
 ## Abstract
 
@@ -330358,7 +330136,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1113
-title: Cloudflare — Edge Network Integration
+title: Cloudflare — The Per-Org Asset Plane
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -330369,7 +330147,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0126, HIP-0139
 ---
 
-# HIP-1113: Cloudflare — Edge Network Integration
+# HIP-1113: Cloudflare — The Per-Org Asset Plane
 
 ## Abstract
 
@@ -331252,7 +331030,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1132
-title: Index — Full Text Search
+title: Index — Full-Text Search
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -331263,7 +331041,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
 ---
 
-# HIP-1132: Index — Full Text Search
+# HIP-1132: Index — Full-Text Search
 
 ## Abstract
 
@@ -332363,7 +332141,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1151
-title: Settings — Product Configuration
+title: Settings — Per-Product Org Configuration
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -332374,7 +332152,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
 ---
 
-# HIP-1151: Settings — Product Configuration
+# HIP-1151: Settings — Per-Product Org Configuration
 
 ## Abstract
 
@@ -332757,18 +332535,18 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1172
-title: Compute — Rented Virtual Hardware
+title: visor — Compute You Rent
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
-capability: compute
+capability: visor
 status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
 ---
 
-# HIP-1172: Compute — Rented Virtual Hardware
+# HIP-1172: visor — Compute You Rent
 
 ## Abstract
 
@@ -333028,7 +332806,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1173
-title: Network — Zero Trust Network Overlay
+title: Network — An Org-Scoped Overlay
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -333039,7 +332817,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
 ---
 
-# HIP-1173: Network — Zero Trust Network Overlay
+# HIP-1173: Network — An Org-Scoped Overlay
 
 ## Abstract
 
@@ -333222,206 +333000,6 @@ forever.
 ## Copyright
 
 Released under CC0 1.0 Universal Public Domain Dedication.
-
-
----
-
-<!-- hip-1191 -->
-
----
-hip: 1191
-title: Billing — Invoicing and Metered Usage
-author: Hanzo AI
-type: Standards Track
-category: Infrastructure
-capability: billing
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
----
-
-# HIP-1191: Billing — Invoicing and Metered Usage
-
-## Abstract
-
-`/v1/billing` is the canonical capability for billing within the Hanzo Cloud platform.
-Package billing is your org's balance, what it has spent, and the cards it pays with.
-The implementation is `hanzoai/cloud` `apps/billing` and `plugin/billing` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
-
-## Motivation
-
-Before this specification, billing operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
-
-## Specification
-
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
-
-### §1 Addresses and Operations
-
-The `billing` capability answers exclusively under its assigned route prefixes:
-
-| Method | Path | Summary |
-|---|---|---|
-| `GET` | `/v1/billing/accounts` | Answers the caller's billing accounts: the org itself, its currency, when it was opened... |
-| `GET` | `/v1/billing/accounts/{id}/members` | Answers one billing account's roster. |
-| `GET` | `/v1/billing/alerts` | Lists this org's spend caps: the ceiling, its scope, whether it enforces, and how much ... |
-| `POST` | `/v1/billing/alerts` | Opens a spend cap on the caller's own org. |
-| `GET` | `/v1/billing/alerts/authorize` | Answers whether one proposed spend fits inside this org's caps. |
-| `DELETE` | `/v1/billing/alerts/{id}` | Removes one of the caller's spend caps and answers 204. |
-| `PATCH` | `/v1/billing/alerts/{id}` | Changes one spend cap: raise or lower the ceiling, flip enforcement, retune the rate li... |
-| `GET` | `/v1/billing/balance` | Prepaid credit the caller's org can still spend |
-| `GET` | `/v1/billing/credit-balance` | Answers what the caller can spend right now, one entry per currency. |
-| `GET` | `/v1/billing/credit-balance/breakdown` | Answers that same spendable credit split by grant tag, with the earliest expiry under e... |
-| `GET` | `/v1/billing/credits` | Lists the caller's credit grants — every one of them, spent and lapsed and voided inclu... |
-| `POST` | `/v1/billing/crypto/deposit` | Issues a deposit address the caller can send crypto to, on the asset they ask for. |
-| `GET` | `/v1/billing/crypto/deposit/{id}` | Reads one of the caller's own deposit intents back — pending, confirming, or succeeded. |
-| `GET` | `/v1/billing/crypto/options` | Answers which chains and tokens the crypto rail accepts — what an asset picker renders. |
-| `GET` | `/v1/billing/invoices` | Lists the caller's invoices, newest first, with the count beside them. |
-| `POST` | `/v1/billing/invoices` | Raise a draft invoice against a customer |
-| `GET` | `/v1/billing/invoices/{id}` | Read one invoice |
-| `POST` | `/v1/billing/invoices/{id}/collect` | Collect an issued invoice from credits, balance, then card |
-| `POST` | `/v1/billing/invoices/{id}/issue` | Issue a draft invoice, making it collectible |
-| `GET` | `/v1/billing/invoices/{id}/pdf` | Download one invoice as a PDF |
-| `POST` | `/v1/billing/invoices/{id}/void` | Void a draft or issued invoice |
-| `GET` | `/v1/billing/ledger` | Answers the org's own postings inside `range=`, each as a signed entry: a DEPOSIT CREDI... |
-| `GET` | `/v1/billing/methods` | Cards and accounts on file for the caller |
-| `POST` | `/v1/billing/methods` | Save a card or account for the caller |
-| `DELETE` | `/v1/billing/methods/{id}` | Removes one card or account the caller has saved. |
-| `POST` | `/v1/billing/mode` | Moves this org between sandbox money and real money. |
-| `GET` | `/v1/billing/payouts` | Answers the org's outbound payouts, newest first — amount, destination, status, and the... |
-| `GET` | `/v1/billing/plans` | The plan catalog, priced with whatever offer is in force |
-| `GET` | `/v1/billing/portal/methods` | Cards and accounts on file for the caller |
-| `POST` | `/v1/billing/portal/methods` | Save a card or account for the caller |
-| `DELETE` | `/v1/billing/portal/methods/{id}` | DetachPortalMethod is DetachMethod at the address a hosted checkout addresses it by. |
-| `GET` | `/v1/billing/recharge` | Reads the caller's auto-reload rule: top the balance up by `amountCents` whenever it fa... |
-| `PUT` | `/v1/billing/recharge` | Sets the caller's auto-reload rule, and answers with the rule as stored. |
-| `POST` | `/v1/billing/recharge/run-all` | Sweeps every org's auto-recharge and answers what it did. |
-| `GET` | `/v1/billing/settings` | Answers the PUBLIC half of this org's processor configuration — the ids a browser needs... |
-| `POST` | `/v1/billing/subscribe/card` | Buy a plan with a card |
-| `GET` | `/v1/billing/subscriptions` | Lists the plans the caller holds, with the count beside them. |
-| `POST` | `/v1/billing/subscriptions/{id}/cancel` | End a subscription |
-| `POST` | `/v1/billing/subscriptions/{id}/reactivate` | Put a canceled subscription back on its plan |
-| `GET` | `/v1/billing/tier` | Answers which tier the caller is on, what it allows, and what is left to spend. |
-| `POST` | `/v1/billing/topup` | Charges a card the caller already saved and credits the balance. |
-| `POST` | `/v1/billing/topup/token` | Charges a single-use card token and credits the caller's balance. |
-| `GET` | `/v1/billing/transactions` | Answers one page of the caller's own ledger, newest first: what moved, how much, when, ... |
-| `GET` | `/v1/billing/transactions/{id}` | Reads one ledger entry by its id. |
-| `GET` | `/v1/billing/usage` | Every billed call the caller's org made, attributed to a product |
-| `GET` | `/v1/billing/usage/accounts` | Answers per-account totals for the linked provider accounts the gateway ROUTED this cal... |
-| `GET` | `/v1/billing/usage/rollup` | Answers the caller's month: what their plan includes, what has been consumed against it... |
-| `GET` | `/v1/billing/wire` | Answers where to send a wire top-up: the receiving bank details, with the caller's own ... |
-
-### §2 Storage and Physical Isolation
-
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/billing.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
-
-### §3 Authentication and Principal
-
-Every request reaching `/v1/billing` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
-
-## Security Considerations
-
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
-
-## References
-
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
-
-
----
-
-<!-- hip-1192 -->
-
----
-hip: 1192
-title: Space — Drives Folders and File Storage
-author: Hanzo AI
-type: Standards Track
-category: Infrastructure
-capability: space
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
----
-
-# HIP-1192: Space — Drives Folders and File Storage
-
-## Abstract
-
-`/v1/space` is the canonical capability for space within the Hanzo Cloud platform.
-Package space is where work lives: drives, folders and the files in them.
-The implementation is `hanzoai/cloud` `apps/space` and `plugin/space` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
-
-## Motivation
-
-Before this specification, space operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
-
-## Specification
-
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
-
-### §1 Addresses and Operations
-
-The `space` capability answers exclusively under its assigned route prefixes:
-
-| Method | Path | Summary |
-|---|---|---|
-| `GET` | `/v1/space/health` | Health reports whether this deployment can serve spaces, drives and files. |
-| `GET` | `/v1/space/spaces` | Lists the caller org's own spaces. |
-| `POST` | `/v1/space/spaces` | Makes a new space for the caller's org and answers 201 with it. |
-| `GET` | `/v1/space/{space}/drives` | Lists a space's drives. |
-| `POST` | `/v1/space/{space}/drives` | Makes a new drive in a space and answers 201 with it. |
-| `DELETE` | `/v1/space/{space}/drives/{drive}` | Removes an EMPTY drive and answers 204. |
-| `GET` | `/v1/space/{space}/drives/{drive}/files` | Lists one folder level of a drive. |
-| `GET` | `/v1/space/{space}/drives/{drive}/files/{wildcard1}` | Mints a URL the caller downloads the file from DIRECTLY. |
-| `PUT` | `/v1/space/{space}/drives/{drive}/files/{wildcard1}` | Mints a URL the caller uploads the file to DIRECTLY. |
-| `DELETE` | `/v1/space/{space}/drives/{drive}/files/{wildcard1}` | Removes one file and answers 204. |
-
-### §2 Storage and Physical Isolation
-
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/space.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
-
-### §3 Authentication and Principal
-
-Every request reaching `/v1/space` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
-
-## Security Considerations
-
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
-
-## References
-
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
 
 
 ---
@@ -334054,7 +333632,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1213
-title: Tool — Tool Execution Plane
+title: Tools — The Tool Plane
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -334062,10 +333640,10 @@ status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0139, HIP-0106, HIP-0300
-capability: tool
+capability: tools
 ---
 
-# HIP-1213: Tool — Tool Execution Plane
+# HIP-1213: Tools — The Tool Plane
 
 ## Abstract
 
@@ -334830,18 +334408,18 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1250
-title: Integration — Connection Registry
+title: Integrations — The Connection Registry
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
-capability: integration
+capability: integrations
 status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0026, HIP-0027, HIP-0106, HIP-0139
 ---
 
-# HIP-1250: Integration — Connection Registry
+# HIP-1250: Integrations — The Connection Registry
 
 ## Abstract
 
@@ -337322,81 +336900,6 @@ the product the user-facing claim.
 Verify the GitLab and Gitea APIs against assumption one, then implement steps 1
 and 2. Until a build demonstrably runs from cache at a commit on a connected host
 that Forge holds no copy of, the rest of this document is a proposal.
-
-
----
-
-<!-- hip-1329 -->
-
----
-hip: 1329
-title: Plugins — Dynamic Process and Host Control
-author: Hanzo AI
-type: Standards Track
-category: Infrastructure
-capability: plugins
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
----
-
-# HIP-1329: Plugins — Dynamic Process and Host Control
-
-## Abstract
-
-`/v1/plugins` is the canonical capability for plugins within the Hanzo Cloud platform.
-Package plugin is what each host is running, and how to change it: enable, disable, reload, or pin a service to a version.
-The implementation is `hanzoai/cloud` `apps/plugins` and `plugin/plugins` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
-
-## Motivation
-
-Before this specification, plugins operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
-
-## Specification
-
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
-
-### §1 Addresses and Operations
-
-The `plugins` capability answers exclusively under its assigned route prefixes:
-
-| Method | Path | Summary |
-|---|---|---|
-| `GET` | `/v1/admin/plugins` | Reports what each host is actually running: every loaded plugin with its version, pid, ... |
-| `POST` | `/v1/admin/plugins/{name}/disable` | Stops the plugin. |
-| `POST` | `/v1/admin/plugins/{name}/enable` | Brings a stopped or disabled plugin back on the artifact it already has: the zero Plugi... |
-| `POST` | `/v1/admin/plugins/{name}/reload` | Swaps a plugin for another build without dropping a request. |
-
-### §2 Storage and Physical Isolation
-
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/plugins.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
-
-### §3 Authentication and Principal
-
-Every request reaching `/v1/plugins` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
-
-## Security Considerations
-
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
-
-## References
-
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
 
 
 ---
@@ -340759,7 +340262,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0040"
-title: Multilanguage SDK Standard
+title: Multi-Language SDK Standard
 author: Hanzo AI Team
 type: Standards Track
 category: Interface
@@ -340772,7 +340275,7 @@ requires: HIP-0004
 ---
 
 
-# HIP-0040: Multilanguage SDK Standard
+# HIP-0040: Multi-Language SDK Standard
 
 ## Abstract
 
@@ -343876,7 +343379,6 @@ category: Interface
 status: Draft
 created: 2026-02-23
 requires: HIP-0026, HIP-0144, HIP-0143, HIP-1061, HIP-1190
-capability: notify
 ---
 
 # HIP-0061: Notification & Messaging Service Standard
@@ -344624,7 +344126,7 @@ status: Final
 implementation-go: shipped
 created: 2026-02-23
 requires: HIP-1190, HIP-0139, HIP-1311
-capability: flag
+capability: flags
 ---
 
 
@@ -345496,7 +344998,7 @@ writes one to disk and never echoes one in a result.
 
 ---
 hip: "0504"
-title: Unified Cross Platform Design System
+title: Unified Cross-Platform Design System
 author: Hanzo AI Team
 type: Standards Track
 category: Interface
@@ -345506,7 +345008,7 @@ requires: HIP-0036
 ---
 
 
-# HIP-0504: Unified Cross Platform Design System
+# HIP-0504: Unified Cross-Platform Design System
 
 ## Abstract
 
@@ -346238,7 +345740,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1021
-title: Chain RPC Endpoint
+title: Chain JSON-RPC Endpoint
 author: Hanzo AI
 type: Standards Track
 category: Interface
@@ -346248,7 +345750,7 @@ created: 2026-08-20
 requires: HIP-1020
 ---
 
-# HIP-1021: Chain RPC Endpoint
+# HIP-1021: Chain JSON-RPC Endpoint
 
 ## Abstract
 
@@ -347731,18 +347233,18 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1066
-title: Channel — Unified Inbox
+title: Channels — One Inbox
 author: Hanzo AI
 type: Standards Track
 category: Interface
-capability: channel
+capability: channels
 status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0126, HIP-0139
 ---
 
-# HIP-1066: Channel — Unified Inbox
+# HIP-1066: Channels — One Inbox
 
 ## Abstract
 
@@ -348797,7 +348299,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1112
-title: Catalog — Service Discovery
+title: Catalog — Cross-Org Discovery
 author: Hanzo AI
 type: Standards Track
 category: Interface
@@ -348808,7 +348310,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0139
 ---
 
-# HIP-1112: Catalog — Service Discovery
+# HIP-1112: Catalog — Cross-Org Discovery
 
 ## Abstract
 
@@ -351603,7 +351105,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: "0005"
-title: Post Quantum Security for AI Infrastructure
+title: Post-Quantum Security for AI Infrastructure
 author: Hanzo AI Team
 type: Standards Track
 category: Security
@@ -351615,7 +351117,7 @@ requires: LP-100
 ---
 
 
-# HIP-0005: Post Quantum Security for AI Infrastructure
+# HIP-0005: Post-Quantum Security for AI Infrastructure
 
 ## Abstract
 
@@ -351742,7 +351244,6 @@ category: Infrastructure
 status: Draft
 created: 2025-01-15
 requires: HIP-0027, HIP-0111, HIP-0144
-capability: iam
 ---
 
 # HIP-0026: Identity & Access Management Standard
@@ -356952,94 +356453,6 @@ This capability is credential custody, so the exposures are stated plainly.
 ## Copyright
 
 Released under CC0 1.0 Universal Public Domain Dedication.
-
-
----
-
-<!-- hip-1194 -->
-
----
-hip: 1194
-title: Trust — Trust Center and Evidence Controls
-author: Hanzo AI
-type: Standards Track
-category: Security
-capability: trust
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
----
-
-# HIP-1194: Trust — Trust Center and Evidence Controls
-
-## Abstract
-
-`/v1/trust` is the canonical capability for trust within the Hanzo Cloud platform.
-Package trust is your trust centre: the controls you publish, the coverage they compute to, the documents a reviewer asks for, and who you send data to.
-The implementation is `hanzoai/cloud` `apps/trust` and `plugin/trust` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
-
-## Motivation
-
-Before this specification, trust operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
-
-## Specification
-
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
-
-### §1 Addresses and Operations
-
-The `trust` capability answers exclusively under its assigned route prefixes:
-
-| Method | Path | Summary |
-|---|---|---|
-| `GET` | `/v1/trust` | Reads YOUR organization's whole trust centre, including the addresses of your own gated... |
-| `GET` | `/v1/trust/controls` | Lists every control your organization publishes, with the counts. |
-| `GET` | `/v1/trust/controls/{id}` | Reads one control by id. |
-| `GET` | `/v1/trust/coverage` | Reads coverage: per framework, how many clauses have an automated control behind them, ... |
-| `GET` | `/v1/trust/coverage/{framework}` | Reads one framework clause by clause: every clause the standard publishes, what covers ... |
-| `GET` | `/v1/trust/documents` | Lists your organization's documents. |
-| `GET` | `/v1/trust/evidence` | Reads the audit rows that stand behind one control, over a window. |
-| `GET` | `/v1/trust/faq` | Lists your knowledge base — the questions a reviewer asks, answered once. |
-| `GET` | `/v1/trust/frameworks` | Lists the frameworks coverage is computed against, and how many clauses each publishes. |
-| `GET` | `/v1/trust/policies` | Lists your organization's published policies. |
-| `GET` | `/v1/trust/profile` | Reads your organization's trust-centre profile — the name, tagline and summary a visito... |
-| `GET` | `/v1/trust/published/{org}` | Reads a published trust centre — the whole thing in one answer: the organization's prof... |
-| `GET` | `/v1/trust/risk` | Reads your risk profile — the label and value pairs describing what your organization h... |
-| `GET` | `/v1/trust/subprocessors` | Lists the third parties your organization sends data to, each naming what it is for. |
-| `GET` | `/v1/trust/updates` | Lists your trust-centre updates, newest as you ordered them. |
-| `PUT` | `/v1/trust/{kind}/{id}` | Writes one record into a section of YOUR organization's trust centre — profile, control... |
-| `DELETE` | `/v1/trust/{kind}/{id}` | Removes one record from a section of your organization's trust centre. |
-
-### §2 Storage and Physical Isolation
-
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/trust.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
-
-### §3 Authentication and Principal
-
-Every request reaching `/v1/trust` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
-
-## Security Considerations
-
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
-
-## References
-
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
 
 
 ---

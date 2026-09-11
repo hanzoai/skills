@@ -12,19 +12,29 @@ does not work locally this says so rather than describing the intent.
 
 ## Start here
 
+From a checkout of `hanzoai/cloud`:
+
 ```
-hanzo host serve
+make build && CLOUD_DEV_UNENCRYPTED=1 CLOUD_LISTEN=127.0.0.1:8080 CLOUD_DATA_DIR=.dev/data ./cloud
 ```
 
-That is the local cloud API. It speaks ZAP — the fleet's own transport — and
-binds a **unix socket**, not a port on an interface. Where the origin is
-loopback it binds `127.0.0.1` and nothing wider. A bound TCP port is not what
-"running" means here, which is why the default exposes none.
+That serves the API and the embedded console on `http://127.0.0.1:8080`, and
+`/v1/openapi.json` lists every route the process serves. The README's `make dev` is meant to be this command; today it stops with
+`cek: this build cannot encrypt a store` (see *What does not work locally yet*).
 
-This command is the answer to "how do I run the cloud locally", and it is the
-one an outside adopter did not find: they wrote four launcher scripts, each
+The CLI has two local modes, and neither builds anything:
+
+- **`hanzo host serve [service]`** runs a cloud binary you already have, in the
+  foreground: `HANZO_CLOUD_BIN`, else `hanzo-cloud` or `cloud` on `PATH`.
+- **`hanzo host start`** runs the host as a daemon. After
+  `hanzo network use local`, every cloud command reaches it over a unix socket in
+  the CLI's state directory, with no TCP port. It starts `HANZO_HOST_BIN`, default
+  `~/work/hanzo/cloud/bin/host`, which `make host` builds; `hanzoai/cloud` has no
+  `make host` target yet.
+
+An outside adopter who found none of this wrote four launcher scripts, each
 minting a master key by hand, and shipped every service unauthenticated on
-loopback to get where this gets you.
+loopback.
 
 ### When you want the cluster shape instead
 
@@ -39,7 +49,7 @@ foreground, so the wait is visible; later boots start from a disk checkpoint.
 so the guest stops when the supervisor does.
 
 Use this when you are testing something that depends on being in a cluster.
-For everything else `hanzo host serve` is lighter and binds less.
+For everything else one process is lighter and binds less.
 
 `hanzo up <service>` forwards to `hanzo host serve` for one release. Do not
 write new scripts against that spelling.
@@ -50,22 +60,22 @@ One number to know: **3690**. That is what `local` means to `hanzo network` —
 `hanzo network use local` names `http://localhost:3690`, and `hanzo up` pins the
 same port so the two cannot disagree.
 
-`8080` is the container's default and appears in the cloud README's
-`docker run`. It is not the local-network port, and a URL built from one while
-the other is running is a connection to nothing. If you are mixing the two, that
-is the first thing to check.
-
-The README's quick start is `docker run … :latest`. Prefer a pinned `vX.Y.Z`:
-floating tags are against policy everywhere else in this estate, and a `:latest`
-you cannot name is a bug you cannot reproduce.
+`8080` is where the cloud serves when you start it from a checkout. It is not
+the local-network port, and a URL built from one while the other is running is a
+connection to nothing. If you are mixing the two, that is the first thing to
+check.
 
 ## Listeners, and reading the right file
 
-The cloud's listeners default to loopback, and the reason is specific: the ZAP
-listener serves the **identical route surface as HTTP over plaintext TCP**,
-including arbitrary process execution. A bare `:9653` binds every interface, and
-that port has been reached from another host on the same subnet with no
-credential.
+The ZAP and health listeners default to loopback, `127.0.0.1:9653` and
+`127.0.0.1:9090`, and the reason is specific: the ZAP listener serves the
+**identical route surface as HTTP over plaintext TCP**, including arbitrary
+process execution. A bare `:9653` binds every interface, and that port has been
+reached from another host on the same subnet with no credential.
+
+The HTTP listener is the exception. With neither `CLOUD_LISTEN` nor `PORT` set
+it binds `:8080`, every interface, which is why the command in *Start here* sets
+`CLOUD_LISTEN`.
 
 Clusters set `CLOUD_ZAP_LISTEN` explicitly and have a network policy in front,
 so the safe default costs them nothing. On a laptop you have neither, which is
@@ -101,13 +111,17 @@ Say so in your notes rather than working around it quietly.
   The in-process client skips the guard, which is why reaching for it is
   tempting and why doing so means your local path and your deployed path are
   different code. Until a local IAM superuser is seeded, keep secrets in
-  something you control and do not build on the bypass.
-- **At-rest encryption has been reported as active over plaintext files.** One
-  adopter's second boot failed with `sqlcipher_export: no such function`, and
-  their notes record every `*.db` carrying the plaintext SQLite header while
-  the boot log said encryption was on. **We have not reproduced this.** Treat a
-  boot log claiming encryption as unverified until you have read the first
-  sixteen bytes of the file yourself.
+  something you control and do not build on the bypass. With no master key
+  set, as in *Start here*, secret operations fail closed as well.
+- **The default build cannot encrypt its stores.** On `main`, `make dev` stops
+  with `cek: this build cannot encrypt a store — a keyed database was written
+  with a plaintext header`. `CLOUD_DEV_UNENCRYPTED=1` does not get past it under
+  `make dev`, which always passes a key; it applies only when no key is set,
+  which is how *Start here* runs, and the files are then plaintext. One adopter
+  also saw `sqlcipher_export: no such function` on a second boot, and every
+  `*.db` carrying the plaintext SQLite header while the boot log said encryption
+  was on. Trust a claim of encryption only after reading the first sixteen bytes
+  of the file.
 
 ## Do not rebuild these
 
@@ -116,7 +130,7 @@ If you are about to write one, read this row first.
 
 | Before you write | We ship | Why it was missed |
 |---|---|---|
-| A launcher script | `hanzo host serve` | Not in any README |
+| A launcher script | the command in *Start here* | The skills described only the hosted cloud |
 | A KMS CLI | `/v1/kms`, `hanzo kms` | Needs IAM, absent locally |
 | An SDK generator | `zip/cmd/zipgen` | Not in the zip README |
 | An LLM client | `python-sdk`, `hanzo-agent` | The packages failed to import |

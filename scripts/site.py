@@ -458,9 +458,9 @@ def patch(path):
         hero_h1_lede = (
             '<h1>The native cloud in a single binary.<br>Go. Rust. C++. '
             '<em>Zero interpreter bloat.</em></h1>'
-            '<p class="lede">Run a local copy of the complete cloud, extend with <code>/v1/*</code>, '
-            'and migrate your backend to Hanzo Base with realtime native SSE, analytics, and insights. '
-            'Built for native performance from local-first to the full Hanzo AI cloud.</p>'
+            '<p class="lede">Run the open-source parts on your own machine, extend the cloud with <code>/v1/*</code>, '
+            'and move your backend to Hanzo Base. <a href="/skill">skill.md</a> gives the command that starts '
+            'each part and says what needs the hosted cloud.</p>'
         )
         out = re.sub(r'<h1>.*?</h1>\s*<p class="lede">.*?</p>', hero_h1_lede, out, count=1, flags=re.S)
         out = re.sub(r'<div class="btns">.*?(?=</div></div><div class="strip">)',

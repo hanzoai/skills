@@ -20,8 +20,8 @@ This coursework trains engineering teams migrating from slow, interpreted, memor
 │              - Benchmarking: 15ms cold starts vs 6s Next.js SSR             │
 │                                                                             │
 │   [MODULE 2] Running Your Own Cloud Locally                                 │
-│              - Complete local copy of the Hanzo AI Cloud                    │
-│              - `hanzo up cloud` / `base serve` with compose.yml             │
+│              - Base and the open-source cloud, from a checkout              │
+│              - start commands: skill.md, On your own machine                │
 │                                                                             │
 │   [MODULE 3] Realtime SSE Streaming & State Synchronization                 │
 │              - Native Server-Sent Events (SSE) in Go                        │
@@ -73,60 +73,27 @@ time ./bin/server --healthcheck
 
 ---
 
-## Module 2: Local-First Cloud (Run a Complete Copy)
+## Module 2: Run It Locally
 
-Hanzo Cloud is engineered so every developer runs a complete copy locally.
+Base and the open-source cloud start from a checkout, with no account.
 
-### 2.1 The Philosophy
-Never mock third-party cloud APIs. Run the actual Hanzo services in-process or via lightweight local containers.
+### The Philosophy
+Never mock third-party cloud APIs. Run the actual Hanzo services in-process.
 
-### 2.2 Local Orchestration with `compose.yml`
-Always use `compose.yml` (never `docker-compose.yml`):
-
-```yaml
-# compose.yml - Complete Hanzo Local Cloud
-services:
-  cloud:
-    image: ghcr.io/hanzoai/cloud:latest
-    ports:
-      - "8080:8080"
-      - "9090:9090"
-    environment:
-      - HANZO_ENV=local
-      - HANZO_PORT=8080
-      - HANZO_STORAGE=sqlite
-      - HANZO_SQLITE_PATH=/data/hanzo.db
-      - HANZO_ZAP_PORT=9090
-    volumes:
-      - hanzo-data:/data
-    restart: unless-stopped
-
-  base:
-    image: ghcr.io/hanzoai/base:latest
-    ports:
-      - "8090:8090"
-    environment:
-      - BASE_PORT=8090
-      - BASE_DB=/data/base.db
-      - BASE_REALTIME_SSE=true
-      - BASE_CLOUD_URL=http://cloud:8080
-    volumes:
-      - base-data:/data
-
-volumes:
-  hanzo-data:
-  base-data:
-```
-
-### 2.3 Lab 2: Launch & Healthcheck
+### Lab 2: Launch & Healthcheck
 ```bash
-# Start your local cloud
-hanzo up cloud
+# Base, in a checkout of github.com/hanzoai/base
+go run ./examples/base serve
+curl -i http://127.0.0.1:8090/v1/health           # from a second terminal
 
-# Verify control plane and base services
-curl -i http://localhost:8080/v1/health
-curl -i http://localhost:8090/v1/health
+# the cloud, in a checkout of github.com/hanzoai/cloud
+make build && CLOUD_DEV_UNENCRYPTED=1 CLOUD_LISTEN=127.0.0.1:8080 CLOUD_DATA_DIR=.dev/data ./cloud
+curl -s http://127.0.0.1:8080/v1/openapi.json     # from a second terminal
 ```
+
+The cloud runs unencrypted this way, for local development only. Every part that
+runs locally, and what needs the hosted cloud, is in `skill.md` under
+*On your own machine*.
 
 ---
 
