@@ -1,5 +1,5 @@
 ---
-name: ui-port-parity
+name: ui-port
 description: Port or migrate a UI from an old/reference implementation to a new system while preserving new-system functionality and achieving high visual parity. Use when comparing reference and target URLs, routes, repos/worktrees, Storybook stories, screenshots, PDFs, DOM/computed-style probes, or any combination; when asked to make a rewrite look like an older UI; when a visual regression is "close" but still reads as a different product; or when agents need a repeatable audit-fix-measure loop for screen-by-screen convergence.
 ---
 

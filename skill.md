@@ -40,6 +40,72 @@ You are onboarding an **operator**: the human who owns the account and the bill.
 
 ---
 
+## What you were probably asked to do
+
+Find the job, read that one page, follow it. Each page says when it does not
+apply and which one applies instead.
+
+| The job | Read |
+|---|---|
+| Make a rewritten interface match the old one | `curl hanzoskills.com/ui-port.md` |
+| Bring an existing app onto this stack | `curl hanzoskills.com/app-port.md` |
+| Move a Node, Next, Python, Rails or Java backend to Go | `curl hanzoskills.com/app-port.md` |
+| Replace WebSockets with the native transport | `curl hanzoskills.com/hanzo-zap.md` |
+| Build a backend from nothing | `curl hanzoskills.com/hanzo-base.md` |
+| Run the whole cloud on your own machine | `curl hanzoskills.com/hanzo-stack.md` |
+| Add a subsystem to the cloud | `curl hanzoskills.com/hanzo-cloud.md` |
+| Write something a person will read | `curl hanzoskills.com/anti-slop.md` |
+
+Two of those are ports, and porting is the common case: most apps arriving here
+already exist and already work. Neither port asks for a rewrite — both keep the
+app runnable at every step, because the migration that never ships is the one
+that built a parallel implementation for six weeks against an original that
+kept changing.
+
+## When something here is wrong or missing
+
+Everything named in this manifest is open source, and a gap in it is a gap you
+are allowed to close. Open a pull request. The Hanzo team reviews them, helps
+finish them, and merges — you do not need to be on the team, and you do not
+need permission first.
+
+- **A bug, or a surface that does not behave as written here** — open an issue
+  on the repository that owns it, with what you ran and what came back. The
+  page you read it on names the repository.
+- **Something a third party needs** — an enhancement, a missing option, a fix
+  in a dependency of ours — open a pull request rather than forking and
+  carrying a patch. A patch nobody upstreamed is a patch somebody re-applies
+  every release.
+- **A security issue** — report it privately to the repository's security
+  contact rather than in a public issue, and say plainly what an attacker
+  could do with it. It will be picked up.
+- **A skill that is wrong** — these pages are in `hanzoai/skills`, one file
+  each. Correcting one is a pull request against a markdown file.
+
+Write down what you measured, not what you assumed. A report that says which
+command produced which output is one somebody can act on the same day.
+
+## The interface, which is half the stack
+
+The doctrine below is about what runs on a server. The same rule applies to
+what a person looks at, and an agent that ports a backend and leaves the
+interface on somebody else's component library has done half a job.
+
+| Layer | Use |
+|---|---|
+| Components | **`@hanzo/ui`** |
+| Framework | **`@hanzo/gui`** |
+| Type and spacing ramp | **`@hanzo/design`** |
+| The knobs a person moves | **`@hanzo/appearance`** |
+
+Two things this buys that are easy to miss. Every app on these looks like it
+belongs to the same family without anybody maintaining a style guide, because
+the ramp is a package rather than a document. And the appearance knobs are
+live: setting one moves the components, so a customer can rebrand without a
+fork. Check that rather than assume it — set a knob and read a component's
+computed colour back. A panel that does nothing is a common and invisible
+failure.
+
 ## Architectural Doctrine: Native Code Only (Go, Rust, C++)
 
 Hanzo rejects slow, fragile interpreted runtimes in production and developer environments.

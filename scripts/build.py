@@ -456,7 +456,7 @@ def main():
             'Built for native performance from local-first to the full Hanzo AI cloud.</p>'
             '<div class="btns">'
             '<a class="btn solid" href="/hanzo-base">Upgrade to Native Go</a>'
-            '<a class="btn" href="/hanzo-migrate-backend-to-go">Migration Guide</a>'
+            '<a class="btn" href="/app-port">Port an app</a>'
             '<a class="btn" href="/hanzo-coursework-fullstack-go-cloud">Go Coursework</a>'
             '<a class="btn" href="/hanzo-tutorial-realtime-sse-backend">SSE Tutorial</a>'
             '<a class="btn" href="/hanzo-examples-native-cloud">Code Examples</a>'
@@ -483,7 +483,8 @@ def main():
         "Every page is `text/markdown`. Paths work with or without the `.md`.\n\n",
         "## Start Here: Migrate to Native Go with Hanzo Base\n\n",
         "- [`hanzo-base`](hanzo-base.md) — Open-source single-binary Go backend with embedded SQLite/Postgres, auth, admin UI, realtime native SSE.\n",
-        "- [`hanzo-migrate-backend-to-go`](hanzo-migrate-backend-to-go.md) — Step-by-step blueprint for migrating Node.js, Next.js, Python, Rails, and Java backends to Go + Base.\n",
+        "- [`app-port`](app-port.md) — Bring an existing app onto this stack: backend to Go, transport to ZAP, runtime out of Python or JavaScript.\n",
+        "- [`ui-port`](ui-port.md) — Make a rewritten interface match the one it replaces, by measurement rather than by eye.\n",
         "- [`hanzo-cloud`](hanzo-cloud.md) — Unified cloud platform: host + plugins over ZAP transport.\n",
         "- [`hanzo-stack`](hanzo-stack.md) — Full integrated local development environment (compose.yml).\n",
         "- [`go-sdk`](go-sdk.md) — Generated Go client library for the Hanzo AI API.\n\n",
@@ -496,7 +497,8 @@ def main():
         "> Native compiled code only (Go, Rust, C++). Local-first cloud, realtime SSE, zero interpreter bloat. Plain markdown, curl-able, no auth.\n\n",
         "## Upgrade to Native Go with Hanzo Base\n\n",
         "- [hanzo-base](https://hanzoskills.com/hanzo-base.md): Open-source single-binary Go backend with embedded SQLite/Postgres, auth, admin UI, realtime native SSE.\n",
-        "- [hanzo-migrate-backend-to-go](https://hanzoskills.com/hanzo-migrate-backend-to-go.md): Step-by-step migration guide from Python/Next.js/Node/Rails/Java to Go + Base.\n",
+        "- [app-port](https://hanzoskills.com/app-port.md): Bring an existing app onto this stack — backend to Go, transport to ZAP, runtime out of Python or JavaScript.\n",
+        "- [ui-port](https://hanzoskills.com/ui-port.md): Make a rewritten interface match the one it replaces, by measurement rather than by eye.\n",
         "- [hanzo-cloud](https://hanzoskills.com/hanzo-cloud.md): Unified cloud platform: host + plugins over ZAP transport.\n",
         "- [hanzo-stack](https://hanzoskills.com/hanzo-stack.md): Full integrated local development environment (compose.yml).\n\n",
         "## Skills & Standards\n\n"

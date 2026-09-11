@@ -12,7 +12,8 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 ## Start Here: Migrate to Native Go with Hanzo Base
 
 - [`hanzo-base`](hanzo-base.md) — Open-source single-binary Go backend with embedded SQLite/Postgres, auth, admin UI, realtime native SSE.
-- [`hanzo-migrate-backend-to-go`](hanzo-migrate-backend-to-go.md) — Step-by-step blueprint for migrating Node.js, Next.js, Python, Rails, and Java backends to Go + Base.
+- [`app-port`](app-port.md) — Bring an existing app onto this stack: backend to Go, transport to ZAP, runtime out of Python or JavaScript.
+- [`ui-port`](ui-port.md) — Make a rewritten interface match the one it replaces, by measurement rather than by eye.
 - [`hanzo-cloud`](hanzo-cloud.md) — Unified cloud platform: host + plugins over ZAP transport.
 - [`hanzo-stack`](hanzo-stack.md) — Full integrated local development environment (compose.yml).
 - [`go-sdk`](go-sdk.md) — Generated Go client library for the Hanzo AI API.
@@ -92,7 +93,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hanzo-mcp`](hanzo-mcp.md) — Hanzo MCP implements the Model Context Protocol -- an open standard for exposing tools, resources, and prompts to AI agents.
 - [`hanzo-memory`](hanzo-memory.md) — Hanzo Memory (@hanzo/memory) is a TypeScript AI memory service that stores, searches, and retrieves contextual memories using vector embeddings.
 - [`hanzo-metrics`](hanzo-metrics.md) — Hanzo Metrics is a fast, cost-effective time-series database for monitoring AI infrastructure.
-- [`hanzo-migrate-backend-to-go`](hanzo-migrate-backend-to-go.md) — Modernizing your stack means moving away from interpreted, slow runtimes.
 - [`hanzo-ml`](hanzo-ml.md) — Hanzo ML is a Rust-based minimalist ML framework forked from HuggingFace Candle, optimized for edge AI, quantization, and multimodal inference.
 - [`hanzo-mpc`](hanzo-mpc.md) — Hanzo MPC is a threshold signing service for securely generating and managing cryptographic wallets across distributed nodes without ever exposing the full private key.
 - [`hanzo-mugen`](hanzo-mugen.md) — Mugen is a PyTorch framework for deep learning research on audio generation.
@@ -160,6 +160,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`algorithmic-art`](algorithmic-art.md) — Creating algorithmic art using p5.js with seeded randomness and interactive parameter exploration. Use this when users request creating art using code, generative art, algorithmic art, flow fields, or particle systems. Create original algorithmic art rather than copying existing artists' work to avoid copyright violations.
 - [`anti-slop`](anti-slop.md) — Comprehensive toolkit for detecting and eliminating "AI slop" - generic, low-quality AI-generated patterns in natural language, code, and design. Use when reviewing or improving content quality, preventing generic AI patterns, cleaning up existing content, or enforcing quality standards in writing, code, or design work.
 - [`api`](api.md) — Automatically discover API design skills when working with REST APIs, GraphQL schemas, API authentication, OAuth, JWT, rate limiting, API versioning, error handling, or endpoint design. Activates for backend API development tasks.
+- [`app-port`](app-port.md) — Port an existing application onto the Hanzo stack — Hanzo Base and Hanzo Cloud OSS for the backend, ZAP for transport, @hanzo/ui and @hanzo/gui for the interface — and move its Python or JavaScript runtime into Go, Rust or C++. Use when adopting a Next.js, Node, Django, Flask, FastAPI, Rails or Spring app; when a service still speaks WebSockets; when a deployment still needs an interpreter beside the binary; or when asked to modernise, migrate or absorb an app somebody else's stack currently runs.
 - [`brand-guidelines`](brand-guidelines.md) — Applies Anthropic's official brand colors and typography to any sort of artifact that may benefit from having Anthropic's look-and-feel. Use it when brand colors or style guidelines, visual formatting, or company design standards apply.
 - [`build-systems`](build-systems.md) — Automatically discover build system skills when working with build systems. Activates for build-systems development tasks.
 - [`caching`](caching.md) — Automatically discover caching and performance skills when working with caching. Activates for caching development tasks.
@@ -190,7 +191,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`infrastructure`](infrastructure.md) — Automatically discover infrastructure and DevOps skills when working with infrastructure. Activates for infrastructure development tasks.
 - [`internal-comms`](internal-comms.md) — A set of resources to help me write all kinds of internal communications, using the formats that my company likes to use. Claude should use this skill whenever asked to write some sort of internal communications (status reports, leadership updates, 3P updates, company newsletters, FAQs, incident reports, project updates, etc.).
 - [`ir`](ir.md) — Automatically discover intermediate representation and compiler skills when working with intermediate representation. Activates for ir development tasks.
-- [`legacy-port`](legacy-port.md) — Bring an existing application onto the Hanzo stack — Hanzo Cloud OSS for the backend, @hanzo/ui and @hanzo/gui for the interface, ZAP for service-to-service transport — and port its Python or JavaScript runtime into Go. Use when adopting a Next.js, Node, Django, Flask or FastAPI app; when a service still speaks WebSockets; when an interface is built on components that are not ours; when a deployment still needs a Python or Node runtime beside the binary; or when asked to modernise, migrate or absorb an app that somebody else's stack currently runs.
 - [`math`](math.md) — Automatically discover mathematics and algorithm skills when working with mathematics. Activates for math development tasks.
 - [`mcp-builder`](mcp-builder.md) — Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).
 - [`ml`](ml.md) — Automatically discover machine learning and AI skills when working with machine learning. Activates for ml development tasks.
@@ -216,7 +216,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`theme-factory`](theme-factory.md) — Toolkit for styling artifacts with a theme. These artifacts can be slides, docs, reportings, HTML landing pages, etc. There are 10 pre-set themes with colors/fonts that you can apply to any artifact that has been creating, or can generate a new theme on-the-fly.
 - [`tui`](tui.md) — Automatically discover terminal UI skills when working with terminal user interfaces. Activates for tui development tasks.
 - [`typed-holes-refactor`](typed-holes-refactor.md) — Refactor codebases using Design by Typed Holes methodology - iterative, test-driven refactoring with formal hole resolution, constraint propagation, and continuous validation. Use when refactoring existing code, optimizing architecture, or consolidating technical debt through systematic hole-driven development.
-- [`ui-port-parity`](ui-port-parity.md) — Port or migrate a UI from an old/reference implementation to a new system while preserving new-system functionality and achieving high visual parity. Use when comparing reference and target URLs, routes, repos/worktrees, Storybook stories, screenshots, PDFs, DOM/computed-style probes, or any combination; when asked to make a rewrite look like an older UI; when a visual regression is "close" but still reads as a different product; or when agents need a repeatable audit-fix-measure loop for screen-by-screen convergence.
+- [`ui-port`](ui-port.md) — Port or migrate a UI from an old/reference implementation to a new system while preserving new-system functionality and achieving high visual parity. Use when comparing reference and target URLs, routes, repos/worktrees, Storybook stories, screenshots, PDFs, DOM/computed-style probes, or any combination; when asked to make a rewrite look like an older UI; when a visual regression is "close" but still reads as a different product; or when agents need a repeatable audit-fix-measure loop for screen-by-screen convergence.
 - [`wasm`](wasm.md) — Automatically discover WebAssembly skills when working with WebAssembly. Activates for wasm development tasks.
 - [`web-artifacts-builder`](web-artifacts-builder.md) — Suite of tools for creating elaborate, multi-component claude.ai HTML artifacts using modern frontend web technologies (React, Tailwind CSS, shadcn/ui). Use for complex artifacts requiring state management, routing, or shadcn/ui components - not for simple single-file HTML/JSX artifacts.
 - [`webapp-testing`](webapp-testing.md) — Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, capturing browser screenshots, and viewing browser logs.
@@ -610,7 +610,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`security-security-headers`](security-security-headers.md) — HTTP security headers including CSP, HSTS, X-Frame-Options, CORS, and other protective headers for web application security
 - [`security-vulnerability-assessment`](security-vulnerability-assessment.md) — Security testing methodologies, OWASP Top 10, vulnerability scanning tools, and penetration testing practices
 
-### ui-port-parity
+### ui-port
 - [`acceptance`](acceptance.md) — Choose states appropriate to the app.
 - [`exchange-example`](exchange-example.md) — This example captures a common failure mode: the shell is close, but the new system still reads as a different product because screen topology, typography, control geometry and information hierarchy diverge.
 - [`ledger`](ledger.md) — Use one row per independently actionable issue.
