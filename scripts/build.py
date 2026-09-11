@@ -498,6 +498,7 @@ def main():
         "## Upgrade to Native Go with Hanzo Base\n\n",
         "- [hanzo-base](https://hanzoskills.com/hanzo-base.md): Open-source single-binary Go backend with embedded SQLite/Postgres, auth, admin UI, realtime native SSE.\n",
         "- [app-port](https://hanzoskills.com/app-port.md): Bring an existing app onto this stack — backend to Go, transport to ZAP, runtime out of Python or JavaScript.\n",
+        "- [cloud-host](https://hanzoskills.com/cloud-host.md): Run the cloud on your own machine — the local API, ports, keys, and what already exists so you do not rebuild it.\n",
         "- [ui-port](https://hanzoskills.com/ui-port.md): Make a rewritten interface match the one it replaces, by measurement rather than by eye.\n",
         "- [hanzo-cloud](https://hanzoskills.com/hanzo-cloud.md): Unified cloud platform: host + plugins over ZAP transport.\n",
         "- [hanzo-stack](https://hanzoskills.com/hanzo-stack.md): Full integrated local development environment (compose.yml).\n\n",

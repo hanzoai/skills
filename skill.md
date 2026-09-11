@@ -62,6 +62,27 @@ app runnable at every step, because the migration that never ships is the one
 that built a parallel implementation for six weeks against an original that
 kept changing.
 
+## Running this yourself
+
+Most of these pages describe the hosted cloud. If you are running it on your own
+machine, read **`cloud-host`** first — it is one command, and an outside adopter
+who did not find it wrote four launcher scripts instead.
+
+What differs locally, stated once so you do not discover it one command at a
+time:
+
+- **`hanzo host serve`** is the local cloud API. It binds a unix socket, and
+  loopback where it binds a port at all.
+- **3690** is what `local` means to `hanzo network`. The `8080` in the cloud
+  README is the container's port, and mixing the two is a connection to nothing.
+- **KMS does not work locally yet.** It requires an IAM principal and there is
+  no IAM on a laptop. The in-process client skips the guard; using it makes your
+  local path different code from your deployed path, so do not build on it.
+- **Anything billed** — hosted inference, the paid endpoints — has no local
+  equivalent. Point at `api.hanzo.ai` for those and keep the rest local.
+- **Check what is bound rather than what is documented.** Two files disagreed
+  about a listener default and the one that runs was the wide one.
+
 ## How these pages are named
 
 So you can guess one instead of searching for it.
