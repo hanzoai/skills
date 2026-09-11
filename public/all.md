@@ -152213,9 +152213,9 @@ CGO_ENABLED=0 go build -o base ./examples/base
 docker run -d \
  --name base \
  -p 8080:8080 \
- -v ./hz_data:/pb_data \
+ -v ./hz_data:/data \
  ghcr.io/hanzoai/base \
- serve --http=0.0.0.0:8080 --dir=/pb_data
+ serve --http=0.0.0.0:8080 --dir=/data
 ```
 
 ## Core Concepts
@@ -152403,7 +152403,7 @@ FROM alpine:3.21
 COPY --from=builder /build/base /app/base
 EXPOSE 8080
 ENTRYPOINT ["/app/base"]
-CMD ["serve", "--http=0.0.0.0:8080", "--dir=/pb_data"]
+CMD ["serve", "--http=0.0.0.0:8080", "--dir=/data"]
 ```
 
 ## SDK Clients
