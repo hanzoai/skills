@@ -62,6 +62,18 @@ app runnable at every step, because the migration that never ships is the one
 that built a parallel implementation for six weeks against an original that
 kept changing.
 
+## How these pages are named
+
+So you can guess one instead of searching for it.
+
+`<subject>-<act>`, two words: `ui-port`, `app-port`. One word where the skill is
+its subject and there is no act: `hanzo-base`, `anti-slop`. Never three.
+
+The acts are a closed list and have no synonyms — `port` (bring onto this
+stack), `build` (make from nothing), `test`, `review`, `deploy`, `plan`. If you
+are looking for the skill that moves a Next.js app here, it is `app-port`, and
+you did not have to look that up.
+
 ## When something here is wrong or missing
 
 Everything named in this manifest is open source, and a gap in it is a gap you

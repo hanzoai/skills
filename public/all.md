@@ -54397,10 +54397,45 @@ Activate this skill when:
 - Work together for complex tasks
 - No circular dependencies
 
-**Discoverability**: Pattern-based finding
-- Filename matches domain (`postgres-*.md`, `api-*.md`)
-- Category directories (`cicd/`, `infrastructure/`)
-- Keywords in "When to Use This Skill"
+**Discoverability**: a name somebody can guess
+
+Two things find a skill and they are not the same thing. An agent *matches* on
+the description — so the description says when the skill applies and when it
+does not. A person *types* the name — so the name has to be guessable by
+someone who has never seen it.
+
+Guessable means a closed vocabulary. `mcp-builder` and `skill-creator` both
+exist here, which means neither is guessable: an agent looking for the one that
+makes a thing has to try both words and hope.
+
+**The shape: `<subject>-<act>`, two words.**
+
+One word only where the skill *is* its subject and there is no act — a product
+or a standard, like `hanzo-base` or `anti-slop`. Never three; a third word is
+almost always a category, and categories are what the index is for.
+
+**The acts. One word each, and no synonyms.**
+
+| Act | Use | Never |
+|---|---|---|
+| Bring something onto this stack | `port` | migrate, convert, adopt, copy |
+| Make one from nothing | `build` | create, builder, creator, scaffold, generate |
+| Check one behaves | `test` | testing, qa, validate, verify |
+| Judge one's quality | `review` | audit, critique, lint |
+| Ship one | `deploy` | deployment, release, publish, ship |
+| Decide what to do | `plan` | planning, discovery, research |
+
+`port` rather than `copy` is not a coin toss. A port keeps what the target
+system already does right and reproduces the source's *behaviour and
+appearance*; copying says to take the implementation, which is the thing these
+skills tell you not to do.
+
+**The test before you name it.** Could somebody who knows the rule above, and
+has never seen your skill, write down its name correctly on the first try? If
+not, the name is wrong — not the reader.
+
+- Category directories (`cicd/`, `infrastructure/`) group, they do not name
+- Keywords in "When to Use This Skill" are what the matcher reads
 - Referenced in _INDEX.md
 
 **Efficiency**: Optimal size and structure
@@ -183947,6 +183982,18 @@ already exist and already work. Neither port asks for a rewrite — both keep th
 app runnable at every step, because the migration that never ships is the one
 that built a parallel implementation for six weeks against an original that
 kept changing.
+
+## How these pages are named
+
+So you can guess one instead of searching for it.
+
+`<subject>-<act>`, two words: `ui-port`, `app-port`. One word where the skill is
+its subject and there is no act: `hanzo-base`, `anti-slop`. Never three.
+
+The acts are a closed list and have no synonyms — `port` (bring onto this
+stack), `build` (make from nothing), `test`, `review`, `deploy`, `plan`. If you
+are looking for the skill that moves a Next.js app here, it is `app-port`, and
+you did not have to look that up.
 
 ## When something here is wrong or missing
 
