@@ -81,4 +81,4 @@ rm ~/.claude/commands/skills.md
 
 ## Next Steps
 
-After installation, see [QUICK_START.md](commands/skills/QUICK_START.md) for usage examples.
+Run `/skills` in Claude Code to browse what you just installed; [`commands/skills.md`](commands/skills.md) is what that command reads.

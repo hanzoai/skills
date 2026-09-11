@@ -54,7 +54,7 @@ Install hanzo-skills as a plugin:
 ```
 
 That's it! The plugin system will:
-- Download all 292 skills to `~/.claude/plugins/hanzo-skills~/.hanzo/skills/`
+- Download all 292 skills to `~/.claude/plugins/hanzo-skills/skills/`
 - Register the `/skills` command automatically
 - Make everything available immediately
 
@@ -86,10 +86,10 @@ If you customized any skills, you can copy them to the plugin directory:
 ```bash
 # Example: Restore a custom skill
 cp ~/.claude/skills.backup/custom/my-skill.md \
-   ~/.claude/plugins/hanzo-skills~/.hanzo/skills/custom/my-skill.md
+   ~/.claude/plugins/hanzo-skills/skills/custom/my-skill.md
 ```
 
-**Note:** The plugin directory is at `~/.claude/plugins/hanzo-skills/`, not `~/.claude~/.hanzo/skills/`.
+**Note:** The plugin directory is at `~/.claude/plugins/hanzo-skills/`, not `~/.claude/skills/`.
 
 ## What Changed
 
@@ -97,13 +97,13 @@ cp ~/.claude/skills.backup/custom/my-skill.md \
 
 **Before (Manual):**
 ```
-~/.claude~/.hanzo/skills/          # Skills directory
+~/.claude/skills/          # Skills directory
 ~/.claude/commands/        # Commands directory
 ```
 
 **After (Plugin):**
 ```
-~/.claude/plugins/hanzo-skills~/.hanzo/skills/      # Skills
+~/.claude/plugins/hanzo-skills/skills/      # Skills
 ~/.claude/plugins/hanzo-skills/commands/    # Commands
 ```
 
@@ -112,7 +112,7 @@ cp ~/.claude/skills.backup/custom/my-skill.md \
 **Before (Manual):**
 ```bash
 git clone https://github.com/hanzoai/skills
-cd hanzo-skills
+cd skills
 ./commands/install.sh
 ```
 
@@ -193,7 +193,7 @@ All existing workflows continue to work:
 **Solution:**
 ```bash
 # Check plugin directory exists
-ls ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
+ls ~/.claude/plugins/hanzo-skills/skills/
 
 # If empty, reinstall plugin
 /plugin uninstall hanzo-skills
@@ -202,7 +202,7 @@ ls ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
 
 ### Want to keep both installations?
 
-You can keep the manual installation in `~/.claude~/.hanzo/skills/` for reference, but:
+You can keep the manual installation in `~/.claude/skills/` for reference, but:
 - Only the plugin version will be used by `/skills` command
 - Skill skills will activate from plugin location
 - This may cause confusion - recommended to remove manual installation
@@ -233,7 +233,7 @@ cp ~/.claude/commands.backup/skills.md ~/.claude/commands/skills.md
 
 **Manual:**
 ```bash
-cat ~/.claude~/.hanzo/skills/README.md | grep "Version:"
+cat ~/.claude/skills/README.md | grep "Version:"
 ```
 
 ### Can I install both?
@@ -242,7 +242,7 @@ Technically yes, but not recommended. The plugin system will take precedence for
 
 ### Will my custom skills be lost?
 
-No, but you need to manually copy them from `~/.claude~/.hanzo/skills/` to `~/.claude/plugins/hanzo-skills~/.hanzo/skills/` after installing the plugin.
+No, but you need to manually copy them from `~/.claude/skills/` to `~/.claude/plugins/hanzo-skills/skills/` after installing the plugin.
 
 ### How do I contribute updates?
 
@@ -266,7 +266,7 @@ After migration:
 If you encounter issues during migration:
 1. Check this guide's troubleshooting section
 2. Review plugin documentation: `cat ~/.claude/plugins/hanzo-skills/PLUGIN.md`
-3. Open an issue: https://github.com/hanzoai~/.hanzo/skills/issues
+3. Open an issue: https://github.com/hanzoai/skills/issues
 
 ---
 

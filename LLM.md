@@ -111,9 +111,9 @@ tests/site.mjs   browser checks — mark, menu, bar, computed border-radius, Zen
 - Typography: Canonical Hanzo `Zen` and `Zen Mono` variable font families (`public/fonts/Zen-Variable.woff2`, `Zen-Italic-Variable.woff2`, `ZenMono-Variable.woff2`, `ZenMono-Italic-Variable.woff2`, `ZenPixel-Square.woff2`) loaded via `@font-face` with `font-display: swap`.
 - `scripts/site.py` is the ONE definition of the chrome and rewrites every page.
   It is idempotent, and CI fails if `public/` does not match it.
-- Publishing is `.hanzo/workflows/deploy.yml` on push to main — `.hanzo`, not
-  `.github`: the forge reads the first workflow dir that exists and this repo is
-  private, so GitHub-hosted jobs never start anyway. It calls
+- Publishing is `.github/workflows/deploy.yml` on push to main, beside `ci.yml`.
+  That is the only workflow directory here: the forge reads the first one that
+  exists, and the org's own `linux-amd64` runners serve both planes. It calls
   `hanzoai/ci/.github/actions/site@v1`, which is `bin/site`: enqueue → upload the
   objects straight to S3 → complete. The bytes never pass through the API. Do not
   publish by hand, and do not transcribe those three calls here.

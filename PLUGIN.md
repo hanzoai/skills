@@ -59,7 +59,7 @@ Clone the repository to develop locally:
 
 ```bash
 git clone https://github.com/hanzoai/skills
-cd hanzo-skills
+cd skills
 
 # Install as plugin from local directory
 /plugin install file://$(pwd)
@@ -194,7 +194,7 @@ Project detected → the skill activates → its files are read as needed
 1. Claude Code clones repository to `~/.claude/plugins/hanzo-skills/`
 2. Reads `.claude-plugin/plugin.json` for metadata
 3. Registers commands from `commands/` directory
-4. Makes skills available at `~/.claude/plugins/hanzo-skills~/.hanzo/skills/`
+4. Makes skills available at `~/.claude/plugins/hanzo-skills/skills/`
 
 ### Updates
 ```bash
@@ -379,7 +379,7 @@ cat skills/your-category/your-skill.md
 **Check:**
 ```bash
 # Verify plugin directory exists
-ls ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
+ls ~/.claude/plugins/hanzo-skills/skills/
 
 # Reinstall if missing
 /plugin uninstall hanzo-skills
@@ -390,7 +390,7 @@ ls ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
 
 **Location:**
 ```bash
-cd ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
+cd ~/.claude/plugins/hanzo-skills/skills/
 # Edit skills here
 # Changes will persist until plugin update
 ```
@@ -451,7 +451,7 @@ cd ~/.claude/plugins/hanzo-skills~/.hanzo/skills/
 
 ### Community Requests
 
-See [GitHub Issues](https://github.com/hanzoai~/.hanzo/skills/issues) for feature requests and discussions.
+See [GitHub Issues](https://github.com/hanzoai/skills/issues) for feature requests and discussions.
 
 ## Support
 
@@ -460,15 +460,15 @@ See [GitHub Issues](https://github.com/hanzoai~/.hanzo/skills/issues) for featur
 - **README.md** - Main documentation and quick start
 - **PLUGIN.md** - This file (plugin details)
 - **MIGRATION.md** - Migration from manual installation
-- **commands~/.hanzo/skills/README.md** - /skills command documentation
+- **commands/skills/README.md** - /skills command documentation
 - **skills/README.md** - Master skills catalog
 
 ### Getting Help
 
 1. **Check documentation** - README.md, PLUGIN.md, MIGRATION.md
-2. **Browse issues** - https://github.com/hanzoai~/.hanzo/skills/issues
+2. **Browse issues** - https://github.com/hanzoai/skills/issues
 3. **Open new issue** - Provide details about problem
-4. **Discussions** - https://github.com/hanzoai~/.hanzo/skills/discussions
+4. **Discussions** - https://github.com/hanzoai/skills/discussions
 
 ### Contributing
 

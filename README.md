@@ -579,7 +579,7 @@ Automated validation runs on all resource changes:
 - Python syntax validation for examples
 - Full validation results in PR comments
 
-See `.github/workflows/validate-resources.yml` for details.
+See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for details.
 
 ### Future Waves
 

@@ -1,5 +1,5 @@
 ---
-description: Discover and activate relevant skills (292 skills, 28 skills)
+description: Discover and activate relevant skills (61 skills)
 argument-hint: [category|search-term] (optional)
 ---
 
@@ -85,7 +85,7 @@ RECOMMENDED FOR THIS PROJECT:
   Keywords: [key topics]
   cat skills/[skill]/SKILL.md
 
-CATEGORIES (292 skills, 28 skills):
+SKILLS (61):
 Frontend (8) | Database (8) | API (7) | Testing (6) | Diagrams (8) | ML (30)
 Math (19) | Debugging (14) | Build Systems (8) | Caching (7) | Observability (8)
 Containers (5) | CI/CD (4) | PLT (13) | Formal (10) | Cloud (13)
@@ -195,7 +195,7 @@ observability, caching, debugging
 
 Show all 28 skill categories:
 ```
-━━━ ALL CATEGORIES (292 skills, 28 skills) ━━━
+━━━ ALL SKILLS (61) ━━━
 
 BACKEND & DATA:
   api (7)         - REST, GraphQL, auth, rate limiting
@@ -330,4 +330,4 @@ ROOT-LEVEL SKILLS:
 - Never modify the skills library
 - Provide clear, copy-paste commands
 - Use Unicode box drawing for visual clarity
-- The catalog has: 292 skills, 28 skills, 31 categories
+- The catalog has: 61 skills, one directory each
