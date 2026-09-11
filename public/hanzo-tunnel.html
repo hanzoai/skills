@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-tunnel</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-tunnel.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-tunnel">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-tunnel.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-tunnel</h1><p class="lede">Hanzo Tunnel is a Rust library and Python agent bridge that connects local Hanzo app instances (dev machines, bots, nodes) to the cloud control plane at app.hanzo.bot.</p><h1>Hanzo Tunnel - Cloud Tunnel Client for Remote Agent Control</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-bot.md</code>, <code>hanzo/hanzo-agent.md</code>, <code>hanzo/hanzo-dev.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Tunnel is a <strong>Rust library and Python agent bridge</strong> that connects local Hanzo app instances (dev machines, bots, nodes) to the cloud control plane at <code>app.hanzo.bot</code>. It provides WebSocket-based registration, remote command execution, terminal streaming, session checkpoint/restore (via S3), and local service exposure (ngrok-like). The Rust crate (<code>hanzo-tunnel</code>) is the protocol library; the Python <code>agent-bridge.py</code> is the standalone agent process.</p>
+<h3>Why Hanzo Tunnel?</h3>
+<ul><li><strong>Remote control</strong>: Execute commands on local machines from the web UI at app.hanzo.bot</li><li><strong>Session migration</strong>: Checkpoint session state to S3, restore on another machine or cloud agent</li><li><strong>Terminal streaming</strong>: Open/close/resize interactive PTY sessions remotely</li><li><strong>Service exposure</strong>: Expose local HTTP/WebSocket/TCP services through the tunnel (ngrok-like)</li><li><strong>Bot gateway integration</strong>: Register as a node in the Hanzo bot gateway&#x27;s NodeRegistry</li><li><strong>Swarm mode</strong>: Launch N parallel agent instances for testing</li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Rust crate</strong>: <code>hanzo-tunnel</code> v0.1.1 (library, no binary)</li><li><strong>Python agent</strong>: <code>agent-bridge.py</code> v0.2.0 (standalone bridge process)</li><li><strong>Docker image</strong>: <code>ghcr.io/hanzoai/cloud-agent:latest</code> (Python 3.12 Alpine)</li><li><strong>Protocol</strong>: JSON frames over WebSocket (register/registered/command/response/event/ping/pong)</li><li><strong>Dependencies (Rust)</strong>: tokio 1, tokio-tungstenite 0.23 (native-tls), serde 1, futures 0.3, uuid 1, chrono 0.4, tracing 0.1, thiserror 2, url 2, http 1</li><li><strong>Dependencies (Python)</strong>: websockets, boto3</li><li><strong>No Go component, no package.json</strong> -- Rust + Python only</li></ul>
+<h3>OSS Base</h3>
+<p>Repo: <code>hanzoai/tunnel</code>. Single branch (<code>main</code>). No README. 5 commits.</p>
+<h3>What This Is NOT</h3>
+<p>This repo does <strong>not</strong> use OpenZiti, zero-trust networking, overlay networks, or service mesh. The transport is plain WebSocket (WSS with native-tls). The only forward-looking reference is a <code>TunnelConnection::from_channels()</code> constructor in <code>lib.rs</code> whose doc comment mentions &quot;ZT fabric&quot; as a hypothetical custom transport -- this is an extensibility hook, not an implementation. No Ziti SDK, no Ziti dependencies, no Ziti configuration exists in the repo.</p>
+<h2>When to use</h2>
+<ul><li>Connecting a local dev machine to the Hanzo cloud control plane</li><li>Running remote commands (chat, exec, terminal) on local machines from a web UI</li><li>Checkpointing and migrating dev sessions between machines</li><li>Exposing local services through a public tunnel URL</li><li>Integrating with the Hanzo bot gateway as a node</li><li>Building custom Hanzo app integrations that need cloud connectivity</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>WebSocket connectivity</strong> to <code>wss://app.hanzo.bot/v1/tunnel</code> or <code>wss://api.hanzo.ai/v1/relay</code></li><li><strong>Auth token</strong>: Hanzo IAM JWT or API key (for Rust library)</li><li><strong>S3 credentials</strong> (optional, for session checkpoint/restore): <code>S3_ACCESS_KEY</code>, <code>S3_SECRET_KEY</code></li><li><strong>Claude CLI</strong> (optional, for <code>chat.send</code> command in Python agent)</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Rust crate | <code>hanzo-tunnel</code> v0.1.1 | | Relay URL | <code>wss://api.hanzo.ai/v1/relay</code> | | Tunnel URL | <code>wss://app.hanzo.bot/v1/tunnel</code> | | Agent bridge | <code>agent-bridge.py</code> | | Agent image | <code>ghcr.io/hanzoai/cloud-agent:latest</code> | | Bot gateway | <code>ws://bot-gateway/v1/tunnel</code> (in-cluster) | | S3 endpoint | <code>https://s3.hanzo.ai</code> | | S3 bucket | <code>hanzo-sessions</code> | | K8s namespace | <code>hanzo</code> | | Repo | <code>github.com/hanzoai/tunnel</code> |</p>
+<h2>One-file quickstart</h2>
+<h3>Rust Library</h3>
+<pre><code class="lang-rust">use hanzo_tunnel::{connect, TunnelConfig, AppKind};
+
+#[tokio::main]
+async fn main() -&gt; Result&lt;(), hanzo_tunnel::TunnelError&gt; {
+ let conn = connect(TunnelConfig {
+ relay_url: &quot;wss://api.hanzo.ai/v1/relay&quot;.into(),
+ auth_token: &quot;hk-abc123&quot;.into(),
+ app_kind: AppKind::Dev,
+ display_name: &quot;z-macbook&quot;.into(),
+ capabilities: vec![&quot;chat&quot;.into(), &quot;exec&quot;.into()],
+ ..Default::default()
+ }).await?;
+
+ println!(&quot;instance_id = {}&quot;, conn.instance_id);
+
+ // Receive commands from cloud
+ while let Some(frame) = conn.recv_command().await {
+ // Handle commands...
+ }
+ Ok(())
+}</code></pre>
+<h3>Python Agent Bridge</h3>
+<pre><code class="lang-bash"># Run locally
+TUNNEL_URL=wss://app.hanzo.bot/v1/tunnel python3 agent-bridge.py
+
+# With S3 session support
+S3_ACCESS_KEY=xxx S3_SECRET_KEY=yyy python3 agent-bridge.py
+
+# Docker
+docker run -d \
+ -e TUNNEL_URL=wss://app.hanzo.bot/v1/tunnel \
+ -e APP_KIND=cloud \
+ ghcr.io/hanzoai/cloud-agent:latest</code></pre>
+<h3>Swarm Mode</h3>
+<pre><code class="lang-bash"># Launch 4 parallel agents
+./swarm.sh 4 wss://app.hanzo.bot/v1/tunnel</code></pre>
+<h2>Core Concepts</h2>
+<h3>Wire Protocol</h3>
+<p>All communication is via JSON frames over WebSocket:</p>
+<pre><code>Frame types:
+ register -&gt; Instance to Cloud: register this instance
+ registered &lt;- Cloud to Instance: registration confirmed (includes session_url)
+ command &lt;- Cloud to Instance: execute a command
+ response -&gt; Instance to Cloud: command result
+ event -&gt; Instance to Cloud: streaming output, state changes
+ ping/pong &lt;- Bidirectional heartbeat</code></pre>
+<h3>App Kinds</h3>
+<pre><code class="lang-rust">enum AppKind {
+ Dev, // Local dev machine
+ Node, // Server/infrastructure node
+ Desktop, // Desktop app
+ Bot, // Bot instance
+ Extension, // Browser/IDE extension
+}</code></pre>
+<h3>Two Connection Modes</h3>
+<p>The crate provides two distinct connection paths:</p>
+<ol><li><strong>Cloud relay</strong> (<code>connect()</code> / <code>connect_and_register()</code>): Connects via WebSocket to <code>api.hanzo.ai/v1/relay</code> or <code>app.hanzo.bot/v1/tunnel</code>. Uses Bearer auth. Sends <code>Frame::Register</code>, receives <code>Frame::Registered</code> with session URL. Transport runs in background tokio task with auto-reconnect (exponential backoff, 1s to 60s).</li></ol>
+<ol><li><strong>Bot gateway</strong> (<code>connect_gateway()</code>): Connects to the bot gateway&#x27;s native protocol. Performs challenge/connect/hello-ok handshake. Registers as a node in the gateway&#x27;s NodeRegistry. Receives <code>node.invoke.request</code> events, sends <code>node.invoke.result</code> responses.</li></ol>
+<h3>Custom Transport Hook</h3>
+<p><code>TunnelConnection::from_channels()</code> accepts pre-built <code>mpsc</code> channels, allowing custom transports (the doc comment mentions &quot;ZT fabric&quot; as a future possibility) to plug into the same dispatch infrastructure without going through the WebSocket connect path. This is the only extensibility point for alternative transports.</p>
+<h3>Commands (Python Agent)</h3>
+<p>| Command | Description | |---------|-------------| | <code>chat.send</code> | Send message to Claude CLI, return response (120s timeout) | | <code>exec.run</code> | Execute shell command (30s timeout) | | <code>status.get</code> | Return instance status, session stats | | <code>session.checkpoint</code> | Save session state + git workspace to S3 | | <code>session.restore</code> | Restore session from S3 checkpoint URL | | <code>session.list</code> | List available checkpoints in S3 |</p>
+<h3>Commands (Rust Dispatcher)</h3>
+<p>| Command | Description | |---------|-------------| | <code>terminal.open</code> | Spawn interactive shell session (piped stdin/stdout/stderr) | | <code>terminal.input</code> | Send input to terminal session | | <code>terminal.close</code> | Close terminal session | | <code>terminal.resize</code> | Resize terminal (cols/rows) -- env-only, no true PTY ioctl | | <code>terminal.list</code> | List active terminal sessions | | <code>system.info</code> | Return OS, arch, hostname, shell, user | | <code>system.run</code> | Execute shell command with configurable timeout (default 30s) | | <code>dev.launch</code> | Launch dev/hanzo-dev/codex session with model selection | | <code>dev.status</code> | Check running dev processes via pgrep |</p>
+<p>The <code>CommandDispatcher</code> also supports registering custom command handlers via <code>dispatcher.register(&quot;my.command&quot;, handler_fn)</code>.</p>
+<h3>Session Checkpoint/Restore</h3>
+<p>Sessions can be migrated between machines:</p>
+<ol><li><code>session.checkpoint</code> captures conversation history, command log, scrollback, and git workspace state (branch, remote URL, log, diff, untracked files)</li><li>Checkpoint uploaded as JSON to S3 (<code>hanzo-sessions</code> bucket) with key <code>{instance_id}/{checkpoint_id}.json</code></li><li><code>session.restore</code> downloads checkpoint, restores session state, optionally clones repo + applies git diff</li><li>S3 operations run in a 2-worker ThreadPoolExecutor off the asyncio event loop</li></ol>
+<h3>Service Exposure (ngrok-like)</h3>
+<pre><code class="lang-rust">use hanzo_tunnel::expose::{expose, ExposedService, ExposedProtocol};
+
+expose(&amp;tx, &amp;ExposedService {
+ name: &quot;api&quot;.into(),
+ local_addr: &quot;127.0.0.1:8080&quot;.into(),
+ protocol: ExposedProtocol::Http,
+ subdomain: Some(&quot;my-api&quot;.into()),
+}).await?;</code></pre>
+<p>Supported protocols: <code>Http</code>, <code>WebSocket</code>, <code>Tcp</code>. The <code>unexpose()</code> function stops exposing a service by name.</p>
+<h3>Bot Gateway Integration</h3>
+<p>The <code>gateway</code> module implements the Hanzo bot gateway&#x27;s native protocol (challenge/connect/hello-ok handshake). This lets tunnel clients register as nodes in the gateway&#x27;s NodeRegistry:</p>
+<pre><code class="lang-rust">use hanzo_tunnel::gateway::{connect_gateway, GatewayConfig};
+
+let conn = connect_gateway(GatewayConfig {
+ url: &quot;ws://127.0.0.1:18789&quot;.into(),
+ auth_token: &quot;device-token&quot;.into(),
+ client_id: &quot;my-node&quot;.into(),
+ display_name: &quot;Dev Machine&quot;.into(),
+ ..Default::default()
+}).await?;
+
+// Handle node.invoke requests
+while let Some(req) = conn.recv_invoke().await {
+ // Process command, send result back
+ conn.send_invoke_result(&amp;req.id, true, Some(payload), None).await?;
+}</code></pre>
+<p>Gateway supports two auth methods: <code>&quot;token&quot;</code> (default) and <code>&quot;password&quot;</code>.</p>
+<h3>Architecture</h3>
+<pre><code>+-------------------+ +---------------------+
+| Local Machine | | Cloud |
+| | | |
+| agent-bridge.py |--WSS---&gt;| app.hanzo.bot |
+| or Rust client | | /v1/tunnel |
+| | | |
+| Terminal PTY | | Web UI |
+| Claude CLI | | (command dispatch) |
+| Local services | | |
++-------------------+ +---------------------+
+ |
+ +--------+--------+
+ | Bot Gateway |
+ | NodeRegistry |
+ +--------+--------+
+ |
+ +--------+--------+
+ | Cloud Agents |
+ | (K8s pods) |
+ +-----------------+</code></pre>
+<h3>Repository Structure</h3>
+<pre><code>src/
+ lib.rs # TunnelConfig, TunnelConnection, connect(), connect_and_register()
+ protocol.rs # Wire protocol types (Frame, AppKind, payloads)
+ transport.rs # WebSocket transport with reconnection + heartbeat
+ gateway.rs # Bot gateway protocol adapter (challenge/connect/hello-ok)
+ commands.rs # Node command dispatcher (terminal, system, dev commands)
+ terminal.rs # Interactive terminal session management (piped, not true PTY)
+ expose.rs # Local service exposure (ngrok-like)
+ registry.rs # Instance registry types (Instance, InvokeParams, InvokeResult)
+ discovery.rs # mDNS discovery (optional feature, _hanzo._tcp.local.)
+ auth.rs # Auth token handling (JWT auto-detect vs API key)
+agent-bridge.py # Python standalone agent bridge (v0.2.0)
+swarm.sh # Launch N parallel agents
+migrate.py # Session migration utility
+test-migration.py # Migration tests
+test-swarm.py # Swarm tests
+k8s/
+ cloud-agents.yaml # K8s Deployment (2 replicas, emptyDir workspace)
+ s3-credentials.yaml # S3 secret template (DEPRECATED, use hanzo-s3)
+Dockerfile # Python 3.12 Alpine image for cloud agent
+Cargo.toml # Rust crate definition
+Cargo.lock # Pinned dependencies
+.gitignore # target/, *.swp, .DS_Store</code></pre>
+<h3>K8s Cloud Agents</h3>
+<p>Cloud agents run as K8s pods that accept migrated sessions:</p>
+<pre><code class="lang-yaml"># 2 replicas, ghcr.io/hanzoai/cloud-agent:latest
+# Connects to ws://bot-gateway/v1/tunnel
+# S3 credentials from hanzo-s3 secret
+# ANTHROPIC_API_KEY from bot-secrets
+# Instance ID from pod name (metadata.name)
+# 250m-1 CPU, 512Mi-2Gi memory, 5Gi workspace (emptyDir)</code></pre>
+<h3>Cargo Features</h3>
+<p>| Feature | Default | Description | |---------|---------|-------------| | <code>reconnect</code> | yes | Automatic reconnection with exponential backoff (1s-60s) | | <code>mdns</code> | no | mDNS service discovery via mdns-sd 0.11 | | <code>tls-rustls</code> | no | TLS via rustls 0.23 (alternative to native-tls) |</p>
+<h2>Build and Test</h2>
+<pre><code class="lang-bash"># Build
+cargo build
+
+# Run tests
+cargo test
+
+# Build Docker image (Python agent)
+docker build -t ghcr.io/hanzoai/cloud-agent:latest .</code></pre>
+<h2>Environment Variables (Python Agent)</h2>
+<pre><code class="lang-bash">TUNNEL_URL=wss://app.hanzo.bot/v1/tunnel # Cloud relay endpoint
+INSTANCE_ID=hostname-pid # Auto-generated if not set
+APP_KIND=dev # dev, cloud, node, bot
+WORKSPACE_DIR=/workspace # Working directory
+S3_ENDPOINT_URL=https://s3.hanzo.ai # S3 endpoint
+S3_ACCESS_KEY= # Required for session commands
+S3_SECRET_KEY= # Required for session commands
+S3_BUCKET=hanzo-sessions # Checkpoint bucket</code></pre>
+<h2>Error Types (Rust)</h2>
+<pre><code class="lang-rust">pub enum TunnelError {
+ Connection(String), // WebSocket or network errors
+ Protocol(String), // JSON serialization/deserialization
+ Auth(String), // Authentication failures
+ Discovery(String), // mDNS errors
+ ChannelClosed, // Internal mpsc channel dropped
+ Timeout, // Operation timeout
+}</code></pre>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | &quot;claude CLI not found&quot; | Claude Code not installed | <code>npm i -g @anthropic-ai/claude-code</code> | | S3 commands fail | Missing credentials | Set <code>S3_ACCESS_KEY</code> and <code>S3_SECRET_KEY</code> | | WebSocket connect timeout | Relay unreachable | Check <code>TUNNEL_URL</code>, verify network | | Gateway auth error | Invalid token | Check <code>auth_token</code> or device password | | Session restore git fail | Repo already exists | Clone skipped if <code>.git/</code> exists | | Terminal resize no-op | Piped stdin/stdout, not true PTY | Resize only updates env vars; real PTY needs portable-pty |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-bot.md</code> - Bot gateway and NodeRegistry</li><li><code>hanzo/hanzo-agent.md</code> - Multi-agent SDK</li><li><code>hanzo/hanzo-dev.md</code> - Dev CLI tool</li><li><code>hanzo/hanzo-operative.md</code> - Computer use agent</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: tunnel, websocket, remote-control, agent, session-migration, ngrok <strong>Prerequisites</strong>: Rust/Python, WebSocket basics, S3 (optional)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-tunnel.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

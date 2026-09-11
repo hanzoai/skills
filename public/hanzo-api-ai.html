@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-api-ai</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-api-ai.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-api-ai">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-api-ai.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-api-ai</h1><p class="lede">Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai&#x27;s surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks…</p><h1>Hanzo AI</h1>
+<p><strong>Scope</strong>: Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai&#x27;s surface) —… <strong>Surface</strong>: 302 operations on <code>/v1/ai</code>, <code>/v1/audio</code>, <code>/v1/chat</code>, <code>/v1/completions</code>, <code>/v1/dev-bridge</code>, <code>/v1/docs</code>, <code>/v1/documents</code>, <code>/v1/embeddings</code> and 17 more <strong>Lines</strong>: ~511 <strong>Last Updated</strong>: 2026-08-20 <strong>Source</strong>: https://api.hanzo.ai/v1/openapi.json (<code>x-app: ai</code>) — generated, do not hand-edit</p>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when:</p>
+<ul><li>Calling a model — chat, messages, embeddings, images, audio, video, rerank</li><li>You want one credential and one base URL across every provider</li><li>Porting code written against the OpenAI or Anthropic SDK: point base_url here</li><li>Choosing a model: /v1/models carries context window, modalities and price</li><li>Calling <code>/v1/ai</code> (208 operations)</li><li>Calling <code>/v1/router</code> (30 operations)</li><li>Calling <code>/v1/org</code> (10 operations)</li><li>Calling <code>/v1/finetune</code> (9 operations)</li><li>Calling <code>/v1/memory</code> (7 operations)</li><li>Calling <code>/v1/audio</code> (5 operations)</li><li>Calling any of this product&#x27;s 19 smaller families (see Surface below)</li></ul>
+<h2>Authentication</h2>
+<p>Every operation takes a Hanzo IAM bearer token. <code>hanzo auth token</code> prints the active short-lived access token for the identity you are signed in as; the org is carried in the token&#x27;s claim, never in a path or a query parameter.</p>
+<pre><code class="lang-bash">TOKEN=$(hanzo auth token)
+curl -sS https://api.hanzo.ai/v1/... -H &quot;Authorization: Bearer $TOKEN&quot;</code></pre>
+<p>The document declares one scheme, <code>bearer</code>, at the top level: <code>Authorization: Bearer &lt;token&gt;</code>. <code>X-Authorization</code> and HTTP Basic carrying the token as the password are accepted spellings of the same header; a browser presents the session cookie instead. There is no product-specific key scheme.</p>
+<h2>Surface</h2>
+<p>| Family | Operations | Addresses under it | |---|---|---| | <code>/v1/ai</code> | 208 | <code>account</code>, <code>activities</code>, <code>answer</code>, <code>articles</code>, <code>assets</code>, <code>chats</code>, <code>connections</code>, <code>dashboards</code>, +30 | | <code>/v1/audio</code> | 5 | <code>foley</code>, <code>music</code>, <code>speech</code>, <code>transcriptions</code>, <code>voice</code> | | <code>/v1/chat</code> | 3 | <code>completions</code>, <code>public</code> | | <code>/v1/completions</code> | 1 | the family root | | <code>/v1/dev-bridge</code> | 1 | the family root | | <code>/v1/docs</code> | 1 | <code>ingest</code> | | <code>/v1/documents</code> | 2 | the family root | | <code>/v1/embeddings</code> | 1 | the family root | | <code>/v1/feedback</code> | 1 | the family root | | <code>/v1/finetune</code> | 9 | <code>cancel</code>, <code>deploy</code>, <code>hf</code>, <code>job</code>, <code>jobs</code>, <code>presets</code> | | <code>/v1/images</code> | 1 | <code>generations</code> | | <code>/v1/install-patch</code> | 1 | the family root | | <code>/v1/memory</code> | 7 | <code>delete</code>, <code>facts</code>, <code>list</code>, <code>recall</code>, <code>remember</code>, <code>search</code>, <code>update</code> | | <code>/v1/messages</code> | 2 | <code>count_tokens</code> | | <code>/v1/models</code> | 4 | <code>providers</code> | | <code>/v1/org</code> | 10 | <code>settings</code> | | <code>/v1/query</code> | 1 | the family root | | <code>/v1/query_multiple</code> | 1 | the family root | | <code>/v1/rag</code> | 5 | <code>context</code>, <code>delete</code>, <code>embed</code>, <code>query</code>, <code>query-multiple</code> | | <code>/v1/rerank</code> | 1 | the family root | | <code>/v1/responses</code> | 1 | the family root | | <code>/v1/router</code> | 30 | <code>artifact-meta</code>, <code>data</code>, <code>defaults</code>, <code>history</code>, <code>judge-panel</code>, <code>ledger</code>, <code>policy</code>, <code>rewards</code>, +1 | | <code>/v1/traffic</code> | 1 | <code>globe</code> | | <code>/v1/videos</code> | 3 | <code>generations</code> | | <code>/v1/wecom-bot</code> | 2 | <code>callback</code> |</p>
+<h2>Operations</h2>
+<p>302 operations — listed by address. Read any one&#x27;s prose from the document:</p>
+<pre><code class="lang-bash">curl -sS https://api.hanzo.ai/v1/openapi.json \
+  | jq &#x27;.paths | to_entries[] | select(.value[].&quot;x-app&quot; == &quot;ai&quot;) | {path: .key, ops: (.value | map_values(.summary))}&#x27;</code></pre>
+<h3><code>/v1/ai</code></h3>
+<ul><li><code>GET /v1/ai/account</code></li><li><code>GET /v1/ai/activities</code></li><li><code>GET /v1/ai/answer</code></li><li><code>GET /v1/ai/articles</code></li><li><code>POST /v1/ai/articles</code></li><li><code>GET /v1/ai/articles/global</code></li><li><code>DELETE /v1/ai/articles/{owner}/{name}</code></li><li><code>GET /v1/ai/articles/{owner}/{name}</code></li><li><code>PATCH /v1/ai/articles/{owner}/{name}</code></li><li><code>PUT /v1/ai/articles/{owner}/{name}</code></li><li><code>GET /v1/ai/assets</code></li><li><code>POST /v1/ai/assets</code></li><li><code>POST /v1/ai/assets/scan</code></li><li><code>DELETE /v1/ai/assets/{owner}/{name}</code></li><li><code>GET /v1/ai/assets/{owner}/{name}</code></li><li><code>PATCH /v1/ai/assets/{owner}/{name}</code></li><li><code>PUT /v1/ai/assets/{owner}/{name}</code></li><li><code>POST /v1/ai/assets/{owner}/{name}/scan</code></li><li><code>GET /v1/ai/chats</code></li><li><code>POST /v1/ai/chats</code></li><li><code>GET /v1/ai/chats/global</code></li><li><code>DELETE /v1/ai/chats/{owner}/{name}</code></li><li><code>GET /v1/ai/chats/{owner}/{name}</code></li><li><code>PATCH /v1/ai/chats/{owner}/{name}</code></li><li><code>PUT /v1/ai/chats/{owner}/{name}</code></li><li><code>GET /v1/ai/connections</code></li><li><code>POST /v1/ai/connections</code></li><li><code>DELETE /v1/ai/connections/{provider}</code></li><li><code>POST /v1/ai/connections/{provider}</code></li><li><code>GET /v1/ai/connections/{provider}/authorize</code></li><li><code>GET /v1/ai/connections/{provider}/callback</code></li><li><code>GET /v1/ai/connections/{provider}/usage</code></li><li><code>GET /v1/ai/dashboards/agents</code></li><li><code>GET /v1/ai/dashboards/vm</code></li><li><code>GET /v1/ai/deployments</code></li><li><code>POST /v1/ai/deployments</code></li><li><code>DELETE /v1/ai/deployments/{owner}/{name}</code></li><li><code>GET /v1/ai/deployments/{owner}/{name}</code></li><li><code>PATCH /v1/ai/deployments/{owner}/{name}</code></li><li><code>PUT /v1/ai/deployments/{owner}/{name}</code></li><li><code>POST /v1/ai/deployments/{owner}/{name}/deploy</code></li><li><code>POST /v1/ai/deployments/{owner}/{name}/undeploy</code></li><li><code>GET /v1/ai/files</code></li><li><code>POST /v1/ai/files</code></li><li><code>POST /v1/ai/files/activate</code></li><li><code>GET /v1/ai/files/active</code></li><li><code>GET /v1/ai/files/global</code></li><li><code>POST /v1/ai/files/upload</code></li><li><code>DELETE /v1/ai/files/{owner}/{name}</code></li><li><code>GET /v1/ai/files/{owner}/{name}</code></li><li><code>PATCH /v1/ai/files/{owner}/{name}</code></li><li><code>PUT /v1/ai/files/{owner}/{name}</code></li><li><code>POST /v1/ai/files/{owner}/{name}/vectors</code></li><li><code>GET /v1/ai/forms</code></li><li><code>POST /v1/ai/forms</code></li><li><code>GET /v1/ai/forms/data</code></li><li><code>GET /v1/ai/forms/global</code></li><li><code>DELETE /v1/ai/forms/{owner}/{name}</code></li><li><code>GET /v1/ai/forms/{owner}/{name}</code></li><li><code>PATCH /v1/ai/forms/{owner}/{name}</code></li><li><code>PUT /v1/ai/forms/{owner}/{name}</code></li><li><code>GET /v1/ai/graphs</code></li><li><code>POST /v1/ai/graphs</code></li><li><code>GET /v1/ai/graphs/global</code></li><li><code>DELETE /v1/ai/graphs/{owner}/{name}</code></li><li><code>GET /v1/ai/graphs/{owner}/{name}</code></li><li><code>PATCH /v1/ai/graphs/{owner}/{name}</code></li><li><code>PUT /v1/ai/graphs/{owner}/{name}</code></li><li><code>GET /v1/ai/k8s-status</code></li><li><code>GET /v1/ai/mcp/tools</code></li><li><code>GET /v1/ai/messages</code></li><li><code>POST /v1/ai/messages</code></li><li><code>GET /v1/ai/messages/global</code></li><li><code>DELETE /v1/ai/messages/welcome</code></li><li><code>DELETE /v1/ai/messages/{owner}/{name}</code></li><li><code>GET /v1/ai/messages/{owner}/{name}</code></li><li><code>PATCH /v1/ai/messages/{owner}/{name}</code></li><li><code>PUT /v1/ai/messages/{owner}/{name}</code></li><li><code>GET /v1/ai/messages/{owner}/{name}/answer</code></li><li><code>GET /v1/ai/nodes</code></li><li><code>POST /v1/ai/nodes</code></li><li><code>DELETE /v1/ai/nodes/{owner}/{name}</code></li><li><code>GET /v1/ai/nodes/{owner}/{name}</code></li><li><code>PATCH /v1/ai/nodes/{owner}/{name}</code></li><li><code>PUT /v1/ai/nodes/{owner}/{name}</code></li><li><code>GET /v1/ai/nodes/{owner}/{name}/tunnel</code></li><li><code>POST /v1/ai/nodes/{owner}/{name}/tunnel</code></li><li><code>PATCH /v1/ai/preferences</code></li><li><code>PUT /v1/ai/preferences</code></li><li><code>GET /v1/ai/prometheus</code></li><li><code>GET /v1/ai/providers</code></li><li><code>POST /v1/ai/providers</code></li><li><code>GET /v1/ai/providers/global</code></li><li><code>POST /v1/ai/providers/mcp-tools</code></li><li><code>DELETE /v1/ai/providers/{owner}/{name}</code></li><li><code>GET /v1/ai/providers/{owner}/{name}</code></li><li><code>PATCH /v1/ai/providers/{owner}/{name}</code></li><li><code>PUT /v1/ai/providers/{owner}/{name}</code></li><li><code>GET /v1/ai/records</code></li><li><code>POST /v1/ai/records</code></li><li><code>POST /v1/ai/records/batch</code></li><li><code>POST /v1/ai/records/commit</code></li><li><code>POST /v1/ai/records/commit-second</code></li><li><code>GET /v1/ai/records/query</code></li><li><code>GET /v1/ai/records/query-second</code></li><li><code>DELETE /v1/ai/records/{owner}/{name}</code></li><li><code>GET /v1/ai/records/{owner}/{name}</code></li><li><code>PATCH /v1/ai/records/{owner}/{name}</code></li><li><code>PUT /v1/ai/records/{owner}/{name}</code></li><li><code>GET /v1/ai/remote-connections</code></li><li><code>POST /v1/ai/remote-connections</code></li><li><code>DELETE /v1/ai/remote-connections/{owner}/{name}</code></li><li><code>GET /v1/ai/remote-connections/{owner}/{name}</code></li><li><code>PATCH /v1/ai/remote-connections/{owner}/{name}</code></li><li><code>PUT /v1/ai/remote-connections/{owner}/{name}</code></li><li><code>POST /v1/ai/remote-connections/{owner}/{name}/start</code></li><li><code>POST /v1/ai/remote-connections/{owner}/{name}/stop</code></li><li><code>GET /v1/ai/routes</code></li><li><code>POST /v1/ai/routes</code></li><li><code>DELETE /v1/ai/routes/{owner}/{name}</code></li><li><code>GET /v1/ai/routes/{owner}/{name}</code></li><li><code>PATCH /v1/ai/routes/{owner}/{name}</code></li><li><code>PUT /v1/ai/routes/{owner}/{name}</code></li><li><code>GET /v1/ai/scales</code></li><li><code>POST /v1/ai/scales</code></li><li><code>GET /v1/ai/scales/global</code></li><li><code>GET /v1/ai/scales/public</code></li><li><code>DELETE /v1/ai/scales/{owner}/{name}</code></li><li><code>GET /v1/ai/scales/{owner}/{name}</code></li><li><code>PATCH /v1/ai/scales/{owner}/{name}</code></li><li><code>PUT /v1/ai/scales/{owner}/{name}</code></li><li><code>GET /v1/ai/scans</code></li><li><code>POST /v1/ai/scans</code></li><li><code>DELETE /v1/ai/scans/{owner}/{name}</code></li><li><code>GET /v1/ai/scans/{owner}/{name}</code></li><li><code>PATCH /v1/ai/scans/{owner}/{name}</code></li><li><code>PUT /v1/ai/scans/{owner}/{name}</code></li><li><code>POST /v1/ai/signin</code></li><li><code>GET /v1/ai/signin-sessions</code></li><li><code>POST /v1/ai/signin-sessions</code></li><li><code>GET /v1/ai/signin-sessions/duplicated</code></li><li><code>DELETE /v1/ai/signin-sessions/{owner}/{name}</code></li><li><code>GET /v1/ai/signin-sessions/{owner}/{name}</code></li><li><code>PATCH /v1/ai/signin-sessions/{owner}/{name}</code></li><li><code>PUT /v1/ai/signin-sessions/{owner}/{name}</code></li><li><code>POST /v1/ai/signout</code></li><li><code>GET /v1/ai/stores</code></li><li><code>POST /v1/ai/stores</code></li><li><code>GET /v1/ai/stores/global</code></li><li><code>GET /v1/ai/stores/names</code></li><li><code>GET /v1/ai/stores/providers</code></li><li><code>DELETE /v1/ai/stores/{owner}/{name}</code></li><li><code>GET /v1/ai/stores/{owner}/{name}</code></li><li><code>PATCH /v1/ai/stores/{owner}/{name}</code></li><li><code>PUT /v1/ai/stores/{owner}/{name}</code></li><li><code>POST /v1/ai/stores/{owner}/{name}/vectors</code></li><li><code>GET /v1/ai/system</code></li><li><code>GET /v1/ai/tasks</code></li><li><code>POST /v1/ai/tasks</code></li><li><code>GET /v1/ai/tasks/global</code></li><li><code>DELETE /v1/ai/tasks/{owner}/{name}</code></li><li><code>GET /v1/ai/tasks/{owner}/{name}</code></li><li><code>PATCH /v1/ai/tasks/{owner}/{name}</code></li><li><code>PUT /v1/ai/tasks/{owner}/{name}</code></li><li><code>POST /v1/ai/tasks/{owner}/{name}/analyze</code></li><li><code>POST /v1/ai/tasks/{owner}/{name}/document</code></li><li><code>GET /v1/ai/templates</code></li><li><code>POST /v1/ai/templates</code></li><li><code>DELETE /v1/ai/templates/{owner}/{name}</code></li><li><code>GET /v1/ai/templates/{owner}/{name}</code></li><li><code>PATCH /v1/ai/templates/{owner}/{name}</code></li><li><code>PUT /v1/ai/templates/{owner}/{name}</code></li><li><code>GET /v1/ai/training-contribution</code></li><li><code>PATCH /v1/ai/training-contribution</code></li><li><code>PUT /v1/ai/training-contribution</code></li><li><code>POST /v1/ai/tree-files</code></li><li><code>DELETE /v1/ai/tree-files/{owner}/{name}</code></li><li><code>PATCH /v1/ai/tree-files/{owner}/{name}</code></li><li><code>PUT /v1/ai/tree-files/{owner}/{name}</code></li><li><code>GET /v1/ai/usages</code></li><li><code>GET /v1/ai/usages/by-user</code></li><li><code>GET /v1/ai/usages/cloud</code></li><li><code>GET /v1/ai/usages/range</code></li><li><code>GET /v1/ai/usages/user-names</code></li><li><code>GET /v1/ai/vectors</code></li><li><code>POST /v1/ai/vectors</code></li><li><code>DELETE /v1/ai/vectors/all</code></li><li><code>GET /v1/ai/vectors/global</code></li><li><code>DELETE /v1/ai/vectors/{owner}/{name}</code></li><li><code>GET /v1/ai/vectors/{owner}/{name}</code></li><li><code>PATCH /v1/ai/vectors/{owner}/{name}</code></li><li><code>PUT /v1/ai/vectors/{owner}/{name}</code></li><li><code>GET /v1/ai/version</code></li><li><code>GET /v1/ai/videos</code></li><li><code>POST /v1/ai/videos</code></li><li><code>GET /v1/ai/videos/global</code></li><li><code>POST /v1/ai/videos/upload</code></li><li><code>DELETE /v1/ai/videos/{owner}/{name}</code></li><li><code>GET /v1/ai/videos/{owner}/{name}</code></li><li><code>PATCH /v1/ai/videos/{owner}/{name}</code></li><li><code>PUT /v1/ai/videos/{owner}/{name}</code></li><li><code>GET /v1/ai/workflows</code></li><li><code>POST /v1/ai/workflows</code></li><li><code>GET /v1/ai/workflows/global</code></li><li><code>DELETE /v1/ai/workflows/{owner}/{name}</code></li><li><code>GET /v1/ai/workflows/{owner}/{name}</code></li><li><code>PATCH /v1/ai/workflows/{owner}/{name}</code></li><li><code>PUT /v1/ai/workflows/{owner}/{name}</code></li></ul>
+<h3><code>/v1/audio</code></h3>
+<ul><li><code>POST /v1/audio/foley</code></li><li><code>POST /v1/audio/music</code></li><li><code>POST /v1/audio/speech</code></li><li><code>POST /v1/audio/transcriptions</code></li><li><code>POST /v1/audio/voice</code></li></ul>
+<h3><code>/v1/chat</code></h3>
+<ul><li><code>POST /v1/chat</code></li><li><code>POST /v1/chat/completions</code></li><li><code>POST /v1/chat/public</code></li></ul>
+<h3><code>/v1/completions</code></h3>
+<ul><li><code>POST /v1/completions</code></li></ul>
+<h3><code>/v1/dev-bridge</code></h3>
+<ul><li><code>GET /v1/dev-bridge</code></li></ul>
+<h3><code>/v1/docs</code></h3>
+<ul><li><code>POST /v1/docs/ingest</code></li></ul>
+<h3><code>/v1/documents</code></h3>
+<ul><li><code>DELETE /v1/documents</code></li><li><code>GET /v1/documents/{file_id}/context</code></li></ul>
+<h3><code>/v1/embeddings</code></h3>
+<ul><li><code>POST /v1/embeddings</code></li></ul>
+<h3><code>/v1/feedback</code></h3>
+<ul><li><code>POST /v1/feedback</code></li></ul>
+<h3><code>/v1/finetune</code></h3>
+<ul><li><code>POST /v1/finetune/cancel</code></li><li><code>POST /v1/finetune/deploy</code></li><li><code>GET /v1/finetune/hf/datasets</code></li><li><code>GET /v1/finetune/hf/models</code></li><li><code>GET /v1/finetune/hf/repo</code></li><li><code>GET /v1/finetune/job</code></li><li><code>GET /v1/finetune/jobs</code></li><li><code>POST /v1/finetune/jobs</code></li><li><code>GET /v1/finetune/presets</code></li></ul>
+<h3><code>/v1/images</code></h3>
+<ul><li><code>POST /v1/images/generations</code></li></ul>
+<h3><code>/v1/install-patch</code></h3>
+<ul><li><code>POST /v1/install-patch</code></li></ul>
+<h3><code>/v1/memory</code></h3>
+<ul><li><code>POST /v1/memory/delete</code></li><li><code>GET /v1/memory/facts</code></li><li><code>GET /v1/memory/list</code></li><li><code>GET /v1/memory/recall</code></li><li><code>POST /v1/memory/remember</code></li><li><code>GET /v1/memory/search</code></li><li><code>POST /v1/memory/update</code></li></ul>
+<h3><code>/v1/messages</code></h3>
+<ul><li><code>POST /v1/messages</code></li><li><code>POST /v1/messages/count_tokens</code></li></ul>
+<h3><code>/v1/models</code></h3>
+<ul><li><code>GET /v1/models</code></li><li><code>GET /v1/models/providers</code></li><li><code>GET /v1/models/{model}/access</code></li><li><code>POST /v1/models/{model}/access</code></li></ul>
+<h3><code>/v1/org</code></h3>
+<ul><li><code>DELETE /v1/org/settings</code></li><li><code>GET /v1/org/settings</code></li><li><code>PATCH /v1/org/settings</code></li><li><code>POST /v1/org/settings</code></li><li><code>PUT /v1/org/settings</code></li><li><code>DELETE /v1/org/settings/list</code></li><li><code>GET /v1/org/settings/list</code></li><li><code>PATCH /v1/org/settings/list</code></li><li><code>POST /v1/org/settings/list</code></li><li><code>PUT /v1/org/settings/list</code></li></ul>
+<h3><code>/v1/query</code></h3>
+<ul><li><code>POST /v1/query</code></li></ul>
+<h3><code>/v1/query_multiple</code></h3>
+<ul><li><code>POST /v1/query_multiple</code></li></ul>
+<h3><code>/v1/rag</code></h3>
+<ul><li><code>GET /v1/rag/context</code></li><li><code>POST /v1/rag/delete</code></li><li><code>POST /v1/rag/embed</code></li><li><code>POST /v1/rag/query</code></li><li><code>POST /v1/rag/query-multiple</code></li></ul>
+<h3><code>/v1/rerank</code></h3>
+<ul><li><code>POST /v1/rerank</code></li></ul>
+<h3><code>/v1/responses</code></h3>
+<ul><li><code>POST /v1/responses</code></li></ul>
+<h3><code>/v1/router</code></h3>
+<ul><li><code>DELETE /v1/router/artifact-meta</code></li><li><code>GET /v1/router/artifact-meta</code></li><li><code>PATCH /v1/router/artifact-meta</code></li><li><code>POST /v1/router/artifact-meta</code></li><li><code>PUT /v1/router/artifact-meta</code></li><li><code>DELETE /v1/router/data</code></li><li><code>GET /v1/router/data</code></li><li><code>DELETE /v1/router/defaults</code></li><li><code>GET /v1/router/defaults</code></li><li><code>PATCH /v1/router/defaults</code></li><li><code>POST /v1/router/defaults</code></li><li><code>PUT /v1/router/defaults</code></li><li><code>GET /v1/router/history</code></li><li><code>GET /v1/router/judge-panel</code></li><li><code>DELETE /v1/router/ledger</code></li><li><code>GET /v1/router/ledger</code></li><li><code>PATCH /v1/router/ledger</code></li><li><code>POST /v1/router/ledger</code></li><li><code>PUT /v1/router/ledger</code></li><li><code>DELETE /v1/router/policy</code></li><li><code>GET /v1/router/policy</code></li><li><code>PATCH /v1/router/policy</code></li><li><code>POST /v1/router/policy</code></li><li><code>PUT /v1/router/policy</code></li><li><code>DELETE /v1/router/rewards</code></li><li><code>GET /v1/router/rewards</code></li><li><code>PATCH /v1/router/rewards</code></li><li><code>POST /v1/router/rewards</code></li><li><code>PUT /v1/router/rewards</code></li><li><code>GET /v1/router/stats</code></li></ul>
+<h3><code>/v1/traffic</code></h3>
+<ul><li><code>GET /v1/traffic/globe</code></li></ul>
+<h3><code>/v1/videos</code></h3>
+<ul><li><code>POST /v1/videos/generations</code></li><li><code>GET /v1/videos/{id}</code></li><li><code>GET /v1/videos/{id}/content</code></li></ul>
+<h3><code>/v1/wecom-bot</code></h3>
+<ul><li><code>GET /v1/wecom-bot/callback/{botId}</code></li><li><code>POST /v1/wecom-bot/callback/{botId}</code></li></ul>
+<h2>Example Calls</h2>
+<pre><code class="lang-bash">TOKEN=$(hanzo auth token)</code></pre>
+<p><strong>Returns the list of available models from the routing table.</strong></p>
+<pre><code class="lang-bash">curl -sS &quot;https://api.hanzo.ai/v1/models&quot;</code></pre>
+<p><strong>Implements the OpenAI-compatible chat completions API</strong></p>
+<pre><code class="lang-bash">curl -sS -X POST &quot;https://api.hanzo.ai/v1/chat/completions&quot;</code></pre>
+<p><strong>Implements the Anthropic Messages API.</strong></p>
+<pre><code class="lang-bash">curl -sS -X POST &quot;https://api.hanzo.ai/v1/messages&quot;</code></pre>
+<h2>Answers</h2>
+<p>Documented status codes across this product: <code>200</code> (1).</p>
+<p>18 of these operations are marked public in the document — they are reachable without a bearer token. The rest are not.</p>
+<h2>Composition</h2>
+<ul><li><code>pricing</code> prices a model before you call it; <code>usage</code> and <code>billing</code> report what the call cost</li><li><code>router</code> paths inside this product pick a model per request; <code>plan</code> decides which are allowed</li><li><code>sandbox</code> runs code the model writes; <code>tool</code> lists what the model may call</li><li><code>o11y</code> receives the traces — a model call is the span most worth keeping</li></ul>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo-api/eval.md</code> — Scoring a model on your own data, with a judge you choose.</li><li><code>hanzo-api/benchmark.md</code> — One honest score for any model, on the tests everyone quotes.</li><li><code>hanzo-api/research.md</code> — Every experiment you have ever run, kept and comparable.</li><li><code>hanzo-api/experiment.md</code> — A/B testing anything: a flag, an ad, a subject line, a model.</li><li><code>hanzo-cloud-architecture/SKILL.md</code> — how one binary serves all of this</li><li><code>hanzo-api/INDEX.md</code> — every Hanzo product, by domain</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-08-20 <strong>Generated from</strong>: https://api.hanzo.ai/v1/openapi.json</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-api-ai.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

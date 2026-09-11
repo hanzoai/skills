@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,12 +196,12 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0129</h1><p class="lede">HIP-129: Eval — The Judgment Plane. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0129: Eval — The Judgment Plane</h1>
+<h1>hip-0129</h1><p class="lede">HIP-129: Eval — A Score Over Model Output. Status Final. Hanzo architectural specification.</p><h1>HIP-0129: Eval — A Score Over Model Output</h1>
 <h2>Abstract</h2>
 <p><code>hanzoai/eval</code> is the third plane of the Hanzo AI surface and its own subsystem repo. Three planes, orthogonal:</p>
 <p>| Plane | Question | Direction | Owns | |-------|----------|-----------|------| | <strong>o11y</strong> | what happened | passive, derived from events | spans, logs, metrics — <strong>read only</strong> | | <strong>ai</strong>   | do the thing  | inference | models, completions, embeddings | | <strong>eval</strong> | was it good   | judgment | dataset, judge, rubric, experiment, run, score, queue |</p>
 <p>eval <strong>consumes</strong> o11y and <strong>calls</strong> ai. Neither depends on eval, and neither may ever. That single-direction edge is the whole justification: judgment is a different concern from observation and from inference, so it is a different plane, with its own repo, its own store, its own routes, and its own name. Repo hygiene is not the argument — an acyclic dependency graph is.</p>
-<p>The plane exists today, dissolved into two others. <code>cloud/clients/eval</code> serves <code>/v1/evals/<em></code>; o11y serves a <strong>write</strong> endpoint, <code>POST /api/annotation</code>, inside a read plane; <code>cloud/clients/o11y</code> serves a </em>second*, unrelated annotation-queue entity at <code>/v1/o11y/annotation-queues</code> on its own SQLite file. One resource, three owners, so none of them kept it in sight of the others — which is why the console calls <code>/v1/o11y/annotation-queues</code> against a server that also registers <code>/api/annotation</code>, and neither side is wrong. This HIP does not patch that mismatch. It moves the resource to the plane that owns it, after which the mismatch is not expressible.</p>
+<p>The plane exists today as a cloud subsystem, not yet as its own repo: <code>apps/eval</code> in <code>hanzoai/cloud</code> serves <code>/v1/eval/<em></code> (the manifest row is <code>manifest/apps.go:408</code>, the group <code>apps/eval/eval.go:207</code>); o11y serves a <strong>write</strong> endpoint, <code>POST /v1/o11y/llm/annotation</code> (<code>pkg/apiserver/o11yapiserver/llmobs.go</code>), inside a read plane; <code>apps/o11y</code> serves a </em>second*, unrelated annotation-queue entity at <code>/v1/o11y/reviews</code> on its own SQLite file (<code>annotation_store.go</code>, pool <code>o11y_annotations</code>). One resource, three owners, so none of them kept it in sight of the others — which is why the console&#x27;s queue module and the span plane&#x27;s annotation write name the same idea at two addresses, and neither side is wrong. This HIP does not patch that mismatch. It moves the resource to the plane that owns it, after which the mismatch is not expressible.</p>
 <h2>Motivation</h2>
 <p>A score is not an observation. An observation is a fact the system emitted about itself; a score is a <em>verdict</em> a judge — a model or a human — pronounced about that fact. Storing verdicts in the observation plane forces that plane to accept writes, and a plane that accepts writes is no longer derivable from events. That is how o11y grew a <code>POST</code>, a mutable <code>llm_scores</code> table with a <code>DELETE</code>, and a free-text <code>queue</code> column naming a queue entity that lives in a different repo.</p>
 <p>Judgment also costs money — a judge run is inference — so the plane that issues verdicts must be the plane that is billed, on the one payer path, or the cost lands under the wrong owner. And judgment must be observable <em>by the plane it observes</em>: an eval run that emits no spans is a black box asking to be trusted.</p>
@@ -204,7 +213,7 @@ footer a{color:var(--soft)}
 <ul><li>Anything eval takes from o11y or ai is a <strong>read</strong>. eval MUST NOT write to a table</li></ul>
 <p>  another plane owns — in particular <code>hanzo.cloud_usage</code>, which is ai&#x27;s metering   warehouse (HIP-0106) and never a second observation store.</p>
 <ul><li>Anything that only <em>aggregates</em> what already happened is observability, not</li></ul>
-<p>  judgment, and MUST NOT live on this plane. <code>GET /v1/evals/metrics</code> — which reads   <code>hanzo.cloud_usage</code> and the o11y span index and writes nothing — is an o11y board   mis-homed on eval; it moves to o11y and does not reappear under <code>/v1/eval</code>.</p>
+<p>  judgment, and MUST NOT live on this plane. <code>GET /v1/eval/metrics</code> — which reads   <code>hanzo.cloud_usage</code> and the o11y span index and writes nothing — is an o11y board   mis-homed on eval; it moves to o11y and does not reappear under <code>/v1/eval</code>.   It is still served today (<code>apps/eval/metrics.go</code>, in the published subset),   so the move is owed, not done.</p>
 <ul><li>eval is the only plane that stores verdicts. There is exactly one score store.</li></ul>
 <h3>§2 What eval owns</h3>
 <p>| Resource | It is | Store | |----------|-------|-------| | <strong>dataset</strong> | a named set of inputs, with items | metastore | | <strong>item</strong> (of a dataset) | one input, identified within its dataset | metastore | | <strong>judge</strong> | a named evaluation method — <code>kind: model</code> (LLM-as-judge) or <code>kind: code</code> | metastore | | <strong>rubric</strong> | the definition a verdict is produced against and validated against: numeric with bounds, categorical with a label set, or boolean | metastore | | <strong>experiment</strong> | a named comparison that groups runs | metastore | | <strong>run</strong> | one execution of a judge over a dataset, with its per-item results | metastore (rollup) + OLAP (items) | | <strong>score</strong> | one verdict — value, rubric, source (<code>model</code> \| <code>code</code> \| <code>human</code>), optional comment | OLAP, append-only | | <strong>queue</strong> | a queue of items awaiting <strong>human</strong> judgment, with items and assignment | metastore |</p>
@@ -215,20 +224,21 @@ footer a{color:var(--soft)}
 <p>  verdict, which is what a rubric is, and it is one word rather than two.</p>
 <p>One deletion. <strong>There is no <code>annotation</code> resource.</strong> What <code>POST /api/annotation</code> wrote was a verdict with an author and no rubric — a score, missing its definition. A human&#x27;s output on this plane is a <strong>score with <code>source: human</code></strong>, validated against the same rubric a model judge is validated against. The queue is what routes work to the human; the score is what the human produces. Deleting the noun is what makes the three-way seam unrepresentable rather than merely fixed.</p>
 <h3>§3 Route surface — one prefix, <code>/v1/eval</code>, singular throughout</h3>
+<p>What is served today is the <strong>plural</strong> surface, and any reader of the table below should know the distance: <code>/v1/eval/{datasets, datasets/{name}, datasets/{name}/items, evaluators, rubrics, runs, scores, traces, metrics}</code> — nine paths, in <code>plugin/eval/openapi.json</code>, with the resource still named <code>evaluators</code> rather than <code>judge</code> and no queue routes at all. The table below is the target grammar this HIP proposes; until the migration lands, the capability&#x27;s name and address are <code>eval</code> (<code>manifest/apps.go:408</code>).</p>
 <p>Every eval endpoint MUST live under <code>/v1/eval</code> and MUST follow the resource-name grammar (HIP-0119 §2): the resource is named <strong>once</strong>, in the singular, and the HTTP method carries collection-versus-item. <code>POST /v1/eval/dataset</code> creates one; <code>GET /v1/eval/dataset</code> lists them; <code>GET /v1/eval/dataset/{name}</code> reads one.</p>
 <p>Nesting rule: a child is nested <strong>only when its identifier is scoped by its parent</strong> (a dataset item&#x27;s id means nothing without its dataset). A resource with its own id, unique within the org, is flat and filtered by query parameter. Compound segments (<code>dataset-items</code>, <code>score-configs</code>, <code>annotation-queues</code>) are the shape this rule replaces, and MUST NOT appear.</p>
 <p>| Method | Path | Notes | |--------|------|-------| | POST · GET | <code>/v1/eval/dataset</code> | create · list | | GET · DELETE | <code>/v1/eval/dataset/{name}</code> | read (with item count) · delete (with its items, one tx) | | POST · GET | <code>/v1/eval/dataset/{name}/item</code> | create · list | | GET · PATCH · DELETE | <code>/v1/eval/dataset/{name}/item/{id}</code> | an item MUST NOT change dataset | | POST · GET | <code>/v1/eval/judge</code> | create · list | | GET · PATCH | <code>/v1/eval/judge/{name}</code> | | | POST · GET | <code>/v1/eval/rubric</code> | create · list | | GET · PATCH | <code>/v1/eval/rubric/{name}</code> | | | POST · GET | <code>/v1/eval/experiment</code> | create · list | | GET | <code>/v1/eval/experiment/{id}</code> | | | POST · GET | <code>/v1/eval/run</code> | start a run · list, <code>?experiment=</code> <code>?dataset=</code> | | GET | <code>/v1/eval/run/{id}</code> | rollup | | GET | <code>/v1/eval/run/{id}/item</code> | per-item results | | POST · GET | <code>/v1/eval/score</code> | record a verdict · list, <code>?run=</code> <code>?item=</code> <code>?trace=</code> | | GET | <code>/v1/eval/score/{id}</code> | | | POST · GET | <code>/v1/eval/queue</code> | create · list | | GET · PATCH · DELETE | <code>/v1/eval/queue/{id}</code> | | | POST · GET | <code>/v1/eval/queue/{id}/item</code> | enqueue · list | | GET · PATCH | <code>/v1/eval/queue/{id}/item/{itemId}</code> | | | PUT · DELETE | <code>/v1/eval/queue/{id}/item/{itemId}/assignment</code> | claim · release | | GET | <code>/v1/eval/health</code> | eval&#x27;s own probe, §5 |</p>
-<p>A score MUST NOT be updated or deleted. A verdict is the record of a judgment that was made; a retraction is a <strong>new score</strong>, not an edit of the old one. The OLAP engine enforces this by construction, and no route may work around it — which is precisely why <code>DELETE /api/score/{id}</code> does not survive the move.</p>
+<p>A score MUST NOT be updated or deleted. A verdict is the record of a judgment that was made; a retraction is a <strong>new score</strong>, not an edit of the old one. The OLAP engine enforces this by construction, and no route may work around it — which is precisely why <code>DELETE /v1/o11y/llm/score/{id}</code> does not survive the move.</p>
 <p>Static sub-routes MUST be registered before their <code>{param}</code> siblings, so a real dataset name can never shadow a collection route.</p>
 <h3>§4 Annotation moves off o11y</h3>
 <p>The following are <strong>removed</strong>, not aliased:</p>
-<ul><li>o11y: <code>GET /api/annotation</code>, <code>POST /api/annotation</code></li></ul>
+<ul><li>o11y: <code>GET</code>/<code>POST /v1/o11y/llm/annotation</code></li></ul>
 <p>  (<code>pkg/apiserver/o11yapiserver/llmobs.go</code>) and the <code>llm_annotations</code> table.</p>
-<ul><li>o11y: <code>GET</code>/<code>POST /api/scores</code>, <code>GET</code>/<code>DELETE /api/score/{id}</code> and <code>llm_scores</code>.</li></ul>
-<p>  Score is a verdict; verdicts live on one plane, and it is not the read plane.</p>
-<ul><li>cloud: <code>cloud/clients/o11y/annotation_queues.go</code>, its eight</li></ul>
-<p>  <code>/v1/o11y/annotation-queues*</code> routes and its <code>o11y_annotations.db</code> metastore.</p>
-<p>o11y keeps exactly what it is: the passive span, log and metric views (<code>/v1/o11y/observations</code>, <code>/traces</code>, <code>/sessions</code>, <code>/users</code>), which read and never write. A <code>POST</code> in a read plane is the defect; deleting it is the fix. Because the queue and the verdict now have one owner under one prefix, the console&#x27;s <code>/v1/o11y/annotation-queues</code> call against a server registering <code>/api/annotation</code> cannot be written at all — there is no second spelling left to disagree with. A correct boundary does not need two sides kept in sync; it makes the disagreement unrepresentable.</p>
+<ul><li>o11y: <code>GET</code>/<code>POST /v1/o11y/llm/scores</code>, <code>GET</code>/<code>DELETE /v1/o11y/llm/score/{id}</code></li></ul>
+<p>  and <code>llm_scores</code>.   Score is a verdict; verdicts live on one plane, and it is not the read plane.</p>
+<ul><li>cloud: <code>apps/o11y/annotation_queues.go</code>, its eight</li></ul>
+<p>  <code>/v1/o11y/reviews*</code> routes and its <code>o11y_annotations</code> metastore   (<code>apps/o11y/annotation_store.go</code>).</p>
+<p>o11y keeps exactly what it is: the passive span, log and metric views (<code>/v1/o11y/observations</code>, <code>/traces</code>, <code>/sessions</code>, <code>/users</code>), which read and never write. A <code>POST</code> in a read plane is the defect; deleting it is the fix. Because the queue and the verdict now have one owner under one prefix, the console&#x27;s <code>/v1/o11y/reviews</code> call against a server registering <code>/v1/o11y/llm/annotation</code> cannot be written at all — there is no second spelling left to disagree with. A correct boundary does not need two sides kept in sync; it makes the disagreement unrepresentable.</p>
 <h3>§5 The subsystem contract</h3>
 <p>eval is a Hanzo service (HIP-0119) and a cloud subsystem (HIP-0106). It MUST be:</p>
 <p><strong>ZAP-native.</strong> Routes are registered on <code>*zip.App</code> (HIP-0122); transport is HTTP + ZAP (HIP-0114/0120). No gRPC — not on the wire, not in the module graph. No <code>/api/</code> prefix anywhere, per HIP-0119 §2/§9.</p>
@@ -248,18 +258,20 @@ if err := bill.Gate(c.Context(), principal.HomeOrg(c), project, projectValidated
 // … do the work …
 bill.Meter(principal.HomeOrg(c), project, kind, fee, c.RequestID(), cloud.ClientIP(c))</code></pre>
 <p><code>bill</code> is the <code>*cloud.ResourceMeter</code> that <code>cloud.NewBase(deps, &quot;eval&quot;)</code> supplies, with provider <code>eval</code>. A run MUST be gated <strong>before</strong> the first judge call and MUST NOT write a score when the gate denies.</p>
+<p>What is priced today: the surface itself is <strong>free</strong> — the plugin declares <code>Price: cloud.Free</code> (<code>plugin/eval/main.go:21</code>) and <code>ResourceFeeCents(&quot;EVAL&quot;, …)</code> is unset, so every eval resource costs nothing in those words. The only money on this plane is the judge&#x27;s inference, metered by ai on the caller&#x27;s identity as above. The capability publishes <strong>no events</strong> on the bus, so a customer&#x27;s webhooks receive nothing from it. Its stage is <strong>ga</strong> (HIP-0139 §8): the manifest row declares no stage. It forks, embeds or mirrors <strong>no OSS upstream</strong> — its OLAP tables ride the shared datastore client another capability owns (<code>apps/eval/telemetry.go</code>), which is that capability&#x27;s upstream to declare, not this one&#x27;s.</p>
 <p><strong>Observable by the plane it observes.</strong> eval MUST emit spans from the <strong>global</strong> tracer provider (<code>otel.Tracer(&quot;hanzo-eval&quot;)</code>), parented from <code>c.Context()</code> — cloud installs the one provider before mounting subsystems and calls <code>aiobject.AdoptHostTracerProvider()</code> so ai&#x27;s <code>gen_ai</code> spans share it. eval MUST NOT construct a provider or an exporter of its own.</p>
+<p>Today <code>apps/eval</code> constructs no tracer and emits no span of its own (there is no otel import in the package), so what a customer can read back under <code>/v1/o11y</code> from this capability is the request span every route already gets and nothing more. The mandate below is the unimplemented half of this section.</p>
 <p>Run, item and judge spans MUST carry <code>gen_ai.hanzo.org_id</code> set to the caller&#x27;s org — o11y&#x27;s llmobs views hard-filter on it, and a span without it is invisible. eval adds <code>eval.run.id</code>, <code>eval.dataset</code>, <code>eval.item.id</code>, <code>eval.judge</code>, <code>eval.rubric</code>, <code>eval.score.name</code>, <code>eval.score.value</code>, <code>eval.score.source</code>. Cost attributes (<code>_o11y.gen_ai.*</code>) belong to ai and MUST NOT be re-emitted by eval — one cost vocabulary, emitted by the plane that knows the price.</p>
 <h3>§6 Storage</h3>
 <p>Two stores, one seam each.</p>
-<p><strong>Metastore</strong> — encrypted SQLite (<code>cek</code>) under <code>DataDir</code>, opened through <code>cloud.OrgDB</code> / <code>cloud.NewOrgStore</code> with <code>cloud.WithDurable</code> so it survives a rolling deploy on the HA plane (HIP-0107). It holds dataset, item, judge, rubric, experiment, run rollup, queue, queue item and assignment. Natural keys are unique <strong>within an org</strong> (<code>(org, name)</code>), never globally.</p>
+<p><strong>Metastore</strong> — encrypted SQLite (<code>cek</code>) under <code>DataDir</code>, opened through <code>cloud.OrgDB</code> / <code>cloud.NewOrgStore</code> with <code>cloud.WithDurable</code> so it survives a rolling deploy on the HA plane (HIP-0107). It holds dataset, item, judge, rubric, experiment, run rollup, queue, queue item and assignment. Natural keys are unique <strong>within an org</strong> (<code>(org, name)</code>), never globally. Today&#x27;s implementation is one shared file with a NOT NULL <code>org</code> column as the trust boundary (<code>apps/eval/store.go</code>), not a file per org — the per-org-file question is named in Open questions and this paragraph is its target state.</p>
 <p><strong>OLAP</strong> — scores and per-item run results, over the <strong>shared</strong> datastore client (<code>aiobject.DatastoreEnabled</code>, <code>DatastoreExec</code>, <code>DatastoreQuery</code>). eval MUST NOT open its own datastore connection: the pool, the retries, and the KMS-injected credentials live in exactly one place. Tables are append-only, partitioned by month, ordered by org first; every predicate is a bound parameter, never interpolated; and every list route is bounded by a server-side limit.</p>
 <p>SQL identifiers are not URL paths. The grammar of §3 governs the route surface; the existing table names (<code>hanzo.eval_traces</code>, <code>hanzo.eval_scores</code>) are data at rest and are NOT renamed by this HIP — renaming them buys nothing and costs a migration.</p>
 <h3>§7 Bounds instead of a queue</h3>
 <p>eval bounds work rather than queueing it: a per-org concurrent-run cap that returns <code>429</code> immediately (runs are never queued — the only queue on this plane is the human one), a wall-clock run deadline, a per-run item cap, and content and comment size caps. Fail fast and say so; a silent backlog is a worse answer than a refusal.</p>
 <h3>§8 Judge</h3>
 <p>A judge is <code>kind: model</code> or <code>kind: code</code>.</p>
-<p>A <strong>model</strong> judge MUST validate its verdict against the named rubric before the score is recorded, and MUST fail the item when the reply cannot be parsed against that rubric. It MUST NOT default an unparseable verdict to a value — a fabricated zero is worse than a recorded failure. Untrusted content (the item, the model&#x27;s output) MUST be delimiter-fenced and never concatenated into the instruction. <code>ai/object/eval_judge.go</code> (<code>JudgeRubric</code>, <code>RunJudge</code>, <code>parseVerdict</code>) is the implementation of record; eval MUST NOT ship a second, weaker judge parser beside it, which is what <code>cloud/clients/eval/runner.go</code> is today.</p>
+<p>A <strong>model</strong> judge MUST validate its verdict against the named rubric before the score is recorded, and MUST fail the item when the reply cannot be parsed against that rubric. It MUST NOT default an unparseable verdict to a value — a fabricated zero is worse than a recorded failure. Untrusted content (the item, the model&#x27;s output) MUST be delimiter-fenced and never concatenated into the instruction. <code>ai/object/eval_judge.go</code> (<code>JudgeRubric</code>, <code>RunJudge</code>, <code>parseVerdict</code>) is the implementation of record; eval MUST NOT ship a second, weaker judge parser beside it, which is what <code>apps/eval/runner.go</code> is today.</p>
 <p>A <strong>code</strong> judge is a deterministic function of <code>(input, output, expected)</code> returning a value admissible under its rubric. Where it executes is an open question.</p>
 <h3>§9 Degraded, honestly</h3>
 <p>With no OLAP store configured, eval MUST serve dataset, item, judge, rubric, experiment and queue from the metastore, MUST return <code>503</code> from the score and run routes, and MUST report the degradation on <code>/v1/eval/health</code>. It MUST NOT fabricate an empty result that reads as a real one.</p>
@@ -276,11 +288,11 @@ bill.Meter(principal.HomeOrg(c), project, kind, fee, c.RequestID(), cloud.Client
 <h2>Migration</h2>
 <p>One release; the old spellings are removed, not aliased — two ways to say one thing is the defect this HIP exists to remove.</p>
 <ol><li>Stand up <code>hanzoai/eval</code> with <code>Mount</code>/<code>Shutdown</code> over <code>eval.Deps</code> (no <code>cloud</code></li></ol>
-<p>   import), porting <code>cloud/clients/eval</code> and its ~40 tests, which are the real    specification of the current behavior.</p>
+<p>   import), porting <code>apps/eval</code> and its ~40 tests, which are the real    specification of the current behavior.</p>
 <ol><li>Add the adapter and the one <code>apps.Wire()</code> line <strong>with <code>Shutdown</code> wired</strong>; delete</li></ol>
-<p>   <code>cloud/clients/eval</code>.</p>
+<p>   <code>apps/eval</code>.</p>
 <ol><li>Move the annotation queue to <code>/v1/eval/queue</code>; delete</li></ol>
-<p>   <code>cloud/clients/o11y/annotation_queues.go</code>, <code>o11y_annotations.db</code>, o11y&#x27;s    <code>/api/annotation</code> and <code>/api/score*</code> routes, <code>llm_annotations</code> and <code>llm_scores</code>.</p>
+<p>   <code>apps/o11y/annotation_queues.go</code>, the <code>o11y_annotations</code> store, o11y&#x27;s    <code>/v1/o11y/llm/annotation</code> and <code>/v1/o11y/llm/score*</code> routes, <code>llm_annotations</code>    and <code>llm_scores</code>.</p>
 <ol><li>Move the metrics board to o11y; <code>/v1/eval/metrics</code> is never created.</li><li>Repoint the console: <code>evals/<em></code> → <code>eval/</em></code> in its API modules, its proxy allow</li></ol>
 <p>   list, and the tests that pin the literal paths.</p>
 <ol><li>Resolve <code>clients/admin</code>&#x27;s direct read of <code>hanzo.eval_traces</code> and</li></ol>
@@ -331,8 +343,12 @@ bill.Meter(principal.HomeOrg(c), project, kind, fee, c.RequestID(), cloud.Client
 <p>  (<code>ValidatedProject</code>) or stays advisory on eval reads.</p>
 <ul><li><strong>What eval charges for.</strong> <code>ResourceFeeCents(&quot;EVAL&quot;, …)</code> is unset, so everything</li></ul>
 <p>  but the judge&#x27;s inference is free today. Whether a run, a stored dataset or a queue   seat is billable — and whether eval gets its own spend-cap service axis or inherits   ai&#x27;s — is a pricing decision, not an engineering one.</p>
+<h2>Security Considerations</h2>
+<p>What an attacker gets from the wrong implementation: a score store that can be edited is the ability to rewrite verdicts after the fact — an agent judged dangerous re-judged safe with no record — which is why a score is append-only and a retraction is a new row (§3). A judge that concatenates untrusted item content into its instruction is a prompt-injection path from evaluated data into the evaluator (§8). A tenancy defect here discloses another org&#x27;s datasets and verdicts and, worse, lets one org&#x27;s runs bill another&#x27;s wallet — the acceptance tests (1), (2) and (4) are the checks that hold those three closed.</p>
 <h2>References</h2>
-<ul><li>HIP-0031 Observability &amp; Metrics · HIP-0106 Unified Cloud Binary · HIP-0111 IAM</li><li>HIP-0114 ZAP Transport · HIP-0119 Service Conventions · HIP-0120 gRPC Elimination</li><li>HIP-0122 zip — ZAP-Native Application Server · HIP-0105/0116 Extension Runtime</li></ul>
+<ul><li>HIP-0106 Unified Cloud Binary · HIP-0111 IAM</li><li>HIP-0114 ZAP Transport · HIP-0119 Service Conventions · HIP-0120 gRPC Elimination</li><li>HIP-0122 zip — ZAP-Native Application Server · HIP-0132 One Telemetry Plane</li><li>HIP-0105/0116 Extension Runtime</li><li>HIP-0139 Capability</li></ul>
+<h2>Copyright</h2>
+<p>Released under CC0 1.0 Universal Public Domain Dedication.</p>
 <footer>
 <div class="fmap">
   <div><b>Build</b>
@@ -352,5 +368,4 @@ bill.Meter(principal.HomeOrg(c), project, kind, fee, c.RequestID(), cloud.Client
 </div>
 <div class="fend"><a href="/hip-0129.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

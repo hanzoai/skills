@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,11 +196,11 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0136</h1><p class="lede">HIP-136: One Secret, One Path. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0136: One Secret, One Path</h1>
+<h1>hip-0136</h1><p class="lede">HIP-136: One Secret, One Path. Status Final. Hanzo architectural specification.</p><h1>HIP-0136: One Secret, One Path</h1>
 <h2>Abstract</h2>
 <p>A secret&#x27;s location is <strong>derivable</strong>, never remembered. Given the app that reads it and the environment variable it becomes, there is exactly one path it can be at, one Kubernetes Secret it lands in, and one key inside that Secret. Nobody looks it up, because there is nothing to look up.</p>
-<p>    hanzo/iam/IAM_SERVICE_TOKEN@prod</p>
-<p>Read that as: the <code>hanzo</code> org&#x27;s <code>iam</code> app reads <code>IAM_SERVICE_TOKEN</code>, in <code>prod</code>. Every part is a fact you already had before you went looking.</p>
+<p>    hanzo/gateway/IAM_CLIENT_SECRET@prod</p>
+<p>Read that as: the <code>hanzo</code> org&#x27;s <code>gateway</code> app reads <code>IAM_CLIENT_SECRET</code>, in <code>prod</code>. Every part is a fact you already had before you went looking.</p>
 <h2>Motivation</h2>
 <p>This is written from an outage. <code>index-chat</code> sat in CrashLoopBackOff for 18 hours — 221 restarts — exiting with <em>&quot;You must provide a master key&quot;</em> and printing a freshly generated key into its own log each time. The key was never missing. It was in KMS the whole time. Nobody could find it, because one concept had four names across two namespaces:</p>
 <p>    env var      INDEX_MASTER_KEY     k8s secrets  search-secrets/SEARCH_MASTER_KEY                  chat-index-key/INDEX_MASTER_KEY                  index-chat-env/INDEX_MASTER_KEY                  index-chat-env-mnemonic     KMS          /platform/index-chat, read at envSlug <code>default</code>                  every other service reads <code>prod</code></p>
@@ -201,9 +210,9 @@ footer a{color:var(--soft)}
 <p>Five shapes is not a convention with exceptions. It is the absence of one.</p>
 <h2>There is ONE KMS: <code>api.hanzo.ai/v1/kms</code></h2>
 <p>It answers <code>path</code> / <code>env</code> / <code>name</code>, resolving to <code>/orgs/&lt;org&gt;/&lt;path&gt;/&lt;NAME&gt;</code>, and it is the only store any service reads.</p>
-<p>There is currently a SECOND DEPLOYMENT of it — <code>localhost:8200</code> / <code>kms.hanzo.ai</code>, which every chart&#x27;s <code>kmsSecrets</code> still points at through the KMSSecret CRD&#x27;s <code>hostAPI</code>. That is not a second architecture and must never be written up as one. It is the same <code>luxfi/kms</code> binary serving the same <code>/v1/kms/secrets</code> routes under the same JWT boundary — its own source says of the two endpoints, <em>&quot;gates on the same thing requireOrgJWT ultimately does: whether the caller&#x27;s own org authorizes this deployment&#x27;s home org. Two endpoints, one boundary.&quot;</em> One program, deployed twice, with its data split across the two.</p>
+<p>There is currently a SECOND DEPLOYMENT of it — <code>localhost:8200</code> / <code>kms.hanzo.ai</code>, which every chart&#x27;s <code>kmsSecrets</code> still points at through the KMSSecret CRD&#x27;s <code>hostAPI</code>. That is not a second architecture and must never be written up as one. It is the same <code>luxfi/kms</code> binary serving the same <code>/v1/kms/secrets</code> routes under the same JWT boundary — its own source says of the two endpoints, <em>&quot;gates on the same thing requireOrgJWT ultimately does: whether the caller&#x27;s own org authorizes this deployment&#x27;s home org. Two doors, one boundary.&quot;</em> One program, deployed twice, with its data split across the two.</p>
 <p>The split is what makes secrets unfindable, and it is a migration item, not a design. A name present in one deployment is absent from the other, so a query against the wrong one returns <code>total: 0</code> — indistinguishable from a secret that never existed, and exactly how a migration deletes a live credential. See the Migration section: the standalone&#x27;s contents move into <code>api.hanzo.ai/v1/kms</code>, every <code>hostAPI</code> repoints there, and the standalone is scaled to zero.</p>
-<p><strong>White-labelling is a frontend concern, not a second store.</strong> <code>kms.lux.cloud</code> resolves to this same API with Lux branding, as <code>kms.hanzo.ai</code> does with Hanzo&#x27;s; the org boundary already separates the data. A brand does not earn a deployment. An operator that needs its own MPC root — a Lux committee signing in <code>lux-k8s</code> rather than <code>the cluster</code> — configures that under one API too; the REK&#x27;s location is deployment configuration, not a fork of the service.</p>
+<p><strong>White-labelling is a frontend concern, not a second store.</strong> <code>kms.lux.cloud</code> resolves to this same API with Lux branding, as <code>kms.hanzo.ai</code> does with Hanzo&#x27;s; the org boundary already separates the data. A brand does not earn a deployment. An operator that needs its own MPC root — a Lux committee signing in <code>lux-k8s</code> rather than <code>hanzo-k8s</code> — configures that under one API too; the REK&#x27;s location is deployment configuration, not a fork of the service.</p>
 <h2>Specification</h2>
 <h3>1. The path</h3>
 <p>A secret is addressed by four coordinates and nothing else:</p>
@@ -249,7 +258,8 @@ footer a{color:var(--soft)}
 <p>What is <strong>not</strong> superseded is HIP-0027&#x27;s <em>reason</em> for wanting it. That isolation goal remains unmet — see Security Considerations. Closing it is a change of identity topology, not of naming, and belongs in its own proposal.</p>
 <h2>Migration</h2>
 <p>Four of eleven declarations already conform. Seven move:</p>
-<p>| app | today | becomes | |---|---|---| | <code>admin-guard</code> | <code>/admin-guard-secrets</code> | <code>/admin-guard</code> | | <code>chat</code> | <code>/chat-guest-key</code> | <code>/chat</code> | | <code>cloud</code> | <code>/cloud-sign</code> | <code>/cloud</code> | | <code>cloud</code> | <code>/integrations/cloudflare</code> (env <code>default</code>) | <code>/cloud</code> (env <code>prod</code>) | | <code>iam</code> | <code>/iam-service-token</code> | <code>/iam</code> | | <code>team</code> | <code>/team-go-secret</code> | <code>/team</code> |</p>
+<p>| app | today | becomes | |---|---|---| | <code>admin-guard</code> | <code>/admin-guard-secrets</code> | <code>/admin-guard</code> | | <code>chat</code> | <code>/chat-guest-key</code> | <code>/chat</code> | | <code>cloud</code> | <code>/cloud-sign</code> | <code>/cloud</code> | | <code>cloud</code> | <code>/integrations/cloudflare</code> (env <code>default</code>) | <code>/cloud</code> (env <code>prod</code>) | | <code>iam</code> | <code>/iam-service-token</code> | <code>/iam</code> |</p>
+<p>The <code>iam</code> row is the one worth reading twice. Its old path named a <strong>service token</strong> — a bearer minted outside IAM and shared between callers, which is the pattern IAM exists to replace. Those tokens have since been deleted across cloud and commerce; a caller presents an IAM identity now (<code>client_credentials</code>, RFC 8707 <code>resource</code>-scoped, JWKS-verified — HIP-0111). So the move is not only a rename: the entry that moves is a client secret, and the shared token it replaced should not come back under a conforming path. | <code>team</code> | <code>/team-go-secret</code> | <code>/team</code> |</p>
 <p>Already conforming: <code>aml</code>, <code>bot-browser</code>, <code>pkg</code>, <code>studio</code>.</p>
 <p><strong><code>base</code> is deliberately NOT in that table, and must not be added to it.</strong> It sets <code>projectSlug: hanzo-base</code> with its own <code>credentialsSecret</code>, so its <code>/</code> is the root of its OWN project, reached by its OWN machine identity — not a shared path carelessly left at the root of everyone else&#x27;s. It holds <code>EMBEDDED_IAM_ROOT_PASSWORD</code> and the IAM signing keys, and no other app in the fleet can read them.</p>
 <p>That is HIP-0027&#x27;s project-per-service isolation, actually implemented, and it is STRONGER than what this HIP describes. Folding it into <code>hanzo/base/*</code> would move the most sensitive material in the estate into the shared project where every app in the namespace could read it. An app with its own project keeps it. The rule below is how a service in the SHARED project is addressed; <code>&lt;org&gt;</code> names the project a secret lives in, and a service that has earned its own is the direction of travel, not a deviation from it.</p>
@@ -295,5 +305,4 @@ footer a{color:var(--soft)}
 </div>
 <div class="fend"><a href="/hip-0136.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

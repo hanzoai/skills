@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,46 +196,83 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hanzo-cloud-architecture</h1><p class="lede">The canonical Hanzo Cloud architecture — one repo, host + per-app plugin binaries on zip, ZAP-only transport, router-projected OpenAPI, the receipt release train. Read this before touching any hanzoai service.</p><h1>Hanzo Cloud Architecture — Host + Plugins, ZAP-Native, Router-Projected</h1>
-<p><strong>Category</strong>: Hanzo Ecosystem <strong>Canonical spec</strong>: HIP-0106 (one binary), HIP-0114 (ZAP transport), HIP-0116 (plugin/VM model), HIP-0117 (cloud-in-a-box), HIP-0004 (AI gateway) — <code>github.com/hanzoai/hips</code> <strong>Live truth</strong>: <code>~/work/hanzo/cloud/LLM.md</code> — 5,800 lines, actively corrected in place. It OUTRANKS this skill wherever they disagree; this skill is the orientation, that file is the record.</p>
+<h1>hanzo-cloud-architecture</h1><p class="lede">The canonical Hanzo Cloud architecture — one Go binary on zip, ZAP-only transport, plugin registry, embedded console, three deployment modes. Read this before touching any hanzoai service.</p><h1>Hanzo Cloud Architecture — One Binary, ZAP-Native, Plugin-Composed</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Canonical spec</strong>: HIP-0106 (one binary), HIP-0114 (ZAP transport), HIP-0116 (plugin/VM model), HIP-0117 (cloud-in-a-box), HIP-0004 (AI gateway) — <code>github.com/hanzoai/hips</code> <strong>Related Skills</strong>: <code>hanzo/hanzo-cloud.md</code>, <code>hanzo/hanzo-zap.md</code>, <code>hanzo/hanzo-gateway.md</code>, <code>hanzo/hanzo-o11y.md</code>, luxfi/skills <code>lux-zap-substrate</code></p>
 <h2>When to Use This Skill</h2>
-<ul><li>Working anywhere in the cloud repo or any app it composes (iam, kms, ai, commerce, o11y, git, platform, …)</li><li>Adding a subsystem, choosing a transport or storage backend, or shipping a release</li><li>Reading any older doc that mentions <code>clients/*</code>, a 76:1 plugin ratio, gRPC, or multi-pod services — all superseded</li></ul>
+<ul><li>Working anywhere in <code>hanzoai/cloud</code> or any service it embeds (IAM, KMS, o11y, tasks, notify, pubsub, kafka, console, ai, ...)</li><li>Adding a new Hanzo service or subsystem</li><li>Choosing a transport, RPC layer, or storage backend for Hanzo code</li><li>Deploying Hanzo Cloud (laptop, k3s bootstrap, or BYO Kubernetes)</li><li>Reading any older doc that mentions multi-pod services or gRPC — this skill is the current truth</li></ul>
 <h2>The Architecture in One Paragraph</h2>
-<p><code>cloud</code> is ONE Go module that builds a LIGHT HOST (<code>cmd/cloud</code>, links zip + the manifest and none of the apps) plus ONE BINARY PER APP (<code>plugin/&lt;app&gt;/main.go</code>, ~144 apps under <code>apps/&lt;name&gt;/</code>). <code>manifest/apps.go</code> is the hand-authored routing table — every app, its <code>/v1/&lt;segment&gt;</code> prefixes, in routing order; ai is the <code>/v1</code> REMAINDER, last, answering what no earlier app claimed. Transport is ZAP and nothing else (HIP-0114): zero gRPC, zero protobuf in Hanzo code (<code>zap2pb</code> at the OTel edge is the one exception). The same artifact serves api.hanzo.ai and every white-label surface; brand and enabled apps are deployment configuration.</p>
-<h2>Repo topology (as of 2026-08-18 — verify against LLM.md &quot;Provenance&quot;)</h2>
-<ul><li><strong>Product line + version register</strong>: <code>git.hanzo.ai/hanzo-inc/cloud</code> (Gitea, the</li></ul>
-<p>  release train runs beside it; its v1.801.* tags are the receipts).</p>
-<ul><li><strong>Working mirror</strong>: <code>github.com/hanzo-inc/cloud</code> — the checkout at</li></ul>
-<p>  <code>~/work/hanzo/cloud</code> tracks this as <code>origin</code>. Ship = green gate locally, push   main to BOTH.</p>
-<ul><li><strong>Public OSS core</strong>: <code>github.com/hanzoai/cloud</code> — a re-rooted, dual-licensed</li></ul>
-<p>  (Apache-2.0 OR MIT) line sharing NO ancestor with the product.   <code>git.hanzo.ai/hanzoai/cloud</code> is its read-only pull mirror. The receipt car   publishes each release&#x27;s record there as a GitHub Release; the tag GitHub   mints for it sits on the OSS-core tip, a different line. <strong>NEVER   <code>git fetch --tags</code> from the hanzoai/cloud remotes</strong> — those tag names poison   <code>git describe</code>, internal/lineage and pin ordering.</p>
-<h2>Build &amp; test — the traps</h2>
-<ul><li><strong>NEVER <code>go build ./...</code></strong> — it links 100+ plugin binaries at ~4.5 GiB each.</li><li>MODULE mode only: <code>GOWORK=off</code>, never workspace mode.</li><li><code>make build</code> — the light host. <code>make plugin APP=&lt;x&gt;</code> — the one app you edit.</li></ul>
-<p>  <code>make ship</code> — host + every app. <code>make test</code> — the release gate (closure-check,   zipdoc-check, <code>go test ./...</code>, then the fleet drift gate, ~35 min).   <code>make test-fast</code> — everything but the drift gate; inner loop only.</p>
-<ul><li>Dependency bumps: <code>make bump M=&lt;mod&gt;@&lt;ver&gt;</code> — moving a dep and regenerating the</li></ul>
-<p>  documents it moves are ONE action; <code>make closure-check</code> (seconds) names stale   documents and prints the exact fix.</p>
-<h2>The OpenAPI document pipeline (openapi/, describe.go, mk/fleet.mk)</h2>
-<p>The spec is a PROJECTION OF THE LIVE ROUTER; <code>openapi.yaml</code> at the root is a golden of it. Four facts are declared beside the routes: bodies (<code>Register</code>), prose (<code>Describe</code>), audience (<code>Public</code> → x-public, default-deny), credential (<code>security.go</code>, default-REQUIRE, <code>Open()</code> per-op). Every operation must state what it does for the caller — a route with no prose FAILS the gate (the sentence lives on the handler&#x27;s Go doc comment, or <code>openapi.Describe</code> beside the mount for routes an embedded module registers). Each app&#x27;s committed subset (<code>plugin/&lt;app&gt;/openapi.json</code>) is produced by <code>&lt;binary&gt; describe &lt;dir&gt;</code> from that app&#x27;s own mount, and carries ONLY addresses the fleet delivers to that app — describe prunes any path whose <code>manifest.OwnerOf</code> (longest-prefix, the routing table&#x27;s own answer) names a sibling. The fleet document is the WEAVE of subsets; one address claimed by two apps is a red gate, never a picked winner.</p>
-<h2>The release train (.hanzo/workflows/cicd.yml + hanzo.yml)</h2>
-<p>One workflow, one <code>needs:</code> graph: gate → image → live → reach → fanout → receipt, on Hanzo runners against git.hanzo.ai. NO GitHub-hosted builders, no local image builds. A v* tag is a RECEIPT minted only after build + smoke pass — never a build trigger. The rollout car moves the universe pin (<code>universe/charts/app/values/hanzo/cloud.yaml</code>); cd reconciles it. It does not roll back — it blocks and resumes (workflow_dispatch at the same sha; every car is idempotent on (version, digest)). Ask production what it runs: <code>curl -s https://api.hanzo.ai/v1/health</code> → <code>{&quot;revision&quot;: …}</code>.</p>
-<h2>Core laws (unchanged)</h2>
-<ul><li>ZAP-only transport; zip (<code>github.com/hanzoai/zip</code>) is the one server framework.</li><li>SQLite-primary per tenant (hanzoai/sqlite); datastore (ClickHouse) for</li></ul>
-<p>  telemetry columns only. No postgres for local dev, no ZooKeeper/etcd/raft —   Quasar + zapdb is the substrate.</p>
-<ul><li>Apps fail closed: a subsystem without its required config refuses to mount.</li><li>Calling an app that is not deployed returns an ERROR, never a zero value</li></ul>
-<p>  (absent_test.go — the Register* seam list is guarded).</p>
-<ul><li>IAM is all auth (<code>hanzoai/iam</code> embedded); KMS for secrets; <code>/v1/</code> only.</li><li>Console SPA is a prebuilt input the Dockerfile pulls; fail-hard if missing.</li></ul>
-<h3>Key Guidelines</h3>
-<pre><code>✅ DO: read ~/work/hanzo/cloud/LLM.md before structural work — it is the record
-✅ DO: add an app under apps/&lt;name&gt;, declare it in manifest/apps.go, make generate
-✅ DO: write every route&#x27;s sentence where the handler lives; regenerate documents
-✅ DO: run `make test` before pushing — a red push blocks the train for everyone
+<p><code>hanzoai/cloud</code> is ONE Go binary that embeds every Hanzo-native subsystem — IAM, KMS, o11y, tasks, notify, pubsub, kafka, console, ai, and the rest — as packages behind a single plugin registry. The core is a <strong>977-LOC shim</strong> on <strong>zip</strong> (<code>github.com/hanzoai/zip</code>, the ZAP-native high-performance server, Fiber v3/fasthttp, HIP-0105); the subsystems are <strong>74,561 LOC of plugins</strong> under <code>clients/*</code> — a 76:1 plugin-to-core ratio. Transport is <strong>ZAP and nothing else</strong> (HIP-0114): zero gRPC, zero protobuf in Hanzo code. The same artifact powers <code>api.hanzo.ai</code> and every white-label resold cloud surface; brand, enabled subsystems, and tenant scope are deployment configuration.</p>
+<h2>Status: shipped vs decided</h2>
+<p>| Piece | Status | |-------|--------| | One binary (<code>hanzoai/cloud</code>, subsystems embedded) | <strong>SHIPPED</strong> | | ZAP-only transport, zero gRPC/protobuf in Hanzo code | <strong>SHIPPED</strong> | | zip as the one server framework | <strong>SHIPPED</strong> | | Console SPA <code>go:embed</code>&#x27;d (303.6 MiB one-binary, fail-hard Dockerfile) | <strong>SHIPPED</strong> | | console.hanzo.ai per-product metered usage + 402 balance-gating | <strong>SHIPPED</strong> | | <code>helm install</code> (charts at <code>cloud/helm/cloud</code>) | <strong>SHIPPED</strong> | | Plugin <strong>VM</strong> formalization (out-of-process VMs via lpm, HIP-0116) | <strong>DECIDED</strong> (HIP Draft, staged) | | <code>cloud cluster init</code> k3s bootstrap (HIP-0117 mode 2) | <strong>DECIDED</strong> (HIP Draft, staged) | | Visor per-tenant cross-provider autoscaling | <strong>DECIDED</strong> (staged) |</p>
+<h2>Core Concepts</h2>
+<h3>1. The plugin registry (<code>cloud.Register</code>)</h3>
+<p>Every subsystem registers into the cloud registry via <code>init()</code>:</p>
+<pre><code class="lang-go">// build.go — the whole extension API
+func Register(name string, order int, mount MountFunc)
+func RegisterWithShutdown(name string, order int, mount MountFunc, shutdown ShutdownFunc)</code></pre>
+<ul><li>Subsystems live in <code>clients/&lt;name&gt;/</code> (e.g. <code>clients/kmssvc</code>, <code>clients/o11y</code>,</li></ul>
+<p>  <code>clients/console</code>, <code>clients/tasksvc</code>, <code>clients/notify</code>, <code>clients/kafka</code>).</p>
+<ul><li>The subsystem set is defined ONCE in the <code>subsystems</code> bundle; <code>cmd/cloud</code></li></ul>
+<p>  and <code>cmd/hanzo</code> blank-import it. <code>cloud.Serve(nil)</code> honors <code>cfg.Enable</code>   from flags/env.</p>
+<ul><li><code>cmd/cloud</code> is the full-surface entrypoint; production deployments name</li></ul>
+<p>  their subsystem set explicitly. Embedded subsystems ship   <strong>disabled-by-default and fail closed</strong>: a subsystem without its required   config refuses to mount rather than degrading silently.</p>
+<h3>2. ZAP-only transport (HIP-0114)</h3>
+<ul><li>ZERO gRPC and ZERO protobuf anywhere in Hanzo code. The transport between</li></ul>
+<p>  subsystems, plugins, and services is ZAP — zero-copy, ZAP-typed Go   interfaces in-process, ZAP RPC over the wire when split.</p>
+<ul><li>The ONLY protobuf in the stack is <code>zap2pb</code> (<code>~/work/zap/zap2pb</code>, ~30 LOC)</li></ul>
+<p>  at the OTel interop edge (OTLP/OpAMP). <code>pb2zap</code> / <code>zap2pb</code> / <code>zapc</code> handle   the pb↔zap boundary; services hold only ZAP types.</p>
+<ul><li>zip serves ZAP as the primary listener with HTTP as an extra:</li></ul>
+<p>  <code>app.Listen(&quot;:9653&quot;, &quot;http://:8080&quot;)</code>.</p>
+<pre><code class="lang-go">// ❌ NEVER in Hanzo code
+import &quot;google.golang.org/grpc&quot;        // no gRPC
+import &quot;google.golang.org/protobuf&quot;    // no protobuf
 
-❌ DON&#x27;T: go build ./..., go work, build images locally, or add a second CI lane
-❌ DON&#x27;T: introduce gRPC/protobuf, a second RPC stack, or a second auth layer
-❌ DON&#x27;T: fetch tags from the public OSS repo, or read its tags as receipts
-❌ DON&#x27;T: publish an address the manifest routes to a sibling app</code></pre>
+// ✅ The one server framework, ZAP-typed handlers
+import &quot;github.com/hanzoai/zip&quot;</code></pre>
+<h3>3. Storage and consensus</h3>
+<ul><li><strong>SQLite-primary, per-tenant</strong> — the default store for every subsystem.</li></ul>
+<p>  PostgreSQL only for production multi-instance needs; never default to it   for local dev.</p>
+<ul><li><strong>datastore</strong> (ClickHouse) is the ONE non-Go exception — telemetry and</li></ul>
+<p>  analytics columns.</p>
+<ul><li><strong>Consensus/replication</strong> = Lux Quasar (<code>luxfi/consensus</code>) + <code>luxfi/zapdb</code>.</li></ul>
+<p>  NO ZooKeeper, NO raft libraries, NO etcd anywhere in the stack.</p>
+<h3>4. Plugin/VM model (HIP-0116 — decided, staged)</h3>
+<p>Every <code>hanzoai/&lt;repo&gt;</code> service builds BOTH ways from one codebase:</p>
+<ol><li><strong>Standalone binary</strong> — its own repo, its own release.</li><li><strong>Plugin VM</strong> for the cloud host — the <code>luxfi/node</code> VM-host model: an</li></ol>
+<p>   independently-built binary the host supervises and dials <strong>over ZAP</strong>.    Distributed and installed via <code>luxfi/lpm</code>.</p>
+<p>NOT build tags. NOT gRPC. NOT dlopen. A plugin VM is simply a subsystem that lives in another process; in-process and out-of-process resolve through the same ZAP-typed contract. Each VM tracks its own replication state on zapdb under Quasar.</p>
+<h3>5. Cloud-in-a-Box — one binary, three modes (HIP-0117)</h3>
+<p>| Mode | Command | Topology | |------|---------|----------| | 1 | <code>cloud serve</code> | Single process, NO Kubernetes. All subsystems in-process, per-tenant SQLite, datastore as subprocess or gracefully absent. Laptop/edge/single-node. | | 2 | <code>cloud cluster init</code> | Binary FETCHES k3s (does not embed it), bootstraps the cluster, installs the operator, hands reconciliation to <code>services.hanzo.ai</code> CRs. Bare metal → HA in one command. (staged) | | 3 | <code>helm install</code> | BYO Kubernetes: <code>cloud/helm/cloud</code> deploys the same image into an existing cluster. |</p>
+<h3>6. The edges: gateway, console, visor</h3>
+<ul><li><strong>gateway</strong> (HIP-0004, <code>api.hanzo.ai</code>) — the unified AI provider interface:</li></ul>
+<p>  one OpenAI-compatible surface over 100+ providers, BYO AI/keys.</p>
+<ul><li><strong>console</strong> (<code>console.hanzo.ai</code>) — the unified dashboard: per-product</li></ul>
+<p>  metered usage and 402 balance-gating. The console SPA is <code>go:embed</code>&#x27;d into   the cloud binary (real <code>hanzoai/console</code> static build; the Dockerfile   fails hard if the SPA is missing — no placeholder builds).</p>
+<ul><li><strong>visor</strong> — fleet autoscaler across any nodes and any cloud provider</li></ul>
+<p>  (BYO provider). 8 Kubernetes clusters operated today.</p>
+<h3>7. CI/CD</h3>
+<ul><li><strong>Gitea Actions on git.hanzo.ai is the native CI</strong> — GH-Actions-compatible,</li></ul>
+<p>  runs the same <code>.github/workflows</code> on Hanzo runners. GitHub is the OSS   mirror. No GitHub-hosted builders, ever.</p>
+<ul><li>Images: <code>ghcr.io/hanzoai/<em></code> for Hanzo, <code>ghcr.io/luxfi/</em></code> for Lux — never mix.</li><li>The operator reconciles <code>services.hanzo.ai</code> CRs; devs ship via CI/CD, not</li></ul>
+<p>  kubectl.</p>
+<h2>Quick Reference</h2>
+<p>| Item | Value | |------|-------| | Repo | <code>github.com/hanzoai/cloud</code> (<code>~/work/hanzo/cloud</code>) | | Core | 977-LOC shim on zip + <code>cloud.Register</code> registry | | Plugins | <code>clients/*</code> — 74,561 LOC, 76:1 plugin:core | | Server framework | <code>github.com/hanzoai/zip</code> (<code>~/work/zap/zip</code>) | | Transport | ZAP only (HIP-0114); ZAP port 9653 | | pb boundary | <code>zap2pb</code>/<code>pb2zap</code>/<code>zapc</code> at the OTel edge only | | Storage | SQLite per-tenant; datastore (ClickHouse) for telemetry | | Consensus | Lux Quasar + zapdb — no ZooKeeper/raft/etcd | | Entrypoints | <code>cmd/cloud</code> (full surface), <code>cmd/hanzo</code> (subcommand dispatcher) | | Helm chart | <code>cloud/helm/cloud</code> | | One-binary size | 303.6 MiB with embedded console SPA | | AI surface | gateway HIP-0004 at api.hanzo.ai | | Metering | console.hanzo.ai, 402 balance-gating |</p>
+<h3>Key Guidelines</h3>
+<pre><code>✅ DO: add functionality as a clients/* plugin registered via cloud.Register
+✅ DO: hold ZAP types end-to-end; convert to pb only at the OTel edge
+✅ DO: default to SQLite per-tenant; fail closed when config is missing
+✅ DO: build each service standalone AND as a subsystem (HIP-0116)
+
+❌ DON&#x27;T: introduce gRPC, protobuf, or a second RPC stack
+❌ DON&#x27;T: add a new standalone pod for something the binary already embeds
+❌ DON&#x27;T: reach for ZooKeeper/etcd/raft — Quasar + zapdb is the substrate
+❌ DON&#x27;T: build images locally — Gitea Actions CI on our runners only</code></pre>
+<h2>Anti-Patterns</h2>
+<p>❌ <strong>&quot;Let&#x27;s split this subsystem into its own microservice&quot;</strong> — the split already exists: it&#x27;s the same code as a plugin VM over ZAP (HIP-0116). Process topology is deployment configuration, not architecture.</p>
+<p>❌ <strong>&quot;Add a proto file for this internal API&quot;</strong> — Hanzo code holds ZAP types only. If you are writing <code>.proto</code>, you are at the OTel edge or you are wrong.</p>
+<p>❌ <strong>&quot;docker compose up postgres for local dev&quot;</strong> — <code>cloud serve</code> runs the whole cloud from one binary with SQLite. That IS local dev.</p>
 <h2>Related Skills</h2>
-<ul><li><code>skills/hanzo/hanzo-cloud.md</code> — the cloud binary operationally (config, URLs, deploy)</li><li><code>skills/hanzo/hanzo-zap.md</code> — ZAP protocol details and the MCP mapping</li><li><code>skills/hanzo/hanzo-gateway.md</code> — the HIP-0004 AI gateway at api.hanzo.ai</li><li>luxfi/skills <code>lux-zap-substrate</code> — the Lux substrate (Quasar + zapdb + zip + lpm)</li></ul>
+<ul><li><code>skills/hanzo/hanzo-cloud.md</code> — the cloud binary operationally (config, URLs, deploy)</li><li><code>skills/hanzo/hanzo-zap.md</code> — ZAP protocol details and the MCP mapping</li><li><code>skills/hanzo/hanzo-gateway.md</code> — the HIP-0004 AI gateway at api.hanzo.ai</li><li><code>skills/hanzo/hanzo-o11y.md</code> — observability, embedded o11y subsystem</li><li>luxfi/skills <code>lux-zap-substrate</code> — the Lux substrate (Quasar + zapdb + zip + lpm) Hanzo builds on</li></ul>
 <footer>
 <div class="fmap">
   <div><b>Build</b>
@@ -246,5 +292,4 @@ footer a{color:var(--soft)}
 </div>
 <div class="fend"><a href="/hanzo-cloud-architecture.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

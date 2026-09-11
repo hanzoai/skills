@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,12 +196,29 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0018</h1><p class="lede">HIP-18: Payment Processing Standard. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0018: Payment Processing Standard</h1>
+<h1>hip-0018</h1><p class="lede">HIP-18: Payment Processing Standard. Status Draft. Hanzo architectural specification.</p><h1>HIP-0018: Payment Processing Standard</h1>
 <h2>Abstract</h2>
 <p>This proposal defines the payment processing standard for the Hanzo ecosystem. Hanzo Commerce is the billing, subscription, and payment service that bridges the <strong>native Hanzo PSP (Hanzo Pay — the same payment engine white-labeled as <code>lux-pay</code> on Lux and per-brand elsewhere)</strong> with the internal credit system managed by Hanzo IAM (HIP-26). Card data is tokenized inside the Hanzo Vault PCI CDE; on-chain rails settle $AI directly. Every dollar a user pays is converted into credits. Every AI inference, API call, or compute job consumes credits. Commerce handles the money side; IAM holds the balance; the LLM Gateway (HIP-4) and Cloud services meter usage.</p>
 <blockquote><p><strong>No external-processor dependency.</strong> First-party Hanzo/Lux/Zoo/Zen surfaces process payments through the native PSP, never through a third-party processor that can deplatform us. Commerce keeps a <em>pluggable</em> provider-adapter interface so a brand MAY add a regional rail, but no first-party flow depends on one.</p></blockquote>
 <p>The system is designed around a single invariant: <strong>IAM is the source of truth for user balances</strong>. Commerce writes credits in; Cloud and Gateway write credits out. No service other than IAM may directly mutate a user&#x27;s balance. All mutations flow through IAM&#x27;s transaction API.</p>
-<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/commerce">github.com/hanzoai/commerce</a> <strong>Port</strong>: 4242 <strong>Docker</strong>: <code>ghcr.io/hanzoai/commerce:latest</code></p>
+<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/commerce">github.com/hanzoai/commerce</a> <strong>Port</strong>: 8090 (<code>COMMERCE_HTTP</code>) <strong>Docker</strong>: <code>ghcr.io/hanzoai/commerce:latest</code></p>
+<h2>Motivation</h2>
+<h3>The Problem</h3>
+<p>AI usage billing is fundamentally different from SaaS billing. A typical SaaS charges a flat monthly fee for feature access. AI platforms charge per token, per image, per minute of audio, per GPU-second of fine-tuning. The unit costs span four orders of magnitude -- a GPT-3.5 completion might cost $0.0002 while a GPT-4 Vision request with a large image costs $0.30. Presenting these raw costs to users is confusing and creates billing anxiety.</p>
+<p>Meanwhile, the Hanzo ecosystem has multiple services that incur costs:</p>
+<ol><li><strong>LLM Gateway</strong> (HIP-4): Chat completions, embeddings, image generation across 100+ providers</li><li><strong>Cloud</strong>: Hosted model inference, fine-tuning jobs, compute clusters</li><li><strong>MCP Tools</strong>: Computer use, browser automation, search -- each with different cost profiles</li><li><strong>Agent SDK</strong>: Multi-agent orchestration where a single user request may trigger dozens of LLM calls</li></ol>
+<p>Without a unified billing system, each service would need its own payment integration, balance tracking, and invoice generation. Users would face multiple bills, multiple balances, and no single view of their spend.</p>
+<h3>Why This Matters</h3>
+<ol><li><strong>User trust</strong>: Users must understand what they are paying for. Opaque per-token billing erodes trust. Credits provide a simple, predictable unit.</li><li><strong>Service isolation</strong>: LLM Gateway should not need payment-processor credentials. It should check a balance, do the work, and report usage. Payment processing is not its job.</li><li><strong>Fraud prevention</strong>: A single source of truth for balances prevents double-spending. If Cloud and Gateway each maintained independent balances, a race condition could allow a user to spend more than they have.</li><li><strong>Regulatory compliance</strong>: Financial transactions require audit trails, PCI compliance, and dispute resolution. Centralizing this in Commerce means one team handles compliance, not five.</li></ol>
+<h2>Design Philosophy</h2>
+<p>This section explains the <em>why</em> behind each major design decision. Payment systems are among the most consequential infrastructure choices a company makes. Mistakes are expensive -- literally.</p>
+<h3>Why Credits-Based Billing</h3>
+<p>AI usage is unpredictable. A user might send one message that triggers a 4-token response or one that triggers a 4,000-token response with tool calls, image generation, and web search. Showing users a per-request cost breakdown like &quot;$0.000847 for 423 input tokens at $0.002/1K + $0.000612 for 204 output tokens at $0.003/1K&quot; is hostile UX.</p>
+<p>Credits provide a simple mental model: you buy credits, you spend credits. 1 credit = $0.001 USD. A $20 top-up gives you 20,000 credits. A typical GPT-4 conversation costs 50-200 credits. Users can reason about their spending without understanding tokenization, provider pricing tiers, or markup calculations.</p>
+<p>Credits also decouple the billing unit from provider pricing. When OpenAI changes their per-token rates (which happens quarterly), we adjust the internal credit-to-token conversion without changing the user-facing credit price. The user&#x27;s mental model remains stable.</p>
+<p>The alternative -- real-time per-token billing in USD -- requires sub-cent transaction tracking, creates rounding errors that accumulate, and produces invoices with thousands of line items. Credits eliminate all three problems.</p>
+<h3>Why a Native PSP (Hanzo Pay)</h3>
+<p>Hanzo originally bridged an external processor. That dependency proved fatal: a third-party processor can <strong>deplatform an entire ecosystem at will</strong> — freezing funds, disabling checkout, and cutting off every brand that rides on it, with no recourse and no portability. This is not hypothetical; it is exactly what happened, and it is why this standard now mandates a <strong>native PSP</strong>. Payment sovereignty — owning the rail end-to-end — is a first-class requirement, not an optimization.</p>
 <p>The native PSP (<strong>Hanzo Pay</strong>, the same engine white-labeled as <code>lux-pay</code> / per-brand) provides:</p>
 <ul><li><strong>Sovereignty</strong>: No external party can disable, freeze, or deplatform a first-party flow. The rail is ours; outages and policy changes are ours to manage.</li><li><strong>PCI offload, in-house</strong>: Card data never touches Commerce or any app server. The <strong>Hanzo Vault</strong> CDE (a dedicated PCI-DSS-scoped tokenization service) holds the card-handling surface; everything else operates on opaque tokens, keeping the broad system out of PCI scope exactly as an external processor would — but under our control.</li><li><strong>Hosted checkout</strong>: A native hosted payment page (served from the Vault/PSP boundary) so app servers only ever receive a signed completion webhook.</li><li><strong>Subscription management</strong>: Recurring billing, proration, dunning (failed-payment retry), and lifecycle hooks.</li><li><strong>Invoicing</strong>: Invoice generation, PDF rendering, and email delivery.</li><li><strong>Fraud detection</strong>: Risk scoring on the native rail; on-chain rails are inherently irreversible (no chargeback exposure).</li><li><strong>Marketplace payouts</strong>: Connect-style transfers for agent revenue (HIP-25) settle natively, including on-chain $AI to any wallet.</li></ul>
 <p>The compliance burden the standard once cited as a reason to outsource (PCI DSS: 300+ controls across 12 categories) is met by scoping the CDE to <strong>Hanzo Vault</strong> alone, not by handing the customer relationship to a party that can revoke it.</p>
@@ -202,6 +228,19 @@ footer a{color:var(--soft)}
 <p>The Hanzo ecosystem includes $AI token (HIP-1) and on-chain settlement (HIP-25). Why not use blockchain for all payments?</p>
 <ol><li><strong>Friction</strong>: Most developers do not have crypto wallets. Requiring wallet setup, token purchase, and gas fees for a $20 credit top-up would eliminate 90%+ of potential users.</li><li><strong>Volatility</strong>: Token prices fluctuate. If a user buys credits with $AI at $0.50 and the price drops to $0.30 before they use the credits, who absorbs the loss?</li><li><strong>Speed</strong>: The native PSP processes a card payment in 2-3 seconds. On-chain settlement takes 2-15 seconds depending on the chain and requires block confirmations for finality.</li><li><strong>Chargebacks</strong>: Card users have dispute rights. Blockchain transactions are irreversible. Offering only crypto payments forfeits consumer protection, which is a regulatory risk.</li></ol>
 <p>The correct approach is <strong>both</strong>: the native PSP for fiat, blockchain for crypto. Commerce accepts both and normalizes them into credits. The user does not need to know or care which payment rail was used.</p>
+<h3>Why IAM Holds Balances</h3>
+<p>Every authenticated API call already hits IAM to validate the JWT. The LLM Gateway (HIP-4) receives a request, extracts the bearer token, and validates it against IAM&#x27;s public key or calls <code>/v1/iam/get-account</code>. This round-trip is unavoidable -- you must authenticate before executing.</p>
+<p>If balance lived in Commerce, every LLM call would require two round-trips:</p>
+<pre><code>Request -&gt; Gateway -&gt; IAM (auth: 3ms) -&gt; Commerce (balance: 5ms) -&gt; Upstream (inference: 200ms)</code></pre>
+<p>By storing balance in IAM, the auth check and balance check collapse into one operation:</p>
+<pre><code>Request -&gt; Gateway -&gt; IAM (auth + balance: 3ms) -&gt; Upstream (inference: 200ms)</code></pre>
+<p>At 1,000 requests/second, eliminating the Commerce round-trip saves 5,000ms of cumulative latency per second and removes Commerce as a critical-path dependency. If Commerce goes down, users cannot <em>buy</em> credits, but they can still <em>use</em> existing credits because IAM is independent.</p>
+<p>The tradeoff: balance is denormalized. Commerce is the authoritative ledger (&quot;what transactions occurred&quot;), and IAM is the balance cache (&quot;what is the current balance&quot;). A reconciliation job detects and corrects drift between the two. This is covered in detail in HIP-26 Section &quot;Why Credit Balances Live in IAM.&quot;</p>
+<h3>Why Webhook-Driven Architecture</h3>
+<p>Payment processing is inherently asynchronous. A user clicks &quot;Pay&quot; on the native hosted checkout page, enters their card, waits for 3D Secure, and the PSP processes the charge. This takes 5-30 seconds. Holding a synchronous HTTP connection open for this duration is fragile.</p>
+<p>Instead, Commerce uses webhooks:</p>
+<ol><li>Commerce creates a native PSP checkout session and returns the URL to the client.</li><li>Client redirects to the native hosted checkout page (served from the Vault/PSP boundary; card data never reaches Commerce).</li><li>User completes payment on the PCI-scoped CDE.</li><li>The PSP sends a signed <code>checkout.session.completed</code> webhook to Commerce.</li><li>Commerce verifies the webhook signature, records the transaction, then calls IAM to add credits.</li></ol>
+<p>This decouples payment processing from service delivery. If Commerce is briefly unavailable when the webhook fires, the PSP retries with exponential backoff for up to 72 hours. Eventual consistency is acceptable for billing -- a 30-second delay between payment and credit delivery is imperceptible to users.</p>
 <h2>Specification</h2>
 <h3>Architecture</h3>
 <pre><code>                              +------------------------+
@@ -316,10 +355,14 @@ footer a{color:var(--soft)}
 4. User completes payment on the native hosted checkout page (Hanzo Vault CDE)
 5. PSP fires webhook: checkout.session.completed
 6. Commerce verifies webhook signature (HMAC-SHA256)
-7. Commerce checks idempotency key in KV (prevent double-processing)
-8. Commerce calls IAM: POST /api/add-balance { owner: &quot;hanzo&quot;, user: &quot;z&quot;, amount: 21.0 }
-9. Commerce records transaction: POST /api/add-transaction
-   { category: &quot;Recharge&quot;, user: &quot;z&quot;, amount: 21.0, name: &quot;txn_psp_cs_...&quot; }
+7. Commerce checks the idempotency key in the shared KV (prevent double-processing)
+8. Commerce records the transaction in its OWN ledger — it does not write a
+   balance into IAM. IAM&#x27;s balance fields are read-only mirrors of this ledger
+   (HIP-0026 §The balance mirror); the `add-balance` and `add-transaction` verbs
+   an earlier revision called here do not exist and would be forbidden if they
+   did (HIP-0111 §4.8).
+9. The mirror follows from the ledger. A surface that gates spend reads the
+   authoritative position, never the mirror.
 10. User&#x27;s IAM balance updated. Credits available immediately.</code></pre>
 <h4>Crypto Payment Flow ($AI Token)</h4>
 <p>Commerce also accepts $AI token (HIP-1) payments on Hanzo Network (chain ID 36963). The user sends tokens to a per-user deposit address. Commerce&#x27;s on-chain listener detects the Transfer event (1 block confirmation for &lt;$1K, 6 for &gt;=$1K), converts $AI to USD at the 10-minute TWAP oracle rate via HMM (HIP-8), and credits the user&#x27;s IAM balance through the same add-balance/add-transaction flow as fiat.</p>
@@ -350,7 +393,7 @@ footer a{color:var(--soft)}
 
     # 2. Check idempotency (prevent double-processing)
     event_id = event[&quot;id&quot;]
-    if await redis.exists(f&quot;webhook:processed:{event_id}&quot;):
+    if await kv.exists(f&quot;webhook:processed:{event_id}&quot;):
         return Response(status=200, body=&quot;Already processed&quot;)
 
     # 3. Route by event type
@@ -368,7 +411,7 @@ footer a{color:var(--soft)}
         await handler(event)
 
     # 4. Mark as processed (72h TTL matching the PSP retry window)
-    await redis.set(f&quot;webhook:processed:{event_id}&quot;, &quot;1&quot;, ex=259200)
+    await kv.set(f&quot;webhook:processed:{event_id}&quot;, &quot;1&quot;, ex=259200)
 
     return Response(status=200)</code></pre>
 <h4>Handled Webhook Events</h4>
@@ -378,14 +421,14 @@ footer a{color:var(--soft)}
 <pre><code>LLM Gateway receives request
     |
     +-- 1. Validate JWT (IAM)
-    +-- 2. Check balance from JWT claims or /api/get-account
+    +-- 2. Check balance from JWT claims or /v1/iam/get-account
     +-- 3. If insufficient balance: return 402 Payment Required
     +-- 4. Execute LLM request (provider API)
     +-- 5. Calculate cost:
     |      input_tokens * input_rate + output_tokens * output_rate
     |      -&gt; convert to USD -&gt; round to credits
     +-- 6. Submit debit transaction to IAM:
-    |      POST /api/add-transaction
+    |      POST /v1/iam/add-transaction
     |      {
     |        &quot;category&quot;: &quot;Purchase&quot;,
     |        &quot;user&quot;: &quot;&lt;user&gt;&quot;,
@@ -444,8 +487,16 @@ Authorization: Bearer &lt;access_token&gt;
 }</code></pre>
 <p>When the metering pipeline detects a balance crossing below the threshold, it enqueues an auto-recharge job. The job creates a PSP payment intent using the stored (tokenized) payment method, processes the charge, and credits the balance without user interaction. Auto-recharge is rate-limited (max 5/month by default) to prevent runaway charges from buggy clients or compromised API keys.</p>
 <h2>Implementation Roadmap</h2>
+<h3>Phase 1: Core Billing (Completed)</h3>
+<ul><li>[x] Native PSP checkout integration for one-time credit purchases</li><li>[x] Webhook handler for <code>checkout.session.completed</code></li><li>[x] IAM balance update via <code>/v1/iam/add-balance</code></li><li>[x] Transaction recording via <code>/v1/iam/add-transaction</code></li><li>[x] Balance and transaction query endpoints</li><li>[x] Idempotency key tracking in the shared KV</li></ul>
 <h3>Phase 2: Subscriptions (Completed)</h3>
 <ul><li>[x] Native PSP subscription creation for Pro/Team tiers</li><li>[x] Monthly credit allocation on <code>invoice.paid</code></li><li>[x] Subscription upgrade/downgrade with proration</li><li>[x] Dunning (failed payment) handling</li><li>[x] Subscription cancellation flow</li></ul>
+<h3>Phase 3: Usage Metering (In Progress)</h3>
+<ul><li>[ ] LLM Gateway batched transaction submission</li><li>[ ] Per-model credit cost configuration</li><li>[ ] Real-time usage dashboard</li><li>[ ] Usage breakdown by model, service, and time period</li><li>[ ] Overage billing via PSP metered usage</li></ul>
+<h3>Phase 4: Multi-Org and Enterprise (Planned)</h3>
+<ul><li>[ ] Org-level billing with shared pool mode</li><li>[ ] Individual credit allocation per member</li><li>[ ] Enterprise invoice billing (NET 30)</li><li>[ ] Custom rate cards for enterprise customers</li><li>[ ] SOC 2 Type II audit trail exports</li></ul>
+<h3>Phase 5: Crypto Payments (Planned)</h3>
+<ul><li>[ ] $AI token payment acceptance on Hanzo Network</li><li>[ ] USDC/USDT acceptance via Lux Bridge (HIP-101)</li><li>[ ] On-chain settlement receipts</li><li>[ ] Token-to-credit conversion via HMM oracle (HIP-8)</li></ul>
 <h2>Security Considerations</h2>
 <h3>PCI DSS Compliance</h3>
 <p>Commerce achieves PCI compliance by <strong>never handling cardholder data</strong>. Cardholder data is confined to the <strong>Hanzo Vault</strong> CDE — the only PCI-DSS-scoped component — which hosts the payment form (native hosted checkout) and issues opaque tokens. Commerce and every app server operate on tokens only; they never see, store, process, or transmit card numbers, CVVs, or expiration dates. Commerce qualifies as a <strong>SAQ A</strong> surface; the Vault carries the full SAQ D / RoC scope, isolated from the rest of the ecosystem.</p>
@@ -471,7 +522,7 @@ expected = hmac_sha256(
 <p>These three layers provide defense-in-depth against double-processing.</p>
 <h3>Rate Limiting</h3>
 <p>| Endpoint | Limit | Window | |----------|-------|--------| | <code>/v1/billing/checkout</code> | 10 | per minute per user | | <code>/v1/billing/subscribe</code> | 5 | per minute per user | | <code>/v1/billing/balance</code> | 60 | per minute per user | | <code>/v1/billing/transactions</code> | 30 | per minute per user | | <code>/v1/billing/usage</code> | 10 | per minute per user | | <code>/webhooks/psp</code> | 1000 | per minute (global) |</p>
-<p>Rate limiting is enforced via KV sliding window counters. Exceeding the limit returns <code>429 Too Many Requests</code> with a <code>Retry-After</code> header.</p>
+<p>Rate limiting is enforced with sliding-window counters in the shared KV (HIP-0144). Exceeding the limit returns <code>429 Too Many Requests</code> with a <code>Retry-After</code> header.</p>
 <h3>Audit Trail</h3>
 <p>Every financial event produces an immutable audit record:</p>
 <pre><code class="lang-json">{
@@ -501,9 +552,15 @@ expected = hmac_sha256(
 <p>When a user&#x27;s balance reaches zero during an API request:</p>
 <ol><li>The LLM Gateway returns <code>402 Payment Required</code> with a link to the billing page.</li><li>Streaming responses are terminated gracefully -- partial completions are delivered with a final chunk indicating billing exhaustion.</li><li>If auto-recharge is enabled, it triggers immediately, and the request can be retried.</li></ol>
 <h2>References</h2>
-<ol><li><a href="./hip-0001-ai-coin-hanzos-native-currency.md">HIP-1: $AI Token</a> - Native currency for crypto payments</li><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-4: LLM Gateway</a> - Primary usage metering source</li><li><a href="./hip-0008-hmm-hanzo-market-maker-native-dex-for-ai-compute-resources.md">HIP-8: HMM (Hanzo Market Maker)</a> - Token price oracle for crypto-to-credit conversion</li><li><a href="./hip-0025-bot-agent-wallet-rpc-billing-protocol.md">HIP-25: Bot Agent Wallet &amp; RPC Billing Protocol</a> - Agent-level billing built on Commerce</li><li><a href="./hip-0026-identity-access-management-standard.md">HIP-26: Identity &amp; Access Management Standard</a> - Balance storage and transaction ledger</li><li><a href="./hip-0027-secrets-management-standard.md">HIP-27: Secrets Management Standard</a> - KMS for PSP keys and secrets</li><li><a href="./hip-0030-event-streaming-standard.md">HIP-30: Event Streaming Standard</a> - Billing event distribution</li><li>HIP-32: Object Storage Standard - Invoice PDF storage</li><li><a href="./hip-0101-hanzo-lux-bridge-protocol-integration.md">HIP-101: Hanzo-Lux Bridge Protocol</a> - Cross-chain payment acceptance</li><li><a href="https://github.com/lux-pay">Hanzo Pay (native PSP) — <code>github.com/lux-pay</code></a> (white-labeled <code>lux-pay</code> on Lux)</li><li><a href="https://github.com/hanzoai/vault">Hanzo Vault — PCI CDE / card tokenization</a></li><li><a href="https://www.pcisecuritystandards.org/">PCI DSS v4.0 — SAQ A / SAQ D scoping</a></li><li><a href="https://www.pcisecuritystandards.org/document_library">PCI DSS Quick Reference Guide</a></li><li><a href="https://github.com/hanzoai/commerce">Hanzo Commerce Repository</a></li></ol>
+<ol><li><a href="./hip-0001-ai-coin-hanzos-native-currency.md">HIP-1: $AI Token</a> - Native currency for crypto payments</li><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-4: LLM Gateway</a> - Primary usage metering source</li><li><a href="./hip-0008-hmm-hanzo-market-maker-native-dex-for-ai-compute-resources.md">HIP-8: HMM (Hanzo Market Maker)</a> - Token price oracle for crypto-to-credit conversion</li><li><a href="./hip-0025-bot-agent-wallet-rpc-billing-protocol.md">HIP-25: Bot Agent Wallet &amp; RPC Billing Protocol</a> - Agent-level billing built on Commerce</li><li><a href="./hip-0026-identity-access-management-standard.md">HIP-26: Identity &amp; Access Management Standard</a> - Balance storage and transaction ledger</li><li><a href="./hip-0027-secrets-management-standard.md">HIP-27: Secrets Management Standard</a> - KMS for PSP keys and secrets</li><li><a href="./hip-1060-pubsub-the-tenant-door-on-the-bus.md">HIP-1060: Pubsub — The Tenant Endpoint on the Bus</a> - billing event distribution</li><li><a href="./hip-1165-s3-buckets-and-objects.md">HIP-1165: S3 — Buckets and Objects</a> - invoice PDF storage</li><li><a href="./hip-0101-hanzo-lux-bridge-protocol-integration.md">HIP-101: Hanzo-Lux Bridge Protocol</a> - Cross-chain payment acceptance</li><li><a href="https://github.com/lux-pay">Hanzo Pay (native PSP) — <code>github.com/lux-pay</code></a> (white-labeled <code>lux-pay</code> on Lux)</li><li><a href="https://github.com/hanzoai/vault">Hanzo Vault — PCI CDE / card tokenization</a></li><li><a href="https://www.pcisecuritystandards.org/">PCI DSS v4.0 — SAQ A / SAQ D scoping</a></li><li><a href="https://www.pcisecuritystandards.org/document_library">PCI DSS Quick Reference Guide</a></li><li><a href="https://github.com/hanzoai/commerce">Hanzo Commerce Repository</a></li></ol>
 <h2>Copyright</h2>
 <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</p>
+<h2>Conformance status</h2>
+<p>Measured against <code>hanzoai/commerce</code> at <code>c17a4f786</code> on 2026-09-09. The credit model ships; the payment-sovereignty claim in the abstract does not.</p>
+<p><strong>The native PSP does not exist as a rail.</strong> <code>payment/processor</code> defines sixteen <code>ProcessorType</code> values. The fiat ones are <code>stripe</code>, <code>square</code>, <code>paypal</code>, <code>adyen</code>, <code>braintree</code>, <code>recurly</code>, <code>lemonsqueezy</code> — every one a third-party processor. The first-party ones are crypto (<code>mpc</code>, <code>bitcoin</code>, <code>ethereum</code>, <code>solanapay</code>, <code>circle</code>) plus <code>wire</code>. There is no <code>hanzopay</code> or <code>lux-pay</code> type, so &quot;the native PSP is always the default and the only rail a first-party surface is required to support&quot; describes a rail that is not implemented.</p>
+<p><strong>A first-party surface&#x27;s fiat default is Square.</strong> <code>DefaultConfig()</code> sets <code>ProcessorPriority</code> to <code>Square</code> first, annotated in the source as <code>// fiat default — pay.hanzo.ai (Square + crypto)</code>. Stripe is registered but held un-selectable for new charges through <code>DisabledProcessors</code>, which is a deliberate and well-built deny policy — but it is a policy about <em>which</em> third-party processor is used, not evidence of a native one. The abstract&#x27;s &quot;no first-party surface registers an external processor that can deplatform the ecosystem&quot; is contradicted by the shipped default.</p>
+<p>This is the gap that keeps this HIP a Draft, and it is a substantive one: the document mandates payment sovereignty as a first-class requirement and gives the deplatforming history as the reason. Either the native PSP lands and the default moves to it, or this HIP is rewritten to describe Square-first fiat with crypto as the sovereign rail. It should not be marked Final while it reads as though the first has already happened.</p>
+<p>The crypto half is sound: <code>DefaultCryptoProcessor</code> defaults to <code>MPC</code>, a first-party rail, and crypto routing is by currency rather than preference order.</p>
 <footer>
 <div class="fmap">
   <div><b>Build</b>
@@ -523,5 +580,4 @@ expected = hmac_sha256(
 </div>
 <div class="fend"><a href="/hip-0018.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

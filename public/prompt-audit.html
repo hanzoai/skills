@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>prompt-audit</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/prompt-audit.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/prompt-audit">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/prompt-audit.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>prompt-audit</h1><p class="lede">Prompts, skills, and tool descriptions accumulate instructions tuned to older models: emphasis added because an old model under-triggered, step-by-step scripts added because an old model planned poorly, format scaffolds written before the A</p><h1>Prompt Audit — Finding and Removing Dated Prompting Patterns</h1>
+<blockquote><p><strong>If you arrived via <code>/claude-api prompt-audit</code>:</strong> this is the right file. Execute the steps below in order — do not summarize them back to the user. Start with Step 0 (establish scope and target model), and finish by producing both deliverables: the audit report (Step 5) and the proposed diff (Step 6).</p></blockquote>
+<p>Prompts, skills, and tool descriptions accumulate instructions tuned to older models: emphasis added because an old model under-triggered, step-by-step scripts added because an old model planned poorly, format scaffolds written before the API had structured outputs. Current Claude models follow instructions more closely and more literally than the models much of this text was written for, so the leftover text is not just wasted tokens — specific outdated instructions actively degrade behavior (over-triggering, over-planning, rigid responses in gray areas), while merely irrelevant text is comparatively harmless. The audit&#x27;s job is therefore to find <strong>specific dated instructions</strong>, not to make prompts shorter. &quot;Every token earns its place&quot; is the frame; &quot;make it short&quot; is not.</p>
+<p><strong>The audit produces two artifacts — both, always:</strong></p>
+<ol><li><strong>An audit report</strong>: every finding with its location (<code>file:line</code>), the pattern it matches, why it is obsolete for the target model, and a confidence level.</li><li><strong>A proposed diff</strong>: concrete edits for the findings that warrant them. Propose — never apply edits without the user&#x27;s consent.</li></ol>
+<p><strong>Prime directive: distinguish cruft from load-bearing content.</strong> A finding you cannot tie to a named pattern below, with a reason grounded in the target model&#x27;s documented behavior, is not a finding. When in doubt, flag it in the report with low confidence and leave it out of the diff. Indiscriminate deletion is the one way an audit makes things worse — see &quot;What not to flag&quot; below, which is as binding as the pattern tables. The inverse binds too: <strong>an audit that finds nothing should change nothing</strong> — a clean surface is a valid outcome, and an empty diff beats a manufactured one.</p>
+<hr>
+<h2>Step 0: Establish scope and target model</h2>
+<p><strong>Before reading any file, establish two things — from the request and the repository, not by asking.</strong> This audit is non-interactive by design: it runs the same way in a chat session, a CI job, or a batch migration, so it states its assumptions and proceeds instead of pausing for confirmation. Both assumptions go at the top of the report (Step 5), where the user can correct them by re-running with a narrower request.</p>
+<ol><li><strong>Scope.</strong> Which files count as the prompt surface? If the user&#x27;s request names a file, directory, or file list, that is the scope. Otherwise the scope is the whole working directory&#x27;s prompt surface — everything Step 1&#x27;s inventory finds.</li><li><strong>Target model.</strong> Cruft is relative to a model: a workaround that is load-bearing on one generation is dead weight on the next. Resolve the target in this order: the model the request names; else the destination of an in-progress migration the repository documents (vendor notes, migration docs, TODOs); else the newest model the repository&#x27;s own code or docs point at; else the current flagship generation of the provider the code calls. If the audit is part of a migration, read <code>shared/model-migration.md</code> → the per-target section alongside this file, since every migration section&#x27;s checklist is also a removal checklist.</li></ol>
+<h2>Step 1: Inventory the prompt surface</h2>
+<p>Find everything that reaches the model as text, not just the file named &quot;prompt&quot;:</p>
+<ul><li><strong>System prompts</strong> and the code that assembles them (f-strings, template files, conditional sections)</li><li><strong>Tool definitions</strong> — <code>description</code> fields and parameter descriptions in the <code>tools</code> array</li><li><strong>Skill and rule files</strong> — <code>SKILL.md</code>, <code>CLAUDE.md</code>, <code>.cursorrules</code>-style rule files, agent instruction files</li><li><strong>Request-building code</strong> — model IDs, <code>thinking</code> configuration, sampling parameters, stop sequences, prefill construction, retry logic, beta headers</li><li><strong>Few-shot blocks and embedded examples</strong>, wherever they live</li></ul>
+<p>List what you found before auditing it, so the user can correct the inventory.</p>
+<h2>Step 2: Establish provenance</h2>
+<p>Where git history is available, <code>git blame</code> the prompt files. The question for every emphatic or prohibitive line is: <strong>which failure, on which model, did this prevent — and does that failure still reproduce on the target model?</strong> Lines added as mitigations for a model that is no longer in use are presumptive removal candidates; a line nobody can justify is suspect by default.</p>
+<p>Prompts can also be dated by their idioms even without history. <code>&lt;scratchpad&gt;</code> / <code>&lt;brainstorm&gt;</code> tag instructions, &quot;think step by step&quot;, assistant-turn prefills, quotes-first extraction scaffolds, and ROLE → CONTEXT → RULES → EXAMPLES boilerplate all mark text written for much earlier Claude generations — techniques that are now natively trained (thinking, calibrated refusals) or superseded by API features (structured outputs). Idiom-dating alone is a flag-only signal (low confidence in the Step 5 rubric); it earns medium or high only when paired with a reason grounded in the target model&#x27;s documented behavior — a blame line tying the text to a retired model&#x27;s era is the strongest form of that pairing.</p>
+<h2>Step 3: Classify every line — the deletion rule</h2>
+<p>For each instruction, ask one question: <strong>could the model already know this?</strong></p>
+<ul><li><strong>Keep what only the author knows</strong>: the audience and product, environment facts, the quality bar, tool contracts and mechanics, genuinely hard judgment calls, and the <em>reasons</em> behind constraints. This is context, and context is never cruft.</li><li><strong>Candidates for removal</strong>: restatements of trained defaults (&quot;be accurate and helpful&quot;), behavior the model already does unprompted (thoroughness, planning, tool use), and workarounds for failures the target model no longer has.</li></ul>
+<p>A second distinction sharpens the first: is the line a <strong>constraint on behavior</strong> (deletion candidate — test it) or <strong>context the model can&#x27;t get elsewhere</strong> (usually keep)? This check prevents the audit from becoming a length contest: a naive shortening pass deletes exactly the highest-value words.</p>
+<h2>Step 4: Scan for the anti-pattern groups</h2>
+<p>Work through the four groups. &quot;Signals&quot; rows are greppable — run them over the inventory rather than eyeballing.</p>
+<h3>Group 1 — Dated prompt text</h3>
+<h4>1a. Pressure language — say exactly what you mean, at normal volume</h4>
+<p>Older, less steerable models genuinely needed forcefulness; current models are highly responsive to the system prompt, so the same text over-applies. This cuts in <strong>both directions</strong>: inflated emphasis causes over-triggering and rigid behavior, while leftover hedges (&quot;try to&quot;, &quot;if possible&quot;) are now read literally as permission to under-deliver.</p>
+<p>| Before (written for older models) | After (current models) | |---|---| | <code>CRITICAL: You MUST use this tool when...</code> | <code>Use this tool when...</code> | | <code>IMPORTANT: NEVER do X</code> (several per prompt) | State the one or two real constraints plainly, with the reason | | <code>If in doubt, use [tool]</code> / <code>Default to [tool]</code> | <em>(delete, or)</em> <code>Use [tool] when it would improve X</code> | | <code>Be thorough. Do not be lazy. Do not stop early.</code> | <em>(delete — current models are proactive by default)</em> | | <code>Try to include a summary if possible</code> (when it&#x27;s required) | <code>Include a summary.</code> | | <code>You have a tendency to over-X, so...</code> / <code>Don&#x27;t be too verbose</code> | State the desired behavior: <code>Keep responses to the length the question needs.</code> |</p>
+<p>When several instructions are each marked critical, the markers stop carrying information — and the prompt&#x27;s register becomes the output&#x27;s register: an anxious prompt produces a cautious, hedging model. Emphasis is not banned; it is a tested, scoped fix for one demonstrably underweighted instruction, not a first-draft register.</p>
+<p><strong>Signals:</strong> density of <code>MUST|NEVER|ALWAYS|CRITICAL|IMPORTANT</code> in caps; <code>!!</code>; emphasis with no adjacent &quot;because&quot;; <code>try to|if possible|ideally</code> attached to actual requirements; <code>you (tend to|often|sometimes)</code> trait claims; <code>don&#x27;t be too [adjective]</code>.</p>
+<h4>1b. Scaffolds replaced by API features — replace, don&#x27;t rewrite</h4>
+<p>These aren&#x27;t tuned down; they&#x27;re swapped for the feature that replaced them. For per-model specifics (what errors on which model, exact syntax), read <code>shared/model-migration.md</code>.</p>
+<p>| Scaffold in the prompt or request code | Replacement | |---|---| | &quot;Think step by step&quot;, <code>&lt;scratchpad&gt;</code>/<code>&lt;thinking&gt;</code> tag instructions | Adaptive thinking (<code>thinking: {type: &quot;adaptive&quot;}</code>) + <code>effort</code>. On thinking models the incantation is redundant at best; control depth via configuration, not prose. | | &quot;Use the think tool to plan&quot; / &quot;plan before acting&quot; | Delete — current models plan without being told, and these cause over-planning. If behavior is still too aggressive after cleanup, lower <code>effort</code> rather than adding prose. | | &quot;Show your thinking&quot; / required reasoning sections in the output | Read thinking blocks via the API. On Claude Fable 5, instructing reasoning reproduction can trigger a <code>refusal</code> (reasoning extraction) — this is an explicit audit item when migrating. | | Assistant-turn prefill (<code>{&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;{&quot;</code>) and the JSON-forcing stack around it: stop-sequences, regex extraction, retry-on-parse loops, &quot;output ONLY valid JSON&quot; | Structured outputs (<code>output_config.format</code>). Prefill 400s on 4.6-and-later Opus- and Sonnet-tier models and Claude Fable 5 — confirm in the per-target section of <code>shared/model-migration.md</code> before claiming the error. Where it applies, the <em>surrounding code</em> is cruft too — audit the request builder, not just the prompt string. Only a <strong>trailing</strong> assistant turn is a prefill — partial or complete-looking (a few-shot block ending on the assistant side still counts): assistant turns mid-array are ordinary conversation history and must stay. | | &quot;Summarize progress every N tool calls&quot; choreography; hard word caps (<code>at most N words</code>) | Delete and re-baseline: current models narrate appropriately, and output caps starve reasoning on hard problems. Prefer qualitative length guidance (&quot;be concise&quot;) over numeric caps tuned against an older model&#x27;s verbosity. | | Inline lookup tables, point systems, arithmetic rubrics the model must compute | Data in files or tool results; arithmetic in code. Leave the model the judgment layer. | | <code>budget_tokens</code>, non-default <code>temperature</code>/<code>top_p</code>/<code>top_k</code>, stale beta headers, dead 400-retry paths | See <code>shared/model-migration.md</code> — whether each one hard-errors or is merely deprecated depends on the target model, so take the error claim from the per-target section there, not from memory. Where it does error, the retry/workaround code around it is removable too. |</p>
+<p><strong>Signals:</strong> <code>think step by step|take a deep breath</code>; <code>&lt;scratchpad&gt;|&lt;thinking&gt;</code> in instructions; <code>stop_sequences</code> guarding JSON; <code>json.loads</code> inside retry loops; <code>budget_tokens|temperature|top_p</code> in request code; <code>every \d+ (tool calls|messages)</code>; <code>at most \d+ (words|sentences)</code>.</p>
+<h4>1c. Over-specification — describe the goal, not the method</h4>
+<p>| Pattern | Why it&#x27;s cruft now | Fix | |---|---|---| | Step-by-step choreography for judgment tasks (<code>STEP 1: ... STEP 2: ...</code>) | Skills and prompts written for prior models are often too prescriptive for current ones and degrade output quality — the model&#x27;s own plan usually beats a hand-written script | State outcomes, constraints, and how to verify; keep numbered steps only where order truly matters | | Prohibition lists (&quot;do not X, never Y, avoid Z...&quot;) | Describing success beats enumerating failure; a prohibition against a failure the model wasn&#x27;t going to make can <em>anchor it toward</em> that failure | Keep prohibitions whose failure reproduces on the target model; rewrite the rest as positive statements of intent | | Example over-indexing: the single gold output; stale few-shot blocks | Concrete examples are the strongest signal in a prompt — the model matches their length, tone, and structure, and examples written for an older model freeze that model&#x27;s behavior into the new one | Several deliberately varied examples, labeled illustrative; delete examples of judgment the model already owns; keep examples that pin a genuinely format-sensitive output shape | | Bullet walls and heavy formatting for behavioral guidance | Bullets flatten priority and sever rules from reasons, and prompt format bleeds into output format | Structure for reference data; prose for behavior, carrying the &quot;because&quot; | | Padding: generic virtues (&quot;be accurate, thorough, clear&quot;), repetition as reinforcement, kitchen-sink edge cases, limits with escape hatches | The model treats everything as actionable signal; asides get applied where they don&#x27;t fit; duplicated rules make the model spend effort reconciling wordings; bulk also directly inflates adaptive-thinking spend | Say it once, in the right place; cover the hard judgment calls instead of the easy parts | | Grader and eval vocabulary (&quot;you will be graded on...&quot;, &quot;hidden tests&quot;) | Describes the scoring apparatus instead of the requirement and pushes effort toward being-watched | State every requirement the grader checks; never describe the grader | | Strategy coaching next to task rules (&quot;it&#x27;s usually best to...&quot;) | The author&#x27;s heuristics are wrong in some situations and the model&#x27;s plan is usually better | If removing the sentence wouldn&#x27;t change what is legal or how success is measured, it&#x27;s strategy — delete it |</p>
+<p><strong>Signals:</strong> <code>STEP \d</code>/numbered imperatives for non-fragile work; runs of 3+ <code>Do not|Never|Avoid</code> lines; <code>do not hallucinate</code> (re-test whether you still need it — removal here is low confidence, not a documented harm); single embedded gold outputs; near-duplicate sentences across sections; <code>Remember,|Again,|As stated above</code>; <code>grade|graded|rubric|hidden test</code>.</p>
+<h4>1d. Fossils — text that outlived its model</h4>
+<p>| Pattern | Why it&#x27;s cruft now | Fix | |---|---|---| | Model-version workarounds: formatting fixes, over-refusal softeners, retry hints, &quot;known issue with [model]&quot; comments, date-conditional guidance | Nobody owns the removal, so prompts accumulate the union of every generation&#x27;s mitigations | Each mitigation names (or gets traced to) the model it patched; if that model is retired, remove and re-test | | Migration-relative phrasing: &quot;X now works differently&quot;, &quot;also counts&quot;, &quot;no longer&quot; | The text is a diff against a previous prompt version the model never saw; relative phrasing implies phantom alternatives | Write as if current rules are the only rules that ever existed | | Patch accretion: many narrow conditionals, each traceable to one incident | The model navigates a maze of special cases instead of a coherent principle, and fails unpredictably between them; an eval win for adding a line on top of the stack is not evidence the stack should exist | Generalize the principle or fix the underlying context; test removals, not just additions | | Unenforced instructions: rules no code path, eval, or reviewer checks — visibly violated in the app&#x27;s own transcripts | If nothing checks it and nobody noticed, it carries no signal — and behavioral rules that could be hooks, allowlists, or schema validators are less reliable as prose | Enforce in code what can be enforced in code; delete what nothing enforces and nobody misses | | Identity stubs standing in for context (&quot;You are a helpful assistant&quot;) | A role line is fine as a one-sentence focus-setter; the defect is an identity statement <em>substituting</em> for audience, product, and quality bar | Don&#x27;t flag a short role line; flag when it&#x27;s the only context the prompt gives |</p>
+<p><strong>Signals:</strong> retired model names in prompts or comments (<code>claude-2|claude-3|claude-instant|3\.5|3\.7</code>); <code>before|after [date]</code> conditionals; <code>now|no longer|instead of</code> attached to behavioral rules; rules whose reason nobody remembers; <code>^You are (a|an) (helpful|expert)</code> with nothing task-specific following.</p>
+<h4>1e. Prohibition clusters — judge by provenance, not by whether the model &quot;needs it&quot;</h4>
+<p>A run of unconditional &quot;never / don&#x27;t / must not&quot; lines is audited by asking, for each, <strong>does it carry a stated reason or encode a real business/policy constraint?</strong> — not &quot;does the target model still need this guardrail?&quot; (the latter question keeps everything, because nothing is <em>harmful</em> to say). Prohibitions that encode observable constraints (refund caps, data rules, compliance language, promises the business must not make) stay, ideally with their reason beside them. Prohibitions that merely describe an undesirable <em>output style</em> with no provenance — banned phrases, tic lists, &quot;don&#x27;t start with &#x27;Certainly&#x27;&quot; written against an older model&#x27;s habits — are cruft: restate the desired style positively in one line, or attach the real reason if there is one. A surrounding cluster of legitimate reasoned prohibitions does not launder the no-provenance ones mixed into it; classify each line separately.</p>
+<h4>1f. Output-shaping choreography — one pattern, remove every limb</h4>
+<p>Fixed interim-update cadences (&quot;after every third tool call, post a progress note&quot;), numeric output ceilings (&quot;under 120 words&quot;, &quot;at most five bullets&quot;), and cut-the-detail instructions are manifestations of the <strong>same</strong> over-constraint pattern, written for models that padded or rambled. They are removed <em>together</em>: a stated operational reason (&quot;queue throughput&quot;, &quot;supervisors skim&quot;) does not convert a numeric clamp into a keeper — re-express the goal as audience/outcome framing without the number (&quot;replies are scan-able and answer only what was asked&quot;), and keep any genuinely format-sensitive requirement as a format instruction, not a word count. Removing the cadence while keeping the ceilings leaves the pattern in place.</p>
+<h3>Group 2 — Brittle skill files</h3>
+<p>Skill files (<code>SKILL.md</code>, <code>CLAUDE.md</code>, rule files) inherit everything in Group 1, plus failure modes of their own. Skill size is a tax paid on every trigger.</p>
+<p>| Pattern | Why it&#x27;s cruft now | Fix | |---|---|---| | Verbose SKILL.md explaining things the model already knows | Every paragraph must justify its token cost; general programming knowledge doesn&#x27;t | Apply the Step 3 deletion rule paragraph by paragraph | | Wrong degrees of freedom | Exact scripts for judgment calls over-constrain; vague prose for fragile operations under-constrains | Match specificity to fragility: prose heuristics for open fields, exact commands (<code>do not modify this command</code>) only for narrow bridges | | The recency trap: one session&#x27;s stumble encoded as a permanent rule | The next session steps around a pothole that isn&#x27;t there | Before keeping a rule, ask: would this have helped most recent sessions, or just the one that wrote it? | | Volatile specifics: hardcoded paths, flags, version numbers, API claims with no verification date | Skills rot factually as code ships; nothing re-checks them by default | Encode architecture, data models, and workflows; verify surviving factual claims against current code as part of the audit | | Time-sensitive content (&quot;if before [date]...&quot;, option menus, duplicated info across SKILL.md and reference files) | Dates rot; menus of alternatives dilute; duplicates drift apart | An &quot;old patterns&quot; section instead of dates; one default plus an escape hatch; information lives in exactly one place | | History narratives: past tense, incident IDs, PR numbers, pinned model names | A rule&#x27;s authority is the behavior it prescribes, not the incident that motivated it; pinned model names silently degrade after the next release | State the current rule; drop the archaeology | | Trigger-case enumeration: description lists of near-synonymous example queries, growing one phrase per missed trigger | Descriptions ride in every request; enumeration taxes every token budget and generalizes worse than intent categories | Name generalized categories of intent; see Group 3 for the trigger/behavior split |</p>
+<p><strong>Signals:</strong> <code>SKILL.md</code> not readable in one sitting; hardcoded paths and version pins; past tense in instruction files; descriptions that only ever grow in git history.</p>
+<h3>Group 3 — Tool descriptions</h3>
+<p><strong>The rubric for tool descriptions is precision and contract accuracy, not brevity</strong> — this is where a &quot;trim it&quot; instinct most often points the wrong way. Detailed descriptions are by far the most important factor in tool performance, and the most common failure is <em>under</em>-description. What changed on current models is <em>which content</em> belongs there: contract and mechanics in, behavioral steering and worked examples out. A tool description is a man page — what the tool does, when to use it (and when not to), what each parameter means, caveats, what it does not return.</p>
+<p>| Pattern | Direction | Fix | |---|---|---| | Vague one-liners; parameters without descriptions; no when-not-to-use | <strong>Under-described — add</strong> | 3–4+ sentences minimum; description must precisely match actual behavior (a contract/behavior mismatch sends the model down paths no prompt text can fix) | | <code>CRITICAL: You MUST use this tool when...</code> | Over-steered — dial back | Plain <code>Use this tool when...</code> — triggering boosters written against under-triggering models now cause over-triggering | | Worked examples, fake dialogue turns, embedded protocols (numbered workflows, HEREDOCs) in the description — in any quantity, even ones that &quot;measurably lift the call rate&quot; | Misplaced — move | Examples constrain the exploration space and cost tokens on every request; move teaching material to skills/progressive disclosure; make parameters expressive (well-named enums carry intent) | | Scolding cross-references (<code>ALWAYS use X, NEVER use Y for this</code>) and behavior-smuggling (&quot;after showing results, always recommend...&quot;) | Misplaced — move or delete | A description is a contract about functionality, not a channel for conversational instructions; put a preference for tool X in X&#x27;s description, not scattered across its rivals | | Tool names in the system prompt; prose lists that shadow the real tool list | Duplicated — delete | The system prompt shouldn&#x27;t name tools; then enabling or disabling one never leaves a dangling reference. Don&#x27;t expose tools that are invalid in the current configuration | | Near-duplicate overlapping tools; bloated response payloads; full catalogs of 30+ always-loaded tools | Structural | Fewer, clearly bounded tools with explicit boundaries in both descriptions; high-signal responses; past a few dozen tools use tool search / deferred loading instead of always-loading every schema |</p>
+<p><strong>One deliberate split: trigger text is not behavioral text.</strong> Text whose job is routing — a skill&#x27;s frontmatter <code>description</code>, a trigger block — may legitimately carry calibrated urgency, because skills currently under-trigger; ideally it&#x27;s tuned against a trigger eval rather than vibes. Text whose job is behavior should explain rather than shout. These look identical to a grep, so classify by function before flagging.</p>
+<p><strong>Signals:</strong> descriptions under ~3 sentences (add); <code>MUST|ALWAYS|NEVER</code> steering behavior inside descriptions (dial back); fake dialogue or worked examples in descriptions (move); tool names in system-prompt prose (delete).</p>
+<h3>Group 4 — Request config and architecture</h3>
+<p>The same audit keeps surfacing these next to prompt cruft; report them even though they&#x27;re not prompt text.</p>
+<ul><li><strong>API fossils</strong>: parameters and headers that error or are deprecated on the target model — the per-model lists live in <code>shared/model-migration.md</code>; treat each migration checklist as a removal checklist.</li><li><strong>Cache-hostile ordering</strong>: timestamps, UUIDs, per-user content interpolated above stable content. Read <code>shared/prompt-caching.md</code> → Silent invalidators, and run its greps during this audit.</li><li><strong>Budget countdowns rendered into context</strong>: surfacing remaining-token counts to the model can cause premature wrap-up behavior; avoid showing them where possible.</li><li><strong>An LLM executor for a deterministic plan</strong>: agent sessions whose transcript is the same loop body N times; calls whose inputs fully determine outputs. <strong>Run this check, don&#x27;t wait to notice it</strong>: in every pipeline, batch job, or agent loop, <em>count the model-call sites</em> and ask of each whether its inputs fully determine its output. Routing, tallying, normalizing, filtering, and formatting steps go back into plain code; keep exactly one model call where the work is genuinely adaptive (classifying the ambiguous remainder, writing the judgment summary). Zero model calls is an over-fix when a judgment step exists — name the one call that stays.</li><li><strong>Redundant specialist sub-agents</strong>: inspect the sub-agent roster / agent config as a surface in its own right. Two agents doing the same task with the same tools and near-duplicate prompts, differing only in a filter or a payload field, are one agent that should take the distinction as input. The fix is a concrete roster edit — delete the redundant definition and fold its one real difference into the surviving agent&#x27;s prompt or payload — proposed as a diff like any other finding, not left as an advisory note.</li><li><strong>No token accounting</strong>: without per-surface cost visibility, every other issue here is invisible. If the user has no accounting, recommend adding it first — it&#x27;s the prerequisite for measuring any cleanup.</li></ul>
+<hr>
+<h2>What not to flag — the keep list</h2>
+<p>An audit that only says &quot;delete&quot; hurts the users who follow it most diligently. These stay, even when a grep matches:</p>
+<ol><li><strong>Context is never cruft.</strong> Audience, product, environment facts, quality bar, constraints, and the <em>reasons</em> for them — what only the author knows. Too-short prompts produce generic output because the model fills gaps with safe defaults; give the model more context than seems necessary, not less.</li><li><strong>Cruft ≠ length.</strong> The harm comes from specific outdated instructions, not from volume. Never justify a deletion by character count alone.</li><li><strong>Fragile operations keep exact scripts.</strong> Low-freedom, prescriptive text is correct where exactly one sequence is safe (destructive commands, auth flows, compliance steps). Prompting effort should scale with how far the task is from what the model does naturally.</li><li><strong>Tool contract detail stays — and often grows.</strong> Parameter semantics, limits, failure modes, what the tool does not return. The audit removes steering and examples from descriptions, not contract.</li><li><strong>Prohibitions against current, demonstrated failures stay.</strong> The discriminator is whether the failure reproduces on the target model in this context — not whether the sentence pattern-matches &quot;prohibition&quot;.</li><li><strong>Trigger/routing text may carry calibrated urgency</strong> (see Group 3). Flag shouting in bodies, not load-bearing trigger text.</li><li><strong>Format-pinning examples on genuinely format-sensitive outputs stay</strong>, labeled illustrative.</li><li><strong>Working redundancy is not cruft.</strong> Duplicated or overlapping content that is <em>functioning</em> — the same contract stated in two files, a worked example the prompt could in principle do without, content you would merely organize differently — is a refactoring preference, not a dated pattern. If it isn&#x27;t causing errors and the target model reconciles it, an audit leaves it alone; propose deduplication or consolidation only when the duplicates actually disagree. &quot;An audit that finds nothing should change nothing&quot; extends to this: on a clean surface, report that it is clean.</li><li><strong>A one-line role statement is fine.</strong> Flag identity text only when it substitutes for real context.</li><li><strong>Deliberate recap is not padding.</strong> A single end-of-prompt restatement of the few key constraints is a known, reasonable pattern; the anti-pattern is scattered duplication.</li><li><strong>Re-baselining adds text too.</strong> Matching a prompt to a new model sometimes means <em>adding</em> guidance for the new model&#x27;s failure modes (see the per-target &quot;Behavioral shifts&quot; sections in <code>shared/model-migration.md</code>). The audit&#x27;s job is fit, in both directions.</li></ol>
+<hr>
+<h2>Step 5: Produce the audit report</h2>
+<p>One entry per finding, in this shape:</p>
+<p>| Field | Content | |---|---| | <strong>Location</strong> | <code>file:line</code> (or <code>file:line-range</code>) | | <strong>Evidence</strong> | The exact text, quoted | | <strong>Pattern</strong> | The group/row above it matches | | <strong>Why obsolete</strong> | One or two sentences tying it to the target model&#x27;s documented behavior (&quot;current models are proactive by default; this booster now causes over-triggering&quot;) | | <strong>Confidence</strong> | <strong>High</strong> — documented in current Claude docs or errors on the target model. <strong>Medium</strong> — consistent, widely-observed behavior (e.g. example over-indexing). <strong>Low</strong> — heuristic or idiom-dating; flag, don&#x27;t edit. | | <strong>Action</strong> | <code>remove</code> / <code>rewrite</code> (give the replacement) / <code>move</code> (say where) / <code>replace-with-API-feature</code> / <code>add</code> (under-description — the fix is <em>more</em> text; give it) / <code>flag</code> (no edit proposed) |</p>
+<p>Order the report by confidence, highest first. Summarize at the top: counts per group, and the two or three highest-impact findings in prose. Findings you cannot tie to a pattern and a target-model reason go at the bottom as <code>flag</code> items or not at all.</p>
+<p><strong>The flag-versus-fix threshold.</strong> A finding that matches a documented row in the groups above <em>is</em> a high- or medium-confidence finding, and it gets a concrete proposed action — <code>remove</code>, <code>rewrite</code> (with the replacement text), <code>move</code>, or <code>add</code>. <code>flag</code> is reserved for two things only: low-confidence idiom-dating that no row documents, and items outside the audit&#x27;s scope. Do not downgrade a documented-pattern match to <code>flag</code> because it &quot;seems minor,&quot; &quot;reads as a soft nudge,&quot; &quot;is a product judgment,&quot; or &quot;measurably helps&quot; — those are reasons the user may <em>decline</em> your proposed fix, not reasons to withhold it. An audit that correctly identifies the pattern and then proposes nothing has done half the job; the user can always reject a hunk they disagree with, but they cannot accept a fix you never wrote.</p>
+<h2>Step 6: Produce the proposed diff</h2>
+<ul><li>Include only findings with action <code>remove</code>/<code>rewrite</code>/<code>move</code>/<code>replace-with-API-feature</code>/<code>add</code> at <strong>high or medium confidence</strong>. <code>flag</code> and low-confidence items appear in the report only.</li><li>One finding per hunk, so effects attribute and the user can take hunks selectively.</li><li>Rewrites beat bare deletions where the instruction has a live purpose: re-express it simply (&quot;look before you delete&quot;) rather than keeping the verbose original or dropping the concern.</li><li>A removal is complete only when everything referencing it goes too: tests asserting the old behavior, call sites and helper functions, docs, and every model-ID pin (READMEs and rule files included). Grep the project for the removed symbols and the old model ID before calling the diff done — a prompt fixed while its smoke test still asserts the old behavior is a broken app, not an audit win.</li><li>For request-construction patterns (assistant-turn prefill, stop-sequence scaffolding, sampling-parameter fossils), the diff must <em>eliminate the capability</em> on every code path — after the fix, no path through the request builder can still emit the dated shape (e.g. no reachable branch yields a trailing assistant turn) — not merely rewire its current consumer. Include every call site of the changed function and the parser/retry helpers that existed only to serve the old mechanism, and rewrite the tests that assert the old request shape.</li><li>The report and the proposed diff are the deliverables — produce both in full and stop there. Do not pause mid-audit to ask whether to continue, and do not end by asking whether to apply: present the diff and let the user take hunks on their own schedule. Apply edits to files only when the request itself explicitly asked for the changes to be applied (e.g. &quot;clean it up&quot;, &quot;remove the cruft&quot;), and even then keep <code>flag</code>/low-confidence items out of the applied set.</li></ul>
+<h2>Step 7: Verify — removal is a hypothesis, not a conclusion</h2>
+<ul><li><strong>Probe behavior, not self-report.</strong> For each contested change, run a small behavioral check before and after on a scratch copy (the user&#x27;s eval suite if one exists; otherwise construct a minimal probe that exercises the instruction&#x27;s purpose). Asking the model whether it needs an instruction is not a measurement.</li><li><strong>One change at a time</strong> where stakes are high, so regressions attribute to their cause.</li><li><strong>If a cut regresses, re-add simply.</strong> Re-express the instruction in its minimal form and re-probe — don&#x27;t restore the verbose original.</li><li><strong>Check out-of-band dependencies before deleting.</strong> Grep the wider system for the exact prompt text first — classifiers, tests, and log parsers sometimes match on prompt strings.</li><li><strong>Re-audit at every model release.</strong> Prompts are per-model artifacts; a line that is load-bearing on one generation is cruft on the next. Each new migration section in <code>shared/model-migration.md</code> is the trigger to run this audit again.</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/prompt-audit.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

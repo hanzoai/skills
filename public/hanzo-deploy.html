@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-deploy</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-deploy.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-deploy">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-deploy.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-deploy</h1><p class="lede">Hanzo deploys all services via Kubernetes manifests stored in the universe repo (hanzoai/universe).</p><h1>Hanzo Deploy - Deployment Guide</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-k8s.md</code>, <code>hanzo/hanzo-platform.md</code>, <code>hanzo/hanzo-kms.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo deploys all services via Kubernetes manifests stored in the <strong>universe</strong> repo (<code>hanzoai/universe</code>). Universe is the single source of truth for all infrastructure. Branch <code>main</code> is production, branch <code>dev</code> is staging. All images are built by CI/CD on self-hosted runners and pushed to GHCR. Never build images locally unless explicitly requested.</p>
+<h2>When to use</h2>
+<ul><li>Deploying any Hanzo service to production or staging</li><li>Setting up CI/CD pipelines for Hanzo services</li><li>Understanding the deployment workflow</li><li>Adding a new service to the Hanzo infrastructure</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Universe is the source of truth</strong>: All K8s manifests live in <code>~/work/hanzo/universe/infra/k8s/</code></li><li><strong>main = production, dev = staging</strong>: Never push untested changes directly to main</li><li><strong>Self-hosted runners only</strong>: Never use GitHub Actions billing. All builds run on the 7-node runner pool in hanzo-k8s</li><li><strong>GHCR for images</strong>: <code>ghcr.io/hanzoai/&lt;service&gt;:&lt;tag&gt;</code>, always <code>--platform linux/amd64</code></li><li><strong>KMS for secrets</strong>: All secrets via KMSSecret CRDs synced from kms.hanzo.ai. Never hardcode secrets in manifests</li><li><strong>No local builds</strong>: CI/CD builds for all architectures. Do not build images on dev machines</li><li><strong>Kustomize, not Helm</strong>: <code>kubectl kustomize . | kubectl apply -f -</code> for idempotent deploy</li><li><strong>No nginx, no caddy</strong>: Hanzo Ingress (Traefik) or the static plugin handles serving</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Universe repo | <code>github.com/hanzoai/universe</code> (private) | | Local path | <code>~/work/hanzo/universe/infra/k8s/</code> | | Prod cluster | <code>do-sfo3-hanzo-k8s</code> (22 nodes) | | Staging cluster | <code>do-sfo3-hanzo-dev-k8s</code> | | Registry | <code>ghcr.io/hanzoai/*</code> | | DO registry | <code>registry.digitalocean.com/hanzo</code> (5/5 repo limit, avoid) | | Runner pool | 7x32GB nodes in hanzo-k8s | | KMS | <code>kms.hanzo.ai</code> |</p>
+<h2>Deployment workflow</h2>
+<h3>Standard service deploy</h3>
+<pre><code class="lang-bash"># 1. Edit manifests in universe
+cd ~/work/hanzo/universe/infra/k8s/&lt;service&gt;
+
+# 2. Apply to production
+kubectl --context do-sfo3-hanzo-k8s kustomize . | kubectl apply -f -
+
+# 3. Verify
+kubectl --context do-sfo3-hanzo-k8s -n hanzo get pods -l app=&lt;service&gt;
+kubectl --context do-sfo3-hanzo-k8s -n hanzo logs -l app=&lt;service&gt; --tail=50</code></pre>
+<h3>New service checklist</h3>
+<ol><li>Create directory in <code>universe/infra/k8s/&lt;service&gt;/</code></li><li>Write <code>kustomization.yaml</code>, <code>deployment.yaml</code>, <code>service.yaml</code></li><li>Add <code>KMSSecret</code> CRD in <code>secrets.yaml</code> for any secrets</li><li>Add Ingress resource with <code>ingressClassName: hanzo</code></li><li>Add Cloudflare DNS record pointing to cluster LB (<code>165.232.146.176</code> for hanzo-k8s)</li><li>Set up CI/CD workflow in service repo to build+push image to GHCR</li><li>Apply manifests: <code>kubectl kustomize . | kubectl apply -f -</code></li></ol>
+<h3>Image build (CI/CD)</h3>
+<p>All images are built in CI/CD pipelines, never locally.</p>
+<pre><code class="lang-yaml"># Typical .github/workflows/build.yml
+name: Build and Push
+on:
+ push:
+ branches: [main, develop]
+jobs:
+ build:
+ runs-on: self-hosted # MUST use self-hosted runners
+ steps:
+ - uses: actions/checkout@v4
+ - name: Login to GHCR
+ run: echo &quot;${{ secrets.GHCR_TOKEN }}&quot; | docker login ghcr.io -u hanzoai --password-stdin
+ - name: Build and push
+ run: |
+ docker buildx build \
+ --platform linux/amd64 \
+ --push \
+ -t ghcr.io/hanzoai/&lt;service&gt;:latest \
+ -t ghcr.io/hanzoai/&lt;service&gt;:${{ github.sha }} \
+ .</code></pre>
+<h3>Secret management</h3>
+<pre><code class="lang-yaml"># secrets.yaml -- KMSSecret CRD
+apiVersion: kms.hanzo.ai/v1
+kind: KMSSecret
+metadata:
+ name: my-service-secrets
+ namespace: hanzo
+spec:
+ project: my-service
+ environment: production
+ syncInterval: 5m
+ secretRef:
+ name: my-service-secrets
+ secrets:
+ - DATABASE_URL
+ - API_KEY
+ - JWT_SECRET</code></pre>
+<h2>Universe directory structure</h2>
+<pre><code>universe/infra/k8s/
+ namespace.yaml # hanzo namespace
+ cluster-issuer.yaml # Let&#x27;s Encrypt issuer
+ platform-ingress.yaml # Platform-level ingress
+ rbac/ # RBAC for service accounts
+ base/ # Shared base manifests
+ # --- Services ---
+ app/ # hanzo.app
+ billing/ # billing.hanzo.ai
+ bot/ # bot gateway
+ chat/ # chat.hanzo.ai
+ cloud/ # cloud.hanzo.ai (Casibase)
+ commerce/ # commerce API
+ console/ # console.hanzo.ai (Langfuse)
+ dns/ # CoreDNS
+ flow/ # workflow builder
+ gateway/ # API gateway (KrakenD)
+ iam/ # hanzo.id (Hanzo IAM)
+ kms/ # kms.hanzo.ai (Hanzo KMS)
+ monitoring/ # Prometheus/Grafana
+ o11y/ # Hanzo o11y observability
+ paas/ # platform.hanzo.ai
+ registry/ # container registry
+ search/ # search service
+ sql/ # PostgreSQL + ZAP sidecar
+ s3/ # Hanzo S3 object storage
+ team/ # hanzo.team
+ vector/ # vector DB
+ zen/ # Zen model serving
+ zt/ # zero-trust (OpenZiti)
+ # ... 40+ service directories</code></pre>
+<h2>Cluster topology</h2>
+<h3>hanzo-k8s (production)</h3>
+<ul><li><strong>Location</strong>: DigitalOcean SFO3</li><li><strong>Nodes</strong>: 22 (15 workers + 7 runners)</li><li><strong>Context</strong>: <code>do-sfo3-hanzo-k8s</code></li><li><strong>LB IP</strong>: <code>165.232.146.176</code></li><li><strong>Services</strong>: All Hanzo services (IAM, KMS, Platform, Cloud, Console, Gateway, Commerce, etc.)</li></ul>
+<h3>lux-k8s (Lux blockchain)</h3>
+<ul><li><strong>Location</strong>: DigitalOcean SFO3</li><li><strong>Nodes</strong>: Separate cluster for Lux blockchain</li><li><strong>Context</strong>: <code>do-sfo3-lux-k8s</code></li><li><strong>LB IP</strong>: <code>24.144.69.101</code></li><li><strong>Services</strong>: 15 validators, gateway, markets, lux-cloud-web</li></ul>
+<h2>Gotchas</h2>
+<ol><li><strong>GHA billing is blocked</strong> for hanzoai org. All CI/CD must use self-hosted runners.</li><li><strong>Runner pool waste</strong>: 7x32GB nodes at 17-26% utilization ($1,764/mo waste). Plan to scale to 2.</li><li><strong>DO registry limit</strong>: 5/5 repo limit on <code>registry.digitalocean.com/hanzo</code>. Use GHCR exclusively.</li><li><strong>Local TLS errors</strong>: Pushing to GHCR from local can fail with TLS errors. Use the buildx K8s driver.</li><li><strong>DO App Platform is DECOMMISSIONED</strong>: All services are K8s-native as of Feb 2026. No managed databases.</li><li><strong>In-cluster PostgreSQL</strong>: <code>postgres.hanzo.svc</code> -- no managed DB services.</li></ol>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-k8s.md</code> -- K8s cluster details</li><li><code>hanzo/hanzo-kms.md</code> -- Secret management</li><li><code>hanzo/hanzo-ingress.md</code> -- Ingress routing</li><li><code>hanzo/hanzo-platform.md</code> -- PaaS for app deployment</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-23 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: deployment, ci-cd, kubernetes, universe, ghcr <strong>Prerequisites</strong>: kubectl, K8s cluster access, GHCR credentials</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-deploy.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

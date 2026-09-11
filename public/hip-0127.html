@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,61 +196,85 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0127</h1><p class="lede">HIP-127: V8 · Open Edition — Architecture, Distribution &amp; the Language Seam. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0127: V8 · Open Edition — Architecture, Distribution &amp; the Language Seam</h1>
+<h1>hip-0127</h1><p class="lede">HIP-127: V8 · Open Edition — Architecture, Distribution &amp; the Language Seam. Status Final. Hanzo architectural specification.</p><h1>HIP-0127: V8 · Open Edition — Architecture, Distribution &amp; the Language Seam</h1>
 <h2>Abstract</h2>
-<p>The spine of Hanzo <strong>V8 · Open Edition</strong>: how the whole cloud is composed, split across languages, and distributed — as one coherent set of decisions so no consumer ever needs to know or care which part is Go and which is Rust. It ties together the unified binary (HIP-0106), the ZAP transport (HIP-0114/0120), the CLI (HIP-0041), and the multi-language SDKs (HIP-0040) under one rule: <strong>one contract, many bindings, thin clients, and a wire — never FFI — between languages.</strong></p>
+<p>The spine of Hanzo <strong>V8 · Open Edition</strong>: how the whole cloud is composed, split across languages, and distributed — as one coherent set of decisions so no consumer ever needs to know or care which part is Go and which is Rust. It ties together the plugin contract (HIP-0106), the ZAP transport (HIP-0114/0120), the CLI (HIP-0041), and the multi-language SDKs (HIP-0040) under one rule: <strong>one contract, many bindings, thin clients, and a wire — never FFI — between languages.</strong></p>
 <h2>Motivation</h2>
-<p>Hanzo is Go <em>and</em> Rust: the cloud is Go (pure, single-binary), the engine, the <code>dev</code> agent, and the ML kernels are Rust. The naive urges are both wrong:</p>
+<p>Hanzo is Go <em>and</em> Rust: the cloud is Go, the engine, the <code>dev</code> agent, and the ML kernels are Rust. The naive urges are both wrong:</p>
 <ul><li>fuse them in one process over FFI (cgo/uniffi), or</li><li>split the GitHub orgs by language (<code>hanzo-go</code>/<code>hanzo-rs</code>).</li></ul>
-<p>The first <em>complects</em> two toolchains — cgo destroys the <code>CGO_ENABLED=0</code> single-static-binary that makes &quot;curl | sh, run the whole cloud anywhere&quot; true. The second leaks the implementation detail into the org, forcing users to know which half a capability lives in. V8 rejects both.</p>
+<p>The first <em>complects</em> two toolchains: a Go⟷Rust FFI link means one build that needs both, a cross-compile matrix that is the product of the two, and a crash in either half landing in the other&#x27;s process. The second leaks the implementation detail into the org, forcing users to know which half a capability lives in. V8 rejects both.</p>
+<p>Note what this rejects and what it does not. It rejects a <strong>language seam</strong> over FFI; it is not a blanket ban on cgo. <code>make</code> defaults to <code>CGO_ENABLED=0</code> — a pure-Go build that registers exactly one <code>sqlite</code> driver — while the shipped image builds <code>CGO_ENABLED=1 -tags &quot;libsqlite3 sqlite_fts5&quot;</code> so stores link the live libsqlcipher codec (<code>cloud/Makefile</code>, which states outright that the shipped binary is not pure Go). One C library inside one Go binary is a dependency choice. Linking Rust into that same binary would be an architecture, and that is the thing refused here.</p>
 <h2>Specification</h2>
-<h3>1 — One binary, one contract</h3>
-<p>The application cloud is <strong>one Go binary</strong> (<code>cloud</code>, <code>CGO_ENABLED=0</code>, static), embedding ~54 subsystems mounted from <code>subsystems.go</code> (HIP-0106). Its public surface is <strong><code>/v1/&lt;capability&gt;</code></strong> over <strong>HTTP + ZAP</strong>, the ONE contract every consumer speaks. Capabilities are grouped into the eight movements of the capability manifest (<code>openapi/capabilities.yaml</code>): one capability = one name = one <code>/v1/&lt;name&gt;</code> = one self-contained spec.</p>
+<h3>1 — One contract, one host, many plugin binaries</h3>
+<p>The application cloud is a <strong>light Go host</strong> (<code>cloud</code>) plus <strong>123 plugin binaries</strong>, composed at run time and not linked at build time (HIP-0106). The host holds no subsystem code. <code>manifest.Apps</code> — a hand-authored <code>var Apps = []App{…}</code> in <code>cloud</code>&#x27;s <code>manifest/apps.go</code> — is the source of truth for the set; <code>cmd/cloud/main.go</code> walks it and calls <code>zip.Load(p, a.Prefixes…)</code> per row, then <code>app.Use(leaf)</code>. Of the 123 rows, 4 are eager, 1 is co-resident (middleware on another app&#x27;s router, mounting nothing of its own) and the rest load on first request. <strong>There is no <code>subsystems.go</code> in this path.</strong> Earlier drafts of this HIP named one; the only file by that name in <code>cloud</code> is <code>apps/admin/subsystems.go</code>, which <em>reports</em> on the composition and does not create it.</p>
+<p>Its public surface is <strong><code>/v1/&lt;capability&gt;</code></strong> over <strong>HTTP + ZAP</strong>, the ONE contract every consumer speaks. One capability = one name = one <code>/v1/&lt;name&gt;</code> = one self-contained spec.</p>
+<h4>1.1 — Three numbers, three questions, never conflated</h4>
+<p>Every number below has one authority and answers one question. They are close in size and were repeatedly quoted for each other; that is the defect this subsection exists to end.</p>
+<p>| Number | Question it answers | Authority | |---|---|---| | <strong>191 capabilities</strong> | Which names exist for a reader shown the whole API at once, and which of nine domains each sits under | <code>capabilities.yaml</code> in the <strong><code>hanzoai/openapi</code> repository</strong> — <code>openapi/</code> is the REPO name, not a directory inside <code>cloud</code> | | <strong>182 products</strong> | Which capability names the served document actually carries today | the top-level <code>tags:</code> of <code>cloud</code>&#x27;s emitted <code>openapi.yaml</code> (2,473 operations across the 123 subsets) | | <strong>123 apps</strong> | How many things get built, shipped and started — the deployment unit | <code>manifest.Apps</code> in <code>cloud/manifest/apps.go</code>, in exact bijection with the 123 <code>plugin/&lt;app&gt;/openapi.json</code> subsets, gated by <code>plugin/gen-app-cmds</code> |</p>
+<p>The manifest is <strong>curation, not a registry</strong>: it cannot invent a capability, because <code>publish.py</code> refuses in both directions — a served name nobody has grouped fails the publish, and a grouped name nothing serves fails it too. The nine domains are <code>identity</code> (18) · <code>intelligence</code> (51) · <code>data</code> (18) · <code>streams</code> (16) · <code>observability</code> (12) · <code>commerce</code> (22) · <code>platform</code> (26) · <code>applications</code> (25) · <code>chain</code> (3).</p>
+<p><strong>Capability ≠ app.</strong> 27 apps serve more than one <code>/v1</code> product (<code>billing</code> also answers <code>/v1/finance</code>), and some products are served by the host itself rather than by any plugin (<code>GET /v1/commands</code>, <code>GET /v1/openapi.json</code>) — so a sweep of <code>plugin/*/openapi.json</code> alone under-reports the served set, and reading a capability count as a binary count is always wrong.</p>
+<p>A fourth number exists and is not a capability count: operations carrying the <code>compat</code> tag are DROPPED from the published document by <code>publish.py</code>, so a wire-compatibility dialect never mints a product name.</p>
+<h4>1.2 — Declared-but-unserved names are drift, and are named</h4>
+<p>At time of writing the manifest declares 13 names <code>cloud</code> no longer serves. Each is a rename or a consolidation with a commit behind it — <code>sentry</code>→<code>sentinel</code>, <code>automations</code>→<code>auto</code>, <code>kv</code>/<code>sql</code>/<code>docdb</code>/<code>datastore</code> folded into <code>/v1/instances/<em></code>, <code>balancers</code>/<code>vpcs</code>/<code>cloud</code> deleted with their apps, four speech names folded into <code>/v1/audio/</em></code>, and <code>health</code>, which was never a product (per-app liveness is auto-mounted). Five served names are ungrouped: <code>instances</code>, <code>sentinel</code>, <code>seo</code>, <code>allowance</code> and <code>edge</code>.</p>
+<p><code>edge</code> must NOT be grouped. <code>GET /v1/edge</code> names a POSITION, not a product; the correction belongs in <code>cloud</code> — move the probe under its owner&#x27;s prefix — and until it moves the publish stays blocked, which is the gate working.</p>
 <h3>2 — The language seam is the ZAP wire, NEVER FFI</h3>
-<p>Go and Rust components compose over <strong>ZAP</strong> (network or local socket), each a clean single-language binary. Go <code>cloud</code> ⟷ Rust <code>engine</code>/<code>dev</code>/<code>cli</code> never link each other&#x27;s code; they exchange ZAP frames whose schema lives in <code>zap-spec</code>.</p>
-<ul><li>Preserves the pure-Go single static binary (no cgo, no cross-toolchain build).</li><li>Language becomes an internal detail of each box; the boxes stay orthogonal and</li></ul>
+<p>Go and Rust components compose over <strong>ZAP</strong> (network or local socket), each a clean single-language binary. Go <code>cloud</code> ⟷ Rust <code>engine</code>/<code>dev</code>/<code>cli</code> never link each other&#x27;s code; they exchange ZAP frames. The wire format those frames are in — what a ZAP message <em>is</em>, field offsets and all — is defined once, language- agnostically, in <strong><code>zap-proto/zap-spec</code></strong>. The runtimes implement it: <code>zap-proto/go</code>, <code>@zap-proto/zap</code> for TypeScript, and the <code>zapwire</code> crate in <code>hanzoai/zap</code> for Rust, which is cross-checked against Go&#x27;s bytes.</p>
+<ul><li>No cross-toolchain build: each binary is compiled by one toolchain, and a</li></ul>
+<p>  release matrix is the sum of the two rather than their product.</p>
+<ul><li>Language becomes an internal detail of each box; the boxes stay orthogonal and</li></ul>
 <p>  composable. Don&#x27;t fuse — <strong>bridge</strong>.</p>
 <h3>3 — Distribution: one contract → N bindings → thin clients</h3>
-<pre><code>hanzo.yaml            (the ONE contract — /v1 over HTTP + ZAP, from capabilities.yaml)
+<p>The direction of generation is one-way and starts in the code. <code>cloud</code> emits <code>openapi.yaml</code> from its own live routers (the weave of the 123 per-app subsets); <code>publish.py</code> in <code>hanzoai/openapi</code> derives <code>hanzo.yaml</code> from that emission at one pinned release, applying <code>capabilities.yaml</code> only as the domain grouping. <strong>Nothing is authored downstream of the code</strong>: to change the API you change a route in <code>cloud</code>.</p>
+<pre><code>cloud/openapi.yaml    (emitted from the live routers — 123 subsets, woven)
+   │  publish.py, at one pinned release  ↓   (+ capabilities.yaml: grouping only)
+hanzo.yaml            (the ONE published contract — /v1 over HTTP + ZAP)
    │  generate ↓
  go-sdk · rust-sdk · js-sdk        (language bindings — HIP-0040; rust hand-kept)
- zap-spec                          (the ZAP wire types)
    │
- hanzo-client (Rust: ZAP bridge + hanzo.id auth + rust-sdk)
-   ├── hanzo   — the control CLI (apps/deploy/login/…)   → @hanzo/cli
-   └── dev     — the coding agent (codex fork)            → @hanzo/dev</code></pre>
-<ul><li><strong>The CLI is a client, never the server.</strong> It speaks ZAP (or its SDK) to a</li></ul>
-<p>  <em>live</em> cloud — prod, a laptop single-binary, or a customer self-host — and   <strong>never imports <code>hanzoai/cloud</code></strong> (that coupling is the ~600 MB trap).</p>
-<ul><li><strong>CLI language = Rust</strong>, sharing <code>hanzo-client</code> with <code>dev</code>: one auth stack, one</li></ul>
-<p>  ZAP client, one SDK, two thin frontends. A ~15 MB binary — npm-shippable.</p>
+ hanzo   — the control CLI (apps/deploy/login/…)   → @hanzo/cli
+ dev     — the coding agent (codex fork)           → @hanzo/dev
+
+ zap-proto/zap-spec    an INPUT, not an output: the ZAP wire format itself,
+                       hand-authored and language-agnostic (§2)</code></pre>
+<ul><li><strong>The CLI is a client, never the server.</strong> It speaks HTTP or ZAP to a <em>live</em></li></ul>
+<p>  cloud — prod, a laptop host, or a customer self-host — and <strong>never imports   <code>hanzoai/cloud</code></strong> (that coupling is what makes a control tool carry a fleet).   The rule holds by construction today: <code>hanzo</code> is Rust and links no Go.</p>
+<ul><li><strong>CLI language = Rust</strong>, one thin binary per tool. <code>hanzo</code> and <code>dev</code> are two</li></ul>
+<p>  Rust binaries sharing an auth model (HIP-0111 OIDC PKCE S256) but, today, not   yet a crate: there is no shared <code>hanzo-client</code>. One client crate under both   remains the target; nothing about the seam depends on reaching it.</p>
 <ul><li><strong>Distribution is one harness, many channels:</strong> per-platform prebuilt binaries</li></ul>
-<p>  on GitHub Releases → <code>@hanzo/cli</code>/<code>@hanzo/dev</code> via npm <code>optionalDependencies</code>   (esbuild/turbo pattern) + <code>hanzo.sh</code> (curl|sh) + brew + <code>go install</code>. One   binary per tool, N channels (HIP-0041).</p>
+<p>  on GitHub Releases, fetched by ONE script. <code>cli/install.sh</code> is the single   implementation of &quot;fetch a Hanzo binary&quot; — it detects the platform, verifies   the asset&#x27;s sha256, and refuses loudly on a platform we do not publish. The   channels drive that one script rather than carrying copies of it: <code>hanzo.sh</code>   (curl|sh) overrides three variables per tool, and <code>@hanzo/cli</code>/<code>@hanzo/dev</code>   install it from a postinstall step whose <code>bin</code> shim execs the real binary and   gets out of the way. One binary per tool, N channels (HIP-0041).</p>
 <h3>3a — Schemas are co-located, never a monorepo</h3>
 <p>A capability&#x27;s <code>.zap</code> wire schema lives <strong>alongside the product that implements it</strong> — the contract evolves with its code in one PR, versioned as a unit. There is <strong>no central <code>hanzoai/zap</code> schema repo</strong>; centralizing decouples contract from implementation (drift) and braids every product&#x27;s contract into one place.</p>
-<ul><li>Shared primitives (auth, errors, the common envelope) → <code>zap-proto/zap-spec</code></li></ul>
-<p>  (the analog of <code>openapi/shared</code>).</p>
+<ul><li>Shared primitives — the message layout every schema is expressed in — live in</li></ul>
+<p>  <code>zap-proto/zap-spec</code>, one level below any capability, the same way an OpenAPI   document depends on JSON Schema rather than on a shared components file. There   is no <code>openapi/shared</code>; an earlier draft cited one, and nothing by that name   exists.</p>
 <ul><li>Discovery for cross-service consumers is a <strong>generated union</strong>, the ZAP analog</li></ul>
 <p>  of <code>hanzo.yaml</code> — not a monorepo.</p>
-<ul><li><code>.zap</code> and OpenAPI are two transports of the SAME <code>/v1</code> contract: both derive</li></ul>
-<p>  from the per-service contract (<code>capabilities.yaml</code> + spec). Do not hand-maintain   them separately — one contract → HTTP + ZAP + SDKs, all generated.</p>
+<ul><li><code>.zap</code> and OpenAPI are two transports of the SAME <code>/v1</code> contract, and both</li></ul>
+<p>  derive from the implementing code, never from each other and never from the   manifest (<code>capabilities.yaml</code> groups names for a reader and declares no route).   Do not hand-maintain them separately — one contract → HTTP + ZAP + SDKs, all   generated.</p>
 <ul><li><code>hanzoai/zap</code> stays the Hanzo ZAP <strong>runtime/sidecar</strong> (SQL/KV/Datastore bridge),</li></ul>
 <p>  never a schema store.</p>
 <h3>4 — Org by capability, not by language</h3>
 <p>Everything canonical under <strong><code>hanzoai/&lt;product&gt;</code></strong> (<code>hanzoai/cloud</code> Go, <code>hanzoai/engine</code> Rust, <code>hanzoai/dev</code> Rust, <code>hanzoai/cli</code> Rust). NO <code>hanzo-go</code>/<code>hanzo-rs</code> orgs. Users never know or care which language answered — because the org is product-first and the wire is uniform, <strong>not</strong> because the languages are fused.</p>
-<h3>5 — Deploy: native PaaS, not ArgoCD</h3>
-<p>Deploys go through the native PaaS (<code>hanzoai/platform</code>, embedded <code>clients/paas</code>), which merge-patches the operator <code>Service</code> CR&#x27;s <code>.spec.image</code>; the operator reconciles the rollout. &quot;No second deployer.&quot; Driven by the <code>hanzo</code> CLI / platform UI. ArgoCD is retired (sequenced — it currently bootstraps the PaaS).</p>
-<h3>6 — Decentralized: the network is the cloud</h3>
-<p><code>hanzo.network</code> is <code>hanzod</code> blockchain nodes; they spawn and power the same unified binary run in production. It is <strong>OSS AI cloud in a single binary</strong> — anyone runs the whole cloud on their own machine, brings their own GPU or K8s, mines on any device (confidential via NVIDIA TEE/CC, market-priced), and public + OSS workloads run free on public nodes (GitHub-for-compute). The 67 capabilities are one binary; the network is the substrate.</p>
+<h3>5 — Deploy: the declared state is the only writer</h3>
+<p><strong>One writer, and for a first-party service it is git, not the cluster.</strong> The image a service runs is declared in the universe repository&#x27;s operator App CR (<code>hanzo.ai/v1</code>, <code>infra/k8s/operator/crs/&lt;service&gt;.yaml</code>) and reconciled by Hanzo CD with <code>selfHeal</code>. A rollout is therefore a COMMIT that moves the tag in that file; the operator reconciles from it.</p>
+<p>This inverts what an earlier draft of this section specified. It said deploys merge-patch the CR&#x27;s <code>.spec.image</code> from an embedded <code>clients/paas</code>. Two things are wrong with that. <code>clients/paas</code> does not exist — the code is <code>cloud/apps/platform/rollout.go</code>. And its <code>releaseService</code> <strong>refuses that patch by name</strong>: under <code>selfHeal</code> a patch is reverted on the next sync, so the release would look applied and then silently roll back. It validates first (DNS-1123 name, strict-semver image, the App exists in the namespace) so the refusal is specific, and its error names the remedy: commit the tag to that file.</p>
+<p>A green pipeline therefore ends at a minted release tag — a receipt for a built, smoke-passed image — and NOT at a live rollout. That pair is not a broken build; it is an image with no declared state pointing at it yet. The mechanism this enforces is exactly &quot;no second deployer&quot;: a CR patch plus a git commit are two writers for one fact, and composing them best-effort hides their disagreement. The <code>hanzo</code> CLI and the platform UI drive the commit; neither writes to a cluster.</p>
+<h3>6 — Decentralized: the network is the substrate</h3>
+<p><code>hanzo.network</code> is the Hanzo Node fleet — a Rust peer-to-peer node for decentralized AI compute coordination (HIP-0020), a different artifact from the Go host and its plugins. The two meet at compute, not at a shared process: a box on the network contributes metered capacity that the cloud bills against (HIP-0121) and that earns its operator rewards (HIP-0096), and a mainnet validator&#x27;s own box is native rather than rented.</p>
+<p>What makes this OSS AI cloud is that the same 123 apps run anywhere: anyone runs them on their own machine, brings their own GPU or K8s, and public + OSS workloads run free on public nodes. <strong>They are not one binary.</strong> The fused build that once linked every subsystem into <code>cmd/cloud</code> was deleted; what a self-hoster runs is the light host plus whichever plugins they want, which is precisely why running a subset is cheap — an app you do not mount is a binary you never build. Read the &quot;single binary&quot; of earlier drafts as &quot;one artifact per app, one command to run them&quot;, never as one link step over the fleet.</p>
 <h2>Consequences</h2>
-<ul><li>Closes the <code>cmd/hanzo</code> question (#10): server-multicall folds into <code>cloud</code>; the</li></ul>
-<p>  thin control CLI becomes the Rust <code>hanzo</code> on <code>hanzo-client</code>.</p>
+<ul><li>Closes the <code>cmd/hanzo</code> question (#10), though not the way it was closed on</li></ul>
+<p>  paper. <code>cmd/hanzo</code> and the server-multicall rung were <strong>deleted</strong>, not folded:   a per-app binary is now the only plugin source. The thin control CLI is the   Rust <code>hanzo</code>.</p>
 <ul><li>SDKs (HIP-0040) and CLI (HIP-0041) are now defined as *derivations of</li></ul>
 <p>  <code>hanzo.yaml</code>*, not independent artifacts.</p>
 <ul><li>Sites (<code>docs.hanzo.ai</code>, <code>hanzo.ai</code>, <code>hanzo.app</code>) present this model verbatim:</li></ul>
-<p>  category-first capability surface, the network story, the self-host path.</p>
+<p>  category-first capability surface, the network story, the self-host path. The   reference is regenerated from the document on every build — one page per   PRODUCT, not per app, and none of it authored — so a capability&#x27;s page appears   when its route does and cannot be written ahead of it.</p>
 <h2>References</h2>
-<ul><li>HIP-0106 Unified Cloud Binary · HIP-0114/0120 ZAP Transport · HIP-0040 SDKs ·</li></ul>
-<p>  HIP-0041 CLI · <code>openapi/capabilities.yaml</code> · <code>hanzoai/platform</code> · <code>zap-spec</code>.</p>
+<ul><li>HIP-0106 The Hanzo Plugin Contract · HIP-0114/0120 ZAP Transport ·</li></ul>
+<p>  HIP-0040 SDKs · HIP-0041 CLI · HIP-0111 IAM Authentication ·   HIP-0020 Blockchain Node · HIP-0096 Compute Rewards · HIP-0121 BYO Compute.</p>
+<ul><li><code>capabilities.yaml</code>, <code>publish.py</code> and <code>hanzo.yaml</code> in the <strong><code>hanzoai/openapi</code></strong></li></ul>
+<p>  repository · <code>manifest/apps.go</code> and <code>cmd/cloud/main.go</code> in <code>hanzoai/cloud</code> ·   <code>hanzoai/platform</code> · <code>zap-proto/zap-spec</code> · <code>hanzoai/zap</code>.</p>
+<ul><li>HIP-0106 described the fused single-binary predecessor and is <strong>Superseded</strong></li></ul>
+<p>  by HIP-0106. Do not read it as current architecture.</p>
 <footer>
 <div class="fmap">
   <div><b>Build</b>
@@ -261,5 +294,4 @@ footer a{color:var(--soft)}
 </div>
 <div class="fend"><a href="/hip-0127.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

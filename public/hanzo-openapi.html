@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-openapi</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-openapi.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-openapi">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-openapi.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-openapi</h1><p class="lede">Hanzo OpenAPI is the canonical OpenAPI 3.1.0 specification for all 26 Hanzo Cloud services.</p><h1>Hanzo OpenAPI - Unified API Specification for 26 Cloud Services</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-gateway.md</code>, <code>hanzo/hanzo-cloud.md</code>, <code>hanzo/python-sdk.md</code>, <code>hanzo/js-sdk.md</code>, <code>hanzo/go-sdk.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo OpenAPI is the <strong>canonical OpenAPI 3.1.0 specification</strong> for all 26 Hanzo Cloud services. One master spec (<code>hanzo.yaml</code>) plus per-service specs, shared schemas, and everything needed to generate SDKs, validate APIs, and render documentation. Version 4.0.0.</p>
+<h3>Why Hanzo OpenAPI?</h3>
+<ul><li><strong>Single source of truth</strong>: Every Hanzo service endpoint, schema, and error is defined here</li><li><strong>SDK generation</strong>: Feed any spec to <code>openapi-generator</code> to produce Python, TypeScript, Go, Rust clients</li><li><strong>Documentation</strong>: Render with Redoc, Scalar, or Swagger UI</li><li><strong>Validation</strong>: Lint specs with <code>@redocly/cli</code> before deploy</li><li><strong>Gateway routing</strong>: Defines the contract that <code>api.hanzo.ai</code> enforces</li></ul>
+<h3>Spec Format</h3>
+<ul><li><strong>OpenAPI 3.1.0</strong> YAML files</li><li>Shared components in <code>shared/</code> (auth, errors, pagination schemas)</li><li>Master unified spec: <code>hanzo.yaml</code> (33KB, all 26 services combined)</li><li>Per-service specs: <code>&lt;service&gt;/openapi.yaml</code></li></ul>
+<h3>OSS Base</h3>
+<p>Repo: <code>hanzoai/openapi</code> (1.8MB, 3 stars).</p>
+<h2>When to use</h2>
+<ul><li>Adding or modifying any Hanzo API endpoint</li><li>Generating a new SDK client for a language</li><li>Validating API contracts before deployment</li><li>Rendering API documentation (docs.hanzo.ai)</li><li>Understanding the full surface area of Hanzo Cloud</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>OpenAPI 3.1.0</strong> compliance for all specs</li><li><strong>Shared schemas</strong> must be referenced from <code>shared/</code>, not duplicated</li><li><strong>All services</strong> must appear in the master <code>hanzo.yaml</code></li><li><strong>Auth</strong> uses <code>Authorization: Bearer hk-...</code> (API key) or OAuth2 JWT</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Master Spec | <code>hanzo.yaml</code> (33KB) | | Spec Version | OpenAPI 3.1.0 | | API Version | 4.0.0 | | Gateway | <code>api.hanzo.ai</code> | | Docs | <code>docs.hanzo.ai</code> | | Repo | <code>github.com/hanzoai/openapi</code> | | Branch | <code>main</code> |</p>
+<h2>Services Covered (26)</h2>
+<h3>AI and Intelligence</h3>
+<p>| Service | Spec | Endpoint | |---------|------|----------| | Cloud | <code>cloud/openapi.yaml</code> (116KB) | <code>api.cloud.hanzo.ai</code> | | Chat | <code>chat/openapi.yaml</code> | <code>hanzo.chat</code> | | Search | <code>search/openapi.yaml</code> | <code>search.hanzo.ai</code> | | Bot | <code>bot/openapi.yaml</code> | <code>app.hanzo.bot</code> | | Nexus | <code>nexus/openapi.yaml</code> | <code>nexus.hanzo.ai</code> | | Vector | <code>vector/openapi.yaml</code> | <code>vector.hanzo.ai</code> |</p>
+<h3>Automation</h3>
+<p>| Service | Spec | Endpoint | |---------|------|----------| | Flow | <code>flow/openapi.yaml</code> | <code>flow.hanzo.ai</code> | | Auto | <code>auto/openapi.yaml</code> | <code>auto.hanzo.ai</code> | | Operative | <code>operative/openapi.yaml</code> | <code>operative.hanzo.ai</code> |</p>
+<h3>Platform and Identity</h3>
+<p>| Service | Spec | Endpoint | |---------|------|----------| | IAM | <code>iam/openapi.yaml</code> | <code>hanzo.id</code> | | Commerce | <code>commerce/openapi.yaml</code> | <code>commerce.hanzo.ai</code> | | Gateway | <code>gateway/openapi.yaml</code> | <code>api.hanzo.ai</code> | | Console | <code>console/openapi.yaml</code> | <code>console.hanzo.ai</code> | | KMS | <code>kms/openapi.yaml</code> | <code>kms.hanzo.ai</code> | | Analytics | <code>analytics/openapi.yaml</code> | <code>analytics.hanzo.ai</code> |</p>
+<h3>Infrastructure</h3>
+<p>| Service | Spec | Endpoint | |---------|------|----------| | PaaS | <code>paas/openapi.yaml</code> | <code>paas.hanzo.ai</code> | | Platform | <code>platform/openapi.yaml</code> | <code>platform.hanzo.ai</code> | | DB | <code>db/openapi.yaml</code> | <code>db.hanzo.ai</code> | | KV | <code>kv/openapi.yaml</code> | <code>kv.hanzo.ai</code> | | MQ | <code>mq/openapi.yaml</code> | <code>mq.hanzo.ai</code> | | Edge | <code>edge/openapi.yaml</code> | <code>edge.hanzo.ai</code> | | Registry | <code>registry/openapi.yaml</code> | <code>oci.hanzo.ai</code> | | Visor | <code>visor/openapi.yaml</code> | <code>vm.hanzo.ai</code> |</p>
+<h3>Operations</h3>
+<p>| Service | Spec | Endpoint | |---------|------|----------| | Engine | <code>engine/openapi.yaml</code> | <code>engine.hanzo.ai</code> | | O11y | <code>o11y/openapi.yaml</code> | <code>o11y.hanzo.ai</code> | | DNS | <code>dns/openapi.yaml</code> | <code>dns.hanzo.ai</code> | | ZT | <code>zt/openapi.yaml</code> | <code>zt.hanzo.ai</code> |</p>
+<h2>Repository Structure</h2>
+<pre><code>openapi/
+ hanzo.yaml # Master unified spec (all 26 services)
+ LLM.md
+ README.md
+ shared/
+ auth.yaml # Auth security schemes (API key, OAuth2, JWT)
+ errors.yaml # Shared error response schemas
+ pagination.yaml # Cursor/offset pagination schemas
+ analytics/openapi.yaml
+ auto/openapi.yaml
+ bot/openapi.yaml
+ chat/openapi.yaml
+ cloud/openapi.yaml # Largest spec (116KB) -- LLM inference API
+ commerce/openapi.yaml
+ console/openapi.yaml
+ db/openapi.yaml
+ did/openapi.yaml
+ dns/openapi.yaml
+ edge/openapi.yaml
+ engine/openapi.yaml
+ flow/openapi.yaml
+ gateway/openapi.yaml
+ guard/openapi.yaml
+ iam/openapi.yaml
+ kms/openapi.yaml
+ kv/openapi.yaml
+ ml/openapi.yaml
+ mq/openapi.yaml
+ nexus/openapi.yaml
+ o11y/openapi.yaml
+ operative/openapi.yaml
+ paas/openapi.yaml
+ platform/openapi.yaml
+ pricing/openapi.yaml
+ pubsub/openapi.yaml
+ registry/openapi.yaml
+ s3/openapi.yaml
+ search/openapi.yaml
+ stream/openapi.yaml
+ vector/openapi.yaml
+ visor/openapi.yaml
+ zt/openapi.yaml</code></pre>
+<h2>Gateway Routes</h2>
+<p>All services accessible through <code>api.hanzo.ai</code>:</p>
+<pre><code>api.hanzo.ai/v1/chat/completions -&gt; Cloud (LLM inference)
+api.hanzo.ai/v1/models -&gt; Cloud (model listing)
+api.hanzo.ai/v1/chat/* -&gt; Chat
+api.hanzo.ai/v1/search/* -&gt; Search
+api.hanzo.ai/v1/bot/* -&gt; Bot
+api.hanzo.ai/v1/nexus/* -&gt; Nexus
+api.hanzo.ai/v1/vector/* -&gt; Vector DB
+api.hanzo.ai/v1/flow/* -&gt; Flow
+api.hanzo.ai/v1/operative/* -&gt; Operative
+api.hanzo.ai/v1/auth/* -&gt; IAM
+api.hanzo.ai/v1/billing/* -&gt; Commerce
+api.hanzo.ai/v1/kms/* -&gt; KMS
+api.hanzo.ai/v1/console/* -&gt; Console
+api.hanzo.ai/v1/analytics/* -&gt; Analytics
+api.hanzo.ai/v1/paas/* -&gt; PaaS
+api.hanzo.ai/v1/platform/* -&gt; Platform
+api.hanzo.ai/v1/db/* -&gt; DB
+api.hanzo.ai/v1/kv/* -&gt; KV
+api.hanzo.ai/v1/mq/* -&gt; MQ
+api.hanzo.ai/v1/edge/* -&gt; Edge
+api.hanzo.ai/v1/registry/* -&gt; Registry
+api.hanzo.ai/v1/vm/* -&gt; Visor
+api.hanzo.ai/v1/engine/* -&gt; Engine
+api.hanzo.ai/v1/o11y/* -&gt; O11y
+api.hanzo.ai/v1/dns/* -&gt; DNS
+api.hanzo.ai/v1/zt/* -&gt; ZT</code></pre>
+<h2>Authentication</h2>
+<p>All services use a single <code>HANZO_API_KEY</code>:</p>
+<pre><code class="lang-bash">curl -H &quot;Authorization: Bearer hk-your-api-key&quot; https://api.hanzo.ai/v1/models</code></pre>
+<p>| Method | Use Case | |--------|----------| | API Key | Server-to-server (<code>Authorization: Bearer hk-...</code>) | | OAuth2 + PKCE | User-facing apps via <code>@hanzo/iam</code> (<code>hanzo.id/v1/iam/oauth/authorize</code>) | | Client Credentials | Service-to-service (<code>POST hanzo.id/v1/iam/oauth/token</code>) | | JWT | After OAuth login (<code>Authorization: Bearer eyJ...</code>) |</p>
+<h2>Common Operations</h2>
+<h3>Validate All Specs</h3>
+<pre><code class="lang-bash">for spec in */openapi.yaml; do
+ echo &quot;Validating $spec...&quot;
+ openapi-generator validate -i &quot;$spec&quot;
+done
+
+# Master spec
+npx @redocly/cli lint hanzo.yaml</code></pre>
+<h3>Generate SDK from Spec</h3>
+<pre><code class="lang-bash"># Python
+openapi-generator generate -i hanzo.yaml -g python -o clients/python
+
+# TypeScript
+openapi-generator generate -i hanzo.yaml -g typescript-axios -o clients/typescript
+
+# Go
+openapi-generator generate -i hanzo.yaml -g go -o clients/go
+
+# Rust
+openapi-generator generate -i hanzo.yaml -g rust -o clients/rust</code></pre>
+<h3>Serve Docs Locally</h3>
+<pre><code class="lang-bash">npx @redocly/cli preview-docs hanzo.yaml # Redoc
+npx @scalar/cli serve hanzo.yaml # Scalar
+docker run -p 8080:8080 -e SWAGGER_JSON=/specs/hanzo.yaml \
+ -v $(pwd):/specs swaggerapi/swagger-ui # Swagger UI</code></pre>
+<h2>Open Source Orgs</h2>
+<p>| GitHub Org | Focus | |------------|-------| | @hanzoai | Core platform (all 26 services) | | @hanzozt | Zero-trust networking | | @hanzo-ml | GPU/ML (kubeflow, kuberay) | | @hanzodns | DNS (coredns) | | @hanzofn | Edge functions (edge-runtime) | | @hanzosql | Databases (neon) | | @hanzokv | Key-value store (valkey) | | @hanzocr | Container registry (harbor) | | @hanzomsg | Messaging (nats-server, nats.go, nats.js, nats.py) | | @hanzoo11y | Observability (loki, grafana, clickhouse) |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-gateway.md</code> - API gateway that enforces these specs</li><li><code>hanzo/hanzo-cloud.md</code> - LLM inference (largest spec)</li><li><code>hanzo/python-sdk.md</code> - Python SDK (generated from these specs)</li><li><code>hanzo/js-sdk.md</code> - JavaScript SDK</li><li><code>hanzo/go-sdk.md</code> - Go SDK</li><li><code>hanzo/rust-sdk.md</code> - Rust SDK</li><li><code>hanzo/hanzo-sdk.md</code> - Unified multi-language CLI SDK</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: openapi, api-specification, sdk-generation, documentation <strong>Prerequisites</strong>: OpenAPI 3.1.0 familiarity, REST API basics</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-openapi.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

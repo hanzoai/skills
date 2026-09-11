@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,7 +196,7 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0128</h1><p class="lede">HIP-128: Resource Surface Standard — Generated REST over ZAP. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0128: Resource Surface Standard — Generated REST over ZAP</h1>
+<h1>hip-0128</h1><p class="lede">HIP-128: Resource Surface Standard — Generated REST over ZAP. Status Final. Hanzo architectural specification.</p><h1>HIP-0128: Resource Surface Standard — Generated REST over ZAP</h1>
 <h2>Abstract</h2>
 <p>Every Hanzo service exposes the same shape, because there is one shape. A caller who has learned one service has learned all of them, an SDK generator sees one grammar, and a reviewer can tell a correct route from an incorrect one without reading the handler.</p>
 <p>This document is that grammar, the generator that emits it, and the failure modes that produced it. It exists because the grammar was rediscovered three times — in <code>ai</code>, in <code>iam</code>, and in <code>cloud</code> — and each rediscovery cost a different security hole.</p>
@@ -252,11 +261,15 @@ func OpenAPIPaths() map[string]any { /* the only spec accessor */ }</code></pre>
 <p><strong>MUST</strong>: ship a test that probes every registered route with no credentials and asserts the answering set equals a frozen list, reporting newly-exposed and newly-withdrawn separately. <strong>MUST</strong>: prove that test fails, by moving a guarded route above the Guard and observing it flag the route. A guard test never seen to fail is not evidence.</p>
 <p><strong>MUST</strong>: check whether action strings are stored as data. Where customer-defined permission rows reference action names, renaming an action is a data migration, not a code change.</p>
 <h2>Migration</h2>
-<ol><li>Add the resource table; generate routes and spec from it.</li><li>Keep the legacy spellings alive in an explicit <code>compat</code> package — a thin</li></ol>
-<p>   routing and envelope layer over the SAME store and the SAME redaction, so no    CRUD and no masking is reimplemented. Document why each alias exists.</p>
-<ol><li>Migrate callers. Fix the <strong>prefix</strong> first (<code>/api/x</code> → <code>/v1/&lt;service&gt;/x</code>),</li></ol>
-<p>   then the <strong>spelling</strong> — one variable at a time, verifying each repointed path    answers rather than 404s.</p>
-<ol><li>Delete <code>compat</code> only when the caller sweep proves it has no consumers.</li></ol>
+<ol><li>Add the resource table; generate routes and spec from it.</li><li>Repoint callers. Fix the <strong>prefix</strong> first (<code>/api/x</code> → <code>/v1/&lt;service&gt;/x</code>),</li></ol>
+<p>   then the <strong>spelling</strong> — one variable at a time, verifying each repointed    path answers rather than 404s.</p>
+<p>There is no alias layer, and no window in which two spellings both answer. One release; the old spelling stops resolving when the new one starts.</p>
+<h3>A retired address names its replacement</h3>
+<p>&quot;Stops resolving&quot; is <strong>410 Gone carrying the collection that replaced it</strong>, not</p>
+<ol><li>The body is the successor:</li></ol>
+<p>    GET /v1/iam/get-users        410  {&quot;successor&quot;: [&quot;/v1/iam/users&quot;]}     GET /v1/iam/get-records      410  {&quot;successor&quot;: [&quot;/v1/iam/audit-logs&quot;]}</p>
+<p>A 404 says only that a caller is wrong. A 410 with a successor says what to do instead, so the retirement documents its own migration and no table has to be kept beside it — a caller, an SDK generator and a reviewer all read the mapping off the surface itself. This costs one row per retired address and removes the class of question that otherwise arrives as a support ticket.</p>
+<p>It also makes the mapping unguessable-safe. Most successors are mechanical, and one is not: <code>get-records</code> became <code>audit-logs</code>, because that is what the collection holds. <code>records</code> answers 404. A consumer that derived the new spelling by stripping the verb would have been wrong exactly once, silently.</p>
 <p>Prefer a correct, proven partial over a broad change that cannot be verified. Authentication surfaces have no safe rollback: a false green locks every user out of every product.</p>
 <h3>Fix the seam, not the call sites</h3>
 <p>A dialect is almost never N independent mistakes; it is one URL builder reflected N times. Find the builder. Measured on the <code>/api/</code> removal: one line in <code>iamsdk/util.go</code> corrected 66 action constants across 95 call sites; one <code>_url.api_path</code> corrected 78; one <code>IAM_ROUTE_PREFIX</code> corrected 32. Editing call sites instead would have been ~400 edits and would have left the builder free to mint the dialect again.</p>
@@ -266,13 +279,21 @@ func OpenAPIPaths() map[string]any { /* the only spec accessor */ }</code></pre>
 <h3>Enforce at the narrowest gate</h3>
 <p>The strongest guard is the one every artifact must pass. For the published surface that is <code>hanzoai/openapi</code>&#x27;s <code>merge.py</code>: every service spec passes through it to reach <code>hanzo.yaml</code>, from which every SDK is generated. A rule enforced there cannot be bypassed by a repo that forgets to add its own check.</p>
 <p>Guards MUST parse code, not lines. A grep-based guard flags its own explanatory comment, which teaches contributors to word around the guard rather than obey it. Use <code>go/ast</code> and Python <code>ast</code>: only a string literal can <em>be</em> a route. And every guard MUST be proven to fire by injecting a violation, then restored green — an enforcement that has never failed is not known to work.</p>
+<h2>Consumers: one client, one contract</h2>
+<p>The grammar above binds the surface. This section binds the code that CALLS it, which is where a retired address actually costs something.</p>
+<p><strong>One family reaches a service.</strong> A client that can address a retired spelling is a client that can regress to it. When a surface migrates, the old client is DELETED, not deprecated — nothing that can only address what is gone earns a place beside the thing that works.</p>
+<p><strong>The retired and the current shape are different WIRE CONTRACTS, not two spellings of one.</strong> A verb-noun address returned an envelope (<code>{status, msg, data, total}</code>); a resource answers <strong>itself</strong>, bare. So a client that swaps only the URL and keeps the envelope reader finds no <code>status: &quot;ok&quot;</code>, and <strong>throws on a 200</strong>. This is the failure that looks like a rename and is not one, and it is why the two must not share a code path with a flag between them.</p>
+<p><strong>A swallowed refusal is worse than a crash.</strong> List views commonly catch and render empty. A 410 then displays as &quot;you have no organizations&quot; on a page that otherwise looks correct — indistinguishable from a real empty set, on the surface a customer uses to see what they are paying for. Where a client renders a collection, an unreachable collection must read as unreachable, never as empty.</p>
+<p><strong>Verify the address before adopting it.</strong> A collection answers <code>401</code> when it exists and is gated; a retired one answers <code>410</code>; a wrong guess answers <code>404</code>. Those three are distinguishable without a credential, so the mapping is checked against the running surface rather than inferred from the old name.</p>
+<p>This applies to every consumer of an org&#x27;s surface on equal terms — first-party consoles, an org&#x27;s own integrations, and customer code alike. There is no internal dialect: a client written by the org that ships the service and one written by a customer paying for it address it identically, which is what makes the surface a contract rather than a convention.</p>
 <h2>Conformance</h2>
 <p>A service conforms when all hold:</p>
 <ul><li>No route literal matches <code>/v1/&lt;service&gt;/&lt;verb&gt;-&lt;noun&gt;</code> outside <code>compat</code>.</li><li>No route literal contains an <code>/api/</code> path segment.</li><li>Every resource is a plural noun; every member is <code>{owner}/{name}</code>.</li><li>Routes and spec are generated from one table; the drift test passes.</li><li>The public-route guard test exists and has been observed to fail.</li><li>Health/liveness endpoints are public (<code>/healthz</code>), never under the guarded</li></ul>
 <p>  <code>/v1/&lt;service&gt;/</code> tree.</p>
-<p>Current status (measured 2026-07-27; verb-noun literals outside <code>compat</code>):</p>
+<p>Current status (measured 2026-09-08; verb-noun literals outside <code>compat</code>):</p>
 <p>| service  | verb-noun | <code>/api/</code> | native surface | |----------|-----------|---------|----------------| | <code>llm</code>    | 0         | 0       | conforming | | <code>bot</code>    | 0         | 0       | conforming | | <code>dev</code>    | 0         | 0       | conforming | | <code>commerce</code> | 2       | 1       | near | | <code>gateway</code>  | 3       | 3       | near | | <code>ai</code>     | 5         | 4       | generated; residue | | <code>cloud</code>  | 17        | 26      | partial | | <code>iam</code>    | 0 in <code>internal/routes</code>; 61 in <code>compat</code>; ~18 elsewhere | 1 | generated; <code>sessions</code> non-compliant |</p>
-<p><code>iam</code>&#x27;s native registration is clean. Its remaining violations are half-migrated modules that register a compliant route <em>and</em> a legacy one side by side — <code>memberships</code> (<code>/v1/iam/memberships</code> beside <code>get-memberships</code>, <code>add-membership</code>, <code>delete-membership</code>), <code>mfa</code> (<code>/v1/iam/mfa/setup/*</code> beside <code>delete-mfa</code>, <code>set-preferred-mfa</code>), <code>get-account</code>, <code>update-preferences</code>.</p>
+<p><code>iam</code> finished. Every verb-noun address it once served now answers 410 with its successor — confirmed against the running surface for all 24 of the organization, user, application, provider, role and record spellings, and for <code>memberships</code>. The half-migrated modules recorded here in July no longer answer two ways; <code>/v1/iam/memberships</code> is the only spelling that resolves.</p>
+<p>The consumers were the lagging half, and they lag invisibly: a producer that has retired an address is conforming, while every client still calling it is broken and often silently (see <em>Consumers</em>). Producer conformance is therefore not evidence that a migration is complete.</p>
 <h2>Rationale</h2>
 <p><strong>Why plural nouns and HTTP verbs.</strong> The method already carries the verb. Encoding it again in the path means two sources for one fact, and they disagree the moment one is edited — which is exactly how <code>get-users</code> outlived the handler&#x27;s semantics.</p>
 <p><strong>Why generate.</strong> A spec beside a router is two descriptions of one surface. The spec is the one customers believe, so it is the one that rots quietly. Deriving it removes the possibility rather than the likelihood.</p>
@@ -308,5 +329,4 @@ func OpenAPIPaths() map[string]any { /* the only spec accessor */ }</code></pre>
 </div>
 <div class="fend"><a href="/hip-0128.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-zrok</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-zrok.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-zrok">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-zrok.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-zrok</h1><p class="lede">Hanzo Zrok is a zero-trust sharing platform built on top of Hanzo ZT (OpenZiti).</p><h1>Hanzo Zrok - Zero-Trust Sharing Platform</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-zt.md</code>, <code>hanzo/hanzo-tunnel.md</code>, <code>hanzo/hanzo-network.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Zrok is a <strong>zero-trust sharing platform</strong> built on top of Hanzo ZT (OpenZiti). It lets users securely share web services, files, and network resources through firewalls and NAT without any network configuration changes. Single binary. Public and private sharing modes. Self-hostable. Fork of <code>openziti/zrok</code>.</p>
+<h3>Why Hanzo Zrok?</h3>
+<ul><li><strong>Instant sharing</strong>: <code>zrok share public localhost:8080</code> exposes a local service with a public URL</li><li><strong>Zero config</strong>: Works through firewalls, NAT, corporate networks -- no port forwarding</li><li><strong>Private sharing</strong>: Share services only with specific zrok users, no public internet exposure</li><li><strong>File sharing</strong>: Turn any directory into a shareable network drive (<code>--backend-mode drive</code>)</li><li><strong>End-to-end encrypted</strong>: All traffic encrypted via Hanzo ZT overlay, even from zrok servers</li><li><strong>Self-hostable</strong>: Run your own zrok instance from Raspberry Pi to enterprise scale</li><li><strong>Multi-protocol</strong>: HTTP/HTTPS, TCP, UDP, and WebDAV file sharing</li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Language</strong>: Go (backend + CLI), Node.js (web console UI)</li><li><strong>Go module</strong>: <code>github.com/openziti/zrok/v2</code> (upstream module path, not yet rebranded)</li><li><strong>Go version</strong>: 1.25.3</li><li><strong>Binary</strong>: <code>zrok2</code> (symlinked to <code>zrok</code>)</li><li><strong>UI</strong>: Node.js 22 (React-based web console + agent UI)</li><li><strong>Database</strong>: SQLite (embedded, via <code>mattn/go-sqlite3</code> with CGO)</li><li><strong>API</strong>: OpenAPI-generated REST server (<code>go-openapi</code> suite, Swagger spec in <code>specs/</code>)</li><li><strong>TUI</strong>: Charm stack (<code>bubbletea</code>, <code>bubbles</code>, <code>lipgloss</code>) for terminal UI</li><li><strong>Container base</strong>: <code>openziti/ziti-cli:latest</code> (includes Ziti CLI tools)</li><li><strong>Release</strong>: GoReleaser (darwin, linux-amd64/arm64/armhf/armel, windows)</li></ul>
+<h3>OpenZiti Dependencies</h3>
+<p>Zrok is an application layer built on top of the OpenZiti networking fabric:</p>
+<ul><li><code>openziti/sdk-golang</code> v1.2.8 -- Go SDK for Ziti network access</li><li><code>openziti/channel/v4</code> v4.2.37 -- Message channels over Ziti</li><li><code>openziti/edge-api</code> v0.26.48 -- Edge management API client</li><li><code>openziti/identity</code> v1.0.116 -- Identity/certificate management</li><li><code>openziti/transport/v2</code> v2.0.194 -- Transport layer</li><li><code>openziti/ziti</code> v1.6.0 -- Core Ziti runtime</li><li><code>openziti/foundation/v2</code> -- Common utilities</li></ul>
+<h3>OSS Base</h3>
+<p>Fork of <code>openziti/zrok</code>. Repo: <code>hanzoai/zrok</code>. License: Apache 2.0. The go.mod still references the upstream module path. Branding partially applied (README, Dockerfile labels reference Hanzo, but internal module paths remain OpenZiti).</p>
+<h2>When to use</h2>
+<ul><li>Sharing a local web app or API with teammates without deploying</li><li>Exposing development servers through corporate firewalls</li><li>Sharing files/directories as a network drive</li><li>Private service-to-service connectivity between zrok-enabled users</li><li>Self-hosting a sharing platform for your organization</li><li>Replacing ngrok/Cloudflare Tunnel with a zero-trust alternative</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Hanzo ZT network</strong> (or OpenZiti network) for the overlay fabric</li><li><strong>Go 1.25+</strong> and <strong>Node.js 22+</strong> to build from source</li><li><strong>CGO enabled</strong> (SQLite requires it)</li><li><strong>zrok account</strong> or self-hosted zrok controller instance</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Binary | <code>zrok2</code> (aliased <code>zrok</code>) | | Go module | <code>github.com/openziti/zrok/v2</code> | | Container | <code>ghcr.io/hanzoai/zrok</code> | | Base image | <code>openziti/ziti-cli:latest</code> | | License | Apache 2.0 | | API spec | <code>specs/</code> (OpenAPI/Swagger) | | SDKs | Go, Node.js, Python | | Database | SQLite (embedded) | | Repo | <code>github.com/hanzoai/zrok</code> |</p>
+<h2>One-file quickstart</h2>
+<h3>Share a local service publicly</h3>
+<pre><code class="lang-bash"># Install zrok
+# (download binary or build from source)
+
+# Create account and enable environment
+zrok invite
+zrok enable
+
+# Share localhost:8080 publicly
+zrok share public localhost:8080
+
+# Share a directory as a network drive
+zrok share public --backend-mode drive ~/Documents
+
+# Share privately with other zrok users
+zrok share private localhost:3000</code></pre>
+<h3>Go SDK</h3>
+<pre><code class="lang-go">package main
+
+import (
+ &quot;github.com/openziti/zrok/v2/sdk/golang/sdk&quot;
+)
+
+func main() {
+ root, _ := sdk.LoadRoot()
+
+ // Create a private share
+ shr, _ := sdk.CreateShare(root, &amp;sdk.ShareRequest{
+ BackendMode: sdk.TcpTunnelBackendMode,
+ ShareMode: sdk.PrivateShareMode,
+ })
+
+ // Listen for connections
+ listener, _ := sdk.NewListener(shr.Token, root)
+ defer listener.Close()
+
+ // Accept and handle connections...
+}</code></pre>
+<h3>Self-host with Docker Compose</h3>
+<pre><code class="lang-yaml"># docker/compose/zrok-instance/
+# Contains full self-hosted zrok instance setup
+# See: docker/compose/zrok-instance/README.md</code></pre>
+<h3>Build from source</h3>
+<pre><code class="lang-bash"># Build UI
+cd ui &amp;&amp; npm ci &amp;&amp; npm run build &amp;&amp; cd ..
+cd agent/agentUi &amp;&amp; npm ci &amp;&amp; npm run build &amp;&amp; cd ..
+
+# Build binary
+CGO_ENABLED=1 go build -tags sqlite_foreign_keys \
+ -o zrok2 ./cmd/zrok2/</code></pre>
+<h2>Core Concepts</h2>
+<h3>Architecture</h3>
+<pre><code>+------------------+ +-------------------+ +------------------+
+| zrok Client | | zrok Controller | | Hanzo ZT Fabric |
+| | | | | |
+| zrok share |----&gt;| REST API |----&gt;| Controller |
+| zrok access | | Account mgmt | | Routers |
+| zrok reserve | | Share mgmt | | Smart routing |
+| | | Metrics/limits | | E2E encryption |
++------------------+ +-------------------+ +------------------+
+ |
+ +------+------+
+ | SQLite |
+ | (state) |
+ +-------------+</code></pre>
+<h3>Sharing Modes</h3>
+<p>| Mode | Description | Use Case | |------|-------------|----------| | <code>public</code> | Anyone with the URL can access | Dev sharing, demos | | <code>private</code> | Only zrok users with explicit access | Internal services | | <code>reserved</code> | Persistent share with stable token | Long-running services |</p>
+<h3>Backend Modes</h3>
+<p>| Mode | Description | |------|-------------| | <code>proxy</code> | HTTP reverse proxy to local service (default) | | <code>web</code> | Static file server | | <code>drive</code> | WebDAV file sharing (network drive) | | <code>tcpTunnel</code> | Raw TCP tunnel | | <code>udpTunnel</code> | Raw UDP tunnel | | <code>caddy</code> | Caddy web server with custom config | | <code>socks</code> | SOCKS5 proxy |</p>
+<h3>Directory Structure</h3>
+<pre><code>cmd/zrok2/ # Main binary entrypoint
+controller/ # zrok controller (API server, share/access management)
+agent/ # zrok agent (daemon, background shares)
+ agentUi/ # Agent web UI (Node.js)
+endpoints/ # Backend mode implementations (proxy, web, drive, tunnel)
+environment/ # Environment/identity management
+drives/ # WebDAV drive implementation
+sdk/
+ golang/ # Go SDK with examples
+ nodejs/ # Node.js SDK
+ python/ # Python SDK
+rest_client_zrok/ # Generated REST API client
+rest_model_zrok/ # Generated REST API models
+rest_server_zrok/ # Generated REST API server
+specs/ # OpenAPI/Swagger specifications
+tui/ # Terminal UI (Charm stack)
+ui/ # Web console UI (Node.js/React)
+docker/
+ compose/
+ zrok-instance/ # Self-hosted instance compose
+ zrok-private-access/
+ zrok-private-share/
+ zrok-public-reserved/
+ images/ # Docker image definitions
+build/ # Build scripts
+canary/ # Canary testing
+etc/ # Configuration templates
+website/ # Documentation website
+nfpm/ # Linux package definitions (deb, rpm)</code></pre>
+<h3>Relationship to Hanzo ZT</h3>
+<p>Zrok is the <strong>application layer</strong> on top of Hanzo ZT (the network fabric):</p>
+<ul><li><strong>Hanzo ZT</strong> (<code>hanzoai/zt</code>) = network overlay fabric (controller, routers, tunnelers, SDKs)</li><li><strong>Hanzo Zrok</strong> (<code>hanzoai/zrok</code>) = sharing platform that uses ZT for secure connectivity</li><li>Zrok controller creates ZT services, policies, and configurations automatically</li><li>Users never need to interact with ZT directly -- zrok abstracts it away</li></ul>
+<h3>Relationship to Hanzo Tunnel</h3>
+<ul><li><strong>Hanzo Tunnel</strong> (<code>hanzoai/tunnel</code>) = WebSocket-based agent bridge for bot/dev control plane</li><li><strong>Hanzo Zrok</strong> (<code>hanzoai/zrok</code>) = OpenZiti-based sharing platform for network services</li><li>Different repos, different purposes, different protocols</li><li>Hanzo Tunnel uses plain WSS; Zrok uses the ZT zero-trust overlay</li></ul>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | CGO errors on build | Missing C compiler | Install <code>gcc</code> and <code>libc6-dev</code> | | SQLite errors | CGO_ENABLED=0 | Must build with <code>CGO_ENABLED=1</code> | | Share fails | No ZT network | Ensure zrok controller has ZT fabric configured | | &quot;not enabled&quot; | Environment not initialized | Run <code>zrok enable</code> first | | Docker build fails | Wrong platform | Use <code>--platform linux/amd64</code> |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-zt.md</code> - Hanzo ZT zero-trust network fabric (underlying network layer)</li><li><code>hanzo/hanzo-tunnel.md</code> - WebSocket-based agent bridge (different component)</li><li><code>hanzo/hanzo-network.md</code> - Hanzo network infrastructure</li><li><code>hanzo/hanzo-platform.md</code> - PaaS platform</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: zrok, openziti, zero-trust, sharing, tunnel, ngrok-alternative, network-overlay <strong>Prerequisites</strong>: Go 1.25+, Node.js 22+, CGO, Hanzo ZT network</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-zrok.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

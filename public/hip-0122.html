@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,10 +196,10 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0122</h1><p class="lede">HIP-122: zip — The ZAP-Native Application Server Core. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0122: zip — The ZAP-Native Application Server Core</h1>
+<h1>hip-0122</h1><p class="lede">HIP-122: zip — The ZAP-Native Application Server Core. Status Final. Hanzo architectural specification.</p><h1>HIP-0122: zip — The ZAP-Native Application Server Core</h1>
 <h2>Abstract</h2>
 <p><strong>zip</strong> is the one Hanzo application server core: a high-performance Go framework (Fiber v3 / fasthttp derived) whose primary transport is <strong>ZAP</strong> (HIP-0114) and whose secondary transport is HTTP, selected as a <em>value</em> on one verb — <code>app.Listen(&quot;:9653&quot;, &quot;http://:8080&quot;)</code>. Every Hanzo Go service is a thin composition over a <code>zip.App</code>; the unified <code>cloud</code> binary (HIP-0106) is itself the proof: its core is a measured <strong>977 lines</strong> (<code>serve.go</code> 260 + <code>subsystems/subsystems.go</code> 312 + <code>build.go</code> 405) hosting <strong>74,561 lines</strong> of mounted plugins under <code>clients/</code> — a <strong>76:1 plugin-to-core ratio</strong>. The server is not where the product lives; the server is what the product mounts on.</p>
-<p>This HIP specifies the zip contract — <code>App</code>, <code>Ctx</code>, transport-as-value <code>Listen</code>, <code>Mount</code>, <code>Module</code>, typed handlers, identity accessors, and shutdown lifecycle — so that HIP-0106 (the host binary), HIP-0116 (the plugin/VM shapes), and every <code>hanzoai/&lt;repo&gt;</code> service compose on one substrate instead of each re-deciding a framework.</p>
+<p>This HIP specifies the zip contract — <code>App</code>, <code>Ctx</code>, transport-as-value <code>Listen</code>, <code>Mount</code>, <code>Module</code>, typed handlers, identity accessors, and shutdown lifecycle — so that HIP-0106 (the host binary), HIP-0106 (the plugin/VM shapes), and every <code>hanzoai/&lt;repo&gt;</code> service compose on one substrate instead of each re-deciding a framework.</p>
 <h2>Specification</h2>
 <h3>One verb, transport as a value</h3>
 <p>zip serves ONE fiber/fasthttp handler tree on any number of addresses. The transport is selected by the address <strong>scheme</strong>, never by a method name (<code>transport.go</code>):</p>
@@ -205,7 +214,7 @@ app.Listen(&quot;http://:8080&quot;)           // HTTP only (edge/interop shape)
 <p>  over every transport. Routes ARE the surface; there is no   per-transport wiring. Streaming responses ride ZAP through the same   framework path (<code>zap-proto/http</code> v0.2.0+).</p>
 <h3>The app surface — routes, groups, mounts, modules</h3>
 <p>| Entry point | Contract | Used by | |---|---|---| | <code>app.Get/Post/...(path, fn)</code> | Sinatra/Express idiom; the primary API | all native Hanzo handlers | | <code>zip.Get<a href="app, path, fn">In, Out</a></code> | typed handlers → OpenAPI 3.1 at <code>/docs</code> AND a free MCP tool projection at <code>/mcp</code> (JSON-RPC 2.0) | typed public surfaces | | <code>app.Group(prefix)</code> | route grouping | <code>/v1/...</code> service prefixes | | <code>app.Mount(prefix, h http.Handler)</code> | registers <code>prefix+&quot;/*&quot;</code> via <code>AdaptNetHTTP</code>; the handler receives the <strong>full original path</strong> (nothing stripped) | migration of chi/gin/beego/net-http code (HIP-0106 adapters); subsystem mounts that own their canonical prefix | | <code>app.Module(method+path, runtime, path)</code> | mounts a HIP-0105 extension (wasm/goja/pyvm/starlark/native) as a route — one mount API for every guest language | user-supplied and multi-language handlers |</p>
-<p><code>Mount</code> preserving the full path is load-bearing: a subsystem mounted at <code>/v1/iam</code> still sees <code>/v1/iam/...</code> — its routes are identical standalone, embedded, or as a plugin VM (HIP-0116&#x27;s &quot;one service, three shapes&quot; depends on this).</p>
+<p><code>Mount</code> preserving the full path is load-bearing: a subsystem mounted at <code>/v1/iam</code> still sees <code>/v1/iam/...</code> — its routes are identical standalone, embedded, or as a plugin VM (HIP-0106&#x27;s &quot;one service, three shapes&quot; depends on this).</p>
 <p>Adapters (<code>adapt.go</code>: <code>AdaptNetHTTP</code>, <code>AdaptNetHTTPFunc</code>, <code>AdaptNetHTTPMiddleware</code>) are migration tools costing ~5% versus native dispatch, per HIP-0106: new code is written natively against zip; adapted routes are replaced when feasible.</p>
 <h3>Identity and request context</h3>
 <p><code>zip.Ctx</code> (<code>ctx.go</code>) carries the gateway-minted identity of HIP-0026 / HIP-0134 as first-class accessors — services never parse headers:</p>
@@ -224,12 +233,12 @@ c.RequestID()  // X-Request-Id</code></pre>
 <p><strong>76:1.</strong> The core does exactly four things: build deps, mount registered subsystems in order onto one <code>zip.App</code>, serve the transports, and tear down in reverse order. Everything else — IAM, KMS, commerce, ML, fleet, console BFF, sixty-plus packages — is a plugin registered through the one registry API (<code>build.go:351</code>):</p>
 <pre><code class="lang-go">cloud.Register(name string, order int, mount MountFunc)
 cloud.RegisterWithShutdown(name string, order int, mount MountFunc, shutdown ShutdownFunc)</code></pre>
-<p>A subsystem&#x27;s <code>init()</code> calls <code>Register</code>; a blank import in <code>cmd/cloud</code> activates it; <code>MountAll</code> mounts onto the shared <code>zip.App</code>. This is the substrate HIP-0116&#x27;s plugin VMs generalize: an embedded plugin is a mount in-process, a plugin VM is the same mount behind a ZAP hop — the <code>zip.App</code> surface is identical.</p>
+<p>A subsystem&#x27;s <code>init()</code> calls <code>Register</code>; a blank import in <code>cmd/cloud</code> activates it; <code>MountAll</code> mounts onto the shared <code>zip.App</code>. This is the substrate HIP-0106&#x27;s plugin VMs generalize: an embedded plugin is a mount in-process, a plugin VM is the same mount behind a ZAP hop — the <code>zip.App</code> surface is identical.</p>
 <p><strong>Requirement:</strong> every Hanzo Go service exposes its business surface as a mount against a <code>zip.App</code> (the HIP-0106 <code>Mount(app, deps)</code> contract). A service that spins up its own parallel framework — or adds a second server core — is nonconformant.</p>
 <h2>Rationale</h2>
-<p><strong>Why a framework HIP at all.</strong> Because the 76:1 measurement is the architecture. When the server core is one small, shared, boring layer, every product decision becomes a plugin decision — independently mountable, testable, and (per HIP-0116) independently packageable. The alternative — each service owning its own server — is how the pre-HIP-0106 estate accumulated N frameworks and N half-consistent identity parsers.</p>
+<p><strong>Why a framework HIP at all.</strong> Because the 76:1 measurement is the architecture. When the server core is one small, shared, boring layer, every product decision becomes a plugin decision — independently mountable, testable, and (per HIP-0106) independently packageable. The alternative — each service owning its own server — is how the pre-HIP-0106 estate accumulated N frameworks and N half-consistent identity parsers.</p>
 <p><strong>Why ZAP-primary rather than HTTP-primary with ZAP bolted on.</strong> Hanzo&#x27;s internal traffic is ZAP (HIP-0106, HIP-0114, HIP-0120); HTTP exists for the external edge and interop. A server core whose default is the internal wire makes the correct thing the effortless thing — <code>app.Listen(&quot;:9653&quot;)</code> is conformant by default. The reverse default would make every service opt in to its own platform&#x27;s transport.</p>
-<p><strong>Why transport-as-value.</strong> Decomplecting &quot;what the handler does&quot; from &quot;how bytes arrive&quot; is the same move HIP-0116 makes for packaging (&quot;what the service does&quot; vs &quot;what process it lives in&quot;). Values, not method explosions: one <code>Listen</code>, schemes as data, <code>RegisterTransport</code> as the single seam.</p>
+<p><strong>Why transport-as-value.</strong> Decomplecting &quot;what the handler does&quot; from &quot;how bytes arrive&quot; is the same move HIP-0106 makes for packaging (&quot;what the service does&quot; vs &quot;what process it lives in&quot;). Values, not method explosions: one <code>Listen</code>, schemes as data, <code>RegisterTransport</code> as the single seam.</p>
 <p><strong>Why no escape hatches.</strong> zip deliberately has no <code>.Fast()</code> raw-mode bypass and no per-runtime mount APIs (<code>app.ModuleWasm</code> does not exist). Escape hatches are how second ways in; the profiled hot path (HIP-0106&#x27;s measured budget) shows the framework does not need one.</p>
 <p><strong>Orthogonality.</strong> One HIP per layer:</p>
 <ul><li>HIP-0114 / HIP-0120 — the <strong>wire</strong>: ZAP envelope, framing, the</li></ul>
@@ -238,7 +247,7 @@ cloud.RegisterWithShutdown(name string, order int, mount MountFunc, shutdown Shu
 <p>  Module, lifecycle.</p>
 <ul><li>HIP-0106 — the <strong>host binary</strong>: deps wiring, subsystem registry</li></ul>
 <p>  policy, fail-closed embeds (its registry rides this HIP&#x27;s App).</p>
-<ul><li>HIP-0116 — the <strong>packaging shapes</strong> mounted on this core.</li><li>HIP-0105 — the <strong>guest runtimes</strong> behind <code>Module</code>.</li></ul>
+<ul><li>HIP-0106 — the <strong>packaging shapes</strong> mounted on this core.</li><li>HIP-0105 — the <strong>guest runtimes</strong> behind <code>Module</code>.</li></ul>
 <h2>Decided vs shipped</h2>
 <p>Everything specified here is <strong>shipped</strong>: zip v1.2.1 (<code>github.com/zap-proto/zip</code>), one-verb <code>Listen</code> with ZAP default, streaming-over-ZAP, <code>Mount</code>/<code>Module</code>/typed handlers/MCP projection, and the 977-line <code>cloud</code> host consuming it in production. The one naming residue is transitional: <code>hanzoai/zip v0.2.0</code> still appears as an indirect dependency in older go.mod graphs (e.g. <code>gateway</code>) until those repos rebase onto <code>zap-proto/zip</code> — same code lineage, one module path forward.</p>
 <h2>References</h2>
@@ -248,7 +257,7 @@ cloud.RegisterWithShutdown(name string, order int, mount MountFunc, shutdown Shu
 <p>  behind <code>Module</code>)</p>
 <ul><li>HIP-0106 — Cloud — Unified Hanzo Binary (the reference host; stack</li></ul>
 <p>  table, adapters, measured capacity budget)</p>
-<ul><li>HIP-0134 — One Process, One Socket, One Identity (who owns the principal)</li><li>HIP-0114 — ZAP — Inter-VM Cognitive Transport (the primary wire)</li><li>HIP-0116 — Hanzo Plugin &amp; VM Model (the shapes mounted on this core)</li><li>HIP-0120 — ZAP-Native Transport &amp; gRPC Elimination (the permitted</li></ul>
+<ul><li>HIP-0134 — One Process, One Socket, One Identity (who owns the principal)</li><li>HIP-0114 — ZAP — Inter-VM Cognitive Transport (the primary wire)</li><li>HIP-0106 — Hanzo Plugin &amp; VM Model (the shapes mounted on this core)</li><li>HIP-0120 — ZAP-Native Transport &amp; gRPC Elimination (the permitted</li></ul>
 <p>  protocol set)</p>
 <ul><li><code>~/work/zap/zip</code> — reference implementation (<code>transport.go</code>,</li></ul>
 <p>  <code>adapt.go</code>, <code>ctx.go</code>, <code>closers.go</code>, <code>mcp.go</code>, <code>typed.go</code>)</p>
@@ -275,5 +284,4 @@ cloud.RegisterWithShutdown(name string, order int, mount MountFunc, shutdown Shu
 </div>
 <div class="fend"><a href="/hip-0122.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

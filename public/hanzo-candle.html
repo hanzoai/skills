@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-candle</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-candle.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-candle">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-candle.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-candle</h1><p class="lede">Hanzo Candle is a Rust-based machine learning framework — intended fork of HuggingFace candle for high-performance ML inference and training with GPU acceleration (CUDA + Metal).</p><h1>Hanzo Candle - Rust ML Framework</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-engine.md</code>, <code>hanzo/hanzo-ane.md</code>, <code>hanzo/rust-sdk.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Candle is a <strong>Rust-based machine learning framework</strong> — intended fork of HuggingFace candle for high-performance ML inference and training with GPU acceleration (CUDA + Metal).</p>
+<p><strong>NOTE</strong>: The <code>hanzoai/candle</code> GitHub repo <strong>does not currently exist</strong>. The upstream HuggingFace candle (v0.9.2-alpha.2) is used directly. A Hanzo fork with ANE support and PQC-safe operations is planned but not yet created.</p>
+<h3>Upstream: HuggingFace Candle</h3>
+<p>The upstream <code>huggingface/candle</code> provides:</p>
+<ul><li>Tensor operations with zero-cost Rust abstractions</li><li>CUDA, Metal, MKL, and WASM backends</li><li>90+ model implementations (LLMs, vision, audio, diffusion)</li><li>GGUF, safetensors, ONNX, PyTorch format support</li><li>No Python runtime required</li></ul>
+<h2>When to use</h2>
+<ul><li>High-performance ML inference in Rust applications</li><li>CUDA/Metal GPU acceleration for neural networks</li><li>Loading and running GGUF, safetensors, ONNX models</li><li>Building custom ML pipelines without Python</li><li>Embedding ML in Hanzo Engine or Hanzo Node</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Rust 1.75+</strong></li><li><strong>CUDA Toolkit 12+</strong> (for CUDA backend) or <strong>macOS 13+</strong> (for Metal)</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Upstream | <code>github.com/huggingface/candle</code> | | Version | 0.9.2-alpha.2 | | Planned fork | <code>github.com/hanzoai/candle</code> (not yet created) | | Build | <code>cargo build --release</code> | | Test | <code>cargo test</code> | | License | MIT OR Apache-2.0 |</p>
+<h2>Workspace Crates</h2>
+<h3>Core (built by default)</h3>
+<p>| Crate | Purpose | |-------|---------| | <code>candle-core</code> | Tensor ops, Device abstraction, DType system | | <code>candle-nn</code> | Neural network layers (Linear, Conv, LayerNorm, Attention) | | <code>candle-transformers</code> | Transformer model implementations (90+) | | <code>candle-datasets</code> | Dataset loading (MNIST, CIFAR, etc.) | | <code>candle-pyo3</code> | Python bindings via PyO3 | | <code>candle-ug</code> | Universal Graph backend | | <code>tensor-tools</code> | CLI tensor manipulation |</p>
+<h3>GPU Backends (opt-in, excluded from default build)</h3>
+<p>| Crate | Purpose | |-------|---------| | <code>candle-kernels</code> | Custom CUDA kernels | | <code>candle-metal-kernels</code> | Custom Metal kernels (Apple GPU) | | <code>candle-flash-attn</code> | Flash Attention v2 (CUDA) | | <code>candle-flash-attn-v3</code> | Flash Attention v3 (CUDA) | | <code>candle-onnx</code> | ONNX model evaluation |</p>
+<h3>Backend Feature Flags</h3>
+<p>| Backend | Feature Flag | Notes | |---------|-------------|-------| | CPU | default | gemm crate for BLAS | | CPU (Intel) | <code>mkl</code> | Intel Math Kernel Library | | CPU (Apple) | <code>accelerate</code> | Apple Accelerate framework | | CUDA | <code>cuda</code> | Via cudarc 0.18.2, cuBLAS, cuRAND | | cuDNN | <code>cudnn</code> | Additional cuDNN kernels | | NCCL | <code>nccl</code> | Multi-GPU distribution | | Metal | <code>metal</code> | Apple GPU via objc2-metal | | WASM | (target) | WebAssembly with SIMD |</p>
+<h2>One-file quickstart</h2>
+<h3>Tensor Operations</h3>
+<pre><code class="lang-rust">use candle_core::{Device, Tensor, DType};
+
+fn main() -&gt; candle_core::Result&lt;()&gt; {
+ let device = Device::cuda_if_available(0)?;
+
+ // Create tensors
+ let a = Tensor::randn(0f32, 1., (2, 3), &amp;device)?;
+ let b = Tensor::randn(0f32, 1., (3, 4), &amp;device)?;
+
+ // Matrix multiply
+ let c = a.matmul(&amp;b)?;
+ println!(&quot;Shape: {:?}&quot;, c.shape()); // [2, 4]
+
+ // Element-wise operations
+ let d = (&amp;a + &amp;a)? * 2.0;
+ let e = a.relu()?;
+ let f = a.softmax(1)?;
+
+ // Type conversion
+ let a_bf16 = a.to_dtype(DType::BF16)?;
+
+ Ok(())
+}</code></pre>
+<h3>Neural Network</h3>
+<pre><code class="lang-rust">use candle_core::{Device, Tensor, DType, Module};
+use candle_nn::{VarBuilder, VarMap, Linear, linear, AdamW};
+
+fn main() -&gt; candle_core::Result&lt;()&gt; {
+ let device = Device::cuda_if_available(0)?;
+ let varmap = VarMap::new();
+ let vb = VarBuilder::from_varmap(&amp;varmap, DType::F32, &amp;device);
+
+ let layer1 = linear(784, 256, vb.pp(&quot;layer1&quot;))?;
+ let layer2 = linear(256, 10, vb.pp(&quot;layer2&quot;))?;
+
+ // Forward pass
+ let input = Tensor::randn(0f32, 1., (32, 784), &amp;device)?;
+ let h = layer1.forward(&amp;input)?.relu()?;
+ let output = layer2.forward(&amp;h)?;
+
+ // Training
+ let mut opt = AdamW::new(varmap.all_vars(), Default::default())?;
+ let target = Tensor::zeros((32, 10), DType::F32, &amp;device)?;
+ let loss = candle_nn::loss::mse(&amp;output, &amp;target)?;
+ opt.backward_step(&amp;loss)?;
+
+ println!(&quot;Loss: {}&quot;, loss.to_scalar::&lt;f32&gt;()?);
+ Ok(())
+}</code></pre>
+<h3>Load GGUF Model</h3>
+<pre><code class="lang-rust">use candle_core::quantized::gguf_file;
+use std::fs::File;
+
+fn main() -&gt; anyhow::Result&lt;()&gt; {
+ let mut file = File::open(&quot;model.gguf&quot;)?;
+ let model = gguf_file::Content::read(&amp;mut file)?;
+
+ for (name, info) in model.tensor_infos.iter() {
+ println!(&quot;{}: {:?}&quot;, name, info.shape);
+ }
+
+ let weights = model.tensor(&amp;mut file, &quot;model.layers.0.self_attn.q_proj.weight&quot;)?;
+ println!(&quot;Weight shape: {:?}&quot;, weights.shape());
+ Ok(())
+}</code></pre>
+<h3>Load safetensors</h3>
+<pre><code class="lang-rust">use candle_core::{Device, DType};
+use candle_nn::VarBuilder;
+
+let device = Device::cuda_if_available(0)?;
+let vb = unsafe {
+ VarBuilder::from_mmaped_safetensors(
+ &amp;[&quot;model.safetensors&quot;],
+ DType::F32,
+ &amp;device,
+ )?
+};
+let weight = vb.get((768, 768), &quot;transformer.h.0.attn.c_attn.weight&quot;)?;</code></pre>
+<h2>Supported Models (90+ via candle-transformers)</h2>
+<p>| Category | Models | |----------|--------| | <strong>LLMs</strong> | LLaMA 1/2/3, Falcon, Gemma 1/2, Phi 1/1.5/2/3, Mistral, Mixtral, Mamba/Mamba2, StarCoder/2, Qwen3 MoE, Yi, GLM4, DeepSeek v2, SmolLM3, Olmo | | <strong>Vision</strong> | DINOv2, ConvMixer, EfficientNet, ResNet, ViT, VGG, YOLO v3/v8, SAM, SegFormer, MobileNet v4, CLIP, SigLIP | | <strong>Audio</strong> | Whisper, EnCodec, MetaVoice, Parler-TTS, Mimi, Silero VAD | | <strong>Diffusion</strong> | Stable Diffusion 1.5/2.1/XL/3, Flux, Z-Image | | <strong>Multimodal</strong> | BLIP, LLaVA, Moondream, PaddleOCR-VL, Pixtral, PaliGemma | | <strong>Quantized</strong> | GGUF/GGML format, llama.cpp compatible |</p>
+<h2>Supported Formats</h2>
+<p>| Format | Extension | Use Case | |--------|-----------|----------| | GGUF | <code>.gguf</code> | Quantized models (llama.cpp compatible) | | safetensors | <code>.safetensors</code> | HuggingFace standard (fast, safe) | | ONNX | <code>.onnx</code> | Cross-framework interop | | PyTorch | <code>.bin</code>, <code>.pt</code> | Legacy format |</p>
+<h2>Cargo.toml Setup</h2>
+<pre><code class="lang-toml">[dependencies]
+candle-core = { version = &quot;0.9&quot;, features = [&quot;cuda&quot;] } # NVIDIA GPU
+# or
+candle-core = { version = &quot;0.9&quot;, features = [&quot;metal&quot;] } # Apple GPU
+# or
+candle-core = { version = &quot;0.9&quot;, features = [&quot;mkl&quot;] } # Intel MKL
+
+candle-nn = &quot;0.9&quot;
+candle-transformers = &quot;0.9&quot;</code></pre>
+<h2>Planned Hanzo Extensions</h2>
+<p>When the <code>hanzoai/candle</code> fork is created:</p>
+<ul><li>ANE (Apple Neural Engine) backend integration</li><li>PQC-safe tensor operations</li><li>Hanzo Engine serving integration</li><li>Optimized Zen model loaders</li></ul>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-engine.md</code> - Uses candle for inference serving</li><li><code>hanzo/hanzo-ane.md</code> - Apple Neural Engine (complementary to Metal)</li><li><code>hanzo/hanzo-jin.md</code> - Visual JEPA framework</li><li><code>hanzo/rust-sdk.md</code> - Hanzo Rust SDK</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: ml, rust, tensor, cuda, metal, inference <strong>Prerequisites</strong>: Rust, ML fundamentals</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-candle.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

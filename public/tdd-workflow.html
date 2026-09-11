@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tdd-workflow</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/tdd-workflow.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/tdd-workflow">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/tdd-workflow.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>tdd-workflow</h1><p class="lede">Complete guide to practicing Test-Driven Development from project setup through delivery.</p><h1>TDD Workflow: Step-by-Step Guide</h1>
+<p>Complete guide to practicing Test-Driven Development from project setup through delivery. Follow this workflow for consistent, high-quality TDD practice.</p>
+<h2>Table of Contents</h2>
+<ol><li><a href="#daily-tdd-workflow">Daily TDD Workflow</a></li><li><a href="#project-setup">Project Setup</a></li><li><a href="#feature-development">Feature Development</a></li><li><a href="#debugging-workflow">Debugging Workflow</a></li><li><a href="#refactoring-workflow">Refactoring Workflow</a></li><li><a href="#code-review-checklist">Code Review Checklist</a></li><li><a href="#common-scenarios">Common Scenarios</a></li></ol>
+<hr>
+<h2>Daily TDD Workflow</h2>
+<h3>Morning Routine</h3>
+<pre><code class="lang-bash"># 1. Pull latest changes
+git pull origin main
+
+# 2. Run full test suite to verify clean slate
+npm test  # or pytest, cargo test, go test, etc.
+
+# 3. Review your task board
+bd ready --json --limit 5  # If using Beads
+
+# 4. Pick ONE small task to start
+# Remember: Small steps, tight feedback loops</code></pre>
+<h3>During Development</h3>
+<p><strong>The Core Cycle</strong> (repeat every 5-10 minutes):</p>
+<pre><code>┌─────────────────┐
+│   1. RED        │  Write failing test (30 sec - 2 min)
+│   Write Test    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   2. GREEN      │  Make test pass (1 - 5 min)
+│   Implement     │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   3. REFACTOR   │  Improve design (1 - 5 min)
+│   Clean Code    │
+└────────┬────────┘
+         │
+         ▼
+    (Commit)
+         │
+         └──────&gt; Next Test</code></pre>
+<h3>End of Day</h3>
+<pre><code class="lang-bash"># 1. Ensure all tests pass
+npm test
+
+# 2. Commit any work in progress
+git add .
+git commit -m &quot;WIP: Feature X progress&quot;
+
+# 3. Push to remote (if on feature branch)
+git push origin feature/your-feature
+
+# 4. Update task tracking
+bd export -o .beads/issues.jsonl
+
+# 5. Quick reflection
+# - How many cycles completed?
+# - What went well?
+# - What to improve tomorrow?</code></pre>
+<hr>
+<h2>Project Setup</h2>
+<h3>Initial Setup for TDD</h3>
+<p><strong>1. Choose Testing Framework</strong></p>
+<pre><code class="lang-bash"># Python
+pip install pytest pytest-cov pytest-watch
+# or with uv:
+uv add --dev pytest pytest-cov pytest-watch
+
+# TypeScript/JavaScript
+npm install --save-dev jest @types/jest ts-jest
+# or
+npm install --save-dev vitest
+
+# Rust
+# Already included in cargo
+
+# Go
+# Already included in go toolchain</code></pre>
+<p><strong>2. Configure Test Runner</strong></p>
+<p>Python (<code>pyproject.toml</code>):</p>
+<pre><code class="lang-toml">[tool.pytest.ini_options]
+testpaths = [&quot;tests&quot;]
+python_files = [&quot;test_*.py&quot;]
+python_classes = [&quot;Test*&quot;]
+python_functions = [&quot;test_*&quot;]
+addopts = &quot;-v --cov=src --cov-report=html --cov-report=term&quot;</code></pre>
+<p>TypeScript (<code>jest.config.js</code>):</p>
+<pre><code class="lang-javascript">module.exports = {
+  preset: &#x27;ts-jest&#x27;,
+  testEnvironment: &#x27;node&#x27;,
+  roots: [&#x27;&lt;rootDir&gt;/src&#x27;],
+  testMatch: [&#x27;**/__tests__/**/*.ts&#x27;, &#x27;**/?(*.)+(spec|test).ts&#x27;],
+  collectCoverageFrom: [&#x27;src/**/*.ts&#x27;],
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70
+    }
+  }
+};</code></pre>
+<p><strong>3. Set Up Watch Mode</strong></p>
+<pre><code class="lang-bash"># Python
+pytest-watch
+
+# JavaScript/TypeScript
+npm test -- --watch
+
+# Rust
+cargo watch -x test
+
+# Go
+# Use tools like gotest or create a watch script</code></pre>
+<p><strong>4. Configure IDE for TDD</strong></p>
+<p>VS Code (<code>settings.json</code>):</p>
+<pre><code class="lang-json">{
+  &quot;editor.formatOnSave&quot;: true,
+  &quot;editor.codeActionsOnSave&quot;: {
+    &quot;source.organizeImports&quot;: true
+  },
+  &quot;python.testing.pytestEnabled&quot;: true,
+  &quot;python.testing.unittestEnabled&quot;: false,
+  &quot;jest.autoRun&quot;: &quot;watch&quot;
+}</code></pre>
+<p><strong>5. Create Project Structure</strong></p>
+<pre><code>project/
+├── src/               # Production code
+│   ├── module1/
+│   └── module2/
+├── tests/             # Test code
+│   ├── test_module1.py
+│   └── test_module2.py
+├── README.md
+├── pyproject.toml     # or package.json, Cargo.toml, etc.
+└── .gitignore</code></pre>
+<hr>
+<h2>Feature Development</h2>
+<h3>Step-by-Step Feature Development with TDD</h3>
+<p><strong>Example</strong>: Adding user authentication to an API</p>
+<h4>Phase 1: Plan the Feature</h4>
+<pre><code class="lang-markdown">Feature: User Authentication
+
+Requirements:
+- User can register with email and password
+- User can login with credentials
+- Password must be hashed
+- Invalid credentials return error
+- Login returns JWT token
+
+Break down into small tests:
+1. ✓ User can be created with email
+2. ✓ Password is hashed on creation
+3. ✓ User can authenticate with valid credentials
+4. ✓ Authentication fails with invalid password
+5. ✓ Authentication returns JWT token</code></pre>
+<h4>Phase 2: First Test (User Creation)</h4>
+<p><strong>RED - Write failing test</strong>:</p>
+<pre><code class="lang-python"># tests/test_user.py
+def test_user_can_be_created_with_email():
+    &quot;&quot;&quot;Given an email, when creating user, then user has that email&quot;&quot;&quot;
+    # Arrange
+    email = &quot;user@example.com&quot;
+
+    # Act
+    user = User.create(email=email, password=&quot;secret123&quot;)
+
+    # Assert
+    assert user.email == email</code></pre>
+<p><strong>Run test</strong> (should fail - User doesn&#x27;t exist):</p>
+<pre><code class="lang-bash">pytest tests/test_user.py::test_user_can_be_created_with_email</code></pre>
+<p><strong>GREEN - Minimal implementation</strong>:</p>
+<pre><code class="lang-python"># src/user.py
+class User:
+    def __init__(self, email: str, password: str):
+        self.email = email
+        self.password = password
+
+    @classmethod
+    def create(cls, email: str, password: str):
+        return cls(email, password)</code></pre>
+<p><strong>Run test</strong> (should pass):</p>
+<pre><code class="lang-bash">pytest tests/test_user.py::test_user_can_be_created_with_email</code></pre>
+<p><strong>REFACTOR</strong> (if needed):</p>
+<ul><li>Code is simple, no refactoring needed yet</li></ul>
+<p><strong>COMMIT</strong>:</p>
+<pre><code class="lang-bash">git add .
+git commit -m &quot;feat: Add User.create method with email&quot;</code></pre>
+<h4>Phase 3: Second Test (Password Hashing)</h4>
+<p><strong>RED</strong>:</p>
+<pre><code class="lang-python">def test_password_is_hashed_on_creation():
+    &quot;&quot;&quot;Given a password, when creating user, then password is hashed&quot;&quot;&quot;
+    # Arrange
+    plain_password = &quot;secret123&quot;
+
+    # Act
+    user = User.create(email=&quot;user@example.com&quot;, password=plain_password)
+
+    # Assert
+    assert user.password != plain_password
+    assert user.password.startswith(&quot;$2b$&quot;)  # bcrypt hash prefix</code></pre>
+<p><strong>GREEN</strong>:</p>
+<pre><code class="lang-python">import bcrypt
+
+class User:
+    def __init__(self, email: str, password_hash: str):
+        self.email = email
+        self.password = password_hash
+
+    @classmethod
+    def create(cls, email: str, password: str):
+        password_hash = bcrypt.hashpw(
+            password.encode(&#x27;utf-8&#x27;),
+            bcrypt.gensalt()
+        ).decode(&#x27;utf-8&#x27;)
+        return cls(email, password_hash)</code></pre>
+<p><strong>REFACTOR</strong>:</p>
+<pre><code class="lang-python">class User:
+    def __init__(self, email: str, password_hash: str):
+        self.email = email
+        self._password_hash = password_hash
+
+    @classmethod
+    def create(cls, email: str, password: str):
+        password_hash = cls._hash_password(password)
+        return cls(email, password_hash)
+
+    @staticmethod
+    def _hash_password(password: str) -&gt; str:
+        &quot;&quot;&quot;Hash a password using bcrypt&quot;&quot;&quot;
+        return bcrypt.hashpw(
+            password.encode(&#x27;utf-8&#x27;),
+            bcrypt.gensalt()
+        ).decode(&#x27;utf-8&#x27;)</code></pre>
+<p><strong>COMMIT</strong>:</p>
+<pre><code class="lang-bash">git add .
+git commit -m &quot;feat: Hash user passwords with bcrypt&quot;</code></pre>
+<h4>Phase 4: Continue with Remaining Tests</h4>
+<p>Follow the same pattern for each requirement:</p>
+<ol><li>Write failing test (RED)</li><li>Make it pass (GREEN)</li><li>Refactor</li><li>Commit</li><li>Next test</li></ol>
+<hr>
+<h2>Debugging Workflow</h2>
+<h3>When a Test Fails</h3>
+<p><strong>DON&#x27;T</strong>:</p>
+<ul><li>❌ Immediately jump to fixing code</li><li>❌ Change test to make it pass</li><li>❌ Add debugging prints everywhere</li></ul>
+<p><strong>DO</strong>:</p>
+<p><strong>1. Understand the Failure</strong></p>
+<pre><code class="lang-bash"># Run with verbose output
+pytest -v tests/test_user.py::test_authentication
+
+# Look at the assertion error
+# Expected: True
+# Actual: False</code></pre>
+<p><strong>2. Verify Test is Correct</strong></p>
+<p>Ask yourself:</p>
+<ul><li>Is this test testing the right thing?</li><li>Is the expected value correct?</li><li>Are the test inputs valid?</li></ul>
+<p><strong>3. Isolate the Problem</strong></p>
+<pre><code class="lang-python"># Add a debugging test
+def test_debug_authentication():
+    user = User.create(&quot;test@example.com&quot;, &quot;password123&quot;)
+    print(f&quot;User password hash: {user._password_hash}&quot;)
+
+    result = user.authenticate(&quot;password123&quot;)
+    print(f&quot;Authentication result: {result}&quot;)
+
+    # Manually verify each step
+    assert user._password_hash is not None
+    assert result is True</code></pre>
+<p><strong>4. Use Debugger</strong></p>
+<pre><code class="lang-python"># Add breakpoint
+import pdb; pdb.set_trace()
+
+# Or use IDE debugger
+# Set breakpoint and run in debug mode</code></pre>
+<p><strong>5. Fix Smallest Thing</strong></p>
+<p>Make the minimal change to fix the issue.</p>
+<p><strong>6. Verify Fix</strong></p>
+<pre><code class="lang-bash"># Run the specific test
+pytest tests/test_user.py::test_authentication
+
+# Run all tests to ensure no regression
+pytest</code></pre>
+<p><strong>7. Clean Up</strong></p>
+<ul><li>Remove debugging code</li><li>Remove temporary tests</li><li>Commit the fix</li></ul>
+<pre><code class="lang-bash">git add .
+git commit -m &quot;fix: Correct password verification in authentication&quot;</code></pre>
+<hr>
+<h2>Refactoring Workflow</h2>
+<h3>Safe Refactoring with TDD</h3>
+<p><strong>Prerequisites</strong>:</p>
+<ul><li>✅ All tests passing</li><li>✅ Tests are comprehensive</li><li>✅ Version control is clean</li></ul>
+<p><strong>Process</strong>:</p>
+<p><strong>1. Ensure Green State</strong></p>
+<pre><code class="lang-bash"># All tests MUST pass before refactoring
+pytest
+# ✓ All tests passed</code></pre>
+<p><strong>2. Identify Refactoring Opportunity</strong></p>
+<p>Common triggers:</p>
+<ul><li>Code duplication</li><li>Long methods</li><li>Unclear names</li><li>Complex conditionals</li><li>God classes</li></ul>
+<p><strong>3. Make Small Change</strong></p>
+<pre><code class="lang-python"># Before: Duplication
+def calculate_discount_for_premium(price):
+    if price &gt; 100:
+        return price * 0.8
+    return price
+
+def calculate_discount_for_gold(price):
+    if price &gt; 100:
+        return price * 0.9
+    return price
+
+# After: Extract common pattern
+DISCOUNT_RATES = {
+    &#x27;premium&#x27;: 0.20,
+    &#x27;gold&#x27;: 0.10,
+}
+
+def calculate_discount(price, customer_type):
+    if price &lt;= 100:
+        return price
+    rate = DISCOUNT_RATES.get(customer_type, 0.0)
+    return price * (1 - rate)</code></pre>
+<p><strong>4. Run Tests Immediately</strong></p>
+<pre><code class="lang-bash">pytest</code></pre>
+<p><strong>5. If Red, Undo and Try Smaller Step</strong></p>
+<pre><code class="lang-bash">git checkout -- .
+# Try a smaller refactoring</code></pre>
+<p><strong>6. If Green, Continue or Commit</strong></p>
+<pre><code class="lang-bash">git add .
+git commit -m &quot;refactor: Extract discount calculation into common function&quot;</code></pre>
+<p><strong>7. Repeat</strong></p>
+<p>Continue refactoring in small steps, testing after each change.</p>
+<hr>
+<h2>Code Review Checklist</h2>
+<h3>TDD Code Review Guidelines</h3>
+<p><strong>For Reviewers</strong>:</p>
+<p><strong>Tests</strong>:</p>
+<ul><li>[ ] Every new feature has tests</li><li>[ ] Tests are clear and readable</li><li>[ ] Tests follow Arrange-Act-Assert pattern</li><li>[ ] Test names describe behavior</li><li>[ ] No commented-out tests</li><li>[ ] No skipped tests without reason</li><li>[ ] Tests are independent (no order dependency)</li><li>[ ] Tests are deterministic (no random data without seeds)</li></ul>
+<p><strong>Production Code</strong>:</p>
+<ul><li>[ ] Code is simple and clear</li><li>[ ] No premature optimization</li><li>[ ] Public API is intuitive</li><li>[ ] Error handling is appropriate</li><li>[ ] No TODO/FIXME comments (create issues instead)</li><li>[ ] Documentation is adequate</li></ul>
+<p><strong>Coverage</strong>:</p>
+<ul><li>[ ] Critical paths have &gt;90% coverage</li><li>[ ] Business logic has &gt;80% coverage</li><li>[ ] New code doesn&#x27;t decrease coverage</li></ul>
+<p><strong>Design</strong>:</p>
+<ul><li>[ ] Code is loosely coupled</li><li>[ ] Responsibilities are clear</li><li>[ ] No code duplication</li><li>[ ] Names are meaningful</li><li>[ ] Functions are small and focused</li></ul>
+<p><strong>Process</strong>:</p>
+<ul><li>[ ] Commits are logical and well-described</li><li>[ ] Tests were written first (check git history)</li><li>[ ] No giant commits (suggests non-TDD approach)</li></ul>
+<p><strong>Questions to Ask</strong>:</p>
+<ul><li>&quot;What test drove this code?&quot;</li><li>&quot;Can this be simpler?&quot;</li><li>&quot;Is this testable?&quot;</li><li>&quot;What edge cases are missing?&quot;</li></ul>
+<hr>
+<h2>Common Scenarios</h2>
+<h3>Scenario 1: Starting a New Feature</h3>
+<pre><code>1. Create feature branch
+   git checkout -b feature/user-search
+
+2. Write first test
+   # Start with simplest case
+   def test_search_returns_empty_for_no_matches():
+       results = search_users(&quot;nonexistent&quot;)
+       assert results == []
+
+3. Run test (should fail)
+   pytest tests/test_search.py
+
+4. Implement minimal code
+   def search_users(query):
+       return []
+
+5. Run test (should pass)
+   pytest tests/test_search.py
+
+6. Commit
+   git commit -m &quot;feat: Add basic user search (empty results)&quot;
+
+7. Next test
+   def test_search_finds_user_by_name():
+       ...</code></pre>
+<h3>Scenario 2: Fixing a Bug</h3>
+<pre><code>1. Write a test that reproduces the bug
+   def test_handle_null_input():
+       # This currently fails
+       result = process(None)
+       assert result is not None
+
+2. Verify test fails
+   pytest tests/test_process.py::test_handle_null_input
+   # Should fail, reproducing the bug
+
+3. Fix the bug
+   def process(input):
+       if input is None:
+           return default_value()
+       # ... rest of code
+
+4. Verify test passes
+   pytest tests/test_process.py::test_handle_null_input
+
+5. Run all tests
+   pytest
+
+6. Commit
+   git commit -m &quot;fix: Handle null input in process()&quot;</code></pre>
+<h3>Scenario 3: Adding Validation</h3>
+<pre><code>1. Test invalid input
+   def test_rejects_invalid_email():
+       with pytest.raises(ValueError):
+           create_user(email=&quot;invalid&quot;)
+
+2. Implement validation
+   def create_user(email):
+       if not is_valid_email(email):
+           raise ValueError(f&quot;Invalid email: {email}&quot;)
+       # ...
+
+3. Test edge cases
+   @pytest.mark.parametrize(&quot;email&quot;, [
+       &quot;&quot;,
+       &quot;no-at-sign&quot;,
+       &quot;@no-local&quot;,
+       &quot;no-domain@&quot;,
+       &quot;spaces in@email.com&quot;,
+   ])
+   def test_rejects_malformed_emails(email):
+       with pytest.raises(ValueError):
+           create_user(email=email)</code></pre>
+<h3>Scenario 4: Refactoring Legacy Code</h3>
+<pre><code>1. Add characterization tests
+   # Document current behavior (even if wrong)
+   def test_current_behavior():
+       result = legacy_function(input)
+       assert result == &lt;whatever it currently returns&gt;
+
+2. Build comprehensive test suite
+   # Test all code paths
+   # Use code coverage to find gaps
+
+3. Refactor incrementally
+   # Small changes
+   # Run tests after each change
+   # Keep tests passing
+
+4. Fix bugs with new tests
+   # Now that you have safety net
+   # Write test for correct behavior
+   # Fix implementation</code></pre>
+<h3>Scenario 5: Working with External Dependencies</h3>
+<pre><code>1. Create abstraction
+   class EmailService:
+       def send(self, to, subject, body):
+           raise NotImplementedError
+
+2. Test with fake
+   class FakeEmailService(EmailService):
+       def __init__(self):
+           self.sent_emails = []
+
+       def send(self, to, subject, body):
+           self.sent_emails.append((to, subject, body))
+
+   def test_sends_welcome_email():
+       email_service = FakeEmailService()
+       user_service = UserService(email_service)
+
+       user_service.register(&quot;user@example.com&quot;)
+
+       assert len(email_service.sent_emails) == 1
+       assert email_service.sent_emails[0][0] == &quot;user@example.com&quot;
+
+3. Implement real service
+   class SMTPEmailService(EmailService):
+       def send(self, to, subject, body):
+           # Real SMTP implementation
+           pass</code></pre>
+<hr>
+<h2>Tips for Success</h2>
+<h3>Maintain Rhythm</h3>
+<ul><li><strong>Short cycles</strong>: 2-10 minutes per Red-Green-Refactor</li><li><strong>Commit often</strong>: After each passing test</li><li><strong>Take breaks</strong>: Pomodoro technique works well with TDD</li></ul>
+<h3>When Stuck</h3>
+<ol><li><strong>Step is too big</strong>: Break into smaller test</li><li><strong>Design unclear</strong>: Spike to explore, then delete and TDD</li><li><strong>Test hard to write</strong>: Design problem, reconsider approach</li><li><strong>All tests passing but feature incomplete</strong>: Missing test case</li></ol>
+<h3>Keep Tests Fast</h3>
+<ul><li>Unit tests: &lt; 100ms each</li><li>Integration tests: &lt; 1s each</li><li>Use test doubles for slow operations</li><li>Parallel test execution</li></ul>
+<h3>Test Quality</h3>
+<ul><li>One assertion per test (generally)</li><li>No logic in tests</li><li>Tests are examples</li><li>Test the interface, not the implementation</li></ul>
+<h3>Remember</h3>
+<blockquote><p>&quot;The code you write without a test is legacy code from the moment you write it&quot; - Michael Feathers</p></blockquote>
+<blockquote><p>&quot;TDD is not about testing, it&#x27;s about design&quot; - Sandi Metz</p></blockquote>
+<blockquote><p>&quot;Make it work, make it right, make it fast&quot; - Kent Beck</p></blockquote>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/tdd-workflow.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

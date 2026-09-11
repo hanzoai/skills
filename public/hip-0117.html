@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,7 +196,7 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0117</h1><p class="lede">HIP-117: Cloud-in-a-Box — One Binary, Three Modes. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0117: Cloud-in-a-Box — One Binary, Three Modes</h1>
+<h1>hip-0117</h1><p class="lede">HIP-117: Cloud-in-a-Box — One Binary, Three Modes. Status Final. Hanzo architectural specification.</p><h1>HIP-0117: Cloud-in-a-Box — One Binary, Three Modes</h1>
 <h2>Abstract</h2>
 <p>This proposal defines the three deployment topologies of the ONE <code>cloud</code> binary (HIP-0106) — from a laptop to an HA cluster without changing the artifact:</p>
 <ol><li><strong><code>cloud serve</code></strong> — single process, <strong>no Kubernetes</strong>: every</li></ol>
@@ -196,7 +205,7 @@ footer a{color:var(--soft)}
 <p>   embed it), bootstraps a Kubernetes cluster, installs the operator,    and hands reconciliation to <code>services.hanzo.ai</code> CRs (HIP-0400).    Single command from bare metal to HA.</p>
 <ol><li><strong><code>helm install</code></strong> — bring your own Kubernetes: the charts at</li></ol>
 <p>   <code>cloud/helm/cloud</code> deploy the same image into an existing cluster.</p>
-<p>The mode is topology, not identity: same bits, same config surface, same product behavior. What runs is decided by HIP-0116 (plugins / enabled subsystems); <em>where</em> it runs is decided here — and nowhere else.</p>
+<p>The mode is topology, not identity: same bits, same config surface, same product behavior. What runs is decided by HIP-0106 (plugins / enabled subsystems); <em>where</em> it runs is decided here — and nowhere else.</p>
 <h2>Motivation</h2>
 <p>An OSS AI cloud must install like a tool, not like a platform team. The competition for the first five minutes is <code>docker run</code> and <code>curl | sh</code>, not a 40-page Helm values reference. At the same time the production shape is an operator-reconciled Kubernetes estate (HIP-0400 CRs, HIP-0036 CI/CD). Historically these were different software: a &quot;dev mode&quot; binary and a &quot;real&quot; set of manifests that drifted apart.</p>
 <p>HIP-0106 removed the reason for that split. The unified binary already runs every subsystem in one process against SQLite; Kubernetes adds scale-out and self-healing, not features. So the deployment story collapses to one artifact with three entry points, and the only real design question left is: <strong>does the binary embed the orchestrator?</strong></p>
@@ -212,13 +221,13 @@ footer a{color:var(--soft)}
 <p>The binary IS the cloud:</p>
 <ul><li>All enabled subsystems mount in-process per HIP-0106 (registry +</li></ul>
 <p>  fail-closed embeds). Disabled-by-default activation and 503   blast-radius isolation apply unchanged.</p>
-<ul><li>Storage is per-tenant SQLite (HIP-0029, HIP-0302) under</li></ul>
+<ul><li>Storage is per-tenant SQLite (HIP-1104, HIP-0302) under</li></ul>
 <p>  <code>--data-dir</code>. No external database exists in this mode — SQLite is   the default, not the fallback.</p>
 <ul><li><strong>datastore</strong> (columnar analytics store; the one non-Go</li></ul>
 <p>  exception per HIP-0106) runs as a locally supervised subprocess when   present. When absent, analytics-dependent surfaces degrade   fail-closed (503 on their prefixes) while everything else serves —   the same isolation rule as any broken subsystem.</p>
 <ul><li>The IAM single-replica guard (HIP-0106 realized state) is trivially</li></ul>
 <p>  satisfied: there is exactly one replica.</p>
-<ul><li>Consensus/replication state per HIP-0116 runs in its single-node,</li></ul>
+<ul><li>Consensus/replication state per HIP-0106 runs in its single-node,</li></ul>
 <p>  in-memory shape: instant finality, zero configuration.</p>
 <p>This mode is <strong>shipped</strong>: it is <code>cloud.Serve</code> — the same entry the SaaS runs — pointed at local storage. Edge and laptop installs are not a port; they are a smaller instance of production.</p>
 <h3>Mode 2 — <code>cloud cluster init</code> (the binary bootstraps its own cluster)</h3>
@@ -231,13 +240,13 @@ footer a{color:var(--soft)}
 <p>   <code>services.hanzo.ai</code> CRDs (HIP-0400 family).</p>
 <ol><li><strong>Reconcile.</strong> Apply the deployment&#x27;s CRs; the operator pulls</li></ol>
 <p>   <code>ghcr.io/hanzoai/&lt;service&gt;</code> images (built by HIP-0036 lanes),    creates the datastore as a StatefulSet, and converges the estate.    From here on, day-2 is GitOps against CRs — <code>cluster init</code> is a    bootstrapper, not a parallel management plane.</p>
-<p>HA and scale-out are properties of this mode: multiple nodes, replica counts on CRs, and the durable Quasar/ZapDB substrate shape from HIP-0116.</p>
+<p>HA and scale-out are properties of this mode: multiple nodes, replica counts on CRs, and the durable Quasar/ZapDB substrate shape from HIP-0106.</p>
 <p><strong>Airgapped variant:</strong> an optional <strong><code>cloud-fat</code></strong> build <code>go:embed</code>s the pinned k3s binary for networks that cannot fetch. It is a separate build target, never the default — the default binary never carries an orchestrator. This is the ONLY sanctioned embedding of k3s.</p>
 <p><strong>Status:</strong> decided; staged behind the SaaS-first cutover. The operator, CRDs, and images it composes all exist and run production today (HIP-0400, HIP-0036); <code>cluster init</code> sequences them from the binary.</p>
 <h3>Mode 3 — <code>helm install</code> (bring your own Kubernetes)</h3>
 <p>For teams that already operate Kubernetes:</p>
 <pre><code class="lang-bash">helm install cloud ./helm/cloud   # charts at hanzoai/cloud helm/cloud</code></pre>
-<p>The chart deploys the same <code>ghcr.io/hanzoai/cloud</code> image with the same config surface (<code>--enable</code> / <code>CLOUD_*</code> per HIP-0106) and pins <code>replicas=1</code> while the embedded IAM is enabled (the session single-replica guard). BYO ingress-controller integration follows the estate topology of HIP-0112. <strong>Shipped:</strong> the chart exists in-tree at <code>cloud/helm/cloud</code>.</p>
+<p>The chart deploys the same <code>ghcr.io/hanzoai/cloud</code> image with the same config surface (<code>--enable</code> / <code>CLOUD_*</code> per HIP-0106) and pins <code>replicas=1</code> while the embedded IAM is enabled (the session single-replica guard). BYO ingress-controller integration follows the edge routing standard of HIP-0068. <strong>Shipped:</strong> the chart exists in-tree at <code>cloud/helm/cloud</code>.</p>
 <h3>Mode invariants</h3>
 <ul><li><strong>One artifact.</strong> All three modes run the identical binary/image.</li></ul>
 <p>  A mode is a command-line entry point, never a fork or a build flag   (the <code>cloud-fat</code> airgap variant differs only by the embedded k3s   payload, not by application code).</p>
@@ -250,14 +259,14 @@ footer a{color:var(--soft)}
 <h2>References</h2>
 <ul><li>HIP-0106 — Cloud — Unified Hanzo Binary (the artifact all three</li></ul>
 <p>  modes run and the product surface it serves; realized state documents   <code>cloud.Serve</code>, the embeds, and the measured binary)</p>
-<ul><li>HIP-0116 — Hanzo Plugin &amp; VM Model (what runs: plugins/subsystems +</li></ul>
+<ul><li>HIP-0106 — Hanzo Plugin &amp; VM Model (what runs: plugins/subsystems +</li></ul>
 <p>  the single-node vs HA state substrate)</p>
 <ul><li>HIP-0400 — Service CRD (the operator/CR family <code>cluster init</code></li></ul>
 <p>  installs and defers to)</p>
 <ul><li>HIP-0036 — CI/CD Build System Standard (the lanes that build the</li></ul>
 <p>  images the operator pulls)</p>
-<ul><li>HIP-0112 — Cloud Infrastructure Topology Standard (the estate shape</li></ul>
-<p>  Mode 2/3 converge to)</p>
+<ul><li>HIP-0068 — Ingress Standard (the edge routing shape Mode 2/3</li></ul>
+<p>  converge to)</p>
 <ul><li>HIP-0107 / HIP-0302 — replication used for serve→cluster graduation</li></ul>
 <p>  concern)</p>
 <ul><li>k3sup, Coder — prior art for fetch-on-bootstrap orchestrator</li></ul>
@@ -281,5 +290,4 @@ footer a{color:var(--soft)}
 </div>
 <div class="fend"><a href="/hip-0117.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

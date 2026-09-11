@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,12 +196,12 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0061</h1><p class="lede">HIP-61: Notification &amp; Messaging Service Standard. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0061: Notification &amp; Messaging Service Standard</h1>
+<h1>hip-0061</h1><p class="lede">HIP-61: Notification &amp; Messaging Service Standard. Status Draft. Hanzo architectural specification.</p><h1>HIP-0061: Notification &amp; Messaging Service Standard</h1>
 <h2>Abstract</h2>
 <p>Hanzo Notify is the unified notification and messaging service for the Hanzo ecosystem. It provides multi-channel delivery -- email, SMS, push notifications, in-app messages, and webhooks -- through a single API. Every service in the Hanzo platform sends notifications through Notify rather than integrating directly with delivery providers.</p>
-<p>Notify includes a template engine with Handlebars rendering and optional LLM-powered personalization, multi-channel fallback chains (try push, then email, then SMS), delivery tracking integrated with Hanzo Insights (HIP-0017), and user preference management integrated with Hanzo IAM (HIP-0026). AI agents (HIP-0025) can send notifications on behalf of users, enabling autonomous workflows to communicate results without human intervention.</p>
+<p>Notify includes a template engine with Handlebars rendering and optional LLM-powered personalization, multi-channel fallback chains (try push, then email, then SMS), delivery tracking integrated with Hanzo Insights (HIP-1190), and user preference management integrated with Hanzo IAM (HIP-0026). AI agents (HIP-0025) can send notifications on behalf of users, enabling autonomous workflows to communicate results without human intervention.</p>
 <p>The service distinguishes between transactional notifications (auth codes, receipts, system alerts) and marketing notifications (campaigns, digests, product updates), applying different delivery policies, rate limits, and compliance rules to each category.</p>
-<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/notify">github.com/hanzoai/notify</a> <strong>Port</strong>: 8061 <strong>Docker</strong>: <code>ghcr.io/hanzoai/notify:latest</code> <strong>Cluster</strong>: <code>the cluster</code> (<code>24.199.76.156</code>)</p>
+<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/notify">github.com/hanzoai/notify</a> <strong>Port</strong>: 8061 <strong>Docker</strong>: <code>ghcr.io/hanzoai/notify:latest</code> <strong>Cluster</strong>: <code>hanzo-k8s</code> (<code>24.199.76.156</code>)</p>
 <h2>Motivation</h2>
 <h3>The Problem</h3>
 <p>Notifications are everywhere in the Hanzo platform. Consider what happens in a single day:</p>
@@ -203,7 +212,28 @@ footer a{color:var(--soft)}
 <p><strong>3. No fallback chains.</strong> When a push notification fails (user disabled notifications), the message is lost. No team implements the logic to fall back to email, then to SMS. Building reliable multi-channel delivery is complex -- each team either does it poorly or does not do it at all.</p>
 <p><strong>4. No preference management.</strong> Users cannot control which channels they receive notifications on or which categories they want to silence. There is no central place to say &quot;send me billing alerts by email but agent reports by push notification only.&quot;</p>
 <p><strong>5. No delivery observability.</strong> Did the email arrive? Was it opened? Did the SMS bounce? Did the webhook return a 200? Without centralized tracking, debugging &quot;I never got the notification&quot; requires spelunking through five different provider dashboards.</p>
+<h3>Why Unified Notification Service</h3>
+<p>A single notification service eliminates all five problems. Services call one API: <code>POST /v1/notify</code>. The Notify service handles provider selection, channel routing, fallback logic, template rendering, rate limiting, bounce handling, preference checking, and delivery tracking. Services never touch a delivery provider directly.</p>
+<p>This is the same architectural principle behind the LLM Gateway (HIP-0004): instead of every service integrating with OpenAI, Anthropic, and Together AI independently, they call the Gateway. Instead of every service integrating with SendGrid, Twilio, and FCM independently, they call Notify.</p>
 <h2>Design Philosophy</h2>
+<h3>Why Not Just Use SendGrid / Twilio Directly</h3>
+<p>The instinctive answer to &quot;we need to send emails&quot; is to sign up for SendGrid and call their API. This works until it does not. Here is the full cost analysis:</p>
+<p><strong>Direct cost at scale.</strong> SendGrid charges $0.00065 per email on the Pro plan (100K emails/month = $65). At 1M emails/month, that is $650. At 10M, $6,500. Twilio SMS is $0.0079 per message in the US. Push notifications via FCM/APNs are free but require infrastructure to manage device tokens. A unified service lets us use the cheapest provider for each channel and switch providers without changing any calling code.</p>
+<p><strong>Deliverability reputation management.</strong> Email deliverability depends on sender reputation -- IP warmup, SPF/DKIM/DMARC configuration, bounce rate monitoring, complaint rate tracking, and list hygiene. When five teams send from five different configurations, one team&#x27;s misconfiguration (e.g., not handling bounces) degrades everyone&#x27;s deliverability. A single service maintains one sender reputation with proper hygiene.</p>
+<p><strong>Data sovereignty.</strong> SendGrid and Twilio store message content on their infrastructure. For enterprise customers with data residency requirements, this is problematic. Notify renders templates locally and sends only the final content to the delivery provider. Template data and user contact information stay on our infrastructure.</p>
+<p><strong>AI personalization.</strong> The most compelling reason for a self-hosted service: we can pass notification content through the LLM Gateway (HIP-0004) for AI-powered personalization before delivery. SendGrid&#x27;s &quot;dynamic templates&quot; offer variable substitution. We offer full LLM rewriting -- adjusting tone, language, length, and content based on user profile and engagement history. This is impossible with a third-party service because it requires access to our user data and LLM infrastructure.</p>
+<h3>Why Handlebars + LLM Fallback for Templates</h3>
+<p>Notification templates need two things: reliable variable substitution for transactional messages, and intelligent content generation for marketing messages.</p>
+<p><strong>Handlebars</strong> is a logic-less templating language. <code>{{user.name}}</code> renders the user&#x27;s name. <code>{{#if user.isPro}}</code> conditionally includes content. It is deterministic -- the same input always produces the same output. This is essential for transactional messages where regulatory compliance requires exact, reproducible content. An auth code email must say exactly what it says, every time.</p>
+<p><strong>LLM personalization</strong> is the opposite: non-deterministic, creative, and context-aware. When sending a weekly usage digest, an LLM can summarize the user&#x27;s activity in natural language, highlight anomalies, and suggest actions -- all personalized to the user&#x27;s usage patterns. This is not possible with Handlebars alone.</p>
+<p>The architecture is: Handlebars renders first (deterministic variable substitution), then an optional LLM pass personalizes the result (non-deterministic enhancement). Transactional templates skip the LLM pass. Marketing templates opt into it.</p>
+<pre><code>Template (Handlebars)  ──render──&gt;  Base Content  ──LLM (optional)──&gt;  Personalized Content
+    {{user.name}}                   &quot;Hi Zach&quot;                          &quot;Hi Zach, great week --
+    {{usage.tokens}}                &quot;You used 1.2M                      you used 1.2M tokens,
+                                     tokens this week&quot;                  up 40% from last week.
+                                                                        Your agents completed
+                                                                        47 tasks autonomously.&quot;</code></pre>
+<p><strong>Why not LLM-only?</strong> Cost and latency. An LLM call costs ~$0.001-0.01 and takes 500ms-2s. For a password reset email sent 100K times/day, Handlebars renders in microseconds at zero marginal cost. LLM personalization is reserved for high-value, low-volume messages where the personalization justifies the cost.</p>
 <h3>Why Multi-Channel Fallback Chains</h3>
 <p>Users interact with the Hanzo platform through different contexts at different times. During work hours, they are in the browser (in-app notifications reach them). On their phone, push notifications reach them. When they are offline, only email or SMS will work.</p>
 <p>A fallback chain defines the sequence of channels to attempt for a notification:</p>
@@ -222,7 +252,7 @@ footer a{color:var(--soft)}
 <pre><code>                        Internet
                            |
                  +---------+---------+
-                 |      Traefik      |
+                 |  Hanzo Ingress    |
                  | (TLS termination) |
                  +---------+---------+
                            |
@@ -445,7 +475,7 @@ Content to personalize:
 <p><strong>Deliverability configuration</strong>:</p>
 <ul><li><strong>SPF</strong>: <code>v=spf1 include:sendgrid.net include:amazonses.com ~all</code></li><li><strong>DKIM</strong>: 2048-bit RSA key per sending domain, rotated annually.</li><li><strong>DMARC</strong>: <code>v=DMARC1; p=quarantine; rua=mailto:dmarc@hanzo.ai; pct=100</code></li><li><strong>Dedicated IP</strong>: Production uses a dedicated sending IP (not shared pool) to isolate reputation.</li><li><strong>Warmup</strong>: New IPs are warmed over 30 days, starting at 100 emails/day and doubling weekly.</li></ul>
 <p><strong>Bounce handling</strong>:</p>
-<ul><li><strong>Hard bounce</strong> (address does not exist): Mark email invalid in IAM user profile. Do not attempt delivery to this address again. Notify IAM to prompt the user to update their email on next login.</li><li><strong>Soft bounce</strong> (mailbox full, temporary failure): Retry 3 times with exponential backoff (1h, 6h, 24h). If all retries fail, fall through to next channel in fallback chain.</li><li><strong>Complaint</strong> (user marked as spam): Immediately unsubscribe from all marketing emails. Log a compliance event in Insights (HIP-0017).</li></ul>
+<ul><li><strong>Hard bounce</strong> (address does not exist): Mark email invalid in IAM user profile. Do not attempt delivery to this address again. Notify IAM to prompt the user to update their email on next login.</li><li><strong>Soft bounce</strong> (mailbox full, temporary failure): Retry 3 times with exponential backoff (1h, 6h, 24h). If all retries fail, fall through to next channel in fallback chain.</li><li><strong>Complaint</strong> (user marked as spam): Immediately unsubscribe from all marketing emails. Log a compliance event in Insights (HIP-1190).</li></ul>
 <h4>SMS</h4>
 <p><strong>Provider</strong>: Twilio (primary), Vonage (fallback).</p>
 <p>SMS is reserved for high-priority transactional messages: auth codes, security alerts, and critical billing notices. Marketing SMS requires explicit per-channel opt-in and is rate-limited to 2 messages per user per week.</p>
@@ -464,7 +494,7 @@ App uninstall ──token invalid──&gt;  (detected on next send, token remov
                         |
                    On notification:
                    Notify pushes JSON to all active sessions for user</code></pre>
-<p>In-app notifications are stored in a per-user inbox (SQL) and served via REST for session history:</p>
+<p>In-app notifications are stored in the per-user inbox and served over REST for session history:</p>
 <pre><code>GET /v1/inbox?user_id=hanzo/zach&amp;unread=true</code></pre>
 <h4>Webhooks</h4>
 <p>Outbound webhooks deliver structured JSON payloads to registered endpoints. Delivery follows an exponential backoff retry policy:</p>
@@ -486,15 +516,15 @@ def verify_signature(payload: bytes, signature: str, secret: str) -&gt; bool:
    c. Repeat until success or all channels exhausted
 4. If all channels exhausted:
    a. Mark notification as &quot;failed&quot;
-   b. Log failure event to Insights (HIP-0017)
+   b. Log failure event to Insights (HIP-1190)
    c. If critical (security category): alert ops via PagerDuty</code></pre>
 <p>Channel timeout values:</p>
 <p>| Channel | Timeout before fallback | |---------|------------------------| | Push | 5 minutes | | In-app | 15 minutes (WebSocket connected) or immediate (not connected) | | Email | 24 hours (soft bounce retry window) | | SMS | 5 minutes | | Webhook | Per retry policy |</p>
 <h3>Integration with IAM (HIP-0026)</h3>
 <p>Notify is a trusted service in the IAM ecosystem. It authenticates to IAM using a service account (<code>svc-notify</code>) with a machine-to-machine OAuth token.</p>
 <p><strong>User resolution</strong>: When <code>to.user_id</code> is provided, Notify calls IAM&#x27;s internal API to resolve the user&#x27;s contact information:</p>
-<pre><code>GET https://hanzo.id/api/get-user?id=hanzo/zach
-Authorization: Bearer &lt;service-token&gt;
+<pre><code>GET https://hanzo.id/v1/iam/get-user?id=hanzo/zach
+Authorization: Bearer &lt;IAM access token&gt;
 
 Response:
 {
@@ -507,30 +537,33 @@ Response:
     &quot;notifyPreferences&quot;: { ... }
   }
 }</code></pre>
-<p><strong>Preference sync</strong>: User preferences are cached in Notify&#x27;s KV instance (TTL 5 minutes). When a user updates preferences via the IAM UI or Notify&#x27;s preference API, the cache is invalidated immediately via a Kafka event on the <code>iam.user.updated</code> topic (HIP-0030).</p>
-<h3>Integration with Analytics (HIP-0017)</h3>
+<p><strong>Preference sync</strong>: user preferences are cached with a five-minute TTL in the shared KV (HIP-0144), not in an instance of Notify&#x27;s own. When a user updates preferences via the IAM UI or Notify&#x27;s preference API, the cache is invalidated immediately via a Kafka event on the <code>iam.user.updated</code> topic (HIP-1323).</p>
+<h3>Integration with Analytics (HIP-1190)</h3>
 <p>Every notification lifecycle event is emitted as an analytics event to Hanzo Insights:</p>
 <p>| Event | Properties | |-------|------------| | <code>notification.queued</code> | <code>notification_id</code>, <code>template</code>, <code>category</code>, <code>channels</code> | | <code>notification.sent</code> | <code>notification_id</code>, <code>channel</code>, <code>provider</code>, <code>latency_ms</code> | | <code>notification.delivered</code> | <code>notification_id</code>, <code>channel</code>, <code>provider</code> | | <code>notification.opened</code> | <code>notification_id</code>, <code>channel</code> (email open tracking pixel) | | <code>notification.clicked</code> | <code>notification_id</code>, <code>channel</code>, <code>link_url</code> | | <code>notification.bounced</code> | <code>notification_id</code>, <code>channel</code>, <code>bounce_type</code>, <code>reason</code> | | <code>notification.failed</code> | <code>notification_id</code>, <code>channel</code>, <code>error</code> | | <code>notification.unsubscribed</code> | <code>user_id</code>, <code>category</code>, <code>channel</code> |</p>
 <p>These events enable delivery dashboards in Insights: delivery rates by channel, bounce rates by domain, open rates by template, click-through rates by campaign. The analytics integration is fire-and-forget -- delivery pipeline latency is not affected by analytics ingestion.</p>
 <h3>Rate Limiting</h3>
 <p>Rate limits protect both users (from notification fatigue) and providers (from API throttling).</p>
 <p>| Scope | Transactional | Marketing | Agent | |-------|---------------|-----------|-------| | Per user per hour | 100 | 5 | 10 | | Per user per day | 500 | 20 | 50 | | Per org per hour | 10,000 | 1,000 | 500 | | Global per second | 1,000 | 100 | 50 |</p>
-<p>Rate limits are enforced via KV sliding window counters. When a limit is exceeded, the API returns HTTP 429 with a <code>Retry-After</code> header.</p>
+<p>Rate limits are enforced with sliding-window counters in the shared KV. When a limit is exceeded the API returns <code>429</code> with a <code>Retry-After</code> header.</p>
 <p>Security-critical notifications (category <code>security</code>) bypass all rate limits. These include: MFA codes, password reset links, account breach alerts, and login from new device warnings.</p>
 <h2>Implementation</h2>
 <h3>Production Deployment</h3>
-<p>Notify runs on <code>the cluster</code> as a Go service with dedicated delivery workers per channel.</p>
+<p>Notify runs on <code>hanzo-k8s</code> as a Go service with dedicated delivery workers per channel.</p>
 <p>| Component | Image | Replicas | CPU | Memory | Purpose | |-----------|-------|----------|-----|--------|---------| | <code>notify-api</code> | <code>ghcr.io/hanzoai/notify:latest</code> | 2 | 250m | 256Mi | REST API, WebSocket, preference management | | <code>notify-email-worker</code> | <code>ghcr.io/hanzoai/notify:latest</code> | 2 | 250m | 128Mi | Email delivery via SendGrid/SES | | <code>notify-sms-worker</code> | <code>ghcr.io/hanzoai/notify:latest</code> | 1 | 100m | 64Mi | SMS delivery via Twilio | | <code>notify-push-worker</code> | <code>ghcr.io/hanzoai/notify:latest</code> | 1 | 100m | 64Mi | Push via FCM/APNs | | <code>notify-webhook-worker</code> | <code>ghcr.io/hanzoai/notify:latest</code> | 1 | 100m | 64Mi | Outbound webhook delivery |</p>
-<p>All workers consume from the Hanzo MQ (HIP-0055) NATS queue <code>mq.notify.&gt;</code>, filtered by channel-specific subjects:</p>
+<p>All workers consume from the Hanzo MQ (HIP-1061) NATS queue <code>mq.notify.&gt;</code>, filtered by channel-specific subjects:</p>
 <ul><li><code>mq.notify.email</code> -- email worker</li><li><code>mq.notify.sms</code> -- SMS worker</li><li><code>mq.notify.push</code> -- push worker</li><li><code>mq.notify.webhook</code> -- webhook worker</li><li><code>mq.notify.in_app</code> -- handled by the API service via WebSocket</li></ul>
-<h3>Database Schema</h3>
-<p>Notify uses SQL (<code>hanzo_notify</code> on <code>localhost</code>) for templates, inbox, and webhook registrations. Delivery logs go to Insights (Datastore) via analytics events, not SQL.</p>
+<h3>Storage</h3>
+<p>Notify holds no database of its own. Per HIP-0144 its templates, inbox and webhook registrations are per-tenant state at rank 1; delivery logs are event data and go to the column store, which is what event data is for. An earlier revision specified a <code>hanzo_notify</code> database on the shared SQL instance, which is a per-app database inside the shared one — every cost of a private instance except the machine.</p>
+<p>The shapes it keeps:</p>
 <p>| Table | Purpose | Key Columns | |-------|---------|-------------| | <code>templates</code> | Notification templates | <code>name</code> (unique), <code>category</code> (transactional/marketing), <code>channels</code> (JSONB), <code>version</code>, <code>active</code> | | <code>inbox</code> | Per-user in-app message store | <code>user_id</code>, <code>notification_id</code>, <code>title</code>, <code>body</code>, <code>read</code>, <code>action_url</code> | | <code>webhooks</code> | Registered webhook endpoints | <code>org_id</code>, <code>url</code>, <code>events[]</code>, <code>secret</code> (HMAC key), <code>enabled</code>, <code>failures</code> | | <code>suppression_list</code> | Hard bounces, complaints, unsubscribes | <code>email</code> or <code>phone</code> (unique partial indexes), <code>reason</code> |</p>
-<p>The <code>inbox</code> table has a partial index on <code>(user_id, read) WHERE NOT read</code> for efficient unread queries. The <code>suppression_list</code> is checked before every delivery attempt to prevent sending to known-bad addresses.</p>
+<p>The unread query is the hot one, so <code>inbox</code> carries an index restricted to unread rows rather than one over the whole table. The suppression list is checked before every delivery attempt: sending to a known-bad address is how a sender&#x27;s reputation is lost, and the check is cheap.</p>
 <h3>Configuration</h3>
 <p>All configuration uses <code>${VARIABLE}</code> placeholders resolved from KMS (HIP-0027) at startup. Key configuration groups:</p>
-<p>| Group | Variables | Description | |-------|-----------|-------------| | IAM | <code>NOTIFY_IAM_CLIENT_ID</code>, <code>NOTIFY_IAM_CLIENT_SECRET</code> | Service account for user resolution | | MQ | <code>NOTIFY_NATS_PASSWORD</code> | NATS credentials for delivery queues | | Email | <code>SENDGRID_API_KEY</code>, <code>SES_ACCESS_KEY</code>, <code>SES_SECRET_KEY</code> | Email provider credentials | | SMS | <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code> | SMS provider credentials | | Push | <code>FCM_CREDENTIALS_JSON</code>, <code>APNS_KEY_ID</code>, <code>APNS_TEAM_ID</code> | Push provider credentials | | LLM | <code>llm_gateway_url=http://localhost:4000</code>, <code>llm_model=zen-8b</code> | Personalization config | | Storage | <code>NOTIFY_DATABASE_URL</code>, <code>redis://localhost:6379/3</code> | PostgreSQL and Redis |</p>
-<p>No credentials appear in config files or Docker images.</p>
+<p>| Group | Variables | Description | |-------|-----------|-------------| | IAM | <code>IAM_CLIENT_ID</code>, <code>IAM_CLIENT_SECRET</code> | its own machine identity, for <code>client_credentials</code> | | Egress | <code>EGRESS_ADDRESS</code> | where it asks for an outbound call | | MQ | — | the bus is reached with the same IAM identity | | LLM | <code>llm_model=zen-8b</code> | personalization config; the model is reached through the gateway |</p>
+<p><strong>No delivery-provider credential appears here, and none may.</strong> An earlier revision listed <code>SENDGRID_API_KEY</code>, <code>SES_ACCESS_KEY</code>, <code>SES_SECRET_KEY</code>, <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>, <code>FCM_CREDENTIALS_JSON</code>, <code>APNS_KEY_ID</code> and <code>APNS_TEAM_ID</code> in this process&#x27;s environment. Every one of those spends money or sends mail in our name; they live in KMS custody behind <code>egress</code> (HIP-0143), and Notify asks egress for a call rather than holding a key.</p>
+<p>That is worth stating for this service in particular. An email provider credential is not only money — it is the ability to send mail <em>as us</em>, which is the ability to phish our own users with correct SPF and DKIM. A stolen caller token buys metered sends through our own meter, attributed and revocable in one place; a stolen provider key buys an unbounded campaign we learn about from recipients.</p>
+<p>The two variables above are addressed at <code>hanzo/notify/&lt;NAME&gt;@prod</code> (HIP-0136). No credential appears in a config file or an image.</p>
 <h3>Monitoring</h3>
 <p>Key Prometheus metrics exported on <code>:8061/metrics</code>:</p>
 <p>| Metric | Labels | Description | |--------|--------|-------------| | <code>notify_sent_total</code> | channel, template, category | Total notifications sent | | <code>notify_delivered_total</code> | channel, provider | Confirmed deliveries | | <code>notify_bounced_total</code> | channel, bounce_type | Bounces (hard/soft) | | <code>notify_failed_total</code> | channel, error_type | Delivery failures | | <code>notify_delivery_duration_seconds</code> | channel | Delivery latency histogram | | <code>notify_rate_limited_total</code> | scope, category | Rate limit rejections | | <code>notify_webhook_consecutive_failures</code> | url | Webhook endpoint health |</p>
@@ -538,7 +571,7 @@ Response:
 <h2>Security Considerations</h2>
 <h3>Authentication and Authorization</h3>
 <p>All Notify API calls require a valid IAM bearer token. Service-to-service calls use machine-to-machine OAuth tokens with scope <code>notify:send</code>. User-facing endpoints (preferences, inbox) validate the token&#x27;s <code>sub</code> claim matches the requested <code>user_id</code>.</p>
-<p>Agent notifications require the agent&#x27;s service token to have scope <code>notify:agent</code> and the agent must be registered as an authorized sender for the target user in IAM.</p>
+<p>Agent notifications require the agent&#x27;s IAM access token to carry scope <code>notify:agent</code>, and the agent must be registered as an authorized sender for the target user in IAM. The agent presents an identity IAM issued — there is no separate service token, and the authorization and the identity come from the same place.</p>
 <h3>PII Protection</h3>
 <p>Notification content may contain PII (names, emails, account details). Notify enforces:</p>
 <ol><li><strong>No logging of rendered content</strong>: Delivery logs record template name, channel, and status -- never the rendered message body.</li><li><strong>TLS everywhere</strong>: All provider API calls use TLS 1.2+. WebSocket connections require WSS.</li><li><strong>Suppression list</strong>: Hard-bounced emails and unsubscribed phone numbers are added to a suppression list. Notify checks this list before every delivery attempt, preventing messages to known-bad addresses.</li><li><strong>Template injection prevention</strong>: Handlebars rendering escapes HTML by default. Raw HTML is only permitted in email templates via explicit <code>{{{triple_braces}}}</code> syntax, and template content is sanitized before storage.</li></ol>
@@ -548,7 +581,7 @@ Response:
 <h3>Compliance</h3>
 <ul><li><strong>CAN-SPAM</strong>: Marketing emails include a physical address and one-click unsubscribe via <code>List-Unsubscribe</code> header.</li><li><strong>GDPR</strong>: User data is deletable via IAM&#x27;s right-to-erasure flow. Deleting a user from IAM triggers deletion of their inbox, preferences, and suppression entries in Notify.</li><li><strong>TCPA</strong>: SMS marketing requires prior express written consent, tracked per-user in IAM. Notify verifies consent status before sending marketing SMS.</li></ul>
 <h2>References</h2>
-<ol><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-0004: LLM Gateway</a> -- LLM personalization provider</li><li><a href="./hip-0017-analytics-event-standard.md">HIP-0017: Analytics Event Standard</a> -- Delivery tracking and engagement metrics</li><li><a href="./hip-0025-bot-agent-wallet-rpc-billing-protocol.md">HIP-0025: Bot Agent Wallet &amp; RPC Billing Protocol</a> -- Agent identity and permissions</li><li><a href="./hip-0026-identity-access-management-standard.md">HIP-0026: Identity &amp; Access Management Standard</a> -- User resolution, preferences, contact info</li><li><a href="./hip-0027-secrets-management-standard.md">HIP-0027: Secrets Management Standard</a> -- Provider credential storage</li><li><a href="./hip-0030-event-streaming-standard.md">HIP-0030: Event Streaming Standard</a> -- IAM user update events</li><li>HIP-0055: Message Queue Standard -- Delivery task distribution</li><li><a href="https://docs.sendgrid.com/api-reference">SendGrid API Documentation</a></li><li><a href="https://www.twilio.com/docs/sms">Twilio SMS API Documentation</a></li><li><a href="https://firebase.google.com/docs/cloud-messaging">Firebase Cloud Messaging</a></li><li><a href="https://developer.apple.com/documentation/usernotifications">Apple Push Notification Service</a></li><li><a href="https://datatracker.ietf.org/doc/html/rfc8058">RFC 8058: One-Click Unsubscribe</a></li><li><a href="https://github.com/hanzoai/notify">Hanzo Notify Repository</a></li></ol>
+<ol><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-0004: LLM Gateway</a> -- LLM personalization provider</li><li><a href="./hip-1190-event-product-analytics.md">HIP-1190: Event -- The Product Analytics Plane</a> -- delivery tracking and engagement metrics</li><li><a href="./hip-0025-bot-agent-wallet-rpc-billing-protocol.md">HIP-0025: Bot Agent Wallet &amp; RPC Billing Protocol</a> -- Agent identity and permissions</li><li><a href="./hip-0026-identity-access-management-standard.md">HIP-0026: Identity &amp; Access Management Standard</a> -- User resolution, preferences, contact info</li><li><a href="./hip-0027-secrets-management-standard.md">HIP-0027: Secrets Management Standard</a> -- Provider credential storage</li><li><a href="./hip-1323-kafka-the-wire-every-client-speaks.md">HIP-1323: Kafka -- A Wire Onto the One Bus</a> -- IAM user update events</li><li><a href="./hip-1061-mq-queues-and-streams.md">HIP-1061: MQ -- Queues and Streams</a> -- delivery task distribution</li><li><a href="./hip-0144-where-state-lives.md">HIP-0144: Where State Lives</a> -- the stores this service is a tenant of</li><li><a href="./hip-0143-egress-outbound-trust-boundary.md">HIP-0143: Egress -- The Outbound Trust Boundary</a> -- where the delivery-provider credentials live</li><li><a href="https://docs.sendgrid.com/api-reference">SendGrid API Documentation</a></li><li><a href="https://www.twilio.com/docs/sms">Twilio SMS API Documentation</a></li><li><a href="https://firebase.google.com/docs/cloud-messaging">Firebase Cloud Messaging</a></li><li><a href="https://developer.apple.com/documentation/usernotifications">Apple Push Notification Service</a></li><li><a href="https://datatracker.ietf.org/doc/html/rfc8058">RFC 8058: One-Click Unsubscribe</a></li><li><a href="https://github.com/hanzoai/notify">Hanzo Notify Repository</a></li></ol>
 <h2>Copyright</h2>
 <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</p>
 <footer>
@@ -570,5 +603,4 @@ Response:
 </div>
 <div class="fend"><a href="/hip-0061.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

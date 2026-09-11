@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-engine</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-engine.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-engine">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-engine.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-engine</h1><p class="lede">Hanzo Engine is Hanzo AI&#x27;s high-performance, Rust-native inference and embedding engine that powers the entire Hanzo ecosystem.</p><h1>Hanzo Engine - Native Rust Inference &amp; Embedding Engine</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Skill Level</strong>: Intermediate to Advanced <strong>Prerequisites</strong>: Rust knowledge helpful but not required for API usage <strong>Related Skills</strong>: hanzo-node.md, python-sdk.md, go-sdk.md, zenlm.md</p>
+<h2>Overview</h2>
+<p><strong>Hanzo Engine</strong> is Hanzo AI&#x27;s high-performance, Rust-native inference and embedding engine that powers the entire Hanzo ecosystem. Built on mistral.rs with Hanzo-specific optimizations, it provides <strong>blazing-fast local inference</strong> for all ZenLM models and industry-standard LLMs.</p>
+<p><strong>Core Philosophy</strong>: Maximum performance, native Rust implementation, multimodal support, and seamless integration with Hanzo Node and Cloud.</p>
+<h2>Key Features</h2>
+<h3>🚀 <strong>Blazingly Fast Performance</strong></h3>
+<ul><li><strong>Native Rust</strong>: Zero-overhead implementation</li><li><strong>PagedAttention</strong>: Memory-efficient attention mechanism</li><li><strong>FlashAttention</strong>: 2-8x faster attention computation</li><li><strong>ISQ (In-Situ Quantization)</strong>: On-the-fly model quantization</li><li><strong>MLX</strong>: Optimized for Apple Silicon (M1/M2/M3)</li></ul>
+<h3>🔮 <strong>All-in-One Multimodal</strong></h3>
+<ul><li><strong>Text ↔ Text</strong>: Standard LLM inference</li><li><strong>Text + Vision ↔ Text</strong>: Vision-language models</li><li><strong>Text + Vision + Audio ↔ Text</strong>: Multimodal understanding</li><li><strong>Text → Speech</strong>: Text-to-speech generation</li><li><strong>Text → Image</strong>: Image generation (coming soon)</li></ul>
+<h3>🎯 <strong>Embeddings First-Class</strong></h3>
+<ul><li><strong>Optimized for Qwen3-Embedding</strong>: #1 on MTEB multilingual benchmark</li><li><strong>Multiple dimensions</strong>: 1024, 2048, 4096 dims</li><li><strong>Reranking support</strong>: Qwen3-Reranker models</li><li><strong>Production-ready</strong>: High-throughput batch processing</li></ul>
+<h3>🌐 <strong>Multiple APIs</strong></h3>
+<ul><li><strong>Rust API</strong>: Native high-performance integration</li><li><strong>Python API</strong>: PyO3 bindings (via mistralrs-pyo3)</li><li><strong>OpenAI HTTP</strong>: Compatible with OpenAI Chat Completions &amp; Embeddings API</li><li><strong>MCP Support</strong>: Model Context Protocol for agentic workflows</li></ul>
+<h3>🔗 <strong>Embedded Everywhere</strong></h3>
+<ul><li><strong>Hanzo Node</strong>: Local inference and mining</li><li><strong>Cloud Nodes</strong>: Distributed inference clusters</li><li><strong>Hanzo Desktop</strong>: Native macOS app with mining</li><li><strong>Python/Go SDKs</strong>: Connect via OpenAI-compatible API</li></ul>
+<h2>Architecture</h2>
+<h3><strong>Hanzo Engine in the Stack</strong></h3>
+<pre><code>┌─────────────────────────────────────────────────┐
+│ ZenLM Models (zen-nano, zen-eco) │
+│ zen-agent, zen-musician, zen-thinking, etc. │
+└─────────────────────────────────────────────────┘
+ ↓
+┌─────────────────────────────────────────────────┐
+│ Hanzo Engine (Rust - port 36900) │
+│ ├─ Native inference &amp; embeddings │
+│ ├─ Optimized for Qwen3 models (#1 MTEB) │
+│ ├─ Multimodal: text, vision, audio │
+│ ├─ PagedAttention, FlashAttention, ISQ, MLX │
+│ └─ MCP support built-in │
+└─────────────────────────────────────────────────┘
+ ↓
+┌─────────────────────────────────────────────────┐
+│ Embedded in: │
+│ ├─ Hanzo Node (local inference) │
+│ └─ Cloud Nodes (distributed inference) │
+└─────────────────────────────────────────────────┘
+ ↓
+┌─────────────────────────────────────────────────┐
+│ SDKs connect to Node/Cloud: │
+│ ├─ Python SDK (hanzoai package) │
+│ ├─ Go SDK (github.com/hanzoai/go-sdk) │
+│ └─ JavaScript/TypeScript SDK (@hanzo/sdk) │
+└─────────────────────────────────────────────────┘</code></pre>
+<h3><strong>Based on mistral.rs</strong></h3>
+<p>Hanzo Engine extends <a href="https://github.com/EricLBuehler/mistral.rs">mistral.rs</a> with:</p>
+<ul><li>Custom CLI tool (<code>hanzo-engine</code> command)</li><li>Model management (pull, list, cache)</li><li>OpenAI-compatible server (default port: 36900)</li><li>Hanzo-specific optimizations for ZenLM models</li><li>Integration with Hanzo Node and Cloud infrastructure</li></ul>
+<p><strong>Upstream Sync</strong>: Fully synchronized with mistral.rs (commit <code>530463af1</code>)</p>
+<h2>Installation</h2>
+<h3>From Source (Recommended)</h3>
+<pre><code class="lang-bash"># Clone Hanzo Engine
+git clone https://github.com/hanzoai/engine.git
+cd engine
+
+# Build for macOS (Metal backend)
+cargo build --package hanzo-engine --release --no-default-features --features metal
+
+# Build for Linux (CUDA backend)
+cargo build --package hanzo-engine --release --features cuda
+
+# Install binary
+cargo install --path hanzo-engine --no-default-features --features metal</code></pre>
+<h3>Via Cargo</h3>
+<pre><code class="lang-bash"># Install from GitHub
+cargo install --git https://github.com/hanzoai/engine hanzo-engine
+
+# With CUDA support (Linux)
+cargo install --git https://github.com/hanzoai/engine hanzo-engine --features cuda</code></pre>
+<h3>Verify Installation</h3>
+<pre><code class="lang-bash">hanzo-engine --version
+hanzo-engine --help</code></pre>
+<h2>Quick Start</h2>
+<h3>1. Pull a Model</h3>
+<pre><code class="lang-bash"># Pull ZenLM model (zen-eco-4B)
+hanzo-engine pull qwen/qwen3-4b
+
+# Pull embedding model (Qwen3-Embedding-8B)
+hanzo-engine pull qwen/qwen3-embedding-8b
+
+# Pull from Ollama
+hanzo-engine pull ollama://llama3.2:3b
+
+# Pull GGUF model from URL
+hanzo-engine pull https://huggingface.co/TheBloke/Llama-2-7B-GGUF/resolve/main/llama-2-7b.Q4_K_M.gguf</code></pre>
+<h3>2. Start the Server</h3>
+<pre><code class="lang-bash"># Start on default port (36900)
+hanzo-engine serve
+
+# With specific port
+hanzo-engine serve --port 36900
+
+# With specific model
+hanzo-engine serve --model qwen3-4b
+
+# With custom model directory
+hanzo-engine serve --model-dir ~/.hanzo/models</code></pre>
+<h3>3. Test Inference</h3>
+<pre><code class="lang-bash"># Chat completions (OpenAI-compatible)
+curl -X POST http://localhost:36900/v1/chat/completions \
+ -H &quot;Content-Type: application/json&quot; \
+ -d &#x27;{
+ &quot;model&quot;: &quot;qwen3-4b&quot;,
+ &quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Explain Rust ownership&quot;}],
+ &quot;temperature&quot;: 0.7
+ }&#x27;
+
+# Embeddings
+curl -X POST http://localhost:36900/v1/embeddings \
+ -H &quot;Content-Type: application/json&quot; \
+ -d &#x27;{
+ &quot;model&quot;: &quot;qwen3-embedding-8b&quot;,
+ &quot;input&quot;: &quot;Hello, Hanzo Engine!&quot;
+ }&#x27;</code></pre>
+<h2>ZenLM Native Support</h2>
+<p>All <strong>ZenLM models</strong> are <strong>natively supported</strong> in Hanzo Engine:</p>
+<h3>zen-nano (0.6B)</h3>
+<pre><code class="lang-bash">hanzo-engine pull qwen/qwen3-0.6b
+hanzo-engine serve --model qwen3-0.6b</code></pre>
+<h3>zen-eco (4B) - instruct/thinking/agent variants</h3>
+<pre><code class="lang-bash"># zen-eco-instruct
+hanzo-engine pull qwen/qwen3-4b
+
+# zen-eco-thinking (with chain-of-thought)
+hanzo-engine pull qwen/qwen3-4b-cot
+
+# zen-agent (tool calling &amp; function execution)
+hanzo-engine pull qwen/qwen3-4b-function-calling</code></pre>
+<h3>zen-musician (7B) - Music generation with lyrics</h3>
+<pre><code class="lang-bash">hanzo-engine pull map/yue-s1-7b-anneal-en-cot</code></pre>
+<h3>zen-vision (Vision-language)</h3>
+<pre><code class="lang-bash"># Qwen3-VL for vision understanding
+hanzo-engine pull qwen/qwen3-vl-8b</code></pre>
+<p><strong>Performance</strong>: All ZenLM models run at <strong>50+ tokens/sec</strong> on consumer hardware (M1, RTX 3060).</p>
+<h2>Integration with Hanzo Node</h2>
+<p>Hanzo Engine is the <strong>core inference backend</strong> for Hanzo Node:</p>
+<h3>Configuration</h3>
+<pre><code class="lang-bash"># In Hanzo Node configuration (.env or environment)
+export EMBEDDINGS_SERVER_URL=&quot;http://localhost:36900&quot; # Engine port
+export EMBEDDING_MODEL_TYPE=&quot;qwen3-embedding-8b&quot;
+export USE_NATIVE_EMBEDDINGS=&quot;true&quot;
+export HANZO_ENGINE_ENABLED=&quot;true&quot;</code></pre>
+<h3>Automatic Connection</h3>
+<p>When you start Hanzo Node, it <strong>automatically connects</strong> to Hanzo Engine:</p>
+<pre><code class="lang-bash"># Start Hanzo Engine
+hanzo-engine serve --port 36900
+
+# Start Hanzo Node (connects to Engine on port 36900)
+hanzo-node start --mine --gpu</code></pre>
+<p>Hanzo Node will:</p>
+<ul><li>Use Engine for all inference requests</li><li>Generate embeddings via Engine&#x27;s Qwen3-Embedding models</li><li>Leverage Engine&#x27;s multimodal capabilities</li><li>Benefit from PagedAttention and FlashAttention optimizations</li></ul>
+<h2>Python SDK Integration</h2>
+<pre><code class="lang-python">from hanzo import Hanzo
+
+# Connect to local Hanzo Engine (via Hanzo Node or directly)
+hanzo = Hanzo(
+ inference_mode=&#x27;local&#x27;,
+ node_url=&#x27;http://localhost:8080&#x27; # Hanzo Node (which uses Engine)
+)
+
+# Or connect directly to Engine
+hanzo_engine = Hanzo(
+ base_url=&#x27;http://localhost:36900&#x27;,
+ api_key=&#x27;not-needed-for-local&#x27;
+)
+
+# Chat completion (uses zen-eco via Engine)
+response = hanzo_engine.chat.completions.create(
+ model=&#x27;qwen3-4b&#x27;,
+ messages=[{&#x27;role&#x27;: &#x27;user&#x27;, &#x27;content&#x27;: &#x27;Explain Rust&#x27;}]
+)
+
+# Embeddings (uses Qwen3-Embedding via Engine)
+embedding = hanzo_engine.embeddings.create(
+ model=&#x27;qwen3-embedding-8b&#x27;,
+ input=&#x27;Hello, Hanzo Engine!&#x27;
+)
+
+print(f&quot;Embedding dimensions: {len(embedding.data[0].embedding)}&quot;) # 4096</code></pre>
+<h2>Go SDK Integration</h2>
+<pre><code class="lang-go">package main
+
+import (
+ &quot;context&quot;
+ &quot;fmt&quot;
+ &quot;github.com/hanzoai/go-sdk&quot;
+ &quot;github.com/hanzoai/go-sdk/option&quot;
+)
+
+func main() {
+ // Connect to Hanzo Engine via Hanzo Node
+ client := hanzoai.NewClient(
+ option.WithInferenceMode(&quot;local&quot;),
+ option.WithNodeURL(&quot;http://localhost:8080&quot;),
+ )
+
+ // Chat completion
+ response, err := client.Chat.Completions.Create(
+ context.Background(),
+ hanzoai.ChatCompletionCreateParams{
+ Model: hanzoai.F(&quot;qwen3-4b&quot;),
+ Messages: hanzoai.F([]hanzoai.ChatCompletionMessageParam{
+ hanzoai.UserMessage(&quot;Explain Rust ownership&quot;),
+ }),
+ },
+ )
+
+ if err != nil {
+ panic(err)
+ }
+
+ fmt.Println(response.Choices[0].Message.Content)
+}</code></pre>
+<h2>Rust Native API</h2>
+<p>For maximum performance, use the native Rust API:</p>
+<pre><code class="lang-rust">use mistralrs::{
+ ChatCompletionRequest, IsqType, Loader, MistralRs, ModelDType,
+ NormalLoaderBuilder, NormalRequest, Request, RequestMessage, Response,
+ SamplingParams, SchedulerConfig, TokenSource
+};
+use tokio::sync::mpsc::channel;
+
+#[tokio::main]
+async fn main() -&gt; anyhow::Result&lt;()&gt; {
+ // Load ZenLM model (zen-eco-4B)
+ let loader = NormalLoaderBuilder::new(
+ &quot;qwen/qwen3-4b&quot;,
+ None,
+ None,
+ Some(ModelDType::Auto),
+ )
+ .build();
+
+ let model = loader.load_model().await?;
+ let pipeline = model.build_pipeline(SchedulerConfig::default_config())?;
+
+ let mistralrs = MistralRs::new(pipeline)?;
+
+ // Create request
+ let (tx, mut rx) = channel(10_000);
+ let request = Request::Normal(NormalRequest {
+ messages: RequestMessage::Chat(vec![
+ ChatCompletionRequest {
+ role: &quot;user&quot;.to_string(),
+ content: &quot;Explain Rust ownership&quot;.to_string(),
+ }
+ ]),
+ sampling_params: SamplingParams::default(),
+ response: tx,
+ ..Default::default()
+ });
+
+ // Send request
+ mistralrs.get_sender().send(request).await?;
+
+ // Receive response
+ let response = rx.recv().await.unwrap();
+ println!(&quot;{}&quot;, response.choices[0].text);
+
+ Ok(())
+}</code></pre>
+<h2>Model Management</h2>
+<h3>Pull Models</h3>
+<pre><code class="lang-bash"># From HuggingFace
+hanzo-engine pull qwen/qwen3-4b
+
+# From Ollama
+hanzo-engine pull ollama://llama3.2:3b
+
+# From MLX Community
+hanzo-engine pull mlx://mlx-community/Llama-3.2-3B-Instruct-4bit
+
+# From direct URL
+hanzo-engine pull https://example.com/model.gguf</code></pre>
+<h3>List Downloaded Models</h3>
+<pre><code class="lang-bash">hanzo-engine list
+
+# Output:
+# Downloaded models:
+# - qwen3-4b (4.3 GB) - /Users/z/.hanzo/models/qwen3-4b
+# - qwen3-embedding-8b (8.1 GB) - /Users/z/.hanzo/models/qwen3-embedding-8b
+# - llama3.2-3b (3.2 GB) - /Users/z/.hanzo/models/llama3.2-3b</code></pre>
+<h3>Model Storage</h3>
+<p>Default model directory: <code>~/.hanzo/models/</code></p>
+<p>Custom directory:</p>
+<pre><code class="lang-bash">export HANZO_MODELS_DIR=/path/to/models
+hanzo-engine serve --model-dir /path/to/models</code></pre>
+<h2>Performance Optimizations</h2>
+<h3>PagedAttention</h3>
+<p>Memory-efficient attention with dynamic memory allocation:</p>
+<pre><code class="lang-bash"># Enable PagedAttention (default for long contexts)
+hanzo-engine serve --paged-attention
+
+# Adjust memory usage
+hanzo-engine serve --gpu-memory-fraction 0.9</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>2-4x higher throughput</li><li>Support for longer sequences</li><li>Efficient KV cache management</li></ul>
+<h3>FlashAttention</h3>
+<p>Ultra-fast attention computation:</p>
+<pre><code class="lang-bash"># FlashAttention is automatic with CUDA
+cargo build --release --features &quot;cuda flash-attn&quot;
+
+# Verify FlashAttention is active
+hanzo-engine serve --log-level debug
+# Look for: &quot;Using FlashAttention for faster inference&quot;</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>2-8x faster attention</li><li>10-20% less memory usage</li><li>No accuracy degradation</li></ul>
+<h3>In-Situ Quantization (ISQ)</h3>
+<p>On-the-fly model quantization for lower memory:</p>
+<pre><code class="lang-bash"># Quantize to 4-bit on load
+hanzo-engine serve --isq Q4K
+
+# Quantize to 8-bit
+hanzo-engine serve --isq Q8_0
+
+# Available formats: Q4K, Q4_0, Q5K, Q8_0, Q8_1</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul><li>50-75% memory reduction</li><li>Minimal accuracy loss (&lt;2% on benchmarks)</li><li>Faster loading times</li></ul>
+<h3>MLX (Apple Silicon)</h3>
+<p>Optimized for M1/M2/M3 Macs:</p>
+<pre><code class="lang-bash"># Build with Metal backend (macOS)
+cargo build --package hanzo-engine --release --no-default-features --features metal
+
+# Use MLX models for maximum performance
+hanzo-engine pull mlx://mlx-community/Llama-3.2-3B-Instruct-4bit
+hanzo-engine serve --model llama-3.2-3b-instruct-4bit</code></pre>
+<p><strong>Benefits on M1 Max</strong>:</p>
+<ul><li>50+ tokens/sec for 4B models</li><li>30+ tokens/sec for 7B models</li><li>Unified memory = faster transfers</li></ul>
+<h2>MCP Support</h2>
+<p>Hanzo Engine has <strong>built-in MCP support</strong> for agentic workflows:</p>
+<pre><code class="lang-bash"># Start Engine with MCP enabled
+hanzo-engine serve --mcp-enabled --mcp-port 3691
+
+# MCP tools automatically exposed:
+# - hanzo_infer: Run inference on any model
+# - hanzo_embed: Generate embeddings
+# - hanzo_list_models: List available models</code></pre>
+<h3>MCP Integration Example</h3>
+<pre><code class="lang-typescript">import { MCPClient } from &#x27;@hanzo/mcp&#x27;
+
+const client = new MCPClient({
+ host: &#x27;localhost&#x27;,
+ port: 3691
+})
+
+// Use Hanzo Engine tools via MCP
+const result = await client.callTool(&#x27;hanzo_infer&#x27;, {
+ model: &#x27;qwen3-4b&#x27;,
+ prompt: &#x27;Explain MCP&#x27;,
+ temperature: 0.7
+})
+
+console.log(result.response)</code></pre>
+<h2>Supported Models</h2>
+<h3>Embedding Models (Optimized)</h3>
+<ul><li><strong>Qwen3-Embedding-8B</strong>: 4096 dims, #1 on MTEB multilingual</li><li><strong>Qwen3-Embedding-4B</strong>: 2048 dims, balanced performance</li><li><strong>Qwen3-Embedding-0.6B</strong>: 1024 dims, lightweight</li></ul>
+<h3>Reranker Models</h3>
+<ul><li><strong>Qwen3-Reranker-4B</strong>: Superior reranking quality</li><li><strong>Qwen3-Reranker-0.6B</strong>: Lightweight reranking</li></ul>
+<h3>LLM Models</h3>
+<p>All models from mistral.rs:</p>
+<ul><li><strong>Llama</strong>: 2, 3, 3.1, 3.2, 3.3</li><li><strong>Mistral</strong>: v0.1, v0.2, v0.3, Nemo, Large</li><li><strong>Phi</strong>: Phi-2, Phi-3, Phi-3.5</li><li><strong>Gemma</strong>: Gemma, Gemma 2</li><li><strong>Qwen</strong>: Qwen2, Qwen2.5, <strong>Qwen3</strong> (ZenLM)</li><li><strong>DeepSeek</strong>: DeepSeek-V2, DeepSeek-V3</li><li><strong>Yi</strong>: Yi-1.5, Yi-Coder</li><li>And many more...</li></ul>
+<h3>Vision-Language Models</h3>
+<ul><li><strong>Qwen3-VL</strong>: Vision understanding (ZenLM)</li><li><strong>Llama-3.2-Vision</strong>: Vision + language</li><li><strong>Pixtral</strong>: Mistral&#x27;s vision model</li><li><strong>Idefics2/3</strong>: Open vision-language models</li></ul>
+<h2>Hardware Requirements</h2>
+<h3>Minimum (zen-nano 0.6B)</h3>
+<ul><li><strong>CPU</strong>: Any modern CPU (x86_64, ARM64)</li><li><strong>RAM</strong>: 2 GB</li><li><strong>GPU</strong>: Optional (runs on CPU)</li></ul>
+<h3>Recommended (zen-eco 4B)</h3>
+<ul><li><strong>CPU</strong>: 4+ cores</li><li><strong>RAM</strong>: 8 GB</li><li><strong>GPU</strong>: 8 GB VRAM (RTX 3060, M1 8GB)</li></ul>
+<h3>Optimal (zen-musician 7B)</h3>
+<ul><li><strong>CPU</strong>: 8+ cores</li><li><strong>RAM</strong>: 16 GB</li><li><strong>GPU</strong>: 16 GB VRAM (RTX 3090, M1 Max 24GB)</li></ul>
+<h3>Performance Benchmarks</h3>
+<p>| Model | Hardware | Tokens/sec | Latency | |-------|----------|------------|---------| | zen-nano 0.6B | M1 8GB | 100+ | 10ms | | zen-eco 4B | M1 16GB | 50+ | 20ms | | zen-eco 4B | RTX 3060 12GB | 45+ | 22ms | | zen-musician 7B | M1 Max 32GB | 35+ | 28ms | | zen-musician 7B | RTX 3090 24GB | 60+ | 16ms |</p>
+<h2>Troubleshooting</h2>
+<h3>Engine won&#x27;t start</h3>
+<pre><code class="lang-bash"># Check port availability
+lsof -i :36900
+
+# Use different port
+hanzo-engine serve --port 37000
+
+# Check logs
+hanzo-engine serve --log-level debug</code></pre>
+<h3>Model not found</h3>
+<pre><code class="lang-bash"># Verify model is downloaded
+hanzo-engine list
+
+# Re-pull model
+hanzo-engine pull qwen/qwen3-4b --force
+
+# Check model directory
+ls ~/.hanzo/models/</code></pre>
+<h3>Out of memory</h3>
+<pre><code class="lang-bash"># Use quantized model
+hanzo-engine serve --model qwen3-4b --isq Q4K
+
+# Reduce GPU memory usage
+hanzo-engine serve --gpu-memory-fraction 0.8
+
+# Use smaller model
+hanzo-engine pull qwen/qwen3-0.6b</code></pre>
+<h3>Slow inference</h3>
+<pre><code class="lang-bash"># Enable FlashAttention (CUDA)
+cargo build --release --features &quot;cuda flash-attn&quot;
+
+# Enable PagedAttention
+hanzo-engine serve --paged-attention
+
+# Use quantized model for faster loading
+hanzo-engine pull qwen/qwen3-4b-q4k</code></pre>
+<h2>Hanzo Engine vs Alternatives</h2>
+<p>| Feature | Hanzo Engine | llama.cpp | vLLM | Ollama | |---------|--------------|-----------|------|--------| | <strong>Language</strong> | Rust | C++ | Python | Go | | <strong>Performance</strong> | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | | <strong>Multimodal</strong> | ✅ All | ✅ Limited | ✅ Yes | ✅ Yes | | <strong>Embeddings</strong> | ✅ Optimized | ❌ No | ✅ Yes | ✅ Yes | | <strong>MCP Support</strong> | ✅ Native | ❌ No | ❌ No | ❌ No | | <strong>PagedAttention</strong> | ✅ Yes | ❌ No | ✅ Yes | ❌ No | | <strong>FlashAttention</strong> | ✅ Yes | ✅ Limited | ✅ Yes | ❌ No | | <strong>Apple Silicon</strong> | ✅ MLX | ✅ Metal | ❌ No | ✅ Metal | | <strong>Model Management</strong> | ✅ Built-in | Manual | Manual | ✅ Built-in | | <strong>OpenAI API</strong> | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | | <strong>Hanzo Integration</strong> | ✅ Native | ❌ No | ❌ No | ❌ No |</p>
+<p><strong>Why Hanzo Engine?</strong></p>
+<ul><li><strong>Native Hanzo integration</strong>: Seamless with Node, Cloud, SDKs</li><li><strong>ZenLM optimized</strong>: Best performance for Zoo Labs models</li><li><strong>Embeddings first-class</strong>: Qwen3-Embedding #1 on MTEB</li><li><strong>MCP native</strong>: Built-in agentic workflow support</li><li><strong>Rust performance</strong>: Maximum speed with memory safety</li><li><strong>All-in-one</strong>: Text, vision, audio, embeddings, reranking</li></ul>
+<h2>Related Skills</h2>
+<ul><li><strong>hanzo-node.md</strong>: Hanzo Node embeds Engine for local inference</li><li><strong>python-sdk.md</strong>: Python SDK connects to Engine via Node</li><li><strong>go-sdk.md</strong>: Go SDK connects to Engine via Node</li><li><strong>zenlm.md</strong>: ZenLM models run natively in Engine</li><li><strong>hanzo-mcp.md</strong>: MCP integration patterns with Engine</li></ul>
+<h2>Additional Resources</h2>
+<ul><li><strong>GitHub</strong>: https://github.com/hanzoai/engine</li><li><strong>Documentation</strong>: https://docs.hanzo.ai/engine</li><li><strong>Hanzo AI</strong>: https://hanzo.ai</li><li><strong>mistral.rs</strong>: https://github.com/EricLBuehler/mistral.rs (upstream)</li></ul>
+<hr>
+<p><strong>Remember</strong>: Hanzo Engine is the <strong>native Rust inference and embedding engine</strong> powering the entire Hanzo ecosystem. All ZenLM models run natively with optimal performance through Engine&#x27;s advanced features like PagedAttention, FlashAttention, and ISQ.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-engine.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

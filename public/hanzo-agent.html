@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-agent</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-agent.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-agent">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-agent.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-agent</h1><p class="lede">Hanzo Agent SDK is a Python multi-agent framework — fork of OpenAI&#x27;s Agents SDK with Hanzo AI integration.</p><h1>Hanzo Agent SDK - Multi-Agent Orchestration Framework</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-mcp.md</code>, <code>hanzo/hanzo-chat.md</code>, <code>hanzo/python-sdk.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Agent SDK is a <strong>Python multi-agent framework</strong> — fork of OpenAI&#x27;s Agents SDK with Hanzo AI integration. Build autonomous agents that plan, use tools, coordinate with other agents, and maintain memory. Designed for production agentic workflows.</p>
+<p><strong>NOTE</strong>: The import path is <code>from agents import ...</code> (NOT <code>from hanzo_agent import ...</code>). The SDK keeps the upstream <code>agents</code> module name.</p>
+<h3>Why Hanzo Agent SDK?</h3>
+<ul><li><strong>Multi-agent</strong>: Orchestrate teams of specialized agents</li><li><strong>OpenAI compatible</strong>: Fork of OpenAI Agents SDK, same patterns</li><li><strong>Tool use</strong>: Native MCP + custom function tools</li><li><strong>Handoffs</strong>: Agents delegate to specialists automatically</li><li><strong>Guardrails</strong>: Input/output validation and safety checks</li><li><strong>Tracing</strong>: Built-in observability for agent runs</li><li><strong>Streaming</strong>: Real-time token-by-token output</li><li><strong>ZAP Protocol</strong>: Zero-copy Agent Protocol for native hanzo-dev usage (less memory than MCP)</li><li><strong>AgentNetwork</strong>: Peer discovery and collaboration between agent instances</li><li><strong>Control Plane</strong>: Go-based orchestration service for production deployments</li></ul>
+<h3>OSS Base</h3>
+<p>Fork of <strong>OpenAI Agents SDK</strong>. Repo: <code>hanzoai/agent</code>.</p>
+<p><strong>NOTE</strong>: PyPI package name collision — <code>hanzoai/agent</code> publishes <code>hanzoai</code> v0.0.4 on PyPI, while <code>hanzoai/python-sdk</code> publishes <code>hanzoai</code> v2.2.0. Ensure you install the correct version for agent use.</p>
+<h2>When to use</h2>
+<ul><li>Building autonomous AI agents</li><li>Multi-agent coordination (supervisor, swarm, pipeline patterns)</li><li>Tool-using agents with MCP integration</li><li>Production agentic workflows with memory</li><li>Replacing OpenAI Agents SDK with self-hosted option</li><li>Web3/TEE/Marketplace agent extensions</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Python 3.9+</strong> with uv</li><li><strong>HANZO_API_KEY</strong> or <strong>OPENAI_API_KEY</strong> for LLM access</li><li><code>uv sync --all-extras</code> for full installation</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Install | <code>uv add hanzoai</code> | | PyPI | <code>hanzoai</code> | | Version | 0.0.4 | | Repo | <code>github.com/hanzoai/agent</code> | | Upstream | OpenAI Agents SDK | | Import | <code>from agents import Agent, Runner</code> | | Setup | <code>uv sync --all-extras</code> | | Test | <code>uv run pytest -v</code> | | Format | <code>uv run ruff format .</code> | | Type check | <code>uv run mypy .</code> | | License | MIT |</p>
+<h2>One-file quickstart</h2>
+<h3>Simple Agent</h3>
+<pre><code class="lang-python">from agents import Agent, Runner
+
+agent = Agent(
+ name=&quot;assistant&quot;,
+ instructions=&quot;You are a helpful assistant that answers questions concisely.&quot;,
+ model=&quot;zen-70b&quot;,
+)
+
+result = Runner.run_sync(agent, &quot;What is the capital of France?&quot;)
+print(result.final_output) # &quot;Paris&quot;</code></pre>
+<h3>Agent with Tools</h3>
+<pre><code class="lang-python">from agents import Agent, Runner, function_tool
+
+@function_tool
+def get_weather(location: str) -&gt; str:
+ &quot;&quot;&quot;Get current weather for a location.&quot;&quot;&quot;
+ return f&quot;72°F and sunny in {location}&quot;
+
+@function_tool
+def search_web(query: str) -&gt; str:
+ &quot;&quot;&quot;Search the web for information.&quot;&quot;&quot;
+ return f&quot;Top result for &#x27;{query}&#x27;: ...&quot;
+
+@function_tool
+def calculate(expression: str) -&gt; str:
+ &quot;&quot;&quot;Evaluate a mathematical expression.&quot;&quot;&quot;
+ return str(eval(expression)) # Use safe eval in production
+
+agent = Agent(
+ name=&quot;research-assistant&quot;,
+ instructions=&quot;Help users with research. Use tools when needed.&quot;,
+ model=&quot;zen-70b&quot;,
+ tools=[get_weather, search_web, calculate],
+)
+
+result = Runner.run_sync(agent, &quot;What&#x27;s the weather in Tokyo?&quot;)</code></pre>
+<h3>Multi-Agent (Handoffs)</h3>
+<pre><code class="lang-python">from agents import Agent, Runner
+
+coder = Agent(
+ name=&quot;coder&quot;,
+ instructions=&quot;Write clean, tested Python code. Return only code.&quot;,
+ model=&quot;zen-70b&quot;,
+)
+
+reviewer = Agent(
+ name=&quot;reviewer&quot;,
+ instructions=&quot;Review code for bugs, security issues, and style. Be thorough.&quot;,
+ model=&quot;zen-70b&quot;,
+)
+
+supervisor = Agent(
+ name=&quot;supervisor&quot;,
+ instructions=&quot;&quot;&quot;You coordinate a coding team:
+ 1. Delegate coding tasks to the coder
+ 2. Send code to the reviewer for review
+ 3. Iterate until code passes review
+ Return the final approved code.&quot;&quot;&quot;,
+ model=&quot;zen-70b&quot;,
+ handoffs=[coder, reviewer],
+)
+
+result = Runner.run_sync(supervisor, &quot;Write a REST API for a todo app with FastAPI&quot;)
+print(result.final_output)</code></pre>
+<h3>Streaming</h3>
+<pre><code class="lang-python">import asyncio
+from agents import Agent, Runner
+
+agent = Agent(name=&quot;writer&quot;, instructions=&quot;Write creatively.&quot;, model=&quot;zen-70b&quot;)
+
+async def main():
+ async for event in Runner.run_streamed(agent, &quot;Write a haiku about code&quot;):
+ if hasattr(event, &quot;text&quot;):
+ print(event.text, end=&quot;&quot;, flush=True)
+
+asyncio.run(main())</code></pre>
+<h3>Guardrails</h3>
+<pre><code class="lang-python">from agents import Agent, Runner, InputGuardrail, OutputGuardrail, GuardrailFunctionOutput
+
+async def check_injection(ctx, agent, input_text: str) -&gt; GuardrailFunctionOutput:
+ &quot;&quot;&quot;Block prompt injection attempts.&quot;&quot;&quot;
+ is_safe = &quot;ignore previous instructions&quot; not in input_text.lower()
+ return GuardrailFunctionOutput(
+ output_info={&quot;safe&quot;: is_safe},
+ tripwire_triggered=not is_safe,
+ )
+
+async def check_pii(ctx, agent, output_text: str) -&gt; GuardrailFunctionOutput:
+ &quot;&quot;&quot;Block PII in output.&quot;&quot;&quot;
+ import re
+ has_ssn = bool(re.search(r&#x27;\d{3}-\d{2}-\d{4}&#x27;, output_text))
+ return GuardrailFunctionOutput(
+ output_info={&quot;has_pii&quot;: has_ssn},
+ tripwire_triggered=has_ssn,
+ )
+
+agent = Agent(
+ name=&quot;safe-agent&quot;,
+ instructions=&quot;Answer questions helpfully.&quot;,
+ model=&quot;zen-70b&quot;,
+ input_guardrails=[InputGuardrail(guardrail_function=check_injection)],
+ output_guardrails=[OutputGuardrail(guardrail_function=check_pii)],
+)</code></pre>
+<h3>MCP Integration</h3>
+<pre><code class="lang-python">from agents import Agent, Runner
+from agents.mcp import MCPServerStdio, MCPServerSse
+
+# Stdio transport (local process)
+mcp_local = MCPServerStdio(
+ command=&quot;npx&quot;,
+ args=[&quot;-y&quot;, &quot;@hanzo/mcp&quot;],
+)
+
+# SSE transport (remote server)
+mcp_remote = MCPServerSse(
+ url=&quot;https://mcp.example.com/sse&quot;,
+ headers={&quot;Authorization&quot;: &quot;Bearer token&quot;},
+)
+
+agent = Agent(
+ name=&quot;mcp-agent&quot;,
+ instructions=&quot;Use available MCP tools to accomplish tasks.&quot;,
+ model=&quot;zen-70b&quot;,
+ mcp_servers=[mcp_local, mcp_remote],
+)
+
+async def main():
+ async with mcp_local, mcp_remote:
+ result = await Runner.run(agent, &quot;Search for recent AI news&quot;)
+ print(result.final_output)</code></pre>
+<h3>Tracing</h3>
+<pre><code class="lang-python">from agents import Agent, Runner
+from agents.tracing import TracingProcessor, Span
+
+class CustomTracer(TracingProcessor):
+ def on_span_start(self, span: Span):
+ print(f&quot;Start: {span.name}&quot;)
+
+ def on_span_end(self, span: Span):
+ print(f&quot;End: {span.name} ({span.duration_ms}ms)&quot;)
+
+# Register globally
+from agents.tracing import set_tracing_processor
+set_tracing_processor(CustomTracer())
+
+# All agent runs now traced automatically
+result = Runner.run_sync(agent, &quot;Hello&quot;)</code></pre>
+<h2>Advanced Features</h2>
+<h3>AgentNetwork (Peer Discovery)</h3>
+<pre><code class="lang-python">from agents import Agent
+from agents.network import AgentNetwork
+
+# Register agents on a shared network
+network = AgentNetwork(discovery=&quot;mdns&quot;) # or &quot;redis&quot;, &quot;consul&quot;
+
+analyst = Agent(name=&quot;analyst&quot;, instructions=&quot;Analyze data.&quot;, model=&quot;zen-70b&quot;)
+writer = Agent(name=&quot;writer&quot;, instructions=&quot;Write reports.&quot;, model=&quot;zen-70b&quot;)
+
+network.register(analyst)
+network.register(writer)
+
+# Agents can discover and delegate to each other
+result = await network.run(&quot;analyst&quot;, &quot;Analyze Q4 sales and have writer draft a report&quot;)</code></pre>
+<h3>SemanticRouter</h3>
+<pre><code class="lang-python">from agents import Agent
+from agents.network.router import SemanticRouter
+
+router = SemanticRouter(
+ routes={
+ &quot;code_help&quot;: code_agent,
+ &quot;data_analysis&quot;: data_agent,
+ &quot;general&quot;: chat_agent,
+ }
+)
+
+# Automatically routes to best agent based on intent
+result = await router.route(&quot;Write a Python function to sort a list&quot;)</code></pre>
+<h3>ZAP Protocol (Zero-copy Agent Protocol)</h3>
+<p>ZAP is an alternative to MCP optimized for native hanzo-dev usage with lower memory overhead:</p>
+<pre><code class="lang-python">from agents.zap import ZAPServer, ZAPClient
+
+# Server side
+server = ZAPServer(tools=[my_tool])
+await server.serve(port=9999)
+
+# Client side
+client = ZAPClient(&quot;localhost:9999&quot;)
+result = await client.call(&quot;my_tool&quot;, {&quot;arg&quot;: &quot;value&quot;})</code></pre>
+<h2>Extensions</h2>
+<p>| Extension | Purpose | Package | |-----------|---------|---------| | <strong>Web3</strong> | On-chain agent actions, wallet management | <code>hanzoai[web3]</code> | | <strong>TEE</strong> | Trusted execution environments for sensitive agent ops | <code>hanzoai[tee]</code> | | <strong>Marketplace</strong> | Publish/discover agent skills | <code>hanzoai[marketplace]</code> |</p>
+<h2>Core Concepts</h2>
+<h3>Agent Architecture</h3>
+<pre><code>┌───────────────────┐
+│ Supervisor │
+│ (orchestrates) │
+├─────────┬─────────┤
+│ Agent A │ Agent B │
+│ (tools) │ (tools) │
+├─────────┴─────────┤
+│ Tool Registry │
+│ MCP + ZAP + Fns │
+├───────────────────┤
+│ Guardrails │
+│ Input + Output │
+├───────────────────┤
+│ Tracing Layer │
+│ (spans, events) │
+├───────────────────┤
+│ LLM Backend │
+│ (api.hanzo.ai) │
+└───────────────────┘</code></pre>
+<h3>Orchestration Patterns</h3>
+<p>| Pattern | Description | When to Use | |---------|-------------|-------------| | <strong>Single agent</strong> | One agent, one task | Simple Q&amp;A, single-tool tasks | | <strong>Handoff</strong> | Agent delegates to specialist | Domain-specific expertise needed | | <strong>Supervisor</strong> | Manager coordinates team | Complex multi-step tasks | | <strong>Pipeline</strong> | Sequential agent chain | Transform/refine/review flows | | <strong>Swarm</strong> | Peer agents collaborate | Exploration, brainstorming | | <strong>Network</strong> | Distributed agent discovery | Multi-service, cross-process |</p>
+<h3>Agent Configuration</h3>
+<pre><code class="lang-python">agent = Agent(
+ name=&quot;my-agent&quot;, # Required: unique name
+ instructions=&quot;...&quot;, # System prompt
+ model=&quot;zen-70b&quot;, # LLM model
+ tools=[tool1, tool2], # Function tools
+ mcp_servers=[server1], # MCP tool servers
+ handoffs=[agent_b, agent_c], # Agents to delegate to
+ input_guardrails=[guard1], # Input validation
+ output_guardrails=[guard2], # Output validation
+ output_type=MyPydanticModel, # Structured output (Pydantic)
+ model_settings=ModelSettings( # LLM settings
+ temperature=0.7,
+ max_tokens=4096,
+ ),
+)</code></pre>
+<h2>Control Plane (Go)</h2>
+<p>Production orchestration service written in Go for managing agent deployments:</p>
+<pre><code class="lang-bash"># Start control plane
+hanzo-agents-server serve --port 8080
+
+# Register agent (via ha CLI)
+ha register --name analyst --endpoint http://localhost:9000
+
+# List agents
+ha list</code></pre>
+<h2>Development</h2>
+<pre><code class="lang-bash">git clone https://github.com/hanzoai/agent.git
+cd agent
+uv sync --all-extras # Install all dependencies
+uv run pytest -v # Run tests
+uv run ruff format . # Format code
+uv run ruff check . # Lint
+uv run mypy . # Type check</code></pre>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | <code>from hanzo_agent import</code> fails | Wrong import path | Use <code>from agents import ...</code> | | Import error | Missing extras | <code>uv sync --all-extras</code> | | PyPI collision | Wrong <code>hanzoai</code> version | Ensure <code>hanzoai</code> from <code>hanzoai/agent</code> not <code>hanzoai/python-sdk</code> | | LLM timeout | Model too slow | Use faster model or increase timeout | | Handoff loop | Circular delegation | Add clear stopping criteria in instructions | | Memory overflow | Too much context | Implement context windowing | | MCP connection fail | Server not running | Check MCP server process |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-mcp.md</code> - MCP tools integration (13 HIP-0300 tools)</li><li><code>hanzo/hanzo-chat.md</code> - LLM API backend</li><li><code>hanzo/python-sdk.md</code> - Python client library</li><li><code>hanzo/hanzo-operative.md</code> - Computer use agent</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: agents, multi-agent, orchestration, tools, openai-agents, zap <strong>Prerequisites</strong>: Python 3.9+, async/await, LLM concepts</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-agent.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

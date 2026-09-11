@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>managed-agents-tools</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/managed-agents-tools.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/managed-agents-tools">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/managed-agents-tools.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>managed-agents-tools</h1><p class="lede">Recommendation: Enable all prebuilt tools via agenttoolset20260401, then disable individually as needed.</p><h1>Managed Agents — Tools &amp; Skills</h1>
+<h2>Tools</h2>
+<h3>Server tools vs client tools</h3>
+<p>| Type | Who runs it | How it works | |---|---|---| | <strong>Prebuilt Claude Agent tools</strong> (<code>agent_toolset_20260401</code>) | Anthropic, on the session&#x27;s container (for <code>cloud</code> envs; for <code>self_hosted</code>, <strong>your</strong> worker supplies and runs them — see <code>shared/managed-agents-self-hosted-sandboxes.md</code>) | File ops, bash, web search, etc. Enable all at once or configure individually with <code>enabled: true/false</code>. | | <strong>MCP tools</strong> (<code>mcp_toolset</code>) | Anthropic&#x27;s orchestration layer | Capabilities exposed by connected MCP servers. Grant access per-server via the toolset. | | <strong>Custom tools</strong> | <strong>You</strong> — your application handles the call and returns results | Agent emits a <code>agent.custom_tool_use</code> event, session goes <code>idle</code>, you send back a <code>user.custom_tool_result</code> event. |</p>
+<p><strong>Recommendation:</strong> Enable all prebuilt tools via <code>agent_toolset_20260401</code>, then disable individually as needed.</p>
+<p><strong>Versioning:</strong> The toolset is a versioned, static resource. When underlying tools change, a new toolset version is created (hence <code>_20260401</code>) so you always know exactly what you&#x27;re getting.</p>
+<h3>Agent Toolset</h3>
+<p>The <code>agent_toolset_20260401</code> provides these built-in tools:</p>
+<p>| Tool                   | Description                              | | ---------------------- | ---------------------------------------- | | <code>bash</code> | Execute bash commands in a shell session | | <code>read</code> | Read a file from the local filesystem, including text, images, PDFs, and Jupyter notebooks | | <code>write</code> | Write a file to the local filesystem | | <code>edit</code> | Perform string replacement in a file | | <code>glob</code> | Fast file pattern matching using glob patterns | | <code>grep</code> | Text search using regex patterns | | <code>web_fetch</code> | Fetch content from a URL | | <code>web_search</code> | Search the web for information |</p>
+<p>Enable the full toolset:</p>
+<pre><code class="lang-json">{
+  &quot;tools&quot;: [
+    { &quot;type&quot;: &quot;agent_toolset_20260401&quot; }
+  ]
+}</code></pre>
+<h3>Per-Tool Configuration</h3>
+<p>Override defaults for individual tools. This example enables everything except bash:</p>
+<pre><code class="lang-json">{
+  &quot;tools&quot;: [
+    {
+      &quot;type&quot;: &quot;agent_toolset_20260401&quot;,
+      &quot;default_config&quot;: { &quot;enabled&quot;: true },
+      &quot;configs&quot;: [
+        { &quot;name&quot;: &quot;bash&quot;, &quot;enabled&quot;: false }
+      ]
+    }
+  ]
+}</code></pre>
+<p>| Field | Required | Description | |---|---|---| | <code>type</code> | ✅ | <code>&quot;agent_toolset_20260401&quot;</code> | | <code>default_config</code> | ❌ | Applied to all tools. <code>{ &quot;enabled&quot;: bool, &quot;permission_policy&quot;: {...} }</code> | | <code>configs</code> | ❌ | Per-tool overrides: <code>[{ &quot;name&quot;: &quot;...&quot;, &quot;enabled&quot;: bool, &quot;permission_policy&quot;: {...} }]</code> |</p>
+<h3>Permission Policies</h3>
+<p>Control when server-executed tools (agent toolset + MCP) run automatically vs wait for approval. Does not apply to custom tools.</p>
+<p>| Policy | Behavior | |---|---| | <code>always_allow</code> | Tool executes automatically (default) | | <code>always_ask</code> | Session emits <code>session.status_idle</code> and pauses until you send a <code>user.tool_confirmation</code> event |</p>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;agent_toolset_20260401&quot;,
+  &quot;default_config&quot;: {
+    &quot;enabled&quot;: true,
+    &quot;permission_policy&quot;: { &quot;type&quot;: &quot;always_allow&quot; }
+  },
+  &quot;configs&quot;: [
+    { &quot;name&quot;: &quot;bash&quot;, &quot;permission_policy&quot;: { &quot;type&quot;: &quot;always_ask&quot; } }
+  ]
+}</code></pre>
+<p><strong>Responding to <code>always_ask</code>:</strong> Send a <code>user.tool_confirmation</code> event with <code>tool_use_id</code> from the triggering <code>agent_tool_use</code>/<code>mcp_tool_use</code> event:</p>
+<pre><code class="lang-json">{ &quot;type&quot;: &quot;user.tool_confirmation&quot;, &quot;tool_use_id&quot;: &quot;sevt_abc123&quot;, &quot;result&quot;: &quot;allow&quot; }
+{ &quot;type&quot;: &quot;user.tool_confirmation&quot;, &quot;tool_use_id&quot;: &quot;sevt_def456&quot;, &quot;result&quot;: &quot;deny&quot;, &quot;message&quot;: &quot;Read .env.example instead&quot; }</code></pre>
+<p>The optional <code>message</code> on a deny is delivered to the agent so it can adjust its approach.</p>
+<p>To enable only specific tools, flip the default off and opt-in per tool:</p>
+<pre><code class="lang-json">{
+  &quot;tools&quot;: [
+    {
+      &quot;type&quot;: &quot;agent_toolset_20260401&quot;,
+      &quot;default_config&quot;: { &quot;enabled&quot;: false },
+      &quot;configs&quot;: [
+        { &quot;name&quot;: &quot;bash&quot;, &quot;enabled&quot;: true },
+        { &quot;name&quot;: &quot;read&quot;, &quot;enabled&quot;: true }
+      ]
+    }
+  ]
+}</code></pre>
+<h3>Custom Tools (Client-Side)</h3>
+<p>Custom tools are executed by <strong>your application</strong>, not Anthropic. The flow:</p>
+<ol><li>Agent decides to use the tool → session emits a <code>agent.custom_tool_use</code> event with inputs</li><li>Session goes <code>idle</code> waiting for you</li><li>Your application executes the tool</li><li>You send back a <code>user.custom_tool_result</code> event with the output</li><li>Session resumes <code>running</code></li></ol>
+<p>No permission policy needed — you&#x27;re the one executing.</p>
+<pre><code class="lang-json">{
+  &quot;tools&quot;: [
+    {
+      &quot;type&quot;: &quot;custom&quot;,
+      &quot;name&quot;: &quot;get_weather&quot;,
+      &quot;description&quot;: &quot;Fetch current weather for a city.&quot;,
+      &quot;input_schema&quot;: {
+        &quot;type&quot;: &quot;object&quot;,
+        &quot;properties&quot;: {
+          &quot;city&quot;: { &quot;type&quot;: &quot;string&quot;, &quot;description&quot;: &quot;City name&quot; }
+        },
+        &quot;required&quot;: [&quot;city&quot;]
+      }
+    }
+  ]
+}</code></pre>
+<h3>MCP Servers</h3>
+<p>MCP (Model Context Protocol) servers expose standardized third-party capabilities (e.g. Asana, GitHub, Linear). <strong>Configuration is split across agent and vault:</strong></p>
+<ol><li><strong>Agent creation</strong> declares which servers to connect to (<code>type</code>, <code>name</code>, <code>url</code> — no auth). The agent&#x27;s <code>mcp_servers</code> array has no auth field.</li><li><strong>Vault</strong> stores the OAuth credentials. Attach via <code>vault_ids</code> on session create.</li></ol>
+<p>This keeps secrets out of reusable agent definitions. Each vault credential is tied to one MCP server URL; Anthropic matches credentials to servers by URL.</p>
+<p><strong>Agent side — declare servers (no auth):</strong></p>
+<p>| Field | Required | Description | |---|---|---| | <code>type</code> | ✅ | <code>&quot;url&quot;</code> | | <code>name</code> | ✅ | Unique name — referenced by <code>mcp_toolset.mcp_server_name</code> | | <code>url</code> | ✅ | The MCP server&#x27;s endpoint URL (Streamable HTTP transport) |</p>
+<pre><code class="lang-json">{
+  &quot;mcp_servers&quot;: [
+    { &quot;type&quot;: &quot;url&quot;, &quot;name&quot;: &quot;linear&quot;, &quot;url&quot;: &quot;https://mcp.linear.app/mcp&quot; }
+  ],
+  &quot;tools&quot;: [
+    { &quot;type&quot;: &quot;mcp_toolset&quot;, &quot;mcp_server_name&quot;: &quot;linear&quot; }
+  ]
+}</code></pre>
+<p><strong>Session side — attach vault:</strong></p>
+<pre><code class="lang-json">{
+  &quot;agent&quot;: &quot;agent_abc123&quot;,
+  &quot;environment_id&quot;: &quot;env_abc123&quot;,
+  &quot;vault_ids&quot;: [&quot;vlt_abc123&quot;]
+}</code></pre>
+<blockquote><p>💡 <strong>Per-tool enablement (empirical):</strong> <code>mcp_toolset</code> has been observed accepting <code>default_config: {enabled: false}</code> + <code>configs: [{name, enabled: true}]</code> for an allowlist pattern. The API ref shows only the minimal <code>{type, mcp_server_name}</code> form.</p></blockquote>
+<blockquote><p>💡 <strong>Changing tools/MCP servers on a running session:</strong> <code>sessions.update()</code> can replace <code>agent.tools</code> and <code>agent.mcp_servers</code> while the session is <code>idle</code> — a session-local override that doesn&#x27;t touch the agent object. <code>vault_ids</code> is create-only. See <code>shared/managed-agents-core.md</code> → Updating the agent configuration mid-session.</p></blockquote>
+<p><strong>Large tool outputs.</strong> If a tool returns more than <strong>100,000 characters (roughly 25,000 tokens)</strong>, the output is automatically offloaded to a file in the sandbox — the agent receives a truncated preview plus the file path and can <code>read</code> the full content. No configuration required. The threshold is in <em>characters</em>, not tokens, and applies to built-in agent tools as well as MCP tools.</p>
+<p><strong>Invalid vault credentials don&#x27;t block session creation.</strong> If a vault credential is invalid for a declared MCP server, the session still creates successfully; a <code>session.error</code> event describes the MCP auth failure, and auth retries on the next <code>session.status_idle</code> → <code>session.status_running</code> transition.</p>
+<blockquote><p>⚠️ <strong>MCP auth tokens ≠ REST API tokens.</strong> Hosted MCP servers (<code>mcp.notion.com</code>, <code>mcp.linear.app</code>, etc.) typically require <strong>OAuth bearer tokens</strong>, not the service&#x27;s native API keys. A Notion <code>ntn_</code> integration token authenticates against Notion&#x27;s REST API but will <strong>not</strong> work as a vault credential for the Notion MCP server. These are different auth systems.</p></blockquote>
+<h3>Vaults — the credential store</h3>
+<p><strong>Vaults</strong> store credentials that Anthropic manages on your behalf. Two credential categories:</p>
+<ul><li><strong>MCP credentials</strong> (<code>mcp_oauth</code>, <code>static_bearer</code>) — keyed by <code>mcp_server_url</code>. When the agent connects to a server at that URL, the token is injected automatically. <strong>Matching is normalized, not byte-exact:</strong> scheme and host are lowercased, and default ports and trailing slashes are stripped, so host casing, an explicit default port, or a trailing slash won&#x27;t break the match. A different path, subdomain, or <em>non-default</em> port will. If nothing matches, the connection is attempted unauthenticated. <code>mcp_oauth</code> tokens are auto-refreshed via the standard OAuth 2.0 <code>refresh_token</code> grant. This is the only way to authenticate MCP servers.</li><li><strong>Environment variables</strong> (<code>environment_variable</code>) — keyed by <code>secret_name</code> (the env var name). The sandbox sees only an <strong>opaque placeholder</strong>; the real secret is substituted into the outbound request <strong>at egress</strong>. Use this for any service that authenticates through an environment variable: CLIs (<code>aws</code>, <code>gcloud</code>, <code>stripe</code>), SDKs, or direct <code>curl</code> calls from the <code>bash</code> tool.</li></ul>
+<p>Secret fields you supply (<code>token</code>, <code>access_token</code>, <code>refresh_token</code>, <code>client_secret</code>, <code>secret_value</code>) are write-only — never returned in API responses.</p>
+<h4>Credentials and the sandbox</h4>
+<p>Vaults store credentials; those credentials <strong>never enter the sandbox</strong>. This is a deliberate security boundary — code running in the sandbox (including anything the agent writes) cannot read or exfiltrate a vaulted credential, even under prompt injection. Instead, credentials are injected by Anthropic-side proxies <strong>after</strong> a request leaves the sandbox:</p>
+<ul><li><strong>MCP tool calls</strong> are routed through an Anthropic-side proxy that fetches the credential from the vault and adds it to the outbound request.</li><li><strong>Git operations on attached GitHub repositories</strong> (<code>git pull</code>, <code>git push</code>, GitHub REST calls) are routed through a git proxy that injects the <code>github_repository</code> resource&#x27;s <code>authorization_token</code> the same way.</li><li><strong>Environment-variable credentials</strong> appear in the sandbox as an opaque placeholder; the real value replaces the placeholder at egress, on requests to the credential&#x27;s allowed hosts only. Substitution covers request <strong>headers and body only</strong> — a secret embedded in the <strong>URL path</strong> is never substituted, so path-secret endpoints (e.g. Slack incoming-webhook URLs) can&#x27;t be vaulted; use header-based auth instead (for Slack: a bot token in <code>Authorization</code> via <code>chat.postMessage</code>).</li></ul>
+<p><strong>When vault credentials don&#x27;t fit</strong> (e.g. self-hosted sandboxes — <code>environment_variable</code> is not yet supported there), <strong>register a custom tool:</strong> the agent emits <code>agent.custom_tool_use</code>, your orchestrator (which already holds the credential) executes the call and returns <code>user.custom_tool_result</code> over the same authenticated event stream. No public endpoint is exposed; the sandbox never sees the secret. See <code>shared/managed-agents-client-patterns.md</code> → Pattern 9.</p>
+<p><strong>Do not put API keys in the system prompt or user messages as a workaround</strong> — they persist in the session&#x27;s event history.</p>
+<blockquote><p>Formerly known internally as TATs (Tool/Tenant Access Tokens).</p></blockquote>
+<p><strong>Flow:</strong></p>
+<ol><li>Create a vault (<code>client.beta.vaults.create(...)</code>) — one per tenant/user, or one shared, depending on your model</li><li>Add credentials to it (<code>client.beta.vaults.credentials.create(...)</code>) — MCP credentials are keyed by MCP server URL; environment-variable credentials by <code>secret_name</code></li><li>Reference the vault on session create via <code>vault_ids: [&quot;vlt_...&quot;]</code></li><li>Anthropic auto-refreshes OAuth tokens before they expire and substitutes secrets at runtime</li></ol>
+<p><strong>MCP OAuth credential shape</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;display_name&quot;: &quot;Notion (workspace-foo)&quot;,
+  &quot;auth&quot;: {
+    &quot;type&quot;: &quot;mcp_oauth&quot;,
+    &quot;mcp_server_url&quot;: &quot;https://mcp.notion.com/mcp&quot;,
+    &quot;access_token&quot;: &quot;&lt;current access token&gt;&quot;,
+    &quot;expires_at&quot;: &quot;2026-04-02T14:00:00Z&quot;,
+    &quot;refresh&quot;: {
+      &quot;refresh_token&quot;: &quot;&lt;refresh token&gt;&quot;,
+      &quot;client_id&quot;: &quot;&lt;your OAuth client_id&gt;&quot;,
+      &quot;token_endpoint&quot;: &quot;https://api.notion.com/v1/oauth/token&quot;,
+      &quot;token_endpoint_auth&quot;: { &quot;type&quot;: &quot;none&quot; }
+    }
+  }
+}</code></pre>
+<p>The <code>refresh</code> block is what enables auto-refresh — <code>token_endpoint</code> is where Anthropic posts the <code>refresh_token</code> grant. <code>token_endpoint_auth</code> is a discriminated union:</p>
+<p>| <code>type</code> | Shape | Use when | |---|---|---| | <code>&quot;none&quot;</code> | <code>{type: &quot;none&quot;}</code> | Public OAuth client (no secret) | | <code>&quot;client_secret_basic&quot;</code> | <code>{type: &quot;client_secret_basic&quot;, client_secret: &quot;...&quot;}</code> | Confidential client, secret via HTTP Basic auth | | <code>&quot;client_secret_post&quot;</code> | <code>{type: &quot;client_secret_post&quot;, client_secret: &quot;...&quot;}</code> | Confidential client, secret in request body |</p>
+<p>Omit <code>refresh</code> entirely if you only have an access token with no refresh capability — it&#x27;ll work until it expires, then the agent loses access.</p>
+<blockquote><p>💡 <strong>Getting an OAuth token.</strong> How you obtain the initial access and refresh tokens depends on the MCP server — consult its documentation. Once you have them, store them in a vault credential using the shape above; Anthropic auto-refreshes via the <code>refresh.token_endpoint</code> from there.</p></blockquote>
+<p><strong>Environment-variable credential shape</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;display_name&quot;: &quot;Twilio API key for sandbox&quot;,
+  &quot;auth&quot;: {
+    &quot;type&quot;: &quot;environment_variable&quot;,
+    &quot;secret_name&quot;: &quot;TWILIO_API_KEY&quot;,
+    &quot;secret_value&quot;: &quot;sk-your-secret-here&quot;,
+    &quot;networking&quot;: {
+      &quot;type&quot;: &quot;limited&quot;,
+      &quot;allowed_hosts&quot;: [&quot;api.twilio.com&quot;, &quot;*.twilio.com&quot;]
+    }
+  }
+}</code></pre>
+<p><code>networking.allowed_hosts</code> controls which outbound hosts the secret can be substituted for — <code>{&quot;type&quot;: &quot;limited&quot;, &quot;allowed_hosts&quot;: [...]}</code> or <code>{&quot;type&quot;: &quot;unrestricted&quot;}</code> if you can&#x27;t enumerate the domains in advance. Limiting is strongly recommended: it prevents the key from ever being sent to unauthorized hosts.</p>
+<p><strong><code>injection_location</code></strong> (optional, sibling of <code>networking</code>) controls <strong>where</strong> in the outbound request the secret is substituted — <code>{header: bool, body: bool}</code>. The two are independent: <code>allowed_hosts</code> scopes <em>which hosts</em> a substituted request can target; <code>injection_location</code> scopes <em>which parts of the request</em> the secret is substituted into across all of those hosts. Most services read an API key from a request header, so <code>{&quot;header&quot;: true}</code> is the narrower configuration — request bodies are often assembled from content the agent is working with, making the body the broader exposure surface. A placeholder in a disabled location is <strong>neither substituted nor stripped</strong> — the literal opaque placeholder string is sent to the third party in that location.</p>
+<p>| Operation | <code>injection_location</code> semantics | |---|---| | Create credential | Omit the field entirely → both locations enabled. Provide the object → any field you omit defaults to <code>false</code> (<code>{&quot;header&quot;: true}</code> creates a header-only credential). | | Update credential | Fields <strong>merge individually</strong> — <code>{&quot;body&quot;: false}</code> disables body substitution and leaves <code>header</code> unchanged. For a running session, the update takes effect on the session&#x27;s next operation. |</p>
+<p>A credential must have at least one location enabled; a create or update that would disable both returns 400, as does explicit <code>null</code> for the object or either field (omit instead). The response always returns both fields with their resolved values.</p>
+<blockquote><p>⚠️ <strong>Credentials created in the Console are header-only by default</strong> — unlike the API, where omitting the field enables both. If your client sends the secret in the request body (a form-encoded token request, for example), the placeholder passes through literally and the service rejects it with its own authentication error. Tick body injection in the Console form, or <code>POST</code> the credential with <code>{&quot;injection_location&quot;: {&quot;body&quot;: true}}</code>.</p></blockquote>
+<blockquote><p>⚠️ <strong>Two networking layers, both required.</strong> <code>networking.allowed_hosts</code> on the credential controls which requests <em>use the secret</em>, not which requests are <em>allowed</em>. The agent must also be able to reach the domain at the <strong>environment level</strong> (<code>unrestricted</code>, or the host listed in the environment&#x27;s <code>allowed_hosts</code> — see <code>shared/managed-agents-environments.md</code>). A domain missing from either layer means the secret-substituted request fails.</p></blockquote>
+<blockquote><p>⚠️ <strong>Client-side validation caveat.</strong> Substitution happens at egress, not inside the sandbox — clients that validate the credential <em>format</em> locally before making a network request (e.g. a CLI that checks the key starts with <code>sk-</code>) will see the opaque placeholder and may fail at startup. If a client rejects the credential before any network call, that&#x27;s why.</p></blockquote>
+<blockquote><p>💡 <strong>Scope the key minimally.</strong> The agent can do anything the key allows; a key with broader permissions than the task needs increases the blast radius if the agent behaves unexpectedly.</p></blockquote>
+<p><strong>Not supported with self-hosted sandboxes</strong> — <code>environment_variable</code> credentials require Anthropic-managed egress. See <code>shared/managed-agents-self-hosted-sandboxes.md</code>.</p>
+<p><strong>Constraints (all credential types):</strong></p>
+<ul><li><strong>Unique key per vault.</strong> <code>mcp_server_url</code> (MCP credentials) and <code>secret_name</code> (environment-variable credentials) must be unique among active credentials in a vault; duplicates return a 409.</li><li><strong>Keys are immutable.</strong> Secret values, <code>display_name</code>, and (on environment-variable credentials) <code>injection_location</code> can be updated; to change <code>mcp_server_url</code>, <code>secret_name</code>, <code>token_endpoint</code>, or <code>client_id</code>, archive the credential and create a new one. Archiving purges the secret and frees the key for a replacement.</li><li><strong>Maximum 20 credentials per vault.</strong></li><li>Credentials are stored as provided and <strong>not validated until session runtime</strong> — an invalid credential surfaces as an authentication or downstream error during the session, which is emitted but does not block the session from continuing.</li></ul>
+<p><strong>Scoping:</strong> Vaults are workspace-scoped. Anyone with developer+ role in the API workspace can create, read (metadata only — secrets are write-only), and attach vaults. <code>vault_ids</code> can be set at session <strong>create</strong> time but not via session update (the SDK docstring says &quot;Not yet supported; requests setting this field are rejected&quot;).</p>
+<hr>
+<h2>Skills</h2>
+<p>Skills are reusable, filesystem-based resources that provide your agent with domain-specific expertise: workflows, context, and best practices that transform general-purpose agents into specialists. Unlike prompts (conversation-level instructions for one-off tasks), skills load on-demand and eliminate the need to repeatedly provide the same guidance across multiple conversations.</p>
+<p>Skills reach the agent two ways: <strong>attached</strong> through the agent&#x27;s <code>skills</code> array, or <strong>loaded from a GitHub repository</strong> mounted on the session (see § Skills from a GitHub repository below). The agent automatically uses them when relevant to the task at hand:</p>
+<p>| Type | What it is | |---|---| | <strong>Pre-built Anthropic skills</strong> | Common document tasks (PowerPoint, Excel, Word, PDF). Reference by name (e.g. <code>xlsx</code>). | | <strong>Custom skills</strong> | Skills you&#x27;ve created in your organization via the Skills API. Reference by <code>skill_id</code> + optional <code>version</code>. |</p>
+<p><strong>Max 20 skills per agent.</strong> Agent creation uses <code>managed-agents-2026-04-01</code>; the separate Skills API (for managing custom skill definitions) uses <code>skills-2025-10-02</code>.</p>
+<h3>Enabling skills on a session</h3>
+<p>Skills are attached to the <strong>agent</strong> definition via <code>agents.create()</code>:</p>
+<pre><code class="lang-ts">const agent = await client.beta.agents.create(
+  {
+    name: &quot;Financial Agent&quot;,
+    model: &quot;claude-opus-5&quot;,
+    system: &quot;You are a financial analysis agent.&quot;,
+    skills: [
+      { type: &quot;anthropic&quot;, skill_id: &quot;xlsx&quot; },
+      { type: &quot;custom&quot;, skill_id: &quot;skill_abc123&quot;, version: &quot;latest&quot; },
+    ],
+  }
+);</code></pre>
+<p>Python:</p>
+<pre><code class="lang-python">agent = client.beta.agents.create(
+    name=&quot;Financial Agent&quot;,
+    model=&quot;claude-opus-5&quot;,
+    system=&quot;You are a financial analysis agent.&quot;,
+    skills=[
+        {&quot;type&quot;: &quot;anthropic&quot;, &quot;skill_id&quot;: &quot;xlsx&quot;},
+        {&quot;type&quot;: &quot;custom&quot;, &quot;skill_id&quot;: &quot;skill_abc123&quot;, &quot;version&quot;: &quot;latest&quot;},
+    ]
+)</code></pre>
+<p><strong>Skill reference fields:</strong></p>
+<p>| Field | Anthropic skill | Custom skill | |---|---|---| | <code>type</code> | <code>&quot;anthropic&quot;</code> | <code>&quot;custom&quot;</code> | | <code>skill_id</code> | Skill name (e.g. <code>&quot;xlsx&quot;</code>, <code>&quot;docx&quot;</code>, <code>&quot;pptx&quot;</code>, <code>&quot;pdf&quot;</code>) | Skill ID from Skills API (e.g. <code>&quot;skill_abc123&quot;</code>) | | <code>version</code> | <code>&quot;latest&quot;</code> or a specific version number | <code>&quot;latest&quot;</code> or a specific version number |</p>
+<p><code>version</code> is optional on <strong>both</strong> kinds and defaults to <code>&quot;latest&quot;</code> — it is not custom-skill-only.</p>
+<h3>Skills from a GitHub repository</h3>
+<p>Skills can also live in your codebase. When a session mounts a repository via the <code>github_repository</code> resource (see <code>shared/managed-agents-environments.md</code> → GitHub Repositories), the repository&#x27;s root <code>.claude/skills</code> directory is scanned at session start, and each skill found becomes available to the agent: it sees each discovered skill&#x27;s name, description, and sandbox path, and reads the skill&#x27;s <code>SKILL.md</code> (plus any scripts/resources it ships) when a task matches.</p>
+<p><strong>The agent can discover any skill in <code>.claude/skills/&lt;skill-name&gt;/</code></strong> — one directory level deep at the repository root. Skills in the following locations are not discoverable: a bare <code>.claude/skills/SKILL.md</code> (no skill directory), anything nested deeper (<code>.claude/skills/tools/code-review/SKILL.md</code>), a <code>skills/</code> directory outside <code>.claude</code>, or a <code>.claude/skills</code> inside a package subdirectory (though those can still surface when the agent reads files under that subtree). The <code>SKILL.md</code> format is the same as uploaded custom skills.</p>
+<blockquote><p>⚠️ <strong>Repository skills are agent instructions — treat them as part of your trust boundary.</strong> Anyone who can commit to a mounted repository (a merged external PR, a compromised dependency, a contributor) can add or edit <code>.claude/skills/</code> content, and the platform loads it at session start with no review step — where session tools like <code>bash</code> and <code>web_fetch</code> give injected instructions real capability. Only mount repositories you trust, and audit <code>.claude/skills/</code> before mounting one with external contributors.</p></blockquote>
+<p>Rules:</p>
+<ul><li><strong>Cloud sandboxes only</strong> — self-hosted sandboxes don&#x27;t support <code>github_repository</code> resources, so they can&#x27;t load repository skills.</li><li><strong>Scanned once, at session start</strong>, from the repository state checked out then (the resource&#x27;s <code>checkout</code> branch/commit, else the default branch). Commits pushed mid-session are not picked up — start a new session for updated skills. Repositories added to a <em>running</em> session are not scanned either.</li><li><strong>Coexists with attached skills.</strong> If a repository skill shares a name with an attached skill (or a skill from another mounted repo), both are available, each announced with its own path.</li></ul>
+<h3>Skills API</h3>
+<p>| Operation             | Method   | Path                                            | | --------------------- | -------- | ----------------------------------------------- | | Create Skill          | <code>POST</code>   | <code>/v1/skills</code>                                    | | List Skills           | <code>GET</code>    | <code>/v1/skills</code>                                    | | Get Skill             | <code>GET</code>    | <code>/v1/skills/{id}</code>                               | | Delete Skill          | <code>DELETE</code> | <code>/v1/skills/{id}</code>                               | | Create Version        | <code>POST</code>   | <code>/v1/skills/{id}/versions</code>                      | | List Versions         | <code>GET</code>    | <code>/v1/skills/{id}/versions</code>                      | | Get Version           | <code>GET</code>    | <code>/v1/skills/{id}/versions/{version}</code>            | | Delete Version        | <code>DELETE</code> | <code>/v1/skills/{id}/versions/{version}</code>            |</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/managed-agents-tools.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

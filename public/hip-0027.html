@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,12 +196,13 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0027</h1><p class="lede">HIP-27: Secrets Management Standard. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0027: Secrets Management Standard</h1>
+<h1>hip-0027</h1><p class="lede">HIP-27: Secrets Management Standard. Status Draft. Hanzo architectural specification.</p><h1>HIP-0027: Secrets Management Standard</h1>
 <h2>Abstract</h2>
-<blockquote><p><strong>UNRESOLVED — do not build on this HIP&#x27;s ownership claim.</strong> Two files in <code>hanzoai/kms</code> disagree about whether that repo exists: its <code>README.md</code> calls it &quot;a thin Go server ... all server logic lives in <code>luxfi/kms</code>&quot;, while <code>DEPRECATED.md</code> in the same repo says <code>hanzoai/kms</code> is deprecated in favour of <code>luxfi/kms</code> outright. This document described a fork of a third-party secrets product, which neither file supports and which we do not run. The wire contract below is still accurate; who owns the implementation is a decision somebody owes.</p></blockquote>
-<p>This proposal defines the secrets management standard for the Hanzo ecosystem, centered on Hanzo KMS at <strong>kms.hanzo.ai</strong>. Hanzo KMS is a self-hosted fork of the luxfi/kms primitives that provides centralized, auditable, Kubernetes-native secrets management for all Hanzo services. It replaces scattered environment variables, CI/CD secrets, and manual <code>kubectl create secret</code> operations with a single source of truth.</p>
+<p>There is <strong>one</strong> KMS surface: <code>api.hanzo.ai/v1/kms</code>. It answers <code>path</code> / <code>env</code> / <code>name</code>, resolving to <code>/orgs/&lt;org&gt;/&lt;path&gt;/&lt;NAME&gt;</code>, and it is the only store any service reads. The <code>/api/v1/</code> and <code>/api/v3/</code> surface earlier revisions of this HIP documented is gone; it carried the <code>/api/</code> prefix the estate does not use (HIP-0119) and it returns <code>404</code>.</p>
+<p><strong>Where a secret sits is HIP-0136&#x27;s question, not this one&#x27;s.</strong> That HIP is normative for the path, and it supersedes the project-per-service layout §Secret Organization Model used to specify. This HIP covers what KMS is, how a service authenticates to it, and how the <code>KMSSecret</code> CRD gets a value into a pod.</p>
+<p>This proposal defines the secrets management standard for the Hanzo ecosystem. Hanzo KMS is the centralized, auditable, Kubernetes-native secret store for all Hanzo services, built on the canonical <code>luxfi/kms</code> primitives. It replaces scattered environment variables, CI/CD secrets, and manual <code>kubectl create secret</code> operations with a single source of truth.</p>
 <p>Every secret in the Hanzo ecosystem --- API keys, database credentials, OAuth client secrets, encryption keys --- flows through KMS. Services authenticate via Universal Auth (machine identity with client ID/secret), receive a short-lived bearer token, and fetch secrets at runtime. In Kubernetes, the <code>KMSSecret</code> custom resource automates syncing secrets from KMS into native <code>Secret</code> objects, eliminating human involvement in the secret lifecycle.</p>
-<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/kms">github.com/hanzoai/kms</a> <strong>Production</strong>: https://kms.hanzo.ai <strong>Docker</strong>: <code>ghcr.io/hanzoai/kms:latest</code> <strong>Cluster</strong>: the cluster (<code>24.199.76.156</code>)</p>
+<p><strong>Repository</strong>: <a href="https://github.com/luxfi/kms">github.com/luxfi/kms</a> — <code>hanzoai/kms</code> is archived <strong>Production</strong>: https://kms.hanzo.ai <strong>Docker</strong>: <code>ghcr.io/luxfi/kms</code></p>
 <h2>Motivation</h2>
 <p>Before KMS, Hanzo secrets were managed through a patchwork of mechanisms:</p>
 <ol><li><strong>Hardcoded in compose files</strong>: <code>compose.yml</code> files contained plaintext</li></ol>
@@ -205,7 +215,7 @@ footer a{color:var(--soft)}
 <p>   IAM, Cloud, Console, and Platform deployments --- each copy managed    independently.</p>
 <ol><li><strong>No audit trail</strong>: When a secret was accessed, changed, or leaked, there</li></ol>
 <p>   was no way to know who did what, when.</p>
-<p>These problems compound at scale. With 15+ services on the cluster and growing, manual secrets management became the single largest operational risk.</p>
+<p>These problems compound at scale. With 15+ services on hanzo-k8s and growing, manual secrets management became the single largest operational risk.</p>
 <h2>Design Philosophy</h2>
 <h3>Why our own KMS over HashiCorp Vault</h3>
 <p>HashiCorp Vault is the industry default for secrets management, but it carries significant operational overhead:</p>
@@ -224,8 +234,8 @@ footer a{color:var(--soft)}
 <p>  environment &gt; folder &gt; key-value, which maps directly to our dev/staging/   production workflow.</p>
 <ul><li><strong>Built-in secret rotation</strong>: the server supports automatic rotation for</li></ul>
 <p>  database credentials and API keys without external tooling.</p>
-<ul><li><strong>Kubernetes operator</strong>: our own operator provides the</li></ul>
-<p>  <code>KMSSecret</code> CRD (live in two groups today, <code>kmssecrets.secrets.lux.network</code>   and <code>kmssecrets.kms.hanzo.ai</code>; universe declares the former) under the   <code>secrets.lux.network</code> API group) for native K8s integration.</p>
+<ul><li><strong>Kubernetes operator</strong>: our own operator provides the <code>KMSSecret</code> CRD in one</li></ul>
+<p>  API group, <code>kms.hanzo.ai/v1</code>. The second group this HIP used to name,   <code>secrets.lux.network</code>, is not installed; <code>kmssecrets.kms.hanzo.ai</code> is the only   one, and universe declares it.</p>
 <ul><li><strong>Open source with BSL</strong>: Business Source License allows self-hosting</li></ul>
 <p>  and modification. We fork, rebrand, and deploy without vendor lock-in.</p>
 <ul><li><strong>Single binary</strong>: the server is a single Go binary with</li></ul>
@@ -260,55 +270,29 @@ footer a{color:var(--soft)}
 <h4>Organizations</h4>
 <p>Top-level organizational boundary. Maps to Hanzo business units:</p>
 <p>| Organization | Purpose | |-------------|---------| | <code>hanzo</code> | Hanzo AI core services | | <code>lux</code> | Lux blockchain infrastructure | | <code>zoo</code> | Zoo Labs Foundation services | | <code>pars</code> | Pars network services |</p>
-<h4>Projects</h4>
-<p>Each deployable service gets its own project. This provides:</p>
-<ul><li><strong>Isolation</strong>: A compromised service identity can only read its own secrets.</li><li><strong>Audit granularity</strong>: Access logs are per-project.</li><li><strong>Team ownership</strong>: Different teams manage different projects.</li></ul>
-<p>Current projects in production:</p>
-<p>| Project Slug | Service | Secret Count | |-------------|---------|-------------| | <code>hanzo-iam</code> | IAM (hanzo.id) | 23 | | <code>gateway</code> | LLM Gateway (llm.hanzo.ai) | 12 | | <code>chat</code> | Hanzo Chat | 8 | | <code>cloud</code> | Hanzo Cloud | 15 | | <code>console</code> | Console (console.hanzo.ai) | 10 | | <code>commerce</code> | Commerce API | 8 | | <code>platform</code> | PaaS Platform | 14 | | <code>bootnode</code> | Bootnode API | 6 | | <code>flow</code> | Workflow Engine | 9 | | <code>zen</code> | Zen Model Serving | 7 |</p>
+<h4>Projects and paths</h4>
+<p><strong>HIP-0136 is normative here.</strong> A secret is addressed by four coordinates and nothing else — <code>&lt;org&gt;/&lt;app&gt;/&lt;NAME&gt;@&lt;env&gt;</code> — where <code>app</code> is the app that READS the secret and <code>NAME</code> is exactly the environment variable the value becomes.</p>
+<p>Earlier revisions of this HIP specified a project per deployable service (<code>hanzo-iam</code>, <code>gateway</code>, <code>chat</code>, <code>cloud</code>, <code>console</code>, …) so that &quot;a compromised service identity can only read its own secrets&quot;. That is not what shipped: every <code>kmsSecrets</code> declaration in the fleet takes the org&#x27;s project and distinguishes the service by path alone. The one exception is <code>base</code>, which holds its own project with its own machine identity, and which HIP-0136 explicitly protects from being folded in — it carries the IAM signing keys, and moving them into the shared project would let every app in the namespace read them.</p>
+<p><strong>The isolation goal is not superseded; it is unmet.</strong> One project per org means one machine identity per namespace, so <code>secretsPath</code> organizes and does not authorize. Closing that gap means one machine identity per app — a change to identity topology, and its own proposal. See §Security.</p>
 <h4>Environments</h4>
 <p>Standard environment slugs. Every project MUST have these:</p>
-<p>| Slug | Purpose | Access Level | |------|---------|-------------| | <code>dev</code> | Local development | All developers | | <code>staging</code> | Pre-production testing | Dev team + CI | | <code>prod</code> / <code>production</code> | Live services | CI + service identities only |</p>
+<p>| Slug | Purpose | |------|---------| | <code>prod</code> | live services; the chart default and the only environment on this plane |</p>
+<p><code>default</code> is not an environment. It is a leaked upstream spelling, and it is what made a present secret read as absent for eighteen hours: a query at the right path and the wrong env returns <code>total: 0</code>, which is indistinguishable from a secret that never existed (HIP-0136 §Motivation).</p>
 <h4>Folders</h4>
 <p>Optional sub-grouping within environments. Used for organizing large projects. Example: <code>/database/</code>, <code>/api-keys/</code>, <code>/oauth/</code>.</p>
-<h3>Universal Auth Flow</h3>
-<p>Universal Auth is the sole machine-to-machine authentication method. Every service that needs secrets authenticates through this flow.</p>
-<h4>Step 1: Login</h4>
-<pre><code>POST https://kms.hanzo.ai/api/v1/auth/universal-auth/login
-Content-Type: application/json
-
-{
-  &quot;clientId&quot;: &quot;31052e02-d1d6-4846-8c8f-3fb1efe90e3b&quot;,
-  &quot;clientSecret&quot;: &quot;st.abc123...&quot;
-}</code></pre>
-<p>Response:</p>
-<pre><code class="lang-json">{
-  &quot;accessToken&quot;: &quot;eyJhbGciOiJIUzI1NiIs...&quot;,
-  &quot;expiresIn&quot;: 7200,
-  &quot;accessTokenMaxTTL&quot;: 7200,
-  &quot;tokenType&quot;: &quot;Bearer&quot;
-}</code></pre>
-<h4>Step 2: Fetch Secrets</h4>
-<pre><code>GET https://kms.hanzo.ai/api/v3/secrets/raw?environment=prod&amp;workspaceSlug=hanzo-iam&amp;secretPath=/
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...</code></pre>
-<p>Response:</p>
-<pre><code class="lang-json">{
-  &quot;secrets&quot;: [
-    {
-      &quot;secretKey&quot;: &quot;DATABASE_URL&quot;,
-      &quot;secretValue&quot;: &quot;postgresql://...&quot;,
-      &quot;type&quot;: &quot;shared&quot;,
-      &quot;version&quot;: 3
-    },
-    {
-      &quot;secretKey&quot;: &quot;REDIS_URL&quot;,
-      &quot;secretValue&quot;: &quot;redis://...&quot;,
-      &quot;type&quot;: &quot;shared&quot;,
-      &quot;version&quot;: 1
-    }
-  ]
-}</code></pre>
-<h4>Step 3: Use Secrets</h4>
-<p>The service injects fetched values into its runtime configuration. Secrets MUST NOT be written to disk, logged, or cached beyond the current process lifetime.</p>
+<h3>Authenticating, and reading a secret</h3>
+<p>A service authenticates as itself with the machine identity IAM already issued it — <code>client_credentials</code>, <code>client_secret_basic</code>, and RFC 8707 <code>resource</code> naming the KMS it is calling (HIP-0111). There is no second credential type and no auth stack of KMS&#x27;s own; IAM is the sole authority for identity and tokens.</p>
+<h4>Step 1: get an access token</h4>
+<pre><code>POST https://hanzo.id/v1/iam/oauth/token
+Authorization: Basic base64(clientId:clientSecret)
+grant_type=client_credentials&amp;resource=hanzo-kms</code></pre>
+<h4>Step 2: read the secret</h4>
+<pre><code>GET https://api.hanzo.ai/v1/kms/secrets?path=/gateway&amp;env=prod&amp;name=IAM_CLIENT_SECRET
+Authorization: Bearer &lt;access token&gt;</code></pre>
+<p>The three query parameters are the address: <code>path</code> names the app that reads the secret, <code>name</code> is exactly the environment variable it becomes, <code>env</code> is <code>prod</code>. They resolve to <code>/orgs/&lt;org&gt;/&lt;path&gt;/&lt;NAME&gt;</code>, and the org comes from the validated token, never from the request — a caller that could name its own org could read another tenant&#x27;s store.</p>
+<p><strong>A read that returns nothing is not evidence of absence.</strong> A path-filtered list returning <code>total: 0</code> and a genuinely empty store are the same response, and treating them as the same is how a migration deletes a live credential. Absence is established only by enumerating the store the chart actually reads (HIP-0136 §Migration).</p>
+<h4>Step 3: use it</h4>
+<p>The value is injected into the service&#x27;s runtime configuration. In Kubernetes it does not travel this path at all: the <code>KMSSecret</code> controller reads it and writes a native <code>Secret</code> the pod mounts, which is the next section.</p>
 <h3>Machine Identity Lifecycle</h3>
 <p>Each service is represented by a Machine Identity in KMS. The identity lifecycle follows these steps:</p>
 <ol><li><strong>Create Identity</strong>: In the KMS UI, create a Machine Identity with a</li></ol>
@@ -372,70 +356,17 @@ spec:
   --from-literal=clientSecret=&lt;machine-identity-client-secret&gt; \
   --dry-run=client -o yaml | kubectl apply -f -</code></pre>
 <p>This is an intentional design constraint. The bootstrap secret is a &quot;root of trust&quot; --- it cannot be managed by the system it bootstraps.</p>
-<h3>CI/CD Integration</h3>
-<h4>GitHub Actions Pattern</h4>
-<p>Services that deploy via GitHub Actions fetch secrets at workflow runtime instead of storing them as GitHub Actions secrets.</p>
-<pre><code class="lang-yaml">name: Deploy
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Authenticate with KMS
-        id: kms-auth
-        run: |
-          TOKEN=$(curl -s -X POST \
-            https://kms.hanzo.ai/api/v1/auth/universal-auth/login \
-            -H &quot;Content-Type: application/json&quot; \
-            -d &quot;{\&quot;clientId\&quot;:\&quot;${{ secrets.KMS_CLIENT_ID }}\&quot;,\&quot;clientSecret\&quot;:\&quot;${{ secrets.KMS_CLIENT_SECRET }}\&quot;}&quot; \
-            | jq -r &#x27;.accessToken&#x27;)
-          echo &quot;::add-mask::$TOKEN&quot;
-          echo &quot;token=$TOKEN&quot; &gt;&gt; $GITHUB_OUTPUT
-
-      - name: Fetch deployment secrets
-        run: |
-          SECRETS=$(curl -s \
-            &quot;https://kms.hanzo.ai/api/v3/secrets/raw?environment=prod&amp;workspaceSlug=my-service&amp;secretPath=/&quot; \
-            -H &quot;Authorization: Bearer ${{ steps.kms-auth.outputs.token }}&quot;)
-
-          # Extract individual secrets
-          echo &quot;DOCKERHUB_USERNAME=$(echo $SECRETS | jq -r &#x27;.secrets[] | select(.secretKey==&quot;DOCKERHUB_USERNAME&quot;) | .secretValue&#x27;)&quot; &gt;&gt; $GITHUB_ENV
-          echo &quot;::add-mask::$(echo $SECRETS | jq -r &#x27;.secrets[] | select(.secretKey==&quot;DOCKERHUB_TOKEN&quot;) | .secretValue&#x27;)&quot;
-          echo &quot;DOCKERHUB_TOKEN=$(echo $SECRETS | jq -r &#x27;.secrets[] | select(.secretKey==&quot;DOCKERHUB_TOKEN&quot;) | .secretValue&#x27;)&quot; &gt;&gt; $GITHUB_ENV</code></pre>
-<p>Note: <code>KMS_CLIENT_ID</code> and <code>KMS_CLIENT_SECRET</code> are the only two values stored as GitHub Actions secrets. All other credentials are fetched from KMS at runtime. This reduces the GitHub secret surface from dozens of secrets per repository to exactly two.</p>
-<h4>SDK Integration</h4>
-<p>For services that fetch secrets programmatically at startup:</p>
-<pre><code class="lang-go">// Go - using luxfi/kms-go SDK
-import &quot;github.com/luxfi/kms-go/sdk&quot;
-
-client := sdk.NewClient(sdk.Config{
-    SiteURL:      &quot;https://kms.hanzo.ai&quot;,
-    ClientID:     os.Getenv(&quot;KMS_CLIENT_ID&quot;),
-    ClientSecret: os.Getenv(&quot;KMS_CLIENT_SECRET&quot;),
-})
-
-secrets, err := client.ListSecrets(sdk.ListSecretsOptions{
-    ProjectSlug: &quot;hanzo-iam&quot;,
-    Environment: &quot;prod&quot;,
-    SecretPath:  &quot;/&quot;,
-})
-if err != nil {
-    log.Fatalf(&quot;failed to fetch secrets from KMS: %v&quot;, err)
-}
-
-for _, s := range secrets {
-    os.Setenv(s.SecretKey, s.SecretValue)
-}</code></pre>
+<h3>CI/CD integration</h3>
+<p>CI is Hanzo Git Actions executed by <code>act_runner</code>, and the pipeline is one reusable workflow in <code>hanzoai/ci</code> (HIP-0036). A repository does not write its own KMS fetch: the reusable workflow does it, once, using the build&#x27;s machine identity, and the secret is addressed at <code>hanzo/deploy/&lt;NAME&gt;@prod</code>.</p>
+<p>The only durable value a repository stores is that machine identity, and it is set <strong>on the forge</strong>, which is what executes the workflow.</p>
+<p>Two things a build must not be given, because it does not need them: a cloud provider token or kubeconfig (it does not deploy — HIP-0036 §Deployment), and any upstream vendor credential a <em>service</em> needs at runtime (that is egress&#x27;s custody — HIP-0143).</p>
 <h3>Secret Rotation Policy</h3>
 <p>| Secret Type | Rotation Frequency | Method | |------------|-------------------|--------| | Database passwords | 90 days | KMS auto-rotation | | API keys (third-party) | 90 days | Manual + KMS update | | OAuth client secrets | 180 days | Coordinated with IAM | | Encryption keys | 365 days | Key versioning | | Machine Identity secrets | 180 days | KMS regenerate | | JWT signing keys | 90 days | Rolling deployment |</p>
 <h3>Audit Logging</h3>
 <p>KMS logs every secret access with:</p>
 <ul><li><strong>Who</strong>: Machine Identity ID or user email</li><li><strong>What</strong>: Secret key name (never the value)</li><li><strong>When</strong>: ISO 8601 timestamp</li><li><strong>Where</strong>: Source IP address</li><li><strong>Action</strong>: <code>read</code>, <code>create</code>, <code>update</code>, <code>delete</code></li><li><strong>Project</strong>: Project slug and environment</li></ul>
 <p>Audit logs are retained for 365 days and are queryable via the KMS API:</p>
-<pre><code>GET /api/v1/audit-logs?projectId=&lt;id&gt;&amp;startDate=2025-01-01&amp;endDate=2025-01-31
+<pre><code>GET /v1/kms/audit?path=&lt;path&gt;&amp;from=2026-01-01&amp;to=2026-01-31
 Authorization: Bearer &lt;admin-token&gt;</code></pre>
 <h2>Implementation</h2>
 <h3>Production Architecture</h3>
@@ -518,20 +449,21 @@ Authorization: Bearer &lt;admin-token&gt;</code></pre>
 <h3>Health Checks</h3>
 <pre><code class="lang-yaml">readinessProbe:
   httpGet:
-    path: /api/status
+    path: /healthz
     port: 8080
   initialDelaySeconds: 60
   periodSeconds: 10
 
 livenessProbe:
   httpGet:
-    path: /api/status
+    path: /healthz
     port: 8080
   initialDelaySeconds: 120
   periodSeconds: 30</code></pre>
 <h3>KMS&#x27;s Own Secrets (Bootstrap Problem)</h3>
-<p>KMS itself requires secrets to operate: <code>ROOT_ENCRYPTION_KEY</code>, <code>AUTH_SECRET</code>, <code>DB_CONNECTION_URI</code>, <code>REDIS_URL</code>. These cannot be stored in KMS (circular dependency). They are stored as a standard K8s <code>Secret</code> named <code>kms-secrets</code>, created once during initial cluster provisioning and documented in a secure offline location.</p>
-<p>This is the irreducible bootstrap dependency. Every secrets management system has one. We acknowledge it explicitly rather than hiding it.</p>
+<p>KMS cannot fetch its own master key from the KMS it is. That circularity is irreducible — every secret store has one — and it is stated here rather than hidden.</p>
+<p>What is reducible is how much sits inside it. The bootstrap set is the master key and the identity it authenticates with, held as a K8s <code>Secret</code> created once at cluster provisioning and recorded offline. It is deliberately <strong>not</strong> a database connection string and a cache URL: those were in the bootstrap set only because KMS ran on a database of its own, and a store that keeps per-org encrypted files (HIP-1134) has no such connection to bootstrap. Every value that leaves the bootstrap set is one fewer secret living outside the system that manages secrets.</p>
+<p><code>stringData</code> is not an escape hatch anywhere else. Charts carry references and never values, and <code>templates/kmssecret.yaml</code> has no field that would accept one — on purpose, and this HIP does not add one.</p>
 <h2>Security</h2>
 <h3>Threat Model</h3>
 <p>| Threat | Mitigation | |--------|-----------| | Compromised service identity | Scoped to single project; revoke identity immediately | | KMS database breach | All secrets encrypted at rest with ROOT_ENCRYPTION_KEY (AES-256-GCM) | | Network interception | All communication over HTTPS with TLS 1.3 | | Insider threat | Audit logs capture all access; role-based access control | | KMS service compromise | Two replicas on separate nodes; encrypted backups | | Leaked bearer token | Tokens expire after 7200s; IP allowlisting available | | Git secret leak | Secrets never exist in git; KMS is sole source of truth | | CI/CD secret exfiltration | Only KMS_CLIENT_ID and KMS_CLIENT_SECRET in CI; short-lived tokens |</p>
@@ -563,15 +495,16 @@ environment:
   KMS_CLIENT_ID: &quot;${KMS_CLIENT_ID}&quot;
   KMS_CLIENT_SECRET: &quot;${KMS_CLIENT_SECRET}&quot;
 # Service fetches all other secrets from KMS at startup</code></pre>
-<h3>From GitHub Actions Secrets</h3>
-<p>Before (many secrets):</p>
+<h3>From a pile of stored CI secrets</h3>
+<p>Before — one stored value per credential, each rotated by hand in every repository that held it:</p>
 <pre><code class="lang-yaml">env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   DO_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
   DATABASE_URL: ${{ secrets.DATABASE_URL }}
   REDIS_URL: ${{ secrets.REDIS_URL }}</code></pre>
-<p>After (two secrets):</p>
+<p>Three of those five no longer exist to store, which is the more interesting half of the migration: there is no registry password (the push authorizes with an IAM identity, HIP-0033), the build holds no cloud provider token because it does not deploy (HIP-0036), and a service reaches the shared store through egress rather than through a connection string of its own (HIP-0143, HIP-0144).</p>
+<p>After — one stored identity, everything else fetched:</p>
 <pre><code class="lang-yaml">env:
   KMS_CLIENT_ID: ${{ secrets.KMS_CLIENT_ID }}
   KMS_CLIENT_SECRET: ${{ secrets.KMS_CLIENT_SECRET }}
@@ -627,7 +560,13 @@ spec:
 <p>   ``<code>bash    kubectl rollout restart deployment/&lt;service&gt;    </code>``</p>
 <ol><li><strong>Review audit logs</strong> to determine the scope of the breach.</li></ol>
 <h2>References</h2>
-<ol><li><code>luxfi/kms</code> -- the primitives all server logic lives in</li><li><a href="./hip-0005-post-quantum-security-for-ai-infrastructure.md">HIP-5: Post-Quantum Security for AI Infrastructure</a></li><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-4: LLM Gateway</a></li><li><a href="https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final">NIST SP 800-57: Key Management</a></li><li><a href="https://kubernetes.io/docs/concepts/configuration/secret/">Kubernetes Secrets Best Practices</a></li><li><a href="https://www.aicpa.org/interestareas/frc/assuranceadvisoryservices/sorhome">SOC 2 Trust Services Criteria</a></li></ol>
+<ol><li><code>luxfi/kms</code> -- the primitives all server logic lives in</li><li><a href="./hip-0005-post-quantum-security-for-ai-infrastructure.md">HIP-5: Post-Quantum Security for AI Infrastructure</a></li><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-4: LLM Gateway</a></li><li><a href="https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final">NIST SP 800-57: Key Management</a></li><li><a href="https://kubernetes.io/docs/concepts/configuration/secret/">Kubernetes Secrets Best Practices</a></li><li><a href="https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2">SOC 2 Trust Services Criteria</a></li></ol>
+<h2>Conformance status</h2>
+<p>Measured on 2026-09-09.</p>
+<p><strong>Ships.</strong> <code>kmssecrets.kms.hanzo.ai/v1</code> is installed and reconciled, with 174 <code>KMSSecret</code> resources live across the estate — <code>hanzo-build</code>, <code>collab</code>, <code>enso</code>, <code>extract-svc</code> and others. A representative resource carries exactly the fields §KMSSecret specifies (<code>projectSlug</code>, <code>envSlug</code>, <code>secretsPath</code>, <code>keys</code>, <code>rename</code>, <code>managedSecretName</code>, <code>creationPolicy</code>) plus <code>transport: iam</code>, so the operator reaches KMS with an IAM identity rather than a bespoke token — which is the authentication §Authenticating specifies, already in production. <code>kms.hanzo.ai/v1/health</code> returns <code>200</code> with a build revision.</p>
+<p><strong>Corrected in this revision.</strong> §Authentication and §Secret Retrieval documented <code>POST /api/v1/auth/universal-auth/login</code> and <code>GET /api/v3/secrets/raw</code>, which both return <code>404</code> and carry an <code>/api/</code> prefix no Hanzo surface uses. They described the third-party product this standard was originally derived from rather than the server that answers. They are replaced by the IAM <code>client_credentials</code> flow and <code>api.hanzo.ai/v1/kms</code>.</p>
+<p><strong>Still open, and the reason this HIP is not Final.</strong> Two deployments of one service hold the data between them — <code>api.hanzo.ai/v1/kms</code> and the standalone at <code>kms.hanzo.ai</code>, which every chart&#x27;s <code>kmsSecrets</code> still reaches through the CRD&#x27;s <code>hostAPI</code>. That is one program deployed twice with its data split, not two architectures, and it must never be written up as one. A name present in one and absent from the other returns <code>total: 0</code> from the wrong door, which is indistinguishable from a secret that never existed. HIP-0136 §Migration carries the collapse sequence; until it lands, &quot;which KMS&quot; is a question a reader can still be forced to ask, and that is exactly the question this standard exists to delete.</p>
+<p><strong>The isolation goal remains unmet.</strong> One project per org means one machine identity per namespace, so any app in a namespace can read any path in that project. <code>secretsPath</code> organizes; it does not authorize. Closing it means one machine identity per app, which is a change of identity topology and belongs in its own proposal.</p>
 <h2>Copyright</h2>
 <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</p>
 <footer>
@@ -649,5 +588,4 @@ spec:
 </div>
 <div class="fend"><a href="/hip-0027.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

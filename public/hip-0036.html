@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,47 +196,31 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0036</h1><p class="lede">HIP-36: CI/CD Build System Standard. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0036: CI/CD Build System Standard</h1>
+<h1>hip-0036</h1><p class="lede">HIP-36: CI/CD Build System Standard. Status Final. Hanzo architectural specification.</p><h1>HIP-0036: CI/CD Build System Standard</h1>
 <h2>Abstract</h2>
-<p>This proposal defines the CI/CD build system standard for the Hanzo ecosystem. All 260+ repositories under the <code>hanzoai</code> GitHub organization MUST follow this specification for automated testing, building, releasing, and deploying software artifacts.</p>
-<p>Hanzo Build provides standardized GitHub Actions workflows, reusable composite actions, and deployment patterns that enforce consistent quality gates across every project -- from the IAM identity provider to the LLM Gateway, from Rust ML frameworks to React frontends.</p>
-<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/build">github.com/hanzoai/build</a> <strong>Secret Management</strong>: <a href="https://kms.hanzo.ai">kms.hanzo.ai</a> (Hanzo KMS, HIP-0033) <strong>Primary Registry</strong>: <a href="https://ghcr.io/hanzoai">ghcr.io/hanzoai</a></p>
+<p>CI is <strong>Hanzo Git Actions</strong> at <code>git.hanzo.ai</code>, executed by <strong><code>act_runner</code></strong> — one runner, capability-routed, serving <code>hanzoai</code>, <code>luxfi</code>, <code>zooai</code>, <code>parsdao</code> and <code>zenlm</code>. Workflows live in <strong><code>.hanzo/workflows/</code></strong>. GitHub Actions is not part of this path and has no runners here; a workflow left under <code>.github/workflows/</code> queues forever while looking like CI.</p>
+<p>A repository needs two files: <code>hanzo.yml</code> at the root, which declares what to test and what images to build (HIP-0142), and a short <code>.hanzo/workflows/cicd.yml</code> that imports the one reusable workflow. Build and test logic lives in <code>hanzoai/ci</code>, once, and no repository carries its own.</p>
+<p>A build ends at a <strong>published image</strong>. It does not deploy. What runs in a cluster is declared in <code>hanzoai/universe</code> and applied by <code>cd.hanzo.ai</code>; <code>ci.hanzo.ai</code> reports whether the two agree.</p>
+<p><strong>Reusable workflow</strong>: <code>hanzoai/ci/.hanzo/workflows/build.yml@v1</code> <strong>Runner labels</strong>: <code>hanzoai/.github</code> → <code>RUNNERS.md</code>, the single source of truth <strong>Registry</strong>: <code>oci.hanzo.ai/&lt;org&gt;/&lt;app&gt;</code> (HIP-0033)</p>
 <h2>Motivation</h2>
 <h3>The Problem at Scale</h3>
 <p>Managing CI/CD for 260+ repositories creates compounding problems:</p>
 <ol><li><strong>Configuration drift</strong>: Without a standard, each repo invents its own workflow. Team A uses <code>npm test</code>, Team B uses <code>pnpm test</code>, Team C uses <code>yarn test</code>. Multiply this by every build step and you get 260 slightly different pipelines that nobody fully understands.</li></ol>
-<ol><li><strong>Secret sprawl</strong>: If each repo stores its own Docker Hub token as a GitHub Secret, rotating that token means updating 260+ repositories. Miss one and its nightly build silently breaks. With 20+ secrets per repo, this becomes a full-time job.</li></ol>
-<ol><li><strong>Registry fragmentation</strong>: Some repos push to Docker Hub, some to GHCR, some to both, some to neither. Consumers cannot predict where an image lives or what tags it uses.</li></ol>
+<ol><li><strong>Secret sprawl</strong>: if each repository stores its own registry token, rotating that token means editing every repository that holds it. Miss one and its next build breaks silently. With twenty-odd secrets per repository this is a full-time job that produces nothing.</li></ol>
+<ol><li><strong>Registry fragmentation</strong>: repositories pushed to one registry, another, both or neither, so a consumer could not predict where an image lived or what tags it carried.</li></ol>
 <ol><li><strong>Deployment inconsistency</strong>: One repo deploys via SSH + docker-compose, another via kubectl, another via Helm. Incident response requires knowing which method each service uses.</li></ol>
 <ol><li><strong>Wasted compute</strong>: Without shared caching strategies, every build downloads the same Go modules, Node packages, and Docker layers from scratch.</li></ol>
 <h3>The Solution</h3>
-<p>A single source of truth -- <code>github.com/hanzoai/build</code> -- that provides:</p>
-<ul><li>Reusable workflow templates called from every repo</li><li>Centralized secret injection from Hanzo KMS</li><li>Standardized Docker build with multi-arch support</li><li>Deterministic registry push order (GHCR first, Docker Hub second)</li><li>Deployment patterns for both Docker Compose and Kubernetes targets</li></ul>
+<p>One reusable workflow — <code>hanzoai/ci</code> — that every repository imports, driven entirely by that repository&#x27;s <code>hanzo.yml</code>. No per-repo build logic, one place to fix a build step, and one place secrets are fetched.</p>
 <h2>Design Philosophy</h2>
-<p>This section explains the <strong>why</strong> behind each architectural decision. CI/CD is foundational infrastructure -- the wrong choice here multiplies across every repository and every deploy.</p>
-<pre><code>260 repos x 1 manual update = 260 manual secret rotations</code></pre>
-<p>With Hanzo KMS (at <code>kms.hanzo.ai</code>, powered by luxfi/kms MPC):</p>
-<pre><code>1 KMS update = all 260 repos pick up the new token on next build</code></pre>
-<p>The secret injection flow works as follows:</p>
-<pre><code>GitHub Actions workflow starts
-  |
-  v
-POST kms.hanzo.ai/api/v1/auth/universal-auth/login
-  - Sends KMS_CLIENT_ID + KMS_CLIENT_SECRET (these two ARE GitHub Secrets)
-  - Receives short-lived ACCESS_TOKEN
-  |
-  v
-GET kms.hanzo.ai/api/v3/secrets/raw/{SECRET_NAME}
-  - Sends ACCESS_TOKEN as Bearer token
-  - Fetches DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, DIGITALOCEAN_ACCESS_TOKEN, etc.
-  |
-  v
-Secrets injected as step outputs -&gt; consumed by subsequent steps</code></pre>
+<h3>Why our own forge runs our own CI</h3>
+<p>Secret rotation is the concrete reason. With a per-repository secret store, one rotated credential is an edit in every repository that holds it; miss one and its next build breaks silently. Secrets are fetched from KMS at build time instead, so a rotation is one write and every subsequent build picks it up. The only long-lived values a repository holds are the machine identity it authenticates with.</p>
+<p>The second reason is that the fleet&#x27;s builds need hardware GitHub-hosted runners do not have — Metal GPU, macOS, Windows, Linux arm64 with CUDA — and a single capability-routed runner serves all of it beside the fungible amd64 bulk.</p>
 <h3>Why Multi-Arch Builds (linux/amd64 + linux/arm64)</h3>
 <p>Hanzo infrastructure runs on two architectures:</p>
-<p>| Environment | Architecture | Examples | |-------------|-------------|----------| | Production K8s | AMD64 | DigitalOcean droplets, Kubernetes cluster  | | Developer machines | ARM64 | Apple Silicon MacBooks (M1/M2/M3/M4) | | CI runners | AMD64 | GitHub-hosted ubuntu-latest |</p>
-<p>Without multi-arch images, developers running <code>docker pull ghcr.io/hanzoai/iam:latest</code> on Apple Silicon get an AMD64 image that runs under Rosetta emulation -- 2-5x slower and with subtle behavior differences.</p>
-<p>Multi-arch manifests solve this. A single image tag (<code>ghcr.io/hanzoai/iam:latest</code>) contains both architectures. Docker automatically selects the native one.</p>
+<p>| Environment | Architecture | Examples | |-------------|-------------|----------| | Production K8s | AMD64 | DigitalOcean droplets, Kubernetes cluster  | | Developer machines | ARM64 | Apple Silicon MacBooks (M1/M2/M3/M4) | | CI runners | AMD64 and ARM64 | the in-cluster <code>act_runner</code> pool, plus native arm64 hosts |</p>
+<p>Without multi-arch images, a developer on Apple Silicon pulling a service image gets an amd64 image under emulation -- several times slower, and with behaviour differences that show up as flaky tests rather than as an obvious wrong-architecture error.</p>
+<p>A multi-arch manifest list solves it: one tag carries both architectures and the client selects the native one.</p>
 <p>The build uses <code>docker/setup-qemu-action</code> for cross-compilation and <code>docker/setup-buildx-action</code> for multi-platform builds:</p>
 <pre><code class="lang-yaml">- uses: docker/setup-qemu-action@v3
 - uses: docker/setup-buildx-action@v3
@@ -235,280 +228,79 @@ Secrets injected as step outputs -&gt; consumed by subsequent steps</code></pre>
   with:
     platforms: linux/amd64,linux/arm64</code></pre>
 <p><strong>Trade-off acknowledged</strong>: Multi-arch builds take 2-3x longer than single-arch builds because each platform compiles separately. We accept this because builds are not in the critical path for developer iteration (developers build locally) and the production correctness guarantee is worth the extra CI minutes.</p>
-<pre><code class="lang-yaml"># GHCR: must succeed (the build fails if this fails)
-- name: Push to GHCR
-  uses: docker/build-push-action@v5
-  with:
-    push: true
-    tags: ghcr.io/hanzoai/${{ env.IMAGE }}:latest
-
-# Docker Hub: best-effort (the build succeeds even if this fails)
-- name: Push to Docker Hub
-  continue-on-error: true
-  uses: docker/build-push-action@v5
-  with:
-    push: true
-    tags: hanzoai/${{ env.IMAGE }}:latest</code></pre>
-<p>Rationale:</p>
-<p>| Factor | GHCR | Docker Hub | |--------|------|------------| | Pull rate limits | None for authenticated GitHub users | 100/6hr anonymous, 200/6hr authenticated | | Cost for private repos | Free (included with GitHub plan) | $5-$9/month per private repo | | Auth for K8s pulls | GITHUB_TOKEN (already available) | Separate imagePullSecret required | | Public discoverability | Lower (GitHub Packages UI) | Higher (hub.docker.com search) | | Uptime/reliability | GitHub SLA | Has had outages affecting pulls |</p>
-<p>GHCR is the source of truth. Docker Hub is a convenience mirror for public consumers. If Docker Hub is down or rate-limited, our builds and deployments are unaffected.</p>
-<h3>Why Not ArgoCD/Flux for GitOps (Yet)</h3>
-<p>Our current deployment model is imperative:</p>
-<pre><code>CI builds image -&gt; CI runs kubectl set image -&gt; K8s rolls out new pods</code></pre>
-<p>ArgoCD and Flux provide declarative GitOps: a Git repository defines the desired state, and a controller in the cluster continuously reconciles toward it. This is superior in theory but premature for our current scale:</p>
-<ul><li><strong>Two clusters</strong>: We operate the cluster and lux-k8s. ArgoCD&#x27;s value scales with cluster count. At 2 clusters, the overhead of running and maintaining ArgoCD (its own HA setup, RBAC, UI, SSO integration) exceeds the benefit.</li><li><strong>Deployment frequency</strong>: Most services deploy 1-3 times per day. We do not need continuous reconciliation for this cadence.</li><li><strong>Migration cost</strong>: Moving 40+ services to ArgoCD ApplicationSets requires writing and testing manifests for each. This is a month of work for marginal immediate gain.</li></ul>
-<p>We will adopt ArgoCD when we exceed 5 clusters or need multi-environment promotion (dev -&gt; staging -&gt; production) with drift detection. This HIP does not preclude that migration; the standardized workflow templates can be updated to push manifests to a GitOps repo instead of running kubectl directly.</p>
+<h3>Why one registry</h3>
+<p>An image lives at exactly one address. A second registry was previously mirrored on a best-effort push, and the mirror is the problem rather than the fallback — a &quot;convenience mirror&quot; a build is permitted to fail is a set of tags that disagree with the source of truth, at a cadence nobody watches, and a consumer cannot tell which one they pulled. HIP-0033 is the one statement of where an image is published, and the org prefix never mixes: <code>hanzoai</code> for Hanzo, <code>luxfi</code> for Lux, <code>zooai</code> for Zoo.</p>
+<h3>Why a build ends at an image</h3>
+<p>The pipeline publishes an image and stops. It holds no cluster credential, runs no <code>kubectl</code>, and cannot roll anything out. What runs is declared in <code>hanzoai/universe</code> as a pinned tag, and <code>cd.hanzo.ai</code> reconciles the cluster toward that declaration.</p>
+<p>That split is what makes drift nameable rather than a feeling. Four values form one causal line — <code>head → built → declared → running</code> — and a service is current exactly when all four agree. Each way they disagree names the arrow that did not happen: <code>unbuilt</code> (head produced no image), <code>unshipped</code> (an image was proved that the pin never named), <code>unsynced</code> (the pin and the cluster disagree, compared by digest), <code>untested</code> (a passing build whose tests did not execute). A pipeline that deploys directly can report success while running something nobody declared, and has no way to say which of the four steps failed.</p>
 <h2>Specification</h2>
-<h3>Standard Workflow Templates</h3>
-<p>Every Hanzo repository MUST include workflows from the following template set. Not all templates are required for every repo -- a pure library needs only <code>build.yml</code> and <code>test.yml</code>, while a deployable service needs all four.</p>
-<h4>1. <code>build.yml</code> -- Build and Test</h4>
-<p>Triggered on every push to <code>main</code>/<code>master</code> and on every pull request.</p>
-<pre><code class="lang-yaml">name: Build
-
+<p>The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as in RFC 2119.</p>
+<h3>1. Two files per repository</h3>
+<p>A repository declares itself with <code>hanzo.yml</code> at the root (HIP-0142 specifies the manifest and its <code>kind</code> field) and imports the one reusable workflow:</p>
+<pre><code class="lang-yaml"># hanzo.yml — what to test, what to build
+images:
+  - { name: api, context: ./api, repo: oci.hanzo.ai/hanzoai/&lt;repo&gt;, tag-suffix: api }
+test:
+  - { name: api, run: &quot;pytest -q&quot; }
+kms: { path: /deploy, environment: prod }</code></pre>
+<pre><code class="lang-yaml"># .hanzo/workflows/cicd.yml — the whole workflow
+name: CI/CD
 on:
-  push:
-    branches: [main, master]
+  push: { branches: [main], tags: [&quot;v*&quot;] }
   pull_request:
-
+  workflow_dispatch:
 jobs:
-  test:
-    name: Tests
-    runs-on: ubuntu-latest
-    # Language-specific service containers (SQL, KV, etc.)
-    services:
-      postgres:
-        image: ghcr.io/hanzoai/sql:latest
-        env:
-          POSTGRES_USER: hanzo
-          POSTGRES_PASSWORD: hanzo123
-          POSTGRES_DB: test_db
-        ports: [&quot;5432:5432&quot;]
-        options: &gt;-
-          --health-cmd=&quot;pg_isready -U hanzo&quot;
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-    steps:
-      - uses: actions/checkout@v4
-
-      # Go projects
-      - uses: actions/setup-go@v4
-        with:
-          go-version: &#x27;1.23&#x27;
-          cache-dependency-path: ./go.mod
-      - run: go test -v -race ./...
-
-      # Node.js projects
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: &#x27;pnpm&#x27;  # or &#x27;yarn&#x27; for legacy repos
-      - run: pnpm install &amp;&amp; pnpm test
-
-      # Python projects
-      - uses: astral-sh/setup-uv@v4
-      - run: uv sync --all-extras &amp;&amp; uv run pytest -v
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # Go: gofumpt via golangci-lint
-      # Node: eslint via pnpm lint
-      # Python: ruff via uv run ruff check .
-      # Rust: clippy via cargo clippy
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [test]
-    steps:
-      - uses: actions/checkout@v4
-      # Language-specific build with race detection (Go),
-      # production bundle (Node), or release build (Rust)</code></pre>
-<h4>2. <code>release.yml</code> -- Semantic Versioning and Release</h4>
-<p>Triggered only on push to <code>main</code>/<code>master</code>, after all build jobs succeed.</p>
-<pre><code class="lang-yaml">  tag-release:
-    name: Create Tag
-    runs-on: ubuntu-latest
-    if: github.repository == &#x27;hanzoai/${{ env.REPO }}&#x27; &amp;&amp; github.event_name == &#x27;push&#x27;
-    needs: [test, lint, build]
-    outputs:
-      new-release-published: ${{ steps.semantic.outputs.new_release_published }}
-      new-release-version: ${{ steps.semantic.outputs.new_release_version }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cycjimmy/semantic-release-action@v4
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}</code></pre>
-<p>Semantic release reads conventional commit messages to determine version bumps:</p>
-<ul><li><code>fix:</code> -&gt; patch (1.0.0 -&gt; 1.0.1)</li><li><code>feat:</code> -&gt; minor (1.0.0 -&gt; 1.1.0)</li><li><code>BREAKING CHANGE:</code> -&gt; major (1.0.0 -&gt; 2.0.0)</li></ul>
-<p><strong>Note</strong>: Go packages MUST NOT be bumped above v1.x.x per Hanzo convention. The <code>.releaserc</code> in Go repos caps at minor/patch.</p>
-<h4>3. <code>docker.yml</code> -- Docker Build and Registry Push</h4>
-<p>Triggered after a successful release tag. This is the core of the containerized build pipeline.</p>
-<pre><code class="lang-yaml">  docker-release:
-    name: Docker Release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-    needs: [tag-release]
-    if: needs.tag-release.outputs.new-release-published == &#x27;true&#x27;
-    steps:
-      - uses: actions/checkout@v4
-
-      # -- Secret injection from KMS --
-      - name: Fetch CI secrets from Hanzo KMS
-        id: kms
-        env:
-          KMS_CLIENT_ID: ${{ secrets.KMS_CLIENT_ID }}
-          KMS_CLIENT_SECRET: ${{ secrets.KMS_CLIENT_SECRET }}
-        run: |
-          set -euo pipefail
-          KMS_URL=&quot;${KMS_URL:-https://kms.hanzo.ai}&quot;
-
-          ACCESS_TOKEN=&quot;$(
-            curl -fsS -X POST &quot;${KMS_URL}/api/v1/auth/universal-auth/login&quot; \
-              -H &quot;Content-Type: application/json&quot; \
-              -d &quot;$(jq -nc --arg cid &quot;$KMS_CLIENT_ID&quot; \
-                           --arg cs  &quot;$KMS_CLIENT_SECRET&quot; \
-                    &#x27;{clientId: $cid, clientSecret: $cs}&#x27;)&quot; \
-            | jq -r &#x27;.accessToken&#x27;
-          )&quot;
-
-          fetch_secret() {
-            curl -fsS \
-              &quot;${KMS_URL}/api/v3/secrets/raw/${1}?\
-          workspaceSlug=gitops&amp;environment=prod&amp;\
-          secretPath=/ci&amp;viewSecretValue=true&amp;\
-          include_imports=true&quot; \
-              -H &quot;Authorization: Bearer ${ACCESS_TOKEN}&quot; \
-            | jq -r &#x27;.secret.secretValue&#x27;
-          }
-
-          for name in DOCKERHUB_USERNAME DOCKERHUB_TOKEN; do
-            val=&quot;$(fetch_secret &quot;$name&quot;)&quot;
-            echo &quot;::add-mask::${val}&quot;
-            echo &quot;${name}=${val}&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
-          done
-
-      # -- Multi-arch build setup --
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-
-      # -- Registry authentication --
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Log in to Docker Hub
-        id: dockerhub-login
-        continue-on-error: true
-        uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ steps.kms.outputs.DOCKERHUB_USERNAME }}
-          password: ${{ steps.kms.outputs.DOCKERHUB_TOKEN }}
-
-      # -- Image metadata --
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ghcr.io/hanzoai/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}},value=${{ needs.tag-release.outputs.new-release-version }}
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix={{branch}}-
-
-      # -- Build and push (GHCR: required) --
-      - name: Build and push to GHCR
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # -- Mirror to Docker Hub (best-effort) --
-      - name: Push to Docker Hub
-        if: steps.dockerhub-login.outcome == &#x27;success&#x27;
-        continue-on-error: true
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: hanzoai/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha</code></pre>
-<h4>4. <code>deploy.yml</code> -- Deployment</h4>
-<p>Triggered after a successful Docker build on the default branch. Supports two deployment targets.</p>
-<pre><code class="lang-yaml">  deploy:
-    name: Deploy
-    needs: [docker-release]
-    if: github.ref == &#x27;refs/heads/main&#x27;
-    runs-on: ubuntu-latest
-    steps:
-      # -- Fetch deploy secrets from KMS --
-      - name: Fetch deploy secrets
-        id: kms
-        env:
-          KMS_CLIENT_ID: ${{ secrets.KMS_CLIENT_ID }}
-          KMS_CLIENT_SECRET: ${{ secrets.KMS_CLIENT_SECRET }}
-        run: |
-          # Same KMS login pattern as docker.yml
-          # Fetches: DIGITALOCEAN_ACCESS_TOKEN
-
-      # -- Kubernetes deployment (preferred) --
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ steps.kms.outputs.do_token }}
-
-      - name: Deploy to K8s
-        run: |
-          doctl kubernetes cluster kubeconfig save the cluster
-          kubectl set image deployment/$SERVICE \
-            $SERVICE=ghcr.io/hanzoai/$SERVICE:latest
-          kubectl rollout status deployment/$SERVICE \
-            --timeout=300s
-
-      - name: Health check
-        run: |
-          kubectl wait --for=condition=available \
-            deployment/$SERVICE --timeout=120s</code></pre>
-<h3>Caching Strategy</h3>
-<p>Builds MUST use GitHub Actions cache to avoid redundant downloads.</p>
+  cicd:
+    uses: hanzoai/ci/.github/workflows/build.yml@v2
+    secrets: inherit</code></pre>
+<p><strong>The caller&#x27;s directory and the callee&#x27;s path are governed by different rules, and conflating them breaks the build.</strong> The caller sits in this repository&#x27;s one workflow directory, which the forge <em>scans</em> (§2). The <code>uses:</code> line is a reference into another repository at a pinned tag — resolved by path at that tag, never scanned — so it names whatever path the reusable workflow occupies there. Today that is <code>hanzoai/ci/.github/workflows/build.yml@v2</code>. Copy the line from <code>hanzoai/ci</code>&#x27;s own caller rather than from memory; it is the one place both halves are known to agree.</p>
+<p>A <code>v*</code> tag is what produces a published immutable image tag. Without that trigger, a release tag builds nothing and there is no version for the declared state to pin.</p>
+<p>A repository MUST NOT carry its own build, test, release or publish logic. Where one exists, the fix is to move the specifics into <code>hanzo.yml</code> and delete the rest — a second implementation of the pipeline is the defect this HIP exists to prevent.</p>
+<h3>2. <code>.hanzo/workflows/</code>, and nothing left under <code>.github/workflows/</code></h3>
+<p>Hanzo Git collects workflows from the <strong>first</strong> entry of <code>WORKFLOW_DIRS</code> that exists — not the union. The moment one file lands in <code>.hanzo/workflows/</code>, every remaining file under <code>.github/workflows/</code> stops running, and it stops <strong>silently</strong>: the checks that would go red are the ones no longer running, so the repository reports green over a pipeline that is not there. A half-finished migration runs neither lane.</p>
+<p>Find the dead files in any repository:</p>
+<pre><code class="lang-bash">comm -23 &lt;(ls .github/workflows) &lt;(ls .hanzo/workflows)   # anything listed is dead</code></pre>
+<p>Moving a file is not reviving it. Two things break on the way across, and both MUST be handled deliberately:</p>
+<ul><li><strong><code>runs-on: ubuntu-latest</code> matches no runner in this fleet, deliberately.</strong></li></ul>
+<p>  Hanzo Git hosts roughly 1,400 mirrored repositories whose upstream workflows   all ask for it; advertising that label would hand the fleet to their CI. An   unmatched label does not fail — it <strong>queues until the timeout</strong>, which reads as   a hung build rather than a misconfiguration. Use a label from <code>RUNNERS.md</code>.</p>
+<ul><li><strong>Anything reading a GitHub-only surface</strong> — <code>github.event.pull_request</code>, PR</li></ul>
+<p>  comments, GitHub Releases, the compare API, GitHub App tokens, CodeQL&#x27;s   <code>security-events</code> upload, OIDC trusted publishing — has no equivalent here. Port   it deliberately, or drop it and say so out loud.</p>
+<p>In a fork, most files under <code>.github/workflows/</code> are the <strong>upstream project&#x27;s</strong> CI: label bots, reviewer assignment, stale bots, release trains for packages we do not publish. Moving those runs someone else&#x27;s automation on our fleet. Sort every file into revive / rewrite / drop, then <strong>delete the directory</strong> — a dead file cannot accumulate in a directory that does not exist.</p>
+<p>The one repository that keeps files in both is <code>hanzoai/ci</code> itself, and for a reason that is not an exception to this rule: its <code>.hanzo/workflows/cicd.yml</code> is its own caller, gated like any other repository, while the reusable workflow it publishes for everyone else is an artifact addressed by path at a tag. It is consumed by reference, never scanned.</p>
+<h3>3. Runner labels</h3>
+<p><code>hanzoai/.github</code> → <code>RUNNERS.md</code> is the single source of truth for the label taxonomy, and both the runner configuration and every workflow&#x27;s <code>runs-on</code> consume it. The canonical label for new workflows is the compound <code>&lt;org&gt;-&lt;os&gt;-&lt;arch&gt;</code> — <code>hanzo-linux-amd64</code>, <code>lux-macos-arm64</code>. Every runner also advertises the compatibility aliases that route to the same capability; author against the canonical form and treat the aliases as history.</p>
+<p>A <code>runs-on</code> value names a <strong>capability</strong>, not a machine. The in-cluster runner serves the fungible amd64-Linux bulk with no physical-host dependency; native host runners serve only what the cluster cannot — Metal GPU, macOS, Windows, and Linux arm64 with CUDA.</p>
+<h3>4. Secrets</h3>
+<p>Secrets are fetched from KMS at build time (HIP-0027, HIP-0136). A repository holds the machine identity it authenticates with and nothing else: no vendor token, no registry password, no cluster credential.</p>
+<p>The build MUST NOT hold a credential for anything it does not itself call. In particular it holds <strong>no cloud provider token and no kubeconfig</strong>, because it does not deploy (§Deployment below). An upstream credential a <em>service</em> needs at runtime is never handed to the build at all — that is egress&#x27;s custody (HIP-0143).</p>
+<h3>5. What a build produces</h3>
+<p>A build produces images and stops. It publishes to <strong>one</strong> destination — <code>oci.hanzo.ai/&lt;org&gt;/&lt;app&gt;</code>, the fleet registry — authenticated with the build&#x27;s IAM identity through a per-repository registry token, never a registry password. HIP-0033 is the one statement of where an image goes; <code>ghcr.io/&lt;org&gt;</code> is for already-published open source that outside users pull, and there is no mirror, no second push and no best-effort publication lane.</p>
+<p>The org prefix never mixes: Hanzo under <code>hanzoai</code>, Lux under <code>luxfi</code>, Zoo under <code>zooai</code>, on whichever host applies.</p>
+<h3>6. Caching</h3>
+<p>Builds MUST cache dependency downloads and image layers.</p>
 <p>| Language | Cache Mechanism | Configuration | |----------|----------------|---------------| | Go | <code>actions/setup-go</code> built-in | <code>cache-dependency-path: ./go.mod</code> | | Node.js | <code>actions/setup-node</code> built-in | <code>cache: &#x27;pnpm&#x27;</code> (or <code>&#x27;yarn&#x27;</code>) | | Python | <code>astral-sh/setup-uv</code> built-in | Automatic uv cache | | Rust | <code>actions/cache</code> manual | <code>~/.cargo/registry</code>, <code>target/</code> | | Docker | GitHub Actions cache backend | <code>cache-from: type=gha</code>, <code>cache-to: type=gha,mode=max</code> |</p>
-<p>Docker layer caching deserves special attention. The <code>type=gha</code> cache backend stores Docker layers in the GitHub Actions cache (10 GB per repo). This means a build that changes only the application layer reuses the base image, dependency install, and compilation layers from cache. For a Go project like IAM, this reduces build time from ~8 minutes to ~2 minutes.</p>
-<h3>Image Tagging Convention</h3>
-<p>All Docker images MUST use the following tag scheme:</p>
-<pre><code>ghcr.io/hanzoai/{service}:{tag}
+<p>Layer caching is the one that matters: a build that changes only the application layer reuses the base image, the dependency install and the compilation layers, which is the difference between a build measured in minutes and one measured in tens of seconds. The cache backend is the forge&#x27;s, reached the same way through <code>act_runner</code>&#x27;s GitHub-Actions-compatible surface.</p>
+<h3>7. Image tagging</h3>
+<p>All images MUST use this tag scheme:</p>
+<pre><code>oci.hanzo.ai/&lt;org&gt;/{service}:{tag}
 
 Tags:
   latest              - Latest build from default branch
   {semver}            - Semantic version (e.g., 1.5.2)
   {branch}-{sha}      - Branch name + short commit SHA (e.g., main-a1b2c3d)</code></pre>
 <p>Examples:</p>
-<pre><code>ghcr.io/hanzoai/iam:latest
-ghcr.io/hanzoai/iam:1.5.2
-ghcr.io/hanzoai/iam:main-a1b2c3d
-ghcr.io/hanzoai/llm-gateway:latest
-ghcr.io/hanzoai/llm-gateway:2.1.0</code></pre>
-<h3>Service Container Images</h3>
-<p>CI workflows that require databases or caches MUST use Hanzo-maintained service images:</p>
-<p>| Service | Image | Notes | |---------|-------|-------| | PostgreSQL | <code>ghcr.io/hanzoai/sql:latest</code> | PostgreSQL with extensions | | Redis | <code>ghcr.io/hanzoai/kv:latest</code> | Redis-compatible KV store | | DocumentDB | <code>mongo:7</code> | Upstream (no Hanzo fork needed) | | MinIO | <code>minio/minio:latest</code> | S3-compatible object storage |</p>
-<h3>Branch Protection Requirements</h3>
-<p>All repositories MUST configure branch protection on <code>main</code>/<code>master</code>:</p>
-<ol><li><strong>Required status checks</strong>: All jobs in <code>build.yml</code> must pass</li><li><strong>Require PR review</strong>: At least one approving review before merge</li><li><strong>Require linear history</strong>: Squash or rebase merges only (no merge commits)</li><li><strong>Signed commits</strong>: Encouraged but not required (GPG or SSH signing)</li></ol>
+<pre><code>oci.hanzo.ai/hanzoai/iam:latest
+oci.hanzo.ai/hanzoai/iam:1.5.2
+oci.hanzo.ai/hanzoai/iam:main-a1b2c3d
+oci.hanzo.ai/luxfi/node:1.17.32</code></pre>
+<p>A floating tag never reaches a cluster: <code>hanzoai/universe</code> pins a semver tag, and <code>latest</code> exists for local pulls and nothing else.</p>
+<h3>8. Service containers in a test job</h3>
+<p>A test job that needs a store MUST use ours, named for what we run (HIP-0144):</p>
+<p>| service | image | |---|---| | <code>sql</code> | <code>oci.hanzo.ai/hanzoai/sql</code> | | <code>kv</code> | <code>oci.hanzo.ai/hanzoai/kv</code> | | <code>datastore</code> | <code>oci.hanzo.ai/hanzoai/datastore</code> | | <code>s3</code> | <code>oci.hanzo.ai/hanzoai/s3</code> |</p>
+<p>There is no DocumentDB service and no MongoDB image; nothing in the fleet runs one, so a test standing one up is testing against an engine that will not be there. A test that needs no server SHOULD use the embedded SQLite path instead of a service container at all — it is faster and it is what the service runs.</p>
+<h3>9. Branch protection</h3>
+<p>All repositories MUST configure branch protection on <code>main</code>:</p>
+<ol><li><strong>Required status checks</strong>: every job of the reusable workflow must pass</li><li><strong>Require PR review</strong>: At least one approving review before merge</li><li><strong>Require linear history</strong>: Squash or rebase merges only (no merge commits)</li><li><strong>Signed commits</strong>: Encouraged but not required (GPG or SSH signing)</li></ol>
 <h3>Conventional Commits</h3>
 <p>All commit messages MUST follow the <a href="https://www.conventionalcommits.org/">Conventional Commits</a> specification:</p>
 <pre><code>&lt;type&gt;[optional scope]: &lt;description&gt;
@@ -527,107 +319,51 @@ Types:
 <h2>Implementation</h2>
 <h3>Repository Structure</h3>
 <p>Every Hanzo repository with CI/CD follows this structure:</p>
-<pre><code>.github/
+<pre><code>hanzo.yml               # what to test, what to build (HIP-0142)
+.hanzo/
   workflows/
-    build.yml           # Test + lint + build (PR and push)
-    docker-deploy.yml   # Docker build + registry push + deploy (push only)
-    sync.yml            # Optional: sync fork with upstream
-  CODEOWNERS            # Required reviewers per path
-Dockerfile              # Multi-stage, multi-target
-compose.yml             # Local development (NOT docker-compose.yml)
-Makefile                # Developer-facing commands
-version.txt             # Current version (read by CI)
-.releaserc              # Semantic-release configuration</code></pre>
-<h3>KMS Secret Organization</h3>
-<p>Secrets in Hanzo KMS are organized by workspace and path:</p>
-<pre><code>Workspace: gitops
-Environment: prod
-Path: /ci
-
-Secrets:
-  DOCKERHUB_USERNAME        # Docker Hub service account
-  DOCKERHUB_TOKEN           # Docker Hub access token
-  DIGITALOCEAN_ACCESS_TOKEN # DO API token for K8s deploy
-  SLACK_WEBHOOK             # Build notification webhook
-  DEPLOY_SSH_KEY            # SSH key for Docker Compose targets</code></pre>
-<p>Each repository&#x27;s KMS Universal Auth identity is scoped to read only from <code>/ci</code>. A repository that also needs application-level secrets (e.g., database URLs for E2E tests) gets additional path access as needed.</p>
-<h3>Deployment Targets</h3>
-<p>Hanzo services deploy to one of two target types:</p>
-<h4>Target 1: Kubernetes (the cluster)</h4>
-<p>The preferred deployment target. The CI workflow:</p>
-<ol><li>Authenticates to DigitalOcean via <code>doctl</code> using a KMS-sourced token</li><li>Configures <code>kubectl</code> for the <code>the cluster</code> cluster</li><li>Updates the deployment image tag: <code>kubectl set image deployment/SERVICE</code></li><li>Waits for rollout: <code>kubectl rollout status</code></li><li>Verifies health: <code>kubectl wait --for=condition=available</code></li></ol>
-<pre><code>Services on the cluster (24.199.76.156):
-  IAM, KMS, Platform, Cloud, Console, Gateway,
-  Commerce, hanzo-app, web3, registry, bootnode-api
-  SQL, KV, DocumentDB, MinIO</code></pre>
-<h4>Target 2: Docker Compose (legacy)</h4>
-<p>For services not yet migrated to K8s. The CI workflow:</p>
-<ol><li>SSHes into the target server using a KMS-sourced SSH key</li><li>Pulls the latest image: <code>docker pull ghcr.io/hanzoai/SERVICE:latest</code></li><li>Restarts the service: <code>docker compose up -d SERVICE</code></li><li>Verifies health via HTTP check</li></ol>
-<p>This target is being phased out in favor of K8s. New services MUST deploy to K8s.</p>
-<h3>Reusable Workflow Pattern</h3>
-<p>The <code>github.com/hanzoai/build</code> repository provides reusable workflows that individual repos call:</p>
-<pre><code class="lang-yaml"># In any Hanzo repo: .github/workflows/docker-deploy.yml
-name: Docker Build and Deploy
-
-on:
-  push:
-    branches: [main, master]
-
-jobs:
-  build-and-deploy:
-    uses: hanzoai/build/.github/workflows/docker-k8s.yml@main
-    with:
-      image-name: my-service
-      k8s-namespace: hanzo
-      k8s-deployment: my-service
-    secrets:
-      KMS_CLIENT_ID: ${{ secrets.KMS_CLIENT_ID }}
-      KMS_CLIENT_SECRET: ${{ secrets.KMS_CLIENT_SECRET }}</code></pre>
-<p>This reduces per-repo workflow files from 150+ lines to ~15 lines while maintaining full customizability via <code>with:</code> inputs.</p>
+    cicd.yml            # ~7 lines: imports hanzoai/ci
+Dockerfile              # multi-stage, multi-target
+compose.yml             # local development (never docker-compose.yml)
+Makefile                # developer-facing commands</code></pre>
+<p>There is no <code>.github/workflows/</code> directory. A repository that still has one has not finished §2, and the files in it either run by accident or do not run at all.</p>
+<h3>Secrets a build may read</h3>
+<p>The path convention is HIP-0136&#x27;s — the path names the app that READS the secret, the key is exactly the environment variable it becomes, and the environment is <code>prod</code>. A build reads under the release pipeline&#x27;s own path:</p>
+<pre><code>hanzo/deploy/&lt;NAME&gt;@prod</code></pre>
+<p><code>deploy</code> is a purpose rather than an app, and it is the one standing exception to HIP-0136&#x27;s rule, because nothing reads it but the release pipeline and the pipeline is not a deployed app. It stays until the pipeline is one.</p>
+<p>What is <strong>not</strong> there any more, and must not come back: a registry mirror&#x27;s username and token, a cloud provider API token, and an SSH key for a compose host. The first has no second registry to authenticate to (§5); the second and third would let a build reach a cluster, which is the authority §Deployment removes.</p>
+<h3>Deployment</h3>
+<p><strong>The pipeline does not deploy.</strong> It publishes an image, and that is the end of its authority. It holds no cloud provider token, no kubeconfig and no SSH key, which is why a compromised build cannot reach a cluster.</p>
+<p>What runs is declared in <code>hanzoai/universe</code> — <code>charts/app/values/&lt;ns&gt;/&lt;name&gt;.yaml</code> pins the semver tag — and <code>cd.hanzo.ai</code> reconciles the cluster toward that declaration within one poll. Promoting a build is therefore an edit to the declared state, reviewable as a diff, and rolling back is the same edit in reverse.</p>
+<p><code>ci.hanzo.ai</code> reads the four values and never writes: no deploy, no retry, no promotion. Two readings it depends on are worth knowing, because both were wrong before they were fixed. A run&#x27;s <strong>jobs</strong> are read rather than its single conclusion — a run that fails at the gate built nothing, a run that fails at the receipt has already built, pinned and proved the release live, and both report <code>failure</code>. And a commit the forge never constructed a run for is <strong>absent</strong>, not failed: there is no log to open, so it is not drawn as a failure.</p>
 <h2>Security</h2>
 <h3>Threat Model</h3>
-<p>| Threat | Mitigation | |--------|-----------| | Leaked secrets in git history | All secrets fetched from KMS at runtime; never written to files or env that persists | | Compromised GitHub Actions runner | KMS access tokens expire in 15 minutes; runner has no persistent credentials | | Supply chain attack via Actions | Pin action versions to SHA, not mutable tags (<code>actions/checkout@abc123</code> not <code>@v4</code>) | | Malicious PR running CI | PRs from forks do not have access to secrets; workflows use <code>pull_request_target</code> carefully | | Container image tampering | GHCR images are content-addressed by digest; Kubernetes can pin to digest | | Privilege escalation in deploy | KMS identities follow least privilege; CI identity cannot read production database credentials |</p>
+<p>| Threat | Mitigation | |--------|-----------| | Leaked secrets in git history | All secrets fetched from KMS at runtime; never written to files or env that persists | | Compromised runner | KMS access tokens are short-lived; the runner holds no persistent credential, and no cluster credential at all | | Supply chain attack via a third-party action | Pin to a full commit SHA, never a mutable tag | | Malicious PR running CI | PRs from forks do not have access to secrets; workflows use <code>pull_request_target</code> carefully | | Container image tampering | GHCR images are content-addressed by digest; Kubernetes can pin to digest | | Privilege escalation in deploy | The build cannot deploy: it has no cluster credential, and the declared state is a reviewed edit in <code>hanzoai/universe</code> | | A workflow that looks like CI and is not | One file in <code>.hanzo/workflows/</code> retires the whole <code>.github/workflows/</code> directory silently; §2 is how that is detected |</p>
 <h3>Secret Hygiene Rules</h3>
-<ol><li><strong>No secrets in git</strong>: Not in code, not in config files, not in <code>.env</code> files. All secrets come from KMS.</li><li><strong>Two GitHub Secrets maximum</strong>: <code>KMS_CLIENT_ID</code> and <code>KMS_CLIENT_SECRET</code>. Everything else is fetched dynamically.</li><li><strong>Mask all secrets</strong>: Every fetched secret MUST be masked with <code>::add-mask::</code> before use.</li><li><strong>Short-lived tokens</strong>: KMS access tokens expire in 15 minutes. If a build takes longer, re-authenticate.</li><li><strong>Audit trail</strong>: KMS logs every secret access. Anomalous patterns (unusual repo, unusual time) trigger alerts.</li></ol>
+<ol><li><strong>No secrets in git</strong>: Not in code, not in config files, not in <code>.env</code> files. All secrets come from KMS.</li><li><strong>One stored identity</strong>: the machine identity the build authenticates to KMS with. Everything else is fetched at build time. It is set <strong>on the forge</strong>, which is what executes these workflows; GitHub&#x27;s secret store is not in this path even for a repository whose workflows live under <code>.github/workflows/</code>.</li><li><strong>Mask all secrets</strong>: Every fetched secret MUST be masked with <code>::add-mask::</code> before use.</li><li><strong>Short-lived tokens</strong>: KMS access tokens expire in 15 minutes. If a build takes longer, re-authenticate.</li><li><strong>Audit trail</strong>: KMS logs every secret access. Anomalous patterns (unusual repo, unusual time) trigger alerts.</li></ol>
 <h3>Image Scanning</h3>
 <p>All Docker images SHOULD be scanned before push using Trivy:</p>
 <pre><code class="lang-yaml">- name: Scan image
-  uses: aquasecurity/trivy-action@master
+  uses: aquasecurity/trivy-action@&lt;full-sha&gt;   # v0.28.0
   with:
-    image-ref: ghcr.io/hanzoai/${{ env.IMAGE }}:${{ env.VERSION }}
-    format: &#x27;sarif&#x27;
-    output: &#x27;trivy-results.sarif&#x27;
-    severity: &#x27;CRITICAL,HIGH&#x27;
-
-- name: Upload scan results
-  uses: github/codeql-action/upload-sarif@v3
-  with:
-    sarif_file: &#x27;trivy-results.sarif&#x27;</code></pre>
-<p>Critical vulnerabilities SHOULD block the release. High vulnerabilities SHOULD be reviewed within 7 days.</p>
+    image-ref: oci.hanzo.ai/hanzoai/${{ env.IMAGE }}:${{ env.VERSION }}
+    format: &#x27;table&#x27;
+    exit-code: &#x27;1&#x27;
+    severity: &#x27;CRITICAL,HIGH&#x27;</code></pre>
+<p>Critical vulnerabilities SHOULD block the release; high vulnerabilities SHOULD be reviewed within seven days.</p>
+<p>The scanner&#x27;s finding is the gate, read from its exit code. A SARIF upload to GitHub&#x27;s code-scanning surface is <strong>not</strong> available here — that is one of the GitHub-only surfaces §2 names — so a workflow that uploads SARIF and treats a successful upload as the check has no gate at all.</p>
 <h3>Supply Chain Security</h3>
-<ul><li><strong>Action pinning</strong>: Prefer SHA-pinned actions over tag references. Tags are mutable; a compromised action could be re-tagged to inject malicious code.</li><li><strong>Dependabot</strong>: All repos MUST enable Dependabot for GitHub Actions workflow updates.</li><li><strong>SLSA provenance</strong>: Docker builds use <code>provenance: false</code> currently (buildx provenance attestations cause issues with some registries). We will enable SLSA Level 2 provenance when registry support stabilizes.</li></ul>
-<h2>Monitoring and Observability</h2>
-<h3>Build Metrics</h3>
-<p>CI workflows emit metrics to the Hanzo observability stack:</p>
-<p>| Metric | Description | Alert Threshold | |--------|-------------|-----------------| | <code>ci.build.duration_seconds</code> | Total workflow duration | &gt; 15 minutes | | <code>ci.test.duration_seconds</code> | Test job duration | &gt; 10 minutes | | <code>ci.docker.build_seconds</code> | Docker build + push duration | &gt; 8 minutes | | <code>ci.deploy.duration_seconds</code> | Deploy + health check duration | &gt; 5 minutes | | <code>ci.build.failure_rate</code> | Rolling 24h failure rate | &gt; 20% | | <code>ci.cache.hit_rate</code> | Docker/dependency cache hit rate | &lt; 50% |</p>
-<h3>Deployment Notifications</h3>
-<p>Build results are posted to Slack via webhook:</p>
-<pre><code>[IAM] Deploy succeeded
-  Version: 1.5.2
-  Commit: a1b2c3d &quot;feat: apply application.DefaultGroup for OAuth signups&quot;
-  Duration: 3m 42s
-  Cluster: the cluster</code></pre>
-<p>Failed builds include the failure step and a link to the workflow run.</p>
-<pre><code class="lang-bash">gh repo create hanzoai/my-new-service \
-  --template hanzoai/template \
-  --public</code></pre>
-<h2>Future Work</h2>
-<h3>Phase 1: Current (Q1 2025)</h3>
-<ul><li>Standardized workflows across all 260+ repos</li><li>KMS-first secret management</li><li>Multi-arch Docker builds</li><li>K8s deployment via kubectl</li></ul>
-<h3>Phase 3: GitOps (Q4 2025)</h3>
-<ul><li>ArgoCD for K8s deployments (when cluster count &gt; 5)</li><li>Manifest repo (<code>hanzoai/deploy</code>) as deployment source of truth</li><li>Environment promotion: staging -&gt; production with approval gates</li><li>Drift detection and automatic reconciliation</li></ul>
+<ul><li><strong>Action pinning</strong>: Prefer SHA-pinned actions over tag references. Tags are mutable; a compromised action could be re-tagged to inject malicious code.</li><li><strong>Dependency updates</strong>: repositories SHOULD run automated dependency updates for their workflow&#x27;s third-party actions, with the same SHA-pinning rule applied to the update.</li><li><strong>Provenance</strong>: the build stamp and the bill of materials are HIP-0074&#x27;s; that HIP states what is emitted today and what is target-not-yet-served, and this one does not restate it.</li></ul>
+<h2>Monitoring</h2>
+<p><code>ci.hanzo.ai</code> answers one question per service: <strong>is what we wrote what is running?</strong> It reads four values that form one causal line, and reports the arrow that did not happen rather than a pass or a fail:</p>
+<pre><code>head ──build──▶ built ──pin──▶ declared ──reconcile──▶ running</code></pre>
+<p>| value | read from | |---|---| | <strong>head</strong> | the repository&#x27;s default branch | | <strong>built</strong> | the newest commit whose run produced an image | | <strong>declared</strong> | <code>charts/app/values/&lt;ns&gt;/&lt;name&gt;.yaml</code> in <code>hanzoai/universe</code> | | <strong>running</strong> | the workload&#x27;s image in the cluster, by digest |</p>
+<p>Three matching values are not health, which is why head is read at all: built, declared and running can agree perfectly while <code>main</code> has moved on and nothing since has built. <code>unbuilt</code> is counted only once a build has STOPPED without producing an image, so a push in flight is not reported as drift.</p>
+<p>It reads the cluster through its own ServiceAccount — <code>get</code> and <code>list</code> on workloads, nothing else, no stored credential — and it never writes: no deploy, no retry, no promotion.</p>
+<h2>Migration status</h2>
+<p>The cutover from <code>arcd</code> to <code>act_runner</code> is done and <code>arcd</code> is retired; the runbook and teardown live in <code>hanzoai/universe</code>. What remains is per-repository: every repository that still carries workflow files under <code>.github/workflows/</code> must sort them into revive / rewrite / drop and delete the directory (§2). Until a repository has done that, one of two things is true of it — either it is still running its GitHub-era pipeline on the forge by accident, or it landed one file in <code>.hanzo/workflows/</code> and silently stopped running everything else.</p>
 <h2>References</h2>
-<ol><li><a href="https://docs.github.com/en/actions">GitHub Actions Documentation</a></li><li><a href="https://docs.docker.com/build/building/multi-platform/">Docker Buildx Multi-Platform Builds</a></li><li><a href="https://www.conventionalcommits.org/">Conventional Commits Specification</a></li><li><a href="https://github.com/semantic-release/semantic-release">Semantic Release</a></li><li><a href="https://slsa.dev/">SLSA Supply Chain Security Framework</a></li><li><a href="./hip-0014-application-deployment-standard.md">HIP-0014: Application Deployment Standard</a></li><li><a href="./hip-0033-container-registry-standard.md">HIP-0033: KMS Secret Management</a></li><li><a href="https://github.com/hanzoai/iam/tree/main/.github/workflows">Hanzo IAM CI/CD</a> -- Reference implementation</li><li><a href="https://github.com/hanzoai/build">Hanzo Build Repository</a></li></ol>
+<ol><li><a href="https://github.com/hanzoai/ci"><code>hanzoai/ci</code></a> -- the one reusable workflow</li><li><code>hanzoai/.github</code> -&gt; <code>RUNNERS.md</code> -- the runner label taxonomy, single source of truth</li><li><a href="./hip-0142-one-manifest-five-kinds.md">HIP-0142: One Manifest, Five Kinds</a> -- <code>hanzo.yml</code>, and every reader of it</li><li><a href="./hip-0033-container-registry-standard.md">HIP-0033: Container Registry Standard</a> -- where an image is published</li><li><a href="./hip-0027-secrets-management-standard.md">HIP-0027: Secrets Management Standard</a> -- where a build&#x27;s secrets come from</li><li><a href="./hip-0136-one-secret-one-path.md">HIP-0136: One Secret, One Path</a> -- how a secret is addressed</li><li><a href="./hip-0143-egress-outbound-trust-boundary.md">HIP-0143: Egress -- The Outbound Trust Boundary</a> -- why a runtime credential never reaches a build</li><li><a href="./hip-0014-application-deployment-standard.md">HIP-0014: Application Deployment Standard</a></li><li><a href="./hip-1122-deploy-gitops-plane.md">HIP-1122: Deploy -- The GitOps Plane</a> -- what reconciles the declared state</li><li><a href="https://www.conventionalcommits.org/">Conventional Commits Specification</a></li><li><a href="https://slsa.dev/">SLSA Supply Chain Security Framework</a></li></ol>
 <h2>Copyright</h2>
 <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</p>
 <footer>
@@ -649,5 +385,4 @@ jobs:
 </div>
 <div class="fend"><a href="/hip-0036.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

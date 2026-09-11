@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-vector</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-vector.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-vector">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-vector.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-vector</h1><p class="lede">Hanzo Vector is a high-performance vector search engine for the Hanzo AI platform.</p><h1>Hanzo Vector - High-Performance Vector Search Engine</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-database.md</code>, <code>hanzo/hanzo-storage.md</code>, <code>hanzo/hanzo-llm-gateway.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Vector is a <strong>high-performance vector search engine</strong> for the Hanzo AI platform. It is a full fork of <a href="https://github.com/qdrant/qdrant">Qdrant</a> v1.17.0, written in Rust, providing dense and sparse vector similarity search with filtering, payloads, quantization, distributed clustering, and GPU acceleration.</p>
+<p>The crate is named <code>hanzo-vector</code> (package name in Cargo.toml), but the binary is still <code>qdrant</code> for wire-protocol compatibility with Qdrant clients.</p>
+<h3>Why Hanzo Vector?</h3>
+<ul><li><strong>Drop-in Qdrant replacement</strong>: Compatible with all Qdrant client SDKs (Python, JS, Rust, Go)</li><li><strong>Dense + sparse vectors</strong>: Hybrid search combining semantic embeddings and keyword matching</li><li><strong>HNSW indexing</strong>: Approximate nearest neighbor with SIMD acceleration</li><li><strong>Vector quantization</strong>: Scalar, product, and binary quantization for memory efficiency</li><li><strong>GPU acceleration</strong>: NVIDIA (Vulkan) and AMD (ROCm) support via <code>--features gpu</code></li><li><strong>Distributed mode</strong>: Raft consensus, sharding, and replication</li><li><strong>REST + gRPC APIs</strong>: OpenAPI 3.0 schema and Protocol Buffer definitions</li><li><strong>Write-ahead logging</strong>: Crash-safe persistence with snapshot-based backup</li><li><strong>Edge runtime</strong>: Embedded mode via <code>lib/edge</code> with Python bindings</li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Language</strong>: Rust (edition 2024, rust-version 1.92)</li><li><strong>HTTP server</strong>: actix-web with rustls TLS</li><li><strong>gRPC server</strong>: tonic (custom fork for qdrant compatibility)</li><li><strong>Consensus</strong>: Raft (via <code>raft</code> crate, prost codec)</li><li><strong>Allocator</strong>: jemalloc (tikv-jemallocator) on x86_64/aarch64</li><li><strong>Profiling</strong>: Pyroscope, tracing-tracy, console-subscriber</li><li><strong>Build</strong>: cargo-chef for Docker layer caching, mold linker</li></ul>
+<h3>OSS Base</h3>
+<p>Fork of <a href="https://github.com/qdrant/qdrant">qdrant/qdrant</a>. Repo: <code>hanzoai/vector</code>, branch <code>master</code> (not <code>main</code>).</p>
+<h2>When to use</h2>
+<ul><li>Storing and searching AI embeddings (LLM, vision, audio)</li><li>Semantic similarity search with metadata filtering</li><li>Recommendation engines using vector similarity</li><li>RAG (Retrieval-Augmented Generation) pipelines</li><li>Hybrid search combining dense vectors with sparse (BM25-style) vectors</li><li>High-throughput vector operations requiring GPU acceleration</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Rust 1.92+</strong> for building from source</li><li><strong>Protobuf compiler</strong> (<code>protoc</code>) for gRPC code generation</li><li><strong>clang + lld</strong> for linking (or mold)</li><li><strong>Docker</strong> for containerized deployment</li><li><strong>Vulkan drivers</strong> if using GPU features (NVIDIA or AMD)</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Repo | <code>github.com/hanzoai/vector</code> | | Branch | <code>master</code> (code), <code>main</code> (stub placeholder) | | Version | 1.17.0 | | Language | Rust (edition 2024) | | Binary | <code>qdrant</code> | | REST port | 6333 | | gRPC port | 6334 | | P2P port | 6335 (cluster mode) | | Docker image | <code>ghcr.io/hanzoai/vector:latest</code> | | License | Apache-2.0 | | Config | <code>config/config.yaml</code> | | OpenAPI | <code>openapi/</code> | | gRPC protos | <code>lib/api/src/grpc/proto/</code> |</p>
+<h2>One-file quickstart</h2>
+<h3>Docker (single node)</h3>
+<pre><code class="lang-bash">docker run -p 6333:6333 -p 6334:6334 ghcr.io/hanzoai/vector:latest</code></pre>
+<h3>Docker with persistent storage</h3>
+<pre><code class="lang-bash">docker run -p 6333:6333 -p 6334:6334 \
+ -v $(pwd)/data:/qdrant/storage \
+ -v $(pwd)/snapshots:/qdrant/snapshots \
+ ghcr.io/hanzoai/vector:latest</code></pre>
+<h3>Docker with custom config</h3>
+<pre><code class="lang-bash">docker run -p 6333:6333 -p 6334:6334 \
+ -v $(pwd)/config.yaml:/qdrant/config/production.yaml \
+ -v $(pwd)/data:/qdrant/storage \
+ ghcr.io/hanzoai/vector:latest</code></pre>
+<h3>Build from source</h3>
+<pre><code class="lang-bash">cargo build --release --bin qdrant
+./target/release/qdrant --config-path config/config.yaml</code></pre>
+<h3>Build with GPU support</h3>
+<pre><code class="lang-bash">cargo build --release --bin qdrant --features gpu</code></pre>
+<h2>Core Concepts</h2>
+<h3>Architecture</h3>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│ Hanzo Vector Node │
+├──────────────┬───────────────┬───────────────────────────┤
+│ REST API │ gRPC API │ Web UI │
+│ (actix-web) │ (tonic) │ (static files) │
+│ :6333 │ :6334 │ :6333/dashboard │
+├──────────────┴───────────────┴───────────────────────────┤
+│ Storage Layer │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Collection │ │
+│ │ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │
+│ │ │ Shard 0 │ │ Shard 1 │ │ Shard N │ │ │
+│ │ │┌────────┐│ │┌────────┐│ │┌────────┐│ │ │
+│ │ ││Segment ││ ││Segment ││ ││Segment ││ │ │
+│ │ ││ HNSW ││ ││ HNSW ││ ││ HNSW ││ │ │
+│ │ ││ Index ││ ││ Index ││ ││ Index ││ │ │
+│ │ │└────────┘│ │└────────┘│ │└────────┘│ │ │
+│ │ └──────────┘ └──────────┘ └──────────┘ │ │
+│ └─────────────────────────────────────────────────────┘ │
+├──────────────────────────────────────────────────────────┤
+│ WAL (Write-Ahead Log) │ Snapshots │ Gridstore │
+├──────────────────────────────────────────────────────────┤
+│ Raft Consensus (P2P :6335) -- cluster mode only │
+└──────────────────────────────────────────────────────────┘</code></pre>
+<h3>Data Model</h3>
+<ul><li><strong>Collection</strong>: A named group of points with a defined vector configuration (dimension, distance metric)</li><li><strong>Point</strong>: A record with an ID (u64 or UUID), one or more named vectors, and an optional JSON payload</li><li><strong>Payload</strong>: Arbitrary JSON metadata attached to a point, indexable for filtering</li><li><strong>Shard</strong>: A horizontal partition of a collection, distributable across cluster nodes</li><li><strong>Segment</strong>: An immutable storage unit within a shard containing vectors + indexes</li></ul>
+<h3>Distance Metrics</h3>
+<ul><li><strong>Cosine</strong> -- angular similarity (default for embeddings)</li><li><strong>Euclidean</strong> -- L2 distance</li><li><strong>Dot</strong> -- inner product</li><li><strong>Manhattan</strong> -- L1 distance</li></ul>
+<h3>Quantization</h3>
+<ul><li><strong>Scalar</strong> -- 8-bit quantization (4x memory reduction)</li><li><strong>Product</strong> -- PQ compression (up to 64x reduction)</li><li><strong>Binary</strong> -- 1-bit per dimension (32x reduction, fastest)</li></ul>
+<h2>Workspace Structure</h2>
+<pre><code>hanzoai/vector (master branch)
+├── Cargo.toml # Root workspace, package: hanzo-vector v1.17.0
+├── Cargo.lock
+├── Dockerfile # Multi-stage: chef → planner → builder → runtime
+├── config/
+│ ├── config.yaml # Full reference config with all options
+│ ├── production.yaml # Production overrides
+│ └── development.yaml # Dev overrides
+├── src/ # Main binary source
+│ ├── main.rs # Entry point, CLI args, server startup
+│ ├── consensus.rs # Raft consensus implementation
+│ ├── settings.rs # Config loading and validation
+│ ├── snapshots.rs # Snapshot management
+│ ├── startup.rs # Server initialization
+│ ├── greeting.rs # Startup banner
+│ ├── actix/ # REST API handlers (actix-web)
+│ │ ├── api/ # Route handlers per resource
+│ │ │ ├── collections_api.rs
+│ │ │ ├── search_api.rs
+│ │ │ ├── query_api.rs
+│ │ │ ├── recommend_api.rs
+│ │ │ ├── retrieve_api.rs
+│ │ │ ├── update_api.rs
+│ │ │ ├── count_api.rs
+│ │ │ ├── cluster_api.rs
+│ │ │ ├── snapshot_api.rs
+│ │ │ ├── shards_api.rs
+│ │ │ ├── local_shard_api.rs
+│ │ │ ├── discovery_api.rs
+│ │ │ ├── facet_api.rs
+│ │ │ └── service_api.rs
+│ │ ├── auth.rs # API key + JWT RBAC auth
+│ │ └── mod.rs # Actix server config
+│ ├── tonic/ # gRPC service implementations
+│ ├── tracing/ # Tracing/logging setup
+│ └── migrations/ # Storage format migrations
+├── lib/ # Workspace crates
+│ ├── api/ # API types (REST + gRPC)
+│ │ ├── src/grpc/proto/ # Protobuf definitions
+│ │ │ ├── qdrant.proto
+│ │ │ ├── collections.proto
+│ │ │ ├── points.proto
+│ │ │ ├── collections_service.proto
+│ │ │ ├── points_service.proto
+│ │ │ ├── snapshots_service.proto
+│ │ │ ├── shard_snapshots_service.proto
+│ │ │ ├── raft_service.proto
+│ │ │ └── health_check.proto
+│ │ └── src/rest/ # REST API types
+│ ├── collection/ # Collection management (CRUD, optimization)
+│ ├── segment/ # Core storage engine
+│ │ └── src/
+│ │ ├── index/ # HNSW index implementation
+│ │ ├── vector_storage/ # Vector data storage
+│ │ ├── payload_storage/# Payload storage + indexing
+│ │ ├── id_tracker/ # Point ID mapping
+│ │ ├── spaces/ # Distance metric implementations
+│ │ ├── data_types/ # Vector type definitions
+│ │ └── types.rs # Core type definitions (170KB)
+│ ├── storage/ # Storage orchestration layer
+│ ├── shard/ # Shard management and transfer
+│ ├── sparse/ # Sparse vector support
+│ ├── quantization/ # Quantization (scalar/product/binary, C++ FFI)
+│ ├── posting_list/ # Inverted index for sparse vectors
+│ ├── gridstore/ # Column-oriented storage for payloads
+│ ├── gpu/ # GPU acceleration (Vulkan, NVIDIA/AMD)
+│ ├── edge/ # Embedded mode (no server, direct API)
+│ │ └── python/ # Python bindings for edge mode
+│ ├── trififo/ # Lock-free triple-buffer FIFO
+│ ├── macros/ # Proc macros
+│ └── common/ # Shared utilities
+│ ├── common/ # Core common types
+│ ├── cancel/ # Cancellation tokens
+│ ├── dataset/ # Dataset loading utilities
+│ └── issues/ # Issue tracking/reporting
+├── openapi/ # OpenAPI 3.0 schema (ytt templates)
+│ ├── openapi-main.ytt.yaml
+│ ├── openapi-collections.ytt.yaml
+│ ├── openapi-points.ytt.yaml
+│ ├── openapi-service.ytt.yaml
+│ ├── openapi-snapshots.ytt.yaml
+│ ├── openapi-shard-snapshots.ytt.yaml
+│ ├── openapi-shards.ytt.yaml
+│ ├── openapi-cluster.ytt.yaml
+│ └── schemas/
+├── tests/ # Integration tests
+│ ├── basic_api_test.sh
+│ ├── basic_grpc_test.sh
+│ ├── basic_sparse_test.sh
+│ ├── consensus_tests/
+│ ├── e2e_tests/
+│ └── openapi/
+├── tools/ # Build and dev scripts
+│ ├── entrypoint.sh # Docker entrypoint
+│ ├── sync-web-ui.sh # Download web dashboard
+│ ├── compose/ # Docker compose files for cluster
+│ └── schema2openapi/ # Schema generation tooling
+└── pkg/
+ └── appimage/ # AppImage packaging</code></pre>
+<h2>REST API Endpoints</h2>
+<p>All endpoints are on port 6333 by default. Auth via <code>api-key</code> header or JWT bearer token.</p>
+<h3>Collections</h3>
+<pre><code class="lang-bash"># List collections
+GET /collections
+
+# Create collection
+PUT /collections/{name}
+{
+ &quot;vectors&quot;: { &quot;size&quot;: 1536, &quot;distance&quot;: &quot;Cosine&quot; },
+ &quot;optimizers_config&quot;: { &quot;indexing_threshold&quot;: 10000 },
+ &quot;replication_factor&quot;: 2
+}
+
+# Get collection info
+GET /collections/{name}
+
+# Delete collection
+DELETE /collections/{name}
+
+# Update collection params
+PATCH /collections/{name}</code></pre>
+<h3>Points</h3>
+<pre><code class="lang-bash"># Upsert points
+PUT /collections/{name}/points
+{
+ &quot;points&quot;: [
+ {
+ &quot;id&quot;: 1,
+ &quot;vector&quot;: [0.1, 0.2, ...],
+ &quot;payload&quot;: { &quot;city&quot;: &quot;Berlin&quot;, &quot;category&quot;: &quot;tech&quot; }
+ }
+ ]
+}
+
+# Get points by ID
+POST /collections/{name}/points
+{ &quot;ids&quot;: [1, 2, 3], &quot;with_payload&quot;: true, &quot;with_vector&quot;: true }
+
+# Delete points
+POST /collections/{name}/points/delete
+{ &quot;points&quot;: [1, 2, 3] }
+
+# Count points
+POST /collections/{name}/points/count
+{ &quot;filter&quot;: { &quot;must&quot;: [{ &quot;key&quot;: &quot;city&quot;, &quot;match&quot;: { &quot;value&quot;: &quot;Berlin&quot; } }] } }</code></pre>
+<h3>Search</h3>
+<pre><code class="lang-bash"># Vector search
+POST /collections/{name}/points/search
+{
+ &quot;vector&quot;: [0.1, 0.2, ...],
+ &quot;limit&quot;: 10,
+ &quot;filter&quot;: {
+ &quot;must&quot;: [{ &quot;key&quot;: &quot;city&quot;, &quot;match&quot;: { &quot;value&quot;: &quot;Berlin&quot; } }]
+ },
+ &quot;with_payload&quot;: true
+}
+
+# Batch search
+POST /collections/{name}/points/search/batch
+{ &quot;searches&quot;: [...] }
+
+# Query (universal search endpoint)
+POST /collections/{name}/points/query
+{
+ &quot;query&quot;: [0.1, 0.2, ...],
+ &quot;limit&quot;: 10,
+ &quot;filter&quot;: { ... }
+}
+
+# Recommend
+POST /collections/{name}/points/recommend
+{
+ &quot;positive&quot;: [1, 2],
+ &quot;negative&quot;: [3],
+ &quot;limit&quot;: 10
+}
+
+# Discover (context-based search)
+POST /collections/{name}/points/discover</code></pre>
+<h3>Snapshots</h3>
+<pre><code class="lang-bash"># Create snapshot
+POST /collections/{name}/snapshots
+
+# List snapshots
+GET /collections/{name}/snapshots
+
+# Download snapshot
+GET /collections/{name}/snapshots/{snapshot_name}
+
+# Full storage snapshot
+POST /snapshots</code></pre>
+<h3>Cluster</h3>
+<pre><code class="lang-bash"># Cluster info
+GET /cluster
+
+# Collection cluster info
+GET /collections/{name}/cluster
+
+# Move shard
+POST /collections/{name}/cluster
+{ &quot;move_shard&quot;: { &quot;shard_id&quot;: 0, &quot;from_peer_id&quot;: 1, &quot;to_peer_id&quot;: 2 } }</code></pre>
+<h3>Service</h3>
+<pre><code class="lang-bash"># Health check
+GET /healthz
+
+# Readiness
+GET /readyz
+
+# Telemetry
+GET /telemetry
+
+# Metrics (Prometheus)
+GET /metrics
+
+# Locks
+GET /locks
+POST /locks</code></pre>
+<h2>gRPC Services</h2>
+<p>Port 6334 by default. Proto files in <code>lib/api/src/grpc/proto/</code>.</p>
+<p>| Service | Proto | Description | |---------|-------|-------------| | <code>Collections</code> | <code>collections_service.proto</code> | CRUD for collections | | <code>Points</code> | <code>points_service.proto</code> | CRUD, search, recommend, query for points | | <code>Snapshots</code> | <code>snapshots_service.proto</code> | Snapshot management | | <code>ShardSnapshots</code> | <code>shard_snapshots_service.proto</code> | Per-shard snapshot operations | | <code>Qdrant</code> | <code>qdrant.proto</code> | Health check, version info | | <code>QdrantInternal</code> | <code>qdrant_internal_service.proto</code> | Internal cluster operations | | <code>Raft</code> | <code>raft_service.proto</code> | Raft consensus messages |</p>
+<h2>Configuration</h2>
+<p>The config file (<code>config/config.yaml</code>) supports YAML with environment variable overrides. Key sections:</p>
+<pre><code class="lang-yaml">storage:
+ storage_path: ./storage # Data directory
+ snapshots_path: ./snapshots # Snapshot directory
+ on_disk_payload: true # Keep payloads on disk (saves RAM)
+ wal:
+ wal_capacity_mb: 32 # WAL segment size
+ hnsw_index:
+ m: 16 # HNSW edges per node
+ ef_construct: 100 # Build-time neighbors
+ full_scan_threshold_kb: 10000
+ on_disk: false # HNSW in RAM or disk
+ optimizers:
+ indexing_threshold_kb: 10000
+ flush_interval_sec: 5
+ collection:
+ replication_factor: 1
+ write_consistency_factor: 1
+
+service:
+ http_port: 6333
+ grpc_port: 6334
+ host: 0.0.0.0
+ max_request_size_mb: 32
+ enable_cors: true
+ enable_tls: false
+ # api_key: your_secret_key
+ # jwt_rbac: true
+
+cluster:
+ enabled: false
+ p2p:
+ port: 6335
+ consensus:
+ tick_period_ms: 100
+
+telemetry_disabled: false</code></pre>
+<p>Environment variable override pattern: <code>QDRANT__SERVICE__HTTP_PORT=6333</code> (double underscore for nesting).</p>
+<h2>Distributed Deployment</h2>
+<p>Enable cluster mode with <code>cluster.enabled: true</code> and specify bootstrap peers:</p>
+<pre><code class="lang-bash"># Node 1 (bootstrap)
+./qdrant --uri http://node1:6335
+
+# Node 2
+./qdrant --uri http://node2:6335 --bootstrap http://node1:6335
+
+# Node 3
+./qdrant --uri http://node3:6335 --bootstrap http://node1:6335</code></pre>
+<p>Cluster features:</p>
+<ul><li><strong>Raft consensus</strong> for metadata coordination</li><li><strong>Sharding</strong>: Automatic or manual shard distribution</li><li><strong>Replication</strong>: Configurable replication factor per collection</li><li><strong>Shard transfer methods</strong>: <code>stream_records</code>, <code>snapshot</code>, <code>wal_delta</code></li><li><strong>Write consistency</strong>: Configurable quorum (1 to all replicas)</li></ul>
+<h2>Debug Binaries</h2>
+<p>Available with <code>--features service_debug</code>:</p>
+<pre><code class="lang-bash"># Generate JSON schema for all types
+cargo run --features service_debug --bin schema_generator
+
+# Inspect WAL contents
+cargo run --features service_debug --bin wal_inspector -- &lt;path&gt;
+
+# Pop entries from WAL
+cargo run --features service_debug --bin wal_pop -- &lt;path&gt;
+
+# Inspect segment data
+cargo run --features service_debug --bin segment_inspector -- &lt;path&gt;</code></pre>
+<h2>Docker Build</h2>
+<p>The Dockerfile supports multi-platform builds with optional GPU:</p>
+<pre><code class="lang-bash"># Standard build
+docker build -t hanzo-vector .
+
+# With GPU (NVIDIA)
+docker build --build-arg GPU=nvidia -t hanzo-vector:gpu .
+
+# With GPU (AMD)
+docker build --build-arg GPU=amd -t hanzo-vector:gpu-amd .
+
+# Custom profile
+docker build --build-arg PROFILE=ci -t hanzo-vector:ci .
+
+# With extra features
+docker build --build-arg FEATURES=rocksdb -t hanzo-vector:rocksdb .</code></pre>
+<h2>Feature Flags</h2>
+<p>| Feature | Description | |---------|-------------| | <code>gpu</code> | GPU-accelerated HNSW (NVIDIA Vulkan / AMD ROCm) | | <code>rocksdb</code> | RocksDB storage backend (alternative to default) | | <code>tracing</code> | Distributed tracing support | | <code>console</code> | tokio-console subscriber for runtime debugging | | <code>tracy</code> | Tracy profiler integration | | <code>stacktrace</code> | Stack trace capture on Linux | | <code>staging</code> | Staging environment features | | <code>data-consistency-check</code> | Runtime data integrity verification | | <code>chaos-testing</code> | Chaos engineering hooks |</p>
+<h2>Testing</h2>
+<pre><code class="lang-bash"># Unit tests
+cargo test
+
+# Integration tests (requires running instance)
+bash tests/basic_api_test.sh
+bash tests/basic_grpc_test.sh
+bash tests/basic_sparse_test.sh
+
+# Consensus tests
+cd tests/consensus_tests &amp;&amp; cargo test
+
+# E2E tests
+cd tests/e2e_tests &amp;&amp; cargo test
+
+# OpenAPI consistency check
+bash tests/openapi_consistency_check.sh
+
+# Python integration tests (uses uv)
+cd tests &amp;&amp; uv run pytest</code></pre>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | Port 6333 in use | Another instance running | <code>lsof -i :6333</code> and kill | | OOM on large collections | Vectors in RAM | Set <code>on_disk: true</code> in vector config or use quantization | | Slow search | No HNSW index built yet | Wait for optimizer or lower <code>indexing_threshold_kb</code> | | gRPC connection refused | gRPC disabled | Set <code>grpc_port: 6334</code> in config | | Cluster peer unreachable | P2P port blocked | Open port 6335, check TLS settings | | GPU not detected | Missing Vulkan drivers | Install <code>vulkan-tools</code>, verify with <code>vulkaninfo</code> | | Build fails on macOS | Missing protoc | <code>brew install protobuf</code> |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-database.md</code> - PostgreSQL (pgvector for simpler vector search)</li><li><code>hanzo/hanzo-storage.md</code> - S3-compatible object storage</li><li><code>hanzo/hanzo-llm-gateway.md</code> - LLM Gateway (generates embeddings for vector storage)</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: vector, embeddings, similarity-search, qdrant, hnsw, ai <strong>Prerequisites</strong>: Rust, Docker, protobuf basics</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-vector.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

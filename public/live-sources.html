@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>live-sources</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/live-sources.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/live-sources">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/live-sources.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>live-sources</h1><p class="lede">This file contains WebFetch URLs for fetching current information from platform.claude.com and Agent SDK repositories.</p><h1>Live Documentation Sources</h1>
+<p>This file contains WebFetch URLs for fetching current information from platform.claude.com and Agent SDK repositories. Use these when users need the latest data that may have changed since the cached content was last updated.</p>
+<h2>When to Use WebFetch</h2>
+<ul><li>User explicitly asks for &quot;latest&quot; or &quot;current&quot; information</li><li>Cached data seems incorrect</li><li>User asks about features not covered in cached content</li><li>User needs specific API details or examples</li></ul>
+<h2>Claude API Documentation URLs</h2>
+<h3>Models &amp; Pricing</h3>
+<p>| Topic           | URL                                                                          | Extraction Prompt                                                               | | --------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | | Models Overview | <code>https://platform.claude.com/docs/en/about-claude/models/overview.md</code>        | &quot;Extract current model IDs, context windows, and pricing for all Claude models&quot; | | Migration Guide | <code>https://platform.claude.com/docs/en/about-claude/models/migration-guide.md</code> | &quot;Extract breaking changes, deprecated parameters, and per-model migration steps when moving to a newer Claude model&quot; | | Introducing Claude Fable 5 | <code>https://platform.claude.com/docs/en/about-claude/models/introducing-claude-fable-5.md</code> | &quot;Extract capabilities, API changes, and availability stages for Claude Fable 5 and Claude Mythos 5&quot; | | Pricing         | <code>https://platform.claude.com/docs/en/pricing.md</code>                             | &quot;Extract current pricing per million tokens for input and output&quot;               |</p>
+<h3>Core Features</h3>
+<p>| Topic             | URL                                                                          | Extraction Prompt                                                                      | | ----------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | | Extended Thinking | <code>https://platform.claude.com/docs/en/build-with-claude/extended-thinking.md</code> | &quot;Extract extended thinking parameters, budget_tokens requirements, and usage examples&quot; | | Adaptive Thinking | <code>https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking.md</code> | &quot;Extract adaptive thinking setup, effort levels, and Claude Opus 5 usage examples&quot;         | | Effort Parameter  | <code>https://platform.claude.com/docs/en/build-with-claude/effort.md</code>            | &quot;Extract effort levels, cost-quality tradeoffs, and interaction with thinking&quot;        | | Tool Use          | <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview.md</code>  | &quot;Extract tool definition schema, tool_choice options, and handling tool results&quot;       | | Streaming         | <code>https://platform.claude.com/docs/en/build-with-claude/streaming.md</code>         | &quot;Extract streaming event types, SDK examples, and best practices&quot;                      | | Prompt Caching    | <code>https://platform.claude.com/docs/en/build-with-claude/prompt-caching.md</code>    | &quot;Extract cache_control usage, pricing benefits, and implementation examples&quot;           |</p>
+<h3>Media &amp; Files</h3>
+<p>| Topic       | URL                                                                    | Extraction Prompt                                                 | | ----------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------- | | Vision      | <code>https://platform.claude.com/docs/en/build-with-claude/vision.md</code>      | &quot;Extract supported image formats, size limits, and code examples&quot; | | PDF Support | <code>https://platform.claude.com/docs/en/build-with-claude/pdf-support.md</code> | &quot;Extract PDF handling capabilities, limits, and examples&quot;         |</p>
+<h3>API Operations</h3>
+<p>| Topic            | URL                                                                         | Extraction Prompt                                                                                       | | ---------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | | Batch Processing | <code>https://platform.claude.com/docs/en/build-with-claude/batch-processing.md</code> | &quot;Extract batch API endpoints, request format, and polling for results&quot;                                  | | Files API        | <code>https://platform.claude.com/docs/en/build-with-claude/files.md</code>            | &quot;Extract file upload, download, and referencing in messages, including supported types and beta header&quot; | | Token Counting   | <code>https://platform.claude.com/docs/en/build-with-claude/token-counting.md</code>   | &quot;Extract token counting API usage and examples&quot;                                                         | | Rate Limits      | <code>https://platform.claude.com/docs/en/api/rate-limits.md</code>                    | &quot;Extract current rate limits by tier and model&quot;                                                         | | Errors           | <code>https://platform.claude.com/docs/en/api/errors.md</code>                         | &quot;Extract HTTP error codes, meanings, and retry guidance&quot;                                                | | Amazon Bedrock   | <code>https://platform.claude.com/docs/en/build-with-claude/claude-on-amazon-bedrock.md</code> | &quot;Extract the AnthropicBedrockMantle client per language, <code>anthropic.</code>-prefixed model IDs, auth paths, feature availability, and regions&quot; | | Claude Platform on AWS | <code>https://platform.claude.com/docs/en/build-with-claude/claude-platform-on-aws.md</code> | &quot;Extract the AnthropicAWS client per language, SigV4 auth, credential precedence, short-term API keys, workspace_id, and region requirements&quot; | | Claude Platform on AWS — IAM actions | <code>https://platform.claude.com/docs/en/api/claude-platform-on-aws-iam-actions.md</code> | &quot;Extract the IAM action names, resource ARNs, and policy examples required for each API capability&quot; |</p>
+<h3>Tools</h3>
+<p>| Topic          | URL                                                                                    | Extraction Prompt                                                                        | | -------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | | Code Execution | <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/code-execution-tool.md</code> | &quot;Extract code execution tool setup, file upload, container reuse, and response handling&quot; | | Computer Use   | <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/computer-use.md</code>        | &quot;Extract computer use tool setup, capabilities, and implementation examples&quot;             | | Bash Tool      | <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/bash-tool.md</code>           | &quot;Extract bash tool schema, reference implementation, and security considerations&quot;        | | Text Editor    | <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/text-editor-tool.md</code>    | &quot;Extract text editor tool commands, schema, and reference implementation&quot;                | | Memory Tool    | <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool.md</code>         | &quot;Extract memory tool commands, directory structure, and implementation patterns&quot;         | | Tool Search    | <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-search-tool.md</code>    | &quot;Extract tool search setup, when to use, and cache interaction&quot;                          | | Programmatic Tool Calling | <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/programmatic-tool-calling.md</code> | &quot;Extract PTC setup, script execution model, and tool invocation from code&quot;    | | Skills         | <code>https://platform.claude.com/docs/en/agents-and-tools/skills.md</code>                       | &quot;Extract skill folder structure, SKILL.md format, and loading behavior&quot;                  |</p>
+<h3>Advanced Features</h3>
+<p>| Topic              | URL                                                                           | Extraction Prompt                                   | | ------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------- | | Structured Outputs | <code>https://platform.claude.com/docs/en/build-with-claude/structured-outputs.md</code> | &quot;Extract output_config.format usage and schema enforcement&quot;                           | | Compaction         | <code>https://platform.claude.com/docs/en/build-with-claude/compaction.md</code>         | &quot;Extract compaction setup, trigger config, and streaming with compaction&quot;             | | Context Editing    | <code>https://platform.claude.com/docs/en/build-with-claude/context-editing.md</code>    | &quot;Extract context editing thresholds, what gets cleared, and configuration&quot;            | | Citations          | <code>https://platform.claude.com/docs/en/build-with-claude/citations.md</code>          | &quot;Extract citation format and implementation&quot;        | | Context Windows    | <code>https://platform.claude.com/docs/en/build-with-claude/context-windows.md</code>    | &quot;Extract context window sizes and token management&quot; |</p>
+<h3>Managed Agents</h3>
+<p>Use these when a managed-agents binding, behavior, or wire-level detail isn&#x27;t covered in the cached <code>shared/managed-agents-*.md</code> concept files or in <code>{lang}/managed-agents/README.md</code>.</p>
+<p>| Topic                 | URL                                                                              | Extraction Prompt                                                                               | | --------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | | Overview              | <code>https://platform.claude.com/docs/en/managed-agents/overview.md</code>                 | &quot;Extract the high-level architecture and how agents/sessions/environments/vaults fit together&quot; | | Quickstart            | <code>https://platform.claude.com/docs/en/managed-agents/quickstart.md</code>               | &quot;Extract the minimal end-to-end agent → environment → session → stream code path&quot;              | | Agent Setup           | <code>https://platform.claude.com/docs/en/managed-agents/agent-setup.md</code>              | &quot;Extract agent create/update/list-versions/archive lifecycle and parameters&quot;                   | | Define Outcomes       | <code>https://platform.claude.com/docs/en/managed-agents/define-outcomes.md</code>          | &quot;Extract outcome definitions, evaluation hooks, and success criteria configuration&quot;             | | Sessions              | <code>https://platform.claude.com/docs/en/managed-agents/sessions.md</code>                 | &quot;Extract session lifecycle, status transitions, idle/terminated semantics, and resume rules&quot;    | | Environments          | <code>https://platform.claude.com/docs/en/managed-agents/environments.md</code>             | &quot;Extract environment config (cloud/networking), management endpoints, and reuse model&quot;          | | Self-Hosted Sandboxes | <code>https://platform.claude.com/docs/en/managed-agents/self-hosted-sandboxes.md</code>    | &quot;Extract config:{type:self_hosted}, ANTHROPIC_ENVIRONMENT_KEY, EnvironmentWorker.run/run_one, beta_agent_toolset, ant beta:worker poll/run, webhook-driven wake&quot; | | Self-Hosted Sandboxes — Security | <code>https://platform.claude.com/docs/en/managed-agents/self-hosted-sandboxes-security.md</code> | &quot;Extract what the customer owns (hardening, egress, key custody, trust boundaries) vs what Anthropic cannot do&quot; | | Events and Streaming  | <code>https://platform.claude.com/docs/en/managed-agents/events-and-streaming.md</code>     | &quot;Extract event stream types, stream-first ordering, reconnect/dedupe, and steering patterns&quot;    | | Tools                 | <code>https://platform.claude.com/docs/en/managed-agents/tools.md</code>                    | &quot;Extract built-in toolset, custom tool definitions, and tool result wire format&quot;                | | Files                 | <code>https://platform.claude.com/docs/en/managed-agents/files.md</code>                    | &quot;Extract file upload, mount paths, session resources, and listing/downloading session outputs&quot;  | | Permission Policies   | <code>https://platform.claude.com/docs/en/managed-agents/permission-policies.md</code>      | &quot;Extract permission policy types (allow/deny/confirm) and per-tool config&quot;                     | | Multi-Agent           | <code>https://platform.claude.com/docs/en/managed-agents/multiagent-orchestration.md</code> | &quot;Extract multi-agent composition patterns, sub-agent invocation, and result handoff&quot;            | | Observability         | <code>https://platform.claude.com/docs/en/managed-agents/observability.md</code>            | &quot;Extract logging, tracing, and usage telemetry exposed by managed agents&quot;                       | | Webhooks              | <code>https://platform.claude.com/docs/en/managed-agents/webhooks.md</code>                 | &quot;Extract webhook endpoint registration, HMAC signature verification, supported event types, and delivery semantics&quot; | | GitHub                | <code>https://platform.claude.com/docs/en/managed-agents/github.md</code>                   | &quot;Extract github_repository resource shape, multi-repo mounting, and token rotation&quot;             | | MCP Connector         | <code>https://platform.claude.com/docs/en/managed-agents/mcp-connector.md</code>            | &quot;Extract MCP server declaration on agents and vault-based credential injection at session&quot;     | | Vaults                | <code>https://platform.claude.com/docs/en/managed-agents/vaults.md</code>                   | &quot;Extract vault create, credential add/rotate, OAuth refresh shape, and archive&quot;                 | | Skills                | <code>https://platform.claude.com/docs/en/managed-agents/skills.md</code>                   | &quot;Extract skill packaging and loading model for managed agents&quot;                                  | | Memory                | <code>https://platform.claude.com/docs/en/managed-agents/memory.md</code>                   | &quot;Extract memory resource shape, scoping, and lifecycle&quot;                                         | | Onboarding            | <code>https://platform.claude.com/docs/en/managed-agents/onboarding.md</code>               | &quot;Extract first-run setup, prerequisites, and account/region requirements&quot;                      | | Cloud Containers      | <code>https://platform.claude.com/docs/en/managed-agents/cloud-containers.md</code>         | &quot;Extract cloud container runtime, image config, and network/storage knobs&quot;                     | | Migration             | <code>https://platform.claude.com/docs/en/managed-agents/migration.md</code>                | &quot;Extract migration paths from earlier APIs/preview shapes to GA managed agents&quot;                 |</p>
+<h3>Anthropic CLI</h3>
+<p>The <code>ant</code> CLI provides terminal access to the Claude API. Every API resource is exposed as a subcommand. It is the recommended way to create agents and environments from version-controlled YAML (<code>ant beta:agents create &lt; agent.yaml</code> — see <code>shared/anthropic-cli.md</code>), and also exposes sessions and every other API resource for scripting and interactive inspection.</p>
+<p>| Topic         | URL                                                     | Extraction Prompt                                                                                  | | ------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | | Anthropic CLI | <code>https://platform.claude.com/docs/en/api/sdks/cli.md</code>   | &quot;Extract CLI install, authentication, command structure, and the beta:agents/environments/sessions commands&quot; | | Authentication overview | <code>https://platform.claude.com/docs/en/manage-claude/authentication.md</code> | &quot;Extract the credential options (API keys, interactive OAuth login, Workload Identity Federation) and when to use each&quot; | | WIF reference | <code>https://platform.claude.com/docs/en/manage-claude/wif-reference.md</code>  | &quot;Extract credential precedence order, the profile configuration file schema, and the configuration directory layout&quot; |</p>
+<hr>
+<h2>Claude API SDK Repositories</h2>
+<p>WebFetch these when a binding (class, method, namespace, field) isn&#x27;t covered in the cached <code>{lang}/</code> skill files or in the managed-agents docs above. The SDKs include beta managed-agents support for <code>/v1/agents</code>, <code>/v1/sessions</code>, <code>/v1/environments</code>, and related resources — search the repo for <code>BetaManagedAgents</code>, <code>beta.agents</code>, <code>beta.sessions</code>, or the equivalent namespace for that language.</p>
+<p>| SDK        | URL                                                      | Extraction Prompt                                                                                                       | | ---------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | | Python     | <code>https://github.com/anthropics/anthropic-sdk-python</code>     | &quot;Extract beta managed-agents namespaces, classes, and method signatures (<code>client.beta.agents</code>, <code>client.beta.sessions</code>)&quot; | | TypeScript | <code>https://github.com/anthropics/anthropic-sdk-typescript</code> | &quot;Extract beta managed-agents namespaces, classes, and method signatures (<code>client.beta.agents</code>, <code>client.beta.sessions</code>)&quot; | | Java       | <code>https://github.com/anthropics/anthropic-sdk-java</code>       | &quot;Extract beta managed-agents classes, builders, and method signatures (<code>client.beta().agents()</code>, <code>BetaManagedAgents*</code>)&quot; | | Go         | <code>https://github.com/anthropics/anthropic-sdk-go</code>         | &quot;Extract beta managed-agents types and method signatures (<code>client.Beta.Agents</code>, <code>BetaManagedAgents*</code> event types)&quot;      | | Ruby       | <code>https://github.com/anthropics/anthropic-sdk-ruby</code>       | &quot;Extract beta managed-agents methods and parameter shapes (<code>client.beta.agents</code>, <code>client.beta.sessions</code>)&quot;               | | C#         | <code>https://github.com/anthropics/anthropic-sdk-csharp</code>     | &quot;Extract beta managed-agents classes and method signatures (NuGet package, <code>BetaManagedAgents*</code> types)&quot;                 | | PHP        | <code>https://github.com/anthropics/anthropic-sdk-php</code>        | &quot;Extract beta managed-agents classes and method signatures (<code>$client-&gt;beta-&gt;agents</code>, <code>BetaManagedAgents*</code> params)&quot;      |</p>
+<p>Each SDK repo also ships runnable programs under <code>examples/</code> — including the refusal-fallback / <code>fallbacks</code> examples (client-side middleware registration, fallback state, server-side <code>fallbacks</code> param). Fetch those for exact per-language syntax instead of translating another language&#x27;s example.</p>
+<h3>SDK major-version upgrade guides</h3>
+<p>Authoritative change lists for upgrading the SDK package itself across a major version. The bundled <code>{lang}/claude-api/sdk-upgrade.md</code> is the executable form; when the two disagree, the repository guide wins.</p>
+<p>| SDK                | URL                                                                         | Extraction Prompt                                                                                                   | | ------------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | | Python (0.x → 1.x) | <code>https://github.com/anthropics/anthropic-sdk-python/blob/main/MIGRATION.md</code> | &quot;Extract every breaking change with its before/after code, the new minimum Python version, and the upgrade command&quot; |</p>
+<hr>
+<h2>Fallback Strategy</h2>
+<p>If WebFetch fails (network issues, URL changed):</p>
+<ol><li>Use cached content from the language-specific files (note the cache date)</li><li>Inform user the data may be outdated</li><li>Suggest they check platform.claude.com or the GitHub repos directly</li></ol>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/live-sources.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

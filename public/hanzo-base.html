@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-base</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-base.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-base">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-base.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-base</h1><p class="lede">Hanzo Base is an open source Go backend that provides a complete application backend in a single binary.</p><h1>Hanzo Base - Open Source Backend for Any App</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-platform.md</code>, <code>hanzo/hanzo-orm.md</code>, <code>hanzo/hanzo-database.md</code>, <code>hanzo/js-sdk.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Base is an <strong>open source Go backend</strong> that provides a complete application backend in a single binary. It includes embedded SQLite and PostgreSQL databases with realtime subscriptions, built-in file and user management, an Admin dashboard UI, REST and GraphQL APIs, CRDT-based collaboration, and a JavaScript plugin VM. Go module: <code>github.com/hanzoai/base</code>.</p>
+<h3>Why Hanzo Base?</h3>
+<ul><li><strong>Single binary</strong>: Entire backend compiles to one portable executable (CGO_ENABLED=0)</li><li><strong>Embedded databases</strong>: In-memory, SQL (SQLite via modernc, PostgreSQL via pgx), and vector DB with realtime subscriptions</li><li><strong>Built-in auth</strong>: Users, OAuth2, OTP, MFA, password reset, email verification, superuser management</li><li><strong>Admin dashboard</strong>: Svelte/Vite SPA embedded in the Go binary</li><li><strong>JavaScript hooks</strong>: Extend with JS via embedded Goja VM (no separate Node.js process)</li><li><strong>CRDT support</strong>: Conflict-free replicated data types for collaborative editing</li><li><strong>Plugin system</strong>: cloudsql, functions, jsvm, migratecmd, platform, scheduler, zap</li><li><strong>SDK clients</strong>: <code>@hanzoai/base</code> (JS/TS), <code>@hanzoai/base-react</code> (React hooks)</li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Backend</strong>: Go 1.26, cobra CLI, embedded SQLite (modernc.org/sqlite), PostgreSQL (pgx/v5)</li><li><strong>Admin UI</strong>: Svelte 4, Vite 5, CodeMirror, Chart.js</li><li><strong>JS SDK</strong>: <code>@hanzoai/base</code> v0.1.0 (TypeScript, tsup)</li><li><strong>React SDK</strong>: <code>@hanzoai/base-react</code> v0.1.0 (React hooks)</li><li><strong>Releases</strong>: GoReleaser (linux/darwin/windows, amd64/arm64)</li><li><strong>Container</strong>: <code>ghcr.io/hanzoai/base</code>, Alpine-based, port 8080</li></ul>
+<h3>OSS Base</h3>
+<p>Repo: <code>hanzoai/base</code>. License: MIT.</p>
+<h2>When to use</h2>
+<ul><li>Building app backends that need auth, file storage, and a database out of the box</li><li>Prototyping APIs quickly with automatic CRUD, realtime, and admin UI</li><li>Extending a Go application with a full backend toolkit (use as a library)</li><li>Self-hosted BaaS (Backend as a Service) alternative</li><li>Apps needing CRDT-based realtime collaboration</li><li>Multi-tenant platforms with IAM and KMS integration (via platform plugin)</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Go 1.24+</strong> for building from source</li><li><strong>Node 18+</strong> for Admin UI development only</li><li>No external database required (SQLite embedded); PostgreSQL optional via plugins</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Go module | <code>github.com/hanzoai/base</code> | | Default port | <code>8080</code> (Docker), <code>8090</code> (dev) | | Admin UI | <code>/_/</code> path on running instance | | Data dir | <code>./hz_data</code> (default) | | Health check | <code>GET /api/health</code> | | JS SDK | <code>@hanzoai/base</code> | | React SDK | <code>@hanzoai/base-react</code> | | Docker image | <code>ghcr.io/hanzoai/base</code> | | License | MIT | | Repo | <code>github.com/hanzoai/base</code> |</p>
+<h2>One-file quickstart</h2>
+<h3>Use as a Go library</h3>
+<pre><code class="lang-go">package main
+
+import (
+ &quot;log&quot;
+
+ &quot;github.com/hanzoai/base&quot;
+ &quot;github.com/hanzoai/base/core&quot;
+)
+
+func main() {
+ app := base.New()
+
+ app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+ // registers new &quot;GET /hello&quot; route
+ se.Router.GET(&quot;/hello&quot;, func(re *core.RequestEvent) error {
+ return re.String(200, &quot;Hello world!&quot;)
+ })
+
+ return se.Next()
+ })
+
+ if err := app.Start(); err != nil {
+ log.Fatal(err)
+ }
+}</code></pre>
+<p>Then run:</p>
+<pre><code class="lang-bash">go mod init myapp &amp;&amp; go mod tidy
+go run main.go serve</code></pre>
+<h3>Run as standalone binary</h3>
+<pre><code class="lang-bash"># Download from releases or build from source
+CGO_ENABLED=0 go build -o base ./examples/base
+./base serve --http=0.0.0.0:8080 --dir=./hz_data</code></pre>
+<h3>Docker</h3>
+<pre><code class="lang-bash">docker run -d \
+ --name base \
+ -p 8080:8080 \
+ -v ./hz_data:/pb_data \
+ ghcr.io/hanzoai/base \
+ serve --http=0.0.0.0:8080 --dir=/pb_data</code></pre>
+<h2>Core Concepts</h2>
+<h3>Architecture</h3>
+<pre><code>┌──────────────────────────────────────────────┐
+│ Hanzo Base Binary │
+├──────────────┬───────────────┬───────────────┤
+│ REST API │ Realtime WS │ Admin UI │
+│ /api/* │ /api/realtime│ /_/ │
+├──────────────┴───────────────┴───────────────┤
+│ core.App │
+│ ┌─────────┐ ┌──────────┐ ┌───────────────┐ │
+│ │ Records │ │ Auth │ │ File Storage │ │
+│ │ (CRUD) │ │ (OAuth2) │ │ (S3/local) │ │
+│ └─────────┘ └──────────┘ └───────────────┘ │
+├──────────────────────────────────────────────┤
+│ SQLite (default) │ PostgreSQL (cloudsql) │
+└──────────────────────────────────────────────┘</code></pre>
+<h3>Directory Structure</h3>
+<pre><code>base/
+ base.go # Main Base struct, implements core.App
+ core/ # Core app logic, records, collections, events, router
+ apis/ # HTTP API handlers (records, auth, collections, realtime, batch, etc.)
+ cmd/ # CLI commands (serve, superuser)
+ crdt/ # CRDT types (document, text, sync)
+ forms/ # Form validation (record upsert, email, S3 test)
+ migrations/ # Database migration scripts
+ mails/ # Email templates
+ plugins/
+ jsvm/ # JavaScript VM (Goja) for hooks and migrations
+ migratecmd/ # Migration CLI command
+ cloudsql/ # Serverless PostgreSQL (per-tenant)
+ functions/ # OpenFaaS serverless functions
+ platform/ # Multi-tenant IAM + KMS integration
+ scheduler/ # Cron/scheduled tasks
+ ghupdate/ # GitHub self-update
+ zap/ # ZAP binary protocol transport (port 9652)
+ sdk/
+ base-js/ # @hanzoai/base TypeScript SDK
+ base-react/ # @hanzoai/base-react React hooks
+ tools/ # Internal utility packages
+ archive/ # Archive utilities
+ auth/ # Auth helpers
+ cron/ # Cron scheduler
+ dbutils/ # Database utilities
+ filesystem/ # File system abstraction
+ hook/ # Event hook system
+ inflector/ # String inflection
+ list/ # List utilities
+ logger/ # Structured logging
+ mailer/ # Email sending
+ osutils/ # OS utilities
+ picker/ # Data picker
+ router/ # HTTP router
+ routine/ # Goroutine helpers
+ search/ # Search utilities
+ security/ # Security helpers
+ store/ # In-memory store
+ subscriptions/ # Realtime subscriptions
+ template/ # Template engine
+ tokenizer/ # Token utilities
+ types/ # Custom types
+ ui/ # Admin dashboard (Svelte 4 + Vite 5)
+ examples/base/ # Standalone example with all plugins
+ tests/ # Integration tests
+ docs/ # Documentation</code></pre>
+<h3>Plugin System</h3>
+<p>Plugins extend Base via hooks on the <code>core.App</code> interface:</p>
+<p>| Plugin | Purpose | |--------|---------| | <code>jsvm</code> | JavaScript hooks and migrations via Goja VM | | <code>migratecmd</code> | Database migration CLI commands | | <code>cloudsql</code> | Serverless PostgreSQL per-tenant provisioning | | <code>functions</code> | OpenFaaS serverless function integration | | <code>platform</code> | Multi-tenant IAM (hanzo.id) + KMS (kms.hanzo.ai) | | <code>scheduler</code> | Cron-based scheduled tasks | | <code>ghupdate</code> | GitHub self-update for releases | | <code>zap</code> | Binary protocol transport on port 9652 |</p>
+<h3>CLI Commands</h3>
+<pre><code class="lang-bash">./base serve # Start the HTTP server
+./base serve --dev # Dev mode (verbose logging, SQL output)
+./base serve --http=0.0.0.0:8080
+./base serve --dir=./hz_data
+./base superuser create # Create a superuser
+./base superuser upsert # Create or update a superuser</code></pre>
+<h3>Global Flags</h3>
+<pre><code>--dir Data directory (default: ./hz_data)
+--dev Enable dev mode
+--encryptionEnv Env var name for 32-char encryption key
+--queryTimeout Default SELECT query timeout in seconds</code></pre>
+<h3>Auth Methods</h3>
+<p>Base supports multiple authentication methods out of the box:</p>
+<ul><li><strong>Password</strong>: Email/password login</li><li><strong>OAuth2</strong>: External providers (Google, GitHub, Apple, etc.)</li><li><strong>OTP</strong>: One-time password via email</li><li><strong>MFA</strong>: Multi-factor authentication</li><li><strong>Email verification</strong>: Confirm email addresses</li><li><strong>Password reset</strong>: Token-based password recovery</li><li><strong>Impersonation</strong>: Superuser can act as any user</li><li><strong>Token refresh</strong>: JWT refresh flow</li></ul>
+<h3>Realtime</h3>
+<p>WebSocket-based realtime subscriptions at <code>/api/realtime</code>:</p>
+<ul><li>Subscribe to record changes per collection</li><li>Presence tracking for connected clients</li><li>Event types: create, update, delete</li></ul>
+<h3>CRDT</h3>
+<p>The <code>crdt/</code> package provides conflict-free replicated data types:</p>
+<ul><li><code>Document</code>: JSON document with merge semantics</li><li><code>Text</code>: Collaborative text editing</li><li><code>Sync</code>: Synchronization protocol between peers</li></ul>
+<h2>Development</h2>
+<h3>Build and test</h3>
+<pre><code class="lang-bash"># Run tests
+go test ./...
+make test
+
+# Lint
+golangci-lint run -c ./golangci.yml ./...
+make lint
+
+# Build standalone binary
+cd examples/base
+CGO_ENABLED=0 go build
+
+# Generate JS types for JSVM plugin
+make jstypes
+
+# Test coverage report
+make test-report</code></pre>
+<h3>Admin UI development</h3>
+<pre><code class="lang-bash">cd ui
+npm install
+npm run dev # Dev server at localhost:3000
+npm run build # Production build to ui/dist/</code></pre>
+<p>The Admin UI expects the backend at <code>http://localhost:8090</code> by default. Override with <code>HZ_BACKEND_URL</code> in <code>ui/.env.development.local</code>.</p>
+<h3>Docker build</h3>
+<pre><code class="lang-dockerfile"># Multi-stage build (from repo Dockerfile)
+FROM golang:1.26-alpine AS builder
+WORKDIR /build
+COPY . .
+CGO_ENABLED=0 go build \
+ -ldflags=&quot;-s -w -X github.com/hanzoai/base.Version=$(git describe --tags)&quot; \
+ -o /build/base ./examples/base/main.go
+
+FROM alpine:3.21
+COPY --from=builder /build/base /app/base
+EXPOSE 8080
+ENTRYPOINT [&quot;/app/base&quot;]
+CMD [&quot;serve&quot;, &quot;--http=0.0.0.0:8080&quot;, &quot;--dir=/pb_data&quot;]</code></pre>
+<h2>SDK Clients</h2>
+<h3>JavaScript SDK (<code>@hanzoai/base</code>)</h3>
+<pre><code class="lang-typescript">import { BaseClient } from &#x27;@hanzoai/base&#x27;;
+
+const client = new BaseClient(&#x27;http://localhost:8080&#x27;);
+
+// Reactive queries, query deduplication, optimistic updates
+// Exports: core, react hooks, crdt</code></pre>
+<p>Exports:</p>
+<ul><li><code>@hanzoai/base</code> -- core client</li><li><code>@hanzoai/base/react</code> -- React hooks</li><li><code>@hanzoai/base/crdt</code> -- CRDT collaboration</li></ul>
+<h3>React SDK (<code>@hanzoai/base-react</code>)</h3>
+<pre><code class="lang-typescript">import { useBaseQuery } from &#x27;@hanzoai/base-react&#x27;;
+
+// Reactive queries, optimistic mutations, realtime, CRDT collaboration</code></pre>
+<h3>Official external SDKs</h3>
+<ul><li><strong>JavaScript</strong>: <code>@hanzoai/js-sdk</code> (github.com/hanzoai/js-sdk)</li><li><strong>Dart</strong>: <code>@hanzoai/dart-sdk</code> (github.com/hanzoai/dart-sdk)</li></ul>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | Port 8090 already in use | Another Base instance running | Kill process or use <code>--http=:8091</code> | | SQLite build errors | CGO required by default | Use <code>CGO_ENABLED=0</code> for pure Go SQLite | | Admin UI not loading | UI dist not embedded | Run <code>cd ui &amp;&amp; npm run build</code> first | | JS hooks not executing | Wrong hooks directory | Use <code>--hooksDir=./hz_hooks</code> flag | | Modernc version mismatch | Dependency conflict | Check <code>modernc_versions_check.go</code> logs |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-platform.md</code> - PaaS platform (uses Base platform plugin)</li><li><code>hanzo/hanzo-orm.md</code> - ORM package (complementary Go data layer)</li><li><code>hanzo/hanzo-database.md</code> - Database infrastructure</li><li><code>hanzo/js-sdk.md</code> - JavaScript SDK ecosystem</li><li><code>hanzo/hanzo-id.md</code> - IAM (used by platform plugin)</li><li><code>hanzo/hanzo-kms.md</code> - Secret management (used by platform plugin)</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-05-12 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: backend, baas, go, realtime, crdt, auth, admin <strong>Prerequisites</strong>: Go 1.24+, basic REST API knowledge</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-base.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

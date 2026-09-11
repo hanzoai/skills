@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>flag_retirement_workflow</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/flag_retirement_workflow.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/flag_retirement_workflow">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/flag_retirement_workflow.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>flag_retirement_workflow</h1><p class="lede">Production-ready workflow for safely retiring feature flags with checklists, timelines, and automation.</p><h1>Feature Flag Retirement Workflow</h1>
+<p>Production-ready workflow for safely retiring feature flags with checklists, timelines, and automation.</p>
+<h2>Overview</h2>
+<p>Feature flag retirement is critical to prevent technical debt. This workflow ensures safe, systematic flag removal.</p>
+<h2>Retirement Phases</h2>
+<h3>Phase 1: Identification (Week 1)</h3>
+<p><strong>Objective</strong>: Identify flags ready for retirement</p>
+<p><strong>Checklist</strong>:</p>
+<ul><li>[ ] Flag has been at 100% rollout for 30+ days</li><li>[ ] No active experiments using this flag</li><li>[ ] No customer-facing issues reported</li><li>[ ] Flag variation is consistently used (&gt;99%)</li><li>[ ] Business stakeholders approve removal</li><li>[ ] Technical team reviews impact</li></ul>
+<p><strong>Analysis</strong>:</p>
+<pre><code class="lang-bash"># Check flag usage
+./analyze_flag_usage.py track --flag feature-x --days 90
+
+# Check stale flags
+./analyze_flag_usage.py stale --threshold 90 --flags-file flags.json
+
+# Get retirement recommendations
+./analyze_flag_usage.py recommend-retire \
+    --confidence 0.8 \
+    --flags-file flags.json</code></pre>
+<p><strong>Criteria for Retirement</strong>:</p>
+<ol><li><strong>Age</strong>: Flag is 90+ days old</li><li><strong>Stability</strong>: No changes in 30+ days</li><li><strong>Consistency</strong>: Single variation used &gt;99% of time</li><li><strong>Impact</strong>: Low risk to business operations</li><li><strong>Dependencies</strong>: No other flags depend on it</li></ol>
+<p><strong>Output</strong>: List of candidate flags with confidence scores</p>
+<h3>Phase 2: Planning (Week 2)</h3>
+<p><strong>Objective</strong>: Create detailed retirement plan</p>
+<p><strong>Tasks</strong>:</p>
+<ol><li><strong>Code Analysis</strong></li></ol>
+<p>   ```bash    # Find all code references    grep -r &quot;feature-x&quot; --include=&quot;<em>.py&quot; --include=&quot;</em>.js&quot; .</p>
+<p>   # Or use the analysis tool    ./analyze_flag_usage.py debt --flag feature-x --flags-file flags.json    ```</p>
+<ol><li><strong>Dependency Mapping</strong></li></ol>
+<ul><li>Identify services using the flag</li><li>Check for SDK integrations</li><li>Review analytics/monitoring dependencies</li><li>Document configuration files</li></ul>
+<ol><li><strong>Impact Assessment</strong></li></ol>
+<p>   | Area | Impact Level | Notes |    |------|-------------|-------|    | Frontend | Low | Only in 2 components |    | Backend | Medium | Used in 5 services |    | Mobile | None | Not used |    | Analytics | High | Multiple dashboards |    | Tests | Medium | 15 tests reference flag |</p>
+<ol><li><strong>Rollback Plan</strong></li></ol>
+<ul><li>Document how to re-enable if needed</li><li>Identify monitoring metrics</li><li>Define rollback triggers</li></ul>
+<p><strong>Output</strong>: Retirement plan document</p>
+<h3>Phase 3: Communication (Week 2-3)</h3>
+<p><strong>Objective</strong>: Notify stakeholders and prepare teams</p>
+<p><strong>Communication Plan</strong>:</p>
+<ol><li><strong>Announcement</strong> (Week 2, Monday)</li></ol>
+<p>   ```    Subject: Feature Flag Retirement: feature-x</p>
+<p>   We plan to retire the &#x27;feature-x&#x27; feature flag in 2 weeks.</p>
+<p>   Timeline:</p>
+<ul><li>Week 3: Code cleanup begins</li><li>Week 4: Flag removed from codebase</li><li>Week 5: Monitoring period</li></ul>
+<p>   Impact:</p>
+<ul><li>[List affected areas]</li></ul>
+<p>   Action Required:</p>
+<ul><li>Review your services for dependencies</li><li>Update documentation</li><li>Notify your team</li></ul>
+<p>   Questions? Contact: [Team]    ```</p>
+<ol><li><strong>Team Notifications</strong></li></ol>
+<ul><li>Engineering teams</li><li>Product managers</li><li>QA/Testing teams</li><li>DevOps/SRE</li><li>Support team</li></ul>
+<ol><li><strong>Documentation Updates</strong></li></ol>
+<ul><li>Update feature flag registry</li><li>Mark flag as &quot;deprecated&quot; in code</li><li>Add warnings to SDK calls</li></ul>
+<p><strong>Checklist</strong>:</p>
+<ul><li>[ ] Sent announcement email</li><li>[ ] Posted in Slack/Teams channels</li><li>[ ] Updated Jira/Linear tickets</li><li>[ ] Marked flag as deprecated in LaunchDarkly/Unleash</li><li>[ ] Updated README and docs</li></ul>
+<h3>Phase 4: Deprecation (Week 3)</h3>
+<p><strong>Objective</strong>: Mark flag as deprecated and prepare for removal</p>
+<p><strong>Steps</strong>:</p>
+<ol><li><strong>Add Deprecation Warnings</strong></li></ol>
+<p>   ```python    # Python example    import warnings</p>
+<p>   def check_feature_x():        warnings.warn(            &quot;feature-x flag is deprecated and will be removed in v2.0&quot;,            DeprecationWarning,            stacklevel=2        )        return feature_flags.is_enabled(&#x27;feature-x&#x27;)    ```</p>
+<p>   ``<code>javascript    // JavaScript example    function checkFeatureX() {        console.warn(&#x27;feature-x flag is deprecated and will be removed in v2.0&#x27;);        return featureFlags.isEnabled(&#x27;feature-x&#x27;);    }    </code>``</p>
+<ol><li><strong>Update Flag Metadata</strong></li></ol>
+<p>   ``<code>bash    # Using management tool    ./manage_feature_flags.py update \        --key feature-x \        --environment production \        --description &quot;DEPRECATED: Will be removed 2025-02-01&quot;    </code>``</p>
+<ol><li><strong>Add Tests for Removal</strong></li></ol>
+<p>   ```python    # Test that flag can be safely removed    def test_feature_x_removal():        # Verify default behavior        result = get_feature_behavior(flag_enabled=False)        assert result == expected_default_behavior</p>
+<p>       # Verify flag enabled behavior (should be same)        result = get_feature_behavior(flag_enabled=True)        assert result == expected_default_behavior    ```</p>
+<p><strong>Checklist</strong>:</p>
+<ul><li>[ ] Deprecation warnings added</li><li>[ ] Flag marked as deprecated in provider</li><li>[ ] Tests verify removal safety</li><li>[ ] Monitoring alerts updated</li><li>[ ] Documentation reflects deprecation</li></ul>
+<h3>Phase 5: Code Cleanup (Week 4)</h3>
+<p><strong>Objective</strong>: Remove flag references from code</p>
+<p><strong>Process</strong>:</p>
+<ol><li><strong>Create Feature Branch</strong></li></ol>
+<p>   ``<code>bash    git checkout -b remove-feature-x-flag    </code>``</p>
+<ol><li><strong>Remove Flag Checks</strong></li></ol>
+<p>   ```python    # Before    if feature_flags.is_enabled(&#x27;feature-x&#x27;):        new_implementation()    else:        legacy_implementation()</p>
+<p>   # After (keep winning variation)    new_implementation()    ```</p>
+<ol><li><strong>Remove Unused Code</strong></li></ol>
+<ul><li>Delete legacy code paths</li><li>Remove conditional logic</li><li>Clean up imports</li><li>Update comments</li></ul>
+<ol><li><strong>Update Tests</strong></li></ol>
+<p>   ```python    # Before    @parametrize(&#x27;flag_enabled&#x27;, [True, False])    def test_feature_x(flag_enabled):        # Test both paths        pass</p>
+<p>   # After    def test_feature_x():        # Test single path        pass    ```</p>
+<ol><li><strong>Update Documentation</strong></li></ol>
+<ul><li>Remove flag from feature flag registry</li><li>Update architecture docs</li><li>Clean up onboarding guides</li></ul>
+<p><strong>Automated Cleanup Tool</strong>:</p>
+<pre><code class="lang-bash"># Find and replace
+find . -type f -name &quot;*.py&quot; -exec sed -i &#x27;&#x27; \
+    &#x27;/feature-x/d&#x27; {} +
+
+# Verify changes
+git diff --stat</code></pre>
+<p><strong>Checklist</strong>:</p>
+<ul><li>[ ] All flag checks removed</li><li>[ ] Legacy code paths deleted</li><li>[ ] Tests updated</li><li>[ ] Documentation updated</li><li>[ ] Code reviewed</li><li>[ ] All tests passing</li></ul>
+<h3>Phase 6: Flag Removal (Week 4-5)</h3>
+<p><strong>Objective</strong>: Remove flag from provider and configuration</p>
+<p><strong>Steps</strong>:</p>
+<ol><li><strong>Disable Flag</strong></li></ol>
+<p>   ``<code>bash    ./manage_feature_flags.py toggle \        --key feature-x \        --environment production \        --enabled false    </code>``</p>
+<ol><li><strong>Monitor for 48 Hours</strong></li></ol>
+<ul><li>Check error rates</li><li>Review user complaints</li><li>Monitor performance metrics</li><li>Verify rollback readiness</li></ul>
+<ol><li><strong>Archive Flag</strong> (After monitoring period)</li></ol>
+<p>   ``<code>bash    ./manage_feature_flags.py archive \        --key feature-x \        --environment production    </code>``</p>
+<ol><li><strong>Remove from Code</strong> (After archive)</li></ol>
+<p>   ``<code>bash    git add .    git commit -m &quot;Remove feature-x flag after successful rollout&quot;    git push origin remove-feature-x-flag    </code>``</p>
+<ol><li><strong>Deploy Changes</strong></li></ol>
+<ul><li>Deploy to staging</li><li>Run integration tests</li><li>Deploy to production</li><li>Monitor rollout</li></ul>
+<p><strong>Monitoring Checklist</strong>:</p>
+<ul><li>[ ] Error rates stable</li><li>[ ] Performance metrics unchanged</li><li>[ ] No customer complaints</li><li>[ ] Rollback plan tested</li><li>[ ] On-call team notified</li></ul>
+<h3>Phase 7: Verification (Week 5-6)</h3>
+<p><strong>Objective</strong>: Verify complete removal and cleanup</p>
+<p><strong>Verification Steps</strong>:</p>
+<ol><li><strong>Code Search</strong></li></ol>
+<p>   ```bash    # Ensure no references remain    grep -r &quot;feature-x&quot; . --include=&quot;<em>.py&quot; --include=&quot;</em>.js&quot;</p>
+<p>   # Should return no results    ```</p>
+<ol><li><strong>Provider Verification</strong></li></ol>
+<p>   ``<code>bash    # Verify flag is archived    ./manage_feature_flags.py list \        --environment production \        --archived true | grep feature-x    </code>``</p>
+<ol><li><strong>Monitoring Review</strong></li></ol>
+<ul><li>7 days of metrics post-removal</li><li>No anomalies detected</li><li>Performance stable</li></ul>
+<ol><li><strong>Documentation Audit</strong></li></ol>
+<ul><li>Flag removed from all docs</li><li>Blog posts updated</li><li>Training materials current</li></ul>
+<p><strong>Final Checklist</strong>:</p>
+<ul><li>[ ] No code references found</li><li>[ ] Flag archived in provider</li><li>[ ] 7 days of stable metrics</li><li>[ ] Documentation updated</li><li>[ ] Team notified of completion</li><li>[ ] Postmortem written (if issues)</li></ul>
+<h2>Timeline Summary</h2>
+<p>| Week | Phase | Key Activities | |------|-------|----------------| | 1 | Identification | Analyze usage, get approvals | | 2 | Planning | Map dependencies, create plan | | 2-3 | Communication | Notify stakeholders | | 3 | Deprecation | Mark deprecated, add warnings | | 4 | Code Cleanup | Remove flag checks | | 4-5 | Flag Removal | Archive flag, deploy changes | | 5-6 | Verification | Confirm complete removal |</p>
+<h2>Automation Scripts</h2>
+<h3>1. Flag Retirement Candidate Finder</h3>
+<pre><code class="lang-bash">#!/bin/bash
+# find_retirement_candidates.sh
+
+./analyze_flag_usage.py recommend-retire \
+    --confidence 0.8 \
+    --flags-file flags.json \
+    --json &gt; candidates.json
+
+# Generate report
+./analyze_flag_usage.py report \
+    --results candidates.json \
+    --format html \
+    --output retirement_candidates.html</code></pre>
+<h3>2. Code Reference Scanner</h3>
+<pre><code class="lang-bash">#!/bin/bash
+# scan_flag_references.sh
+
+FLAG_KEY=$1
+
+echo &quot;Scanning for references to: $FLAG_KEY&quot;
+
+# Find in code
+echo &quot;=== Code References ===&quot;
+rg &quot;$FLAG_KEY&quot; --type py --type js --type go
+
+# Find in configs
+echo &quot;=== Config References ===&quot;
+find . -name &quot;*.yaml&quot; -o -name &quot;*.json&quot; | xargs grep &quot;$FLAG_KEY&quot;
+
+# Find in tests
+echo &quot;=== Test References ===&quot;
+rg &quot;$FLAG_KEY&quot; --glob &quot;*test*&quot;</code></pre>
+<h3>3. Safe Removal Verifier</h3>
+<pre><code class="lang-bash">#!/bin/bash
+# verify_safe_removal.sh
+
+FLAG_KEY=$1
+
+echo &quot;Verifying safe removal of: $FLAG_KEY&quot;
+
+# Check usage stats
+./analyze_flag_usage.py track --flag &quot;$FLAG_KEY&quot; --days 90
+
+# Check for dependencies
+./analyze_flag_usage.py debt --flag &quot;$FLAG_KEY&quot;
+
+# Run tests
+pytest tests/ -v
+
+echo &quot;Verification complete&quot;</code></pre>
+<h2>Rollback Procedures</h2>
+<h3>Emergency Rollback</h3>
+<p>If issues detected after flag removal:</p>
+<ol><li><strong>Immediate Response</strong> (0-15 minutes)</li></ol>
+<p>   ```bash    # Revert deployment    kubectl rollout undo deployment/app</p>
+<p>   # Or revert via CD tool    argocd app rollback app-production    ```</p>
+<ol><li><strong>Re-enable Flag</strong> (15-30 minutes)</li></ol>
+<p>   ``<code>bash    # Re-create flag if deleted    ./manage_feature_flags.py create \        --key feature-x \        --name &quot;Feature X (Restored)&quot; \        --type release \        --variations &#x27;{&quot;on&quot;: true, &quot;off&quot;: false}&#x27; \        --default off \        --enabled    </code>``</p>
+<ol><li><strong>Communication</strong> (30-60 minutes)</li></ol>
+<ul><li>Notify stakeholders</li><li>Update incident tracker</li><li>Schedule postmortem</li></ul>
+<h2>Best Practices</h2>
+<ol><li><strong>Never Rush</strong>: Take full 6 weeks if needed</li><li><strong>Monitor Continuously</strong>: Watch metrics at each phase</li><li><strong>Communicate Early</strong>: Notify teams early and often</li><li><strong>Document Everything</strong>: Keep detailed records</li><li><strong>Test Thoroughly</strong>: Verify each step</li><li><strong>Plan Rollback</strong>: Always have escape plan</li><li><strong>Learn from Issues</strong>: Write postmortems</li></ol>
+<h2>Common Pitfalls</h2>
+<ul><li><strong>Removing too quickly</strong>: Skipping monitoring periods</li><li><strong>Missing dependencies</strong>: Not checking all services</li><li><strong>Poor communication</strong>: Surprising teams with changes</li><li><strong>No rollback plan</strong>: Unable to revert if issues</li><li><strong>Incomplete removal</strong>: Leaving dead code/configs</li></ul>
+<h2>Success Metrics</h2>
+<ul><li>Time to retirement: &lt; 6 weeks</li><li>Zero production incidents</li><li>No customer impact</li><li>Complete code removal</li><li>Team satisfaction: High</li></ul>
+<h2>Tools Reference</h2>
+<ul><li><code>manage_feature_flags.py</code>: Flag CRUD operations</li><li><code>analyze_flag_usage.py</code>: Usage analytics</li><li><code>test_flag_variations.py</code>: Validation testing</li></ul>
+<h2>Conclusion</h2>
+<p>Follow this workflow to safely retire feature flags without disruption. Take time, communicate well, and monitor carefully.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/flag_retirement_workflow.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

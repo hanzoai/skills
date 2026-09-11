@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,7 +196,7 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0125</h1><p class="lede">HIP-125: Consensus-Backed Plugin-Placement Platform. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0125: Consensus-Backed Plugin-Placement Platform</h1>
+<h1>hip-0125</h1><p class="lede">HIP-125: Consensus-Backed Plugin-Placement Platform. Status Final. Hanzo architectural specification.</p><h1>HIP-0125: Consensus-Backed Plugin-Placement Platform</h1>
 <h2>Abstract</h2>
 <p>This proposal turns the unified <code>cloud</code> binary (HIP-0106) into a <strong>planet-scale, consensus-backed, plugin-placement PaaS runtime</strong>. A plugin author implements one small interface and calls <code>cloud.Register(name, order, fn)</code> (HIP-0105); in return the runtime gives that plugin <strong>placement, per-tenant scale, streaming replication, per-connection pinning, and high-availability for free</strong> — the plugin author never writes a lease, a failover, a proxy hop, or a replication loop.</p>
 <p>The mechanism is **two planes, decomplected, where consensus orders <em>decisions</em>, not *bytes***:</p>
@@ -345,7 +354,7 @@ func init() { cloud.Register(&quot;hello&quot;, 500, mount) } // that&#x27;s the
 <p>The runtime needs <strong>stable identity</strong> (a node&#x27;s <code>NodeID</code> must survive a restart so the RSM membership and placement map stay valid) and <strong>stable storage</strong> (a node must reopen the same shard files). That is a StatefulSet, not a Deployment.</p>
 <p>| Property | Today (HIP-0106) | This HIP | |---|---|---| | Workload kind | <code>Deployment(strategy: Recreate, replicas: 1)</code> | <code>StatefulSet(replicas: N)</code> | | Identity | Random pod name | Stable <code>NodeID</code> = ordinal (<code>cloud-0 … cloud-(N-1)</code>) | | Networking | Service only | <strong>Headless service</strong> for pod-to-pod (<code>cloud-&lt;N&gt;.cloud-headless</code>) + existing Services | | Storage | Shared/ephemeral | <code>volumeClaimTemplates</code> → per-pod PVC (each node&#x27;s shards) | | Upgrade | Recreate (full stop) | <code>RollingUpdate{maxUnavailable: 1}</code>, <code>OrderedReady</code> |</p>
 <p>Because <code>NodeID</code>s are <strong>stable across image upgrades</strong>, a rolling upgrade is <em>not</em> a membership change: the RSM sees the same seven voters and the same data-node identities before and after, so <strong>no epoch reconfiguration and no placement churn</strong> happens on a deploy. <code>maxUnavailable: 1</code> keeps the voter quorum (6 of 7, above the 5-of-7 threshold) live throughout the roll.</p>
-<p>The existing Service aliases keep resolving: <code>kms</code> and <code>cloud-api</code> Services select <code>app.kubernetes.io/name: cloud</code>, which the StatefulSet pods still carry, so nothing downstream re-points. The operator&#x27;s <code>hanzo.ai/v1 kind: Service</code> CR (HIP-0112) gains a <strong>StatefulSet-emitting mode</strong> — a boolean on the CR that makes the operator render a StatefulSet + headless service + volumeClaimTemplates instead of a Deployment. One CR field, one new render path; the CR contract is otherwise unchanged.</p>
+<p>The existing Service aliases keep resolving: <code>kms</code> and <code>cloud-api</code> Services select <code>app.kubernetes.io/name: cloud</code>, which the StatefulSet pods still carry, so nothing downstream re-points. The operator&#x27;s <code>hanzo.ai/v1 kind: Service</code> CR (HIP-0400) gains a <strong>StatefulSet-emitting mode</strong> — a boolean on the CR that makes the operator render a StatefulSet + headless service + volumeClaimTemplates instead of a Deployment. One CR field, one new render path; the CR contract is otherwise unchanged.</p>
 <h2>Migration plan</h2>
 <p>Nine stages. <strong>Each is independently correct, canary-able, and reversible.</strong> <code>[M]</code> = mechanical (config/plumbing, no behavior flip). <code>[BR]</code> = blue→red (a behavior change that must be adversarially reviewed before it ships).</p>
 <h3>Stage 0 — dependencies + inert config <code>[M]</code></h3>
@@ -379,7 +388,7 @@ func init() { cloud.Register(&quot;hello&quot;, 500, mount) } // that&#x27;s the
 <ul><li><strong>Making consensus a dependency of serving.</strong> Explicitly rejected — the</li></ul>
 <p>  whole point is that serving survives quorum loss. Any design that puts the   RSM on the request path violates this HIP.</p>
 <ul><li><strong>A general scheduler.</strong> This is placement of <em>plugin write ownership</em>,</li></ul>
-<p>  not a Kubernetes replacement. Node-pool <code>--enable</code> sets (HIP-0106) and the   operator (HIP-0112) still own coarse scheduling.</p>
+<p>  not a Kubernetes replacement. Node-pool <code>--enable</code> sets (HIP-0106) and the   operator (HIP-0400) still own coarse scheduling.</p>
 <ul><li><strong>Folding <code>vault</code> / <code>payments</code>.</strong> Per HIP-0106&#x27;s solo-vault CDE rule, the</li></ul>
 <p>  PCI systems stay their own deployments and are not placed by this runtime.</p>
 <h2>Open questions</h2>
@@ -404,8 +413,8 @@ func init() { cloud.Register(&quot;hello&quot;, 500, mount) } // that&#x27;s the
 <p>  subsystem model this HIP makes stateful and HA)</p>
 <ul><li>HIP-0107 — Streaming Replication over VFS (the data plane, reused</li></ul>
 <p>  unchanged)</p>
-<ul><li>HIP-0112 — Cloud Infrastructure Topology Standard (the operator <code>Service</code></li></ul>
-<p>  CR that gains a StatefulSet-emitting mode)</p>
+<ul><li>HIP-0400 — Service CRD (the operator <code>Service</code> CR that gains a</li></ul>
+<p>  StatefulSet-emitting mode)</p>
 <ul><li>HIP-0114 — ZAP Inter-VM Cognitive Transport (the ZAP-native default wire</li></ul>
 <p>  for plugins)</p>
 <ul><li>HIP-0302 — Hanzo Replicate: Encrypted SQLite + ZapDB Durability (the</li></ul>
@@ -437,5 +446,4 @@ func init() { cloud.Register(&quot;hello&quot;, 500, mount) } // that&#x27;s the
 </div>
 <div class="fend"><a href="/hip-0125.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

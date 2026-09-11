@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,31 +196,30 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0063</h1><p class="lede">HIP-63: Feature Flags &amp; Experimentation Standard. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0063: Feature Flags &amp; Experimentation Standard</h1>
+<h1>hip-0063</h1><p class="lede">HIP-63: Feature Flags Standard. Status Final. Hanzo architectural specification.</p><h1>HIP-0063: Feature Flags Standard</h1>
 <h2>Abstract</h2>
-<p>This proposal defines the feature flag and experimentation platform for the Hanzo ecosystem. Hanzo Flags provides boolean flags, multivariate flags, percentage rollouts, user targeting, and a full A/B experimentation engine with statistical significance analysis -- all with first-class support for AI-specific experiments like model routing, prompt template testing, and RAG strategy comparison.</p>
-<p>The platform implements the <a href="https://openfeature.dev">OpenFeature</a> specification for flag evaluation, ensuring SDK interoperability across languages and preventing vendor lock-in. It integrates with Hanzo Analytics (HIP-0017) for experiment metric collection and with the API Gateway (HIP-0044) for traffic splitting at the infrastructure layer.</p>
-<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/flags">github.com/hanzoai/flags</a> <strong>Port</strong>: 8063 (API) <strong>Docker</strong>: <code>ghcr.io/hanzoai/flags:latest</code> <strong>SDKs</strong>: <code>@hanzoai/flags-js</code>, <code>hanzoai-flags</code> (Python), <code>github.com/hanzoai/flags-go</code></p>
+<p>This proposal defines the feature flag platform for the Hanzo ecosystem. Hanzo Flags provides boolean flags, multivariate flags, percentage rollouts and user targeting — the primitive every other plane composes, including the AI-specific splits that make model routing, prompt selection and retrieval strategy switchable without a deploy.</p>
+<p>Evaluation semantics are PostHog-compatible — the embedded evaluator is pinned to a 621-case parity table (<code>apps/flags/engine.go:11-13</code>) — so a PostHog-shaped client repoints by changing the host. An OpenFeature adapter, if published, wraps the generated SDK rather than defining the wire.</p>
+<p>The A/B plane that composes this primitive — the experiment registry, its analysis and its decision — is the separate <code>experiment</code> capability, HIP-1311.</p>
+<p><strong>Evaluator</strong>: <a href="https://github.com/hanzoai/flags">github.com/hanzoai/flags</a> — the stateless Go engine (<code>flags/go</code>) compiled into the cloud binary <strong>Serving</strong>: <code>apps/flags</code> in <code>hanzoai/cloud</code>, at <code>/v1/flags</code> — there is no standalone flags service, port or image; SDK access is the generated cloud SDKs (HIP-1030)</p>
 <h2>Motivation</h2>
 <p>Every software team eventually needs to decouple deployment from release. You push code to production, but the new behavior is hidden behind a flag. You turn it on for 1% of users, watch metrics, then ramp to 100%. If something breaks, you kill the flag -- no rollback, no redeployment, no incident.</p>
 <p>This is table stakes for web applications. But AI systems introduce a category of experimentation that traditional feature flag platforms were never designed for:</p>
 <ol><li><strong>Model version rollouts</strong>: You have Zen-72B in production. Zen-120B is ready. You want to route 5% of inference traffic to the new model, compare quality scores, latency, and cost, then decide whether to promote. This is not a boolean flag -- it is a traffic split with multi-dimensional metric analysis.</li></ol>
 <ol><li><strong>Prompt template A/B testing</strong>: The same model with two different system prompts produces different outputs. Which prompt yields better user satisfaction? Better task completion? Lower token usage? You need to randomly assign users to prompt variants and track downstream metrics.</li></ol>
 <ol><li><strong>RAG strategy comparison</strong>: Retrieval-augmented generation has multiple knobs -- chunk size, overlap, embedding model, reranker, top-k. Comparing strategies requires running parallel pipelines and measuring answer quality. This is a multi-armed bandit problem, not a simple on/off switch.</li></ol>
-<ol><li><strong>Cost optimization experiments</strong>: Route 20% of traffic to a cheaper model. If quality metrics remain within 5% of the baseline, promote the cheaper model for that traffic segment. This saves real money -- at 10M requests/month, a $0.001/request savings is $10K/month.</li></ol>
-<p>No existing feature flag platform handles these use cases natively. LaunchDarkly, Split, Unleash, and Flagsmith all treat flags as configuration switches. They support A/B tests on UI elements (&quot;button color&quot;, &quot;pricing page layout&quot;). None of them understand tokens, latency percentiles, model quality scores, or cost-per-inference.</p>
-<h2>Design Philosophy</h2>
-<h3>Why Custom Over LaunchDarkly</h3>
-<p>LaunchDarkly is the market leader in feature flags. It is also a SaaS product that charges per Monthly Active User (MAU). Pricing starts at $10/month per seat (Starter) and scales to enterprise contracts in the six-figure range. At Hanzo&#x27;s scale -- multiple products, millions of AI inference requests, thousands of flag evaluations per second -- LaunchDarkly would cost $50K-200K/year.</p>
-<p>More critically, LaunchDarkly&#x27;s evaluation model is opaque. Flags are defined in their cloud dashboard. Evaluation happens either client-side (their SDK polls their CDN for flag state) or server-side (their SDK maintains a streaming connection to their service). In both cases, <strong>flag evaluation depends on LaunchDarkly&#x27;s infrastructure</strong>. If their CDN has an outage, your flags stop updating. If their streaming service drops connections, your server-side evaluations stale.</p>
-<p>For AI inference routing, stale flags mean requests routed to the wrong model -- potentially a model that has been deprecated or a cost tier that exceeds budget. This is not acceptable for production AI infrastructure.</p>
-<p><strong>Unleash</strong> is open-source (Apache 2.0) and self-hostable. It solves the data sovereignty problem. However, Unleash&#x27;s evaluation engine is a Node.js/Java application backed by SQL. It does not support AI experiment types, continuous metric analysis, or integration with inference gateways. We would need to build those features on top of Unleash, effectively maintaining a fork with custom experiment logic, custom metric pipelines, and custom SDK extensions. At that point, we are building a custom system with Unleash&#x27;s data model -- a worse starting point than building from first principles.</p>
-<p><strong>Decision</strong>: Build Hanzo Flags as a Go service with KV-backed evaluation, OpenFeature-compatible SDKs, and native support for AI experiment types. Total cost: infrastructure we already operate (KV, Datastore, Kafka). Zero per-seat or per-MAU licensing.</p>
+<ol><li><strong>Cost optimization experiments</strong>: Route 20% of traffic to a cheaper model. If quality metrics remain within the baseline, promote the cheaper model for that traffic segment.</li></ol>
+<p>General-purpose flag platforms treat flags as configuration switches for UI elements, and their evaluation rides a hosted tier — a CDN poll or a streaming connection — that can go stale. For AI inference routing, a stale flag is a request routed to a deprecated model or a cost tier over budget. Hence the design: a stateless, PostHog-compatible evaluator compiled into the cloud binary, definitions in each org&#x27;s own encrypted SQLite, with no evaluation tier that can go stale.</p>
 <h2>Specification</h2>
+<h3>The shipped surface</h3>
+<p><strong>flags</strong> (<code>manifest/apps.go:54</code>) serves seven operations under <code>/v1/flags</code> (<code>apps/flags/routes.go:47-60</code>): <code>POST /v1/flags</code> and <code>POST /v1/flags/decide</code> are the SAME evaluate handler — one verdict function, two spellings for the PostHog-shaped clients; <code>GET /v1/flags/defs</code>, <code>GET|PUT|DELETE /v1/flags/defs/{key}</code> manage definitions; <code>GET /v1/flags/activity</code> reads the audit log; <code>GET /v1/flags/health</code> probes. Definitions live in per-(org, project) encrypted SQLite — <code>{DataDir}/orgs/{org}/projects/{project}/flags.db</code> via <code>cloud.OrgDB</code> (<code>apps/flags/store.go:3-6</code>) — and evaluation runs in-process through the embedded evaluator <code>github.com/hanzoai/flags/go</code>, a pure function of (definitions JSON, context JSON) answering in microseconds (<code>apps/flags/engine.go:1-13</code>). <strong>No KV, no sync protocol, no network hop</strong>: every pod evaluates from its own hot copy, which is what makes the p99 targets below ordinary rather than aspirational.</p>
+<p>The credential is the org&#x27;s ordinary bearer per HIP-0026 — there is no <code>hf_*</code> key family. The admin plane is not a second prefix: definition writes are org-scoped on the same surface, and the platform&#x27;s own switches are the reserved platform store the SuperAdmin flips from the cockpit through the same engine (<code>apps/flags/flags.go:21-27</code>).</p>
+<p>Stated for HIP-0139 §6: the capability is <strong>free</strong>, said in those words (<code>plugin/flags/main.go:21</code> — <code>Price: cloud.Free</code>), and <code>/v1/flags/</code> is on the spend gate&#x27;s never-refuse list (<code>spend.go:453</code>) because the kill switch must be observable by an unpaid org. It owns the definition store above and no other. It publishes <strong>no events</strong> on the bus, so a customer&#x27;s webhooks (HIP-1310) receive nothing from it, and it emits nothing to observability beyond the request span. It is <strong>ga</strong> (HIP-0139 §8): flags is the mechanism stage-gating itself rides, so it cannot sit behind a flag. Upstream: it embeds <code>github.com/hanzoai/flags/go</code>, our own implementation of PostHog-compatible evaluation semantics, pinned to the prior implementation&#x27;s answers by a 621-case parity table (<code>apps/flags/engine.go:11-13</code>).</p>
 <h3>Flag Types</h3>
 <p>Hanzo Flags supports four flag value types, matching the OpenFeature specification:</p>
 <p>| Type | Use Case | Example | |------|----------|---------| | <strong>Boolean</strong> | Kill switches, feature gates | <code>new-dashboard: true/false</code> | | <strong>String</strong> | Multivariate experiments, model selection | <code>inference-model: &quot;zen-72b&quot; / &quot;zen-120b&quot;</code> | | <strong>Number</strong> | Numeric configuration, thresholds | <code>rate-limit-multiplier: 1.5</code> | | <strong>Object</strong> | Complex configuration, prompt templates | <code>rag-config: {&quot;chunk_size&quot;: 512, &quot;top_k&quot;: 5}</code> |</p>
 <h3>Flag Definition Schema</h3>
+<p>The stored definition is the PostHog-compatible JSON the embedded evaluator consumes (<code>apps/flags/store.go:5</code>), versioned and audited; the evaluator&#x27;s parity table, not this document, is the normative statement of its fields. The JSON below illustrates the concepts a definition carries — variants, targeting, rollout percentages, a fallthrough — in a reader-friendly shape:</p>
 <pre><code class="lang-json">{
   &quot;key&quot;: &quot;inference-model-experiment&quot;,
   &quot;name&quot;: &quot;Inference Model A/B Test&quot;,
@@ -286,22 +294,20 @@ AI-Specific Attributes:
 bucket = hash % 10000  // 0-9999, giving 0.01% granularity</code></pre>
 <p>The seed is configurable per flag. Changing the seed reshuffles the assignment -- useful when you want to run a new experiment on the same flag key without the previous assignment biasing results.</p>
 <h3>Evaluation API</h3>
-<h4>POST /v1/evaluate</h4>
-<p>Evaluate a single flag for a given context. This is the primary hot-path endpoint.</p>
-<pre><code class="lang-http">POST /v1/evaluate HTTP/1.1
-Host: flags.hanzo.ai
-Authorization: Bearer hf_project_key_abc123
+<h4>POST /v1/flags/decide</h4>
+<p>Evaluate flags for an identity. This is the primary hot-path endpoint — served as both <code>POST /v1/flags</code> and <code>POST /v1/flags/decide</code>, one handler (<code>apps/flags/routes.go:52-55</code>). It answers for EVERY flag in the caller&#x27;s definitions at once (the PostHog <code>/decide</code> shape), so there is no separate batch endpoint to keep in step with it.</p>
+<pre><code class="lang-http">POST /v1/flags/decide HTTP/1.1
+Host: api.hanzo.ai
+Authorization: Bearer &lt;the org&#x27;s ordinary key, HIP-0026&gt;
 Content-Type: application/json
 
 {
-  &quot;flag_key&quot;: &quot;inference-model-experiment&quot;,
-  &quot;context&quot;: {
-    &quot;user_id&quot;: &quot;user_789&quot;,
+  &quot;distinct_id&quot;: &quot;user_789&quot;,
+  &quot;properties&quot;: {
     &quot;org&quot;: &quot;hanzo&quot;,
     &quot;plan&quot;: &quot;pro&quot;,
     &quot;country&quot;: &quot;US&quot;
-  },
-  &quot;default_value&quot;: &quot;zen-72b&quot;
+  }
 }</code></pre>
 <p>Response:</p>
 <pre><code class="lang-json">{
@@ -314,494 +320,41 @@ Content-Type: application/json
     &quot;experiment_id&quot;: &quot;exp_model_comparison_2026Q1&quot;
   }
 }</code></pre>
-<p>Evaluation reasons follow the OpenFeature specification:</p>
-<p>| Reason | Meaning | |--------|---------| | <code>STATIC</code> | Flag has no targeting rules; default value returned | | <code>TARGETING_MATCH</code> | A targeting rule matched | | <code>SPLIT</code> | Percentage rollout assignment | | <code>DEFAULT</code> | No rules matched; fallthrough value returned | | <code>DISABLED</code> | Flag is disabled; default value returned | | <code>ERROR</code> | Evaluation error; default value returned |</p>
-<h4>POST /v1/evaluate/batch</h4>
-<p>Evaluate multiple flags in a single request. SDKs SHOULD use this to reduce round-trips on page load or request initialization.</p>
-<pre><code class="lang-http">POST /v1/evaluate/batch HTTP/1.1
-Host: flags.hanzo.ai
-Authorization: Bearer hf_project_key_abc123
-Content-Type: application/json
-
-{
-  &quot;flags&quot;: [&quot;inference-model-experiment&quot;, &quot;new-dashboard&quot;, &quot;rag-strategy&quot;],
-  &quot;context&quot;: {
-    &quot;user_id&quot;: &quot;user_789&quot;,
-    &quot;org&quot;: &quot;hanzo&quot;,
-    &quot;plan&quot;: &quot;pro&quot;
-  }
-}</code></pre>
-<p>Response:</p>
-<pre><code class="lang-json">{
-  &quot;flags&quot;: {
-    &quot;inference-model-experiment&quot;: {
-      &quot;value&quot;: &quot;zen-120b&quot;,
-      &quot;variant&quot;: &quot;zen-120b&quot;,
-      &quot;reason&quot;: &quot;TARGETING_MATCH&quot;
-    },
-    &quot;new-dashboard&quot;: {
-      &quot;value&quot;: true,
-      &quot;variant&quot;: &quot;on&quot;,
-      &quot;reason&quot;: &quot;SPLIT&quot;
-    },
-    &quot;rag-strategy&quot;: {
-      &quot;value&quot;: {&quot;chunk_size&quot;: 512, &quot;top_k&quot;: 5, &quot;reranker&quot;: &quot;cross-encoder&quot;},
-      &quot;variant&quot;: &quot;strategy-b&quot;,
-      &quot;reason&quot;: &quot;SPLIT&quot;
-    }
-  }
-}</code></pre>
+<p>The response and reason vocabulary is the embedded evaluator&#x27;s — PostHog-compatible, pinned by its parity table — and the JSON above is illustrative of the verdict&#x27;s shape (state, variant, payload per flag), not a schema this HIP owns: the definitive shape is what the evaluator answers and the served document publishes (HIP-1030).</p>
 <h4>Performance Requirements</h4>
 <p>| Metric | Target | |--------|--------| | Evaluation latency (p50) | &lt; 1ms | | Evaluation latency (p99) | &lt; 5ms | | Batch evaluation (10 flags, p99) | &lt; 10ms | | Availability | 99.99% | | Throughput | 100K evaluations/second per node |</p>
-<p>These targets are achievable because flag evaluation is a pure in-memory operation. Flag definitions are synced from SQL to KV, then pulled into an in-process cache in each SDK instance. The evaluation endpoint exists for server-side languages that prefer a thin client; SDKs with local evaluation never hit this endpoint at all.</p>
-<h3>Admin API</h3>
-<p>The Admin API manages flag definitions, experiments, and audit history. It requires a management API key (<code>hf_admin_</code> prefix) and is NOT exposed to end-user SDKs.</p>
-<pre><code>POST   /admin/v1/flags                  # Create flag
-GET    /admin/v1/flags                  # List flags
-GET    /admin/v1/flags/{key}            # Get flag
-PUT    /admin/v1/flags/{key}            # Update flag
-DELETE /admin/v1/flags/{key}            # Archive flag
-POST   /admin/v1/flags/{key}/toggle     # Enable/disable
-
-POST   /admin/v1/experiments            # Create experiment
-GET    /admin/v1/experiments            # List experiments
-GET    /admin/v1/experiments/{id}       # Get experiment with results
-PUT    /admin/v1/experiments/{id}       # Update experiment
-POST   /admin/v1/experiments/{id}/stop  # Stop experiment, lock winner
-
-GET    /admin/v1/audit                  # Audit log of all changes</code></pre>
-<p>Every mutation to a flag or experiment is recorded in an append-only audit log with the acting user, timestamp, and diff of the change. This audit log is queryable via the Admin API and is critical for debugging production incidents (&quot;who changed the model rollout percentage at 3am?&quot;).</p>
-<h2>AI Model Experimentation</h2>
-<p>This is the core differentiator of Hanzo Flags. Traditional A/B testing asks &quot;which button color converts better?&quot; AI experimentation asks &quot;which model/prompt/strategy produces better results at what cost?&quot;</p>
-<h3>Experiment Definition</h3>
-<pre><code class="lang-json">{
-  &quot;id&quot;: &quot;exp_zen120b_rollout&quot;,
-  &quot;name&quot;: &quot;Zen-120B Production Readiness&quot;,
-  &quot;description&quot;: &quot;Compare Zen-120B against Zen-72B on production inference traffic&quot;,
-  &quot;flag_key&quot;: &quot;inference-model-experiment&quot;,
-  &quot;type&quot;: &quot;ai_model_comparison&quot;,
-  &quot;variants&quot;: [
-    {&quot;key&quot;: &quot;control&quot;, &quot;value&quot;: &quot;zen-72b&quot;, &quot;allocation&quot;: 80},
-    {&quot;key&quot;: &quot;treatment&quot;, &quot;value&quot;: &quot;zen-120b&quot;, &quot;allocation&quot;: 20}
-  ],
-  &quot;metrics&quot;: {
-    &quot;primary&quot;: {
-      &quot;name&quot;: &quot;quality_score&quot;,
-      &quot;type&quot;: &quot;continuous&quot;,
-      &quot;direction&quot;: &quot;increase&quot;,
-      &quot;minimum_detectable_effect&quot;: 0.05
-    },
-    &quot;secondary&quot;: [
-      {&quot;name&quot;: &quot;latency_p95_ms&quot;, &quot;type&quot;: &quot;continuous&quot;, &quot;direction&quot;: &quot;decrease&quot;},
-      {&quot;name&quot;: &quot;cost_per_request_usd&quot;, &quot;type&quot;: &quot;continuous&quot;, &quot;direction&quot;: &quot;decrease&quot;},
-      {&quot;name&quot;: &quot;user_satisfaction&quot;, &quot;type&quot;: &quot;continuous&quot;, &quot;direction&quot;: &quot;increase&quot;},
-      {&quot;name&quot;: &quot;error_rate&quot;, &quot;type&quot;: &quot;proportion&quot;, &quot;direction&quot;: &quot;decrease&quot;}
-    ],
-    &quot;guardrails&quot;: [
-      {&quot;name&quot;: &quot;latency_p99_ms&quot;, &quot;type&quot;: &quot;continuous&quot;, &quot;threshold&quot;: 5000, &quot;action&quot;: &quot;alert&quot;},
-      {&quot;name&quot;: &quot;error_rate&quot;, &quot;type&quot;: &quot;proportion&quot;, &quot;threshold&quot;: 0.05, &quot;action&quot;: &quot;kill&quot;}
-    ]
-  },
-  &quot;analysis&quot;: {
-    &quot;method&quot;: &quot;bayesian&quot;,
-    &quot;confidence_threshold&quot;: 0.95,
-    &quot;minimum_sample_size&quot;: 1000,
-    &quot;maximum_duration_days&quot;: 14
-  },
-  &quot;targeting&quot;: {
-    &quot;conditions&quot;: [
-      {&quot;attribute&quot;: &quot;plan&quot;, &quot;op&quot;: &quot;in&quot;, &quot;value&quot;: [&quot;pro&quot;, &quot;enterprise&quot;]}
-    ]
-  }
-}</code></pre>
-<h3>Metric Collection</h3>
-<p>AI experiments collect metrics through two channels:</p>
-<p><strong>Automatic metrics</strong> are collected by the LLM Gateway (HIP-0004) and API Gateway (HIP-0044). When a request passes through the gateway with an active experiment assignment, the gateway emits a structured event to Kafka:</p>
-<pre><code class="lang-json">{
-  &quot;event&quot;: &quot;experiment_exposure&quot;,
-  &quot;experiment_id&quot;: &quot;exp_zen120b_rollout&quot;,
-  &quot;variant&quot;: &quot;treatment&quot;,
-  &quot;distinct_id&quot;: &quot;user_789&quot;,
-  &quot;timestamp&quot;: &quot;2026-02-23T14:30:00.000Z&quot;,
-  &quot;properties&quot;: {
-    &quot;model&quot;: &quot;zen-120b&quot;,
-    &quot;prompt_tokens&quot;: 245,
-    &quot;completion_tokens&quot;: 512,
-    &quot;latency_ms&quot;: 1850,
-    &quot;cost_usd&quot;: 0.0042,
-    &quot;status&quot;: 200
-  }
-}</code></pre>
-<p><strong>Custom metrics</strong> are sent by application code via the Flags SDK or the Analytics SDK (HIP-0017):</p>
-<pre><code class="lang-python">from hanzoai.flags import FlagsClient
-
-flags = FlagsClient(api_key=&quot;hf_project_key_abc123&quot;)
-
-# Evaluate the flag (get the variant)
-variant = flags.get_string_value(
-    &quot;inference-model-experiment&quot;,
-    default=&quot;zen-72b&quot;,
-    context={&quot;user_id&quot;: &quot;user_789&quot;, &quot;plan&quot;: &quot;pro&quot;}
-)
-
-# ... perform inference with the assigned model ...
-
-# Report a custom metric
-flags.track_metric(
-    experiment_id=&quot;exp_zen120b_rollout&quot;,
-    distinct_id=&quot;user_789&quot;,
-    metric=&quot;quality_score&quot;,
-    value=0.87
-)</code></pre>
-<h3>Integration with Gateway (HIP-0044)</h3>
-<p>The API Gateway integrates with Hanzo Flags to perform traffic splitting at the infrastructure layer. This is essential for model routing experiments where the split must happen before the request reaches any application code.</p>
-<pre><code>Client request
-  --&gt; API Gateway (HIP-0044)
-      --&gt; Evaluate flag: &quot;inference-model-experiment&quot;
-      --&gt; Result: &quot;zen-120b&quot;
-      --&gt; Route to LLM Gateway with X-Model-Override: zen-120b
-          --&gt; LLM Gateway (HIP-0004) uses specified model
-          --&gt; Response includes X-Experiment-Variant: treatment
-      --&gt; Gateway emits experiment_exposure event to Kafka
-  &lt;-- Response to client</code></pre>
-<p>KrakenD configuration for gateway-level flag evaluation:</p>
-<pre><code class="lang-json">{
-  &quot;endpoint&quot;: &quot;/v1/chat/completions&quot;,
-  &quot;extra_config&quot;: {
-    &quot;plugin/hanzo-flags&quot;: {
-      &quot;flag_key&quot;: &quot;inference-model-experiment&quot;,
-      &quot;context_from_headers&quot;: {
-        &quot;user_id&quot;: &quot;X-User-Id&quot;,
-        &quot;org&quot;: &quot;X-Org-Id&quot;,
-        &quot;plan&quot;: &quot;X-User-Plan&quot;
-      },
-      &quot;action&quot;: &quot;set_header&quot;,
-      &quot;target_header&quot;: &quot;X-Model-Override&quot;,
-      &quot;emit_exposure_event&quot;: true
-    }
-  }
-}</code></pre>
-<p>This gateway plugin evaluates the flag using the local in-process cache (no network call), sets a header that the LLM Gateway respects, and emits the exposure event asynchronously. The evaluation adds &lt; 0.1ms to request latency.</p>
-<h3>AI-Specific Experiment Types</h3>
-<h4>Model Version Rollout</h4>
-<p>Route a percentage of inference traffic to a new model version. Measure quality, latency, and cost. Auto-promote when confidence threshold is met.</p>
-<pre><code class="lang-yaml">Type: ai_model_comparison
-Control: zen-72b (80%)
-Treatment: zen-120b (20%)
-Primary metric: quality_score (increase)
-Guardrail: latency_p99 &lt; 5000ms, error_rate &lt; 5%
-Duration: 7-14 days
-Auto-promote: yes, when P(treatment &gt; control) &gt; 0.95</code></pre>
-<h4>Prompt Template A/B Test</h4>
-<p>Same model, different system prompts. Measure task completion, user satisfaction, and token efficiency.</p>
-<pre><code class="lang-yaml">Type: prompt_ab_test
-Model: zen-72b (fixed)
-Variant A: &quot;You are a helpful assistant. Be concise.&quot; (50%)
-Variant B: &quot;You are an expert analyst. Think step by step.&quot; (50%)
-Primary metric: task_completion_rate (increase)
-Secondary: tokens_per_response (decrease), user_thumbs_up (increase)</code></pre>
-<h4>RAG Strategy Comparison</h4>
-<p>Compare different retrieval-augmented generation configurations. The flag returns a JSON object that the RAG pipeline consumes directly.</p>
-<pre><code class="lang-yaml">Type: rag_strategy
-Variant A: {&quot;chunk_size&quot;: 256, &quot;overlap&quot;: 50, &quot;top_k&quot;: 3, &quot;reranker&quot;: &quot;none&quot;}
-Variant B: {&quot;chunk_size&quot;: 512, &quot;overlap&quot;: 100, &quot;top_k&quot;: 5, &quot;reranker&quot;: &quot;cross-encoder&quot;}
-Variant C: {&quot;chunk_size&quot;: 1024, &quot;overlap&quot;: 200, &quot;top_k&quot;: 10, &quot;reranker&quot;: &quot;cohere&quot;}
-Primary metric: answer_relevance_score (increase)
-Secondary: retrieval_latency_ms (decrease), context_tokens (decrease)
-Method: multi-armed bandit (auto-allocate traffic to best performer)</code></pre>
-<h4>Cost Optimization Experiment</h4>
-<p>Route traffic to cheaper models and verify quality holds. This is financially motivated -- the experiment succeeds if quality stays within tolerance AND cost decreases.</p>
-<pre><code class="lang-yaml">Type: cost_optimization
-Control: zen-72b @ $0.003/1K tokens
-Treatment: zen-32b @ $0.0008/1K tokens
-Primary metric: quality_score (must stay within 5% of control)
-Success condition: cost_per_request decreases AND quality holds
-Guardrail: quality_score &gt; 0.80 (absolute floor)</code></pre>
-<h2>Statistical Engine</h2>
-<p>Hanzo Flags includes a built-in statistical engine for experiment analysis. It supports three analysis methods, chosen based on the experiment type and organizational preference.</p>
-<h3>Bayesian Analysis</h3>
-<p>The default method. Bayesian analysis provides a natural answer to &quot;what is the probability that treatment is better than control?&quot; rather than the frequentist &quot;can we reject the null hypothesis?&quot;</p>
-<p>For <strong>continuous metrics</strong> (latency, cost, quality score), the engine uses a Normal-Inverse-Gamma conjugate prior:</p>
-<pre><code>Prior:     mu ~ Normal(mu_0, sigma^2 / kappa_0)
-           sigma^2 ~ Inverse-Gamma(alpha_0, beta_0)
-
-Posterior: Updated with observed data (sample mean, sample variance, n)
-
-Decision:  P(mu_treatment &gt; mu_control | data) &gt; threshold</code></pre>
-<p>For <strong>proportion metrics</strong> (conversion rate, error rate), the engine uses a Beta-Binomial model:</p>
-<pre><code>Prior:     theta ~ Beta(alpha_0, beta_0)   # default: Beta(1, 1) = uniform
-Posterior: theta | data ~ Beta(alpha_0 + successes, beta_0 + failures)
-Decision:  P(theta_treatment &gt; theta_control | data) &gt; threshold</code></pre>
-<p>The probability is computed via Monte Carlo sampling (100K draws from each posterior). This is fast -- under 10ms for two-variant experiments, under 100ms for multi-variant.</p>
-<p><strong>Why Bayesian over frequentist as default?</strong> Bayesian analysis lets you check results at any time without inflating false positive rates (the &quot;peeking problem&quot; that plagues frequentist A/B tests). With frequentist tests, checking results daily before reaching the planned sample size inflates the Type I error rate from 5% to 20-30%. Bayesian posterior probabilities are valid at every observation count.</p>
-<h3>Frequentist Analysis</h3>
-<p>Available for teams that prefer traditional hypothesis testing or need results compatible with academic publication standards.</p>
-<p>For <strong>continuous metrics</strong>: Welch&#x27;s t-test (unequal variances assumed). Reports p-value, confidence interval, and effect size (Cohen&#x27;s d).</p>
-<p>For <strong>proportion metrics</strong>: Two-proportion z-test. Reports p-value, confidence interval, and relative lift.</p>
-<p><strong>Sample size calculation</strong> is performed upfront based on the minimum detectable effect (MDE), significance level (alpha, default 0.05), and power (1-beta, default 0.80):</p>
-<pre><code>n_per_variant = (Z_alpha/2 + Z_beta)^2 * 2 * sigma^2 / delta^2</code></pre>
-<p>The experiment dashboard shows a progress bar toward the required sample size. Results are marked as &quot;preliminary&quot; until the planned sample size is reached.</p>
-<h3>Multi-Armed Bandit</h3>
-<p>For experiments where the goal is optimization rather than measurement, Hanzo Flags supports Thompson Sampling -- a multi-armed bandit algorithm that automatically allocates more traffic to the winning variant as evidence accumulates.</p>
-<pre><code>For each request:
-  1. Sample from each variant&#x27;s posterior distribution
-  2. Select the variant with the highest sample
-  3. Serve that variant to the user
-  4. Observe the outcome and update the posterior</code></pre>
-<p>Thompson Sampling converges to the best variant while minimizing regret (the cost of showing inferior variants during the experiment). It is ideal for RAG strategy comparison, where you have 3+ variants and want to find the best one quickly without exposing users to poor configurations.</p>
-<p><strong>Trade-off</strong>: Bandit experiments do not produce clean statistical comparisons between variants. The traffic allocation is non-uniform and changes over time. If you need a rigorous &quot;is A better than B?&quot; answer, use Bayesian or frequentist A/B testing. If you need to &quot;find and use the best option as fast as possible,&quot; use Thompson Sampling.</p>
-<h3>Experiment Results API</h3>
-<pre><code class="lang-http">GET /admin/v1/experiments/exp_zen120b_rollout/results HTTP/1.1
-Host: flags.hanzo.ai
-Authorization: Bearer hf_admin_key_xyz</code></pre>
-<p>Response:</p>
-<pre><code class="lang-json">{
-  &quot;experiment_id&quot;: &quot;exp_zen120b_rollout&quot;,
-  &quot;status&quot;: &quot;running&quot;,
-  &quot;started_at&quot;: &quot;2026-02-16T00:00:00Z&quot;,
-  &quot;duration_days&quot;: 7,
-  &quot;variants&quot;: {
-    &quot;control&quot;: {
-      &quot;name&quot;: &quot;zen-72b&quot;,
-      &quot;allocation&quot;: 80,
-      &quot;sample_size&quot;: 45230,
-      &quot;metrics&quot;: {
-        &quot;quality_score&quot;: {&quot;mean&quot;: 0.82, &quot;std&quot;: 0.15, &quot;ci_95&quot;: [0.816, 0.824]},
-        &quot;latency_p95_ms&quot;: {&quot;mean&quot;: 1200, &quot;std&quot;: 450},
-        &quot;cost_per_request_usd&quot;: {&quot;mean&quot;: 0.0031, &quot;std&quot;: 0.0012},
-        &quot;error_rate&quot;: {&quot;mean&quot;: 0.012, &quot;std&quot;: 0.002}
-      }
-    },
-    &quot;treatment&quot;: {
-      &quot;name&quot;: &quot;zen-120b&quot;,
-      &quot;allocation&quot;: 20,
-      &quot;sample_size&quot;: 11308,
-      &quot;metrics&quot;: {
-        &quot;quality_score&quot;: {&quot;mean&quot;: 0.87, &quot;std&quot;: 0.13, &quot;ci_95&quot;: [0.863, 0.877]},
-        &quot;latency_p95_ms&quot;: {&quot;mean&quot;: 2100, &quot;std&quot;: 680},
-        &quot;cost_per_request_usd&quot;: {&quot;mean&quot;: 0.0058, &quot;std&quot;: 0.0018},
-        &quot;error_rate&quot;: {&quot;mean&quot;: 0.009, &quot;std&quot;: 0.001}
-      }
-    }
-  },
-  &quot;analysis&quot;: {
-    &quot;method&quot;: &quot;bayesian&quot;,
-    &quot;primary_metric&quot;: &quot;quality_score&quot;,
-    &quot;probability_treatment_better&quot;: 0.993,
-    &quot;expected_lift&quot;: 0.061,
-    &quot;ci_95_lift&quot;: [0.047, 0.075],
-    &quot;recommendation&quot;: &quot;Treatment (zen-120b) shows 6.1% quality improvement with 99.3% probability. Latency increased 75% and cost increased 87%. Recommend promotion for quality-sensitive traffic; maintain control for cost-sensitive segments.&quot;,
-    &quot;guardrails&quot;: {
-      &quot;latency_p99_ms&quot;: {&quot;status&quot;: &quot;pass&quot;, &quot;value&quot;: 4200, &quot;threshold&quot;: 5000},
-      &quot;error_rate&quot;: {&quot;status&quot;: &quot;pass&quot;, &quot;value&quot;: 0.009, &quot;threshold&quot;: 0.05}
-    }
-  }
-}</code></pre>
+<p>These targets are achievable because flag evaluation is a pure in-memory operation: definitions are read from the org&#x27;s own SQLite store into a hot in-process copy, and the evaluator is a pure function over them (<code>apps/flags/engine.go:5-7</code>). There is no KV tier and no sync hop to go stale.</p>
+<h3>Management surface</h3>
+<p>Definition management is org-scoped on the SAME prefix — there is no <code>/admin/v1</code> and no separate management key family:</p>
+<pre><code>GET    /v1/flags/defs          # list definitions
+GET    /v1/flags/defs/{key}    # read one
+PUT    /v1/flags/defs/{key}    # create / update (versioned)
+DELETE /v1/flags/defs/{key}    # delete
+GET    /v1/flags/activity      # the audit log of definition changes</code></pre>
+<p>Every mutation to a flag definition is recorded append-only with the acting user, timestamp and version (<code>apps/flags/store.go</code>), readable at <code>GET /v1/flags/activity</code> — which is what answers &quot;who changed the model rollout percentage at 3am?&quot;. The platform&#x27;s own operational switches are the one cross-tenant surface: they live in the reserved platform store and only a SuperAdmin writes them (<code>apps/flags/flags.go:21-27</code>).</p>
+<h2>The plane that composes this one</h2>
+<p>An A/B test is a caller of this primitive, not a second engine inside it: the experiment registry, the analysis over its arms and the decision that locks a winner are the <code>experiment</code> capability, HIP-1311. Create and decide there write a flag definition here, which is why the arm a request is served and the arm a report names are one value.</p>
+<h3>Integration with the serving path</h3>
+<p>Traffic splitting at the infrastructure layer — the gateway evaluating a flag before the request reaches application code — is a design this section used to specify in KrakenD configuration. No such gateway plugin ships; what ships is in-process composition: any subsystem in the binary evaluates through <code>flags.Assign</code> (the same deterministic rollout hash the HTTP surface uses), which is how <code>apps/experiment</code> and <code>apps/campaign</code> split traffic today with no network hop at all. A gateway-level split remains open design and MUST, if built, evaluate through the same embedded engine rather than a second one.</p>
 <h2>Architecture</h2>
-<pre><code>                                    ┌─────────────────────┐
-                                    │   Admin UI / API     │
-                                    │  Flag management     │
-                                    │  Experiment config   │
-                                    └──────────┬──────────┘
-                                               │ write
-                                               v
-┌──────────────┐                    ┌─────────────────────┐
-│  SQL          │&lt;───── persist ────│   Flags Service      │
-│  (flag defs,  │                   │   (Go, port 8063)    │
-│   audit log)  │                   │                      │
-└──────────────┘                    │  - Admin API          │
-                                    │  - Evaluation API     │
-┌──────────────┐                    │  - Sync to KV         │
-│  KV           │&lt;───── sync ──────│  - Stats engine       │
-│  (flag state, │                   └──────────┬──────────┘
-│   cache)      │                              │
-└──────┬───────┘                               │ emit
-       │ read                                  v
-       v                            ┌─────────────────────┐
-┌──────────────┐                    │   Kafka (HIP-0030)   │
-│  SDK / Gateway│                   │  topic: experiment_   │
-│  (in-process  │                   │  exposures            │
-│   cache)      │                   └──────────┬──────────┘
-└──────────────┘                               │ consume
-                                               v
-                                    ┌─────────────────────┐
-                                    │   Datastore           │
-                                    │  (experiment metrics, │
-                                    │   shared w/ HIP-0017) │
-                                    └─────────────────────┘</code></pre>
-<h3>Flag Sync Protocol</h3>
-<ol><li>Flag definitions are stored in SQL (source of truth)</li><li>On create/update/delete, the Flags Service writes to SQL and publishes a change event to KV Pub/Sub channel <code>flags:changes</code></li><li>All Flags Service instances subscribe to <code>flags:changes</code> and update their KV hash (<code>flags:{project_id}</code>)</li><li>SDKs with local evaluation poll KV every 30 seconds (configurable) or subscribe to Server-Sent Events for real-time updates</li><li>The evaluation endpoint reads from the in-process cache (populated from KV), never from SQL</li></ol>
-<p>This architecture means SQL can go down for 30 minutes and flag evaluation continues uninterrupted from the KV + in-process cache. SDKs with local evaluation continue working even if KV is down, using their last-known flag state.</p>
-<h3>API Key Types</h3>
-<p>| Prefix | Type | Capabilities | |--------|------|-------------| | <code>hf_project_</code> | Project key | Evaluate flags, report metrics | | <code>hf_admin_</code> | Admin key | Full CRUD on flags and experiments | | <code>hf_server_</code> | Server SDK key | Evaluate flags with local evaluation (pulls full flag config) |</p>
-<h2>Implementation</h2>
-<h3>Deployment</h3>
-<pre><code class="lang-yaml"># K8s Deployment on the cluster
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: flags
-  namespace: hanzo
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: flags
-  template:
-    spec:
-      containers:
-      - name: flags
-        image: ghcr.io/hanzoai/flags:latest
-        ports:
-        - containerPort: 8063
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: flags-secrets
-              key: database-url
-        - name: REDIS_URL
-          valueFrom:
-            secretKeyRef:
-              name: flags-secrets
-              key: redis-url
-        - name: KAFKA_BROKERS
-          value: &quot;localhost:9092&quot;
-        resources:
-          requests:
-            cpu: 250m
-            memory: 256Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8063
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8063
-          periodSeconds: 5</code></pre>
+<p>One binary, one subsystem, no tiers. <code>apps/flags</code> holds the definitions in each org&#x27;s own encrypted SQLite file and evaluates them in-process through the embedded evaluator. There is no standalone flags service, no SQL-to-KV sync, no KV pub/sub channel, no Kafka exposure topic and no separate deployment — the earlier revision of this HIP specified all four, and the shipped shape replaced them with something strictly simpler: the store is beside the evaluator, so there is nothing to sync and nothing to go stale. Deployment is the cloud image; the plugin binary is <code>plugin/flags</code>.</p>
+<p>The credential is the caller&#x27;s ordinary org key (HIP-0026). There is no <code>hf_*</code> key family: the evaluate routes take the same bearer as every other <code>/v1</code> surface, and tenancy is the validated principal, never the key prefix.</p>
 <h3>SDK Usage</h3>
-<h4>Go (Server-Side with Local Evaluation)</h4>
-<pre><code class="lang-go">package main
-
-import (
-    &quot;context&quot;
-    &quot;fmt&quot;
-
-    &quot;github.com/hanzoai/flags-go&quot;
-    &quot;github.com/open-feature/go-sdk/openfeature&quot;
-)
-
-func main() {
-    // Register Hanzo Flags as OpenFeature provider
-    provider := flags.NewProvider(flags.Config{
-        ServerURL: &quot;https://flags.hanzo.ai&quot;,
-        APIKey:    &quot;hf_server_key_abc123&quot;,
-        CacheTTL:  30 * time.Second,
-    })
-    openfeature.SetProvider(provider)
-    defer provider.Shutdown()
-
-    client := openfeature.NewClient(&quot;inference-service&quot;)
-
-    // Evaluate a string flag
-    ctx := openfeature.NewEvaluationContext(&quot;user_789&quot;, map[string]interface{}{
-        &quot;org&quot;:  &quot;hanzo&quot;,
-        &quot;plan&quot;: &quot;pro&quot;,
-    })
-
-    model, _ := client.StringValue(context.Background(), &quot;inference-model-experiment&quot;, &quot;zen-72b&quot;, ctx)
-    fmt.Printf(&quot;Using model: %s\n&quot;, model)
-}</code></pre>
-<h4>Python (Server-Side)</h4>
-<pre><code class="lang-python">from openfeature import api as openfeature
-from hanzoai.flags import HanzoFlagsProvider
-
-# Register provider
-provider = HanzoFlagsProvider(
-    server_url=&quot;https://flags.hanzo.ai&quot;,
-    api_key=&quot;hf_server_key_abc123&quot;,
-)
-openfeature.set_provider(provider)
-
-client = openfeature.get_client()
-
-# Evaluate with context
-context = openfeature.EvaluationContext(
-    targeting_key=&quot;user_789&quot;,
-    attributes={&quot;org&quot;: &quot;hanzo&quot;, &quot;plan&quot;: &quot;pro&quot;},
-)
-
-model = client.get_string_value(&quot;inference-model-experiment&quot;, &quot;zen-72b&quot;, context)
-print(f&quot;Using model: {model}&quot;)
-
-# Object flag for RAG config
-rag_config = client.get_object_value(&quot;rag-strategy&quot;, {&quot;chunk_size&quot;: 256}, context)
-print(f&quot;RAG config: chunk_size={rag_config[&#x27;chunk_size&#x27;]}, top_k={rag_config[&#x27;top_k&#x27;]}&quot;)</code></pre>
-<h4>TypeScript (Client-Side)</h4>
-<pre><code class="lang-typescript">import { OpenFeature } from &#x27;@openfeature/web-sdk&#x27;;
-import { HanzoFlagsProvider } from &#x27;@hanzoai/flags-openfeature-web&#x27;;
-
-// Initialize
-OpenFeature.setProvider(new HanzoFlagsProvider({
-  serverUrl: &#x27;https://flags.hanzo.ai&#x27;,
-  apiKey: &#x27;hf_project_key_abc123&#x27;,
-}));
-
-const client = OpenFeature.getClient();
-
-// Set context once (persists across evaluations)
-OpenFeature.setContext({
-  targetingKey: &#x27;user_789&#x27;,
-  org: &#x27;hanzo&#x27;,
-  plan: &#x27;pro&#x27;,
-});
-
-// Evaluate
-const showNewDashboard = await client.getBooleanValue(&#x27;new-dashboard&#x27;, false);
-const model = await client.getStringValue(&#x27;inference-model-experiment&#x27;, &#x27;zen-72b&#x27;);</code></pre>
+<p>The client surface is the generated cloud SDKs and the <code>hanzo</code> CLI, both projections of the served document (HIP-1030): the flags operations appear as the <code>Flags</code> class/command group in every generated language. The hand-written <code>@hanzoai/flags-js</code> / <code>hanzoai-flags</code> / <code>flags-go</code> packages and the OpenFeature provider wrappers this section used to show are not published; if OpenFeature adapters are wanted they wrap the generated client, they do not replace it.</p>
 <h2>Security</h2>
 <h3>Authentication</h3>
-<p>All API requests require a valid API key in the <code>Authorization</code> header. Project keys (<code>hf_project_</code>) can only evaluate flags. Admin keys (<code>hf_admin_</code>) can manage flags and experiments. Server keys (<code>hf_server_</code>) can evaluate and pull full flag configurations for local evaluation.</p>
+<p>Every request carries the org&#x27;s ordinary credential (HIP-0026); there is no flags-specific key family. Tenancy is the VALIDATED principal — <code>principal.Org</code> and <code>principal.Project</code> — never a header a client can write.</p>
 <h3>Flag Access Control</h3>
-<p>Flags are scoped to projects. A project key can only evaluate flags within its project. Admin keys are scoped to organizations. Multi-tenant isolation is enforced at the API layer -- there is no way for one project&#x27;s SDK to evaluate another project&#x27;s flags.</p>
+<p>Flags are scoped to (org, project), and the isolation is physical, not a filter: each (org, project) pair is its own SQLite file (<code>apps/flags/store.go:3-6</code>), so one tenant&#x27;s evaluation cannot read another&#x27;s definitions even in the presence of a query defect. The platform-switch store is the reserved platform namespace and only a SuperAdmin writes it.</p>
+<p>What an attacker gets from the wrong implementation: flags are the policy primitive other planes compose (admission, stage gating per HIP-0139 §8.2), so a cross-tenant write here is not a cosmetic defect — it is another org&#x27;s kill switches flipped, and a readable beta-flag roster is an existence oracle for capabilities a customer has not been shown.</p>
 <h3>Audit Trail</h3>
 <p>Every flag mutation (create, update, toggle, delete) is recorded with:</p>
 <ul><li>Acting user (from IAM token or API key)</li><li>Timestamp (UTC, millisecond precision)</li><li>Full diff of the change (before/after JSON)</li><li>IP address and user agent</li></ul>
 <p>The audit log is append-only and cannot be modified or deleted via the API. It is stored in SQL with a 2-year retention policy.</p>
-<h3>Experiment Data Privacy</h3>
-<p>Experiment exposure events contain <code>distinct_id</code> and variant assignment. They do NOT contain the user&#x27;s request or response content. Metric values (latency, cost, quality score) are aggregate numbers, not raw inference data. This ensures that the experimentation system never stores or transmits user prompts, completions, or any PII beyond the stable user identifier.</p>
 <h2>Monitoring</h2>
-<pre><code class="lang-yaml">alerts:
-  - name: FlagEvaluationLatencyHigh
-    expr: histogram_quantile(0.99, flags_evaluation_duration_seconds_bucket) &gt; 0.005
-    for: 5m
-    severity: warning
-    summary: &quot;Flag evaluation p99 &gt; 5ms&quot;
-
-  - name: FlagSyncStale
-    expr: (time() - flags_last_sync_timestamp_seconds) &gt; 120
-    for: 2m
-    severity: critical
-    summary: &quot;Flag state not synced from KV in &gt; 2 minutes&quot;
-
-  - name: ExperimentGuardrailBreached
-    expr: flags_experiment_guardrail_breached == 1
-    for: 0m
-    severity: critical
-    summary: &quot;Experiment guardrail threshold exceeded -- auto-kill may trigger&quot;
-
-  - name: ExposureEventLag
-    expr: kafka_consumer_group_lag{group=&quot;flags-exposures&quot;} &gt; 50000
-    for: 5m
-    severity: warning
-    summary: &quot;Experiment exposure event consumer lag &gt; 50K&quot;</code></pre>
+<p>It exports no metrics of its own today: there is no <code>flags_*</code> metric family and no sync or consumer lag to alert on, because there is no sync and no consumer. What a customer can read back under <code>/v1/o11y</code> is the request span every route already gets; the definition change history is <code>GET /v1/flags/activity</code>. Alerting on evaluation latency, if wanted, rides the fleet&#x27;s ordinary request telemetry rather than a capability-local exporter.</p>
 <h2>References</h2>
-<ol><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-4: LLM Gateway</a></li><li><a href="./hip-0017-analytics-event-standard.md">HIP-17: Analytics Event Standard</a></li><li>HIP-44: API Gateway Standard</li><li><a href="https://openfeature.dev/specification/">OpenFeature Specification</a></li><li><a href="https://github.com/open-feature/go-sdk">OpenFeature Go SDK</a></li><li><a href="https://arxiv.org/abs/1707.02038">Thompson Sampling for Multi-Armed Bandits</a></li><li><a href="https://vwo.com/downloads/VWO_SmartStats_technical_whitepaper.pdf">Bayesian A/B Testing at VWO</a></li><li><a href="https://github.com/hanzoai/flags">Hanzo Flags Repository</a></li></ol>
+<ol><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-4: LLM Gateway</a></li><li><a href="./hip-1190-event-product-analytics.md">HIP-1190: Event — The Product Analytics Plane</a></li><li><a href="./hip-0519-one-identity-boundary.md">HIP-519: One Identity Boundary</a></li><li><a href="https://openfeature.dev/specification/">OpenFeature Specification</a></li><li><a href="https://github.com/open-feature/go-sdk">OpenFeature Go SDK</a></li><li><a href="https://arxiv.org/abs/1707.02038">Thompson Sampling for Multi-Armed Bandits</a></li><li><a href="https://github.com/hanzoai/flags">Hanzo Flags Repository</a></li><li><a href="./hip-1311-experiment-the-ab-plane.md">HIP-1311: Experiment — Arms, Assignment, a Verdict</a></li></ol>
 <h2>Copyright</h2>
 <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</p>
 <footer>
@@ -823,5 +376,4 @@ const model = await client.getStringValue(&#x27;inference-model-experiment&#x27;
 </div>
 <div class="fend"><a href="/hip-0063.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

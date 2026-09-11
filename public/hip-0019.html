@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,10 +196,10 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0019</h1><p class="lede">HIP-19: Tensor Operations Standard. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0019: Tensor Operations Standard</h1>
+<h1>hip-0019</h1><p class="lede">HIP-19: Tensor Operations Standard. Status Final. Hanzo architectural specification.</p><h1>HIP-0019: Tensor Operations Standard</h1>
 <h2>Abstract</h2>
 <p>This proposal defines the tensor operations standard for all ML computations in the Hanzo ecosystem. It specifies the data types, device backends, operation primitives, model formats, quantization strategies, memory management, custom operations, WebAssembly compilation pipeline, and API surface that every inference workload MUST use. The reference implementation is Hanzo Candle, a fork of HuggingFace&#x27;s Candle Rust ML framework extended with Apple Silicon Metal support, custom quantization kernels, Hamiltonian dynamics operations, and integration with the Hanzo model serving pipeline.</p>
-<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/candle">github.com/hanzoai/candle</a> <strong>Crates</strong>: <code>candle-core</code>, <code>candle-nn</code>, <code>candle-transformers</code>, <code>candle-metal-kernels</code>, <code>candle-wasm</code> <strong>NPM Package</strong>: <code>@hanzoai/candle-wasm</code></p>
+<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/ml">github.com/hanzoai/ml</a> <strong>Crates</strong>: <code>hanzo-ml</code> (tensor core), <code>hanzo-nn</code>, <code>hanzo-transformers</code>, <code>hanzo-metal-kernels</code> -- the fork publishes under the <code>hanzo-<em></code> prefix; the <code>candle-</em></code> names used below follow the upstream layout. <strong>NPM Package</strong>: none yet -- the WASM build described below is proposed, not published.</p>
 <h2>Motivation</h2>
 <p>ML inference in production has a set of concrete problems that existing tooling does not solve together:</p>
 <ol><li><strong>Runtime bloat</strong>: PyTorch requires a 2GB+ runtime. For a service that loads a 4-bit quantized 7B model into 4GB of RAM, the framework itself should not double the memory footprint. Inference servers should be small, fast to start, and free of dynamic library dependency chains.</li><li><strong>No single-binary deployment</strong>: Python-based inference requires a virtualenv, pip dependencies, CUDA toolkit installation, and careful version pinning. Deploying to a new machine means reproducing this environment exactly. A compiled binary that statically links its dependencies eliminates this class of failure.</li><li><strong>GIL contention</strong>: Python&#x27;s Global Interpreter Lock serializes CPU-bound work across threads. For inference servers handling concurrent requests, this means either multiprocessing (with memory duplication) or yielding to C extensions (with complex FFI). Rust has no GIL.</li><li><strong>Memory safety at the hardware boundary</strong>: CUDA and Metal kernels operate on raw pointers. Buffer overflows, use-after-free, and data races in kernel launch code cause silent corruption or segfaults. Rust&#x27;s ownership model catches these at compile time.</li><li><strong>No edge/browser deployment path</strong>: PyTorch cannot compile to WebAssembly. ONNX Runtime has a WASM build but it is large and limited. Candle compiles to WASM natively, enabling in-browser inference with no server round-trip.</li><li><strong>Fragmented hardware support</strong>: Most frameworks treat CUDA as first-class and everything else as an afterthought. Apple Silicon (Metal) and WebAssembly are second-class or unsupported. We need uniform performance across CPU, CUDA, Metal, and WASM.</li><li><strong>No custom operation pathway for scientific computing</strong>: Production ML frameworks are optimized for standard neural network operations. Applications that require physics-informed layers -- such as Hamiltonian dynamics for the HMM protocol (HIP-0008) or active inference for HLLM (HIP-0002) -- have no clean extension mechanism in PyTorch or ONNX. Candle&#x27;s trait-based backend system makes custom operations first-class.</li></ol>
@@ -441,7 +450,7 @@ kernel void q4_k_m_matmul_metal(
     fn metal_fwd(&amp;self, storage: &amp;MetalStorage, layout: &amp;Layout) -&gt; Result&lt;(MetalStorage, Shape)&gt;;
 }</code></pre>
 <h3>WASM Compilation Pipeline</h3>
-<p>The WASM pipeline compiles Candle to WebAssembly and packages it as an npm module for browser consumption. The full pipeline:</p>
+<p>The WASM pipeline compiles Candle to WebAssembly and packages it as an npm module for browser consumption. The repository carries per-model WASM examples (<code>hanzo-ml-wasm-examples/</code>), but no package is published to npm yet, so the pipeline and the package name below describe what this HIP proposes rather than something you can install today:</p>
 <pre><code>Rust source (candle-core, candle-nn, candle-transformers)
     |
     v
@@ -579,7 +588,7 @@ let logits = model.forward(&amp;input, 0)?;  // position offset = 0
 let next_token = logits.argmax(D::Minus1)?;</code></pre>
 <h2>Implementation</h2>
 <h3>Repository</h3>
-<p><a href="https://github.com/hanzoai/candle">github.com/hanzoai/candle</a> -- fork of <a href="https://github.com/huggingface/candle">huggingface/candle</a> with Hanzo extensions.</p>
+<p><a href="https://github.com/hanzoai/ml">github.com/hanzoai/ml</a> -- fork of <a href="https://github.com/huggingface/candle">huggingface/candle</a> with Hanzo extensions.</p>
 <h3>Build</h3>
 <pre><code class="lang-bash"># CPU only (all platforms)
 cargo build --release
@@ -596,7 +605,7 @@ wasm-pack build candle-wasm --target web --release
 # All features (development)
 cargo build --release --features &quot;cuda metal&quot;</code></pre>
 <h3>Integration Points</h3>
-<p>| System | Integration | Details | |--------|-------------|---------| | <strong>Zen Gateway</strong> (HIP-0039) | Edge inference | Quantized Zen models served via Candle on CPU/Metal for low-latency edge nodes | | <strong>Studio</strong> (HIP-0035) | Diffusion inference | Stable Diffusion / Flux pipelines run on Candle Metal backend for Apple Silicon users | | <strong>Jin</strong> (HIP-0003) | Multimodal backbone | Jin model architectures implemented as Candle modules in <code>candle-transformers</code> | | <strong>LLM Gateway</strong> (HIP-0004) | Local model serving | Gateway routes to local Candle inference workers for on-premise deployments | | <strong>Object Storage</strong> (HIP-0032) | Model distribution | Model weights stored in safetensors/GGUF format in Hanzo Object Storage, loaded by Candle | | <strong>MCP</strong> (HIP-0010) | Tool inference | MCP tool servers embed Candle for classification, embedding, and small-model inference | | <strong>Node</strong> (HIP-0020) | Verified inference | Blockchain nodes use Candle for deterministic inference with reproducible outputs | | <strong>HMM</strong> (HIP-0008) | Market dynamics | Hamiltonian Market Maker uses <code>candle-hamiltonian</code> for symplectic market state evolution |</p>
+<p>| System | Integration | Details | |--------|-------------|---------| | <strong>Zen Gateway</strong> (HIP-0039) | Edge inference | Quantized Zen models served via Candle on CPU/Metal for low-latency edge nodes | | <strong>Studio</strong> (HIP-1211) | Diffusion inference | Stable Diffusion / Flux pipelines run on Candle Metal backend for Apple Silicon users | | <strong>Jin</strong> (HIP-0003) | Multimodal backbone | Jin model architectures implemented as Candle modules in <code>candle-transformers</code> | | <strong>LLM Gateway</strong> (HIP-0004) | Local model serving | Gateway routes to local Candle inference workers for on-premise deployments | | <strong>Object Storage</strong> (HIP-0405) | Model distribution | Model weights stored in safetensors/GGUF format in Hanzo Object Storage, loaded by Candle | | <strong>MCP</strong> (HIP-0010) | Tool inference | MCP tool servers embed Candle for classification, embedding, and small-model inference | | <strong>Node</strong> (HIP-0020) | Verified inference | Blockchain nodes use Candle for deterministic inference with reproducible outputs | | <strong>HMM</strong> (HIP-0008) | Market dynamics | Hamiltonian Market Maker uses <code>candle-hamiltonian</code> for symplectic market state evolution |</p>
 <h3>Execution Flow</h3>
 <pre><code>User Request
     |
@@ -734,7 +743,7 @@ fn test_quantized_load() {
         .all(|batch| batch.iter().all(|seq| seq.iter().all(|v| v.is_finite()))));
 }</code></pre>
 <h2>References</h2>
-<ol><li><a href="./hip-0002-hamiltonian-large-language-models-hllms-specification.md">HIP-0002: Hamiltonian Large Language Models</a></li><li><a href="./hip-0003-jin-multimodal-ai-architecture.md">HIP-0003: Jin Multimodal AI Architecture</a></li><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-0004: LLM Gateway</a></li><li><a href="./hip-0007-active-inference-integration-for-hamiltonian-llms.md">HIP-0007: Active Inference Integration</a></li><li><a href="./hip-0008-hmm-hanzo-market-maker-native-dex-for-ai-compute-resources.md">HIP-0008: HMM Hanzo Market Maker</a></li><li><a href="./hip-0010-model-context-protocol-mcp-integration-standards.md">HIP-0010: Model Context Protocol</a></li><li><a href="./hip-0020-blockchain-node-standard.md">HIP-0020: Blockchain Node Standard</a></li><li>HIP-0032: Object Storage Standard</li><li><a href="./hip-0035-image-video-generation-standard.md">HIP-0035: Image &amp; Video Generation Standard</a></li><li><a href="./hip-0039-zen-model-architecture.md">HIP-0039: Zen Model Architecture</a></li><li><a href="https://github.com/huggingface/candle">HuggingFace Candle</a> -- upstream repository</li><li><a href="https://huggingface.co/docs/safetensors/">safetensors format</a> -- model serialization standard</li><li><a href="https://github.com/ggerganov/ggml/blob/master/docs/gguf.md">GGUF format</a> -- quantized model format</li><li><a href="https://en.wikipedia.org/wiki/Leapfrog_integration">Leapfrog integration</a> -- symplectic integrator theory</li></ol>
+<ol><li><a href="./hip-0002-hamiltonian-large-language-models-hllms-specification.md">HIP-0002: Hamiltonian Large Language Models</a></li><li><a href="./hip-0003-jin-multimodal-ai-architecture.md">HIP-0003: Jin Multimodal AI Architecture</a></li><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-0004: LLM Gateway</a></li><li><a href="./hip-0007-active-inference-integration-for-hamiltonian-llms.md">HIP-0007: Active Inference Integration</a></li><li><a href="./hip-0008-hmm-hanzo-market-maker-native-dex-for-ai-compute-resources.md">HIP-0008: HMM Hanzo Market Maker</a></li><li><a href="./hip-0010-model-context-protocol-mcp-integration-standards.md">HIP-0010: Model Context Protocol</a></li><li><a href="./hip-0020-blockchain-node-standard.md">HIP-0020: Blockchain Node Standard</a></li><li><a href="./hip-0405-s3-crd.md">HIP-0405: S3 CRD</a></li><li><a href="./hip-1211-ai-the-model-api.md">HIP-1211: AI — The Model API</a></li><li><a href="./hip-0039-zen-model-architecture.md">HIP-0039: Zen Model Architecture</a></li><li><a href="https://github.com/huggingface/candle">HuggingFace Candle</a> -- upstream repository</li><li><a href="https://huggingface.co/docs/safetensors/">safetensors format</a> -- model serialization standard</li><li><a href="https://github.com/ggerganov/ggml/blob/master/docs/gguf.md">GGUF format</a> -- quantized model format</li><li><a href="https://en.wikipedia.org/wiki/Leapfrog_integration">Leapfrog integration</a> -- symplectic integrator theory</li></ol>
 <h2>Copyright</h2>
 <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</p>
 <footer>
@@ -756,5 +765,4 @@ fn test_quantized_load() {
 </div>
 <div class="fend"><a href="/hip-0019.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

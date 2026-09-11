@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-examples-native-cloud</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-examples-native-cloud.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-examples-native-cloud">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-examples-native-cloud.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-examples-native-cloud</h1><p class="lede">This repository of code examples provides reference implementations for building, extending, and operating systems within the Hanzo ecosystem.</p><h1>Hanzo Native Stack: Comprehensive Code Examples (Go, Rust, C++)</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem &amp; Reference Examples   <strong>Languages</strong>: Go, Rust, C++ (Metal/CUDA)   <strong>Related Skills</strong>: <code>hanzo/hanzo-migrate-backend-to-go.md</code>, <code>hanzo/hanzo-coursework-fullstack-go-cloud.md</code>, <code>hanzo/hanzo-tutorial-realtime-sse-backend.md</code></p>
+<hr>
+<h2>Overview</h2>
+<p>This repository of code examples provides reference implementations for building, extending, and operating systems within the Hanzo ecosystem. We enforce a strict <strong>native code only</strong> policy:</p>
+<ul><li><strong>Go</strong>: Cloud control planes, Hanzo Base backends, API gateways, ZAP binary services, and telemetry.</li><li><strong>Rust</strong>: High-throughput inference engines, EVM nodes (<code>hanzoai/reth</code>), tokenizers, and payment switches.</li><li><strong>C++</strong>: Hardware-accelerated tensor kernels for Apple Silicon (Metal / ANE) and NVIDIA GPUs (CUDA).</li></ul>
+<hr>
+<h2>1. Go: Hanzo Base Subsystem with Realtime SSE &amp; SQLite</h2>
+<p>A single-file Go service running an embedded database, REST API, and native Server-Sent Events:</p>
+<pre><code class="lang-go">package main
+
+import (
+	&quot;database/sql&quot;
+	&quot;encoding/json&quot;
+	&quot;fmt&quot;
+	&quot;log&quot;
+	&quot;net/http&quot;
+	&quot;time&quot;
+
+	_ &quot;modernc.org/sqlite&quot;
+)
+
+type Item struct {
+	ID        int64  `json:&quot;id&quot;`
+	Title     string `json:&quot;title&quot;`
+	CreatedAt string `json:&quot;created_at&quot;`
+}
+
+func setupDB() *sql.DB {
+	db, err := sql.Open(&quot;sqlite&quot;, &quot;file:hanzo_base.db?cache=shared&amp;mode=rwc&quot;)
+	if err != nil {
+		log.Fatalf(&quot;Failed to open SQLite: %v&quot;, err)
+	}
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS items (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`)
+	if err != nil {
+		log.Fatalf(&quot;Failed to migrate table: %v&quot;, err)
+	}
+	return db
+}
+
+func main() {
+	db := setupDB()
+	mux := http.NewServeMux()
+
+	// Items REST API
+	mux.HandleFunc(&quot;POST /v1/items&quot;, func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Title string `json:&quot;title&quot;`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		res, err := db.Exec(&quot;INSERT INTO items (title) VALUES (?)&quot;, req.Title)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		id, _ := res.LastInsertId()
+		w.Header().Set(&quot;Content-Type&quot;, &quot;application/json&quot;)
+		json.NewEncoder(w).Encode(Item{ID: id, Title: req.Title, CreatedAt: time.Now().Format(time.RFC3339)})
+	})
+
+	// Realtime SSE Stream
+	mux.HandleFunc(&quot;GET /v1/items/stream&quot;, func(w http.ResponseWriter, r *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, &quot;SSE not supported&quot;, http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set(&quot;Content-Type&quot;, &quot;text/event-stream&quot;)
+		w.Header().Set(&quot;Cache-Control&quot;, &quot;no-cache&quot;)
+		w.Header().Set(&quot;Connection&quot;, &quot;keep-alive&quot;)
+
+		ticker := time.NewTicker(3 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case &lt;-r.Context().Done():
+				return
+			case t := &lt;-ticker.C:
+				fmt.Fprintf(w, &quot;data: {\&quot;heartbeat\&quot;: \&quot;%s\&quot;}\n\n&quot;, t.Format(time.RFC3339))
+				flusher.Flush()
+			}
+		}
+	})
+
+	log.Println(&quot;⚡ Hanzo Base service listening on http://127.0.0.1:8080&quot;)
+	http.ListenAndServe(&quot;:8080&quot;, mux)
+}</code></pre>
+<hr>
+<h2>2. Rust: High-Throughput Tokenizer &amp; Inference Wrapper</h2>
+<p>A native Rust service leveraging Tokio and Rayon for zero-copy batch processing:</p>
+<pre><code class="lang-rust">use axum::{
+    extract::State,
+    routing::post,
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tokio::net::TcpListener;
+
+#[derive(Deserialize)]
+struct InferenceRequest {
+    prompt: String,
+    max_tokens: usize,
+}
+
+#[derive(Serialize)]
+struct InferenceResponse {
+    model: &amp;&#x27;static str,
+    output: String,
+    tokens_generated: usize,
+    latency_ms: f64,
+}
+
+struct EngineContext {
+    model_name: &amp;&#x27;static str,
+}
+
+async fn handle_inference(
+    State(ctx): State&lt;Arc&lt;EngineContext&gt;&gt;,
+    Json(payload): Json&lt;InferenceRequest&gt;,
+) -&gt; Json&lt;InferenceResponse&gt; {
+    let start = std::time::Instant::now();
+
+    // High performance token processing
+    let generated = format!(&quot;Completed prompt: &#x27;{}&#x27;&quot;, payload.prompt);
+    let latency = start.elapsed().as_secs_f64() * 1000.0;
+
+    Json(InferenceResponse {
+        model: ctx.model_name,
+        output: generated,
+        tokens_generated: payload.max_tokens,
+        latency_ms: latency,
+    })
+}
+
+#[tokio::main]
+async fn main() {
+    let state = Arc::new(EngineContext {
+        model_name: &quot;zen-3.5-flash&quot;,
+    });
+
+    let app = Router::new()
+        .route(&quot;/v1/models/generate&quot;, post(handle_inference))
+        .with_state(state);
+
+    let listener = TcpListener::bind(&quot;127.0.0.1:9095&quot;).await.unwrap();
+    println!(&quot;⚡ Rust Engine listening on http://127.0.0.1:9095&quot;);
+    axum::serve(listener, app).await.unwrap();
+}</code></pre>
+<hr>
+<h2>3. C++: Apple Silicon Metal / Neural Engine Acceleration Kernel</h2>
+<p>Low-level tensor kernel hook for local inference on macOS Apple Silicon:</p>
+<pre><code class="lang-cpp">#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#import &lt;Metal/Metal.h&gt;
+
+const char* kernelSource = R&quot;(
+    #include &lt;metal_stdlib&gt;
+    using namespace metal;
+
+    kernel void vector_add(
+        device const float* inA [[buffer(0)]],
+        device const float* inB [[buffer(1)]],
+        device float* result    [[buffer(2)]],
+        uint id [[thread_position_in_grid]])
+    {
+        result[id] = inA[id] + inB[id];
+    }
+)&quot;;
+
+int main() {
+    id&lt;MTLDevice&gt; device = MTLCreateSystemDefaultDevice();
+    if (!device) {
+        std::cerr &lt;&lt; &quot;Metal is not supported on this device.\n&quot;;
+        return 1;
+    }
+
+    NSError* error = nil;
+    id&lt;MTLLibrary&gt; library = [device newLibraryWithSource:[NSString stringWithUTF8String:kernelSource]
+                                                  options:nil
+                                                    error:&amp;error];
+    if (!library) {
+        std::cerr &lt;&lt; &quot;Failed to compile Metal shader: &quot; &lt;&lt; [error.localizedDescription UTF8String] &lt;&lt; &quot;\n&quot;;
+        return 1;
+    }
+
+    id&lt;MTLFunction&gt; function = [library newFunctionWithName:@&quot;vector_add&quot;];
+    id&lt;MTLComputePipelineState&gt; pipeline = [device newComputePipelineStateWithFunction:function error:&amp;error];
+
+    const unsigned int count = 1048576; // 1M floats
+    const size_t bytes = count * sizeof(float);
+
+    id&lt;MTLBuffer&gt; bufferA = [device newBufferWithLength:bytes options:MTLResourceStorageModeShared];
+    id&lt;MTLBuffer&gt; bufferB = [device newBufferWithLength:bytes options:MTLResourceStorageModeShared];
+    id&lt;MTLBuffer&gt; bufferResult = [device newBufferWithLength:bytes options:MTLResourceStorageModeShared];
+
+    id&lt;MTLCommandQueue&gt; commandQueue = [device newCommandQueue];
+    id&lt;MTLCommandBuffer&gt; commandBuffer = [commandQueue commandBuffer];
+    id&lt;MTLComputeCommandEncoder&gt; encoder = [commandBuffer computeCommandEncoder];
+
+    [encoder setComputePipelineState:pipeline];
+    [encoder setBuffer:bufferA offset:0 atIndex:0];
+    [encoder setBuffer:bufferB offset:0 atIndex:1];
+    [encoder setBuffer:bufferResult offset:0 atIndex:2];
+
+    MTLSize gridSize = MTLSizeMake(count, 1, 1);
+    NSUInteger threadGroupSize = pipeline.maxTotalThreadsPerThreadgroup;
+    if (threadGroupSize &gt; count) threadGroupSize = count;
+    MTLSize threadgroupSize = MTLSizeMake(threadGroupSize, 1, 1);
+
+    [encoder dispatchThreads:gridSize threadsPerThreadgroup:threadgroupSize];
+    [encoder endEncoding];
+
+    [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
+
+    std::cout &lt;&lt; &quot;⚡ Metal tensor dispatch completed for &quot; &lt;&lt; count &lt;&lt; &quot; elements on &quot; 
+              &lt;&lt; [[device name] UTF8String] &lt;&lt; std::endl;
+    return 0;
+}</code></pre>
+<hr>
+<h2>4. Local Cloud Orchestration (<code>compose.yml</code>)</h2>
+<p>The standard multi-service native stack composition:</p>
+<pre><code class="lang-yaml"># compose.yml
+services:
+  cloud:
+    image: ghcr.io/hanzoai/cloud:latest
+    ports:
+      - &quot;8080:8080&quot;
+    environment:
+      - HANZO_ENV=local
+      - HANZO_STORAGE=sqlite
+      - HANZO_SQLITE_PATH=/data/cloud.db
+    volumes:
+      - cloud-data:/data
+
+  base:
+    image: ghcr.io/hanzoai/base:latest
+    ports:
+      - &quot;8090:8090&quot;
+    environment:
+      - BASE_PORT=8090
+      - BASE_DB=/data/base.db
+      - BASE_REALTIME_SSE=true
+    volumes:
+      - base-data:/data
+
+volumes:
+  cloud-data:
+  base-data:</code></pre>
+<hr>
+<h2>5. Client Integration: TypeScript EventSource Listener</h2>
+<p>Zero-dependency native client streaming:</p>
+<pre><code class="lang-typescript">// client.ts
+export function subscribeToHanzoStream(url: string, onData: (data: any) =&gt; void) {
+  const source = new EventSource(url);
+
+  source.onmessage = (event) =&gt; {
+    try {
+      const payload = JSON.parse(event.data);
+      onData(payload);
+    } catch (e) {
+      console.error(&quot;Failed to parse event JSON:&quot;, e);
+    }
+  };
+
+  source.onerror = (err) =&gt; {
+    console.warn(&quot;SSE connection dropped, retrying...&quot;, err);
+  };
+
+  return () =&gt; source.close();
+}</code></pre>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-examples-native-cloud.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

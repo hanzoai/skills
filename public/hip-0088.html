@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,9 +196,9 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0088</h1><p class="lede">HIP-88: Session KEM (ML-KEM-768/1024 for P2P). Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0088: Session KEM (ML-KEM-768/1024 for P2P)</h1>
+<h1>hip-0088</h1><p class="lede">HIP-88: Session KEM (ML-KEM-768/1024 for P2P). Status Final. Hanzo architectural specification.</p><h1>HIP-0088: Session KEM (ML-KEM-768/1024 for P2P)</h1>
 <h2>Abstract</h2>
-<p>HIP-0088 locks the post-quantum session KEM under the strict-PQ profile. The ZAP wire handshake (HIP-0077) negotiates an <code>ML-KEM-768</code> (FIPS 203, NIST PQ Cat 3) shared secret by default and <code>ML-KEM-1024</code> (Cat 5) for high-value sessions. The hybrid X-Wing (X25519 + ML-KEM-768) mode is available as an explicit transitional profile but is refused under strict-PQ. The derived shared secret is fed to an HKDF-Extract keyed by <code>KMAC256</code> (SP 800-185) and produces the AEAD key for <code>AES-256-GCM</code> or <code>ChaCha20-Poly1305</code> transport.</p>
+<p>HIP-0088 locks the post-quantum session KEM under the strict-PQ profile. The ZAP wire handshake (HIP-0077) negotiates an <code>ML-KEM-768</code> (FIPS 203, NIST PQ Cat 3) shared secret by default and <code>ML-KEM-1024</code> (Cat 5) for high-value sessions. One KEM family is admitted and it is ML-KEM; there is no hybrid mode to fall back to. The derived shared secret is fed to an HKDF-Extract keyed by <code>KMAC256</code> (SP 800-185) and produces the AEAD key for <code>AES-256-GCM</code> or <code>ChaCha20-Poly1305</code> transport.</p>
 <h2>Motivation</h2>
 <p>Path 12 of the LUX_STRICT_E2E_PQ coverage matrix is partial: LP-022 (ZAP) is the wire protocol and LP-072 specifies ML-KEM as a primitive, but no spec mandates ML-KEM under strict-PQ at the handshake boundary. HIP-0077 references ML-KEM-768 informationally but does not lock the KEM-derived transport key path. Without HIP-0088, P2P session encryption can silently fall back to classical X25519, defeating the end-to-end PQ posture.</p>
 <h2>Specification</h2>
@@ -232,9 +241,9 @@ session_key = KMAC256(shared_secret,
 <ol><li>Session key is rotated every 1 hour or 2^28 records, whichever</li></ol>
 <p>   comes first.</p>
 <h2>Rationale</h2>
-<p>ML-KEM-768 is NIST PQ Cat 3, matching ML-DSA-65&#x27;s identity scheme. ML-KEM-1024 is Cat 5 for high-value (governance, bridge, treasury) flows. X-Wing is useful only as a transition tool for connecting to legacy classical-only peers; under strict-PQ the X25519 leg adds zero cryptanalytic surface and would silently weaken the posture if not explicitly refused. KMAC256 over the transcript matches the SP 800-185 key-derivation pattern used elsewhere in the strict-PQ stack.</p>
+<p>ML-KEM-768 is NIST PQ Cat 3, matching ML-DSA-65&#x27;s identity scheme. ML-KEM-1024 is Cat 5 for high-value (governance, bridge, treasury) flows. A hybrid X25519 leg would add zero cryptanalytic surface while silently weakening the posture, so it is refused rather than offered as a way in. KMAC256 over the transcript matches the SP 800-185 key-derivation pattern used elsewhere in the strict-PQ stack.</p>
 <h2>Backwards compatibility</h2>
-<p>None. Strict-PQ refuses classical key exchange (X25519, ECDH) at the handshake boundary. The permissive profile (0x02) MAY accept hybrid constructions; the FIPS profile (0x03) MAY accept ML-KEM only.</p>
+<p>None. Classical key exchange (X25519, ECDH) is refused at the handshake boundary. A peer that cannot speak ML-KEM does not connect.</p>
 <h2>Reference implementation</h2>
 <p>ML-KEM primitive + session derivation: <code>luxfi/node/network/kem/</code>. Handshake state machine: <code>luxfi/node/network/peer/handshake.go</code>. Canonical wire byte registry: <code>luxfi/consensus/config/pq_mode.go</code> (<code>KeyExchangeID</code>).</p>
 <h2>Security considerations</h2>
@@ -262,5 +271,4 @@ session_key = KMAC256(shared_secret,
 </div>
 <div class="fend"><a href="/hip-0088.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

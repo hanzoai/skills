@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-ml</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-ml.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-ml">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-ml.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-ml</h1><p class="lede">Hanzo ML is a Rust-based minimalist ML framework forked from HuggingFace Candle, optimized for edge AI, quantization, and multimodal inference.</p><h1>Hanzo ML - Rust ML Framework</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-candle.md</code>, <code>hanzo/hanzo-engine.md</code>, <code>hanzo/hanzo-kensho.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo ML is a <strong>Rust-based minimalist ML framework</strong> forked from HuggingFace Candle, optimized for edge AI, quantization, and multimodal inference. It provides the tensor computation layer for the Hanzo ecosystem, with GPU acceleration via CUDA, Metal (Apple Silicon), and CPU optimizations (MKL, Accelerate).</p>
+<p>The repository maintains <strong>dual crate namespaces</strong>: original <code>candle-<em></code> crates for upstream compatibility plus <code>hanzo-</em></code> crates as the forward-looking Hanzo-branded API. Both coexist in the workspace and share the same underlying code.</p>
+<h3>Key Differentiators from Upstream Candle</h3>
+<ul><li><strong>Hanzo-branded crates</strong>: <code>hanzo-ml</code>, <code>hanzo-nn</code>, <code>hanzo-transformers</code>, <code>hanzo-datasets</code> published at v0.9.2-alpha.2</li><li><strong>HANZO_INTEGRATION.md</strong>: Integration guide for Hanzo Engine (mistral-rs fork)</li><li><strong>Hanzo-specific kernels</strong>: <code>hanzo-flash-attn</code>, <code>hanzo-metal-kernels</code>, <code>hanzo-kernels</code></li><li><strong>Python bindings</strong>: <code>hanzo-ml-pyo3</code> for Python interop</li><li><strong>WASM examples</strong>: <code>hanzo-ml-wasm-examples</code> for browser inference</li></ul>
+<h2>When to use</h2>
+<ul><li>High-performance ML inference in Rust applications</li><li>CUDA/Metal GPU acceleration without Python runtime</li><li>Loading GGUF, safetensors, ONNX models in Rust</li><li>Browser-based ML via WebAssembly</li><li>Integration with Hanzo Engine for model serving</li><li>Building custom inference pipelines with zero-cost abstractions</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Rust 1.75+</strong></li><li><strong>CUDA Toolkit 12+</strong> (for CUDA backend) or <strong>macOS 13+</strong> (for Metal)</li><li>For WASM: <code>wasm-pack</code> and compatible browser</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Repo | <code>github.com/hanzoai/ml</code> | | Branch | <code>main</code> | | Language | Rust (primary), C++/CUDA/Metal/Python | | Version | 0.9.2-alpha.2 (hanzo crates), 0.9.2 (candle crates) | | Build | <code>cargo build --workspace</code> | | Test | <code>cargo test --workspace</code> | | License | BSD-3-Clause OR Apache-2.0 |</p>
+<h2>Workspace Crates</h2>
+<h3>Hanzo-Branded (v0.9.2-alpha.2)</h3>
+<p>| Crate | Purpose | |-------|---------| | <code>hanzo-ml</code> | Core tensor operations, Device, DType, quantization | | <code>hanzo-nn</code> | Neural network layers (Linear, Conv, LayerNorm, Attention) | | <code>hanzo-transformers</code> | Transformer model implementations (90+) | | <code>hanzo-datasets</code> | Dataset loading (MNIST, CIFAR, TinyStories) | | <code>hanzo-ml-pyo3</code> | Python bindings via PyO3 | | <code>hanzo-flash-attn</code> | Flash Attention v2 CUDA kernels | | <code>hanzo-metal-kernels</code> | Custom Metal GPU kernels | | <code>hanzo-kernels</code> | Custom CUDA kernels | | <code>hanzo-onnx</code> | ONNX model evaluation | | <code>hanzo-ug</code> | Universal Graph backend | | <code>hanzo-ml-examples</code> | Example binaries | | <code>hanzo-ml-wasm-examples</code> | Browser WASM examples | | <code>hanzo-ml-wasm-tests</code> | WASM test suite |</p>
+<h3>Upstream-Compatible (v0.9.2)</h3>
+<p>| Crate | Purpose | |-------|---------| | <code>candle-core</code> | Original tensor core (same code as hanzo-ml) | | <code>candle-nn</code> | Original NN layers | | <code>candle-transformers</code> | Original transformer models | | <code>candle-datasets</code> | Original datasets | | <code>candle-examples</code> | Original examples | | <code>candle-pyo3</code> | Original Python bindings |</p>
+<h3>GPU Backend Crates (opt-in)</h3>
+<p>| Crate | Purpose | |-------|---------| | <code>hanzo-kernels</code> | Custom CUDA kernels (reduce, cast, affine, etc.) | | <code>hanzo-metal-kernels</code> | Custom Metal kernels (Apple GPU) | | <code>hanzo-flash-attn</code> | Flash Attention v2 (CUDA SM80+) |</p>
+<h2>Feature Flags</h2>
+<p>| Feature | Effect | |---------|--------| | <code>cuda</code> | NVIDIA GPU via cudarc 0.19.1 | | <code>cudnn</code> | Additional cuDNN kernels | | <code>nccl</code> | Multi-GPU distribution | | <code>mkl</code> | Intel Math Kernel Library | | <code>accelerate</code> | Apple Accelerate framework | | <code>metal</code> | Apple GPU via hanzo-metal-kernels + objc2-metal | | <code>ug</code> | Universal Graph backend |</p>
+<h2>One-file quickstart</h2>
+<h3>Tensor Operations</h3>
+<pre><code class="lang-rust">use hanzo_ml::{Device, Tensor, DType};
+
+fn main() -&gt; hanzo_ml::Result&lt;()&gt; {
+ let device = Device::cuda_if_available(0)?;
+
+ let a = Tensor::randn(0f32, 1., (2, 3), &amp;device)?;
+ let b = Tensor::randn(0f32, 1., (3, 4), &amp;device)?;
+ let c = a.matmul(&amp;b)?;
+ println!(&quot;Shape: {:?}&quot;, c.shape()); // [2, 4]
+
+ let d = a.relu()?;
+ let e = a.softmax(1)?;
+ let f = a.to_dtype(DType::BF16)?;
+
+ Ok(())
+}</code></pre>
+<h3>Neural Network Training</h3>
+<pre><code class="lang-rust">use hanzo_ml::{Device, Tensor, DType, Module};
+use hanzo_nn::{VarBuilder, VarMap, Linear, linear, AdamW};
+
+fn main() -&gt; hanzo_ml::Result&lt;()&gt; {
+ let device = Device::cuda_if_available(0)?;
+ let varmap = VarMap::new();
+ let vb = VarBuilder::from_varmap(&amp;varmap, DType::F32, &amp;device);
+
+ let layer1 = linear(784, 256, vb.pp(&quot;layer1&quot;))?;
+ let layer2 = linear(256, 10, vb.pp(&quot;layer2&quot;))?;
+
+ let input = Tensor::randn(0f32, 1., (32, 784), &amp;device)?;
+ let h = layer1.forward(&amp;input)?.relu()?;
+ let output = layer2.forward(&amp;h)?;
+
+ let mut opt = AdamW::new(varmap.all_vars(), Default::default())?;
+ let target = Tensor::zeros((32, 10), DType::F32, &amp;device)?;
+ let loss = hanzo_nn::loss::mse(&amp;output, &amp;target)?;
+ opt.backward_step(&amp;loss)?;
+
+ println!(&quot;Loss: {}&quot;, loss.to_scalar::&lt;f32&gt;()?);
+ Ok(())
+}</code></pre>
+<h3>Load GGUF Model</h3>
+<pre><code class="lang-rust">use hanzo_ml::quantized::gguf_file;
+use std::fs::File;
+
+fn main() -&gt; anyhow::Result&lt;()&gt; {
+ let mut file = File::open(&quot;model.gguf&quot;)?;
+ let model = gguf_file::Content::read(&amp;mut file)?;
+
+ for (name, info) in model.tensor_infos.iter() {
+ println!(&quot;{}: {:?}&quot;, name, info.shape);
+ }
+ Ok(())
+}</code></pre>
+<h3>Load safetensors</h3>
+<pre><code class="lang-rust">use hanzo_ml::{Device, DType};
+use hanzo_nn::VarBuilder;
+
+let device = Device::cuda_if_available(0)?;
+let vb = unsafe {
+ VarBuilder::from_mmaped_safetensors(
+ &amp;[&quot;model.safetensors&quot;], DType::F32, &amp;device,
+ )?
+};
+let weight = vb.get((768, 768), &quot;transformer.h.0.attn.c_attn.weight&quot;)?;</code></pre>
+<h2>Cargo.toml Setup</h2>
+<pre><code class="lang-toml">[dependencies]
+# From crates.io (when published)
+hanzo-ml = { version = &quot;0.9.2-alpha.2&quot;, features = [&quot;metal&quot;] }
+hanzo-nn = &quot;0.9.2-alpha.2&quot;
+hanzo-transformers = &quot;0.9.2-alpha.2&quot;
+
+# From git (current)
+hanzo-ml = { git = &quot;https://github.com/hanzoai/ml&quot;, branch = &quot;main&quot; }
+hanzo-nn = { git = &quot;https://github.com/hanzoai/ml&quot;, branch = &quot;main&quot; }
+hanzo-transformers = { git = &quot;https://github.com/hanzoai/ml&quot;, branch = &quot;main&quot; }</code></pre>
+<h2>Integration with Hanzo Engine</h2>
+<p>Hanzo Engine (mistral-rs fork) uses Hanzo ML as its tensor backend:</p>
+<pre><code class="lang-toml"># In engine Cargo.toml
+[dependencies]
+hanzo-ml = { git = &quot;https://github.com/hanzoai/ml&quot;, branch = &quot;main&quot; }
+hanzo-nn = { git = &quot;https://github.com/hanzoai/ml&quot;, branch = &quot;main&quot; }
+hanzo-transformers = { git = &quot;https://github.com/hanzoai/ml&quot;, branch = &quot;main&quot; }
+
+[features]
+default = [&quot;metal&quot;]
+metal = [&quot;hanzo-ml/metal&quot;, &quot;hanzo-nn/metal&quot;]
+cuda = [&quot;hanzo-ml/cuda&quot;]</code></pre>
+<h3>Quantization Support</h3>
+<p>| Format | Use Case | |--------|----------| | GGUF/GGML | Universal, llama.cpp compatible | | AFQ (Affine) | Optimized for Metal/Apple Silicon | | GPTQ/AWQ | GPU-optimized quantization | | ISQ | In-situ runtime quantization |</p>
+<h2>Supported Models (90+ via hanzo-transformers)</h2>
+<p>| Category | Models | |----------|--------| | <strong>LLMs</strong> | LLaMA 1/2/3, Falcon, Gemma 1/2, Phi 1-3, Mistral, Mixtral, Mamba/2, StarCoder/2, Qwen3 MoE, Yi, GLM4, DeepSeek v2, SmolLM3, Olmo | | <strong>Vision</strong> | DINOv2, ConvMixer, EfficientNet, ResNet, ViT, VGG, YOLO v3/v8, SAM, SegFormer, MobileNet v4, CLIP, SigLIP | | <strong>Audio</strong> | Whisper, EnCodec, MetaVoice, Parler-TTS, Mimi, Silero VAD | | <strong>Diffusion</strong> | Stable Diffusion 1.5/2.1/XL/3, Flux | | <strong>Multimodal</strong> | BLIP, LLaVA, Moondream, PaddleOCR-VL, Pixtral, PaliGemma | | <strong>Quantized</strong> | GGUF/GGML format, llama.cpp compatible |</p>
+<h2>Supported Formats</h2>
+<p>| Format | Extension | Use Case | |--------|-----------|----------| | GGUF | <code>.gguf</code> | Quantized models (llama.cpp compatible) | | safetensors | <code>.safetensors</code> | HuggingFace standard (fast, safe) | | ONNX | <code>.onnx</code> | Cross-framework interop | | PyTorch | <code>.bin</code>, <code>.pt</code> | Legacy format |</p>
+<h2>Project Structure</h2>
+<pre><code>ml/
+├── hanzo-ml/ # Core tensor ops (hanzo-branded)
+│ ├── src/
+│ │ ├── lib.rs
+│ │ ├── tensor.rs # Tensor type
+│ │ ├── device.rs # CPU/CUDA/Metal device
+│ │ ├── dtype.rs # Data types (F16, BF16, F32, etc.)
+│ │ ├── backend.rs # Backend trait
+│ │ ├── cuda_backend/ # CUDA implementation
+│ │ ├── metal_backend/ # Metal implementation
+│ │ ├── cpu_backend/ # CPU implementation
+│ │ ├── quantized/ # GGUF/GGML quantization
+│ │ └── safetensors.rs # safetensors loading
+│ ├── benches/ # Performance benchmarks
+│ └── tests/ # Unit tests
+├── hanzo-nn/ # Neural network layers
+├── hanzo-transformers/ # 90+ transformer model implementations
+├── hanzo-datasets/ # Dataset loading utilities
+├── hanzo-ml-pyo3/ # Python bindings
+├── hanzo-flash-attn/ # Flash Attention CUDA kernels
+│ └── kernels/ # CUDA kernel source files
+├── hanzo-metal-kernels/ # Metal GPU kernels
+├── hanzo-kernels/ # Generic CUDA kernels
+├── hanzo-onnx/ # ONNX evaluation
+├── hanzo-ml-examples/ # Example binaries
+├── hanzo-ml-wasm-examples/ # WASM browser examples
+├── candle-core/ # Upstream-compatible core (v0.9.2)
+├── candle-nn/ # Upstream-compatible NN
+├── candle-transformers/ # Upstream-compatible transformers
+├── candle-datasets/ # Upstream-compatible datasets
+├── candle-examples/ # Upstream-compatible examples
+├── candle-book/ # Documentation book
+├── tensor-tools/ # CLI tensor manipulation
+├── Cargo.toml # Workspace root
+├── Makefile
+├── HANZO_INTEGRATION.md # Engine integration guide
+└── LLM.md</code></pre>
+<h2>Development Workflow</h2>
+<pre><code class="lang-bash"># Build entire workspace
+cargo build --workspace
+
+# Test everything
+cargo test --workspace
+
+# Build with Metal (Apple Silicon)
+cargo build --workspace --features metal
+
+# Build with CUDA
+cargo build --workspace --features cuda
+
+# Run example (LLaMA inference)
+cargo run --release --example llama -- --model meta-llama/Llama-3.2-3B-Instruct
+
+# Sync from upstream
+git remote add upstream https://github.com/huggingface/candle.git
+git fetch upstream
+git merge upstream/main</code></pre>
+<h2>Performance Considerations</h2>
+<h3>Apple Silicon (Metal)</h3>
+<ul><li>Use <code>AFQ4</code> quantization for best throughput</li><li>Enable <code>--features &quot;metal accelerate&quot;</code> for CPU fallback ops</li><li>Group size 64 balances speed and accuracy</li></ul>
+<h3>CUDA</h3>
+<ul><li>Use GPTQ or AWQ quantization</li><li>Flash Attention enabled via <code>hanzo-flash-attn</code> (SM80+)</li><li>PagedAttention for memory efficiency in long sequences</li></ul>
+<h3>CPU</h3>
+<ul><li>GGUF models with appropriate quantization level</li><li><code>mkl</code> feature for Intel platforms</li><li><code>accelerate</code> feature for Apple platforms</li></ul>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-candle.md</code> - Upstream candle documentation (planned fork)</li><li><code>hanzo/hanzo-engine.md</code> - Inference engine using hanzo-ml</li><li><code>hanzo/hanzo-ane.md</code> - Apple Neural Engine (complementary to Metal)</li><li><code>hanzo/hanzo-kensho.md</code> - Image generation model</li><li><code>hanzo/hanzo-sho.md</code> - Text diffusion engine</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: ml, rust, tensor, cuda, metal, inference, quantization, wasm <strong>Prerequisites</strong>: Rust, ML fundamentals, GPU programming concepts</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-ml.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-desktop</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-desktop.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-desktop">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-desktop.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-desktop</h1><p class="lede">Hanzo Desktop is a cross-platform desktop application for creating and managing AI agents without code.</p><h1>Hanzo Desktop - Cross-Platform AI Agent Builder</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-node.md</code>, <code>hanzo/hanzo-mcp.md</code>, <code>hanzo/hanzo-ui.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Desktop is a <strong>cross-platform desktop application</strong> for creating and managing AI agents without code. Built with <strong>Tauri</strong> (Rust backend + React frontend) and managed as an <strong>NX monorepo</strong>, it provides a visual interface for multi-agent orchestration, MCP tool integration, and hybrid local/cloud AI inference.</p>
+<p>The application embeds the <strong>Hanzo Node</strong> binary (from <code>github.com/hanzoai/node</code>) as a sidecar process, which provides the actual AI agent runtime, P2P networking, and inference capabilities.</p>
+<p>Fork lineage: Originally based on <code>dcSpark/shinkai-local-ai-agents</code> (some <code>shinkai-*</code> lib names remain in the codebase).</p>
+<h3>OSS Info</h3>
+<p>Repo: <code>github.com/hanzoai/desktop</code>. Package: <code>@hanzo/source</code> v1.1.34. Desktop app: <code>hanzo-desktop</code> v1.1.28. Apache License.</p>
+<h2>When to use</h2>
+<ul><li>Building AI agents without writing code (drag-and-drop visual interface)</li><li>Running local AI inference with privacy (Ollama integration)</li><li>Orchestrating multiple agents that collaborate on complex workflows</li><li>Connecting AI agents to external tools via MCP</li><li>Cross-platform deployment (Windows, macOS, Linux)</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Node.js &gt;= 20</strong> with npm 10.x</li><li><strong>Rust toolchain</strong> (for Tauri build)</li><li><strong>NX</strong> (workspace orchestration, included as devDependency)</li><li>Side binaries: Hanzo Node v1.1.20 + Ollama v0.12.3 (downloaded via CI script)</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Repo | <code>github.com/hanzoai/desktop</code> | | Package name | <code>@hanzo/source</code> v1.1.34 | | Desktop app | <code>hanzo-desktop</code> | | Framework | Tauri (Rust + React) | | Build system | NX + Vite | | Frontend | React 19, TypeScript, Tailwind CSS 4 | | State | Zustand (UI) + React Query (server) | | Testing | Vitest + React Testing Library | | Platforms | Windows 10+, macOS 10.15+, Linux (Ubuntu 20.04+) | | Node.js | &gt;= 20 | | License | Apache-2.0 |</p>
+<h2>Project structure</h2>
+<pre><code>desktop/
+├── package.json # @hanzo/source v1.1.34 (workspace root)
+├── nx.json # NX workspace config
+├── tsconfig.base.json
+├── eslint.config.mjs
+├── mise.toml # Runtime version manager
+├── apps/
+│ └── hanzo-desktop/ # Main Tauri desktop application
+│ └── src-tauri/ # Rust backend + Tauri config
+├── libs/
+│ ├── hanzo-message-ts/ # Message protocols for Hanzo Node communication
+│ ├── hanzo-node-state/ # React Query state management for node data
+│ ├── hanzo-ui/ # Reusable React component library
+│ ├── hanzo-artifacts/ # Styled UI primitives (Radix + Tailwind)
+│ ├── hanzo-i18n/ # i18next internationalization (8 languages)
+│ └── shinkai-node-state/ # Legacy state lib (upstream naming)
+├── ci-scripts/ # Build, binary download, Ollama repo generation
+├── scripts/ # Development utilities
+├── tools/ # NX plugins and dev tools
+├── patches/ # npm patch-package overrides
+├── docs/ # Documentation
+└── assets/ # App icons and images</code></pre>
+<h2>Key features (verified from repo)</h2>
+<ul><li><strong>No-code agent builder</strong>: Visual interface for creating specialized AI agents</li><li><strong>Multi-agent orchestration</strong>: Deploy teams of agents that collaborate and share context</li><li><strong>MCP support</strong>: Universal protocol compatibility (Claude, Cursor ecosystem)</li><li><strong>Hybrid deployment</strong>: Local inference (Ollama), cloud models, or both</li><li><strong>Cross-platform</strong>: Windows, macOS (Apple Silicon), Linux</li><li><strong>Crypto-native</strong>: Built-in support for decentralized payments and DeFi interactions</li><li><strong>Internationalization</strong>: 8 languages (EN, ES, ZH, ZH-HK, KO, JA, ID, TR)</li><li><strong>Composio integration</strong>: Pre-built app templates via generated repository</li></ul>
+<h2>Technology stack</h2>
+<p>| Layer | Technology | |-------|-----------| | Desktop shell | Tauri 2.x (Rust + WebView) | | Frontend | React 19, TypeScript, Vite | | Styling | Tailwind CSS 4, Radix UI, Shadcn/ui patterns | | State management | Zustand (UI state), React Query (server state) | | Build orchestration | NX 22.3 | | AI runtime | Hanzo Node (embedded Rust sidecar) | | Local inference | Ollama (embedded sidecar) | | Testing | Vitest, React Testing Library, Playwright | | i18n | i18next with AI-generated translations | | Forms | React Hook Form + Zod | | Charts | Recharts | | Markdown | Streamdown |</p>
+<h2>Development</h2>
+<h3>Setup</h3>
+<pre><code class="lang-bash">git clone https://github.com/hanzoai/desktop.git
+cd desktop
+nvm use
+npm ci</code></pre>
+<h3>Download side binaries</h3>
+<p>The app embeds Hanzo Node and Ollama as sidecar binaries:</p>
+<pre><code class="lang-bash"># macOS Apple Silicon
+ARCH=&quot;aarch64-apple-darwin&quot; \
+HANZO_NODE_VERSION=&quot;v1.1.20&quot; \
+OLLAMA_VERSION=&quot;v0.12.3&quot; \
+npx ts-node ./ci-scripts/download-side-binaries.ts
+
+# Linux
+ARCH=&quot;x86_64-unknown-linux-gnu&quot; \
+HANZO_NODE_VERSION=&quot;v1.1.20&quot; \
+OLLAMA_VERSION=&quot;v0.12.3&quot; \
+npx ts-node ./ci-scripts/download-side-binaries.ts
+
+# Windows
+$ENV:ARCH=&quot;x86_64-pc-windows-msvc&quot;
+$ENV:HANZO_NODE_VERSION=&quot;v1.1.20&quot;
+$ENV:OLLAMA_VERSION=&quot;v0.12.3&quot;
+npx ts-node ./ci-scripts/download-side-binaries.ts</code></pre>
+<h3>Run development server</h3>
+<pre><code class="lang-bash">npx nx serve:tauri hanzo-desktop</code></pre>
+<h3>Build</h3>
+<pre><code class="lang-bash">npx nx build hanzo-desktop
+
+# With increased memory for large builds
+NODE_OPTIONS=&quot;--max_old_space_size=8192&quot; npx nx build hanzo-desktop</code></pre>
+<h3>Test</h3>
+<pre><code class="lang-bash">npx nx test [project-name]
+npx nx run-many --target=test
+npx nx lint [project-name]</code></pre>
+<h2>Shared libraries</h2>
+<p>| Library | Purpose | |---------|---------| | <code>hanzo-message-ts</code> | TypeScript message protocols for communicating with Hanzo Node | | <code>hanzo-node-state</code> | React Query hooks for node data (models, agents, jobs) | | <code>hanzo-ui</code> | Reusable React components and design system | | <code>hanzo-artifacts</code> | Styled UI primitives built on Radix and Tailwind CSS | | <code>hanzo-i18n</code> | Internationalization utilities with AI-generated translations |</p>
+<h2>Tauri plugins used</h2>
+<p>The desktop app uses these Tauri 2.x plugins (from package.json):</p>
+<ul><li><code>@tauri-apps/plugin-dialog</code> - Native file/folder dialogs</li><li><code>@tauri-apps/plugin-fs</code> - File system access</li><li><code>@tauri-apps/plugin-http</code> - HTTP client</li><li><code>@tauri-apps/plugin-log</code> - Logging</li><li><code>@tauri-apps/plugin-notification</code> - System notifications</li><li><code>@tauri-apps/plugin-opener</code> - Open URLs/files</li><li><code>@tauri-apps/plugin-os</code> - OS information</li><li><code>@tauri-apps/plugin-process</code> - Process management</li><li><code>@tauri-apps/plugin-shell</code> - Shell command execution</li><li><code>@tauri-apps/plugin-updater</code> - Auto-update</li></ul>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-node.md</code> - The Rust AI node that powers the desktop app backend</li><li><code>hanzo/hanzo-mcp.md</code> - MCP protocol integration</li><li><code>hanzo/hanzo-ui.md</code> - Component library (separate from the desktop-internal hanzo-ui lib)</li><li><code>hanzo/python-sdk.md</code> - Python SDK for programmatic access</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: desktop, tauri, react, agents, ai, cross-platform <strong>Prerequisites</strong>: Node.js 20+, Rust toolchain, NX basics</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-desktop.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

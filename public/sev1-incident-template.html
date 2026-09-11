@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>sev1-incident-template</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/sev1-incident-template.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/sev1-incident-template">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/sev1-incident-template.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>sev1-incident-template</h1><p class="lede">This template provides a structured approach for managing critical (SEV-1) incidents.</p><h1>SEV-1 Incident Template</h1>
+<p>This template provides a structured approach for managing critical (SEV-1) incidents.</p>
+<h2>Initial Response (0-5 minutes)</h2>
+<h3>Incident Commander Actions</h3>
+<pre><code class="lang-markdown">## Incident Declaration
+
+- [ ] Acknowledge alert
+- [ ] Create incident ticket: [JIRA/Linear link]
+- [ ] Declare SEV-1 in #incidents channel
+- [ ] Create war room: #incident-YYYYMMDD-description
+- [ ] Page required personnel via PagerDuty
+- [ ] Announce IC role in war room
+
+**War Room Message Template**:</code></pre>
+<p>@here SEV-1 Incident Declared</p>
+<p>Title: [Brief description] Impact: [What&#x27;s broken for users] Started: [HH:MM UTC]</p>
+<p>I&#x27;m taking IC. Current responders:</p>
+<ul><li>IC: @your-name</li><li>On-call: @engineer-name</li></ul>
+<p>First priority: Assess and mitigate customer impact. Status update in 15 minutes.</p>
+<pre><code></code></pre>
+<h3>Technical Lead Actions</h3>
+<pre><code class="lang-markdown">- [ ] Join war room
+- [ ] Quick assessment:
+  - What&#x27;s broken?
+  - How many users affected?
+  - Since when?
+  - What changed recently?
+- [ ] Report findings to IC
+- [ ] Begin hands-on investigation</code></pre>
+<h3>Communications Lead Actions</h3>
+<pre><code class="lang-markdown">- [ ] Join war room
+- [ ] Update status page to &quot;Investigating&quot;
+- [ ] Send initial customer notification
+- [ ] Alert support team via #support-escalations
+- [ ] Prepare for updates every 30 minutes</code></pre>
+<h2>Assessment Phase (5-15 minutes)</h2>
+<h3>Questions to Answer</h3>
+<pre><code class="lang-markdown">## Incident Assessment
+
+1. **What is broken?**
+   - Service: [name]
+   - Feature: [specific functionality]
+   - Scope: [partial/complete outage]
+
+2. **User Impact**
+   - Users affected: [number/%]
+   - Severity of impact: [cannot use X / slow performance / errors]
+   - Geographic scope: [global / region-specific]
+
+3. **Timeline**
+   - Issue started: [HH:MM UTC]
+   - First detected: [HH:MM UTC]
+   - Detection method: [monitoring / customer report / internal]
+
+4. **Recent Changes**
+   - Deployments in last 2 hours: [yes/no - versions]
+   - Config changes: [yes/no - what changed]
+   - Infrastructure changes: [yes/no - what changed]
+   - Traffic patterns: [normal / spike / unusual]
+
+5. **Current Metrics**
+   - Error rate: [X%]
+   - P95 latency: [Xms]
+   - Throughput: [X req/s]
+   - Resource utilization: [CPU/Memory/Disk]</code></pre>
+<h3>Severity Confirmation</h3>
+<pre><code class="lang-markdown">Confirm SEV-1 classification:
+- [ ] &gt;50% of users affected OR
+- [ ] Complete outage of critical feature OR
+- [ ] Revenue impact &gt;$10K/hour OR
+- [ ] Data breach/security incident OR
+- [ ] SLA breach imminent
+
+If criteria not met, consider de-escalating to SEV-2.</code></pre>
+<h2>Mitigation Phase (15-60 minutes)</h2>
+<h3>Mitigation Decision Tree</h3>
+<pre><code>Recent deployment (&lt; 2 hours)?
+├─ YES → High confidence in deployment quality?
+│        ├─ NO → ROLLBACK (fastest path)
+│        └─ YES → Can fix in &lt; 15 minutes?
+│                 ├─ YES → Implement fix, monitor closely
+│                 └─ NO → ROLLBACK
+│
+└─ NO → Resource exhaustion?
+        ├─ YES → Scale up immediately
+        │        Check for memory leaks / connection leaks
+        │
+        └─ NO → Dependency failure?
+                ├─ YES → Enable graceful degradation
+                │        Failover to backup
+                │        Route around failed dependency
+                │
+                └─ NO → Deep investigation required
+                        Consider enabling maintenance mode
+                        while investigating</code></pre>
+<h3>Mitigation Actions</h3>
+<pre><code class="lang-markdown">## Common Mitigation Actions
+
+### Rollback Deployment</code></pre>
+<h1>Kubernetes</h1>
+<p>kubectl rollout undo deployment/[service-name] kubectl rollout status deployment/[service-name]</p>
+<h1>Verify error rate decreased</h1>
+<h1>Wait 5 minutes for metrics to stabilize</h1>
+<pre><code>
+### Scale Resources</code></pre>
+<h1>Increase replicas</h1>
+<p>kubectl scale deployment/[service-name] --replicas=20</p>
+<h1>Increase resource limits</h1>
+<p>kubectl set resources deployment/[service-name] \   --limits=memory=8Gi,cpu=4000m</p>
+<h1>Monitor metrics for improvement</h1>
+<pre><code>
+### Disable Feature Flag</code></pre>
+<h1>Using feature flag API</h1>
+<p>curl -X POST &quot;$FEATURE_FLAG_API/disable&quot; \   -H &quot;Authorization: Bearer $TOKEN&quot; \   -d &#x27;{&quot;flag&quot;:&quot;new_feature&quot;,&quot;reason&quot;:&quot;SEV-1 incident&quot;}&#x27;</p>
+<h1>Verify flag disabled</h1>
+<p>curl &quot;$FEATURE_FLAG_API/flags&quot; | jq &#x27;.flags.new_feature&#x27;</p>
+<pre><code>
+### Enable Graceful Degradation</code></pre>
+<h1>Application-level fallback</h1>
+<p>try:     result = external_service.call(timeout=5) except (TimeoutError, ConnectionError):     # Serve from cache or return degraded response     result = cache.get(key, default=SAFE_FALLBACK)     metrics.increment(&#x27;degraded_mode_active&#x27;)</p>
+<pre><code>
+### Route Traffic</code></pre>
+<h1>Route traffic away from failing region</h1>
+<p>aws route53 change-resource-record-sets \   --hosted-zone-id $ZONE_ID \   --change-batch file://failover-config.json</p>
+<h1>Or disable bad region in load balancer</h1>
+<p>kubectl annotate ingress main \   nginx.ingress.kubernetes.io/canary-weight=0</p>
+<pre><code></code></pre>
+<h2>Communication Updates</h2>
+<h3>Update Schedule</h3>
+<pre><code class="lang-markdown">SEV-1 Update Cadence:
+- Initial: Within 10 minutes of declaration
+- Progress: Every 30 minutes
+- Resolution: Immediately when resolved
+- Postmortem: Within 48 hours</code></pre>
+<h3>Update Template (30-minute intervals)</h3>
+<pre><code class="lang-markdown">Subject: [SEV-1] Update #[N] - [Service Name] - [Status]
+
+UPDATE #[N] - [HH:MM UTC]
+
+CURRENT STATUS: [Investigating / Identified / Mitigating / Monitoring]
+
+IMPACT:
+- [Current user impact]
+- Users affected: [Updated count if known]
+- Error rate: [Current %]
+
+ACTIONS TAKEN:
+- [HH:MM] [Action 1]
+- [HH:MM] [Action 2]
+
+CURRENT EFFORTS:
+- [What we&#x27;re working on now]
+
+EXPECTED TIMELINE:
+- [Best estimate OR &quot;investigating&quot;]
+
+NEXT UPDATE: [30 minutes from now]
+
+[IC Name] - Incident Commander</code></pre>
+<h2>Resolution Phase</h2>
+<h3>Resolution Criteria</h3>
+<pre><code class="lang-markdown">Service can be declared RESOLVED when ALL criteria met:
+
+Technical Metrics:
+- [ ] Error rate back to baseline (&lt;0.5%)
+- [ ] Latency within SLO (p95 &lt; [X]ms)
+- [ ] Throughput recovered to normal levels
+- [ ] All health checks passing
+- [ ] No active alerts
+
+Customer Impact:
+- [ ] User-facing functionality verified working
+- [ ] Support ticket volume back to normal
+- [ ] No customer reports in last 30 minutes
+
+System Stability:
+- [ ] No recurring issues for 30+ minutes
+- [ ] Monitoring confirms stable state
+- [ ] Related systems healthy
+- [ ] Dependencies verified operational
+
+Do NOT resolve if:
+- Metrics still elevated
+- Mitigation is temporary (will fail again)
+- Root cause unknown and likely to recur
+- Still receiving customer complaints</code></pre>
+<h3>Resolution Actions</h3>
+<pre><code class="lang-markdown">When declaring RESOLVED:
+
+1. [ ] IC announces resolution in war room
+2. [ ] Update status page to &quot;Resolved&quot;
+3. [ ] Send final customer notification
+4. [ ] Update incident ticket to Resolved
+5. [ ] Thank team members publicly
+6. [ ] Schedule postmortem (within 24-48 hours)
+7. [ ] Document any follow-up work needed
+8. [ ] Close war room (keep pinned messages)
+9. [ ] Update on-call handoff notes
+10. [ ] Notify leadership of resolution</code></pre>
+<h3>Resolution Notification</h3>
+<pre><code class="lang-markdown">Subject: [RESOLVED] [Service Name] - Incident Resolved
+
+The incident affecting [Service Name] has been RESOLVED.
+
+SUMMARY:
+- Started: [HH:MM UTC]
+- Resolved: [HH:MM UTC]
+- Duration: [X hours, Y minutes]
+- Impact: [Brief description]
+
+RESOLUTION:
+- [Brief description of what fixed it]
+- Service is now operating normally
+- Monitoring for continued stability
+
+ROOT CAUSE:
+- Preliminary: [Brief description]
+- Full postmortem will be published within 48 hours
+
+NO ACTION REQUIRED from users.
+
+We apologize for any inconvenience this may have caused.
+
+[IC Name] - Incident Commander</code></pre>
+<h2>Post-Incident (24-72 hours)</h2>
+<h3>Immediate Follow-up</h3>
+<pre><code class="lang-markdown">Within 24 hours of resolution:
+- [ ] Compile timeline from war room logs
+- [ ] Gather metrics, graphs, screenshots
+- [ ] Schedule postmortem meeting (1 hour)
+  - Invite: IC, tech lead, responders, stakeholders
+  - Facilitator: Someone NOT on incident response
+- [ ] Begin drafting postmortem document</code></pre>
+<h3>Postmortem Meeting</h3>
+<pre><code class="lang-markdown">Agenda (60 minutes):
+
+1. [5 min] Facilitator reads executive summary
+2. [10 min] Walk through timeline
+3. [10 min] Discuss what went well
+4. [15 min] Discuss what went poorly (blameless!)
+5. [15 min] Brainstorm action items
+6. [5 min] Assign owners and deadlines
+
+Rules:
+- Blameless: Focus on systems, not people
+- Specific: &quot;The monitoring&quot; not &quot;we&quot;
+- Actionable: Every issue needs action item
+- Time-boxed: Park deep dives for later</code></pre>
+<h3>Action Item Tracking</h3>
+<pre><code class="lang-markdown">All action items must have:
+- [ ] Clear description of work
+- [ ] Owner assigned
+- [ ] Deadline set (1-4 weeks)
+- [ ] Priority (P0/P1/P2)
+- [ ] Tracked in project management tool
+
+Categories:
+- Prevent: Actions to prevent recurrence
+- Detect: Actions to detect faster
+- Respond: Actions to respond faster
+- Process: Process improvements
+
+Follow-up:
+- [ ] 1 week: Check-in on progress
+- [ ] 1 month: Review completion rate
+- [ ] Quarterly: Review effectiveness</code></pre>
+<h2>War Room Best Practices</h2>
+<h3>Communication Format</h3>
+<pre><code class="lang-markdown">Use structured updates in war room:
+
+[HH:MM] [@person] [Action/Decision/Observation]
+
+Examples:
+[14:23] @alice [ACTION] Rolled back deployment v2.5.3
+[14:25] @bob [OBSERVATION] Error rate decreased to 2%
+[14:27] @ic [DECISION] Monitoring for 10 min before resolving
+[14:30] @comms [NOTIFICATION] Customer update sent
+[14:35] @tech-lead [QUESTION] Do we know which requests are failing?
+[14:37] @alice [ANSWER] Seeing failures on /api/v1/orders endpoint</code></pre>
+<h3>Roles Clarity</h3>
+<pre><code class="lang-markdown">Incident Commander (IC):
+- Makes all decisions
+- Coordinates responders
+- Manages communication cadence
+- Declares resolution
+- NOT hands on keyboard
+
+Technical Lead:
+- Hands on keyboard
+- Implements fixes
+- Technical investigation
+- Reports findings to IC
+
+Communications Lead:
+- Writes all external updates
+- Sends to customers, leadership, support
+- Manages status page
+- NOT involved in technical decisions
+
+Scribe:
+- Documents timeline
+- Records decisions
+- Tracks action items
+- NOT involved in investigation</code></pre>
+<h2>Metrics to Track</h2>
+<pre><code class="lang-markdown">For every SEV-1, record:
+
+Detection:
+- MTTD (Mean Time To Detect): Alert time - Issue start
+- Detection method: Monitoring / Customer / Manual
+
+Response:
+- MTTA (Mean Time To Acknowledge): Ack time - Alert time
+- Time to IC assigned: IC assigned - Alert time
+- Time to first update: First comms - Alert time
+
+Resolution:
+- MTTR (Mean Time To Repair): Resolved - Alert time
+- Time to mitigation: First relief - Alert time
+- Customer impact duration: Restored - Impact start
+
+Impact:
+- Users affected (count or %)
+- Failed requests / transactions
+- Revenue impact ($)
+- Support tickets generated</code></pre>
+<h2>Checklist Summary</h2>
+<pre><code class="lang-markdown">## SEV-1 Quick Checklist
+
+Initial (0-5 min):
+- [ ] Declare SEV-1
+- [ ] Create war room
+- [ ] Page team
+- [ ] Assess impact
+- [ ] Initial customer notification
+
+Mitigation (5-60 min):
+- [ ] Identify recent changes
+- [ ] Implement mitigation
+- [ ] Verify impact reduced
+- [ ] Updates every 30 min
+
+Resolution:
+- [ ] Verify all criteria met
+- [ ] Monitor for 30+ min
+- [ ] Final customer notification
+- [ ] Schedule postmortem
+
+Post-Incident:
+- [ ] Postmortem draft (24 hr)
+- [ ] Postmortem meeting (48 hr)
+- [ ] Action items assigned (72 hr)
+- [ ] Publish postmortem (1 week)</code></pre>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/sev1-incident-template.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

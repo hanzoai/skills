@@ -189,11 +189,20 @@ CSS = """
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -378,6 +387,11 @@ def btns():
         'aria-expanded="false" aria-controls="copymenu">Copy setup prompt %s</button>'
         '<div class="menu" id="copymenu" role="menu" aria-labelledby="copybtn" hidden>%s</div>'
         '</div>'
+        '<a class="btn" href="/hanzo-base">Upgrade to Native Go</a>'
+        '<a class="btn" href="/hanzo-migrate-backend-to-go">Migration Guide</a>'
+        '<a class="btn" href="/hanzo-coursework-fullstack-go-cloud">Go Coursework</a>'
+        '<a class="btn" href="/hanzo-tutorial-realtime-sse-backend">SSE Tutorial</a>'
+        '<a class="btn" href="/hanzo-examples-native-cloud">Code Examples</a>'
         '<a class="btn" href="/llms.txt">Index for agents</a>'
         '<a class="btn" href="https://hanzo.codes">Code with an agent</a>'
         '</div>'
@@ -441,6 +455,14 @@ def patch(path):
     if os.path.basename(path) == "index.html":
         # Anchored on markup outside each region so a rewritten page re-matches
         # exactly the same span.
+        hero_h1_lede = (
+            '<h1>The native cloud in a single binary.<br>Go. Rust. C++. '
+            '<em>Zero interpreter bloat.</em></h1>'
+            '<p class="lede">Run a local copy of the complete cloud, extend with <code>/v1/*</code>, '
+            'and migrate your backend to Hanzo Base with realtime native SSE, analytics, and insights. '
+            'Built for native performance from local-first to the full Hanzo AI cloud.</p>'
+        )
+        out = re.sub(r'<h1>.*?</h1>\s*<p class="lede">.*?</p>', hero_h1_lede, out, count=1, flags=re.S)
         out = re.sub(r'<div class="btns">.*?(?=</div></div><div class="strip">)',
                      lambda _: btns(), out, count=1, flags=re.S)
         out = re.sub(r'<div class="strip">.*?(?=\n<div class="wrap">)',

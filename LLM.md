@@ -91,12 +91,24 @@ and CDN for the zone and nothing else: there is no Pages project, no Worker, and
 no Cloudflare credential anywhere in the lane.
 
 ```
-public/          index.html + 537 <name>.html + <name>.md + all.md, llms.txt, favicon.svg
-scripts/site.py  the shared chrome: style, nav, hero, copy-prompt menu, agent bar
+public/          index.html + 913 <name>.html + <name>.md + all.md, llms.txt, favicon.svg, fonts/
+scripts/build.py markdown->html generator: parses skills + core HIPs, formats index & categories
+scripts/site.py  the shared chrome: style, nav, hero, copy-prompt menu, agent bar, Zen fonts
 scripts/marks.py mark geometry, from hanzoai/design assets/{providers,logos}
-tests/site.mjs   browser checks — mark, menu, bar, computed border-radius
+tests/site.mjs   browser checks — mark, menu, bar, computed border-radius, Zen fonts
 ```
 
+- `scripts/build.py` compiles `skills/` (including 134 `hanzo/*` skills) and all 270 `HIPS` into `public/`.
+  Standards / HIPs are organized across 5 architectural domains explaining all standards:
+  `standards-core` (Core AI & Models), `standards-infra` (Cloud & Native Infrastructure),
+  `standards-interface` (Protocols & Realtime SSE), `standards-security` (IAM & Cryptography),
+  and `standards-apps` (Platform & Applications).
+  The `hanzo` category (led by `hanzo-base`, `hanzo-cloud`, `hanzo-migrate-backend-to-go`, `hanzo-coursework-fullstack-go-cloud`, `hanzo-tutorial-realtime-sse-backend`, `hanzo-examples-native-cloud`, `hanzo-stack`) is sorted first.
+- The site enforces native compiled code only (Go, Rust, C++), migrating away from Python/Next.js/Node/Rails/Java.
+  Developers have a copy of the entire platform: run a local cloud (`hanzo up cloud`), extend with `/v1/*`,
+  build on Hanzo Base (`github.com/hanzoai/base`) with realtime native Server-Sent Events (SSE), analytics,
+  and insights, and scale to the full Hanzo AI Cloud (`api.hanzo.ai`, Zen qwen3+ only). Hanzo AI is Techstars '17.
+- Typography: Canonical Hanzo `Zen` and `Zen Mono` variable font families (`public/fonts/Zen-Variable.woff2`, `Zen-Italic-Variable.woff2`, `ZenMono-Variable.woff2`, `ZenMono-Italic-Variable.woff2`, `ZenPixel-Square.woff2`) loaded via `@font-face` with `font-display: swap`.
 - `scripts/site.py` is the ONE definition of the chrome and rewrites every page.
   It is idempotent, and CI fails if `public/` does not match it.
 - Publishing is `.hanzo/workflows/deploy.yml` on push to main — `.hanzo`, not
@@ -109,8 +121,6 @@ tests/site.mjs   browser checks — mark, menu, bar, computed border-radius
   which the action trades at `kms.hanzo.ai` for the deploy key.
 - Controls are pills (`--r: 999px`) and surfaces are `--r-soft: 14px`, matching
   hanzo.ai, whose buttons compute to a full pill at 44px tall.
-- `public/` content is a snapshot of the corpus, not generated from `skills/`.
-  The markdown→html generator that produced it has no home in this repo.
 
 ### Where the site lives, outside this repo
 

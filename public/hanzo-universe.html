@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-universe</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-universe.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-universe">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-universe.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-universe</h1><p class="lede">Hanzo Universe (github.com/hanzoai/universe) is the single source of truth for all production infrastructure across the Hanzo ecosystem.</p><h1>Hanzo Universe - Production Kubernetes Infrastructure</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-operator.md</code>, <code>hanzo/hanzo-kms.md</code>, <code>hanzo/hanzo-platform.md</code>, <code>hanzo/hanzo-stack.md</code>, <code>hanzo/hanzo-ingress.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Universe (<code>github.com/hanzoai/universe</code>) is the <strong>single source of truth</strong> for all production infrastructure across the Hanzo ecosystem. It contains Kustomize manifests for 50+ services, Terraform configs for DigitalOcean provisioning, Helm charts, GitHub Actions CI/CD workflows, Docker Compose stacks, and end-to-end tests. Everything runs on DOKS (DigitalOcean Kubernetes Service).</p>
+<p><strong>Repo</strong>: <code>github.com/hanzoai/universe</code> (private) <strong>Local path</strong>: <code>~/work/hanzo/universe/</code></p>
+<h3>Design Principles</h3>
+<ul><li><strong>Kustomize over Helm</strong> for service manifests (Helm used only for IAM identity chart)</li><li><strong>KMSSecret CRDs</strong> for all secrets (never plaintext in manifests)</li><li><strong>Single namespace</strong> (<code>hanzo</code>) for most services; operators and external stacks get their own</li><li><strong>Idempotent deployment</strong>: <code>kubectl kustomize . | kubectl apply -f -</code></li><li><strong>All images</strong>: <code>ghcr.io/hanzoai/&lt;service&gt;:latest</code>, always <code>--platform linux/amd64</code></li></ul>
+<h2>When to Use</h2>
+<ul><li>Deploying or updating any Hanzo service in production</li><li>Adding a new service to the cluster</li><li>Debugging production infrastructure (manifests, secrets, ingress)</li><li>Modifying RBAC, monitoring, or observability</li><li>Provisioning new infrastructure with Terraform</li><li>Running CI/CD pipelines for Hanzo services</li></ul>
+<h2>Cluster Topology</h2>
+<h3>hanzo-k8s (<code>24.199.76.156</code>)</h3>
+<p>Primary cluster. Runs all core Hanzo services. DigitalOcean SFO3 region. 4-node worker pool with <code>hostNetwork</code> ingress.</p>
+<h3>lux-k8s (<code>24.144.69.101</code>)</h3>
+<p>Lux blockchain cluster. Runs validators (mainnet/testnet/devnet), gateway, explorer, bridge, exchange, and bootnode. Applied separately: <code>kubectl apply -k lux/ --context do-sfo3-lux-k8s</code>.</p>
+<h3>Deployment</h3>
+<p>DO App Platform is <strong>decommissioned</strong> (Feb 2026). All infrastructure is K8s-native.</p>
+<h2>Repository Structure</h2>
+<pre><code>universe/
+ infra/
+ k8s/ # Production Kustomize manifests (main entry point)
+ kustomization.yaml # Root -- includes all services below
+ Makefile # diff, apply, validate, build, deploy-%
+ namespace.yaml # hanzo namespace
+ cluster-issuer.yaml # Let&#x27;s Encrypt ClusterIssuer (cert-manager)
+ platform-ingress.yaml # Platform-level ingress rules
+ base/ # Shared deployment/ingress templates
+ rbac/ # Cluster-wide RBAC (readonly, operator, ci roles)
+ ci/ # CI deployer ServiceAccount
+ ingress/ # Hanzo Ingress (Traefik-based L7 proxy, 4 replicas)
+ # --- Operators ---
+ hanzo-operator/ # HanzoService/Datastore/Gateway/MPC/Network/Ingress/Platform CRDs
+ kms-operator/ # KMSSecret/KMSDynamicSecret/KMSPushSecret CRDs
+ nchain/ # Blockchain node operator (nchain-system namespace)
+ # --- Data ---
+ sql/ # PostgreSQL 16 + ZAP (StatefulSet, 20Gi PVC)
+ kv/ # Valkey + ZAP (StatefulSet, 2Gi PVC)
+ docdb/ # DocDB -- FerretDB (MongoDB wire protocol over PostgreSQL)
+ storage/ # Hanzo S3 (s3.hanzo.ai)
+ search/ # Meilisearch (search.hanzo.ai, backup CronJob)
+ vector/ # Qdrant (vector.hanzo.ai, backup CronJob)
+ nats/ # NATS core messaging
+ stream/ # Kafka wire protocol gateway over PubSub
+ cloud-sql/ # Serverless PostgreSQL (Neon-based: pageserver, safekeeper, compute)
+ # --- Identity &amp; Security ---
+ iam/ # Hanzo IAM IAM (hanzo.id, lux.id, zoo.id, pars.id)
+ kms/ # KMS / Hanzo KMS (kms.hanzo.ai)
+ login/ # White-label login UI
+ mpc/ # Multi-party computation (threshold signing, StatefulSet)
+ cloudflare/ # Cloudflare API credentials
+ # --- Zero Trust ---
+ zt/ # ZeroTier overlay mesh (controller, routers, MCP gateway)
+ # --- AI &amp; Models ---
+ zen/ # Zen LM Gateway (identity injection + Console tracking)
+ models/ # Model registry API (models.hanzo.ai)
+ pricing/ # Pricing API + CronJob (pricing.hanzo.ai)
+ rag-api/ # RAG API for chat
+ crawl/ # crawl4ai web crawler
+ # --- Applications ---
+ chat/ # Hanzo Chat (LibreChat + DocDB + search)
+ bot/ # Hanzo Bot (gateway, hub, docs, agents control plane, playground)
+ cloud/ # Cloud API + agent + site
+ commerce/ # Commerce API (HPA, PDB, service)
+ console/ # Developer console + worker
+ billing/ # Billing center
+ gateway/ # API gateway (api.hanzo.ai)
+ flow/ # Visual AI workflow builder + site
+ auto/ # Visual workflow automation
+ visor/ # Agent orchestration
+ vm/ # Virtual machine management
+ vmd/ # VM daemon
+ # --- Serverless ---
+ openfaas/ # OpenFaaS function control plane (controller, gateway, queue-worker)
+ # --- Platform ---
+ paas/ # PaaS v2 (platform.hanzo.ai, RBAC, PDB)
+ gitops/ # GitOps sync engine
+ registry/ # Container registry + PVC
+ argocd/ # ArgoCD bootstrap (applications, RBAC, ingress)
+ # --- Observability ---
+ analytics/ # Event analytics
+ insights/ # Product analytics
+ monitoring/ # Prometheus ServiceMonitors, alerts, Grafana dashboards, OTel collector
+ logging/ # Loki + Promtail log pipeline
+ o11y/ # OTel collector config
+ status/ # Status pages (hanzo, lux, zoo, pars, adnexus)
+ sentry/ # Sentry error tracking
+ # --- Sites &amp; Misc ---
+ app/ # hanzo.ai main app
+ base/ # Database admin UI
+ bootnode/ # bootnode.hanzo.ai (API + web)
+ bootnode-whitelabel/ # White-label bootnode deployments
+ captable/ # Cap table management
+ dataroom/ # Data room
+ dns/ # DNS service (ConfigMap, PDB)
+ lux-build/ # Lux build service
+ preview/ # PR preview environments (namespace, certs, pull secrets)
+ sign/ # Document signing
+ team/ # Project management (own namespace: team)
+ # --- External Stacks (separate clusters) ---
+ lux/ # Lux blockchain (lux-k8s cluster)
+ operator/ # Lux operator
+ validators/ # 15 validators across 3 networks (mainnet/testnet/devnet)
+ gateway/ # KrakenD API gateway
+ explorer/ # Blockscout explorer + frontend
+ bridge/ # Cross-chain bridge
+ exchange/ # DEX
+ bootnode-lux/ # Lux bootnode
+ agnost/ # Agnost deployments
+ adnexus/ # AdNexus advertising (adnexus-k8s cluster)
+ terraform/
+ main.tf # DigitalOcean VPC, Droplets, LB, Firewall, DNS
+ autoscaler.tf # Docker Swarm autoscaler config
+ terraform.tfvars.example # Variable template
+ do/
+ autoscaler.py # DigitalOcean autoscaler script
+ compose.autoscaler.yml # Autoscaler compose
+ scripts/
+ manager-init.sh # Swarm manager bootstrap
+ worker-init.sh # Swarm worker bootstrap
+ deploy.sh # One-shot infra deploy (Terraform + Swarm + Universe)
+ k8s-deploy.sh # K8s-only deploy script
+ README.md # Infra documentation
+ helm/
+ identity/ # IAM Helm chart (Hanzo IAM)
+ Chart.yaml
+ values.yaml
+ values-production.yaml
+ templates/ # deployment, service, ingress, configmap, secrets, pdb
+ hanzo-stack/
+ values.production.yaml # Production values for full stack chart
+ deploy/ # Docker Compose production deployment
+ compose.production.yml
+ deploy.sh # Production deploy script
+ kms.sh # KMS bootstrap
+ dns-setup.sh # DNS configuration
+ staging/ # Staging environment
+ services/ # Docker Compose service definitions
+ compose.yml # Main services compose
+ compose-hanzo-*.yml # Hanzo service variants (complete, dev, minimal, services)
+ compose-infra.yml # Infrastructure compose (postgres, redis)
+ compose-lux.yml # Lux services compose
+ compose-nodes.yml # Node compose
+ config/ # Router configs, IAM configs, MCP servers
+ .github/
+ workflows/ # 17 CI/CD workflows
+ actions/ # Reusable actions (KMS auth, KMS action)
+ compose.yml # Root development compose (29k lines)
+ compose.production.yml # Production compose
+ compose.single-node.yml # Single-node compose
+ Makefile # Root Makefile (up, down, status, logs, health, db-backup)
+ Cargo.toml # Rust workspace root
+ e2e/ # End-to-end tests
+ docs/ # Documentation
+ scripts/ # Utility scripts</code></pre>
+<h2>K8s Deployment Commands</h2>
+<pre><code class="lang-bash"># From infra/k8s/:
+
+# Preview changes (dry-run diff)
+make diff
+
+# Apply all resources idempotently
+make apply
+
+# Validate manifests without applying
+make validate
+
+# Render manifests to stdout
+make build
+
+# Deploy a single service
+make deploy-chat
+make deploy-iam
+make deploy-kms
+
+# Apply Lux cluster separately
+kubectl apply -k lux/ --context do-sfo3-lux-k8s</code></pre>
+<h2>Core Data Services</h2>
+<p>| Service | Image | Type | Port | Storage | |---------|-------|------|------|---------| | <strong>sql</strong> | <code>ghcr.io/hanzoai/sql:latest</code> | StatefulSet | 5432 (PG) + 9651 (ZAP) | 20Gi do-block-storage | | <strong>kv</strong> | <code>ghcr.io/hanzoai/kv:latest</code> | StatefulSet | 6379 (Valkey) + 9651 (ZAP) | 2Gi | | <strong>docdb</strong> | DocDB | StatefulSet | MongoDB wire protocol | Via PostgreSQL | | <strong>storage</strong> | Hanzo S3 | Deployment | S3 API | PVC | | <strong>search</strong> | Meilisearch | Deployment | HTTP | PVC + backup CronJob | | <strong>vector</strong> | Qdrant | Deployment | gRPC + HTTP | PVC + backup CronJob | | <strong>nats</strong> | NATS | - | 4222 | - | | <strong>stream</strong> | Kafka protocol | Deployment | Kafka wire | - | | <strong>cloud-sql</strong> | Neon-based | Multi-component | 5432 | S3-backed |</p>
+<p>The <code>sql</code> and <code>kv</code> images are unified containers: PostgreSQL 16 + embedded ZAP server, and Valkey + embedded ZAP server respectively. Both expose dual ports. A backward-compat <code>postgres</code> Service alias exists for <code>sql</code>.</p>
+<h2>Secret Management</h2>
+<p>All secrets flow through KMS (kms.hanzo.ai) via the <strong>KMS Operator</strong>.</p>
+<h3>CRDs (API group: <code>secrets.lux.network/v1alpha1</code>)</h3>
+<p>| CRD | Purpose | |-----|---------| | <strong>KMSSecret</strong> | Pulls secrets from KMS and syncs to K8s Secret | | <strong>KMSDynamicSecret</strong> | Dynamic secrets with TTL and lease management | | <strong>KMSPushSecret</strong> | Pushes K8s Secrets back to KMS |</p>
+<h3>How KMSSecret Works</h3>
+<pre><code class="lang-yaml">apiVersion: secrets.lux.network/v1alpha1
+kind: KMSSecret
+metadata:
+ name: bot-kms-sync
+ namespace: hanzo
+spec:
+ hostAPI: http://kms.hanzo.svc.cluster.local/api
+ resyncInterval: 60
+ authentication:
+ universalAuth:
+ credentialsRef:
+ secretName: universal-auth-credentials
+ secretNamespace: hanzo
+ secretsScope:
+ projectSlug: secrets-639-c
+ envSlug: prod
+ secretsPath: /bot
+ managedSecretReference:
+ secretName: bot-secrets
+ secretNamespace: hanzo
+ secretType: Opaque</code></pre>
+<p>Authentication methods: Universal Auth (credentialsRef), Kubernetes Auth (serviceAccountRef + identityId), Service Token (legacy).</p>
+<p>The <code>universal-auth-credentials</code> secret (clientId/clientSecret) is created out-of-band via kubectl. Never committed to git.</p>
+<p>Services with <code>kms-secrets.yaml</code>: bot, bootnode, captable, chat, cloud, commerce, insights, o11y, search, sign, sentry, storage, team, vector, zen, zt.</p>
+<p>Services with direct <code>secret.yaml</code>/<code>secrets.yaml</code> (legacy or bootstrap): analytics, app, auto, cloudflare, flow, gateway, kv, mpc, paas, registry, sql.</p>
+<h2>Ingress Architecture</h2>
+<p>The ingress layer is a <strong>Traefik-based L7 reverse proxy</strong> (<code>ghcr.io/hanzoai/ingress:latest</code>):</p>
+<ul><li><strong>4 replicas</strong> with <code>hostNetwork: true</code> (pods bind directly to node ports 80/443)</li><li><strong>podAntiAffinity</strong> ensures one pod per node across the worker pool</li><li><strong>TLS</strong>: ACME DNS-01 via Cloudflare + static Cloudflare origin certs for <code>hanzo.ai</code>, <code>lux.network</code>, <code>hanzo.bot</code></li><li><strong>Providers</strong>: Kubernetes Ingress (<code>ingressClass: ingress</code>), Kubernetes CRD (cross-namespace), file provider (1500+ lines of static routes)</li><li><strong>Tracing</strong>: OpenTelemetry to <code>otel-collector.hanzo.svc:4317</code></li><li><strong>Cert resolution</strong>: Let&#x27;s Encrypt with Cloudflare DNS challenge (<code>dev@hanzo.ai</code>)</li></ul>
+<p>Cloudflare DNS wildcards (<code>*.hanzo.ai</code>) round-robin across all 4 pod node IPs.</p>
+<h2>Hanzo Operator CRDs</h2>
+<p>The Hanzo Operator (<code>ghcr.io/hanzoai/operator:latest</code>) runs in <code>hanzo-operator-system</code> namespace and manages 7 CRDs under <code>hanzo.ai/v1alpha1</code>:</p>
+<p>| CRD | Description | |-----|-------------| | <strong>HanzoService</strong> | Standard service (Deployment, Service, Ingress, HPA, PDB, NetworkPolicy, KMSSecret) | | <strong>HanzoDatastore</strong> | Stateful data service (StatefulSet, headless Service, PVC, CronJob backup) | | <strong>HanzoGateway</strong> | API gateway (KrakenD-based, ConfigMap routing) | | <strong>HanzoMPC</strong> | Multi-party computation (StatefulSet, dashboard, cache) | | <strong>HanzoNetwork</strong> | Blockchain validator network (StatefulSet, bootnode, indexer, explorer, bridge) | | <strong>HanzoIngress</strong> | Multi-host Ingress with cert-manager TLS | | <strong>HanzoPlatform</strong> | Meta-CRD composing all the above |</p>
+<p>34 sample CRs in <code>infra/k8s/hanzo-operator/crs/</code> cover every deployed service. PodDisruptionBudgets in <code>pdbs/</code> for critical services (cloud-api, console, gateway, hanzo-app, hanzo-login, iam, kms, models, paas, pricing).</p>
+<h2>Lux Blockchain Stack (lux-k8s)</h2>
+<p>Applied separately via <code>kubectl apply -k lux/ --context do-sfo3-lux-k8s</code>:</p>
+<ul><li><strong>3 networks</strong>: mainnet (networkId 1), testnet (networkId 2), devnet (networkId 3)</li><li><strong>15 validators total</strong>: 5 per network, managed by <code>lux.network/v1alpha1 LuxNetwork</code> CRD</li><li><strong>Image</strong>: <code>ghcr.io/luxfi/node:v1.23.23</code></li><li><strong>Ports</strong>: mainnet 9630-9631, testnet 9640-9641, devnet 9650-9651</li><li><strong>Staking keys</strong>: Synced from KMS (<code>kms.lux.cloud</code>) per environment</li><li><strong>Snapshots</strong>: Hourly to S3 (in-cluster Hanzo S3), 5 retained, RLP exports included</li><li><strong>Gateway</strong>: KrakenD (<code>api.lux.network</code>)</li><li><strong>Explorer</strong>: Blockscout + frontend (<code>explorer.lux.network</code>)</li><li><strong>Bridge</strong>: Cross-chain bridge service</li><li><strong>Exchange</strong>: DEX service</li></ul>
+<h2>Monitoring and Observability</h2>
+<h3>Prometheus ServiceMonitors</h3>
+<p>17 ServiceMonitors scrape metrics from: IAM, commerce, gateway, bot, cloud, KMS, chat, analytics, console, PaaS, insights, auto, flow, base, zen, plus OTel collector.</p>
+<h3>Grafana Dashboards</h3>
+<p>6 ConfigMap-based dashboards: Payment monitoring, Platform health, Web analytics, Product usage, AI operations, Per-organization metrics.</p>
+<h3>Alerts (PrometheusRule)</h3>
+<p>Critical alerts: <code>PaymentFailureRateHigh</code> (&gt;5% failure over 5m), <code>ServiceDown</code> (any hanzo namespace service unreachable &gt;2m), <code>PodCrashLooping</code> (&gt;5 restarts in 15m), <code>HighErrorRate5xx</code> (5xx error rate threshold).</p>
+<h3>Logging</h3>
+<p>Loki + Promtail pipeline with Grafana log exploration dashboard.</p>
+<h3>Tracing</h3>
+<p>OpenTelemetry Collector (<code>otel-collector.hanzo.svc:4317</code>) receives traces from ingress and application services.</p>
+<h2>RBAC Model</h2>
+<p>Three cluster-wide roles in <code>rbac/</code>:</p>
+<p>| Role | Scope | Purpose | |------|-------|---------| | <strong>readonly</strong> | Cluster | Read-only access for developers | | <strong>operator</strong> | Cluster | Full management for operators | | <strong>ci</strong> | Cluster + namespace | Automated deployments from CI |</p>
+<h2>CI/CD Workflows</h2>
+<p>17 GitHub Actions workflows in <code>.github/workflows/</code>:</p>
+<p>| Workflow | Trigger | Purpose | |----------|---------|---------| | <code>ci.yml</code> | Push/PR | Lint, test, validate manifests | | <code>deploy.yml</code> | Manual | Deploy specific services | | <code>deploy-production.yml</code> | Push to main | Full production deploy | | <code>auto-deploy.yml</code> | Various | Auto-deploy on changes | | <code>e2e-production.yml</code> | Post-deploy | End-to-end production tests | | <code>nightly-backup.yml</code> | Cron | Database backups | | <code>pr-preview.yml</code> | PR | Preview environments | | <code>release.yml</code> | Tag | Release artifacts | | <code>build-zap-images.yml</code> | Manual | Build sql/kv unified images | | <code>reusable-deploy-service.yml</code> | Called | Reusable service deploy | | <code>reusable-deploy-cf-pages.yml</code> | Called | Cloudflare Pages deploy | | <code>reusable-deploy-static.yml</code> | Called | Static site deploy | | <code>reusable-go.yml</code> | Called | Go build/test pipeline | | <code>reusable-python.yml</code> | Called | Python build/test pipeline | | <code>reusable-rust.yml</code> | Called | Rust build/test pipeline | | <code>reusable-typescript.yml</code> | Called | TypeScript build/test pipeline | | <code>reusable-kms-oidc.yml</code> | Called | KMS OIDC auth for CI |</p>
+<p>Custom GitHub Actions in <code>.github/actions/</code>: <code>kms-action</code> (fetch secrets), <code>kms-auth</code> (authenticate to KMS).</p>
+<h2>Terraform Infrastructure</h2>
+<p><code>infra/terraform/main.tf</code> provisions on DigitalOcean:</p>
+<ul><li><strong>VPC</strong>: <code>10.100.0.0/16</code> private network</li><li><strong>Manager node</strong>: <code>s-4vcpu-8gb</code> Ubuntu 24.04 (Docker Swarm manager)</li><li><strong>Worker nodes</strong>: <code>s-2vcpu-4gb</code> x3 initial, autoscale 2-99</li><li><strong>Load balancer</strong>: HTTPS passthrough to Hanzo Ingress</li><li><strong>Floating IP</strong>: Stable IP for manager</li><li><strong>Firewall</strong>: SSH/HTTP/HTTPS public; Swarm ports VPC-only</li><li><strong>DNS</strong>: A records (root + wildcard) pointing to LB</li></ul>
+<h2>Docker Compose (Local Development)</h2>
+<p>Root <code>Makefile</code> orchestrates three compose files:</p>
+<pre><code class="lang-bash">make setup # Create network, start postgres + redis + ClickHouse
+make up # Start all services (services + datastore + IAM)
+make down # Stop everything
+make status # Show service status across all compose files
+make health # Health check all services
+make db-backup # Backup PostgreSQL + ClickHouse</code></pre>
+<p>Individual service targets: <code>make traefik</code>, <code>make iam</code>, <code>make cloud</code>, <code>make analytics</code>, <code>make datastore</code>, <code>make platform</code>, <code>make infra</code>.</p>
+<h2>Key Domain Mapping</h2>
+<p>| Domain | Service | Cluster | |--------|---------|---------| | hanzo.id, lux.id, zoo.id, pars.id, id.ad.nexus, id.bootno.de | IAM (Hanzo IAM) | hanzo-k8s | | kms.hanzo.ai | KMS (Hanzo KMS) | hanzo-k8s | | api.hanzo.ai | API Gateway | hanzo-k8s | | console.hanzo.ai | Developer Console | hanzo-k8s | | cloud.hanzo.ai | Cloud Dashboard | hanzo-k8s | | chat.hanzo.ai, hanzo.chat | Hanzo Chat | hanzo-k8s | | platform.hanzo.ai | PaaS | hanzo-k8s | | flow.hanzo.ai | Visual Workflow | hanzo-k8s | | auto.hanzo.ai | Automation | hanzo-k8s | | commerce.hanzo.ai | Commerce API | hanzo-k8s | | analytics.hanzo.ai | Event Analytics | hanzo-k8s | | search.hanzo.ai | Full-text Search | hanzo-k8s | | vector.hanzo.ai | Vector DB | hanzo-k8s | | s3.hanzo.ai | Object Storage | hanzo-k8s | | status.hanzo.ai | Status Page | hanzo-k8s | | hanzo.team | Project Management | hanzo-k8s | | api.lux.network | Lux Gateway (KrakenD) | lux-k8s | | explorer.lux.network | Blockscout Explorer | lux-k8s |</p>
+<h2>Database Strategy</h2>
+<p>All databases are <strong>in-cluster PostgreSQL</strong> (no managed DBaaS). The <code>sql</code> StatefulSet serves multiple databases for different services via <code>init-db.sql</code>. Valkey (<code>kv</code>) handles caching and queues. DocDB provides MongoDB wire protocol compatibility over PostgreSQL via FerretDB.</p>
+<p>Cloud SQL (Neon-based) provides serverless PostgreSQL with pageserver, safekeeper, storage-broker, and compute nodes.</p>
+<h2>Common Operations</h2>
+<pre><code class="lang-bash"># Deploy everything to hanzo-k8s
+cd ~/work/hanzo/universe/infra/k8s &amp;&amp; make apply
+
+# Deploy single service
+cd ~/work/hanzo/universe/infra/k8s &amp;&amp; make deploy-chat
+
+# Preview changes
+cd ~/work/hanzo/universe/infra/k8s &amp;&amp; make diff
+
+# Check KMS secret sync status
+kubectl get kmssecrets -n hanzo
+
+# View operator logs
+kubectl logs -n hanzo-operator-system deploy/hanzo-operator-controller-manager
+
+# View ingress logs
+kubectl logs -n hanzo -l app=hanzo-ingress --tail=100
+
+# Apply Lux stack
+kubectl apply -k ~/work/hanzo/universe/infra/k8s/lux/ --context do-sfo3-lux-k8s</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-operator.md</code> -- Hanzo K8s operator (7 CRDs, reconciliation)</li><li><code>hanzo/hanzo-kms.md</code> -- Secret management (KMS/Hanzo KMS)</li><li><code>hanzo/hanzo-platform.md</code> -- PaaS deployments (platform.hanzo.ai)</li><li><code>hanzo/hanzo-stack.md</code> -- Local dev environment (vs production)</li><li><code>hanzo/hanzo-ingress.md</code> -- Traefik ingress layer</li><li><code>hanzo/hanzo-sql.md</code> -- PostgreSQL + ZAP unified image</li><li><code>hanzo/hanzo-kv.md</code> -- Valkey + ZAP cache</li><li><code>hanzo/hanzo-iam.md</code> -- Identity and access management</li><li><code>hanzo/hanzo-zt.md</code> -- Zero Trust mesh overlay</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: kubernetes, k8s, infrastructure, kustomize, terraform, production, deployment, ingress, operators, secrets, monitoring <strong>Prerequisites</strong>: Kubernetes, kubectl, Kustomize, Terraform (for provisioning), Docker Compose (for local dev)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-universe.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

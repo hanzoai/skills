@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,36 +196,46 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0516</h1><p class="lede">HIP-516: Translate — One Endpoint, Two Tiers, Permissive Weights. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0516: Translate — One Endpoint, Two Tiers, Permissive Weights</h1>
+<h1>hip-0516</h1><p class="lede">HIP-516: Translate — One Endpoint, Two Tiers, Permissive Weights. Status Final. Hanzo architectural specification.</p><h1>HIP-0516: Translate — One Endpoint, Two Tiers, Permissive Weights</h1>
 <h2>Abstract</h2>
-<p><code>POST /v1/translate</code> is the one translation surface: a quality tier served by our own models and a bulk tier served by MADLAD-400. Both sit behind one endpoint, so callers choose cost and latency, never a vendor.</p>
-<h2>Weights and the license constraint</h2>
-<p>The license decides this before quality does. The three most cited open translation models are <strong>CC-BY-NC</strong> and therefore unusable in a paid service:</p>
-<p>| Model | License | Usable | |---|---|---| | MADLAD-400 3B / 10B | apache-2.0 | yes | | Opus-MT / Marian | MIT | yes | | M2M-100, mBART-50 | MIT | yes | | NLLB-200 | cc-by-nc-4.0 | no | | SeamlessM4T v2 | cc-by-nc-4.0 | no | | TowerInstruct | cc-by-nc-4.0 | no |</p>
-<p>Verified against the HuggingFace model API, not from memory. This is not a hypothetical risk: an audit already found NC weights shipping inside our repos.</p>
-<p><strong>LibreTranslate is excluded as a component.</strong> It is AGPL-3.0, the one license that reaches through a hosted service to the service itself.</p>
-<p>MADLAD-400 3B is the default bulk model: Apache-2.0, 419 languages, and by far the most exercised of the permissive options.</p>
+<p><code>POST /v1/translate</code> is the one translation surface: a quality tier served by the model plane and a bulk tier served by MADLAD-400. Both sit behind one endpoint, so callers choose cost and latency, never a vendor. The translation memory beside it is normative, not a cache — it is what makes a locale rebuild idempotent under a non-deterministic model. The implementation is <code>hanzoai/cloud</code> <code>apps/translate</code>.</p>
+<h2>Motivation</h2>
+<p>LLM output is non-deterministic, so a naive rebuild rewrites every string in every locale file. That churn is the main thing a hosted translation management product was actually providing, and it must be replaced rather than dropped. The second forcing fact is licensing: the most cited open translation weights are non-commercial and unusable in a paid service, so which model serves the bulk tier is decided by license before quality gets a vote.</p>
 <h2>Specification</h2>
-<pre><code>POST /v1/translate
-  { text | batch[], target, source?, tier?, glossary?, format? }
-  -&gt; { translations[], detected_source?, tier, usage }</code></pre>
+<p>The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as in RFC 2119.</p>
+<h3>§1 The address</h3>
+<p>Every route is under <code>/v1/translate</code> (<code>manifest/apps.go:437</code>): three operations. <code>GET</code> and <code>PUT /v1/translate/memory</code> — the review lane — are typed. <code>POST /v1/translate</code> itself is a raw handler with prose declared beside the route (<code>apps/translate/translate.go:59</code>): its input is a union (<code>text</code> or <code>batch</code>, never both) that a single typed <code>In</code> cannot state honestly, so the capability&#x27;s only product route carries a full declared description instead of an operationId and nothing else.</p>
+<h3>§2 Two tiers, no fallback</h3>
 <p><code>tier</code> selects the engine and defaults to <code>quality</code>:</p>
-<ul><li><strong><code>quality</code></strong> routes to the model plane (zen through the gateway). It carries</li></ul>
-<p>  context, terminology and tone, and it is what an LLM is genuinely better at. Our   own S2ST measurements found the LLM path beat a joint translation model on   fluency, so this is the default on evidence rather than fashion.</p>
-<ul><li><strong><code>bulk</code></strong> routes to MADLAD-400 under CTranslate2 (MIT) for high-volume,</li></ul>
-<p>  low-latency, cost-sensitive work where an LLM is overkill.</p>
-<p>Two tiers, one endpoint, one auth path, one meter. No second inference stack: the quality tier reuses the serving infrastructure already in production, and the bulk tier is a model behind the same endpoint.</p>
-<p><code>source</code> is optional; when absent the engine detects it and returns <code>detected_source</code>. <code>/v1/</code> only, and never a <code>v2</code> — a new capability is a new field.</p>
-<h2>Determinism and the translation memory</h2>
-<p>LLM output is non-deterministic, so a naive rebuild rewrites every string in every locale file. That churn is the main thing Crowdin was actually providing, and it must be replaced rather than dropped.</p>
-<p><code>/v1/translate</code> therefore keys a translation memory on <code>(source_text, target, glossary_version, tier)</code>. A hit returns the stored value unchanged; only new or changed source strings reach a model. This makes locale rebuilds idempotent and makes the bill proportional to what actually changed.</p>
-<p>The memory is the mechanism that lets translation be a product rather than a one-shot call, and it is normative, not an optimisation.</p>
-<h2>Dogfooding</h2>
-<p>The locale sync that replaces Crowdin calls <code>/v1/translate</code> like any other client. Our own product translation is the reference deployment, which keeps us honest: a regression in the service shows up in our own surfaces first.</p>
-<h2>Security and tenancy</h2>
-<p>Standard IAM: org-scoped by bearer, metered per org, no cross-tenant read of a translation memory. Submitted text is customer content — it is not training data and not retained beyond the memory the customer&#x27;s own org owns.</p>
+<ul><li><strong>quality</strong> routes to the model plane (<code>deps.AI</code> — zen through the gateway),</li></ul>
+<p>  which carries context, terminology and tone. Our own S2ST measurements found   the LLM path beat a joint translation model on fluency, so this default is   evidence rather than fashion.</p>
+<ul><li><strong>bulk</strong> routes to MADLAD-400 under CTranslate2, reached over a small JSON</li></ul>
+<p>  contract so the weights are served independently of this binary   (<code>apps/translate/engine.go</code>). A deployment with no bulk backend answers 503   for that tier. Bulk MUST NOT fall back to quality: a caller is never quietly   served — or charged — at a tier it did not ask for.</p>
+<p>The license decides the bulk model before quality does. MADLAD-400 3B/10B and Opus-MT/Marian are permissively licensed (apache-2.0, MIT); NLLB-200, SeamlessM4T v2 and TowerInstruct are cc-by-nc-4.0 and unusable in a paid service — verified against the Hugging Face model API, not from memory, after an audit found NC weights shipping inside our repos. LibreTranslate is excluded as a component: AGPL-3.0 reaches through a hosted service.</p>
+<h3>§3 The memory is normative</h3>
+<p>Every string keys on <code>(source_text, target, glossary_version, tier)</code>; a hit returns the stored value verbatim and never re-translates, so only new or changed source strings reach an engine — locale rebuilds are idempotent and the bill is proportional to what changed. Editing a glossary term changes the key, so a stale rendering can never be served.</p>
+<p>The review lane rides the same memory: an entry carries a state on the ladder machine → suggested → approved → published, and a machine write may create a row or refresh one still at <code>machine</code>, nothing else (<code>apps/translate/memory.go</code>). A rebuild can never silently revert a string a human approved.</p>
+<p>The store is one SQLite memory per org, opened through <code>cloud.OrgStore</code> under the name <code>translate</code> (<code>apps/translate/translate.go:181</code>) — a distinct org resolves to a distinct file, so a query in one org cannot reach another&#x27;s rows. Submitted text is customer content: it lands only in that org&#x27;s own memory, is not training data, and is not retained anywhere else.</p>
+<h3>§4 Tenancy</h3>
+<p>The org is the validated principal&#x27;s (HIP-0026); a request without one is 401/403, and the memory read back at <code>/v1/translate/memory</code> is always the caller&#x27;s own org&#x27;s.</p>
+<h3>§5 Money</h3>
+<p>The surface declares <code>cloud.Metered</code> (<code>plugin/translate/main.go</code>) and is listed in the standing gate (<code>spend.go:319</code>, &quot;per-character fee&quot;). The two tiers bill through two planes, deliberately: quality is debited by the model plane&#x27;s own token meter — a second charge here would double-bill — while bulk carries its own per-org gate and meter on the source characters that actually reached the engine (<code>apps/translate/translate.go:340,361</code>), priced by <code>TRANSLATE_PRICE_UUSD_PER_1K_CHARS</code> (default 20 micro-USD per 1000 characters, <code>apps/translate/engine.go:234</code>). A fully-cached rebuild reports zero characters and costs zero.</p>
+<h3>§6 Events and telemetry</h3>
+<p>It publishes nothing on the bus; a customer&#x27;s webhooks receive no <code>translate.*</code> events. Beyond the request span it emits only its own log lines.</p>
+<h3>§7 Upstream</h3>
+<p>MADLAD-400 3B/10B weights (apache-2.0) served under CTranslate2 (MIT) are the bulk engine — spoken to over the JSON contract in §2, not linked into the binary. The memory rides <code>github.com/hanzoai/sqlite</code> (MIT / Apache-2.0 dual). Nothing is forked.</p>
+<h3>§8 Stage</h3>
+<p><code>beta</code>: the manifest row declares <code>Stage: Beta</code> (<code>manifest/apps.go:437</code>), so per HIP-0139 §8 the capability is dropped from the public projection and its prefix answers 404 unless the caller&#x27;s org holds the <code>translate</code> flag.</p>
+<h3>§9 Dogfooding</h3>
+<p>The locale sync that replaced the hosted translation vendor calls <code>/v1/translate</code> like any other client. Our own product translation is the reference deployment, which keeps us honest: a regression shows up in our own surfaces first.</p>
+<h2>Rationale</h2>
+<p>The alternative to one endpoint with a tier field is two products — an LLM translator and a bulk MT service — each with its own auth, meter and memory. That doubles every projection and, worse, splits the memory: the same source string translated on both products would have two histories and the review lane would have to reconcile them. One endpoint, one memory keyed by tier, keeps a string&#x27;s history in one place.</p>
+<h2>Security Considerations</h2>
+<p>Submitted text is customer content and the memory is the disclosure surface: tenancy is a separate database file per org (§3), so a cross-tenant read requires opening the wrong file rather than forgetting a predicate. The wrong billing implementation charges twice (an edge fee on top of the model plane&#x27;s tokens) or silently serves bulk work on the quality tier at quality&#x27;s cost — both are refused structurally: the edge declares <code>Metered</code> and adds nothing, and there is no cross-tier fallback (§2). The review ladder is an integrity boundary: a machine write that could touch an approved string would let a rebuild rewrite reviewed legal or safety copy without a human in the loop.</p>
 <h2>References</h2>
-<ul><li>HIP-0111 — IAM authentication</li></ul>
+<ul><li>HIP-0026 — Identity and Access Management</li><li>HIP-0111 — IAM authentication</li><li>HIP-0139 — Capability</li></ul>
+<h2>Copyright</h2>
+<p>Released under CC0 1.0 Universal Public Domain Dedication.</p>
 <footer>
 <div class="fmap">
   <div><b>Build</b>
@@ -236,5 +255,4 @@ footer a{color:var(--soft)}
 </div>
 <div class="fend"><a href="/hip-0516.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

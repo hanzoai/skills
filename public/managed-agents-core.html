@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>managed-agents-core</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/managed-agents-core.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/managed-agents-core">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/managed-agents-core.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>managed-agents-core</h1><p class="lede">Managed Agents is built around four core concepts:</p><h1>Managed Agents — Core Concepts</h1>
+<h2>Architecture</h2>
+<p>Managed Agents is built around four core concepts:</p>
+<p>| Concept | Endpoint | What it is | |---|---|---| | <strong>Agent</strong> | <code>/v1/agents</code> | A persisted, versioned object defining the agent&#x27;s capabilities and persona: model, system prompt, tools, MCP servers, skills. <strong>Must be created before starting a session.</strong> See the Agents section below. | | <strong>Session</strong> | <code>/v1/sessions</code> | A stateful interaction with an agent. References a pre-created agent by ID + an environment + initial instructions. Produces an event stream. | | <strong>Environment</strong> | <code>/v1/environments</code> | A template defining the configuration for container provisioning. | | <strong>Container</strong> | N/A | An isolated compute instance where the agent&#x27;s <strong>tools</strong> execute (bash, file ops, code). The agent loop does not run here — it runs on Anthropic&#x27;s orchestration layer and acts on the container via tool calls. |</p>
+<pre><code>                       ┌─────────────────────────────────────┐
+                       │  Anthropic orchestration layer      │
+Agent (config) ───────▶│  (agent loop: Claude + tool calls)  │
+                       └──────────────┬──────────────────────┘
+                                      │ tool calls
+                                      ▼
+Environment (template) ──▶ Container (tool execution workspace)
+                                 │
+                         Session ─┤
+                                 ├── Resources (files, repos, memory stores — attached at startup)
+                                 ├── Vault IDs (MCP credential references)
+                                 └── Conversation (event stream in/out)</code></pre>
+<blockquote><p><strong>Agent creation is a prerequisite.</strong> Sessions reference a pre-created agent by ID — <code>model</code>/<code>system</code>/<code>tools</code> live on the agent object, never on the session. Every flow starts with <code>POST /v1/agents</code>.</p></blockquote>
+<hr>
+<h2>Session Lifecycle</h2>
+<pre><code>rescheduling → running ↔ idle → terminated</code></pre>
+<p>| Status         | Description                                                        | | -------------- | ------------------------------------------------------------------ | | <code>idle</code> | Agent has finished the current task, and is awaiting input. It&#x27;s either waiting for input to continue working via a <code>user.message</code>, blocked awaiting a <code>user.custom_tool_result</code> or <code>user.tool_confirmation</code>, or paused because the session budget cap was reached. The <code>stop_reason</code> attached contains more information about why the Agent has stopped working. | | <code>running</code> | Session has starting running, and the Agent is actively doing work. | | <code>rescheduling</code> | Session is (re)scheduling after a retryable error has occurred, ready to be picked up by the orchestration system. | | <code>terminated</code> | Session has ended and is in an irreversible, unusable state — <strong>either on completion or because of an unrecoverable error</strong>. Terminated does not by itself mean failure; fetch the session to tell the two apart. |</p>
+<ul><li>Events can be sent when the session is <code>running</code> or <code>idle</code>. Messages are queued and processed in order. Exception: a session paused at its budget (<code>stop_reason: budget_reached</code>) accepts only <strong>settle events</strong> — events that resolve work already in progress (<code>user.tool_confirmation</code>, <code>user.tool_result</code>, <code>user.custom_tool_result</code>, <code>user.interrupt</code>) rather than starting new work — see § Session budgets.</li><li>The agent transitions <code>idle → running</code> when it receives a new event, then back to <code>idle</code> when done.</li><li>Errors surface as <code>session.error</code> events in the stream, not as a status value.</li></ul>
+<p>Every session has a live trace view in the Anthropic Console at <code>https://platform.claude.com/workspaces/{workspace}/sessions/{session_id}</code>. Print this URL immediately after creating a session so the user can watch tool calls and messages stream in real time. <strong><code>{workspace}</code> is the workspace the API key belongs to</strong> — use <code>default</code> only when that&#x27;s the org&#x27;s Default workspace. The session response does <strong>not</strong> include a workspace field and the Console has no workspace-agnostic session route, so for non-default workspaces substitute the workspace&#x27;s ID (visible in the Console URL bar, or expose it as a config value alongside the API key). A <code>default</code> link to a session that lives in another workspace lands on a <strong>&quot;Session not found&quot;</strong> page — the <strong>Search workspaces</strong> button there will locate it, but it is not an automatic redirect.</p>
+<h3>Built-in session features</h3>
+<ul><li><strong>Context compaction</strong> — if you approach max context, the API automatically condenses session history to keep the interaction going</li><li><strong>Prompt caching</strong> — historical repeated tokens are cached, reducing processing time and cost</li><li><strong>Extended thinking</strong> — on by default; <code>agent.thinking</code> events signal thinking progress and carry no thinking content</li></ul>
+<h3>Session operations</h3>
+<p>| Operation | Notes | |---|---| | List / fetch | Paginated list or single resource by ID | | Update | <code>title</code>, <code>metadata</code>, and the session-local <code>agent.tools</code>/<code>agent.mcp_servers</code> can be overridden (see § Updating the agent configuration mid-session). <code>budget</code> can only be changed or removed (see § Session budgets). <code>vault_ids</code> is create-only — update requests setting it are rejected. | | Archive | Session becomes <strong>read-only</strong>. Not reversible. | | Delete | Permanently deletes session, event history, container, and checkpoints. |</p>
+<p>These are ops/inspection calls — typically made from a terminal, not application code. From the shell (see <code>shared/anthropic-cli.md</code>):</p>
+<pre><code class="lang-sh">ant beta:sessions list --transform &#x27;{id,title,status,created_at}&#x27; --format jsonl
+ant beta:sessions retrieve --session-id &quot;$SID&quot;
+ant beta:sessions:events stream --session-id &quot;$SID&quot;   # watch events live
+ant beta:sessions archive  --session-id &quot;$SID&quot;
+ant beta:sessions delete   --session-id &quot;$SID&quot;</code></pre>
+<hr>
+<h2>Sessions</h2>
+<p>A session is a running agent instance inside an environment.</p>
+<h3>Session Object</h3>
+<p>Key fields returned by the API:</p>
+<p>| Field           | Type     | Description                                         | | --------------- | -------- | --------------------------------------------------- | | <code>type</code> | string | Always <code>&quot;session&quot;</code> | | <code>id</code> | string | Unique session ID | | <code>title</code> | string | Human-readable title | | <code>status</code> | string | <code>idle</code>, <code>running</code>, <code>rescheduling</code>, <code>terminated</code> | | <code>created_at</code> | string | ISO 8601 timestamp | | <code>updated_at</code> | string | ISO 8601 timestamp | | <code>archived_at</code> | string | ISO 8601 timestamp (nullable) | | <code>environment_id</code> | string | Environment ID | | <code>agent</code> | object | Agent configuration | | <code>resources</code> | array | Attached files, repos, and memory stores | | <code>metadata</code> | object | User-provided key-value pairs (max 8 keys) | | <code>usage</code> | object | Cumulative usage: token counts, <code>server_tool_use</code> (web search/fetch request counts), <code>list_cost</code> (consumption priced at public list rates, as <code>{amount, currency}</code> with the amount an integer string in minor units — cents), and <code>active_seconds</code> (time with ≥1 thread running; concurrent-thread overlap counted once — unlike <code>stats.active_seconds</code>, which sums per-thread time) | | <code>budget</code> | object | The session&#x27;s spend cap, when one was set at creation — see § Session budgets | | <code>stats</code> | object | Timing statistics — <code>stats.active_seconds</code> sums per-thread time, unlike <code>usage.active_seconds</code> |</p>
+<h3>Creating a session</h3>
+<p><strong>A session is meaningless without an agent.</strong> Sessions reference a pre-created agent by ID. Create the agent first via <code>agents.create()</code>, then reference it:</p>
+<pre><code class="lang-ts">// 1. Create the agent (reusable, versioned)
+const agent = await client.beta.agents.create(
+  {
+    name: &quot;Coding Assistant&quot;,
+    model: &quot;claude-opus-5&quot;,
+    system: &quot;You are a helpful coding agent.&quot;,
+    tools: [{ type: &quot;agent_toolset_20260401&quot;}],
+  },
+);
+
+// 2. Start a session that references it
+const session = await client.beta.sessions.create(
+  {
+    agent: agent.id,  // string shorthand → latest version. Or: { type: &quot;agent&quot;, id: agent.id, version: agent.version }
+    environment_id: environmentId,
+    title: &quot;Hello World Session&quot;,
+  },
+);</code></pre>
+<blockquote><p>💡 <strong>Watch it live in Console.</strong> While developing, print a link so you can click through to the session UI instead of parsing the event stream: <code>https://platform.claude.com/workspaces/{workspace}/sessions/{session.id}</code>. Use <code>default</code> for <code>{workspace}</code> only when the API key belongs to the org&#x27;s Default workspace; otherwise substitute the workspace&#x27;s ID (the session response does not carry it — read it from the Console URL bar or make it a config value). Include this <code>print</code>/<code>console.log</code> in code you generate for users who are iterating locally.</p></blockquote>
+<p><strong>Session creation parameters:</strong></p>
+<p>| Field           | Type     | Required | Description                                    | | --------------- | -------- | -------- | ---------------------------------------------- | | <code>agent</code>         | string or object | <strong>Yes</strong> | Three forms: string shorthand <code>&quot;agent_abc123&quot;</code> (latest version); pinned <code>{type: &quot;agent&quot;, id, version}</code>; or <code>{type: &quot;agent_with_overrides&quot;, id, version?, ...}</code> to override <code>model</code>/<code>system</code>/<code>tools</code>/<code>mcp_servers</code>/<code>skills</code> for this session only — see § Override agent configuration for a session | | <code>environment_id</code>| string   | <strong>Yes</strong>  | Environment ID                                 | | <code>title</code>         | string   | No       | Human-readable name (appears in logs/dashboards) | | <code>resources</code>     | array    | No       | Files, GitHub repos, or memory stores, attached to the container at startup. Memory stores are session-create-only (not addable via <code>resources.add()</code>). | | <code>initial_events</code>| array    | No       | Events to send at creation, processed in order — collapses create + first send into one call. See § Seeding a session with <code>initial_events</code> below. | | <code>vault_ids</code>     | array    | No       | Vault IDs (<code>vlt_*</code>) — MCP credentials with auto-refresh + <code>environment_variable</code> secrets substituted at egress. See <code>shared/managed-agents-tools.md</code> → Vaults. | | <code>budget</code>        | object   | No       | Hard dollar cap on the session&#x27;s spend: <code>{type: &quot;limit&quot;, max_list_cost: {amount, currency}}</code>. <strong>Create-only</strong> — can be changed or removed later, never added. See § Session budgets. | | <code>metadata</code>      | object   | No       | User-provided key-value pairs                  |</p>
+<h4>Seeding a session with <code>initial_events</code></h4>
+<p>Creating a session without <code>initial_events</code> registers the session in <code>idle</code> and starts no work; the sandbox is provisioned when the session first needs it. Passing a <strong>non-empty</strong> <code>initial_events</code> array starts the agent loop in the same call — the session is <strong>created directly in <code>running</code></strong>, never passing through <code>idle</code>. A client that waits for an <code>idle → running</code> transition to know work began will wait forever; check <code>status</code> on the create response instead.</p>
+<pre><code class="lang-python">session = client.beta.sessions.create(
+    agent=AGENT_ID,
+    environment_id=ENVIRONMENT_ID,
+    initial_events=[
+        {&quot;type&quot;: &quot;user.message&quot;, &quot;content&quot;: [{&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;Review the auth module.&quot;}]},
+    ],
+)</code></pre>
+<ul><li><strong>Only <code>user.message</code> and <code>user.define_outcome</code> are accepted</strong>, max <strong>50</strong> events. The tool-result kinds (<code>user.tool_confirmation</code>, <code>user.tool_result</code>, <code>user.custom_tool_result</code>) are rejected because no agent turn exists yet, and <code>user.interrupt</code> because there is no turn to stop. Unlike a scheduled deployment&#x27;s <code>initial_events</code>, a session&#x27;s does <strong>not</strong> accept <code>system.message</code>.</li><li>Each event is validated and persisted before the create response returns, in list order, with a server-assigned ID — exactly as if you had posted it to the send-events endpoint immediately after creation. Per-event content rules are the same as on that endpoint.</li><li><strong>The events are not echoed on the create response.</strong> Read them back with <code>sessions.events.list(session.id)</code> if you need their server-assigned IDs.</li><li><strong>Validation is all-or-nothing:</strong> if any event fails, the whole request is rejected and no session is created. An empty list is equivalent to omitting the field.</li><li>Rejections: more than one <code>user.define_outcome</code> → 400; a <code>user.define_outcome</code> without a <code>rubric</code> → 400; more than 100 file-sourced <code>document</code> content blocks across the whole list → 400; a request body over 32 MB → 413.</li></ul>
+<p>An outcome-driven session is therefore a single call — pass one <code>user.define_outcome</code> in <code>initial_events</code> instead of creating the session and then sending the event (see <code>shared/managed-agents-outcomes.md</code>).</p>
+<p><strong>Agent configuration fields</strong> (passed to <code>agents.create()</code>, not <code>sessions.create()</code>):</p>
+<p>| Field         | Type     | Required | Description                                    | | ------------- | -------- | -------- | ---------------------------------------------- | | <code>name</code>        | string   | <strong>Yes</strong>  | Human-readable name (1-256 chars)              | | <code>model</code>       | string or object | <strong>Yes</strong> | Claude model ID (bare string, or an object taking <code>id</code>, <code>speed</code>, <code>effort</code>, and <code>inference_geo</code>). All Claude 4.5+ models supported. See § Effort on the agent model and § Pinning inference geography below. | | <code>system</code>      | string   | No       | System prompt — defines the agent&#x27;s behavior (up to 100K chars) | | <code>tools</code>       | array    | No       | Encompasses three kinds: (1) pre-built Claude Agent tools (<code>agent_toolset_20260401</code>), (2) MCP tools (<code>mcp_toolset</code>), and (3) custom client-side tools. Max 128. | | <code>mcp_servers</code> | array    | No       | MCP server connections — standardized third-party capabilities (e.g. GitHub, Asana). Max 20, unique names. See <code>shared/managed-agents-tools.md</code> → MCP Servers. | | <code>skills</code>      | array    | No       | Customized &quot;best-practices&quot; context with progressive disclosure. Max 20. See <code>shared/managed-agents-tools.md</code> → Skills. | | <code>description</code> | string   | No       | Description of the agent (up to 2048 chars)    | | <code>multiagent</code>  | object   | No       | <code>{type: &quot;coordinator&quot;, agents: [...]}</code> — roster this agent may delegate to. See <code>shared/managed-agents-multiagent.md</code>. | | <code>metadata</code>    | object   | No       | Arbitrary key-value pairs (max 16, keys ≤64 chars, values ≤512 chars) |</p>
+<h3>Session budgets</h3>
+<p>A <strong>session budget</strong> is an optional hard spend ceiling set at session creation. The platform continuously prices everything the session consumes at <strong>public list rates</strong> (the session&#x27;s <strong>list cost</strong>) and stops issuing new model requests once that total reaches the cap. A session at its budget <strong>pauses and goes <code>idle</code> with <code>stop_reason: budget_reached</code></strong> — it is not terminated; history and sandbox are preserved, and changing or removing the budget resumes the paused work automatically.</p>
+<pre><code class="lang-python">session = client.beta.sessions.create(
+    agent=AGENT_ID,
+    environment_id=ENVIRONMENT_ID,
+    budget={
+        &quot;type&quot;: &quot;limit&quot;,
+        &quot;max_list_cost&quot;: {&quot;amount&quot;: &quot;2500&quot;, &quot;currency&quot;: &quot;USD&quot;},  # minor units: &quot;2500&quot; = $25.00
+    },
+)</code></pre>
+<ul><li><code>type</code> is always <code>&quot;limit&quot;</code>. <code>max_list_cost.amount</code> is the amount in <strong>minor units of the currency (cents), as an integer string</strong> with no leading zeros, &gt; 0 — <code>&quot;2500&quot;</code> is $25.00, <code>&quot;50&quot;</code> is fifty cents. A string rather than a number so no float rounding is ever applied; decimal forms such as <code>&quot;25.00&quot;</code> are rejected. <code>max_list_cost.currency</code> is uppercase ISO-4217; <strong><code>USD</code> is the only supported currency.</strong></li><li><strong>What counts toward list cost:</strong> model tokens at each served model&#x27;s list price, web searches at $10 per 1,000, and session running time at $0.08/hour. List cost is <em>not</em> your contracted price — with negotiated discounts, the session hits the cap when the list-price total does, and billed spend may be lower.</li><li><strong>Enforcement is a pre-request gate:</strong> before every model request the platform checks whether consumed list cost has reached the cap and pauses the thread if it has; the request that crosses the cap completes, so the final figure can exceed the cap by at most one model request per running thread. Treat the budget as a bound on new work, not an exact stop.</li><li>The reported <code>list_cost</code> is <strong>rounded to the nearest cent</strong> while enforcement compares exact amounts — rounding can move the reported figure up to half a cent in either direction from the exact amount, so a session whose reported <code>list_cost</code> equals its cap may not yet be paused. Treat <code>stop_reason: budget_reached</code> (or the 400 on <code>user.message</code>), not the reported figure, as the signal that the cap was reached.</li><li><strong>Create-only.</strong> Adding a budget to a session created without one is a 400. Updates accept exactly two changes: <strong>change the cap</strong> (the new value can be higher or lower than the old cap, but must be strictly greater than the consumed list cost, else 400: <code>budget.max_list_cost must be greater than the session&#x27;s consumed list cost</code>) or <strong>remove</strong> (<code>budget: null</code> — the <code>session.updated</code> event carries <code>budget: null</code> rather than a separate flag). Because the consumed cost usually sits a fraction past the old cap when the session pauses, base the new value on the session&#x27;s reported <code>usage.list_cost</code>, not the old <code>max_list_cost</code>. <strong>Removal is one-way</strong>: a removed budget can never be re-added; to keep a cap, change it instead.</li><li><strong>At the cap, only settle events are accepted</strong> — events that resolve work already in progress rather than starting new work: <code>user.tool_confirmation</code>, <code>user.tool_result</code>, <code>user.custom_tool_result</code>, <code>user.interrupt</code>. A <code>user.interrupt</code> sent while the session is paused at its budget (all threads paused at the cap) is accepted and ignored: it does not appear in the event list and changes nothing. Raise or remove the budget to continue. Anything that starts new work (e.g. <code>user.message</code>) is a 400 naming that list. No event resumes the session — only a budget change/removal does.</li><li><strong>Multiagent:</strong> one budget shared across all threads, no per-thread caps. Threads pause independently; each thread&#x27;s consumption is priced at its own served model. A pending tool ask outranks the cap: a session with one thread at <code>requires_action</code> and another at <code>budget_reached</code> reports <code>requires_action</code> at the session level — answer it as usual (settle events aren&#x27;t blocked).</li><li><strong>Models without a list price can&#x27;t be budgeted:</strong> a budgeted create whose agent (or any roster agent, including the advisor&#x27;s model) uses an unpriced model is a 400. If a running budgeted session&#x27;s usage comes to include one, changing the budget is rejected — remove the budget to resume.</li><li>Stream behavior at the cap and the <code>session.usage</code> event: <code>shared/managed-agents-events.md</code> § Reaching a session budget.</li><li>Scheduled deployments can carry a budget too — copied onto each fired session, with different update semantics (clearable and re-addable): <code>shared/managed-agents-scheduled-deployments.md</code> § Deployment budgets.</li></ul>
+<blockquote><p><strong>Not the same thing as Messages-API task budgets.</strong> Session budgets are hard, dollar-denominated, platform-enforced caps on one session. <code>task_budget</code> on the Messages API is an advisory, token-denominated budget the model uses to pace itself within one agentic loop.</p></blockquote>
+<hr>
+<h2>Agents</h2>
+<p><strong>This is where every Managed Agents flow begins.</strong> The agent object is a persisted, versioned configuration — you create it once, then reference it by ID every time you start a session. No agent → no session.</p>
+<h3>Agent Object</h3>
+<p>The API is <strong>flat</strong> — <code>model</code>, <code>system</code>, <code>tools</code> etc. are top-level fields, not wrapped in an <code>agent:{}</code> sub-object.</p>
+<p>| Field              | Type     | Required | Description                                        | | ------------------ | -------- | -------- | -------------------------------------------------- | | <code>name</code>             | string   | Yes      | Human-readable name                                | | <code>model</code>            | string or object | Yes | Claude model ID — bare string, or <code>{id, speed?, effort?, inference_geo?}</code> | | <code>system</code>           | string   | No       | System prompt                                      | | <code>tools</code>            | array    | No       | Agent toolset / MCP toolset / custom tools         | | <code>mcp_servers</code>      | array    | No       | MCP server connections                             | | <code>skills</code>           | array    | No       | Skill references (max 20)                          | | <code>description</code>      | string   | No       | Description of the agent                           | | <code>multiagent</code>       | object   | No       | Coordinator roster — see <code>shared/managed-agents-multiagent.md</code> | | <code>metadata</code>         | object   | No       | Arbitrary key-value pairs                          |</p>
+<h3>Lifecycle: create once, run many, update in place</h3>
+<p>The agent is a <strong>persistent resource</strong>, not a per-run parameter. The intended pattern:</p>
+<pre><code>┌─ setup (once) ─────────┐     ┌─ runtime (every invocation) ─┐
+│ agents.create()        │     │ sessions.create(             │
+│   → store agent_id     │ ──→ │   agent={type:..., id: ID}   │
+│     in config/env/db   │     │ )                            │
+└────────────────────────┘     └──────────────────────────────┘</code></pre>
+<p><strong>Anti-pattern:</strong> calling <code>agents.create()</code> at the top of every script run. This accumulates orphaned agent objects, pays create latency on every invocation, and defeats the versioning model. If you see <code>agents.create()</code> in a function that&#x27;s called per-request or per-cron-tick, that&#x27;s wrong — hoist it to one-time setup and persist the ID.</p>
+<blockquote><p><strong>Recommended — define agents and environments as YAML + apply via the <code>ant</code> CLI.</strong> The split is <strong>CLI for the control plane, SDK for the data plane</strong>: agents and environments are relatively static resources you manage with <code>ant</code> (version-controlled YAML, applied from CI); sessions are dynamic and driven by your application through the SDK. See <code>shared/anthropic-cli.md</code> → <em>Version-controlled Managed Agents resources</em> for the <code>ant beta:agents create &lt; agent.yaml</code> / <code>update --version N</code> flow. The SDK <code>agents.create()</code> call shown elsewhere in this doc is the in-code equivalent — use it when you need to provision programmatically, but prefer the YAML flow for anything a human maintains.</p></blockquote>
+<h3>Effort on the agent model</h3>
+<p>Pass <code>model</code> as an object to set the effort level: <code>{&quot;id&quot;: &quot;claude-opus-5&quot;, &quot;effort&quot;: &quot;high&quot;}</code>. <code>effort</code> accepts a level string (<code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code>, <code>max</code>) or an object such as <code>{&quot;type&quot;: &quot;high&quot;}</code>. The create/update response echoes it in object form and fills in omitted <code>model</code> fields with their defaults.</p>
+<blockquote><p>⚠️ <strong>Effort is agent configuration only.</strong> An <code>effort</code> set inside a per-session <code>model</code> override is <strong>not applied</strong> — the session runs at the agent&#x27;s effort. To change effort you must update the agent (or point the session at a different agent). This is the one field where the override form silently does nothing rather than erroring.</p></blockquote>
+<p>The same object form carries <code>speed</code> for fast mode: <code>{&quot;id&quot;: &quot;claude-opus-5&quot;, &quot;speed&quot;: &quot;fast&quot;}</code>.</p>
+<h3>Pinning inference geography (<code>inference_geo</code>)</h3>
+<p>The <code>model</code> object also takes <code>inference_geo</code> to pin the geography that serves the agent&#x27;s model requests: <code>{&quot;id&quot;: &quot;claude-opus-5&quot;, &quot;inference_geo&quot;: &quot;us&quot;}</code>. Accepts <code>&quot;us&quot;</code> or <code>&quot;global&quot;</code> — and unlike the Messages API, where <code>inference_geo</code> is a top-level request parameter, here it is always nested inside <code>model</code>, never top-level. When unset, each model request follows the workspace&#x27;s default inference geo at the time it&#x27;s served.</p>
+<ul><li><strong>Validated at every stage:</strong> the pin is checked against the workspace&#x27;s <code>allowed_inference_geos</code> when the agent is saved, when a session is created from it, and on every turn the session serves. If the workspace allowlist later narrows so the pin is no longer allowed, new sessions can&#x27;t be created from the agent and <strong>running sessions refuse further turns</strong> — pins are never grandfathered (workspaces rely on them for compliance).</li><li>Setting <code>inference_geo</code> on a model that doesn&#x27;t support geographic inference pinning returns a 400.</li><li><strong>Fixed for a session&#x27;s lifetime</strong> — the pin can&#x27;t change mid-session. Set it on the agent, or set/clear it for one session with a <code>model</code> override at session create (see § Override agent configuration for a session).</li><li><strong>Multiagent rosters must be geo-uniform:</strong> the coordinator&#x27;s pin and every roster member&#x27;s must all be the same value or all be unset — see <code>shared/managed-agents-multiagent.md</code>.</li><li>Unlike <code>effort</code>, an <code>inference_geo</code> inside a per-session <code>model</code> override <strong>is applied</strong> — and because overrides replace the <code>model</code> object in full, an override that <em>omits</em> <code>inference_geo</code> clears the agent&#x27;s pin for that session.</li></ul>
+<h3>Versioning</h3>
+<p>Each <code>POST /v1/agents/{id}</code> (update) creates a new immutable version — a sequential integer, starting at 1 and incrementing on each update. The agent&#x27;s history is append-only — you can&#x27;t edit a past version.</p>
+<p><strong><code>version</code> on update is optional.</strong> Supply it for optimistic concurrency, or omit it to apply the update unconditionally:</p>
+<p>| <code>version</code> | Behavior | Fits | |---|---|---| | Supplied (must be ≥ 1) | 409 if it doesn&#x27;t match the agent&#x27;s current version — <strong>even when the fields you send already equal the stored values</strong>. Re-read and retry. | Interactive callers; the recommended default | | Omitted | Applies unconditionally. The most recent update silently replaces any concurrent one, with no error to either caller. | Declarative apply loops — e.g. a CI job syncing checked-in agent definitions, where the loop owns the agent |</p>
+<p><strong>Update semantics.</strong> Omitted fields are preserved. Scalar fields (<code>model</code>, <code>system</code>, <code>name</code>, <code>description</code>) are replaced; <code>system</code> and <code>description</code> can be cleared with <code>null</code>, while <code>model</code> and <code>name</code> cannot. Array fields (<code>tools</code>, <code>mcp_servers</code>, <code>skills</code>) are replaced wholesale — <code>null</code> or <code>[]</code> clears them. <strong><code>effort</code> is the sole exception inside a <code>model</code> object you supply:</strong> if the model <code>id</code> is unchanged, omitting <code>effort</code> leaves the stored level alone; if you change the <code>id</code>, an omitted <code>effort</code> resets to the new model&#x27;s default. Other <code>model</code> fields are replaced along with the object — <strong>supplying <code>model</code> without <code>inference_geo</code> clears the agent&#x27;s inference geo pin.</strong></p>
+<p><strong>Why version:</strong></p>
+<ul><li><strong>Reproducibility</strong> — pin a session to a known-good config: <code>{type: &quot;agent&quot;, id, version: 3}</code></li><li><strong>Safe iteration</strong> — update the agent without breaking sessions already running on the old version</li><li><strong>Rollback</strong> — if a new system prompt regresses, pin new sessions back to the prior version while you debug</li></ul>
+<p><strong><code>version</code> is optional.</strong> Omit it (or use the string shorthand <code>agent=&quot;agent_abc123&quot;</code>) to get the latest version at session-creation time. Pass it explicitly (<code>{type: &quot;agent&quot;, id, version: N}</code>) to pin for reproducibility.</p>
+<p><strong>Getting the version to pin:</strong> <code>agents.create()</code> and <code>agents.update()</code> both return <code>version</code> in the response. Store it alongside <code>agent_id</code>. To fetch the current latest for an existing agent: <code>GET /v1/agents/{id}</code> → <code>.version</code>.</p>
+<p><strong>When to update vs create new:</strong> Update (<code>POST /v1/agents/{id}</code>) when it&#x27;s conceptually the same agent with tweaked behavior (better prompt, extra tool). Create a new agent when it&#x27;s a different persona/purpose. Rule of thumb: if you&#x27;d give it the same <code>name</code>, update.</p>
+<h3>Agent Endpoints</h3>
+<p>| Operation        | Method   | Path                                  | | ---------------- | -------- | ------------------------------------- | | Create           | <code>POST</code>   | <code>/v1/agents</code>                          | | List             | <code>GET</code>    | <code>/v1/agents</code>                          | | Get              | <code>GET</code>    | <code>/v1/agents/{id}</code>                     | | Update           | <code>POST</code>   | <code>/v1/agents/{id}</code>                     | | Archive          | <code>POST</code>   | <code>/v1/agents/{id}/archive</code>             |</p>
+<blockquote><p>⚠️ <strong>Archive is permanent.</strong> Archiving makes the agent read-only: existing sessions continue to run, but <strong>new sessions cannot reference it</strong>, and there is no unarchive. Since agents have no <code>delete</code>, this is the terminal lifecycle state. Never archive a production agent as routine cleanup — confirm with the user first.</p></blockquote>
+<h3>Using an Agent in a Session</h3>
+<p>Reference the agent by string ID (latest version) or by object with an explicit version:</p>
+<pre><code class="lang-python"># String shorthand — uses the agent&#x27;s latest version
+session = client.beta.sessions.create(
+    agent=agent.id,
+    environment_id=environment_id,
+)
+
+# Or pin to a specific version (int)
+session = client.beta.sessions.create(
+    agent={&quot;type&quot;: &quot;agent&quot;, &quot;id&quot;: agent.id, &quot;version&quot;: agent.version},
+    environment_id=environment_id,
+)</code></pre>
+<h3>Override agent configuration for a session</h3>
+<p>The third <code>agent</code> form, <code>agent_with_overrides</code>, replaces parts of the agent&#x27;s configuration for <strong>a single session</strong> — try a different model or grant an extra tool without versioning the agent. Pass <code>id</code> (and optionally <code>version</code>; omitted = latest, same default as the other two forms) plus any of <code>model</code>, <code>system</code>, <code>tools</code>, <code>mcp_servers</code>, <code>skills</code>:</p>
+<pre><code class="lang-python">session = client.beta.sessions.create(
+    agent={
+        &quot;type&quot;: &quot;agent_with_overrides&quot;,
+        &quot;id&quot;: agent.id,
+        &quot;model&quot;: &quot;claude-opus-5&quot;,   # replace the agent&#x27;s model for this session
+        &quot;system&quot;: None,           # clear the system prompt for this session
+    },
+    environment_id=environment_id,
+)</code></pre>
+<p>Each overridable field follows tri-state rules:</p>
+<ul><li><strong>Omit</strong> → the session inherits the value from the referenced agent version.</li><li><strong><code>null</code> (or <code>[]</code> for list fields)</strong> → the session runs with that field cleared. Applies in full to <code>system</code> and <code>skills</code>. Three exceptions: <code>model</code> is never clearable (<code>model: null</code> → 400 <code>agent_model_required</code>); clearing <code>tools</code> returns 400 when the session&#x27;s effective <code>skills</code> is non-empty (skills require the <code>read</code> tool); and clearing <code>mcp_servers</code> returns 400 when the effective <code>tools</code> still contains an <code>mcp_toolset</code> referencing one of the agent&#x27;s servers — override <code>tools</code> in the same request to drop those entries, then clear <code>mcp_servers</code>.</li><li><strong>A value</strong> → replaces the agent&#x27;s value <strong>in full</strong>. Overrides never merge — a <code>tools</code> override must list every tool the session should have. One exception: an <code>effort</code> level inside a <code>model</code> override is <strong>not applied</strong> (set it on the agent instead — see § Effort on the agent model). An <code>inference_geo</code> inside a <code>model</code> override <strong>is</strong> applied — and because the object is replaced in full, an override that omits it clears the agent&#x27;s pin, so the session follows the workspace&#x27;s default inference geo. The overridden value is validated against the workspace&#x27;s <code>allowed_inference_geos</code> at session create.</li></ul>
+<p>Overrides are session-local: they do <strong>not</strong> modify the agent resource or create a new agent version. The response&#x27;s <code>agent</code> object reflects the post-override configuration, while its <code>id</code> and <code>version</code> still identify the base agent — so you can trace a session back to its base. In multiagent sessions, overrides apply to the coordinator and its <code>{type: &quot;self&quot;}</code> copies; roster agents referenced by ID always use their own as-created configuration (see <code>shared/managed-agents-multiagent.md</code>).</p>
+<h3>Updating the agent configuration mid-session</h3>
+<p><code>sessions.update()</code> can change <code>agent.tools</code> and <code>agent.mcp_servers</code> (including permission policies) on an <strong>existing</strong> session. This is a <strong>session-local override</strong> — it does not create a new agent version and does not propagate back to the agent object. The provided arrays are <strong>full replacements</strong>; to append one tool, <code>GET</code> the session, modify, and <code>POST</code> back. The session must be <code>idle</code> — interrupt first if running. <code>vault_ids</code> is <strong>create-only</strong>: the update param exists in the SDK but is rejected by the API (&quot;Not yet supported&quot;) — attach vaults when you create the session.</p>
+<p>Among the agent-configuration fields, only <code>tools</code> and <code>mcp_servers</code> can change after a session is created — to run with a <code>model</code>, <code>system</code>, or <code>skills</code> other than the agent&#x27;s values, use <code>agent_with_overrides</code> at create time (above). (<code>title</code>, <code>metadata</code>, and <code>budget</code> have their own session-update paths — see § Session operations / § Session budgets.) The agent&#x27;s model configuration — including its <code>inference_geo</code> pin — and its configured <code>system</code> field are fixed for the session&#x27;s lifetime; you can still <strong>append system-level context between turns</strong> by sending a <code>system.message</code> event (see <code>shared/managed-agents-events.md</code> § Adding system context mid-session).</p>
+<pre><code class="lang-python">client.beta.sessions.update(
+    session.id,
+    agent={
+        &quot;tools&quot;: [
+            {&quot;type&quot;: &quot;agent_toolset_20260401&quot;},
+            {&quot;type&quot;: &quot;mcp_toolset&quot;, &quot;mcp_server_name&quot;: &quot;linear&quot;},
+        ],
+        &quot;mcp_servers&quot;: [{&quot;type&quot;: &quot;url&quot;, &quot;name&quot;: &quot;linear&quot;, &quot;url&quot;: &quot;https://mcp.linear.app/sse&quot;}],
+    },
+)</code></pre>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/managed-agents-core.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

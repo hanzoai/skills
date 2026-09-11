@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,7 +196,7 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0068</h1><p class="lede">HIP-68: Ingress Standard. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0068: Ingress Standard</h1>
+<h1>hip-0068</h1><p class="lede">HIP-68: Ingress Standard. Status Final. Hanzo architectural specification.</p><h1>HIP-0068: Ingress Standard</h1>
 <h2>Abstract</h2>
 <p>This proposal defines the Ingress standard for the Hanzo ecosystem. Hanzo Ingress is the Layer 7 reverse proxy and load balancer that sits at the edge of every Hanzo Kubernetes cluster. It handles host-based routing, TLS termination (via Cloudflare proxy mode), load balancing, health checks, and middleware chains for all inbound traffic.</p>
 <p>Hanzo Ingress is a maintained fork of <strong>Traefik v3.6</strong>. It watches Kubernetes Ingress resources and IngressRoute CRDs natively -- no config generation, no external sync loops, no sidecar injection. A new Service or Ingress resource appears in the cluster; Ingress picks it up within seconds and starts routing traffic.</p>
@@ -195,7 +204,7 @@ footer a{color:var(--soft)}
 <p><strong>Repository</strong>: <a href="https://github.com/hanzoai/ingress">github.com/hanzoai/ingress</a> <strong>Entrypoints</strong>: web (8080), websecure (8443) <strong>Image</strong>: <code>ghcr.io/hanzoai/ingress:latest</code> <strong>Providers</strong>: KubernetesIngress, KubernetesCRD</p>
 <h2>Motivation</h2>
 <h3>The Edge Routing Problem</h3>
-<p>Hanzo operates two Kubernetes clusters (<code>the cluster</code> and <code>lux-k8s</code>) serving 30+ domains across multiple services. Each domain needs:</p>
+<p>Hanzo operates two Kubernetes clusters (<code>hanzo-k8s</code> and <code>lux-k8s</code>) serving 30+ domains across multiple services. Each domain needs:</p>
 <ol><li><strong>Host-based routing</strong>: <code>api.hanzo.ai</code> goes to the API Gateway, <code>platform.hanzo.ai</code> goes to Dokploy, <code>kms.hanzo.ai</code> goes to KMS. Each domain is a separate routing decision at the edge.</li><li><strong>TLS termination</strong>: Every domain needs HTTPS. Managing 30+ TLS certificates manually is operationally unsustainable.</li><li><strong>Health-aware load balancing</strong>: When a backend pod crashes, the edge proxy must stop sending traffic to it immediately, not after a 30-second DNS TTL.</li><li><strong>Middleware chains</strong>: Some services need rate limiting at the edge, some need IP whitelisting, some need request buffering for large uploads. These cross-cutting concerns must be configurable per-route, not hardcoded.</li></ol>
 <h3>Why Not nginx-ingress?</h3>
 <p>The NGINX Ingress Controller is the Kubernetes default. It has three problems that make it unsuitable for Hanzo:</p>
@@ -274,7 +283,7 @@ spec:
     - name: rate-limit
     - name: security-headers</code></pre>
 <h3>Host Routing Table (Production)</h3>
-<p>| Host | Backend Service | Port | Cluster | |------|----------------|------|---------| | <code>api.hanzo.ai</code> | API Gateway (HIP-44) | 8080 | the cluster | | <code>llm.hanzo.ai</code> | LLM Gateway (HIP-4) | 4000 | the cluster | | <code>hanzo.id</code> | Hanzo IAM | 8000 | the cluster | | <code>lux.id</code> | Hanzo IAM | 8000 | the cluster | | <code>zoo.id</code> | Hanzo IAM | 8000 | the cluster | | <code>pars.id</code> | Hanzo IAM | 8000 | the cluster | | <code>kms.hanzo.ai</code> | KMS (Hanzo KMS) | 8080 | the cluster | | <code>platform.hanzo.ai</code> | Platform (Dokploy) | 3000 | the cluster | | <code>console.hanzo.ai</code> | Console | 3001 | the cluster | | <code>cloud.hanzo.ai</code> | Cloud | 3002 | the cluster | | <code>hanzo.app</code> | Main App | 3000 | the cluster | | <code>api.lux.network</code> | Lux Gateway (KrakenD) | 8080 | lux-k8s | | <code>cloud.lux.network</code> | Lux Cloud | 3000 | lux-k8s | | <code>markets.lux.network</code> | Markets | 3000 | lux-k8s |</p>
+<p>| Host | Backend Service | Port | Cluster | |------|----------------|------|---------| | <code>api.hanzo.ai</code> | API Gateway (HIP-44) | 8080 | hanzo-k8s | | <code>llm.hanzo.ai</code> | LLM Gateway (HIP-4) | 4000 | hanzo-k8s | | <code>hanzo.id</code> | Hanzo IAM | 8000 | hanzo-k8s | | <code>lux.id</code> | Hanzo IAM | 8000 | hanzo-k8s | | <code>zoo.id</code> | Hanzo IAM | 8000 | hanzo-k8s | | <code>pars.id</code> | Hanzo IAM | 8000 | hanzo-k8s | | <code>kms.hanzo.ai</code> | KMS (Hanzo KMS) | 8080 | hanzo-k8s | | <code>platform.hanzo.ai</code> | Platform (Dokploy) | 3000 | hanzo-k8s | | <code>console.hanzo.ai</code> | Console | 3001 | hanzo-k8s | | <code>cloud.hanzo.ai</code> | Cloud | 3002 | hanzo-k8s | | <code>hanzo.app</code> | Main App | 3000 | hanzo-k8s | | <code>api.lux.network</code> | Lux Gateway (KrakenD) | 8080 | lux-k8s | | <code>cloud.lux.network</code> | Lux Cloud | 3000 | lux-k8s | | <code>markets.lux.network</code> | Markets | 3000 | lux-k8s |</p>
 <h3>TLS Configuration</h3>
 <p><strong>Primary mode: Cloudflare Proxy (Flexible SSL)</strong></p>
 <p>All Hanzo domains use Cloudflare as DNS proxy. Cloudflare terminates TLS at the edge and forwards traffic to the origin. In this mode, Ingress receives plaintext HTTP from Cloudflare on port 8080. No certificate management is required on the origin.</p>
@@ -585,11 +594,11 @@ services:
 <p>Hanzo Ingress registers itself as the default IngressClass (<code>hanzo-ingress</code>). Any Ingress resource without an explicit <code>ingressClassName</code> is handled by Hanzo Ingress. Services that need a different ingress controller (e.g., for testing) can specify an alternate IngressClass.</p>
 <h2>Per-brand replication</h2>
 <p>Each brand runs the identical topology with its own values:</p>
-<p>| Concern | Per-brand value | |---------|-----------------| | Identity origin | <code>iam.hanzo.ai</code> / <code>lux.id</code> / <code>zoo.id</code> / <code>id.bootno.de</code> / <code>pars.id</code> | | API host | <code>api.&lt;brand-domain&gt;</code> | | Apps | brand-scoped <code>&lt;org&gt;-&lt;app&gt;</code> client IDs (HIP-0111) | | Secrets | KMS project per brand | | Container registry | <code>ghcr.io/hanzoai/<em></code> (Hanzo), <code>ghcr.io/luxfi/</em></code> (Lux), <code>ghcr.io/zooai/*</code> (Zoo) |</p>
+<p>| Concern | Per-brand value | |---------|-----------------| | Identity origin | <code>iam.hanzo.ai</code> / <code>lux.id</code> / <code>zoo.id</code> / <code>id.bootno.de</code> / <code>pars.id</code> | | API host | <code>api.&lt;brand-domain&gt;</code> | | Apps | brand-scoped <code>&lt;org&gt;-&lt;app&gt;</code> client IDs (HIP-0111) | | Secrets | KMS project per brand | | Container registry | <code>oci.hanzo.ai/&lt;org&gt;/&lt;app&gt;</code>, org-namespaced and never mixed (HIP-0033) |</p>
 <p>Nothing in the topology is brand-special-cased. A brand is a set of values plugged into the same shape.</p>
 <p>Ingress is configured with <code>ingress.kubernetes.io/<em></code> annotations ONLY. A <code>traefik.</em></code> annotation is silently ignored, which leaves a route believing it has a rate limit it does not have — the failure is invisible until load arrives.</p>
 <h2>Relationship to Other HIPs</h2>
-<p>| HIP | Relationship | |-----|-------------| | <strong>HIP-4</strong> (LLM Gateway) | Ingress routes <code>llm.hanzo.ai</code> traffic to LLM Gateway. Separate processes at different layers. | | <strong>HIP-14</strong> (Application Deployment) | Dokploy generates IngressRoute resources that Ingress watches and routes. | | <strong>HIP-26</strong> (IAM) | Ingress routes <code>hanzo.id</code>, <code>lux.id</code>, <code>zoo.id</code>, <code>pars.id</code> to IAM. No auth at the ingress layer; auth is handled by the API Gateway or services themselves. | | <strong>HIP-27</strong> (KMS) | Ingress routes <code>kms.hanzo.ai</code> to KMS. TLS certificates for strict SSL mode are stored as K8s Secrets provisioned by CertManager. | | <strong>HIP-31</strong> (Observability) | Ingress exports Prometheus metrics consumed by Grafana dashboards. Access logs feed into the log aggregation pipeline. | | <strong>HIP-106</strong> (Cloud) | Ingress routes <code>cloud.hanzo.ai</code> and <code>cloud.lux.network</code> to their respective cloud services. | | <strong>HIP-44</strong> (API Gateway) | The API Gateway (KrakenD) is a backend behind Ingress. Ingress handles L7 host routing; the API Gateway handles application-level concerns (auth, rate limiting, circuit breaking). | | <strong>HIP-49</strong> (DNS) | DNS records point domains to the DigitalOcean LoadBalancer IP. Cloudflare proxies these records for DDoS protection and edge TLS. |</p>
+<p>| HIP | Relationship | |-----|-------------| | <strong>HIP-4</strong> (LLM Gateway) | Ingress routes <code>llm.hanzo.ai</code> traffic to LLM Gateway. Separate processes at different layers. | | <strong>HIP-14</strong> (Application Deployment) | Dokploy generates IngressRoute resources that Ingress watches and routes. | | <strong>HIP-26</strong> (IAM) | Ingress routes <code>hanzo.id</code>, <code>lux.id</code>, <code>zoo.id</code>, <code>pars.id</code> to IAM. No auth at the ingress layer; auth is handled by the API Gateway or services themselves. | | <strong>HIP-27</strong> (KMS) | Ingress routes <code>kms.hanzo.ai</code> to KMS. TLS certificates for strict SSL mode are stored as K8s Secrets provisioned by CertManager. | | <strong>HIP-132</strong> (Telemetry) | Ingress exports Prometheus metrics consumed by Grafana dashboards. Access logs feed into the log aggregation pipeline. | | <strong>HIP-106</strong> (Cloud) | Ingress routes <code>cloud.hanzo.ai</code> and <code>cloud.lux.network</code> to their respective cloud services. | | <strong>HIP-44</strong> (API Gateway) | The API Gateway (KrakenD) is a backend behind Ingress. Ingress handles L7 host routing; the API Gateway handles application-level concerns (auth, rate limiting, circuit breaking). | | <strong>HIP-49</strong> (DNS) | DNS records point domains to the DigitalOcean LoadBalancer IP. Cloudflare proxies these records for DDoS protection and edge TLS. |</p>
 <h3>Layer Separation</h3>
 <pre><code>Internet
   --&gt; Cloudflare (DDoS protection, edge TLS, CDN caching)
@@ -611,11 +620,11 @@ services:
 <ul><li>Cloudflare absorbs volumetric DDoS at the edge before traffic reaches the origin.</li><li>DigitalOcean LoadBalancer provides basic SYN flood protection.</li><li>Ingress rate limiting middleware provides per-IP throttling as a last line of defense.</li></ul>
 <h2>Implementation Roadmap</h2>
 <h3>Phase 1: Core Deployment (Complete)</h3>
-<ul><li>Traefik v3.6 fork with Hanzo defaults</li><li>Deployment on the cluster with DigitalOcean LoadBalancer</li><li>KubernetesIngress and KubernetesCRD providers</li><li>Host routing for all production domains</li><li>Cloudflare Flexible SSL for TLS termination</li><li>Prometheus metrics on port 9100</li><li>JSON access logs on stdout</li></ul>
+<ul><li>Traefik v3.6 fork with Hanzo defaults</li><li>Deployment on hanzo-k8s with DigitalOcean LoadBalancer</li><li>KubernetesIngress and KubernetesCRD providers</li><li>Host routing for all production domains</li><li>Cloudflare Flexible SSL for TLS termination</li><li>Prometheus metrics on port 9100</li><li>JSON access logs on stdout</li></ul>
 <h3>Phase 3: Multi-Cluster (Q2 2026)</h3>
 <ul><li>Deploy Ingress on lux-k8s cluster</li><li>Cross-cluster service discovery via ExternalName services</li><li>Global server load balancing (GSLB) via Cloudflare DNS</li><li>Canary deployments with weighted IngressRoute services</li></ul>
 <h2>References</h2>
-<ol><li><a href="https://doc.traefik.io/traefik/">Traefik Documentation</a></li><li><a href="https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/">Traefik Kubernetes IngressRoute</a></li><li><a href="https://doc.traefik.io/traefik/middlewares/overview/">Traefik Middleware Reference</a></li><li><a href="https://kubernetes.io/docs/concepts/services-networking/ingress/">Kubernetes Ingress Specification</a></li><li><a href="https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/">Cloudflare SSL/TLS Modes</a></li><li><a href="https://docs.digitalocean.com/products/networking/load-balancers/">DigitalOcean Load Balancer</a></li><li>HIP-44: API Gateway Standard</li><li><a href="./hip-0026-identity-access-management-standard.md">HIP-26: Identity &amp; Access Management</a></li><li>HIP-31: Observability &amp; Metrics</li><li><a href="https://github.com/hanzoai/ingress">Ingress Repository</a></li></ol>
+<ol><li><a href="https://doc.traefik.io/traefik/">Traefik Documentation</a></li><li><a href="https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/">Traefik Kubernetes IngressRoute</a></li><li><a href="https://doc.traefik.io/traefik/middlewares/overview/">Traefik Middleware Reference</a></li><li><a href="https://kubernetes.io/docs/concepts/services-networking/ingress/">Kubernetes Ingress Specification</a></li><li><a href="https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/">Cloudflare SSL/TLS Modes</a></li><li><a href="https://docs.digitalocean.com/products/networking/load-balancers/">DigitalOcean Load Balancer</a></li><li>HIP-44: API Gateway Standard</li><li><a href="./hip-0026-identity-access-management-standard.md">HIP-26: Identity &amp; Access Management</a></li><li><a href="./hip-0132-one-telemetry-plane.md">HIP-132: One Telemetry Plane</a></li><li><a href="https://github.com/hanzoai/ingress">Ingress Repository</a></li></ol>
 <h2>Copyright</h2>
 <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</p>
 <footer>
@@ -637,5 +646,4 @@ services:
 </div>
 <div class="fend"><a href="/hip-0068.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

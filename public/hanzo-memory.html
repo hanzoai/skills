@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-memory</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-memory.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-memory">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-memory.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-memory</h1><p class="lede">Hanzo Memory (@hanzo/memory) is a TypeScript AI memory service that stores, searches, and retrieves contextual memories using vector embeddings.</p><h1>Hanzo Memory - AI Memory Service with LanceDB</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-agent.md</code>, <code>hanzo/hanzo-mcp.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Memory (<code>@hanzo/memory</code>) is a <strong>TypeScript AI memory service</strong> that stores, searches, and retrieves contextual memories using vector embeddings. It provides a REST API server (Fastify) and a TypeScript client library. The primary backend is LanceDB for vector storage, with 6 embedding provider options including local (ONNX, Candle, llama.cpp) and API-based (OpenAI). Port of the Python memory service with full feature parity.</p>
+<h3>What it actually is</h3>
+<ul><li>npm package <code>@hanzo/memory</code> v0.1.0</li><li>Fastify REST API server (<code>src/server.ts</code>) on port 8000</li><li>TypeScript client (<code>src/client.ts</code>) for programmatic access</li><li>LanceDB vector database backend (default) + in-memory backend (testing)</li><li>6 embedding providers: Mock, OpenAI, ONNX, Transformers.js, Candle (Rust/Metal), llama.cpp</li><li>2 LLM providers: OpenAI, Mock (for PII stripping and result filtering)</li><li>Zod for runtime type validation</li><li>110 tests passing (92 unit + 18 integration)</li><li>Dockerfile with 4 build stages: production, test, benchmark, development</li><li>pnpm monorepo with <code>packages/embedding</code> and <code>packages/inference</code> sub-packages</li></ul>
+<h2>When to use</h2>
+<ul><li>Adding persistent memory to AI agents or chatbots</li><li>Storing user preferences and conversation context</li><li>Building knowledge bases with semantic search</li><li>Chat session history with vector search</li><li>Any service needing user-scoped memory with embeddings</li></ul>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Repo | <code>github.com/hanzoai/memory</code> | | Package | <code>@hanzo/memory</code> | | Version | 0.1.0 | | Branch | <code>main</code> | | Language | TypeScript | | Runtime | Node.js &gt;= 18 | | Server | Fastify 4 on port 8000 | | DB | LanceDB (default), in-memory (testing) | | Validation | Zod | | Tests | 110 passing (92 unit + 18 integration) | | Test runner | Vitest | | Build | tsup | | Package manager | pnpm | | Docker | Multi-stage (production, test, benchmark, dev) | | CI | GitHub Actions (Linux + macOS matrix) | | License | BSD-3-Clause |</p>
+<h2>Project structure</h2>
+<pre><code>hanzoai/memory/
+ package.json # @hanzo/memory 0.1.0
+ tsconfig.json # TypeScript config
+ tsup.config.ts # Build config (tsup)
+ vitest.config.ts # Test config
+ Dockerfile # 4-stage build
+ docker-compose.yml # Server, test, benchmark, dev targets
+ .env.example # Configuration template
+ src/
+ index.ts # Package exports
+ server.ts # Fastify REST API server
+ client.ts # MemoryClient class
+ config.ts # Configuration loading from env
+ db/ # Database backends
+ models/ # Zod schemas and types
+ services/
+ memory.ts # Core MemoryService
+ embeddings.ts # Embedding provider factory
+ embeddings/ # Provider implementations
+ llm.ts # LLM provider (OpenAI, Mock)
+ index.ts # Service exports
+ types/ # TypeScript type definitions
+ packages/
+ embedding/ # Standalone embedding package
+ inference/ # Standalone inference package
+ tests/ # Unit and integration tests
+ benchmarks/ # Performance benchmarks</code></pre>
+<h2>Dependencies</h2>
+<p>From <code>package.json</code>:</p>
+<ul><li><code>@lancedb/lancedb</code> ^0.4.0 -- vector database</li><li><code>fastify</code> ^4.25.0 -- HTTP server</li><li><code>fastify-zod</code> ^1.4.0 -- Zod integration for Fastify</li><li><code>openai</code> ^4.0.0 -- OpenAI API client</li><li><code>zod</code> ^3.22.0 -- runtime type validation</li><li><code>uuid</code> ^9.0.0 -- unique identifiers</li><li><code>dotenv</code> ^16.0.0 -- env config</li><li><code>onnxruntime-node</code> 1.22.0-rev -- local ONNX embeddings (optional)</li><li><code>sharp</code> ^0.34.3 -- image processing (optional, for Transformers.js)</li></ul>
+<h2>API endpoints</h2>
+<h3>Health</h3>
+<ul><li><code>GET /health</code> -- service health status</li></ul>
+<h3>Memory operations</h3>
+<ul><li><code>POST /v1/remember</code> -- store a memory</li><li><code>POST /v1/memories/add</code> -- add memory (alias)</li><li><code>POST /v1/memories/get</code> -- get specific memory</li><li><code>POST /v1/memories/search</code> -- semantic search</li><li><code>DELETE /v1/memories</code> -- delete memory</li><li><code>POST /v1/memories/delete</code> -- delete (RPC-style)</li><li><code>POST /v1/user/delete</code> -- delete all user data</li></ul>
+<h3>Projects</h3>
+<ul><li><code>POST /v1/project/create</code> -- create project</li><li><code>GET /v1/projects</code> -- list user projects</li></ul>
+<h3>Knowledge base</h3>
+<ul><li><code>POST /v1/kb/create</code> -- create knowledge base</li><li><code>GET /v1/kb/list</code> -- list knowledge bases</li><li><code>POST /v1/kb/facts/add</code> -- add fact</li><li><code>POST /v1/kb/facts/get</code> -- search facts</li><li><code>POST /v1/kb/facts/delete</code> -- delete facts</li></ul>
+<h3>Chat sessions</h3>
+<ul><li><code>POST /v1/chat/sessions/create</code> -- create session</li><li><code>POST /v1/chat/messages/add</code> -- add message</li><li><code>GET /v1/chat/sessions/:session_id/messages</code> -- get messages</li><li><code>POST /v1/chat/search</code> -- search messages</li></ul>
+<h2>Quickstart</h2>
+<h3>As a library</h3>
+<pre><code class="lang-typescript">import { MemoryClient } from &#x27;@hanzo/memory&#x27;
+
+const client = new MemoryClient()
+
+// Store a memory
+const memory = await client.remember({
+ userid: &#x27;user-123&#x27;,
+ content: &#x27;User prefers dark mode&#x27;,
+ importance: 8
+})
+
+// Semantic search
+const results = await client.search({
+ userid: &#x27;user-123&#x27;,
+ query: &#x27;What are the user preferences?&#x27;,
+ limit: 5
+})</code></pre>
+<h3>As a server</h3>
+<pre><code class="lang-bash">git clone https://github.com/hanzoai/memory.git
+cd memory
+pnpm install
+pnpm run server:dev # Dev mode with auto-reload on port 8000</code></pre>
+<h3>Docker</h3>
+<pre><code class="lang-bash">docker-compose up memory-server # Production
+docker-compose up memory-dev # Development with hot-reload
+docker-compose up memory-test # Run tests
+docker-compose up memory-benchmark # Run benchmarks</code></pre>
+<h2>Embedding providers</h2>
+<p>| Provider | Key | Local | GPU | Dependencies | |----------|-----|-------|-----|-------------| | Mock | <code>mock</code> | Yes | No | None (default) | | OpenAI | <code>openai</code> | No | N/A | <code>OPENAI_API_KEY</code> | | ONNX | <code>onnx</code> | Yes | No | <code>onnxruntime-node</code> | | Transformers.js | <code>transformers</code> | Yes | No | <code>sharp</code> module | | Candle | <code>candle</code> | Yes | Metal (macOS) | Rust + <code>candle-embeddings</code> | | llama.cpp | <code>llama</code> | Yes | CUDA/Metal | <code>llama.cpp</code> binary + model |</p>
+<p>Configure via <code>EMBEDDING_PROVIDER</code> env var.</p>
+<h2>Environment variables</h2>
+<pre><code class="lang-bash"># Database
+DB_BACKEND=lancedb # or &#x27;memory&#x27;
+LANCEDB_URI=./lancedb_data
+
+# Embeddings
+EMBEDDING_PROVIDER=mock # mock|openai|onnx|transformers|candle|llama
+EMBEDDING_MODEL=Xenova/all-MiniLM-L6-v2
+
+# OpenAI (optional)
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-3.5-turbo
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+
+# Server
+HANZO_HOST=0.0.0.0
+HANZO_PORT=8000
+
+# Features
+STRIP_PII_DEFAULT=false
+FILTER_WITH_LLM_DEFAULT=false</code></pre>
+<h2>Troubleshooting</h2>
+<ul><li><strong>sharp install fails on macOS</strong>: Use <code>EMBEDDING_PROVIDER=mock</code> or <code>EMBEDDING_PROVIDER=openai</code> to avoid Transformers.js dependency</li><li><strong>LanceDB write errors</strong>: Check <code>LANCEDB_URI</code> directory exists and is writable</li><li><strong>ONNX returns mock embeddings</strong>: Full ONNX model support planned, currently falls back to mock</li><li><strong>Candle not found</strong>: Install via <code>cargo install candle-embeddings</code></li><li><strong>Vite CJS deprecation warning</strong>: Comes from Vitest, does not affect functionality</li></ul>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-agent.md</code> -- Agent framework that uses memory</li><li><code>hanzo/hanzo-mcp.md</code> -- MCP integration for memory tools</li><li><code>hanzo/hanzo-chat.md</code> -- Chat application with memory support</li><li><code>hanzo/hanzo-candle.md</code> -- Rust ML framework (Candle embeddings)</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: memory, vector-db, lancedb, embeddings, ai, agent <strong>Prerequisites</strong>: Node.js &gt;= 18, pnpm</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-memory.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

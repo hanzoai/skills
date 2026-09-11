@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-sentry</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-sentry.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-sentry">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-sentry.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-sentry</h1><p class="lede">Hanzo Sentry is a self-hosted Sentry 24.2.0 deployment for error tracking and performance monitoring across all Hanzo, Lux, Zoo, and Pars services.</p><h1>Hanzo Sentry - Error Tracking &amp; Performance Monitoring</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-o11y.md</code>, <code>hanzo/hanzo-kms.md</code>, <code>hanzo/hanzo-id.md</code>, <code>hanzo/hanzo-universe.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Sentry is a <strong>self-hosted Sentry 24.2.0 deployment</strong> for error tracking and performance monitoring across all Hanzo, Lux, Zoo, and Pars services. It is a fork of <a href="https://github.com/getsentry/sentry">getsentry/sentry</a> with a custom Dockerfile branded for Hanzo, configured for OIDC SSO via hanzo.id, and deployed to the hanzo-k8s cluster.</p>
+<h3>Why Hanzo Sentry?</h3>
+<ul><li><strong>Self-hosted</strong>: Full control over data, no SaaS dependency</li><li><strong>Multi-tenant</strong>: Single instance serving four domains (hanzo, lux, pars, zoo)</li><li><strong>IAM integrated</strong>: OIDC SSO login via hanzo.id (<code>app-sentry</code> client)</li><li><strong>Secrets via KMS</strong>: All credentials synced from kms.hanzo.ai</li><li><strong>OTEL instrumented</strong>: Exports traces to the shared OTEL collector</li><li><strong>Shared infrastructure</strong>: Uses hanzo-sql (PostgreSQL) and shared Redis</li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Backend</strong>: Python 3.11 (Django 5.x, Celery, DRF)</li><li><strong>Frontend</strong>: React + TypeScript (Webpack, Emotion CSS)</li><li><strong>Queue</strong>: Celery via Redis (or RabbitMQ if configured)</li><li><strong>Database</strong>: PostgreSQL via <code>hanzo-sql.hanzo.svc</code></li><li><strong>Cache</strong>: Redis via <code>redis.hanzo.svc</code></li><li><strong>Image</strong>: <code>ghcr.io/hanzoai/sentry:latest</code></li><li><strong>Base version</strong>: Sentry 24.2.0 (FSL-1.0-Apache-2.0 license)</li></ul>
+<h3>OSS Base</h3>
+<p>Fork of <code>getsentry/sentry</code>. Local clone at <code>~/work/hanzo/sentry/</code>. The GitHub repo <code>hanzoai/sentry</code> does not yet exist as a public fork -- currently origin points to <code>getsentry/sentry</code> and Hanzo customizations live in the <code>self-hosted/</code> directory and K8s manifests in <code>universe/infra/k8s/sentry/</code>.</p>
+<h2>When to use</h2>
+<ul><li>Instrumenting Hanzo services with error tracking</li><li>Monitoring performance of API endpoints, workers, and frontends</li><li>Viewing crash reports, stack traces, and breadcrumbs</li><li>Setting up alerting rules for error spikes</li><li>Tracking release health across deployments</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>PostgreSQL</strong> via <code>hanzo-sql.hanzo.svc</code> (database <code>sentry</code>)</li><li><strong>Redis</strong> via <code>redis.hanzo.svc</code> (cache, queues, rate limits, buffers)</li><li><strong>KMS</strong> at kms.hanzo.ai for secret sync (secret-key, db-password, oidc-client-secret)</li><li><strong>IAM</strong> at hanzo.id with <code>app-sentry</code> OIDC client for SSO</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | UI | <code>https://sentry.hanzo.ai</code> | | Alt domains | <code>sentry.lux.network</code>, <code>sentry.pars.network</code>, <code>sentry.zoo.network</code> | | Port | 9000 (web), internal K8s service | | Image | <code>ghcr.io/hanzoai/sentry:latest</code> | | Base version | Sentry 24.2.0 | | Language | Python 3.11 + TypeScript | | K8s namespace | <code>hanzo</code> | | Deployments | <code>sentry-web</code> (2 replicas), <code>sentry-worker</code> (2 replicas), <code>sentry-cron</code> (1 replica) | | Database | <code>hanzo-sql.hanzo.svc:5432/sentry</code> | | Redis | <code>redis.hanzo.svc:6379</code> | | Auth | OIDC SSO via hanzo.id (<code>app-sentry</code>) | | KMS project | <code>hanzo-k8s-epiq</code>, path <code>/sentry</code> | | Local clone | <code>~/work/hanzo/sentry/</code> | | K8s manifests | <code>~/work/hanzo/universe/infra/k8s/sentry/</code> | | Health check | <code>GET /_health/</code> |</p>
+<h2>One-file quickstart</h2>
+<h3>Instrument a Python service</h3>
+<pre><code class="lang-python">import sentry_sdk
+
+sentry_sdk.init(
+ dsn=&quot;https://&lt;key&gt;@sentry.hanzo.ai/&lt;project-id&gt;&quot;,
+ traces_sample_rate=0.1,
+ environment=&quot;production&quot;,
+ release=&quot;my-service@1.0.0&quot;,
+)</code></pre>
+<h3>Instrument a Node.js service</h3>
+<pre><code class="lang-javascript">const Sentry = require(&quot;@sentry/node&quot;);
+
+Sentry.init({
+ dsn: &quot;https://&lt;key&gt;@sentry.hanzo.ai/&lt;project-id&gt;&quot;,
+ tracesSampleRate: 0.1,
+ environment: &quot;production&quot;,
+ release: &quot;my-service@1.0.0&quot;,
+});</code></pre>
+<h3>Instrument a Go service</h3>
+<pre><code class="lang-go">import &quot;github.com/getsentry/sentry-go&quot;
+
+func main() {
+ sentry.Init(sentry.ClientOptions{
+ Dsn: &quot;https://&lt;key&gt;@sentry.hanzo.ai/&lt;project-id&gt;&quot;,
+ TracesSampleRate: 0.1,
+ Environment: &quot;production&quot;,
+ Release: &quot;my-service@1.0.0&quot;,
+ })
+ defer sentry.Flush(2 * time.Second)
+}</code></pre>
+<h3>Docker Compose (local development)</h3>
+<pre><code class="lang-yaml"># compose.yml
+services:
+ sentry-web:
+ image: ghcr.io/hanzoai/sentry:latest
+ command: [&quot;sentry&quot;, &quot;run&quot;, &quot;web&quot;]
+ ports:
+ - &quot;9000:9000&quot;
+ environment:
+ SENTRY_SECRET_KEY: &quot;${SENTRY_SECRET_KEY}&quot;
+ SENTRY_POSTGRES_HOST: postgres
+ SENTRY_DB_NAME: sentry
+ SENTRY_DB_USER: sentry
+ SENTRY_DB_PASSWORD: &quot;${SENTRY_DB_PASSWORD}&quot;
+ SENTRY_REDIS_HOST: redis
+
+ sentry-worker:
+ image: ghcr.io/hanzoai/sentry:latest
+ command: [&quot;sentry&quot;, &quot;run&quot;, &quot;worker&quot;]
+ environment:
+ SENTRY_SECRET_KEY: &quot;${SENTRY_SECRET_KEY}&quot;
+ SENTRY_POSTGRES_HOST: postgres
+ SENTRY_DB_NAME: sentry
+ SENTRY_DB_USER: sentry
+ SENTRY_DB_PASSWORD: &quot;${SENTRY_DB_PASSWORD}&quot;
+ SENTRY_REDIS_HOST: redis
+
+ sentry-cron:
+ image: ghcr.io/hanzoai/sentry:latest
+ command: [&quot;sentry&quot;, &quot;run&quot;, &quot;cron&quot;]
+ environment:
+ SENTRY_SECRET_KEY: &quot;${SENTRY_SECRET_KEY}&quot;
+ SENTRY_POSTGRES_HOST: postgres
+ SENTRY_DB_NAME: sentry
+ SENTRY_DB_USER: sentry
+ SENTRY_DB_PASSWORD: &quot;${SENTRY_DB_PASSWORD}&quot;
+ SENTRY_REDIS_HOST: redis
+
+ postgres:
+ image: postgres:16
+ environment:
+ POSTGRES_DB: sentry
+ POSTGRES_USER: sentry
+ POSTGRES_PASSWORD: &quot;${SENTRY_DB_PASSWORD}&quot;
+
+ redis:
+ image: redis:7-alpine</code></pre>
+<h2>Core Concepts</h2>
+<h3>Architecture</h3>
+<pre><code> ┌──────────────────────────────────┐
+ │ K8s Ingress │
+ │ sentry.hanzo.ai │
+ │ sentry.lux.network │
+ │ sentry.pars.network │
+ │ sentry.zoo.network │
+ └───────────────┬──────────────────┘
+ │
+ ┌───────────────▼──────────────────┐
+ │ sentry-web (2 replicas) │
+ │ Django + uWSGI on port 9000 │
+ └──┬────────────┬─────────────┬────┘
+ │ │ │
+ ┌──────▼──┐ ┌─────▼─────┐ ┌───▼────────┐
+ │ Postgres │ │ Redis │ │ OTEL │
+ │ hanzo-sql│ │ (shared) │ │ Collector │
+ └─────────┘ └───────────┘ └────────────┘
+ │ │
+ ┌──────▼──┐ ┌─────▼──────────────┐
+ │ sentry- │ │ sentry-worker │
+ │ cron │ │ (2 replicas, Celery) │
+ └─────────┘ └─────────────────────┘</code></pre>
+<h3>Three Deployments</h3>
+<p>| Component | Command | Replicas | Purpose | |-----------|---------|----------|---------| | <code>sentry-web</code> | <code>sentry run web</code> | 2 | Django web server (uWSGI) | | <code>sentry-worker</code> | <code>sentry run worker</code> | 2 | Celery async task processing | | <code>sentry-cron</code> | <code>sentry run cron</code> | 1 | Scheduled tasks (digests, cleanup) |</p>
+<h3>Multi-Tenant Domains</h3>
+<p>A single Sentry instance serves four domains via K8s Ingress. Each domain maps to a separate Sentry organization, allowing per-org project isolation:</p>
+<ul><li><code>sentry.hanzo.ai</code> -- Hanzo AI services</li><li><code>sentry.lux.network</code> -- Lux blockchain nodes</li><li><code>sentry.pars.network</code> -- Pars network services</li><li><code>sentry.zoo.network</code> -- Zoo Labs experiments</li></ul>
+<h3>Auth Flow</h3>
+<p>SSO is via OIDC against hanzo.id:</p>
+<ol><li>User visits <code>sentry.hanzo.ai</code> and clicks &quot;SSO Login&quot;</li><li>Redirected to <code>hanzo.id</code> for authentication (client <code>app-sentry</code>)</li><li>OIDC callback returns to Sentry with identity token</li><li>Sentry creates/links user account and grants org membership</li></ol>
+<h3>Dockerfile Customizations</h3>
+<p>The <code>self-hosted/Dockerfile</code> in the local clone contains Hanzo-specific changes:</p>
+<ul><li>OCI labels with <code>ops@hanzo.ai</code> maintainer and Hanzo branding</li><li>References <code>ghcr.io/hanzoai/sentry</code> as image source</li><li>Copies <code>self-hosted/sentry.conf.py</code> and <code>self-hosted/config.yml</code> into <code>/etc/sentry/</code></li><li>Entrypoint via <code>tini</code> + <code>gosu</code> for proper signal handling</li></ul>
+<h3>KMS Secret Sync</h3>
+<p>Secrets are managed via the <code>KMSSecret</code> CRD that syncs from <code>kms.hanzo.ai</code>:</p>
+<pre><code class="lang-yaml"># kms-secrets.yaml
+spec:
+ hostAPI: https://kms.hanzo.ai/api
+ managedSecretReference:
+ secretName: sentry-secrets
+ secretNamespace: hanzo
+ authentication:
+ universalAuth:
+ secretsScope:
+ projectSlug: hanzo-k8s-epiq
+ envSlug: prod
+ secretsPath: /sentry</code></pre>
+<p>Required secrets: <code>secret-key</code>, <code>db-password</code>, <code>oidc-client-secret</code>, <code>commerce-api-key</code> (optional).</p>
+<h3>Environment Variables</h3>
+<pre><code class="lang-bash"># Database (PostgreSQL)
+SENTRY_POSTGRES_HOST=hanzo-sql.hanzo.svc
+SENTRY_DB_NAME=sentry
+SENTRY_DB_USER=sentry
+SENTRY_DB_PASSWORD=&lt;from KMS&gt;
+SENTRY_DB_PORT=5432
+
+# Redis
+SENTRY_REDIS_HOST=redis.hanzo.svc
+SENTRY_REDIS_PORT=6379
+
+# Core
+SENTRY_SECRET_KEY=&lt;from KMS&gt;
+
+# OIDC SSO
+SENTRY_OIDC_ENABLED=true
+SENTRY_OIDC_ISSUER=https://hanzo.id
+SENTRY_OIDC_CLIENT_ID=app-sentry
+SENTRY_OIDC_CLIENT_SECRET=&lt;from KMS&gt;
+
+# Observability
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.hanzo.svc:4318
+OTEL_SERVICE_NAME=sentry
+
+# Optional: Commerce billing
+HANZO_COMMERCE_URL=https://commerce.hanzo.ai
+HANZO_COMMERCE_API_KEY=&lt;from KMS&gt;</code></pre>
+<h3>Local Development</h3>
+<pre><code class="lang-bash">cd ~/work/hanzo/sentry
+
+# Python setup (uses direnv + pyenv, not uv — upstream pattern)
+make develop
+
+# Run dependent services (Postgres, Redis, Kafka, etc.)
+make run-dependent-services
+
+# Apply database migrations
+make apply-migrations
+
+# Start web server
+sentry run web
+
+# In another terminal: start worker
+sentry run worker
+
+# Run Python tests
+make test-python-ci
+
+# Run JavaScript tests
+make test-js</code></pre>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | OIDC login fails | <code>app-sentry</code> not configured in IAM | Create OIDC client at hanzo.id with redirect URI <code>https://sentry.hanzo.ai/auth/sso/</code> | | Redis connection error | Missing <code>SENTRY_REDIS_HOST</code> | Ensure <code>redis.hanzo.svc</code> is reachable in cluster | | <code>SENTRY_SECRET_KEY is undefined</code> | KMS sync not running | Verify <code>sentry-secrets</code> K8s secret exists in <code>hanzo</code> namespace | | Migration errors | DB not created | Run <code>sentry upgrade</code> to create tables and apply migrations | | Worker not processing | Celery not connected to broker | Check Redis connectivity or RabbitMQ config | | Health check failing | Sentry not fully started | Wait for <code>initialDelaySeconds</code> (60s); check logs for startup errors | | <code>npm ci</code> fails | Peer dep conflicts | Use <code>npm install</code> with <code>.npmrc</code> containing <code>legacy-peer-deps=true</code> |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-o11y.md</code> - Observability stack (OTEL, Prometheus, Grafana)</li><li><code>hanzo/hanzo-id.md</code> - IAM and OIDC SSO configuration</li><li><code>hanzo/hanzo-kms.md</code> - Secret management via KMSSecret CRDs</li><li><code>hanzo/hanzo-universe.md</code> - Production K8s infrastructure and manifests</li><li><code>hanzo/hanzo-database.md</code> - Shared PostgreSQL (hanzo-sql)</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: sentry, error-tracking, monitoring, observability, self-hosted <strong>Prerequisites</strong>: Kubernetes, PostgreSQL, Redis, OIDC basics</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-sentry.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

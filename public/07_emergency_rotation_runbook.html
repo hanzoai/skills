@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>07_emergency_rotation_runbook</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/07_emergency_rotation_runbook.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/07_emergency_rotation_runbook">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/07_emergency_rotation_runbook.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>07_emergency_rotation_runbook</h1><p class="lede">Purpose: Emergency rotation procedure for compromised secrets SLA: Complete rotation within 1 hour of detection Scope: All production secrets (databases, API keys, certificates, tokens)</p><h1>Emergency Secret Rotation Runbook</h1>
+<h2>Overview</h2>
+<p><strong>Purpose</strong>: Emergency rotation procedure for compromised secrets <strong>SLA</strong>: Complete rotation within 1 hour of detection <strong>Scope</strong>: All production secrets (databases, API keys, certificates, tokens)</p>
+<hr>
+<h2>Incident Detection</h2>
+<h3>Indicators of Compromise</h3>
+<ul><li>[ ] Secret found in public repository</li><li>[ ] Unusual access patterns detected</li><li>[ ] Security alert from monitoring system</li><li>[ ] Third-party breach notification</li><li>[ ] Insider threat suspicion</li><li>[ ] Failed authentication spike</li><li>[ ] Unexpected data access</li></ul>
+<h3>Initial Assessment (5 minutes)</h3>
+<ol><li><strong>Identify compromised secret(s)</strong></li></ol>
+<p>   ```bash    # List all secrets in system    ./scripts/list-secrets.sh</p>
+<p>   # Check secret usage logs    ./scripts/check-secret-usage.sh &lt;secret-name&gt; --last-24h    ```</p>
+<ol><li><strong>Determine blast radius</strong></li></ol>
+<ul><li>What systems use this secret?</li><li>What data is accessible?</li><li>How many users/services affected?</li></ul>
+<ol><li><strong>Classify severity</strong></li></ol>
+<ul><li><strong>P0 Critical</strong>: Production database, root credentials</li><li><strong>P1 High</strong>: API keys, service accounts</li><li><strong>P2 Medium</strong>: Read-only credentials, non-production</li><li><strong>P3 Low</strong>: Development, test environments</li></ul>
+<hr>
+<h2>Emergency Response Team</h2>
+<h3>Roles and Responsibilities</h3>
+<p>| Role | Responsibilities | Contact | |------|------------------|---------| | <strong>Incident Commander</strong> | Coordinate response, make decisions | On-call manager | | <strong>Security Lead</strong> | Assess impact, containment | Security team | | <strong>Operations Lead</strong> | Execute rotation, verify systems | DevOps team | | <strong>Communications Lead</strong> | Notify stakeholders, documentation | Product/Support |</p>
+<h3>Communication Channels</h3>
+<pre><code class="lang-bash"># Create incident war room
+slack --channel=#incident-$(date +%Y%m%d-%H%M) --topic=&quot;Secret Rotation: &lt;secret-name&gt;&quot;
+
+# Start incident bridge
+zoom --meeting-id=emergency-rotation
+
+# Page on-call
+pagerduty trigger --service=security --severity=critical --summary=&quot;Secret compromised: &lt;secret-name&gt;&quot;</code></pre>
+<hr>
+<h2>Rotation Procedures</h2>
+<h3>1. Database Credentials (P0 - 30 minutes)</h3>
+<p><strong>PostgreSQL/MySQL</strong></p>
+<pre><code class="lang-bash"># Step 1: Create new credentials
+NEW_PASSWORD=$(openssl rand -base64 32)
+echo &quot;New password generated: ${NEW_PASSWORD:0:8}...&quot;
+
+# Step 2: Create temporary user (zero-downtime)
+psql -h $DB_HOST -U postgres &lt;&lt;EOF
+CREATE USER app_user_temp WITH PASSWORD &#x27;$NEW_PASSWORD&#x27;;
+GRANT ALL PRIVILEGES ON DATABASE myapp TO app_user_temp;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO app_user_temp;
+EOF
+
+# Step 3: Update application config (rolling restart)
+kubectl set env deployment/app \
+  DB_USER=app_user_temp \
+  DB_PASSWORD=$NEW_PASSWORD
+
+# Wait for rollout
+kubectl rollout status deployment/app --timeout=5m
+
+# Step 4: Verify application health
+kubectl exec deployment/app -- curl -f http://localhost:8080/health
+
+# Step 5: Rotate original user
+psql -h $DB_HOST -U postgres &lt;&lt;EOF
+ALTER USER app_user WITH PASSWORD &#x27;$NEW_PASSWORD&#x27;;
+EOF
+
+# Step 6: Switch back to original user
+kubectl set env deployment/app \
+  DB_USER=app_user \
+  DB_PASSWORD=$NEW_PASSWORD
+
+kubectl rollout status deployment/app --timeout=5m
+
+# Step 7: Clean up temporary user
+psql -h $DB_HOST -U postgres -c &quot;DROP USER app_user_temp;&quot;
+
+# Step 8: Update secret manager
+aws secretsmanager update-secret \
+  --secret-id prod/db/credentials \
+  --secret-string &quot;{\&quot;username\&quot;:\&quot;app_user\&quot;,\&quot;password\&quot;:\&quot;$NEW_PASSWORD\&quot;}&quot;
+
+echo &quot;✓ Database credentials rotated successfully&quot;</code></pre>
+<p><strong>Verification Checklist</strong></p>
+<ul><li>[ ] Application health checks passing</li><li>[ ] Database connections stable</li><li>[ ] No authentication errors in logs</li><li>[ ] Old credentials invalidated</li><li>[ ] Secret manager updated</li></ul>
+<hr>
+<h3>2. API Keys (P1 - 15 minutes)</h3>
+<p><strong>Third-party API Keys (Stripe, Twilio, etc.)</strong></p>
+<pre><code class="lang-bash"># Step 1: Generate new API key
+# Via provider console or API
+NEW_API_KEY=$(curl -X POST https://api.provider.com/v1/keys \
+  -H &quot;Authorization: Bearer $ADMIN_TOKEN&quot; \
+  | jq -r &#x27;.key&#x27;)
+
+echo &quot;New API key: ${NEW_API_KEY:0:10}...&quot;
+
+# Step 2: Update application (immediate)
+kubectl create secret generic api-keys \
+  --from-literal=PROVIDER_API_KEY=$NEW_API_KEY \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Step 3: Rolling restart
+kubectl rollout restart deployment/app
+kubectl rollout status deployment/app --timeout=5m
+
+# Step 4: Verify integration
+kubectl exec deployment/app -- \
+  curl -f https://api.provider.com/v1/test \
+  -H &quot;Authorization: Bearer $NEW_API_KEY&quot;
+
+# Step 5: Revoke old key
+curl -X DELETE https://api.provider.com/v1/keys/$OLD_KEY_ID \
+  -H &quot;Authorization: Bearer $ADMIN_TOKEN&quot;
+
+echo &quot;✓ API key rotated successfully&quot;</code></pre>
+<p><strong>Verification Checklist</strong></p>
+<ul><li>[ ] New key working in production</li><li>[ ] All service instances updated</li><li>[ ] Old key revoked</li><li>[ ] No API errors in logs</li><li>[ ] Rate limits not exceeded</li></ul>
+<hr>
+<h3>3. TLS Certificates (P0 - 20 minutes)</h3>
+<p><strong>Let&#x27;s Encrypt / ACME</strong></p>
+<pre><code class="lang-bash"># Step 1: Obtain new certificate
+certbot certonly \
+  --webroot -w /var/www/html \
+  -d example.com -d www.example.com \
+  --email security@example.com \
+  --agree-tos \
+  --non-interactive
+
+# Step 2: Upload to load balancer
+NEW_CERT_ARN=$(aws acm import-certificate \
+  --certificate fileb:///etc/letsencrypt/live/example.com/fullchain.pem \
+  --private-key fileb:///etc/letsencrypt/live/example.com/privkey.pem \
+  --query &#x27;CertificateArn&#x27; --output text)
+
+echo &quot;New certificate ARN: $NEW_CERT_ARN&quot;
+
+# Step 3: Update load balancer listener (zero-downtime)
+aws elbv2 modify-listener \
+  --listener-arn $LISTENER_ARN \
+  --certificates CertificateArn=$NEW_CERT_ARN
+
+# Step 4: Verify TLS
+echo | openssl s_client -connect example.com:443 -servername example.com 2&gt;/dev/null \
+  | openssl x509 -noout -dates
+
+# Step 5: Delete old certificate (after 5 min grace period)
+sleep 300
+aws acm delete-certificate --certificate-arn $OLD_CERT_ARN
+
+echo &quot;✓ Certificate rotated successfully&quot;</code></pre>
+<p><strong>Verification Checklist</strong></p>
+<ul><li>[ ] New certificate valid</li><li>[ ] HTTPS traffic flowing</li><li>[ ] No SSL errors</li><li>[ ] Browser trust indicators present</li><li>[ ] Old certificate removed</li></ul>
+<hr>
+<h3>4. SSH Keys (P1 - 10 minutes)</h3>
+<p><strong>Server Access Keys</strong></p>
+<pre><code class="lang-bash"># Step 1: Generate new keypair
+ssh-keygen -t ed25519 -f /tmp/emergency_key -N &quot;&quot; -C &quot;emergency-rotation-$(date +%Y%m%d)&quot;
+
+# Step 2: Deploy public key to all servers
+ansible all -m authorized_key \
+  -a &quot;user=deploy key=&#x27;{{ lookup(&#x27;file&#x27;, &#x27;/tmp/emergency_key.pub&#x27;) }}&#x27; state=present&quot;
+
+# Step 3: Verify access with new key
+ssh -i /tmp/emergency_key deploy@server1.example.com &quot;echo &#x27;Connection successful&#x27;&quot;
+
+# Step 4: Remove old key
+OLD_KEY_FINGERPRINT=&quot;SHA256:abc123...&quot;
+ansible all -m authorized_key \
+  -a &quot;user=deploy key=&#x27;{{ OLD_KEY_FINGERPRINT }}&#x27; state=absent&quot;
+
+# Step 5: Update key management system
+vault kv put secret/ssh/deploy-key \
+  private_key=@/tmp/emergency_key \
+  public_key=@/tmp/emergency_key.pub
+
+# Step 6: Secure cleanup
+shred -vfz /tmp/emergency_key /tmp/emergency_key.pub
+
+echo &quot;✓ SSH keys rotated successfully&quot;</code></pre>
+<p><strong>Verification Checklist</strong></p>
+<ul><li>[ ] New key works on all servers</li><li>[ ] Old key no longer works</li><li>[ ] CI/CD pipelines updated</li><li>[ ] Team members notified</li><li>[ ] Key backup secured</li></ul>
+<hr>
+<h2>Automation Scripts</h2>
+<h3>Full Emergency Rotation Script</h3>
+<pre><code class="lang-bash">#!/bin/bash
+# emergency-rotate.sh - Automated emergency rotation
+
+set -euo pipefail
+
+SECRET_TYPE=$1  # database|api-key|certificate|ssh-key
+SECRET_NAME=$2
+
+log() {
+    echo &quot;[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*&quot; | tee -a /var/log/rotation.log
+}
+
+rotate_database() {
+    log &quot;Starting database rotation: $SECRET_NAME&quot;
+
+    # Generate new password
+    NEW_PASS=$(openssl rand -base64 32)
+
+    # Execute rotation
+    python3 /opt/rotation/rotate_db.py \
+        --secret-name &quot;$SECRET_NAME&quot; \
+        --new-password &quot;$NEW_PASS&quot; \
+        --zero-downtime
+
+    log &quot;Database rotation complete&quot;
+}
+
+rotate_api_key() {
+    log &quot;Starting API key rotation: $SECRET_NAME&quot;
+
+    python3 /opt/rotation/rotate_api_key.py \
+        --secret-name &quot;$SECRET_NAME&quot; \
+        --provider auto-detect \
+        --immediate
+
+    log &quot;API key rotation complete&quot;
+}
+
+rotate_certificate() {
+    log &quot;Starting certificate rotation: $SECRET_NAME&quot;
+
+    python3 /opt/rotation/rotate_certificate.py \
+        --domains &quot;$SECRET_NAME&quot; \
+        --acme-provider letsencrypt \
+        --upload-to-lb
+
+    log &quot;Certificate rotation complete&quot;
+}
+
+rotate_ssh_key() {
+    log &quot;Starting SSH key rotation: $SECRET_NAME&quot;
+
+    python3 /opt/rotation/rotate_ssh_key.py \
+        --key-name &quot;$SECRET_NAME&quot; \
+        --deploy-all-servers \
+        --remove-old
+
+    log &quot;SSH key rotation complete&quot;
+}
+
+# Execute rotation based on type
+case $SECRET_TYPE in
+    database)
+        rotate_database
+        ;;
+    api-key)
+        rotate_api_key
+        ;;
+    certificate)
+        rotate_certificate
+        ;;
+    ssh-key)
+        rotate_ssh_key
+        ;;
+    *)
+        log &quot;ERROR: Unknown secret type: $SECRET_TYPE&quot;
+        exit 1
+        ;;
+esac
+
+log &quot;Emergency rotation complete: $SECRET_TYPE/$SECRET_NAME&quot;</code></pre>
+<h3>Usage</h3>
+<pre><code class="lang-bash"># Rotate database credentials
+./emergency-rotate.sh database prod-db-credentials
+
+# Rotate API key
+./emergency-rotate.sh api-key stripe-production
+
+# Rotate certificate
+./emergency-rotate.sh certificate example.com
+
+# Rotate SSH key
+./emergency-rotate.sh ssh-key deploy-key</code></pre>
+<hr>
+<h2>Post-Rotation</h2>
+<h3>Verification (15 minutes)</h3>
+<pre><code class="lang-bash"># Run comprehensive tests
+./scripts/verify-rotation.sh --secret=$SECRET_NAME
+
+# Check application health
+kubectl get pods --all-namespaces
+kubectl top nodes
+kubectl logs -l app=myapp --tail=100 | grep -i error
+
+# Verify metrics
+curl -s http://prometheus:9090/api/v1/query?query=&#x27;up{job=&quot;myapp&quot;}&#x27; | jq &#x27;.data.result[].value[1]&#x27;
+
+# Test critical user journeys
+./scripts/e2e-tests.sh --env=production --critical-path-only</code></pre>
+<h3>Documentation</h3>
+<pre><code class="lang-markdown">## Incident Report: Secret Rotation
+
+**Incident ID**: INC-2024-XXXX
+**Date**: 2024-XX-XX
+**Duration**: X hours
+**Severity**: PX
+
+### Summary
+Brief description of what happened.
+
+### Timeline
+- 14:00 UTC - Compromise detected
+- 14:05 UTC - Incident declared
+- 14:10 UTC - Rotation started
+- 14:45 UTC - Rotation complete
+- 15:00 UTC - Verification complete
+
+### Impact
+- Services affected: X
+- Users impacted: X
+- Downtime: 0 minutes (zero-downtime rotation)
+
+### Root Cause
+What led to the compromise.
+
+### Remediation
+What was done to fix it.
+
+### Follow-up Actions
+- [ ] Review access logs
+- [ ] Update rotation automation
+- [ ] Team training on new procedures
+- [ ] Implement additional monitoring</code></pre>
+<hr>
+<h2>Contact Information</h2>
+<h3>Emergency Contacts</h3>
+<ul><li><strong>Security Team</strong>: security@example.com, Slack: #security</li><li><strong>On-call Engineer</strong>: PagerDuty escalation policy</li><li><strong>DevOps Lead</strong>: devops-lead@example.com</li><li><strong>CTO</strong>: cto@example.com (for P0 incidents)</li></ul>
+<h3>Escalation Path</h3>
+<ol><li><strong>0-15 min</strong>: On-call engineer + Security team</li><li><strong>15-30 min</strong>: Add DevOps lead</li><li><strong>30-60 min</strong>: Add CTO (P0 only)</li><li><strong>60+ min</strong>: Executive notification</li></ol>
+<hr>
+<h2>Appendix</h2>
+<h3>Pre-rotation Checklist</h3>
+<ul><li>[ ] Incident declared and logged</li><li>[ ] War room established</li><li>[ ] Stakeholders notified</li><li>[ ] Blast radius assessed</li><li>[ ] Backup created</li><li>[ ] Rollback plan ready</li></ul>
+<h3>Post-rotation Checklist</h3>
+<ul><li>[ ] All systems verified healthy</li><li>[ ] Old credentials invalidated</li><li>[ ] Secret manager updated</li><li>[ ] Monitoring shows normal behavior</li><li>[ ] Incident documentation complete</li><li>[ ] Team debriefing scheduled</li><li>[ ] Follow-up actions assigned</li></ul>
+<h3>Common Pitfalls</h3>
+<ol><li><strong>Rotating too quickly without testing</strong> - Always verify new credentials work before invalidating old ones</li><li><strong>Not updating all locations</strong> - Check CI/CD, local dev, documentation</li><li><strong>Forgetting grace period</strong> - Allow overlap for in-flight requests</li><li><strong>No verification</strong> - Always test after rotation</li><li><strong>Poor communication</strong> - Keep stakeholders informed</li></ol>
+<h3>Tools and Resources</h3>
+<ul><li><a href="https://github.com/example/rotation-scripts">Secret rotation scripts</a></li><li><a href="https://grafana.example.com/rotation">Monitoring dashboard</a></li><li><a href="https://pagerduty.com/incidents">Incident management</a></li><li><a href="https://wiki.example.com/security/rotation">Documentation</a></li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/07_emergency_rotation_runbook.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

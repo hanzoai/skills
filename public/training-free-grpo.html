@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>training-free-grpo</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/training-free-grpo.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/training-free-grpo">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/training-free-grpo.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>training-free-grpo</h1><p class="lede">Training-Free GRPO (Group Relative Policy Optimization) is Zoo Gym&#x27;s default RLHF method that eliminates value networks entirely, achieving 40-60% memory reduction and 2× speedup compared to PPO.</p><h1>Training-Free GRPO - RLHF Without Value Networks</h1>
+<p><strong>Category</strong>: Zoo Gym Training Methods <strong>Skill Level</strong>: Advanced <strong>Prerequisites</strong>: Understanding of RLHF, PPO, policy optimization, reward modeling <strong>Related Skills</strong>: bitdelta.md, deltasoup.md, ../hanzo/hanzo-gym.md <strong>Zoo Gym Default</strong>: This is the default RLHF approach used in Zoo Gym</p>
+<h2>Overview</h2>
+<p>Training-Free GRPO (Group Relative Policy Optimization) is Zoo Gym&#x27;s <strong>default RLHF method</strong> that eliminates value networks entirely, achieving 40-60% memory reduction and 2× speedup compared to PPO. It&#x27;s based on DeepSeek&#x27;s GRPO innovation and <strong>distinct from BitDelta/DeltaSoup</strong> which focus on per-user personalization and community learning.</p>
+<p><strong>Core Innovation</strong>: Group sampling + relative advantage estimation within groups = <strong>no value network needed</strong> = massive memory savings + faster training.</p>
+<h2>Why Training-Free GRPO?</h2>
+<h3>The Problem: Traditional RLHF (PPO) is Expensive</h3>
+<p><strong>PPO Requirements</strong>:</p>
+<ul><li><strong>Policy model</strong>: The LLM being trained (~10GB for 4B model)</li><li><strong>Value network</strong>: Separate network to estimate value function (~10GB)</li><li><strong>Reference model</strong>: Frozen copy for KL penalty (~10GB)</li><li><strong>Total</strong>: 30GB+ GPU memory for 4B model</li></ul>
+<p><strong>PPO Training</strong>:</p>
+<ul><li>Compute advantage: <code>A = Q(s,a) - V(s)</code></li><li>Requires value network V(s) trained simultaneously</li><li>Value network training adds 40-60% overhead</li><li>Memory bottleneck limits batch sizes</li></ul>
+<h3>The Training-Free GRPO Solution</h3>
+<p><strong>GRPO Requirements</strong>:</p>
+<ul><li><strong>Policy model</strong>: The LLM being trained (~10GB)</li><li><strong>Reference model</strong>: Frozen copy for KL penalty (~10GB)</li><li><strong>Value network</strong>: <strong>NONE</strong> ❌</li><li><strong>Total</strong>: 20GB GPU memory (40% less than PPO)</li></ul>
+<p><strong>GRPO Training</strong>:</p>
+<ul><li>Group sampling: Generate K responses per query</li><li>Relative advantage: <code>A = R_i - mean(R_group)</code></li><li>No value network needed!</li><li>40-60% memory savings, 2× speedup</li></ul>
+<h2>How Training-Free GRPO Works</h2>
+<h3>1. Group Sampling</h3>
+<p>Generate multiple responses (K=5-8) for each query:</p>
+<pre><code class="lang-python"># Traditional PPO: 1 response per query
+query = &quot;Solve: 2x + 3 = 11&quot;
+response = model.generate(query)
+reward = reward_model(query, response)
+
+# Training-Free GRPO: K responses per query
+K = 5
+responses = [model.generate(query) for _ in range(K)]
+rewards = [reward_model(query, r) for r in responses]
+
+# Group:
+# responses[0]: &quot;x = 4&quot; (correct) → reward = 1.0
+# responses[1]: &quot;x = 3&quot; (wrong) → reward = 0.0
+# responses[2]: &quot;x = 4&quot; (correct) → reward = 1.0
+# responses[3]: &quot;x = 5&quot; (wrong) → reward = 0.0
+# responses[4]: &quot;x = 4&quot; (correct) → reward = 1.0</code></pre>
+<h3>2. Relative Advantage Estimation</h3>
+<p>Compute advantages relative to group mean:</p>
+<pre><code class="lang-python"># PPO: Absolute advantage (requires value network)
+# A = Q(s,a) - V(s)
+# V(s) = value_network(state) ← REQUIRES VALUE NETWORK
+
+# GRPO: Relative advantage (no value network)
+mean_reward = sum(rewards) / K  # 0.6
+advantages = [r - mean_reward for r in rewards]
+
+# Advantages:
+# [1.0 - 0.6 = 0.4]  # Good response
+# [0.0 - 0.6 = -0.6] # Bad response
+# [1.0 - 0.6 = 0.4]  # Good response
+# [0.0 - 0.6 = -0.6] # Bad response
+# [1.0 - 0.6 = 0.4]  # Good response</code></pre>
+<h3>3. Policy Optimization</h3>
+<p>Update policy using relative advantages:</p>
+<pre><code class="lang-python"># Compute policy loss (same as PPO, but advantages are relative)
+for response, advantage in zip(responses, advantages):
+    # Log probability under current policy
+    log_prob = model.log_prob(query, response)
+
+    # Log probability under reference policy (for KL penalty)
+    ref_log_prob = ref_model.log_prob(query, response)
+
+    # Ratio
+    ratio = torch.exp(log_prob - ref_log_prob)
+
+    # Clipped surrogate loss
+    loss = -torch.min(
+        ratio * advantage,
+        torch.clamp(ratio, 1 - clip_range, 1 + clip_range) * advantage
+    )
+
+    # Backprop and update
+    loss.backward()
+    optimizer.step()</code></pre>
+<h3>4. Why This Works</h3>
+<p><strong>Key insight</strong>: Relative advantages are sufficient for policy optimization</p>
+<pre><code class="lang-python"># PPO (absolute advantage):
+# A = Q(s,a) - V(s)
+# &quot;How much better is this action than average?&quot;
+
+# GRPO (relative advantage):
+# A = R(s,a) - mean(R_group)
+# &quot;How much better is this response than other responses in the group?&quot;
+
+# Both capture the same signal!
+# GRPO doesn&#x27;t need V(s) because it&#x27;s comparing within groups</code></pre>
+<h2>Memory Comparison</h2>
+<p>| Component | PPO | GRPO | Savings | |-----------|-----|------|---------| | Policy Model | 10GB | 10GB | 0% | | Value Network | 10GB | <strong>0GB</strong> | <strong>100%</strong> | | Reference Model | 10GB | 10GB | 0% | | <strong>Total</strong> | <strong>30GB</strong> | <strong>20GB</strong> | <strong>40%</strong> |</p>
+<h2>Training Speed Comparison (Qwen3-4B on 4× A100)</h2>
+<p>| Method | Training Time | Tokens/sec | Memory | |--------|---------------|------------|--------| | Full Fine-Tune | 12 hours | 500 | 40GB | | PPO | 8 hours | 800 | 30GB | | <strong>GRPO</strong> | <strong>4 hours</strong> | <strong>1600</strong> | <strong>20GB</strong> | | LoRA | 2 hours | 2000 | 15GB |</p>
+<p><strong>Note</strong>: LoRA is faster but doesn&#x27;t do RLHF (only supervised fine-tuning).</p>
+<h2>Cost Savings: Training-Free GRPO vs Traditional Methods</h2>
+<h3>Training Cost Comparison</h3>
+<p>| Method | Model | Training Samples | Training Cost | Performance (AIME24) | |--------|-------|-----------------|---------------|---------------------| | <strong>Training-Free GRPO</strong> | DeepSeek-V3.1-Terminus (671B) | 100 | <strong>~$18</strong> | <strong>82.7%</strong> | | ReTool (Standard RL) | Qwen2.5-32B-Instruct | 1000s | <strong>~$10,000</strong> | 67.0% | | LoRA Fine-Tuning | Qwen2.5-32B-Instruct | 1000s | <strong>~$20,000</strong> | ~60-70% |</p>
+<p><strong>Key Findings</strong>:</p>
+<ul><li><strong>500× cost reduction</strong>: $18 vs $10,000+ for superior performance</li><li><strong>100× fewer samples</strong>: 100 vs 1000s of training examples needed</li><li><strong>Better results</strong>: 82.7% vs 67.0% on AIME24 benchmark</li><li><strong>No parameter updates</strong>: Zero gradient computation, instant deployment</li><li><strong>Larger model advantage</strong>: 671B frozen model outperforms fine-tuned 32B</li></ul>
+<h3>Infrastructure Cost Breakdown</h3>
+<p><strong>Traditional LoRA/RL Training</strong> (Example: ReTool on Qwen2.5-32B):</p>
+<pre><code>Training Cost:
+- GPU hours: 20,000 × $0.5/hour = $10,000
+- Data collection: $2,000-5,000
+- Total: $12,000-15,000
+
+Deployment Cost (Dedicated GPU):
+- 4× GPUs at $0.5/GPU-hour = $2/hour = $1,440/month
+- Inference: ~$0.005 per problem (400 problems/hour)
+- Fixed infrastructure: Always running, even with low usage
+
+Result: $10K+ training + $1.4K/month deployment</code></pre>
+<p><strong>Training-Free GRPO</strong> (Example: DeepSeek-V3.1-Terminus):</p>
+<pre><code>Training Cost:
+- API calls: 38M input tokens + 6.6M output tokens
+- With cache hit pricing: ~$18 for 100 samples
+- 3 training steps over 6 hours
+- Total: $18
+
+Deployment Cost (Pay-as-you-go API):
+- ~$0.02 per problem (60K input + 8K output tokens)
+- No fixed infrastructure
+- Only pay for actual usage
+- Automatic scaling, no GPU management
+
+Result: $18 training + pay-per-use inference</code></pre>
+<h3>Real-World Cost Example</h3>
+<p><strong>Scenario</strong>: Medical diagnosis assistant (low-traffic, specialized domain)</p>
+<p><strong>Traditional LoRA Fine-Tuning</strong>:</p>
+<ul><li>Training: $15,000 (data collection + GPU time)</li><li>Deployment: $1,440/month (dedicated GPU)</li><li>First year: $15,000 + $17,280 = <strong>$32,280</strong></li><li>Rigid specialization: Cannot adapt to new medical domains without retraining</li></ul>
+<p><strong>Training-Free GRPO</strong>:</p>
+<ul><li>Training: $50 (200 samples across 3 medical subdomains)</li><li>Deployment: $200/month (100 diagnoses/day @ $0.02 each, 100 days/month)</li><li>First year: $50 + $2,400 = <strong>$2,450</strong></li><li>Flexible: Switch medical domains by plugging in different experiences</li><li><strong>Savings</strong>: $29,830 (92% cost reduction)</li></ul>
+<h2>Installation</h2>
+<pre><code class="lang-bash"># Zoo Gym includes Training-Free GRPO by default
+git clone https://github.com/zooai/gym.git
+cd gym
+pip install -e .
+
+# Or via pip
+pip install zoo-gym</code></pre>
+<h2>Usage Examples</h2>
+<h3>Basic Training-Free GRPO</h3>
+<pre><code class="lang-python">from zoo.gym import GRPOTrainer, GRPOConfig
+
+# Configure GRPO
+config = GRPOConfig(
+    group_size=5,              # 5 rollouts per query
+    max_epochs=3,              # 3 training epochs
+    beta=0.1,                  # KL penalty coefficient
+    clip_range=0.2,            # PPO-style clipping
+    normalize_advantages=True, # Normalize advantages
+    temperature_train=0.7,     # Training temperature
+    temperature_eval=0.3       # Evaluation temperature
+)
+
+# Create trainer (no value network!)
+trainer = GRPOTrainer(
+    model=model,
+    ref_model=ref_model,
+    tokenizer=tokenizer,
+    config=config,
+    reward_model=reward_fn
+)
+
+# Train with minimal samples
+trainer.train(
+    train_dataset=train_dataset,  # Only 100-1000 samples needed
+    eval_dataset=eval_dataset
+)
+
+# Save trained model
+trainer.save_model(&quot;./trained_model&quot;)</code></pre>
+<h3>Training-Free GRPO with Experience Injection</h3>
+<pre><code class="lang-python">from zoo.gym import TrainingFreeGRPO, GRPOConfig
+
+# Configure Training-Free GRPO
+config = GRPOConfig(
+    group_size=5,
+    max_epochs=3,
+    temperature_train=0.7,
+    temperature_eval=0.3
+)
+
+# Create trainer (frozen base model)
+trainer = TrainingFreeGRPO(
+    base_model=&quot;deepseek/v3.1-terminus&quot;,  # Frozen 671B model
+    config=config
+)
+
+# Train with minimal samples (100 is enough!)
+experiences = trainer.train(
+    dataset=math_problems[:100],
+    reward_model=reward_fn
+)
+
+# Deploy instantly - no parameter updates needed
+response = trainer.infer(
+    query=&quot;Solve: 2x + 3 = 11&quot;,
+    experiences=experiences  # Plug in learned experiences
+)
+print(response)  # &quot;x = 4&quot;</code></pre>
+<h3>CLI Training with GRPO</h3>
+<pre><code class="lang-bash"># Train with Training-Free GRPO (default in Zoo Gym)
+llamafactory-cli train \
+    --stage grpo \
+    --do_train \
+    --model_name_or_path Qwen/Qwen3-4B \
+    --dataset your_preference_dataset \
+    --template qwen3 \
+    --finetuning_type lora \
+    --output_dir ./model-grpo \
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 8 \
+    --num_train_epochs 1 \
+    --learning_rate 1e-5 \
+    --grpo_group_size 8 \
+    --grpo_beta 0.1 \
+    --grpo_clip_range 0.2</code></pre>
+<h3>Custom Reward Function</h3>
+<pre><code class="lang-python">def custom_reward_fn(query: str, response: str) -&gt; float:
+    &quot;&quot;&quot;Custom reward function for math problems&quot;&quot;&quot;
+    # Parse expected answer
+    expected = parse_answer(query)
+
+    # Parse model answer
+    predicted = parse_answer(response)
+
+    # Binary reward
+    if predicted == expected:
+        return 1.0
+    else:
+        return 0.0
+
+# Use custom reward
+trainer = GRPOTrainer(
+    model=model,
+    ref_model=ref_model,
+    config=config,
+    reward_model=custom_reward_fn  # Custom reward
+)</code></pre>
+<h2>Advanced Features</h2>
+<h3>1. Group Size Tuning</h3>
+<pre><code class="lang-python"># Larger groups = more stable but slower
+config = GRPOConfig(group_size=10)  # 10 responses per query
+
+# Smaller groups = faster but less stable
+config = GRPOConfig(group_size=3)  # 3 responses per query
+
+# Recommended: 5-8 for most tasks
+config = GRPOConfig(group_size=5)  # Default</code></pre>
+<h3>2. Temperature Scheduling</h3>
+<pre><code class="lang-python"># Use higher temperature during training (exploration)
+# Use lower temperature during evaluation (exploitation)
+config = GRPOConfig(
+    temperature_train=0.9,  # High exploration
+    temperature_eval=0.1    # Low exploitation
+)</code></pre>
+<h3>3. KL Penalty Tuning</h3>
+<pre><code class="lang-python"># Beta controls KL penalty (how much to stay close to reference model)
+config = GRPOConfig(
+    beta=0.01  # Weak penalty, more exploration
+)
+
+config = GRPOConfig(
+    beta=0.5   # Strong penalty, stay close to reference
+)</code></pre>
+<h3>4. Integration with BitDelta</h3>
+<pre><code class="lang-python">from zoo.gym import GRPOTrainer, BitDeltaConfig
+
+# Train with GRPO + BitDelta compression
+bitdelta_config = BitDeltaConfig(
+    bits=1,
+    group_size=128,
+    safety_threshold=0.6
+)
+
+grpo_config = GRPOConfig(group_size=5, max_epochs=3)
+
+# Train (GRPO) + Compress (BitDelta) + Serve
+trainer = GRPOTrainer(model, ref_model, grpo_config)
+trainer.train(train_dataset)
+trainer.compress_deltas(bitdelta_config)  # 10× compression
+trainer.save_model(&quot;./compressed_model&quot;)</code></pre>
+<h2>Performance Benchmarks</h2>
+<h3>AIME24 Math Benchmark</h3>
+<p>| Method | Model | Training Samples | Accuracy | Cost | |--------|-------|-----------------|----------|------| | <strong>Training-Free GRPO</strong> | DeepSeek-V3.1 (671B) | 100 | <strong>82.7%</strong> | <strong>$18</strong> | | ReTool (Standard RL) | Qwen2.5 (32B) | 1000s | 67.0% | $10,000 | | LoRA Fine-Tuning | Qwen2.5 (32B) | 1000s | ~65% | $20,000 | | Base Model (zero-shot) | Qwen2.5 (32B) | 0 | 45% | $0 |</p>
+<h3>Memory Efficiency (Training Qwen3-4B)</h3>
+<p>| Method | GPU Memory | Max Batch Size | |--------|------------|----------------| | Full Fine-Tune | 40GB | 1 | | PPO (with value network) | 30GB | 2 | | <strong>GRPO (no value network)</strong> | <strong>20GB</strong> | <strong>4</strong> | | LoRA | 15GB | 8 |</p>
+<h3>Training Speed (4× A100 GPUs)</h3>
+<p>| Method | Tokens/sec | Training Time | Cost | |--------|------------|---------------|------| | Full Fine-Tune | 500 | 12 hours | $240 | | PPO | 800 | 8 hours | $160 | | <strong>GRPO</strong> | <strong>1600</strong> | <strong>4 hours</strong> | <strong>$80</strong> | | LoRA | 2000 | 2 hours | $40 |</p>
+<h2>GRPO vs PPO vs LoRA vs BitDelta</h2>
+<p>| Method | Purpose | Memory | Speed | Use Case | |--------|---------|--------|-------|----------| | <strong>Training-Free GRPO</strong> | RLHF without value network | -40% vs PPO | 2× vs PPO | <strong>Default for RLHF in Zoo Gym</strong> | | <strong>PPO</strong> | Traditional RLHF | Baseline | Baseline | Research, legacy systems | | <strong>LoRA</strong> | Supervised fine-tuning | -60% vs full | 4× vs full | Instruction tuning (not RLHF) | | <strong>BitDelta</strong> | Per-user personalization | 10× vs LoRA | Similar | Millions of user variants | | <strong>DeltaSoup</strong> | Community learning | Efficient | Async | Aggregate user improvements |</p>
+<p><strong>Key Distinctions</strong>:</p>
+<ul><li><strong>Training-Free GRPO</strong>: For RLHF (no value network, default in Zoo Gym)</li><li><strong>PPO</strong>: For RLHF (with value network, traditional approach)</li><li><strong>LoRA</strong>: For supervised fine-tuning (not RLHF)</li><li><strong>BitDelta</strong>: For per-user personalization (works on deltas, not RLHF)</li><li><strong>DeltaSoup</strong>: For community aggregation (Byzantine-robust, not RLHF)</li></ul>
+<h2>Integration with Hanzo Ecosystem</h2>
+<h3>Python SDK</h3>
+<pre><code class="lang-python">from hanzo import Hanzo
+from zoo.gym import GRPOConfig
+
+hanzo = Hanzo(inference_mode=&#x27;local&#x27;)
+
+# Train with GRPO
+hanzo.train_grpo(
+    base_model=&quot;qwen3-4b&quot;,
+    dataset=preference_dataset,
+    config=GRPOConfig(group_size=5, max_epochs=3)
+)
+
+# Serve trained model
+response = hanzo.chat.completions.create(
+    model=&quot;qwen3-4b-grpo&quot;,
+    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Hello!&quot;}]
+)</code></pre>
+<h3>Go SDK</h3>
+<pre><code class="lang-go">package main
+
+import (
+    &quot;context&quot;
+    &quot;github.com/hanzoai/go-sdk&quot;
+    &quot;github.com/hanzoai/go-sdk/option&quot;
+)
+
+func main() {
+    client := hanzoai.NewClient(
+        option.WithInferenceMode(&quot;local&quot;),
+    )
+
+    // Train with GRPO
+    job, _ := client.Training.GRPO.Create(
+        context.Background(),
+        hanzoai.GRPOTrainingParams{
+            BaseModel: hanzoai.F(&quot;qwen3-4b&quot;),
+            Dataset: hanzoai.F(preference_dataset),
+            GroupSize: hanzoai.F(5),
+            MaxEpochs: hanzoai.F(3),
+        },
+    )
+
+    println(&quot;Training job:&quot;, job.ID)
+}</code></pre>
+<h3>Hanzo Node</h3>
+<pre><code class="lang-bash"># Start Hanzo Node with GRPO support
+hanzo-node start --enable-grpo
+
+# Train with GRPO
+hanzo-node train grpo \
+    --base-model qwen3-4b \
+    --dataset ./preference_data.jsonl \
+    --group-size 5 \
+    --max-epochs 3 \
+    --output ./trained_model
+
+# Serve trained model
+hanzo-node serve --model ./trained_model</code></pre>
+<h3>Hanzo Engine</h3>
+<p>Training-Free GRPO is optimized in Hanzo Engine (Rust):</p>
+<ul><li>Native Rust implementation</li><li>Zero-copy experience injection</li><li>Memory-efficient group sampling</li><li>Multi-query parallel GRPO</li></ul>
+<h3>Hanzo Dev</h3>
+<pre><code class="lang-bash"># Train with CLI
+dev &quot;train GRPO on math dataset with 100 samples, group size 5&quot;
+
+# Export trained model
+dev &quot;export GRPO model to GGUF format&quot;
+
+# Deploy to local node
+dev &quot;deploy GRPO model to hanzo node&quot;</code></pre>
+<h3>Hanzo Desktop</h3>
+<ul><li>Train GRPO on MacBook (M1/M2/M3)</li><li>Mine $AI tokens while training</li><li>ZenLM models (zen-eco, zen-agent) with GRPO</li><li>Local RLHF for privacy</li></ul>
+<h2>Best Practices</h2>
+<h3>1. Group Size Selection</h3>
+<pre><code class="lang-python"># Small datasets (&lt; 100 samples): group_size=3-5
+# Medium datasets (100-1000): group_size=5-8 (default)
+# Large datasets (&gt; 1000): group_size=8-10</code></pre>
+<h3>2. Temperature Tuning</h3>
+<pre><code class="lang-python"># Classification tasks: temperature_train=0.5, temperature_eval=0.1
+# Generation tasks: temperature_train=0.9, temperature_eval=0.7
+# Math/reasoning: temperature_train=0.7, temperature_eval=0.3 (default)</code></pre>
+<h3>3. Sample Efficiency</h3>
+<pre><code class="lang-python"># Training-Free GRPO works with 100-1000 samples
+# More samples = better but diminishing returns
+# 100 samples: ~80% of max performance
+# 1000 samples: ~95% of max performance</code></pre>
+<h2>Limitations and Considerations</h2>
+<h3>1. Group Size Trade-off</h3>
+<ul><li>Larger groups = more stable but slower</li><li>Smaller groups = faster but less stable</li><li>Recommended: 5-8 for most tasks</li></ul>
+<h3>2. Sample Efficiency</h3>
+<ul><li>Training-Free GRPO needs 100-1000 samples</li><li>Still orders of magnitude fewer than PPO/LoRA</li><li>Quality &gt; Quantity for GRPO</li></ul>
+<h3>3. Base Model Quality</h3>
+<ul><li>Training-Free GRPO relies on frozen base model</li><li>Larger base models generally work better</li><li>Example: 671B DeepSeek outperforms fine-tuned 32B</li></ul>
+<h2>Related Skills</h2>
+<ul><li><strong>bitdelta.md</strong> - Per-user personalization (10× compression, distinct from GRPO)</li><li><strong>deltasoup.md</strong> - Community-driven learning (Byzantine-robust aggregation)</li><li><strong>../hanzo/hanzo-gym.md</strong> - Comprehensive Zoo Gym training guide</li><li><strong>../hanzo/python-sdk.md</strong> - Python SDK integration</li><li><strong>../hanzo/go-sdk.md</strong> - Go SDK integration</li><li><strong>../hanzo/hanzo-node.md</strong> - Local inference infrastructure</li><li><strong>../hanzo/hanzo-engine.md</strong> - Native Rust inference engine</li></ul>
+<h2>Additional Resources</h2>
+<ul><li><strong>GitHub</strong>: https://github.com/zooai/gym</li><li><strong>Paper</strong>: https://arxiv.org/abs/2502.01155 (DeepSeek GRPO)</li><li><strong>Zoo Labs Foundation</strong>: https://zoo.ngo (501(c)(3) wildlife conservation)</li></ul>
+<hr>
+<p><strong>Remember</strong>: Training-Free GRPO is <strong>Zoo Gym&#x27;s default RLHF method</strong> with 40% memory reduction, 2× speedup, and 500× cost savings compared to traditional RL - perfect for RLHF with minimal samples and no value network overhead.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/training-free-grpo.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>managed-agents-api-reference</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/managed-agents-api-reference.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/managed-agents-api-reference">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/managed-agents-api-reference.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>managed-agents-api-reference</h1><p class="lede">All endpoints require x-api-key and anthropic-version: 2023-06-01 headers.</p><h1>Managed Agents — Endpoint Reference</h1>
+<p>All endpoints require <code>x-api-key</code> and <code>anthropic-version: 2023-06-01</code> headers. Managed Agents endpoints additionally require the <code>anthropic-beta</code> header.</p>
+<blockquote><p>Most users should define agents and environments as version-controlled YAML applied with the <code>ant</code> CLI — see <code>shared/anthropic-cli.md</code>. The endpoints below are the underlying API that the CLI and SDKs drive.</p></blockquote>
+<h2>Beta Headers</h2>
+<pre><code>anthropic-beta: managed-agents-2026-04-01</code></pre>
+<p>The SDK adds this header automatically for all <code>client.beta.{agents,environments,sessions,vaults,memory_stores,deployments,deployment_runs}.*</code> calls. Skills endpoints use <code>skills-2025-10-02</code>; Files endpoints use <code>files-api-2025-04-14</code>.</p>
+<hr>
+<h2>SDK Method Reference</h2>
+<p>All resources are under the <code>beta</code> namespace. Python and TypeScript share identical method names.</p>
+<p>| Resource | Python / TypeScript (<code>client.beta.<em></code>) | Go (<code>client.Beta.</em></code>) | | --- | --- | --- | | Agents | <code>agents.create</code> / <code>retrieve</code> / <code>update</code> / <code>list</code> / <code>archive</code> | <code>Agents.New</code> / <code>Get</code> / <code>Update</code> / <code>List</code> / <code>Archive</code> | | Agent Versions | <code>agents.versions.list</code> | <code>Agents.Versions.List</code> | | Environments | <code>environments.create</code> / <code>retrieve</code> / <code>update</code> / <code>list</code> / <code>delete</code> / <code>archive</code> | <code>Environments.New</code> / <code>Get</code> / <code>Update</code> / <code>List</code> / <code>Delete</code> / <code>Archive</code> | | Environment Work (self-hosted) | <code>environments.work.poller</code> / <code>stats</code> / <code>stop</code> | See <code>shared/managed-agents-self-hosted-sandboxes.md</code> | | Sessions | <code>sessions.create</code> / <code>retrieve</code> / <code>update</code> / <code>list</code> / <code>delete</code> / <code>archive</code> | <code>Sessions.New</code> / <code>Get</code> / <code>Update</code> / <code>List</code> / <code>Delete</code> / <code>Archive</code> | | Session Events | <code>sessions.events.list</code> / <code>send</code> / <code>stream</code> | <code>Sessions.Events.List</code> / <code>Send</code> / <code>StreamEvents</code> | | Session Threads | <code>sessions.threads.list</code> / <code>retrieve</code> / <code>archive</code>; <code>sessions.threads.events.list</code> / <code>stream</code> | <code>Sessions.Threads.List</code> / <code>Get</code> / <code>Archive</code>; <code>Sessions.Threads.Events.List</code> / <code>StreamEvents</code> | | Session Resources | <code>sessions.resources.add</code> / <code>retrieve</code> / <code>update</code> / <code>list</code> / <code>delete</code> | <code>Sessions.Resources.Add</code> / <code>Get</code> / <code>Update</code> / <code>List</code> / <code>Delete</code> | | Deployments | <code>deployments.create</code> / <code>update</code> / <code>pause</code> / <code>unpause</code> / <code>archive</code> / <code>run</code> | Not yet documented — WebFetch the SDK repo (<code>shared/live-sources.md</code>) | | Deployment Runs | <code>deployment_runs.list</code> / <code>retrieve</code> (TS: <code>deploymentRuns.*</code>) | Not yet documented — WebFetch the SDK repo (<code>shared/live-sources.md</code>) | | Vaults | <code>vaults.create</code> / <code>retrieve</code> / <code>update</code> / <code>list</code> / <code>delete</code> / <code>archive</code> | <code>Vaults.New</code> / <code>Get</code> / <code>Update</code> / <code>List</code> / <code>Delete</code> / <code>Archive</code> | | Credentials | <code>vaults.credentials.create</code> / <code>retrieve</code> / <code>update</code> / <code>list</code> / <code>delete</code> / <code>archive</code> / <code>mcp_oauth_validate</code> | <code>Vaults.Credentials.New</code> / <code>Get</code> / <code>Update</code> / <code>List</code> / <code>Delete</code> / <code>Archive</code> / <code>McpOauthValidate</code> | | Memory Stores | <code>memory_stores.create</code> / <code>retrieve</code> / <code>update</code> / <code>list</code> / <code>delete</code> / <code>archive</code> | <code>MemoryStores.New</code> / <code>Get</code> / <code>Update</code> / <code>List</code> / <code>Delete</code> / <code>Archive</code> | | Memories | <code>memory_stores.memories.create</code> / <code>retrieve</code> / <code>update</code> / <code>list</code> / <code>delete</code> | <code>MemoryStores.Memories.New</code> / <code>Get</code> / <code>Update</code> / <code>List</code> / <code>Delete</code> | | Memory Versions | <code>memory_stores.memory_versions.list</code> / <code>retrieve</code> / <code>redact</code> | <code>MemoryStores.MemoryVersions.List</code> / <code>Get</code> / <code>Redact</code> |</p>
+<p><strong>Naming quirks to watch for:</strong></p>
+<ul><li>Agents and Session Threads have <strong>no delete</strong> — only <code>archive</code>. Archive is <strong>permanent</strong>: the agent becomes read-only, new sessions cannot reference it, and there is no unarchive. Confirm with the user before archiving a production agent. Environments, Sessions, Vaults, Credentials, and Memory Stores have both <code>delete</code> and <code>archive</code>; Session Resources, Files, Skills, and Memories are <code>delete</code>-only; Memory Versions have neither — only <code>redact</code>.</li><li>Session resources use <code>add</code> (not <code>create</code>).</li><li>Go&#x27;s event stream is <code>StreamEvents</code> (not <code>Stream</code>).</li><li>The self-hosted worker is <strong>not</strong> under <code>client.beta.*</code> — it&#x27;s <code>EnvironmentWorker</code> from <code>anthropic.lib.environments</code> / <code>@anthropic-ai/sdk/helpers/beta/environments</code>; only <code>environments.work.poller/stats/stop</code> are client methods.</li></ul>
+<p><strong>Agent shorthand:</strong> <code>agent</code> on session create accepts three forms — a bare string (<code>agent=&quot;agent_abc123&quot;</code>, latest version), a pinned reference <code>{type: &quot;agent&quot;, id, version}</code>, or <code>{type: &quot;agent_with_overrides&quot;, id, version?, model?, system?, tools?, mcp_servers?, skills?}</code> to override those fields for this session only (see <code>shared/managed-agents-core.md</code> → Override agent configuration for a session).</p>
+<p><strong>Model shorthand:</strong> <code>model</code> on agent create accepts either a bare string (<code>model=&quot;claude-opus-5&quot;</code> — uses <code>standard</code> speed) or the full config object, which takes <code>speed</code>, <code>effort</code>, and <code>inference_geo</code> alongside <code>id</code>: <code>{id: &quot;claude-opus-5&quot;, speed: &quot;fast&quot;}</code>, <code>{id: &quot;claude-opus-5&quot;, effort: &quot;high&quot;}</code>, <code>{id: &quot;claude-opus-5&quot;, inference_geo: &quot;us&quot;}</code>. <code>effort</code> accepts a level string (<code>low</code>/<code>medium</code>/<code>high</code>/<code>xhigh</code>/<code>max</code>) or <code>{type: &quot;&lt;level&gt;&quot;}</code>, and is <strong>agent-configuration only</strong> — an <code>effort</code> inside a per-session <code>model</code> override is ignored. <code>inference_geo</code> (<code>&quot;us&quot;</code> | <code>&quot;global&quot;</code>) pins the geography serving the agent&#x27;s model requests, and unlike <code>effort</code> <strong>is</strong> applied in a per-session <code>model</code> override. See <code>shared/managed-agents-core.md</code> → Effort on the agent model / Pinning inference geography. Note: <code>speed: &quot;fast&quot;</code> is supported on Claude Opus 5 and Opus 4.8 — on the Claude API only, which includes Managed Agents but not Amazon Bedrock, Google Cloud, or Microsoft Foundry. Opus 4.7 fast mode has been removed; <code>speed: &quot;fast&quot;</code> on Opus 4.7 returns an error.</p>
+<hr>
+<h2>Agents</h2>
+<p><strong>Step one of every flow.</strong> Sessions require a pre-created agent — there is no inline agent config under <code>managed-agents-2026-04-01</code>.</p>
+<p>| Method   | Path                                             | Operation        | Description                              | | -------- | ------------------------------------------------ | ---------------- | ---------------------------------------- | | <code>GET</code> | <code>/v1/agents</code> | ListAgents | List agents | | <code>POST</code> | <code>/v1/agents</code> | CreateAgent | Create a saved agent configuration | | <code>GET</code> | <code>/v1/agents/{agent_id}</code> | GetAgent | Get agent details | | <code>POST</code> | <code>/v1/agents/{agent_id}</code> | UpdateAgent | Update agent configuration. <code>version</code> is <strong>optional</strong>: supply it (≥ 1) for optimistic concurrency — a mismatch returns 409 — or omit it for an unconditional last-write-wins update. | | <code>POST</code> | <code>/v1/agents/{agent_id}/archive</code> | ArchiveAgent | Archive an agent. Makes it <strong>read-only</strong>; existing sessions continue, new sessions cannot reference it. No unarchive — this is the terminal state. | | <code>GET</code> | <code>/v1/agents/{agent_id}/versions</code> | ListAgentVersions | List agent versions |</p>
+<h2>Sessions</h2>
+<p>| Method   | Path                                             | Operation        | Description                              | | -------- | ------------------------------------------------ | ---------------- | ---------------------------------------- | | <code>GET</code> | <code>/v1/sessions</code> | ListSessions | List sessions (paginated) | | <code>POST</code> | <code>/v1/sessions</code> | CreateSession | Create a new session | | <code>GET</code> | <code>/v1/sessions/{session_id}</code> | GetSession | Get session details | | <code>POST</code> | <code>/v1/sessions/{session_id}</code> | UpdateSession | Update session <code>metadata</code>/<code>title</code>, <code>agent.tools</code>/<code>agent.mcp_servers</code> (session-local override; session must be <code>idle</code>), or <code>budget</code> — change the cap (higher or lower; the new value must exceed the consumed list cost) or remove it with <code>null</code>; removal is one-way, and a budget can never be added post-create. <code>vault_ids</code> is create-only (rejected on update). See <code>shared/managed-agents-core.md</code> → Updating the agent configuration mid-session / Session budgets. | | <code>DELETE</code> | <code>/v1/sessions/{session_id}</code> | DeleteSession | Delete a session | | <code>POST</code> | <code>/v1/sessions/{session_id}/archive</code> | ArchiveSession | Archive a session |</p>
+<h2>Events</h2>
+<p>| Method   | Path                                             | Operation        | Description                              | | -------- | ------------------------------------------------ | ---------------- | ---------------------------------------- | | <code>GET</code> | <code>/v1/sessions/{session_id}/events</code> | ListEvents | List events (polling, paginated) | | <code>POST</code> | <code>/v1/sessions/{session_id}/events</code> | SendEvents | Send events (user message, tool result) | | <code>GET</code> | <code>/v1/sessions/{session_id}/events/stream</code> | StreamEvents | Stream events via SSE. Optional <code>event_deltas[]=agent.message</code> / <code>agent.thinking</code> opts in to live-preview <code>event_start</code>/<code>event_delta</code> events — see <code>shared/managed-agents-events.md</code> § Live previews. |</p>
+<h2>Session Threads</h2>
+<p>Per-subagent event streams in multiagent sessions. See <code>shared/managed-agents-multiagent.md</code>.</p>
+<p>| Method   | Path                                             | Operation        | Description                              | | -------- | ------------------------------------------------ | ---------------- | ---------------------------------------- | | <code>GET</code> | <code>/v1/sessions/{session_id}/threads</code> | ListThreads | List threads (paginated) | | <code>GET</code> | <code>/v1/sessions/{session_id}/threads/{thread_id}</code> | GetThread | Retrieve one thread (carries <code>agent</code> snapshot, <code>status</code>, <code>parent_thread_id</code>, <code>stats</code>, <code>usage</code>) | | <code>POST</code> | <code>/v1/sessions/{session_id}/threads/{thread_id}/archive</code> | ArchiveThread | Archive a thread | | <code>GET</code> | <code>/v1/sessions/{session_id}/threads/{thread_id}/events</code> | ListThreadEvents | List past events for one thread (paginated) | | <code>GET</code> | <code>/v1/sessions/{session_id}/threads/{thread_id}/stream</code> | StreamThreadEvents | Stream one thread via SSE (SDK: <code>threads.events.stream</code>) |</p>
+<h2>Session Resources</h2>
+<p>| Method   | Path                                                    | Operation        | Description                              | | -------- | ------------------------------------------------------- | ---------------- | ---------------------------------------- | | <code>GET</code> | <code>/v1/sessions/{session_id}/resources</code> | ListResources | List resources attached to session | | <code>POST</code> | <code>/v1/sessions/{session_id}/resources</code> | AddResource | Attach <code>file</code> or <code>github_repository</code> resource (SDK method: <code>add</code>, not <code>create</code>). <code>memory_store</code> resources attach at session-create time only. | | <code>GET</code> | <code>/v1/sessions/{session_id}/resources/{resource_id}</code> | GetResource | Get a single resource | | <code>POST</code> | <code>/v1/sessions/{session_id}/resources/{resource_id}</code> | UpdateResource | Update resource | | <code>DELETE</code> | <code>/v1/sessions/{session_id}/resources/{resource_id}</code> | DeleteResource | Remove resource from session |</p>
+<h2>Environments</h2>
+<p>| Method   | Path                                                             | Operation            | Description                         | | -------- | ---------------------------------------------------------------- | -------------------- | ----------------------------------- | | <code>POST</code>   | <code>/v1/environments</code>                                     | CreateEnvironment    | Create environment                  | | <code>GET</code>    | <code>/v1/environments</code>                                     | ListEnvironments     | List environments                   | | <code>GET</code>    | <code>/v1/environments/{environment_id}</code>                    | GetEnvironment       | Get environment details             | | <code>POST</code>   | <code>/v1/environments/{environment_id}</code>                    | UpdateEnvironment    | Update environment                  | | <code>DELETE</code> | <code>/v1/environments/{environment_id}</code>                    | DeleteEnvironment    | Delete environment. Returns 204. | | <code>POST</code>   | <code>/v1/environments/{environment_id}/archive</code>            | ArchiveEnvironment   | Archive environment. Makes it <strong>read-only</strong>; existing sessions continue, new sessions cannot reference it. No unarchive — this is the terminal state. | | <code>GET</code>    | <code>/v1/environments/{environment_id}/work/stats</code>         | WorkQueueStats       | Self-hosted work-queue depth/pending/workers. <code>x-api-key</code> auth. See <code>shared/managed-agents-self-hosted-sandboxes.md</code>. | | <code>POST</code>   | <code>/v1/environments/{environment_id}/work/{work_id}/stop</code> | StopWork            | Self-hosted: stop a claimed work item. <code>x-api-key</code> auth. |</p>
+<p>For <code>type: &quot;self_hosted&quot;</code>, <code>config</code> is the bare <code>{&quot;type&quot;: &quot;self_hosted&quot;}</code> — <code>networking</code> and <code>packages</code> do not apply.</p>
+<h2>Deployments</h2>
+<p>Scheduled deployments (<code>depl_</code> IDs) run an agent on a recurring cron schedule — each firing creates a session. See <code>shared/managed-agents-scheduled-deployments.md</code> for the conceptual guide (cron/DST semantics, failure behavior, lifecycle).</p>
+<p>| Method   | Path                                             | Operation        | Description                              | | -------- | ------------------------------------------------ | ---------------- | ---------------------------------------- | | <code>POST</code>   | <code>/v1/deployments</code>                                | CreateDeployment | Create a scheduled deployment            | | <code>POST</code>   | <code>/v1/deployments/{deployment_id}</code>                | UpdateDeployment | Update deployment configuration (see <code>shared/managed-agents-scheduled-deployments.md</code>) | | <code>POST</code>   | <code>/v1/deployments/{deployment_id}/pause</code>          | PauseDeployment  | Suppress scheduled triggers (reversible; manual runs still allowed) | | <code>POST</code>   | <code>/v1/deployments/{deployment_id}/unpause</code>        | UnpauseDeployment | Resume from the next occurrence (no backfill) | | <code>POST</code>   | <code>/v1/deployments/{deployment_id}/archive</code>        | ArchiveDeployment | <strong>Terminal</strong> — schedule stops, deployment becomes immutable | | <code>POST</code>   | <code>/v1/deployments/{deployment_id}/run</code>            | RunDeployment    | Trigger a manual run immediately (<code>trigger_context.type: &quot;manual&quot;</code>); works while paused |</p>
+<h2>Deployment Runs</h2>
+<p>Each trigger attempt (scheduled or manual) writes a <code>deployment_run</code> record (<code>drun_</code> IDs) carrying either the created <code>session_id</code> or an <code>error.type</code> (<code>environment_archived</code>, <code>agent_archived</code>, <code>vault_not_found</code>, <code>session_rate_limited</code>, <code>service_unavailable</code>).</p>
+<p>| Method   | Path                                             | Operation        | Description                              | | -------- | ------------------------------------------------ | ---------------- | ---------------------------------------- | | <code>GET</code>    | <code>/v1/deployment_runs?deployment_id=...</code>          | ListDeploymentRuns | List runs for a deployment (paginated; filter failures with <code>has_error=true</code>) | | <code>GET</code>    | <code>/v1/deployment_runs/{deployment_run_id}</code>        | GetDeploymentRun   | Retrieve a single run by ID (a <code>deployment_run.*</code> webhook event carries this as <code>data.id</code>) |</p>
+<h2>Vaults</h2>
+<p>Vaults store credentials that Anthropic manages on your behalf — MCP credentials (OAuth with auto-refresh, or static bearer tokens) and <code>environment_variable</code> credentials substituted into outbound requests at egress. Attach to sessions via <code>vault_ids</code>. See <code>managed-agents-tools.md</code> §Vaults for the conceptual guide and credential shapes.</p>
+<p>| Method   | Path                                             | Operation        | Description                              | | -------- | ------------------------------------------------ | ---------------- | ---------------------------------------- | | <code>POST</code>   | <code>/v1/vaults</code>                                     | CreateVault      | Create a vault                           | | <code>GET</code>    | <code>/v1/vaults</code>                                     | ListVaults       | List vaults                              | | <code>GET</code>    | <code>/v1/vaults/{vault_id}</code>                          | GetVault         | Get vault details                        | | <code>POST</code>   | <code>/v1/vaults/{vault_id}</code>                          | UpdateVault      | Update vault                             | | <code>DELETE</code> | <code>/v1/vaults/{vault_id}</code>                          | DeleteVault      | Delete vault                             | | <code>POST</code>   | <code>/v1/vaults/{vault_id}/archive</code>                  | ArchiveVault     | Archive vault                            |</p>
+<h2>Credentials</h2>
+<p>Credentials are individual secrets stored inside a vault.</p>
+<p>| Method   | Path                                                              | Operation          | Description                  | | -------- | ----------------------------------------------------------------- | ------------------ | ---------------------------- | | <code>POST</code>   | <code>/v1/vaults/{vault_id}/credentials</code>                               | CreateCredential   | Create a credential          | | <code>GET</code>    | <code>/v1/vaults/{vault_id}/credentials</code>                               | ListCredentials    | List credentials in vault    | | <code>GET</code>    | <code>/v1/vaults/{vault_id}/credentials/{credential_id}</code>               | GetCredential      | Get credential metadata      | | <code>POST</code>   | <code>/v1/vaults/{vault_id}/credentials/{credential_id}</code>               | UpdateCredential   | Update credential            | | <code>DELETE</code> | <code>/v1/vaults/{vault_id}/credentials/{credential_id}</code>               | DeleteCredential   | Delete credential            | | <code>POST</code>   | <code>/v1/vaults/{vault_id}/credentials/{credential_id}/archive</code>       | ArchiveCredential  | Archive credential           | | <code>POST</code>   | <code>/v1/vaults/{vault_id}/credentials/{credential_id}/mcp_oauth_validate</code> | McpOauthValidate | Validate an MCP OAuth credential |</p>
+<h2>Memory Stores</h2>
+<p>Workspace-scoped persistent memory that survives across sessions. Attach to a session via a <code>{&quot;type&quot;: &quot;memory_store&quot;, &quot;memory_store_id&quot;: ...}</code> entry in <code>resources[]</code> (session-create time only). See <code>shared/managed-agents-memory.md</code> for the conceptual guide, the FUSE-mount agent interface, preconditions, and versioning.</p>
+<p>| Method   | Path                                             | Operation          | Description                              | | -------- | ------------------------------------------------ | ------------------ | ---------------------------------------- | | <code>POST</code>   | <code>/v1/memory_stores</code>                              | CreateMemoryStore  | Create a store (<code>name</code>, <code>description</code>, <code>metadata</code>) | | <code>GET</code>    | <code>/v1/memory_stores</code>                              | ListMemoryStores   | List stores (<code>include_archived</code>, <code>created_at_{gte,lte}</code>) | | <code>GET</code>    | <code>/v1/memory_stores/{memory_store_id}</code>            | GetMemoryStore     | Get store details                        | | <code>POST</code>   | <code>/v1/memory_stores/{memory_store_id}</code>            | UpdateMemoryStore  | Update store                             | | <code>DELETE</code> | <code>/v1/memory_stores/{memory_store_id}</code>            | DeleteMemoryStore  | Delete store                             | | <code>POST</code>   | <code>/v1/memory_stores/{memory_store_id}/archive</code>    | ArchiveMemoryStore | Archive store. Makes it <strong>read-only</strong>; existing sessions continue, new sessions cannot reference it. No unarchive. |</p>
+<h2>Memories</h2>
+<p>Individual text documents inside a store (≤ 100KB each). <code>create</code> creates at a <code>path</code> and returns <code>409</code> (<code>memory_path_conflict_error</code>, with <code>conflicting_memory_id</code>) if the path is occupied; <code>update</code> mutates by <code>mem_...</code> ID (rename and/or content). Only <code>update</code> accepts a <code>precondition</code> (<code>{&quot;type&quot;: &quot;content_sha256&quot;, &quot;content_sha256&quot;: ...}</code>) — on mismatch returns <code>409</code> (<code>memory_precondition_failed_error</code>). List endpoints accept <code>view: &quot;basic&quot;|&quot;full&quot;</code> (controls whether <code>content</code> is populated; <code>retrieve</code> defaults to <code>full</code>).</p>
+<p>| Method   | Path                                                              | Operation      | Description                              | | -------- | ----------------------------------------------------------------- | -------------- | ---------------------------------------- | | <code>GET</code>    | <code>/v1/memory_stores/{memory_store_id}/memories</code>                    | ListMemories   | Returns <code>Memory \| MemoryPrefix</code>; filter by <code>path_prefix</code>, <code>depth</code> | | <code>POST</code>   | <code>/v1/memory_stores/{memory_store_id}/memories</code>                    | CreateMemory   | Create at <code>path</code> (SDK: <code>memories.create</code>); <code>409 memory_path_conflict_error</code> if occupied | | <code>GET</code>    | <code>/v1/memory_stores/{memory_store_id}/memories/{memory_id}</code>        | GetMemory      | Read one memory (defaults to <code>view=&quot;full&quot;</code>) | | <code>PATCH</code>  | <code>/v1/memory_stores/{memory_store_id}/memories/{memory_id}</code>        | UpdateMemory   | Change <code>content</code>, <code>path</code>, or both by ID; optional <code>precondition</code> | | <code>DELETE</code> | <code>/v1/memory_stores/{memory_store_id}/memories/{memory_id}</code>        | DeleteMemory   | Delete (optional <code>expected_content_sha256</code>) |</p>
+<h2>Memory Versions</h2>
+<p>Immutable per-mutation snapshots (<code>memver_...</code>) — the audit and rollback surface. <code>operation</code> ∈ <code>created</code> / <code>modified</code> / <code>deleted</code>.</p>
+<p>| Method   | Path                                                                          | Operation             | Description                              | | -------- | ----------------------------------------------------------------------------- | --------------------- | ---------------------------------------- | | <code>GET</code>    | <code>/v1/memory_stores/{memory_store_id}/memory_versions</code>                         | ListMemoryVersions    | Newest-first; filter by <code>memory_id</code>, <code>operation</code>, <code>session_id</code>, <code>api_key_id</code>, <code>created_at_{gte,lte}</code> | | <code>GET</code>    | <code>/v1/memory_stores/{memory_store_id}/memory_versions/{version_id}</code>            | GetMemoryVersion      | List fields + full <code>content</code>             | | <code>POST</code>   | <code>/v1/memory_stores/{memory_store_id}/memory_versions/{version_id}/redact</code>     | RedactMemoryVersion   | Clear <code>content</code>/<code>content_sha256</code>/<code>content_size_bytes</code>/<code>path</code>; preserve actor + timestamps |</p>
+<h2>Files</h2>
+<p>| Method   | Path                                             | Operation        | Description                              | | -------- | ------------------------------------------------ | ---------------- | ---------------------------------------- | | <code>POST</code>   | <code>/v1/files</code>                            | UploadFile       | Upload a file                            | | <code>GET</code>    | <code>/v1/files</code>                            | ListFiles        | List files                               | | <code>GET</code>    | <code>/v1/files/{file_id}</code>                  | GetFile          | Get file metadata (SDK method: <code>retrieve_metadata</code>) | | <code>GET</code>    | <code>/v1/files/{file_id}/content</code>          | DownloadFile     | Download file content                    | | <code>DELETE</code> | <code>/v1/files/{file_id}</code>                  | DeleteFile       | Delete a file                            |</p>
+<h2>Skills</h2>
+<p>| Method   | Path                                                            | Operation          | Description                  | | -------- | --------------------------------------------------------------- | ------------------ | ---------------------------- | | <code>POST</code>   | <code>/v1/skills</code>                                          | CreateSkill        | Create a skill               | | <code>GET</code>    | <code>/v1/skills</code>                                          | ListSkills         | List skills                  | | <code>GET</code>    | <code>/v1/skills/{skill_id}</code>                               | GetSkill           | Get skill details            | | <code>DELETE</code> | <code>/v1/skills/{skill_id}</code>                               | DeleteSkill        | Delete a skill               | | <code>POST</code>   | <code>/v1/skills/{skill_id}/versions</code>                      | CreateVersion      | Create skill version         | | <code>GET</code>    | <code>/v1/skills/{skill_id}/versions</code>                      | ListVersions       | List skill versions          | | <code>GET</code>    | <code>/v1/skills/{skill_id}/versions/{version}</code>            | GetVersion         | Get skill version            | | <code>DELETE</code> | <code>/v1/skills/{skill_id}/versions/{version}</code>            | DeleteVersion      | Delete skill version         |</p>
+<hr>
+<h2>Request/Response Schema Quick Reference</h2>
+<h3>CreateAgent Request Body</h3>
+<p><strong>Always start here.</strong> <code>model</code>, <code>system</code>, <code>tools</code>, <code>mcp_servers</code>, <code>skills</code> are top-level fields on this object — they do NOT go on the session.</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;string (required, 1-256 chars)&quot;,
+  &quot;model&quot;: &quot;claude-opus-5 (required — bare string, or {id, speed?, effort?, inference_geo?} object)&quot;,
+  &quot;description&quot;: &quot;string (optional, up to 2048 chars)&quot;,
+  &quot;system&quot;: &quot;string (optional, up to 100,000 chars)&quot;,
+  &quot;tools&quot;: [
+    { &quot;type&quot;: &quot;agent_toolset_20260401&quot; }
+  ],
+  &quot;skills&quot;: [
+    { &quot;type&quot;: &quot;anthropic&quot;, &quot;skill_id&quot;: &quot;xlsx&quot; },
+    { &quot;type&quot;: &quot;custom&quot;, &quot;skill_id&quot;: &quot;skill_abc123&quot;, &quot;version&quot;: &quot;1&quot; }
+  ],
+  &quot;mcp_servers&quot;: [
+    {
+      &quot;type&quot;: &quot;url&quot;,
+      &quot;name&quot;: &quot;github&quot;,
+      &quot;url&quot;: &quot;https://api.githubcopilot.com/mcp/&quot;
+    }
+  ],
+  &quot;multiagent&quot;: {
+    &quot;type&quot;: &quot;coordinator&quot;,
+    &quot;agents&quot;: [
+      &quot;agent_abc123&quot;,
+      { &quot;type&quot;: &quot;agent&quot;, &quot;id&quot;: &quot;agent_def456&quot;, &quot;version&quot;: 4 },
+      { &quot;type&quot;: &quot;self&quot; }
+    ]
+  },
+  &quot;metadata&quot;: {
+    &quot;key&quot;: &quot;value (max 16 pairs, keys ≤64 chars, values ≤512 chars)&quot;
+  }
+}</code></pre>
+<blockquote><p>Limits: <code>tools</code> max 128, <code>skills</code> max 20, <code>mcp_servers</code> max 20 (unique names). <code>multiagent.agents</code> 1–20 entries (string ID | <code>{type:&quot;agent&quot;,id,version?}</code> | <code>{type:&quot;self&quot;}</code> | <code>{type:&quot;advisor&quot;,model}</code>, at most one advisor) — see <code>shared/managed-agents-multiagent.md</code>.</p></blockquote>
+<h3>CreateSession Request Body</h3>
+<pre><code class="lang-json">{
+  &quot;agent&quot;: &quot;agent_abc123 (required — string shorthand for latest version, or {type: \&quot;agent\&quot;, id, version} object)&quot;,
+  &quot;environment_id&quot;: &quot;env_abc123 (required)&quot;,
+  &quot;title&quot;: &quot;string (optional)&quot;,
+  &quot;resources&quot;: [
+    {
+      &quot;type&quot;: &quot;github_repository&quot;,
+      &quot;url&quot;: &quot;https://github.com/owner/repo (required)&quot;,
+      &quot;authorization_token&quot;: &quot;ghp_... (required)&quot;,
+      &quot;mount_path&quot;: &quot;/workspace/repo (optional — defaults to /workspace/&lt;repo-name&gt;)&quot;,
+      &quot;checkout&quot;: { &quot;type&quot;: &quot;branch&quot;, &quot;name&quot;: &quot;main&quot; }
+    }
+  ],
+  &quot;initial_events&quot;: [
+    { &quot;type&quot;: &quot;user.message&quot;, &quot;content&quot;: [{ &quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;Review the auth module.&quot; }] }
+  ],
+  &quot;vault_ids&quot;: [&quot;vlt_abc123 (optional — vault credentials: MCP auth + environment variables)&quot;],
+  &quot;budget&quot;: {
+    &quot;type&quot;: &quot;limit&quot;,
+    &quot;max_list_cost&quot;: { &quot;amount&quot;: &quot;2500&quot;, &quot;currency&quot;: &quot;USD&quot; }
+  },
+  &quot;metadata&quot;: {
+    &quot;key&quot;: &quot;value&quot;
+  }
+}</code></pre>
+<blockquote><p>The <code>agent</code> field accepts a string ID, <code>{type: &quot;agent&quot;, id, version}</code>, or <code>{type: &quot;agent_with_overrides&quot;, id, version?, ...}</code> for session-local overrides of <code>model</code>/<code>system</code>/<code>tools</code>/<code>mcp_servers</code>/<code>skills</code>. Outside the overrides form, those fields live on the agent, not here. An <code>effort</code> inside a <code>model</code> override is ignored — set it on the agent. An <code>inference_geo</code> inside a <code>model</code> override <strong>is</strong> applied (omitting it clears the agent&#x27;s pin for this session).</p>
+<p><strong><code>budget</code></strong> (optional, create-only) is a hard dollar cap on the session&#x27;s list-priced spend; <code>amount</code> is an integer string in minor units (cents — <code>&quot;2500&quot;</code> = $25.00), <code>USD</code> only. It can be changed or removed later via session update, never added. See <code>shared/managed-agents-core.md</code> → Session budgets.</p>
+<p><strong><code>initial_events</code></strong> (optional, max 50) sends events at creation and starts the agent loop in the same call. Only <code>user.message</code> and <code>user.define_outcome</code> are accepted — no <code>system.message</code>, and none of the tool-result kinds. Validation is all-or-nothing. See <code>shared/managed-agents-core.md</code> → Seeding a session with <code>initial_events</code>.</p>
+<p><strong><code>checkout</code></strong> accepts <code>{type: &quot;branch&quot;, name: &quot;...&quot;}</code> or <code>{type: &quot;commit&quot;, sha: &quot;...&quot;}</code>. Omit for the repo&#x27;s default branch.</p></blockquote>
+<h3>CreateEnvironment Request Body</h3>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;string (required)&quot;,
+  &quot;description&quot;: &quot;string (optional)&quot;,
+  &quot;config&quot;: {
+    &quot;type&quot;: &quot;cloud | self_hosted&quot;,
+    &quot;networking&quot;: {
+      &quot;type&quot;: &quot;unrestricted | limited (union — see SDK types)&quot;
+    },
+    &quot;packages&quot;: { }
+  },
+  &quot;metadata&quot;: { &quot;key&quot;: &quot;value&quot; }
+}</code></pre>
+<h3>CreateDeployment Request Body</h3>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;Weekly compliance scan&quot;,
+  &quot;agent&quot;: &quot;agent_abc123 (required — same shapes as CreateSession)&quot;,
+  &quot;environment_id&quot;: &quot;env_abc123 (required)&quot;,
+  &quot;initial_events&quot;: [
+    { &quot;type&quot;: &quot;user.message&quot;, &quot;content&quot;: [{ &quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;Run the weekly compliance scan.&quot; }] }
+  ],
+  &quot;schedule&quot;: {
+    &quot;type&quot;: &quot;cron&quot;,
+    &quot;expression&quot;: &quot;0 20 * * 5&quot;,
+    &quot;timezone&quot;: &quot;America/New_York&quot;
+  }
+}</code></pre>
+<blockquote><p>Optional session config (<code>resources</code>, <code>vault_ids</code>, etc.) is supported the same way as on CreateSession, including <code>budget</code> — copied onto each fired session; unlike a session&#x27;s, it can be added where none exists and re-added after clearing (see <code>shared/managed-agents-scheduled-deployments.md</code> § Deployment budgets). Response includes <code>status</code>, <code>paused_reason</code>, and <code>schedule.upcoming_runs_at</code> (next fire times). See <code>shared/managed-agents-scheduled-deployments.md</code>.</p></blockquote>
+<h3>SendEvents Request Body</h3>
+<pre><code class="lang-json">{
+  &quot;events&quot;: [
+    {
+      &quot;type&quot;: &quot;user.message&quot;,
+      &quot;content&quot;: [
+        {
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;text&quot;: &quot;Hello&quot;
+        }
+      ]
+    }
+  ]
+}</code></pre>
+<blockquote><p><code>system.message</code> events (append system-level context for this turn and later ones) use the same envelope with <code>type: &quot;system.message&quot;</code> — supported on Claude Opus 5, Claude Opus 4.8, Claude Sonnet 5, Claude Fable 5, and Claude Mythos 5, checked against the agent&#x27;s <em>primary</em> model only; see <code>shared/managed-agents-events.md</code> § Adding system context mid-session.</p></blockquote>
+<h3>Define Outcome Event</h3>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;user.define_outcome&quot;,
+  &quot;description&quot;: &quot;Build a DCF model for Costco in .xlsx&quot;,
+  &quot;rubric&quot;: { &quot;type&quot;: &quot;file&quot;, &quot;file_id&quot;: &quot;file_01...&quot; },
+  &quot;max_iterations&quot;: 5
+}</code></pre>
+<blockquote><p><code>rubric</code> is required: <code>{type: &quot;text&quot;, content}</code> or <code>{type: &quot;file&quot;, file_id}</code>. <code>max_iterations</code> default 3, max 20. Echoed back with <code>outcome_id</code> + <code>processed_at</code>. See <code>shared/managed-agents-outcomes.md</code>.</p></blockquote>
+<h3>Tool Result Event</h3>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;user.custom_tool_result&quot;,
+  &quot;custom_tool_use_id&quot;: &quot;sevt_abc123&quot;,
+  &quot;content&quot;: [{ &quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;Result data&quot; }],
+  &quot;is_error&quot;: false
+}</code></pre>
+<hr>
+<h2>Error Handling</h2>
+<p>Managed Agents endpoints use the standard Anthropic API error format. Errors are returned with an HTTP status code and a JSON body containing <code>type</code>, <code>error</code>, and <code>request_id</code>:</p>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;error&quot;,
+  &quot;error&quot;: {
+    &quot;type&quot;: &quot;invalid_request_error&quot;,
+    &quot;message&quot;: &quot;Description of what went wrong&quot;
+  },
+  &quot;request_id&quot;: &quot;req_011CRv1W3XQ8XpFikNYG7RnE&quot;
+}</code></pre>
+<p>Include the <code>request_id</code> when reporting issues to Anthropic — it lets us trace the request end-to-end. The inner <code>error.type</code> is one of the following:</p>
+<p>| Status | Error type | Description | |---|---|---| | 400 | <code>invalid_request_error</code> | The request was malformed or missing required parameters | | 401 | <code>authentication_error</code> | Invalid or missing API key | | 403 | <code>permission_error</code> | The API key doesn&#x27;t have permission for this operation | | 404 | <code>not_found_error</code> | The requested resource doesn&#x27;t exist | | 409 | <code>invalid_request_error</code> | The request conflicts with the resource&#x27;s current state (e.g., sending to an archived session) | | 413 | <code>request_too_large</code> | The request body exceeds the maximum allowed size | | 429 | <code>rate_limit_error</code> | Too many requests — check rate limit headers for retry timing | | 500 | <code>api_error</code> | An internal server error occurred | | 529 | <code>overloaded_error</code> | The service is temporarily overloaded — retry with backoff |</p>
+<p>Note that <code>409 Conflict</code> carries <code>error.type: &quot;invalid_request_error&quot;</code> (there is no separate <code>conflict_error</code> type); inspect both the HTTP status and the <code>message</code> to distinguish conflicts from other invalid requests.</p>
+<hr>
+<h2>Pagination</h2>
+<p>Most Managed Agents list endpoints use the <code>page</code> / <code>next_page</code> cursor scheme:</p>
+<p>| Field | Where | Notes | |---|---|---| | <code>limit</code> | query | Max items per page | | <code>page</code> | query | Opaque cursor from a previous response — pass a <code>next_page</code> or <code>prev_page</code> value here | | <code>order</code> | query | <code>asc</code> / <code>desc</code> on endpoints that support sorting. A cursor encodes the <code>order</code> of the request that produced it — reusing it with a different <code>order</code> returns 400. Other params (filters, <code>limit</code>) can change between paginated requests. | | <code>next_page</code> | response | Cursor for the next page; <code>null</code> when there are no more results | | <code>prev_page</code> | response | Cursor for the previous page on endpoints that support backward pagination — currently <strong>only <code>GET /v1/sessions</code></strong>. <code>null</code> on the first page. On endpoints that don&#x27;t support it, the field is <strong>absent</strong> (not <code>null</code>). |</p>
+<p>Every SDK exposes an auto-paginating iterator that follows <code>next_page</code>. In Python and TypeScript, iterate the list result directly; the other SDKs expose the iterator via a separate method (iterating the plain list result returns one page). SDK auto-pagination is <strong>forward-only</strong> — to go back a page, read <code>prev_page</code> from the response and pass it back as the <code>page</code> parameter yourself.</p>
+<blockquote><p>⚠️ Some endpoints use a <strong>different</strong> cursor scheme: Message Batches, Files, Models, and several Admin API endpoints take <code>after_id</code>/<code>before_id</code> and return <code>has_more</code>/<code>first_id</code>/<code>last_id</code> instead of <code>page</code>/<code>next_page</code>. Some <code>page</code>-scheme endpoints (e.g. <code>GET /v1/skills</code>) also return a <code>has_more</code> boolean alongside <code>next_page</code>. Check the endpoint&#x27;s reference page for its exact pagination fields.</p></blockquote>
+<hr>
+<h2>Rate Limits</h2>
+<p>Managed Agents endpoints have per-organization request-per-minute (RPM) limits, separate from your <a href="https://platform.claude.com/docs/en/api/rate-limits">Messages API token limits</a>. Model inference inside a session still draws from your organization&#x27;s standard ITPM/OTPM limits.</p>
+<p>| Endpoint group | Scope | RPM | Max concurrent | |---|---|---|---| | Create operations (Agents, Sessions, Vaults) | organization | 300 | — | | All other operations (Agents, Sessions, Vaults) | organization | 600 | — | | All operations (Environments) | organization | 60 | 5 |</p>
+<p>Files and Skills endpoints use the standard tier-based <a href="https://platform.claude.com/docs/en/api/rate-limits">rate limits</a>.</p>
+<p>When a limit is exceeded the API returns <code>429</code> with a <code>rate_limit_error</code> (see <a href="#error-handling">Error Handling</a> for the response envelope) and a <code>retry-after</code> header indicating how many seconds to wait before retrying. The Anthropic SDK reads this header and retries automatically.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/managed-agents-api-reference.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

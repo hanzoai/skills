@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>managed-agents-webhooks</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/managed-agents-webhooks.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/managed-agents-webhooks">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/managed-agents-webhooks.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>managed-agents-webhooks</h1><p class="lede">Anthropic can POST to your HTTPS endpoint when a Managed Agents resource changes state — an alternative to holding an SSE stream or polling.</p><h1>Managed Agents — Webhooks</h1>
+<p>Anthropic can POST to your HTTPS endpoint when a Managed Agents resource changes state — an alternative to holding an SSE stream or polling. Payloads are <strong>thin</strong> (event type + resource IDs only); on receipt, fetch the resource for current state. Every delivery is HMAC-signed.</p>
+<blockquote><p><strong>Direction matters.</strong> This page covers <em>Anthropic → you</em> notifications about session/vault state. It does <strong>not</strong> cover <em>third-party → you</em> webhooks that <em>trigger</em> a session (e.g. a GitHub push handler that calls <code>sessions.create()</code>) — that&#x27;s ordinary application code on your side with no Anthropic-specific wire format.</p></blockquote>
+<hr>
+<h2>Register an endpoint (Console only)</h2>
+<p>Console → <strong>Manage → Webhooks</strong>. There is no programmatic endpoint-management API yet. Secret rotation is supported from the same page.</p>
+<p>| Field | Constraint | |---|---| | URL | HTTPS on port 443, publicly resolvable hostname | | Event types | Subscribe per <code>data.type</code> — an endpoint receives only the types it is subscribed to | | Signing secret | <code>whsec_</code>-prefixed, 32 bytes, <strong>shown once at creation</strong> — store it |</p>
+<hr>
+<h2>Verify the signature</h2>
+<p>Every delivery carries the <code>webhook-id</code>, <code>webhook-timestamp</code>, and <code>webhook-signature</code> headers. <strong>Use the SDK&#x27;s <code>client.beta.webhooks.unwrap()</code></strong> — it verifies the signature, rejects payloads more than ~5 minutes old, and returns the parsed event. It reads the <code>whsec_</code> secret from <code>ANTHROPIC_WEBHOOK_SIGNING_KEY</code>. Pass the headers through untouched; don&#x27;t hand-roll verification against a single <code>X-Webhook-Signature</code> header, which is not the wire format.</p>
+<pre><code class="lang-python">import anthropic
+from flask import Flask, request
+
+client = anthropic.Anthropic()  # reads ANTHROPIC_WEBHOOK_SIGNING_KEY from env
+app = Flask(__name__)
+
+
+@app.route(&quot;/webhook&quot;, methods=[&quot;POST&quot;])
+def webhook():
+    try:
+        event = client.beta.webhooks.unwrap(
+            request.get_data(as_text=True),
+            headers=dict(request.headers),
+        )
+    except Exception:
+        return &quot;invalid signature&quot;, 400
+
+    if event.id in seen_event_ids:  # dedupe retries — id is per-event, not per-delivery
+        return &quot;&quot;, 204
+    seen_event_ids.add(event.id)
+
+    match event.data.type:
+        case &quot;session.status_idled&quot;:
+            session = client.beta.sessions.retrieve(event.data.id)
+            notify_user(session)
+        case &quot;vault_credential.refresh_failed&quot;:
+            alert_oncall(event.data.id)
+
+    return &quot;&quot;, 204</code></pre>
+<p>Pass the <strong>raw request body</strong> to <code>unwrap()</code> — frameworks that re-serialize JSON (Express <code>.json()</code>, Flask <code>.get_json()</code>) change the bytes and break the MAC. For other languages, look up the <code>beta.webhooks.unwrap</code> binding in the SDK repo (<code>shared/live-sources.md</code>); don&#x27;t hand-roll verification.</p>
+<hr>
+<h2>Payload envelope</h2>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;event&quot;,
+  &quot;id&quot;: &quot;whe_9d5c1f7e...&quot;,
+  &quot;created_at&quot;: &quot;2026-03-18T14:05:22Z&quot;,
+  &quot;data&quot;: {
+    &quot;type&quot;: &quot;session.status_idled&quot;,
+    &quot;id&quot;: &quot;session_01XYZ...&quot;,
+    &quot;organization_id&quot;: &quot;8a3d2f1e-...&quot;,
+    &quot;workspace_id&quot;: &quot;c7b0e4d9-...&quot;
+  }
+}</code></pre>
+<p>Switch on <code>data.type</code>, fetch the resource by <code>data.id</code>, return any <strong>2xx</strong> to acknowledge. <code>created_at</code> is when the <em>event occurred</em>, not when the delivery was attempted — the <code>webhook-timestamp</code> header is the clock for the attempt (see Delivery behavior).</p>
+<p>The top-level <code>id</code> is the same value as the <code>webhook-id</code> header, and it is per <em>event</em>, not per delivery — every retry carries it unchanged. Dedupe on it.</p>
+<hr>
+<h2>Supported <code>data.type</code> values</h2>
+<p>| <code>data.type</code> | Fires when | |---|---| | <code>session.status_scheduled</code> | Session created and ready to accept events | | <code>session.status_run_started</code> | Agent execution kicked off (every transition to <code>running</code>) | | <code>session.status_idled</code> | Agent awaiting input (tool approval, custom tool result, or next message) — or paused at its session budget. The webhook payload is thin — list the session&#x27;s events and check the latest <code>session.status_idle</code> event&#x27;s <code>stop_reason</code> (the session object itself has no <code>stop_reason</code> field): if it is <code>budget_reached</code>, further <code>user.message</code> events return a 400 and only a budget change/removal resumes the session (<code>shared/managed-agents-core.md</code> § Session budgets) | | <code>session.status_rescheduled</code> | A transient error occurred; the session is retrying automatically | | <code>session.status_terminated</code> | Session ended — <strong>on completion or on error</strong>, not error-only | | <code>session.thread_created</code> | Multiagent: coordinator opened a new subagent thread, or the session&#x27;s advisor is being consulted (<code>shared/managed-agents-multiagent.md</code> → Advisor) | | <code>session.thread_idled</code> | Child threads only: a subagent thread is waiting for input — or paused because the session reached its budget cap. When the whole session pauses at the cap, a <code>session.status_idled</code> webhook also fires and the stream&#x27;s <code>session.status_idle</code> event carries <code>stop_reason: budget_reached</code> — unless another thread is waiting on a tool ask, which outranks the cap at the session level (<code>shared/managed-agents-core.md</code> § Session budgets). | | <code>session.thread_terminated</code> | A thread ended — child completed its work, or the thread was archived. <strong>Child threads only</strong>; the primary thread&#x27;s end surfaces as <code>session.status_terminated</code> | | <code>session.outcome_evaluation_ended</code> | Outcome grader finished one iteration | | <code>session.updated</code> | Session properties changed (name, configuration) | | <code>session.deleted</code> | Session permanently deleted — no object left to fetch; treat the event itself as final | | <code>vault.archived</code> | Vault was archived | | <code>vault.created</code> | Vault was created | | <code>vault.deleted</code> | Vault was deleted — a <code>vault_credential.deleted</code> also fires per underlying credential. No object left to fetch; treat the event itself as final | | <code>vault_credential.archived</code> | Credential archived, directly or via vault archival | | <code>vault_credential.created</code> | Vault credential was created | | <code>vault_credential.deleted</code> | Credential deleted, directly or via vault deletion. No object left to fetch; treat the event itself as final | | <code>vault_credential.refresh_failed</code> | MCP OAuth vault credential failed to refresh | | <code>agent.created</code> | Agent created | | <code>agent.updated</code> | A new agent version was published. Updates that do not create a new version do <strong>not</strong> fire this. | | <code>agent.archived</code> | Agent archived | | <code>agent.deleted</code> | Agent permanently deleted — no object left to fetch; treat the event itself as final | | <code>deployment.created</code> | Scheduled deployment created | | <code>deployment.updated</code> | Deployment properties changed (e.g. schedule edited) | | <code>deployment.paused</code> | Deployment paused — by request, or automatically when a scheduled run fails with a <strong>non-recoverable</strong> error (archived agent, missing environment). Recoverable failures, including rate limits, do <strong>not</strong> auto-pause. | | <code>deployment.unpaused</code> | Deployment unpaused; schedule resumes | | <code>deployment.archived</code> | Deployment archived — directly, or as a result of agent archival/deletion | | <code>deployment.deleted</code> | Deployment permanently deleted — no object left to fetch; treat the event itself as final | | <code>deployment_run.started</code> | A <strong>scheduled</strong> run started. Manual runs do <strong>not</strong> emit <code>deployment_run.*</code> events. | | <code>deployment_run.succeeded</code> | Scheduled run created its session. Same <code>data.id</code> (the run ID) as the run&#x27;s <code>.started</code> event — fetch the deployment run for its <code>session_id</code>, then subscribe to the session events to follow the work. | | <code>deployment_run.failed</code> | Scheduled run did not create a session. Same <code>data.id</code> as the run&#x27;s <code>.started</code> event — fetch the deployment run for <code>error.type</code> / <code>error.message</code>. | | <code>environment.created</code> | Environment created | | <code>environment.updated</code> | Environment updated with at least one changed field. A no-op update emits nothing. | | <code>environment.archived</code> | Environment archived. Re-archiving an already-archived environment emits nothing. | | <code>environment.deleted</code> | Environment deleted, including delete of an already-archived one. No object left to fetch; treat the event itself as final | | <code>memory_store.created</code> | Memory store created — by you, or by an Anthropic-operated process that clones one of your stores | | <code>memory_store.archived</code> | Memory store archived. Re-archiving an already-archived store emits nothing. | | <code>memory_store.deleted</code> | Memory store deleted, including delete of an already-archived one. Cascades to its memories and versions <strong>without</strong> per-memory events — this single event is the signal. No object left to fetch; treat it as final |</p>
+<blockquote><p><strong>There is deliberately no <code>memory_store.updated</code>.</strong> Individual memories and memory versions emit no webhook events at all, and neither do an environment&#x27;s self-hosted work items. If you need per-memory change tracking, poll the memory-versions endpoints (<code>shared/managed-agents-memory.md</code>).</p></blockquote>
+<blockquote><p>These are <strong>webhook</strong> <code>data.type</code> values — a separate namespace from SSE event types (<code>session.status_idle</code>, <code>span.outcome_evaluation_end</code>, etc. in <code>shared/managed-agents-events.md</code>). Don&#x27;t reuse SSE constants in webhook handlers.</p></blockquote>
+<hr>
+<h2>Delivery behavior &amp; pitfalls</h2>
+<ul><li><strong>Duplicates.</strong> An endpoint can receive the same event more than once; every attempt carries the same top-level <code>event.id</code> (= the <code>webhook-id</code> header). Dedupe on it.</li><li><strong>Subscription scope.</strong> An event reaches only endpoints subscribed to its type <strong>at the moment it is emitted</strong>. An event emitted while nothing was subscribed is never delivered, and subscribing later does not backfill — subscribe before you need the type.</li><li><strong>No ordering guarantee.</strong> Events are not delivered in occurrence order: <code>session.status_idled</code> may arrive before <code>session.outcome_evaluation_ended</code>, and a <code>.deleted</code> can arrive before the <code>.archived</code> for the same resource. <strong>Drive state from the resource you fetch, not from arrival order.</strong></li><li><strong>Retries: up to three attempts</strong> per endpoint per event, with jittered exponential backoff between 5 and 120 seconds. A response that triggers auto-disable is never retried. <strong>After the last attempt fails the event is dropped</strong> — not queued, and with no signal that it was lost. Webhooks are not a durable log: if you must observe every transition, reconcile by listing or fetching the resource.</li><li><strong><code>webhook-timestamp</code> is re-stamped on every attempt</strong>, so retries don&#x27;t fail the SDK&#x27;s five-minute freshness check. It times the <em>delivery attempt</em>; use the payload&#x27;s <code>created_at</code> for when the event occurred.</li><li><strong>Auto-disable — three triggers</strong>, each setting <code>disabled_reason</code>, all reversible from Console (events emitted while disabled are <strong>not</strong> replayed):</li><li>A <code>3xx</code> response. Redirects are never followed; disables immediately, on the first attempt. Reason: <code>auto-disabled: endpoint URL returned a redirect (3xx)</code>.</li><li>The URL resolves to a non-public IP at connect time. Disables immediately. Reason: <code>auto-disabled: endpoint URL resolved to an invalid address</code>.</li><li>Continuous failure for a sustained period. Reason: <code>auto-disabled after sustained delivery failures</code>. <strong>The trigger is duration, not a delivery count</strong> — a single <code>2xx</code> resets the window, so one flaky event can&#x27;t disable the endpoint.</li><li><strong>Thin payload is intentional.</strong> Don&#x27;t expect <code>stop_reason</code> (list the session&#x27;s events for that — the session object has no <code>stop_reason</code> field), <code>outcome_evaluations</code>, credential secrets, etc. on the webhook body — fetch the resource.</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/managed-agents-webhooks.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

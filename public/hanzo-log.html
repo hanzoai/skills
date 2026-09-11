@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-log</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-log.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-log">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-log.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-log</h1><p class="lede">Hanzo Log is a high-performance, zero-allocation structured logging library for Go.</p><h1>Hanzo Log - Structured Logging for Go</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-cli.md</code>, <code>hanzo/hanzo-orm.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Log is a <strong>high-performance, zero-allocation structured logging library</strong> for Go. Based on zerolog with a dual API: a zero-allocation chaining style and a geth-compatible variadic style. Both share the same underlying Event system backed by sync.Pool. The standard logging library for all Hanzo Go services.</p>
+<h3>Why Hanzo Log?</h3>
+<ul><li><strong>Zero allocation</strong>: ~8 ns/op for empty log, 0 B/op via sync.Pool event recycling</li><li><strong>Dual API</strong>: Method chaining (zerolog-style) and variadic key-value (geth-style)</li><li><strong>Logger interface</strong>: All logging goes through a <code>Logger</code> interface, enabling Noop/test/custom loggers</li><li><strong>slog integration</strong>: Maps to <code>log/slog</code> levels for stdlib interop</li><li><strong>Colorized console</strong>: Pretty <code>ConsoleWriter</code> with ANSI colors for development</li><li><strong>Sampling</strong>: <code>BasicSampler</code> to throttle high-volume logs in production</li><li><strong>Hooks</strong>: Attach arbitrary processing to log events</li><li><strong>Lumberjack rotation</strong>: Built-in log file rotation via <code>lumberjack.v2</code></li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Language</strong>: Go 1.26+</li><li><strong>Module</strong>: <code>github.com/hanzoai/log</code></li><li><strong>Dependencies</strong>: <code>go-colorable</code>, <code>go-isatty</code>, <code>lumberjack.v2</code> (all minimal)</li><li><strong>OSS Base</strong>: zerolog architecture with geth API layer added</li><li><strong>CI</strong>: GitHub Actions (ci.yml, release.yml, docs.yml)</li></ul>
+<p>Repo: <code>github.com/hanzoai/log</code></p>
+<h2>When to use</h2>
+<ul><li>Any Hanzo Go service that needs structured logging</li><li>Replacing <code>go-ethereum/log</code> in Lux/EVM codebases (geth API is compatible)</li><li>High-throughput services where allocation matters</li><li>When you need both JSON and human-readable log output</li></ul>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Module | <code>github.com/hanzoai/log</code> | | Repo | <code>github.com/hanzoai/log</code> | | Go version | 1.26+ | | Install | <code>go get github.com/hanzoai/log</code> | | License | See LICENSE | | Sub-packages | <code>github.com/hanzoai/log/level</code> |</p>
+<h2>Installation</h2>
+<pre><code class="lang-bash">go get github.com/hanzoai/log</code></pre>
+<h2>Usage</h2>
+<h3>Chaining API (zero-allocation)</h3>
+<pre><code class="lang-go">import &quot;github.com/hanzoai/log&quot;
+
+// Simple
+log.Info().Msg(&quot;hello world&quot;)
+
+// With fields
+log.Info().
+ Str(&quot;user&quot;, &quot;alice&quot;).
+ Int(&quot;attempt&quot;, 3).
+ Msg(&quot;login successful&quot;)
+
+// With timestamp
+l := log.NewWriter(os.Stdout).With().Timestamp().Logger()
+l.Info().Str(&quot;service&quot;, &quot;api&quot;).Msg(&quot;started&quot;)</code></pre>
+<h3>Variadic API (geth-compatible)</h3>
+<pre><code class="lang-go">import &quot;github.com/hanzoai/log&quot;
+
+// Simple
+logger := log.New(&quot;component&quot;, &quot;myapp&quot;)
+logger.Info(&quot;hello world&quot;)
+
+// With fields
+logger.Info(&quot;login successful&quot;,
+ log.String(&quot;user&quot;, &quot;alice&quot;),
+ log.Int(&quot;attempt&quot;, 3),
+)
+
+// Error with key
+logger.Error(&quot;operation failed&quot;, log.Err(err))</code></pre>
+<h3>Logger Interface</h3>
+<p>All logging goes through the <code>Logger</code> interface:</p>
+<pre><code class="lang-go">type Logger interface {
+ Trace(msg string, ctx ...interface{})
+ Debug(msg string, ctx ...interface{})
+ Info(msg string, ctx ...interface{})
+ Warn(msg string, ctx ...interface{})
+ Error(msg string, ctx ...interface{})
+ Fatal(msg string, ctx ...interface{})
+ Panic(msg string, ctx ...interface{})
+ With() Context
+ New(ctx ...interface{}) Logger
+ Level(lvl Level) Logger
+ // ... plus chaining methods (TraceEvent, DebugEvent, etc.)
+}
+
+// Disabled logger for optional params
+logger := log.Noop()</code></pre>
+<h3>Console Output</h3>
+<pre><code class="lang-go">output := log.ConsoleWriter{Out: os.Stdout}
+l := log.NewWriter(output)
+l.Info().Str(&quot;foo&quot;, &quot;bar&quot;).Msg(&quot;Hello World&quot;)
+// Output: 3:04pm INF Hello World foo=bar</code></pre>
+<h3>Log Levels</h3>
+<pre><code class="lang-go">log.SetGlobalLevel(log.WarnLevel)
+
+// Levels: TraceLevel(-1), DebugLevel(0), InfoLevel(1),
+// WarnLevel(2), ErrorLevel(3), FatalLevel(4), PanicLevel(5)</code></pre>
+<h3>EVM/VM Initialization</h3>
+<pre><code class="lang-go">logger, err := log.InitLogger(&quot;C-chain&quot;, &quot;info&quot;, false, writer)</code></pre>
+<h2>Key Files</h2>
+<p>| File | Purpose | |------|---------| | <code>log.go</code> | Logger interface, constructors, core implementation | | <code>event.go</code> | Event type with sync.Pool recycling | | <code>geth.go</code> | Geth-compatible Field constructors (String, Int, Err, etc.) | | <code>fields.go</code> | Internal field encoding for variadic API | | <code>globals.go</code> | Global config (field names, time formats, colors) | | <code>console.go</code> | ConsoleWriter for human-readable output | | <code>context.go</code> | Context builder for pre-set fields | | <code>slog.go</code> | log/slog handler integration | | <code>sampler.go</code> | Log sampling (BasicSampler) | | <code>encoder_json.go</code> | JSON encoder | | <code>hook.go</code> | Hook interface |</p>
+<h2>Performance</h2>
+<pre><code>BenchmarkLogEmpty-10 161M ops 8.4 ns/op 0 B/op 0 allocs/op
+BenchmarkLogFields-10 32M ops 40.2 ns/op 0 B/op 0 allocs/op
+BenchmarkLogFieldType/Str 95M ops 11.7 ns/op 0 B/op 0 allocs/op</code></pre>
+<p>Compared to: zerolog (19 ns), zap (236 ns), logrus (1244 ns, 27 allocs).</p>
+<h2>Field Constructors (geth-style)</h2>
+<pre><code class="lang-go">log.String(key, val) log.Int(key, val) log.Bool(key, val)
+log.Float64(key, val) log.Duration(key, val) log.Time(key, val)
+log.Err(err) log.Any(key, val) log.Binary(key, val)
+log.Strings(key, vals) log.Ints(key, vals) log.Uint64(key, val)</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-orm.md</code> - ORM that uses hanzo/log</li><li><code>hanzo/hanzo-cli.md</code> - CLI tools</li><li><code>hanzo/go-sdk.md</code> - Go SDK</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: logging, go, structured-logging, zerolog, geth, performance <strong>Prerequisites</strong>: Go 1.26+</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-log.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,7 +196,7 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0106</h1><p class="lede">HIP-106: The Hanzo Plugin Contract. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0106: The Hanzo Plugin Contract</h1>
+<h1>hip-0106</h1><p class="lede">HIP-106: The Hanzo Plugin Contract. Status Final. Hanzo architectural specification.</p><h1>HIP-0106: The Hanzo Plugin Contract</h1>
 <h2>Abstract</h2>
 <p>This is the contract a git repository satisfies in order to build and run as a Hanzo plugin: what it may import, what its <code>main</code> does, how it declares the paths it answers, what documents it must project, and what gates prove all of it. Any repository that satisfies it composes into any host — <code>hanzoai/cloud</code> is the reference host — and also runs standalone as an ordinary HIP-0119 service, with no second code path and no build matrix.</p>
 <p><strong>A plugin imports <code>zip</code> and nothing of the host&#x27;s.</strong> Its binary is composed at run time, not linked at build time, so the host&#x27;s build does not grow when a plugin does, plugins build in parallel, and one changing rebuilds only itself. Capabilities expand strictly opt-in: a language runtime, a store, telemetry, the call plane — each is an import the plugin chooses or a value that arrives at run time, and a plugin needing none pays for none. The smallest host binary runs just the smallest set.</p>
@@ -209,6 +218,7 @@ footer a{color:var(--soft)}
 <h4>§1.1 What a plugin imports</h4>
 <p>A plugin&#x27;s non-test import graph MUST contain, from first-party code, exactly:</p>
 <p>| Import | Role | Status | |---|---|---| | <code>github.com/zap-proto/zip</code> | the framework: router, typed ops, transports, caller, call plane | required | | <code>github.com/zap-proto/zip/middleware</code> | <code>Recover</code>, <code>RequestID</code>, <code>Logger</code>, <code>Telemetry</code>, <code>RateLimit</code>, … | optional | | <code>github.com/hanzoai/plane</code> | the internal call contract: op-name constants and their In/Out types | only if it calls or answers a peer | | <code>github.com/hanzoai/money</code> | exact decimal amounts | only if it handles money | | one <code>zip/&lt;lang&gt;</code> adaptor | a non-Go handler runtime (§5) | only if it mounts one |</p>
+<p>The third row is the one forward reference in the table. <code>github.com/hanzoai/plane</code> is the path §1.3(a) extracts the contract to, and that extraction has not landed: the module does not resolve, and the constants still live in package <code>plane</code> of the <code>hanzoai/cloud</code> module. The row names the destination anyway, because a plugin that spells the import any other way gets edited twice.</p>
 <p>It MUST NOT import <code>github.com/hanzoai/cloud</code>, any <code>hanzoai/cloud/...</code> subpackage, or any other host package. That is the entire rule, and it is checked by a gate, not by review (§8.1).</p>
 <p>Everything else a plugin needs — a store driver, an HTTP client, a PDF library — is the plugin&#x27;s own dependency, chosen by the plugin, paid for by the plugin, and invisible to every other plugin and to the host.</p>
 <h4>§1.2 The measured floor</h4>
@@ -223,7 +233,7 @@ footer a{color:var(--soft)}
 <p>   that arrives at run time cannot be a compile-time dependency, and a plugin    that receives it holds no code to keep in sync.</p>
 <p>Nothing is resolved by a fourth placement. In particular nothing is resolved by a build tag, and nothing is resolved by a stub: where a capability may be absent, the constructor MUST exist either way and MUST be nil-safe, so no caller ever branches on availability (<code>middleware.Telemetry(nil)</code> returning a pass-through handler is the shape).</p>
 <p><strong>(a) The plane contract — a contract module, and one function in zip.</strong></p>
-<p><code>github.com/hanzoai/plane</code> is <code>hanzoai/cloud/plane</code> extracted verbatim to its own module: 74 packages, no host imports, already correct. The extraction is a module-path change and nothing else.</p>
+<p><code>github.com/hanzoai/plane</code> is <code>hanzoai/cloud/plane</code> extracted verbatim to its own module: 74 packages, no host imports, already correct. The extraction is a module-path change and nothing else — and it is the part still to be done. There is no <code>hanzoai/plane</code> module to fetch yet; the package is one directory of <code>hanzoai/cloud</code> until the move lands.</p>
 <p>The <em>client and server halves</em> are already zip and MUST NOT be duplicated. Every helper the host currently wraps them in is deleted in the change that names its survivor:</p>
 <p>| Deleted | Survivor | |---|---| | <code>cloud.Plane()</code> | <code>zip.New(zip.Config{AppName: name})</code> — a second app, listening only on <code>zip.SocketPath(name)</code>, never mounted on the edge | | <code>cloud.ServePlane(name, log)</code> | <code>app.Listen(zip.SocketPath(name))</code> | | <code>cloud.Peer(app)</code> | <code>zip.DialApp(name)</code> | | <code>cloud.Who(ctx)</code> | <code>zip.CallerOf(ctx)</code> | | <code>cloud.For(ctx, org)</code> | <code>zip.WithCaller(ctx, zip.Caller{Org: org})</code> | | <code>cloud.As(c, org)</code> | <code>zip.Delegate(c *Ctx, org string) context.Context</code> — MOVE to zip; it reads only <code>Ctx</code> accessors | | <code>cloud.bindRuntimeDir</code> | the host sets <code>ZIP_RUNTIME_DIR</code> on its children; <code>zip.RuntimeDir()</code> already resolves <code>$ZIP_RUNTIME_DIR</code> → <code>$XDG_RUNTIME_DIR/zip</code> → <code>/run/zip</code> | | <code>cloud.Ask[In,Out]</code> | <code>zip.Ask<a href="ctx, name, op, in">In,Out</a></code> — ADD to zip: dial, call, close |</p>
 <p><code>zip.Ask</code> is the only genuinely missing piece. <code>zip</code> has <code>DialApp</code> and <code>Call</code>; it does not have the one-shot, so every caller writes the same six lines. One function, in zip, because &quot;dial a peer by name and invoke one op&quot; is a property of the call plane and not of any deployment.</p>
@@ -253,7 +263,7 @@ func Tenant(ctx context.Context) (string, bool)</code></pre>
 <p><strong>(e) Telemetry — at run time, through a nil-safe seam that already exists.</strong></p>
 <p><code>middleware.Telemetry(sink O11ySink)</code> is the seam, and <code>Telemetry(nil)</code> is a pass-through. A plugin MUST install it and MUST NOT link an OTLP SDK: the collector lives in the o11y binary alone, and spans leave a plugin as ordinary plane calls to o11y&#x27;s op. This is the direction the OTLZ work is taking fleet-wide; a plugin that links OTLP today adds 43 packages to its floor for a capability the host already provides.</p>
 <p><strong>(f) The host&#x27;s own facilities — not available, by construction.</strong></p>
-<p>A plugin does not serve the console, does not thread operator flags, does not scope credentials for other processes, and does not own the ops listener when it runs as a child (<code>zip.Addr(&quot;&quot;) != &quot;&quot;</code> means a host handed it a socket; the ops port is the host&#x27;s — HIP-0119 §1 applies to the <em>deployment&#x27;s</em> listeners, and a child&#x27;s socket is not one). These are entry-point concerns and stay in one process.</p>
+<p>A plugin does not serve the console, does not thread operator flags, does not scope credentials for other processes, and does not own the ops listener when it runs as a child (<code>zip.Addr(&quot;&quot;) != &quot;&quot;</code> means a host handed it a socket; the ops port is the host&#x27;s — HIP-0119 §1 applies to the <em>deployment&#x27;s</em> listeners, and a child&#x27;s socket is not one). These are edge concerns and stay in one process.</p>
 <h3>§2 The entry point</h3>
 <p>A plugin <code>main</code> does four things, in this order: construct, register, describe if asked, serve. This is the generalisation of what works today — <code>plugin/o11y/main.go</code> is the only existing main written against <code>zip</code> alone, and the other 115 are <code>cloud.Serve</code> calls, which is exactly the import this contract removes.</p>
 <pre><code class="lang-go">// Command billing is the billing service. It builds as its own binary; a host
@@ -417,7 +427,7 @@ func TestEveryDeclaredRouteReachesItsPlugin(t *testing.T) { … }</code></pre>
 <pre><code class="lang-go">import &quot;github.com/zap-proto/zip/js&quot;
 
 app := zip.New(zip.Config{AppName: &quot;webhooks&quot;, Loader: js.Loader()})
-app.Module(&quot;POST /v1/webhooks/transform&quot;, &quot;goja&quot;, &quot;./ext/transform&quot;)</code></pre>
+app.Module(&quot;POST /v1/webhook/transform&quot;, &quot;goja&quot;, &quot;./ext/transform&quot;)</code></pre>
 <p>The import IS the declaration. There is no runtime flag, no manifest field and no build tag, and Go&#x27;s module graph pruning makes it free: measured, <code>zip</code>&#x27;s <code>go.mod</code> still requires goja and esbuild for <code>zip/js</code>, and a plugin that does not import <code>zip/js</code> builds 258 packages with zero goja packages in its graph. One repo, N opt-in packages, each cost borne only by the binary that asks.</p>
 <p><code>hanzoai/base</code> MUST reuse these adaptors and delete <code>base/plugins/{extruntime,gojavm,wasmvm,v8vm}</code>. Base is an application; mounting a foreign-language handler is a framework concern, and today a plugin that wants one route in JavaScript must depend on a whole application framework to get it. <code>app.Module</code> stays the ONE mount verb — there is no <code>ModuleWasm</code>, <code>ModuleGoja</code> or <code>ModulePython</code>, on purpose.</p>
 <p>A module route registers a route and no op, so it is in no document, is no MCP tool and is reachable by no peer. That hole closes when an extension DECLARES its contract in its manifest and <code>zip.Module</code> surfaces the schema; until then a route whose contract IS known belongs in a typed op with the module as an implementation detail behind it.</p>
@@ -451,7 +461,7 @@ test:
       set -e
       export GOPRIVATE=&#x27;github.com/hanzoai/*&#x27; GOWORK=off
       make test</code></pre>
-<p><code>.github/workflows/cicd.yml</code>, unchanged from repo to repo:</p>
+<p><code>.hanzo/workflows/cicd.yml</code>, unchanged from repo to repo — a repository keeps ONE workflow directory and this is the fleet&#x27;s, while the <code>uses:</code> line references the reusable workflow by path at a pinned tag, which is resolved rather than scanned (HIP-0036 §1, §2):</p>
 <pre><code class="lang-yaml">name: CI/CD
 on:
   push: { branches: [main], tags: [&quot;v*&quot;] }
@@ -459,12 +469,12 @@ on:
   workflow_dispatch:
 jobs:
   cicd:
-    uses: hanzoai/ci/.github/workflows/build.yml@v1
+    uses: hanzoai/ci/.github/workflows/build.yml@v2
     secrets: inherit</code></pre>
-<ul><li>Images push to <strong><code>registry.hanzo.ai</code></strong>, org-namespaced <code>&lt;host&gt;/&lt;org&gt;/&lt;app&gt;</code>.</li></ul>
+<ul><li>Images push to <strong><code>oci.hanzo.ai</code></strong>, org-namespaced <code>&lt;host&gt;/&lt;org&gt;/&lt;app&gt;</code>.</li></ul>
 <p>  Registries never mix. <code>ghcr.io/&lt;org&gt;</code> remains only for already-published OSS   deps external users pull.</p>
-<ul><li>The only GitHub secrets are <code>KMS_CLIENT_ID</code> / <code>KMS_CLIENT_SECRET</code> plus the</li></ul>
-<p>  <code>KMS_WORKSPACE</code> variable. Registry, IAM and cluster credentials come from KMS   at run time.</p>
+<ul><li>The only stored secret is the machine identity the build authenticates to KMS</li></ul>
+<p>  with, set on the forge, since <code>.hanzo/workflows/</code> is what the forge reads.   Registry and IAM credentials come from KMS at run time; the build holds no   cluster credential at all, because it does not deploy (HIP-0036 §Deployment).</p>
 <ul><li>Binaries build on every push (an arm64 cross-compile that breaks fails the PR</li></ul>
 <p>  that broke it) and publish on a tag, after the <code>test:</code> gate. <code>binaries.json</code>   ships beside them with <code>{name, os, arch, url, sha256}</code> for every artifact, plus   each artifact&#x27;s <code>&lt;name&gt;.plugin.json</code> declaration (§3.3).</p>
 <ul><li>Builds are <code>CGO_ENABLED=0 -trimpath</code>: the digest must be a function of the</li></ul>
@@ -573,7 +583,7 @@ jobs:
 <h3>Conformance checklist</h3>
 <p>Build a conforming plugin repo in one pass:</p>
 <ol><li><code>go.mod</code> requires <code>github.com/zap-proto/zip &gt;= v1.18.7</code>, plus</li></ol>
-<p>   <code>hanzoai/plane</code> if it calls a peer and <code>hanzoai/money</code> if it handles money.    Nothing from <code>hanzoai/cloud</code>. §8.1 proves it.</p>
+<p>   <code>hanzoai/plane</code> if it calls a peer — not yet fetchable, see §1.3(a) — and    <code>hanzoai/money</code> if it handles money. Nothing from <code>hanzoai/cloud</code>. §8.1    proves it.</p>
 <ol><li>One <code>main</code> per §2: construct, register typed ops, register peer ops on the</li></ol>
 <p>   second app, <code>zip.Described()</code> check, <code>app.Listen(zip.Addr(fallback))</code>.</p>
 <ol><li><code>//go:generate go run github.com/zap-proto/zip/cmd/zipdoc</code> in every package</li></ol>
@@ -614,55 +624,8 @@ DELETE /v1/keys    # revoke the key of that type</code></pre>
 <ol><li><strong>Record</strong>, after the handler returns, with the units the request</li></ol>
 <p>   actually consumed.</p>
 <p><strong>Fail-closed is the default</strong>: when <code>commerce</code> cannot be reached the request is denied rather than served unpriced. Fail-open is a deliberate per-deployment choice, never the consequence of an outage. Free routes declare a price of zero and skip both calls.</p>
-<p>A usage event says who spent, what served it, what it consumed and how it went. It carries no prompt content and no PII.</p>
-<pre><code class="lang-go">type UsageEvent struct {
-    ID        string
-    Timestamp time.Time
-
-    // Who spent
-    OrgID     string
-    ProjectID string
-    UserID    string
-    KeyID     string
-
-    // What served it
-    Service  ServiceScope
-    Model    string
-    Provider string // the upstream that actually answered
-
-    // What it consumed
-    PromptTokens     int
-    CompletionTokens int
-    TotalTokens      int
-    Cost             int64 // USD cents
-
-    // How it went
-    LatencyMs int64
-    TTFTMs    int64 // time to first token, streaming
-    Status    UsageStatus
-
-    // Agent runs attribute each tool call separately
-    AgentID    string
-    AgentRunID string
-    ToolCalls  []ToolCall
-
-    Metadata map[string]string
-}
-
-type ToolCall struct {
-    Name       string // tool
-    Provider   string // MCP server that served it
-    DurationMs int64
-    Status     UsageStatus
-}</code></pre>
-<p>Events are written to the calling tenant&#x27;s own store, so a usage read is org-scoped by construction rather than by a <code>WHERE</code> clause, and <code>commerce</code> aggregates them for invoicing and reseller revenue share.</p>
-<pre><code>GET /v1/usage/summary       # current billing period
-GET /v1/usage/timeseries    # hourly, daily or monthly buckets
-GET /v1/usage/by-model
-GET /v1/usage/by-user
-GET /v1/usage/by-key
-GET /v1/usage/events        # paginated raw events</code></pre>
-<p>All six accept <code>start</code>, <code>end</code>, <code>granularity</code> and <code>filter</code>. An alert is the same data read against a threshold — spend, request count or error count, over a daily, weekly or monthly period — delivered to a webhook, an email address or a Slack hook when it is crossed.</p>
+<p>A usage event says who spent and what it cost, exactly. The wire type the recorder carries is deliberately narrow — subject, namespace, an EXACT decimal USD (never a rounded cent), currency, model and provider (<code>hanzoai/cloud</code> <code>ai.go:23-30</code>) — and it carries no idempotency ref, an absence that is load-bearing: the ref this struct once carried was derived from client-posted fields and handed the ledger&#x27;s dedup key to the payer. It carries no prompt content and no PII. The per-request detail (tokens, latency, per-model breakdowns) lives in the <code>hanzo.cloud_usage</code> warehouse ledger the ai plane writes; the money lands on the org&#x27;s commerce ledger.</p>
+<p>The <code>usage</code> capability is the categorized read over that record, and it is specified in HIP-1313.</p>
 <h3>OpenAI-compatible surface</h3>
 <p>The inference surface is OpenAI&#x27;s, so an existing application moves by changing two strings:</p>
 <pre><code class="lang-python">from openai import OpenAI
@@ -745,7 +708,7 @@ GET  /v1/models</code></pre>
 <h2>References</h2>
 <ul><li>HIP-0119 — Hanzo Service Conventions — **the service shape a plugin conforms</li></ul>
 <p>  to in full; this HIP adds only what HIP-0119 does not cover**</p>
-<ul><li>HIP-0116 — Plugin &amp; VM Model — <strong>SUPERSEDED by this HIP.</strong> Its surviving</li></ul>
+<ul><li>HIP-0106 — Plugin &amp; VM Model — <strong>SUPERSEDED by this HIP.</strong> Its surviving</li></ul>
 <p>  truths are absorbed here: no build tags (a capability is a plugin, compiled   once, loaded when asked); a plugin is a supervised child with crash isolation   and per-prefix 503 degradation; ZAP is only a transport, and reachability   confers no authority. Its lpm distribution, its <code>.zap</code>/<code>zapc</code> plugin IDL and   its &quot;embedded subsystem&quot; shape did not ship and are replaced by §3 (the   declaration), §7 (<code>hanzoai/ci</code> + <code>binaries.json</code> + digest-verified install)   and §1.3(a) (<code>hanzoai/plane</code>, a Go leaf of op names and types)</p>
 <ul><li>HIP-0105 — In-Process Extension Runtime — the engines §5 makes opt-in</li><li>HIP-0134 — One Process, One Socket, One Identity — **where the principal comes</li></ul>
 <p>  from, and the rule that nothing re-derives it.** §1.3(b) and §6 cite it and   add only the plugin&#x27;s own read; they do not restate it</p>
@@ -775,5 +738,4 @@ GET  /v1/models</code></pre>
 </div>
 <div class="fend"><a href="/hip-0106.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

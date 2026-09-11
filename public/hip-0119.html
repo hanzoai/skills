@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,7 +196,7 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0119</h1><p class="lede">HIP-119: Hanzo Service Conventions. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0119: Hanzo Service Conventions</h1>
+<h1>hip-0119</h1><p class="lede">HIP-119: Hanzo Service Conventions. Status Final. Hanzo architectural specification.</p><h1>HIP-0119: Hanzo Service Conventions</h1>
 <h2>Abstract</h2>
 <p>This is the one and only shape of a Hanzo backend service. Every first-party service — across Hanzo, <strong>and across Lux (LPs) and Zoo (ZIPs), which run on the same substrate</strong> — exposes the same listeners on the same ports, serves its API under the same prefix, answers health on the same paths, ships metrics the same way, is configured by the same environment variables, and is deployed by the same operator through the same CRD. Read this one document and you can build, deploy, probe, observe, and call any service in the estate without guessing.</p>
 <p>It exists because the shape had drifted. The same service&#x27;s liveness path was written three different ways in three places — <code>/api/health</code> in the committed manifest, <code>/v1/health</code> in the live cluster, <code>/health</code> in the binary — and a deploy that should have been a version bump became an outage. That is the cost of an unstated contract. This HIP states it.</p>
@@ -197,7 +206,7 @@ footer a{color:var(--soft)}
 <p>The key words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are to be interpreted as in RFC 2119.</p>
 <h3>§1 Two listeners, orthogonal</h3>
 <p>A service MUST bind exactly two HTTP listeners, and they MUST NOT share a port:</p>
-<p>| Listener | Port (default) | Env override | Serves | Auth | |----------|----------------|--------------|--------|------| | <strong>app</strong>  | <code>8000</code>         | <code>PORT</code>       | the product API, under <code>/v1/*</code> only | per HIP-0111 | | <strong>ops</strong>  | <code>9090</code>         | <code>OPS_PORT</code>   | <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>   | none (cluster-internal) |</p>
+<p>| Listener | Port (default) | Env override | Serves | Auth | |----------|----------------|--------------|--------|------| | <strong>app</strong>  | <code>8080</code>         | <code>CLOUD_LISTEN</code> | the product API, under <code>/v1/*</code> only | per HIP-0111 | | <strong>ops</strong>  | <code>9090</code>         | <code>CLOUD_HEALTH_LISTEN</code> | <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>   | none (cluster-internal) |</p>
 <p>The split is the contract, not an optimization. Operational traffic (probes, scrapes, drains) MUST NOT traverse the app listener, and the app listener MUST NOT serve operational endpoints. This is what makes a readiness flap independent of API load, lets <code>NetworkPolicy</code> expose <code>:9090</code> only to the cluster, and means a probe never carries a JWT. A service MAY bind additional protocol listeners (e.g. a ZAP transport per HIP-0114, gRPC); those are declared the same way, on their own ports, and are out of scope here.</p>
 <h3>§2 API surface — <code>/v1/</code> and only <code>/v1/</code></h3>
 <p>Every product endpoint MUST live under <code>/v1/</code>. A service MUST NOT serve a product endpoint at the root, under <code>/api/</code>, or under any other version prefix. The API evolves <strong>forward only</strong>: changes are additive, and <code>/v2</code> MUST NOT be introduced — breaking changes are made by adding fields/endpoints under <code>/v1</code>, never by versioning the namespace. (<code>api.&lt;brand&gt;</code> is already the host; an <code>/api/</code> path prefix on top of it is redundant and is forbidden.)</p>
@@ -209,9 +218,9 @@ footer a{color:var(--soft)}
 <p>  product traffic (migrations applied, required deps reachable, caches warm). It   MUST return <code>503</code> otherwise. A failing <code>/readyz</code> means &quot;take me out of rotation,&quot;   not &quot;restart me.&quot;</p>
 <p>Both MUST be on the <strong>ops</strong> listener (<code>:9090</code>), unauthenticated, and respond in under one second. Per-subsystem detail (e.g. <code>/v1/&lt;sub&gt;/health</code> inside a composed binary per HIP-0106) MAY exist on the app listener for diagnostics, but MUST NOT be what Kubernetes probes; probes target the ops listener.</p>
 <h3>§4 Observability — <code>/metrics</code> on the ops listener</h3>
-<p>A service MUST expose Prometheus metrics at <strong><code>GET /metrics</code></strong> on the ops listener, per HIP-0031. It MUST NOT expose <code>/metrics</code> on the app listener.</p>
+<p>A service MUST expose Prometheus metrics at <strong><code>GET /metrics</code></strong> on the ops listener. It MUST NOT expose <code>/metrics</code> on the app listener.</p>
 <h3>§5 Configuration — environment, deterministic names</h3>
-<p>Configuration is by environment variable. Names are stable and shared: <code>PORT</code>, <code>OPS_PORT</code>, <code>LOG_LEVEL</code>, <code>BRAND</code>, <code>DOMAIN</code>. Identity, datastore, and secret material follow the referenced HIPs (<code>IAM_*</code> per HIP-0111, <code>KMS_*</code> per HIP-0027). A service MUST start with zero required flags — every input has a documented env var and a working default for local single-node dev. Secrets MUST come from KMS (HIP-0027) and MUST NOT be baked into the image or committed in plaintext.</p>
+<p>Configuration is by environment variable. Names are stable and shared: <code>CLOUD_LISTEN</code>, <code>CLOUD_HEALTH_LISTEN</code>, <code>LOG_LEVEL</code>, <code>BRAND</code>, <code>DOMAIN</code>. Identity, datastore, and secret material follow the referenced HIPs (<code>IAM_*</code> per HIP-0111, <code>KMS_*</code> per HIP-0027). A service MUST start with zero required flags — every input has a documented env var and a working default for local single-node dev. Secrets MUST come from KMS (HIP-0027) and MUST NOT be baked into the image or committed in plaintext.</p>
 <h3>§6 Identity &amp; secrets</h3>
 <p>Authentication and token validation MUST be done exactly as HIP-0111 specifies (<code>@hanzo/iam</code>, <code>/v1/iam/oauth/*</code>, <code>&lt;org&gt;-&lt;app&gt;</code> client IDs). Secrets MUST be sourced from KMS per HIP-0027. Neither is redefined here.</p>
 <h3>§7 Deployment — the operator, through the CRD, and nothing else</h3>
@@ -223,23 +232,23 @@ footer a{color:var(--soft)}
 <ul><li>IAM client IDs are <code>&lt;org&gt;-&lt;app&gt;</code> (HIP-0111).</li><li>One service, one repo, one image, one CR. A binary that composes subsystems</li></ul>
 <p>  (HIP-0106) is still one service with one app listener and one ops listener.</p>
 <h3>§9 Forbidden — the anti-patterns this HIP exists to kill</h3>
-<ul><li>An <code>/api/</code> path prefix on any endpoint.</li><li>A versioned health path (<code>/v1/health</code>, <code>/v2/healthz</code>).</li><li>Health, readiness, or metrics on the <strong>app</strong> listener.</li><li>Kubernetes probes pointed at the app listener or at a product/API path.</li><li>A single listener serving both product and operational traffic.</li><li>Per-service bespoke ports for the same role (everyone&#x27;s app is <code>:8000</code>, ops is</li></ul>
+<ul><li>An <code>/api/</code> path prefix on any endpoint.</li><li>A versioned health path (<code>/v1/health</code>, <code>/v2/healthz</code>).</li><li>Health, readiness, or metrics on the <strong>app</strong> listener.</li><li>Kubernetes probes pointed at the app listener or at a product/API path.</li><li>A single listener serving both product and operational traffic.</li><li>Per-service bespoke ports for the same role (everyone&#x27;s app is <code>:8080</code>, ops is</li></ul>
 <p>  <code>:9090</code>).</p>
 <ul><li>Floating image tags in a CR; hand-deployed drift; a second deploy mechanism.</li></ul>
 <h3>§10 One contract across Hanzo, Lux, and Zoo</h3>
 <p>Lux and Zoo run on this same substrate (shared IAM, KMS, operator, gateway, ingress) under white-label branding. <strong>LPs and ZIPs adopt this HIP by reference and MUST NOT restate or fork the service contract.</strong> What differs between ecosystems is <em>values</em> — brand, domain, theme, the org segment of <code>&lt;org&gt;-&lt;app&gt;</code> and <code>ghcr.io/&lt;org&gt;/…</code> — never <em>shape</em>. An LP or ZIP that needs a backend service points at HIP-0119; the contract is identical up, down, left, right, in, and out. That identity is the whole point: it is what makes the platform one way.</p>
 <h2>Reference implementation</h2>
-<p><code>hanzo/cloud</code> (HIP-0106) is the reference: it binds the app listener (<code>CLOUD_LISTEN</code>, <code>:8000</code>) for <code>/v1/*</code> and the ops listener (<code>CLOUD_HEALTH_LISTEN</code>, <code>:9090</code>) for <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>; the <code>cloud-api</code> <code>Service</code> CR probes the ops listener. iam and gateway follow the same split.</p>
+<p><code>hanzo/cloud</code> (HIP-0106) is the reference: it binds the app listener (<code>CLOUD_LISTEN</code>, <code>:8080</code>) for <code>/v1/*</code> and the ops listener (<code>CLOUD_HEALTH_LISTEN</code>, <code>:9090</code>) for <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>; the <code>cloud-api</code> <code>Service</code> CR probes the ops listener. iam and gateway follow the same split.</p>
 <h2>Conformance checklist (build a service against this in one pass)</h2>
-<ol><li>App listener on <code>:8000</code> (<code>PORT</code>); every product route under <code>/v1/</code>. No <code>/api/</code>.</li><li>Ops listener on <code>:9090</code> (<code>OPS_PORT</code>): <code>/healthz</code> (liveness, no deps), <code>/readyz</code></li></ol>
-<p>   (readiness, deps), <code>/metrics</code> (Prometheus). Unauthenticated.</p>
+<ol><li>App listener on <code>:8080</code> (<code>CLOUD_LISTEN</code>); every product route under <code>/v1/</code>. No <code>/api/</code>.</li><li>Ops listener on <code>:9090</code> (<code>CLOUD_HEALTH_LISTEN</code>, default</li></ol>
+<p>   <code>127.0.0.1:9090</code>): <code>/healthz</code> (liveness, no deps), <code>/readyz</code>    (readiness, deps), <code>/metrics</code> (Prometheus). Unauthenticated.</p>
 <ol><li>Probes (in the CR) target <code>:9090/healthz</code> and <code>:9090/readyz</code>.</li><li>Starts with zero required flags; secrets from KMS (HIP-0027); auth via</li></ol>
 <p>   <code>@hanzo/iam</code> (HIP-0111).</p>
 <ol><li>Image <code>ghcr.io/&lt;org&gt;/&lt;svc&gt;:vX.Y.Z</code>; deployed by one <code>Service</code>/<code>LLM</code> CR</li></ol>
 <p>   (HIP-0400) reconciled by the operator.</p>
 <ol><li>Nothing from §9.</li></ol>
 <h2>References</h2>
-<ul><li>HIP-0027 Secrets Management · HIP-0031 Observability/Metrics · HIP-0044 API Gateway</li><li>HIP-0068 Ingress · HIP-0106 Unified Cloud Binary · HIP-0111 IAM Authentication</li><li>HIP-0112 Cloud Infrastructure Topology · HIP-0400 Service CRD</li></ul>
+<ul><li>HIP-0027 Secrets Management · HIP-0519 One Identity Boundary</li><li>HIP-0068 Ingress · HIP-0106 Unified Cloud Binary · HIP-0111 IAM Authentication</li><li>HIP-0132 One Telemetry Plane · HIP-0400 Service CRD</li></ul>
 <footer>
 <div class="fmap">
   <div><b>Build</b>
@@ -259,5 +268,4 @@ footer a{color:var(--soft)}
 </div>
 <div class="fend"><a href="/hip-0119.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

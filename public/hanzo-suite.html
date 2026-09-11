@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-suite</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-suite.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-suite">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-suite.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-suite</h1><p class="lede">Hanzo Business Suite is a fork of Odoo 18.0 (Community Edition) providing a full-featured open-source ERP/CRM platform tightly integrated with Hanzo AI infrastructure.</p><h1>Hanzo Suite - Business ERP/CRM Suite (Odoo 18 Fork)</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-commerce.md</code>, <code>hanzo/hanzo-platform.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Business Suite is a <strong>fork of Odoo 18.0</strong> (Community Edition) providing a full-featured open-source ERP/CRM platform tightly integrated with Hanzo AI infrastructure. It includes CRM, e-commerce, warehouse management, project management, billing/accounting, POS, HR, marketing, manufacturing, and 100+ built-in modules. Runs as a Python web application backed by PostgreSQL. Live at <code>team.hanzo.ai</code> and <code>hanzo.team</code>.</p>
+<h3>Why Hanzo Suite?</h3>
+<ul><li><strong>Full ERP in one platform</strong>: CRM, accounting, inventory, HR, e-commerce, POS, project management</li><li><strong>Odoo 18.0 base</strong>: Mature, battle-tested ERP framework with large addon ecosystem</li><li><strong>AI integration</strong>: Positioned for Hanzo AI enhancements on top of Odoo&#x27;s module system</li><li><strong>Self-hosted</strong>: Docker Compose deployment with PostgreSQL, Traefik reverse proxy</li><li><strong>Modular</strong>: 100+ built-in addons, plus custom addons in <code>/mnt/extra-addons</code></li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Language</strong>: Python 3.10+ (core framework)</li><li><strong>Web framework</strong>: Werkzeug + custom Odoo HTTP layer</li><li><strong>ORM</strong>: Odoo ORM (custom, PostgreSQL-backed, declarative field definitions)</li><li><strong>Database</strong>: PostgreSQL 16</li><li><strong>Frontend</strong>: Odoo Web Client (JavaScript/OWL framework)</li><li><strong>Templates</strong>: Jinja2 + QWeb (Odoo&#x27;s XML-based template engine)</li><li><strong>Container</strong>: <code>odoo:18</code> official Docker image</li><li><strong>Reverse proxy</strong>: Traefik (production)</li><li><strong>License</strong>: LGPL-3.0</li></ul>
+<h3>OSS Base</h3>
+<p>Repo: <code>hanzoai/suite</code>. Default branch: <code>main</code>. Fork of Odoo 18.0 Community Edition.</p>
+<h2>When to use</h2>
+<ul><li>Running internal business operations (CRM, accounting, inventory, HR)</li><li>E-commerce storefront with integrated warehouse and shipping</li><li>Project management with time tracking and billing</li><li>Point-of-sale for retail operations</li><li>Custom business workflow automation via Odoo modules</li><li>Financial reporting and accounting</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>PostgreSQL 16</strong> database</li><li><strong>Python 3.10+</strong> with system dependencies (lxml, Pillow, psycopg2, etc.)</li><li><strong>Docker</strong> (recommended deployment method)</li><li><strong>wkhtmltopdf</strong> for PDF report generation (included in Odoo Docker image)</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Live URL | <code>https://team.hanzo.ai</code> / <code>https://hanzo.team</code> | | Web port | 8069 (mapped to 10017 in dev compose) | | Live chat port | 8072 (mapped to 20017 in dev compose) | | Odoo version | 18.0 (final) | | Python | 3.10+ | | Database | PostgreSQL 16 | | ORM | Odoo ORM (custom) | | Default branch | <code>main</code> | | License | LGPL-3.0 | | Repo | <code>github.com/hanzoai/suite</code> |</p>
+<h2>One-file quickstart</h2>
+<h3>Docker Compose (development)</h3>
+<pre><code class="lang-yaml"># compose.yaml
+services:
+ db:
+ image: postgres:16
+ environment:
+ POSTGRES_USER: odoo
+ POSTGRES_PASSWORD: &quot;${DB_PASSWORD}&quot;
+ POSTGRES_DB: postgres
+ volumes:
+ - ./postgresql:/var/lib/postgresql/data
+
+ odoo:
+ image: odoo:18
+ depends_on:
+ - db
+ ports:
+ - &quot;8069:8069&quot;
+ - &quot;8072:8072&quot;
+ environment:
+ HOST: db
+ USER: odoo
+ PASSWORD: &quot;${DB_PASSWORD}&quot;
+ volumes:
+ - ./addons:/mnt/extra-addons
+ - ./etc:/etc/odoo</code></pre>
+<pre><code class="lang-bash"># Start
+DB_PASSWORD=changeme docker compose up -d
+
+# Access at http://localhost:8069
+# First run: create database via web UI</code></pre>
+<h3>From source</h3>
+<pre><code class="lang-bash"># Clone
+git clone https://github.com/hanzoai/suite.git
+cd suite
+
+# Install dependencies (use uv for venv)
+uv venv
+uv pip install -r requirements.txt
+
+# Run
+./odoo-bin --addons-path=addons -d mydb</code></pre>
+<h2>Core Concepts</h2>
+<h3>Architecture</h3>
+<pre><code> Traefik (HTTPS)
+ |
+ team.hanzo.ai / hanzo.team
+ |
+ +--------------+
+ | Odoo 18.0 | :8069 (web)
+ | (Python) | :8072 (longpolling/livechat)
+ +--------------+
+ |
+ +--------------+
+ | PostgreSQL 16|
+ +--------------+
+
+Odoo internals:
+ odoo-bin (entrypoint)
+ -&gt; odoo.cli.main()
+ -&gt; odoo.http (Werkzeug-based HTTP server)
+ -&gt; odoo.models (ORM layer)
+ -&gt; odoo.fields (field definitions)
+ -&gt; odoo.api (environment, decorators)
+ -&gt; odoo/addons/* (built-in modules)
+ -&gt; /mnt/extra-addons/* (custom modules)</code></pre>
+<h3>Module System</h3>
+<p>Odoo&#x27;s power comes from its modular architecture. Each module is a Python package with:</p>
+<ul><li><code>__manifest__.py</code> -- Module metadata (name, version, depends, data files)</li><li><code>models/</code> -- Python ORM model definitions</li><li><code>views/</code> -- XML view definitions (form, tree, kanban, etc.)</li><li><code>security/</code> -- Access control (ir.model.access.csv, record rules)</li><li><code>data/</code> -- Default data (XML/CSV)</li><li><code>static/</code> -- Web assets (JS, CSS, images)</li><li><code>controllers/</code> -- HTTP route handlers</li></ul>
+<h3>Odoo ORM</h3>
+<p>The ORM maps Python classes to PostgreSQL tables:</p>
+<pre><code class="lang-python">from odoo import models, fields, api
+
+class SaleOrder(models.Model):
+ _name = &#x27;sale.order&#x27;
+ _description = &#x27;Sales Order&#x27;
+
+ name = fields.Char(string=&#x27;Order Reference&#x27;, required=True)
+ partner_id = fields.Many2one(&#x27;res.partner&#x27;, string=&#x27;Customer&#x27;)
+ order_line = fields.One2many(&#x27;sale.order.line&#x27;, &#x27;order_id&#x27;)
+ amount_total = fields.Monetary(compute=&#x27;_compute_total&#x27;)
+ state = fields.Selection([
+ (&#x27;draft&#x27;, &#x27;Quotation&#x27;),
+ (&#x27;sale&#x27;, &#x27;Sales Order&#x27;),
+ (&#x27;done&#x27;, &#x27;Done&#x27;),
+ (&#x27;cancel&#x27;, &#x27;Cancelled&#x27;),
+ ], default=&#x27;draft&#x27;)
+
+ @api.depends(&#x27;order_line.price_subtotal&#x27;)
+ def _compute_total(self):
+ for order in self:
+ order.amount_total = sum(order.order_line.mapped(&#x27;price_subtotal&#x27;))</code></pre>
+<h3>Key Built-in Modules</h3>
+<p>| Module | Purpose | |--------|---------| | <code>sale</code> | Sales orders and quotations | | <code>purchase</code> | Purchase orders | | <code>stock</code> | Warehouse and inventory management | | <code>account</code> | Accounting and invoicing | | <code>crm</code> | Customer relationship management | | <code>project</code> | Project management and tasks | | <code>hr</code> | Human resources | | <code>website</code> | Website builder | | <code>website_sale</code> | E-commerce storefront | | <code>point_of_sale</code> | Point of sale | | <code>mrp</code> | Manufacturing | | <code>mail</code> | Internal messaging and email |</p>
+<h3>Production Deployment</h3>
+<p>The production compose (<code>compose.prod.yaml</code>) uses:</p>
+<ul><li><strong>Traefik</strong> reverse proxy with automatic Let&#x27;s Encrypt TLS</li><li><strong>Domains</strong>: <code>team.hanzo.ai</code> and <code>hanzo.team</code> (both routed to same Odoo instance)</li><li><strong>CSP headers</strong>: Scoped to <code>self</code> + <code>team.hanzo.ai</code> + <code>hanzo.team</code></li><li><strong>Named volumes</strong>: <code>odoo-web-data-prod</code>, <code>odoo-db-data-prod</code></li><li><strong>Network</strong>: <code>hanzo-network</code> (external Docker network shared with other Hanzo services)</li><li><strong>Config</strong>: Mounted from <code>/etc/hanzo/compose/odoo/files/config</code></li><li><strong>Custom addons</strong>: Mounted from <code>/etc/hanzo/compose/odoo/files/addons</code></li></ul>
+<h2>Directory structure</h2>
+<pre><code>github.com/hanzoai/suite/
+ odoo-bin # Entrypoint script (Python)
+ setup.py # Package definition (pip installable as &#x27;odoo&#x27;)
+ setup.cfg # Setup configuration
+ requirements.txt # Pinned Python dependencies (per Python version)
+ MANIFEST.in # Package manifest
+ compose.yaml # Development Docker Compose
+ compose.prod.yaml # Production Docker Compose (Traefik + TLS)
+ odoo/ # Core framework
+ __init__.py # Framework initialization
+ release.py # Version info (18.0.0 final)
+ api.py # Environment, decorators (@api.depends, @api.model, etc.)
+ fields.py # Field type definitions (Char, Integer, Many2one, etc.)
+ models.py # Base Model, TransientModel, AbstractModel
+ http.py # HTTP layer (Werkzeug-based)
+ sql_db.py # Database connection pool
+ exceptions.py # UserError, ValidationError, AccessError, etc.
+ netsvc.py # Logging and network services
+ addons/ # Built-in addon modules (100+)
+ cli/ # Command-line interface (server, scaffold, shell, etc.)
+ conf/ # Configuration handling
+ modules/ # Module loader and registry
+ service/ # RPC and WSGI services
+ tests/ # Core framework tests
+ tools/ # Utility functions (mail, image, misc, etc.)
+ upgrade/ # Database upgrade scripts
+ osv/ # Legacy ORM compatibility
+ addons/ # Custom/extra addons directory (mounted in Docker)
+ debian/ # Debian packaging files
+ doc/ # Documentation
+ setup/ # Setup scripts
+ .github/ # Issue/PR templates</code></pre>
+<h2>Key Python Dependencies</h2>
+<p>| Package | Purpose | |---------|---------| | <code>psycopg2</code> | PostgreSQL adapter | | <code>werkzeug</code> | HTTP/WSGI framework | | <code>lxml</code> | XML/HTML processing | | <code>Jinja2</code> | Template engine | | <code>Pillow</code> | Image processing | | <code>reportlab</code> | PDF generation | | <code>passlib</code> | Password hashing | | <code>gevent</code> | Async worker mode | | <code>requests</code> | HTTP client | | <code>cryptography</code> | Crypto operations | | <code>python-ldap</code> | LDAP authentication (optional) |</p>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | &quot;FATAL: role odoo does not exist&quot; | PostgreSQL user not created | <code>createuser -s odoo</code> or set POSTGRES_USER in compose | | Module not found | Addons path not set | Add <code>--addons-path=addons,/mnt/extra-addons</code> | | &quot;port 8069 already in use&quot; | Another Odoo or service running | <code>lsof -i :8069</code> and stop conflicting process | | Slow first startup | Module installation and asset compilation | Normal for first run; subsequent starts are faster | | PDF reports blank | wkhtmltopdf missing | Install via package manager or use Docker image | | &quot;database does not exist&quot; | No database created | Access <code>/web/database/manager</code> to create one | | Assets not loading | CSS/JS not compiled | Clear browser cache; run <code>./odoo-bin --dev=assets</code> |</p>
+<h2>Environment Variables</h2>
+<pre><code class="lang-bash"># Database connection
+HOST=db # PostgreSQL host
+USER=odoo # PostgreSQL user
+PASSWORD=changeme # PostgreSQL password
+
+# Odoo config file (alternative to env vars)
+# /etc/odoo/odoo.conf</code></pre>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-commerce.md</code> - Hanzo Commerce (web3 commerce, complementary to Suite)</li><li><code>hanzo/hanzo-platform.md</code> - PaaS for deploying Suite instances</li><li><code>hanzo/hanzo-database.md</code> - PostgreSQL infrastructure</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: erp, crm, odoo, accounting, inventory, e-commerce, python <strong>Prerequisites</strong>: Python 3.10+, PostgreSQL 16, Docker (recommended)</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-suite.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

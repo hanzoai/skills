@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-gym</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-gym.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-gym">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-gym.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-gym</h1><p class="lede">Zoo Gym is the unified training infrastructure for all ZenLM AI models, built on LLaMA Factory.</p><h1>Zoo Gym - Unified AI Model Training Platform</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Difficulty</strong>: Intermediate <strong>Prerequisites</strong>: Python 3.10+, PyTorch, basic ML knowledge <strong>Related Skills</strong>: zenlm.md, python-sdk.md, hanzo-dev.md</p>
+<h2>Overview</h2>
+<p><strong>Zoo Gym</strong> is the unified training infrastructure for all ZenLM AI models, built on LLaMA Factory. Developed by Zoo Labs Foundation (501(c)(3) charitable organization dedicated to AI research for wildlife conservation and preservation), it provides comprehensive support for fine-tuning, reinforcement learning, and quantization across the entire ZenLM model family—from zen-nano (0.6B) to zen-musician (7B).</p>
+<p><strong>Why Zoo Gym?</strong></p>
+<ul><li><strong>Unified Platform</strong>: Train all ZenLM models with consistent tooling</li><li><strong>Production-Grade</strong>: Battle-tested methods including GRPO (Group Relative Policy Optimization)</li><li><strong>Training-Free GRPO Innovation</strong>: Distinct implementation based on Tencent&#x27;s youtu-agent research - no value network needed</li><li><strong>Performance Optimized</strong>: 2-5x faster with Unsloth, FlashAttention-2, Liger Kernel</li><li><strong>Hardware Efficient</strong>: Train 4B models on 8GB GPUs with QLoRA</li><li><strong>Export Ready</strong>: GGUF, MLX, AWQ, GPTQ quantization for deployment</li><li><strong>Wildlife Conservation</strong>: Part of Zoo Labs Foundation&#x27;s mission to aid conservation efforts</li></ul>
+<h2>Quick Start</h2>
+<h3>Installation</h3>
+<pre><code class="lang-bash"># Clone Zoo Gym repository
+git clone https://github.com/zooai/gym.git
+cd gym
+
+# Create environment
+conda create -n zoo-gym python=3.10
+conda activate zoo-gym
+pip install -r requirements.txt
+
+# FlashAttention-2 (recommended - 2x faster)
+pip install flash-attn --no-build-isolation
+
+# Unsloth acceleration (2-5x faster training)
+pip install &quot;unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git&quot;</code></pre>
+<h3>Train Your First Model (zen-nano with LoRA)</h3>
+<pre><code class="lang-bash">llamafactory-cli train \
+ --stage sft \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-0.6B \
+ --dataset your_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --lora_target all \
+ --output_dir ./zen-nano-lora \
+ --per_device_train_batch_size 4 \
+ --gradient_accumulation_steps 4 \
+ --num_train_epochs 3 \
+ --lr_scheduler_type cosine \
+ --learning_rate 5e-5 \
+ --flash_attn fa2 \
+ --use_unsloth true \
+ --save_steps 100 \
+ --logging_steps 10</code></pre>
+<h3>GUI Training Interface</h3>
+<pre><code class="lang-bash"># Launch Zoo Gym web interface
+llamafactory-cli webui</code></pre>
+<p>Access at http://localhost:7860 for visual training configuration.</p>
+<h2>Training Methods</h2>
+<h3>1. LoRA (Low-Rank Adaptation)</h3>
+<p><strong>Best for</strong>: Most training scenarios <strong>Memory</strong>: ~30% of full fine-tuning <strong>Speed</strong>: 1.5-2x faster <strong>Quality</strong>: 95-98% of full fine-tuning</p>
+<pre><code class="lang-bash">llamafactory-cli train \
+ --stage sft \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-4B \
+ --dataset your_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --lora_rank 64 \
+ --lora_alpha 32 \
+ --lora_dropout 0.1 \
+ --lora_target all \
+ --output_dir ./model-lora \
+ --per_device_train_batch_size 4 \
+ --gradient_accumulation_steps 4 \
+ --learning_rate 5e-5</code></pre>
+<h3>2. QLoRA (Quantized LoRA)</h3>
+<p><strong>Best for</strong>: Limited GPU memory (train 4B on 8GB GPU) <strong>Memory</strong>: ~10% of full fine-tuning <strong>Speed</strong>: 1.2-1.5x faster than full <strong>Quality</strong>: 90-95% of full fine-tuning</p>
+<pre><code class="lang-bash">llamafactory-cli train \
+ --stage sft \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-4B \
+ --dataset your_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --quantization_bit 4 \
+ --lora_rank 64 \
+ --lora_alpha 32 \
+ --output_dir ./model-qlora \
+ --per_device_train_batch_size 1 \
+ --gradient_accumulation_steps 16 \
+ --learning_rate 2e-4</code></pre>
+<h3>3. GRPO (Group Relative Policy Optimization)</h3>
+<p><strong>Best for</strong>: Reinforcement learning from human feedback <strong>Innovation</strong>: Zoo Gym&#x27;s distinct training-free GRPO implementation - no value network required <strong>Memory</strong>: 40-60% less than PPO (eliminates value network overhead) <strong>Speed</strong>: 2x faster than PPO <strong>Quality</strong>: Superior to DPO for instruction following</p>
+<p><strong>Implementation</strong>: Zoo Gym uses a distinct training-free GRPO variant based on <a href="https://github.com/TencentCloudADP/youtu-agent/tree/training_free_GRPO/training_free_grpo">Tencent&#x27;s youtu-agent research</a>. This eliminates the value network entirely, unlike standard GRPO implementations (e.g., DeepSeek), making it truly training-free and more memory-efficient for RLHF workflows.</p>
+<pre><code class="lang-bash">llamafactory-cli train \
+ --stage grpo \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-4B \
+ --dataset your_preference_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --output_dir ./model-grpo \
+ --per_device_train_batch_size 2 \
+ --gradient_accumulation_steps 8 \
+ --num_train_epochs 1 \
+ --learning_rate 1e-5</code></pre>
+<h3>4. GSPO (Group Sampled Policy Optimization)</h3>
+<p><strong>Best for</strong>: Mixture-of-Experts models (Qwen3-MoE) <strong>Memory</strong>: Similar to GRPO <strong>Speed</strong>: Optimized for MoE stability</p>
+<pre><code class="lang-bash">llamafactory-cli train \
+ --stage gspo \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-4B-MoE \
+ --dataset your_preference_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --output_dir ./model-gspo \
+ --learning_rate 1e-5</code></pre>
+<p><strong>Note on Training-Free GRPO</strong>: Training-free GRPO is the <strong>default approach</strong> used in Zoo Gym for local LLMs and production deployments. It provides the best balance of memory efficiency and quality without requiring value networks. For specialized use cases like per-user personalization, see BitDelta/DeltaSoup below.</p>
+<h2>Per-User Personalization (BitDelta &amp; DeltaSoup)</h2>
+<h3>BitDelta (ZIP-7) - Personalized Models Without LoRA</h3>
+<p><strong>Purpose</strong>: Create millions of personalized model variants for individual users <strong>without</strong> using LoRA <strong>Innovation</strong>: 1-bit quantization of fine-tune deltas - <strong>distinct from training-free GRPO</strong> <strong>Memory</strong>: 10× reduction for personalized models <strong>Safety</strong>: 60% reduction in jailbreak risks <strong>Use Case</strong>: Per-user personalization of frontier LLMs (GPT-4, Claude, Llama, Qwen)</p>
+<p><strong>How It Works</strong>:</p>
+<ul><li>Compresses fine-tune deltas to binary signs + scales</li><li>Each user gets a unique personalized variant</li><li>Base model stays in memory, deltas are 1-bit</li><li>Serve thousands of users from single GPU</li></ul>
+<pre><code class="lang-bash"># Train personalized variant for user
+llamafactory-cli train \
+ --stage sft \
+ --model_name_or_path Qwen/Qwen3-4B \
+ --dataset user_123_preferences \
+ --template qwen3 \
+ --finetuning_type bitdelta \
+ --output_dir ./variants/user_123 \
+ --quantization_method bitdelta \
+ --bits 1 \
+ --group_size 128 \
+ --safety_threshold 0.6</code></pre>
+<p><strong>Python SDK Integration</strong>:</p>
+<pre><code class="lang-python">from zoo.gym import PersonalizedTrainer, BitDeltaConfig
+
+# Configure BitDelta for per-user personalization
+config = BitDeltaConfig(
+ bits=1, # 1-bit quantization
+ group_size=128, # Group size for quantization
+ safety_threshold=0.6, # 60% jailbreak reduction
+ enable_deltasoup=True # Enable community aggregation
+)
+
+# Create personalized trainer
+trainer = PersonalizedTrainer(
+ base_model=&quot;Qwen/Qwen3-4B&quot;,
+ config=config
+)
+
+# Train personalized variants
+trainer.create_variant(
+ user_id=&quot;user_123&quot;,
+ preferences=user_preferences,
+ dataset=user_dataset
+)
+
+# Serve variant (10× memory efficient)
+response = trainer.serve_variant(
+ user_id=&quot;user_123&quot;,
+ prompt=&quot;Hello, what do you remember about me?&quot;
+)</code></pre>
+<h3>DeltaSoup - Community-Driven Improvement</h3>
+<p><strong>Purpose</strong>: Aggregate personalized improvements from multiple users <strong>Innovation</strong>: Byzantine-robust community learning <strong>Safety</strong>: Differential privacy + outlier rejection <strong>Rewards</strong>: Contributor rewards based on quality</p>
+<p><strong>How It Works</strong>:</p>
+<ul><li>Users contribute their personalized deltas</li><li>Byzantine-robust aggregation filters malicious contributions</li><li>Differential privacy protects individual contributions</li><li>Contributors earn rewards based on quality</li></ul>
+<pre><code class="lang-python">from zoo.gym import DeltaSoup, AggregationMethod, DeltaSoupConfig
+
+# Configure DeltaSoup
+config = DeltaSoupConfig(
+ method=AggregationMethod.BYZANTINE_ROBUST,
+ differential_privacy=True,
+ enable_rewards=True,
+ min_contributors=3,
+ quality_threshold=0.8
+)
+
+# Create soup
+soup = DeltaSoup(config)
+
+# Users contribute their improvements
+soup.contribute(user_id=&quot;alice&quot;, model=model_alice)
+soup.contribute(user_id=&quot;bob&quot;, model=model_bob)
+soup.contribute(user_id=&quot;charlie&quot;, model=model_charlie)
+
+# Aggregate improvements
+aggregated_model = soup.aggregate()
+
+# Distribute rewards
+rewards = soup.calculate_rewards()
+# {&#x27;alice&#x27;: 42.5, &#x27;bob&#x27;: 38.2, &#x27;charlie&#x27;: 19.3}</code></pre>
+<h3>BitDelta vs LoRA vs Training-Free GRPO</h3>
+<p>| Method | Purpose | Memory | Speed | Use Case | |--------|---------|---------|-------|----------| | <strong>Training-Free GRPO</strong> | RLHF | -40% vs PPO | 2x vs PPO | <strong>Default for local LLMs &amp; production</strong> | | <strong>BitDelta</strong> | Per-user personalization | 10× reduction | Fast | Millions of user variants | | <strong>DeltaSoup</strong> | Community learning | Efficient | Async | Aggregate user improvements | | <strong>LoRA</strong> | General fine-tuning | -70% vs full | 1.5x vs full | Single-model adaptation | | <strong>QLoRA</strong> | Memory-constrained | -90% vs full | 1.2x vs full | Train 4B on 8GB GPU |</p>
+<p><strong>Key Distinctions</strong>:</p>
+<ul><li><strong>Training-Free GRPO</strong>: Used everywhere by default in Zoo Gym for local and production LLMs (no value network)</li><li><strong>BitDelta</strong>: For per-user personalization without LoRA (works directly on fine-tune deltas)</li><li><strong>DeltaSoup</strong>: For community-driven improvements (aggregates user contributions)</li><li><strong>LoRA/QLoRA</strong>: For general-purpose fine-tuning (adapter layers)</li></ul>
+<h2>Cost Savings: Training-Free GRPO vs Traditional Fine-Tuning</h2>
+<p><strong>Dramatic cost reduction</strong> using Training-Free GRPO compared to traditional LoRA or standard RL methods:</p>
+<h3>Training Cost Comparison</h3>
+<p>| Method | Model | Training Samples | Training Cost | Performance (AIME24) | |--------|-------|-----------------|---------------|---------------------| | <strong>Training-Free GRPO</strong> | DeepSeek-V3.1-Terminus (671B) | 100 | <strong>~$18</strong> | <strong>82.7%</strong> | | ReTool (Standard RL) | Qwen2.5-32B-Instruct | 1000s | <strong>~$10,000</strong> | 67.0% | | LoRA Fine-Tuning | Qwen2.5-32B-Instruct | 1000s | <strong>~$20,000</strong> | ~60-70% |</p>
+<p><strong>Key Findings</strong>:</p>
+<ul><li><strong>500× cost reduction</strong>: $18 vs $10,000+ for superior performance</li><li><strong>100× fewer samples</strong>: 100 vs 1000s of training examples needed</li><li><strong>Better results</strong>: 82.7% vs 67.0% on AIME24 benchmark</li><li><strong>No parameter updates</strong>: Zero gradient computation, instant deployment</li><li><strong>Larger model advantage</strong>: 671B frozen model outperforms fine-tuned 32B</li></ul>
+<h3>Infrastructure Cost Breakdown</h3>
+<p><strong>Traditional LoRA/RL Training</strong> (Example: ReTool on Qwen2.5-32B):</p>
+<pre><code>Training Cost:
+- GPU hours: 20,000 × $0.5/hour = $10,000
+- Data collection: $2,000-5,000
+- Total: $12,000-15,000
+
+Deployment Cost (Dedicated GPU):
+- 4× GPUs at $0.5/GPU-hour = $2/hour = $1,440/month
+- Inference: ~$0.005 per problem (400 problems/hour)
+- Fixed infrastructure: Always running, even with low usage
+
+Result: $10K+ training + $1.4K/month deployment</code></pre>
+<p><strong>Training-Free GRPO</strong> (Example: DeepSeek-V3.1-Terminus):</p>
+<pre><code>Training Cost:
+- API calls: 38M input tokens + 6.6M output tokens
+- With cache hit pricing: ~$18 for 100 samples
+- 3 training steps over 6 hours
+- Total: $18
+
+Deployment Cost (Pay-as-you-go API):
+- ~$0.02 per problem (60K input + 8K output tokens)
+- No fixed infrastructure
+- Only pay for actual usage
+- Automatic scaling, no GPU management
+
+Result: $18 training + pay-per-use inference</code></pre>
+<h3>When Training-Free GRPO Saves More</h3>
+<p><strong>Ideal scenarios for maximum cost savings</strong>:</p>
+<ol><li><strong>Low-frequency applications</strong>: Don&#x27;t need dedicated GPU cluster</li><li><strong>Specialized domains</strong>: Need adaptation but not full fine-tuning</li><li><strong>Limited data</strong>: Only dozens of examples available</li><li><strong>Rapid iteration</strong>: Need quick experiments without multi-day training</li><li><strong>Multiple domains</strong>: Switch between domains by plugging in different experiences</li><li><strong>Budget constraints</strong>: Cannot afford $10K+ training costs</li></ol>
+<h3>Real-World Cost Example</h3>
+<p><strong>Scenario</strong>: Medical diagnosis assistant (low-traffic, specialized domain)</p>
+<p><strong>Traditional LoRA Fine-Tuning</strong>:</p>
+<ul><li>Training: $15,000 (data collection + GPU time)</li><li>Deployment: $1,440/month (dedicated GPU)</li><li>First year: $15,000 + $17,280 = <strong>$32,280</strong></li><li>Rigid specialization: Cannot adapt to new medical domains without retraining</li></ul>
+<p><strong>Training-Free GRPO</strong>:</p>
+<ul><li>Training: $50 (200 samples across 3 medical subdomains)</li><li>Deployment: $200/month (100 diagnoses/day @ $0.02 each, 100 days/month)</li><li>First year: $50 + $2,400 = <strong>$2,450</strong></li><li>Flexible: Switch medical domains by plugging in different experiences</li><li><strong>Savings</strong>: $29,830 (92% cost reduction)</li></ul>
+<h3>SDK Support for Training-Free GRPO</h3>
+<p><strong>Full Python SDK support</strong>:</p>
+<pre><code class="lang-python">from zoo.gym import TrainingFreeGRPO, GRPOConfig
+
+# Configure Training-Free GRPO
+config = GRPOConfig(
+ group_size=5, # 5 rollouts per query
+ max_epochs=3, # 3 training steps
+ temperature_train=0.7, # Training temperature
+ temperature_eval=0.3 # Evaluation temperature
+)
+
+# Create trainer
+trainer = TrainingFreeGRPO(
+ base_model=&quot;deepseek/v3.1-terminus&quot;,
+ config=config
+)
+
+# Train with minimal samples
+experiences = trainer.train(
+ dataset=math_problems[:100], # Only 100 samples!
+ reward_model=reward_fn
+)
+
+# Deploy instantly - no parameter updates needed
+response = trainer.infer(
+ query=&quot;Solve this geometry problem...&quot;,
+ experiences=experiences # Plug in learned experiences
+)</code></pre>
+<p><strong>Full Rust SDK support</strong>:</p>
+<pre><code class="lang-rust">use zoo_gym::{TrainingFreeGRPO, GRPOConfig};
+
+let config = GRPOConfig {
+ group_size: 5,
+ max_epochs: 3,
+ temperature_train: 0.7,
+ temperature_eval: 0.3,
+};
+
+let trainer = TrainingFreeGRPO::new(&quot;deepseek/v3.1-terminus&quot;, config);
+let experiences = trainer.train(&amp;dataset[..100], reward_fn)?;
+let response = trainer.infer(query, &amp;experiences)?;</code></pre>
+<h3>Native Hanzo Ecosystem Support</h3>
+<p><strong>Hanzo Node</strong>: Serve Training-Free GRPO models locally</p>
+<ul><li>Load frozen base model (e.g., DeepSeek, Qwen)</li><li>Inject learned experiences as context</li><li>Zero-latency experience switching</li><li>Local inference for privacy</li></ul>
+<p><strong>Hanzo Engine</strong>: Optimized inference with experience injection</p>
+<ul><li>Native Rust implementation</li><li>1-bit BitDelta variants supported</li><li>Memory-efficient experience caching</li><li>Multi-experience parallel serving</li></ul>
+<p><strong>Hanzo Dev</strong>: CLI training workflows</p>
+<pre><code class="lang-bash"># Train with Training-Free GRPO
+dev &quot;train training-free GRPO on math dataset with 100 samples&quot;
+
+# Export experiences
+dev &quot;export learned experiences to JSON&quot;
+
+# Deploy to local node
+dev &quot;deploy experiences to hanzo node with deepseek base model&quot;</code></pre>
+<p><strong>Hanzo Desktop</strong>: Local training and mining</p>
+<ul><li>Train Training-Free GRPO on MacBook</li><li>Mine $AI tokens while serving personalized models</li><li>ZenLM models (zen-eco, zen-agent) with learned experiences</li><li>Automatic experience caching and reuse</li></ul>
+<h2>Zen Model Training Configs</h2>
+<h3>zen-nano (0.6B) - Ultra-lightweight</h3>
+<pre><code class="lang-yaml">model_name_or_path: Qwen/Qwen3-0.6B
+template: qwen3
+finetuning_type: lora
+lora_rank: 64
+lora_alpha: 32
+per_device_train_batch_size: 8
+gradient_accumulation_steps: 2
+learning_rate: 5e-5
+flash_attn: fa2
+use_unsloth: true
+max_length: 2048
+num_train_epochs: 3</code></pre>
+<p><strong>Hardware Requirements</strong>: 4GB GPU (GTX 1660 Ti+)</p>
+<h3>zen-eco (4B) - Efficient models (instruct/thinking/agent)</h3>
+<pre><code class="lang-yaml">model_name_or_path: Qwen/Qwen3-4B
+template: qwen3
+finetuning_type: lora
+lora_rank: 128
+lora_alpha: 64
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 4
+learning_rate: 2e-5
+flash_attn: fa2
+use_unsloth: true
+max_length: 4096
+num_train_epochs: 3</code></pre>
+<p><strong>Hardware Requirements</strong>: 16GB GPU (RTX 4060 Ti+) or 8GB with QLoRA</p>
+<h3>zen-agent (4B) - Tool calling &amp; function execution</h3>
+<pre><code class="lang-yaml">model_name_or_path: Qwen/Qwen3-4B
+dataset: Salesforce/xlam-function-calling-60k
+template: qwen3
+finetuning_type: lora
+lora_rank: 128
+lora_alpha: 64
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 8
+learning_rate: 1e-5
+max_length: 8192</code></pre>
+<p><strong>Hardware Requirements</strong>: 16GB GPU (RTX 4060 Ti+)</p>
+<h3>zen-musician (7B) - Music generation with lyrics</h3>
+<pre><code class="lang-yaml">model_name_or_path: m-a-p/YuE-s1-7B-anneal-en-cot
+template: yue
+finetuning_type: lora
+lora_rank: 64
+lora_alpha: 32
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 16
+learning_rate: 2e-4
+flash_attn: fa2
+max_length: 4096</code></pre>
+<p><strong>Hardware Requirements</strong>: 24GB GPU (RTX 3090+) or 12GB with QLoRA</p>
+<h2>Quantization &amp; Export</h2>
+<h3>Export to GGUF (llama.cpp)</h3>
+<pre><code class="lang-bash"># Q4_K_M (recommended for most use cases)
+llamafactory-cli export \
+ --model_name_or_path ./zen-eco-lora \
+ --adapter_name_or_path ./zen-eco-lora \
+ --template qwen3 \
+ --export_dir ./zen-eco-gguf \
+ --export_size 4 \
+ --export_quantization_bit 4 \
+ --export_legacy_format false
+
+# Q8_0 (higher quality)
+llamafactory-cli export \
+ --model_name_or_path ./model \
+ --export_dir ./gguf \
+ --export_quantization_bit 8
+
+# Q2_K (maximum compression for mobile)
+llamafactory-cli export \
+ --model_name_or_path ./model \
+ --export_dir ./gguf \
+ --export_quantization_bit 2</code></pre>
+<h3>MLX Conversion (Apple Silicon)</h3>
+<pre><code class="lang-bash"># Convert to MLX format for Mac
+python -m mlx_lm.convert \
+ --hf-path ./zen-eco-lora \
+ --mlx-path ./zen-eco-mlx \
+ --quantize</code></pre>
+<h2>Performance Optimizations</h2>
+<h3>FlashAttention-2</h3>
+<p><strong>Benefit</strong>: 2x faster attention, 22GB → 20GB memory <strong>Installation</strong>: <code>pip install flash-attn --no-build-isolation</code></p>
+<pre><code class="lang-bash">--flash_attn fa2</code></pre>
+<h3>Unsloth</h3>
+<p><strong>Benefit</strong>: 2-5x faster training, 20GB → 18GB memory <strong>Installation</strong>: <code>pip install &quot;unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git&quot;</code></p>
+<pre><code class="lang-bash">--use_unsloth true</code></pre>
+<h3>Liger Kernel</h3>
+<p><strong>Benefit</strong>: 3x faster, LinkedIn&#x27;s optimized kernels <strong>Installation</strong>: Included in requirements.txt</p>
+<pre><code class="lang-bash">--enable_liger_kernel true</code></pre>
+<h3>Gradient Checkpointing</h3>
+<p><strong>Benefit</strong>: 2.8x speed, 18GB → 14GB memory (trades compute for memory)</p>
+<pre><code class="lang-bash">--gradient_checkpointing true</code></pre>
+<h3>Combined Optimization</h3>
+<pre><code class="lang-bash">llamafactory-cli train \
+ --model_name_or_path Qwen/Qwen3-4B \
+ --flash_attn fa2 \
+ --use_unsloth true \
+ --enable_liger_kernel true \
+ --gradient_checkpointing true \
+ --quantization_bit 4</code></pre>
+<p><strong>Result</strong>: Train zen-eco-4B on 8GB GPU at 3x baseline speed!</p>
+<h2>Hardware Requirements</h2>
+<p>| Model Size | Training Method | GPU Memory | Recommended GPU | Speed | |------------|----------------|------------|-----------------|-------| | 0.6B | Full | 8GB | RTX 3060 | 1.0x | | 0.6B | LoRA | 4GB | GTX 1660 Ti | 1.5x | | 4B | Full | 32GB | RTX 3090 | 1.0x | | 4B | LoRA | 16GB | RTX 4060 Ti | 1.5x | | 4B | QLoRA 4-bit | 8GB | RTX 3060 | 1.2x | | 4B | LoRA + Unsloth | 14GB | RTX 3060 Ti | 2.5x | | 7B | Full | 48GB | A6000 | 1.0x | | 7B | LoRA | 24GB | RTX 3090 | 1.5x | | 7B | QLoRA 4-bit | 12GB | RTX 3060 Ti | 1.2x |</p>
+<h2>Experiment Tracking</h2>
+<h3>Weights &amp; Biases</h3>
+<pre><code class="lang-bash">export WANDB_PROJECT=zen-models
+export WANDB_API_KEY=your_key
+
+llamafactory-cli train \
+ --report_to wandb \
+ --config your_config.yaml</code></pre>
+<h3>TensorBoard (Built-in)</h3>
+<pre><code class="lang-bash"># TensorBoard logs automatically created
+tensorboard --logdir ./output</code></pre>
+<h3>MLflow</h3>
+<pre><code class="lang-bash">llamafactory-cli train \
+ --report_to mlflow \
+ --config your_config.yaml</code></pre>
+<h2>Deployment</h2>
+<h3>OpenAI-style API (vLLM)</h3>
+<pre><code class="lang-bash">llamafactory-cli api \
+ --model_name_or_path ./zen-eco-lora \
+ --template qwen3 \
+ --infer_backend vllm \
+ --port 8000</code></pre>
+<h3>Gradio Chat Interface</h3>
+<pre><code class="lang-bash">llamafactory-cli chat \
+ --model_name_or_path ./zen-eco-lora \
+ --template qwen3</code></pre>
+<p>Access at http://localhost:7860</p>
+<h2>Troubleshooting</h2>
+<h3>Out of Memory Errors</h3>
+<pre><code class="lang-bash"># 1. Reduce batch size
+--per_device_train_batch_size 1
+
+# 2. Increase gradient accumulation
+--gradient_accumulation_steps 32
+
+# 3. Enable gradient checkpointing
+--gradient_checkpointing true
+
+# 4. Use QLoRA 4-bit
+--quantization_bit 4</code></pre>
+<h3>Slow Training</h3>
+<pre><code class="lang-bash"># 1. Enable FlashAttention-2
+--flash_attn fa2
+
+# 2. Enable Unsloth
+--use_unsloth true
+
+# 3. Enable Liger Kernel
+--enable_liger_kernel true
+
+# 4. Check GPU utilization
+nvidia-smi -l 1</code></pre>
+<h3>Model Divergence (Loss exploding)</h3>
+<pre><code class="lang-bash"># 1. Lower learning rate
+--learning_rate 1e-5
+
+# 2. Add warmup
+--warmup_ratio 0.1
+
+# 3. Use cosine scheduler
+--lr_scheduler_type cosine
+
+# 4. Reduce gradient accumulation
+--gradient_accumulation_steps 4</code></pre>
+<h2>Comparison: Manual Training vs Zoo Gym</h2>
+<h3>Manual PyTorch Training (50-100+ lines)</h3>
+<pre><code class="lang-python">import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer
+from peft import LoraConfig, get_peft_model
+from datasets import load_dataset
+
+# Load model and tokenizer
+model = AutoModelForCausalLM.from_pretrained(&quot;Qwen/Qwen3-4B&quot;, torch_dtype=torch.float16)
+tokenizer = AutoTokenizer.from_pretrained(&quot;Qwen/Qwen3-4B&quot;)
+
+# Configure LoRA
+lora_config = LoraConfig(
+ r=64,
+ lora_alpha=32,
+ target_modules=[&quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;, &quot;o_proj&quot;],
+ lora_dropout=0.1,
+ bias=&quot;none&quot;,
+ task_type=&quot;CAUSAL_LM&quot;
+)
+model = get_peft_model(model, lora_config)
+
+# Load and preprocess dataset
+dataset = load_dataset(&quot;your_dataset&quot;)
+def preprocess_function(examples):
+ # Complex tokenization logic...
+ pass
+tokenized_dataset = dataset.map(preprocess_function, batched=True)
+
+# Configure trainer with custom settings
+training_args = TrainingArguments(
+ output_dir=&quot;./output&quot;,
+ per_device_train_batch_size=4,
+ gradient_accumulation_steps=4,
+ learning_rate=5e-5,
+ num_train_epochs=3,
+ lr_scheduler_type=&quot;cosine&quot;,
+ # Many more parameters...
+)
+
+trainer = Trainer(
+ model=model,
+ args=training_args,
+ train_dataset=tokenized_dataset,
+ tokenizer=tokenizer
+)
+
+# Train and export
+trainer.train()
+model.save_pretrained(&quot;./output&quot;)
+
+# Manual GGUF export (complex multi-step process)
+# ... 20+ more lines ...</code></pre>
+<h3>Zoo Gym (1 command)</h3>
+<pre><code class="lang-bash">llamafactory-cli train \
+ --stage sft \
+ --do_train \
+ --model_name_or_path Qwen/Qwen3-4B \
+ --dataset your_dataset \
+ --template qwen3 \
+ --finetuning_type lora \
+ --lora_target all \
+ --output_dir ./zen-eco-lora \
+ --per_device_train_batch_size 4 \
+ --gradient_accumulation_steps 4 \
+ --num_train_epochs 3 \
+ --learning_rate 5e-5 \
+ --flash_attn fa2 \
+ --use_unsloth true</code></pre>
+<p><strong>Result</strong>: 50-100 lines → 1 command, <strong>10-50x faster development</strong></p>
+<h2>Integration with Hanzo/ZenLM Ecosystem</h2>
+<h3>Train with Hanzo Python SDK</h3>
+<pre><code class="lang-python">from hanzo import Hanzo
+
+# Initialize Hanzo with local training mode
+hanzo = Hanzo(
+ inference_mode=&#x27;local&#x27;,
+ node_url=&#x27;http://localhost:8080&#x27;
+)
+
+# Deploy trained model to Hanzo Node
+hanzo.deploy_model(
+ model_path=&#x27;./zen-eco-lora&#x27;,
+ model_name=&#x27;zen-eco-custom&#x27;,
+ quantization=&#x27;4bit&#x27;
+)
+
+# Use trained model immediately
+response = hanzo.chat.completions.create(
+ model=&#x27;zen-eco-custom&#x27;,
+ messages=[{&#x27;role&#x27;: &#x27;user&#x27;, &#x27;content&#x27;: &#x27;Test my fine-tuned model&#x27;}]
+)</code></pre>
+<h3>Use with Hanzo Dev (Terminal Agent)</h3>
+<pre><code class="lang-bash"># Train model
+dev &quot;train zen-eco with my dataset using LoRA&quot;
+
+# Export to GGUF
+dev &quot;export the trained model to GGUF Q4_K_M&quot;
+
+# Deploy to Hanzo Node
+dev &quot;deploy the GGUF model to my local Hanzo Node&quot;</code></pre>
+<h2>Best Practices</h2>
+<h3>1. Start Small, Scale Up</h3>
+<pre><code class="lang-bash"># 1. Test with zen-nano first (fast iteration)
+llamafactory-cli train --model_name_or_path Qwen/Qwen3-0.6B ...
+
+# 2. Move to zen-eco when ready
+llamafactory-cli train --model_name_or_path Qwen/Qwen3-4B ...
+
+# 3. Scale to zen-musician for production
+llamafactory-cli train --model_name_or_path m-a-p/YuE-s1-7B ...</code></pre>
+<h3>2. Use GUI for Experimentation</h3>
+<pre><code class="lang-bash"># Launch Zoo Gym GUI for visual configuration
+llamafactory-cli webui
+
+# Export config once satisfied
+# config.yaml created automatically</code></pre>
+<h3>3. Track Everything</h3>
+<pre><code class="lang-bash"># Use WandB for professional tracking
+export WANDB_PROJECT=my-zen-models
+llamafactory-cli train --report_to wandb ...</code></pre>
+<h3>4. Optimize Progressively</h3>
+<pre><code class="lang-bash"># Baseline (no optimization)
+llamafactory-cli train --model_name_or_path Qwen/Qwen3-4B ...
+
+# Add FlashAttention-2 (+50% speed)
+--flash_attn fa2
+
+# Add Unsloth (+100-150% speed)
+--use_unsloth true
+
+# Add gradient checkpointing (if memory constrained)
+--gradient_checkpointing true</code></pre>
+<h2>Related Skills</h2>
+<ul><li><strong>zenlm.md</strong>: Learn about ZenLM model family and capabilities</li><li><strong>python-sdk.md</strong>: Deploy trained models with Hanzo SDK</li><li><strong>hanzo-dev.md</strong>: Use terminal agent to automate training workflows</li><li><strong>hanzo-desktop.md</strong>: Run trained models locally with mining capabilities</li></ul>
+<h2>Additional Resources</h2>
+<ul><li><strong>GitHub</strong>: https://github.com/zooai/gym</li><li><strong>Zoo Labs Foundation</strong>: https://zoo.ngo (501(c)(3) charitable organization)</li><li><strong>LLaMA Factory</strong>: https://github.com/hiyouga/LLaMA-Factory</li><li><strong>HuggingFace Models</strong>: https://huggingface.co/zenlm</li></ul>
+<h2>Zoo Labs Foundation</h2>
+<p>Zoo Gym is developed and maintained by <strong>Zoo Labs Foundation</strong> (501(c)(3) tax-exempt charitable organization) dedicated to AI research for wildlife conservation, preservation, and environmental protection.</p>
+<p><strong>Tax ID</strong>: 88-3538992 <strong>Mission</strong>: Leverage AI technology to aid in wildlife conservation efforts globally</p>
+<p>By using Zoo Gym, you&#x27;re supporting open-source AI research that directly contributes to environmental conservation.</p>
+<hr>
+<p><strong>Zoo Gym</strong> - Train any ZenLM model with production-grade efficiency. Developed by <strong>Zoo Labs Foundation</strong> for conservation through AI.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-gym.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

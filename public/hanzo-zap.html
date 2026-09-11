@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-zap</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-zap.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-zap">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-zap.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-zap</h1><p class="lede">ZAP is THE Hanzo transport (HIP-0114): the zero-copy protocol every Hanzo service speaks — subsystem↔subsystem inside the cloud binary (ZAP-typed Go interfaces in-process), host↔plugin-VM over the wire (ZAP RPC, HIP-0116), and service↔datab</p><h1>Hanzo ZAP - The Transport (and the DB Protocol Bridge)</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Canonical spec</strong>: HIP-0114 (ZAP transport), HIP-0116 (plugin VMs over ZAP) <strong>Related Skills</strong>: <code>hanzo-cloud-architecture/SKILL.md</code>, <code>hanzo/hanzo-mcp.md</code>, <code>hanzo/hanzo-sql.md</code>, <code>hanzo/hanzo-kv.md</code></p>
+<h2>Overview</h2>
+<p><strong>ZAP is THE Hanzo transport</strong> (HIP-0114): the zero-copy protocol every Hanzo service speaks — subsystem↔subsystem inside the <code>cloud</code> binary (ZAP-typed Go interfaces in-process), host↔plugin-VM over the wire (ZAP RPC, HIP-0116), and service↔database via the bridge below. There is <strong>ZERO gRPC and ZERO protobuf in Hanzo code</strong>; the only protobuf anywhere is the tiny <code>zap2pb</code> tool (<code>~/work/zap/zap2pb</code>, ~30 LOC) at the OTel (OTLP/OpAMP) interop edge — <code>pb2zap</code>/<code>zap2pb</code>/<code>zapc</code> handle the pb↔zap boundary while services hold only ZAP types. The <code>zip</code> server (<code>github.com/hanzoai/zip</code>) serves ZAP as its primary listener with HTTP as an extra.</p>
+<p>This skill also covers <code>hanzoai/zap</code>, the <strong>Go bridge that translates ZAP calls into native database protocols</strong>. It runs alongside databases and caches in 4 modes: SQL (PostgreSQL), KV (Valkey/Redis), Datastore (ClickHouse), and DocumentDB (MongoDB wire protocol). ZAP&#x27;s schema maps 1:1 with MCP, so any ZAP service gets MCP tools for free.</p>
+<h2>When to use</h2>
+<ul><li>Choosing the transport for ANY Hanzo service-to-service call (answer: ZAP)</li><li>Wiring a plugin VM to the cloud host (ZAP RPC, HIP-0116)</li><li>Adding MCP tool support to PostgreSQL, Redis, ClickHouse, or MongoDB</li><li>Building AI agents that need direct database access via MCP</li><li>Deploying database sidecars in K8s for ZAP/MCP access</li><li>Bridging Hanzo Gateway to backend infrastructure</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Sidecar pattern</strong>: ZAP runs in the same pod as the database, communicating via localhost</li><li><strong>Port 9651</strong>: Default ZAP listen port (same as Lux staking port by convention)</li><li><strong>Single mode per instance</strong>: Each sidecar runs one mode (<code>--mode sql|kv|datastore|documentdb</code>)</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Repo | <code>github.com/hanzoai/zap</code> | | Module | <code>github.com/hanzoai/zap-sidecar</code> | | Go version | 1.26 | | Binary | <code>bin/zap</code> | | Modes | <code>sql</code>, <code>kv</code>, <code>datastore</code>, <code>documentdb</code> | | Default port | 9651 | | Health | <code>GET /health</code> (port 9651) | | Image | <code>ghcr.io/hanzoai/zap:latest</code> | | Build | <code>make build</code> | | Test | <code>make test</code> | | Service type | mDNS: <code>_hanzo._tcp</code> | | K8s manifests | <code>universe/infra/k8s/sql/</code> (sidecar in sql StatefulSet) |</p>
+<h2>ZAP-MCP mapping</h2>
+<p>ZAP&#x27;s schema natively maps 1:1 with MCP:</p>
+<p>| ZAP Concept | MCP Equivalent | |-------------|----------------| | ZAP tools | <code>listTools</code>, <code>callTool</code> | | ZAP resources | <code>listResources</code>, <code>readResource</code> | | ZAP prompts | <code>listPrompts</code>, <code>getPrompt</code> |</p>
+<p>Any service implementing the ZAP interface gets MCP for free via the ZAP Gateway (<code>zapd</code>).</p>
+<h2>MCP tools by mode</h2>
+<h3>SQL mode (<code>--mode sql</code>)</h3>
+<p>| Tool | Description | |------|------------| | <code>sql_query</code> | Execute read-only SQL SELECT, return JSON rows | | <code>sql_exec</code> | Execute write SQL (INSERT/UPDATE/DELETE), return affected rows | | <code>sql_health</code> | Check PostgreSQL connection health |</p>
+<p>Resource: <code>hanzo://sql/schema</code> -- database schema (tables, columns, indexes)</p>
+<h3>KV mode (<code>--mode kv</code>)</h3>
+<p>| Tool | Description | |------|------------| | <code>kv_get</code> | Get value by key | | <code>kv_set</code> | Set key-value pair (optional TTL) | | <code>kv_mget</code> | Get multiple values by keys | | <code>kv_cmd</code> | Execute arbitrary Valkey/Redis command |</p>
+<p>Resource: <code>hanzo://kv/info</code> -- server info and statistics</p>
+<h3>Datastore mode (<code>--mode datastore</code>)</h3>
+<p>| Tool | Description | |------|------------| | <code>datastore_query</code> | Execute ClickHouse SQL query, return JSON rows | | <code>datastore_exec</code> | Execute DDL/non-SELECT statement | | <code>datastore_insert</code> | Bulk insert rows via native batch protocol | | <code>datastore_tables</code> | List tables and metadata | | <code>datastore_health</code> | Check connection health |</p>
+<p>Resource: <code>hanzo://datastore/tables</code> -- table definitions and schemas</p>
+<h3>DocumentDB mode (<code>--mode documentdb</code>)</h3>
+<p>| Tool | Description | |------|------------| | <code>documentdb_find</code> | Find documents matching a filter | | <code>documentdb_insert</code> | Insert documents into a collection | | <code>documentdb_update</code> | Update documents matching a filter | | <code>documentdb_delete</code> | Delete documents matching a filter | | <code>documentdb_health</code> | Check connection health |</p>
+<p>Resource: <code>hanzo://documentdb/collections</code> -- collection list and indexes</p>
+<h2>Dependencies</h2>
+<p>| Package | Version | Purpose | |---------|---------|---------| | <code>github.com/luxfi/zap</code> | v0.2.0 | ZAP protocol + mDNS discovery | | <code>github.com/jackc/pgx/v5</code> | v5.7.2 | PostgreSQL driver | | <code>github.com/hanzoai/kv-go/v9</code> | v9.17.2-hanzo.1 | Valkey/Redis client | | <code>github.com/ClickHouse/clickhouse-go/v2</code> | v2.43.0 | ClickHouse native driver | | <code>go.mongodb.org/mongo-driver/v2</code> | v2.5.0 | MongoDB driver |</p>
+<h2>Quickstart</h2>
+<pre><code class="lang-bash">git clone https://github.com/hanzoai/zap.git
+cd zap
+make build
+
+# SQL mode (PostgreSQL sidecar)
+./bin/zap --mode sql --backend &quot;postgres://user:pass@localhost:5432/db&quot;
+
+# KV mode (Valkey/Redis sidecar)
+./bin/zap --mode kv --backend localhost:6379 --password secret
+
+# Datastore mode (ClickHouse sidecar)
+ZAP_USER=default ZAP_DATABASE=default \
+ ./bin/zap --mode datastore --backend localhost:9000
+
+# DocumentDB mode (MongoDB/FerretDB sidecar)
+ZAP_DATABASE=hanzo \
+ ./bin/zap --mode documentdb --backend localhost:27017</code></pre>
+<h2>K8s sidecar deployment</h2>
+<p>ZAP runs as a sidecar in a StatefulSet, not a standalone Deployment:</p>
+<pre><code class="lang-yaml"># In the sql StatefulSet
+containers:
+ - name: postgres
+ image: ghcr.io/hanzoai/sql:latest
+ - name: zap
+ image: ghcr.io/hanzoai/zap:latest
+ args: [&quot;--mode&quot;, &quot;sql&quot;, &quot;--backend&quot;, &quot;localhost:5432&quot;]
+ ports:
+ - containerPort: 9651
+ livenessProbe:
+ httpGet:
+ path: /health
+ port: 9651</code></pre>
+<h2>Wire format</h2>
+<p>ZAP is a native TCP binary protocol (bridge default port 9651; zip&#x27;s primary ZAP listener uses 9653). The wire format is designed for zero-copy operation:</p>
+<ul><li><strong>Header</strong>: 8 bytes (4-byte length + 4-byte type)</li><li><strong>Body</strong>: ZAP zero-copy encoding — NOT protobuf; messages are read in place</li><li><strong>Streaming</strong>: Bidirectional streaming for large result sets</li><li><strong>Service mesh</strong>: mDNS discovery for automatic sidecar registration</li></ul>
+<h3>The one pb boundary</h3>
+<p>Protobuf exists at exactly one edge: OTel interop (OTLP/OpAMP). <code>zap2pb</code> converts outbound ZAP telemetry to OTLP pb; <code>pb2zap</code> converts inbound; <code>zapc</code> compiles the schemas. No Hanzo service imports <code>google.golang.org/grpc</code> or <code>google.golang.org/protobuf</code> — if you find one, that is a bug.</p>
+<h2>Environment variables</h2>
+<p>| Variable | Description | Default | |----------|------------|---------| | <code>ZAP_MODE</code> | Backend mode | required | | <code>ZAP_BACKEND</code> | Backend address (host:port or DSN) | required | | <code>ZAP_PASSWORD</code> | Backend password | empty | | <code>ZAP_USER</code> | Backend username | empty | | <code>ZAP_DATABASE</code> | Database name | empty |</p>
+<h2>CLI flags</h2>
+<p>| Flag | Description | Default | |------|------------|---------| | <code>--mode</code> | Sidecar mode | <code>$ZAP_MODE</code> | | <code>--node-id</code> | ZAP node ID | mode name | | <code>--port</code> | ZAP listen port | 9651 | | <code>--service-type</code> | mDNS service type | <code>_hanzo._tcp</code> | | <code>--backend</code> | Backend address | <code>$ZAP_BACKEND</code> | | <code>--password</code> | Backend password | <code>$ZAP_PASSWORD</code> |</p>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | &quot;unknown mode&quot; error | Invalid mode | Set <code>--mode</code> to: sql, kv, datastore, documentdb | | Connection refused | Backend unreachable | Same pod = localhost. Check backend container | | Health check fails | Wrong port | ZAP listens on 9651: <code>wget -qO- http://localhost:9651/health</code> | | Auto-deploy disabled | Sidecar in StatefulSet | Build/push image, deploy manually (bouncing would restart DB) |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-mcp.md</code> -- MCP tools (ZAP provides MCP for free)</li><li><code>hanzo/hanzo-sql.md</code> -- PostgreSQL (hanzoai/sql)</li><li><code>hanzo/hanzo-kv.md</code> -- Valkey/Redis (hanzoai/kv)</li><li><code>hanzo/hanzo-datastore.md</code> -- ClickHouse analytics</li><li><code>hanzo/hanzo-documentdb.md</code> -- MongoDB wire protocol</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-23 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: zap, sidecar, protocol-bridge, mcp, postgresql, redis, clickhouse, mongodb <strong>Prerequisites</strong>: Go 1.26, Docker</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-zap.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tool-use-concepts</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/tool-use-concepts.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/tool-use-concepts">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/tool-use-concepts.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>tool-use-concepts</h1><p class="lede">This file covers the conceptual foundations of tool use with the Claude API.</p><h1>Tool Use Concepts</h1>
+<p>This file covers the conceptual foundations of tool use with the Claude API. For language-specific code examples, see the <code>python/</code>, <code>typescript/</code>, or other language folders. For decision heuristics on which tools to expose, how to manage context in long-running agents, and caching strategy, see <code>agent-design.md</code>.</p>
+<h2>User-Defined Tools</h2>
+<h3>Tool Definition Structure</h3>
+<blockquote><p><strong>Note:</strong> When using the Tool Runner (beta), tool schemas are generated automatically from your function signatures (Python), Zod schemas (TypeScript), annotated classes (Java), <code>jsonschema</code> struct tags (Go), or <code>BaseTool</code> subclasses (Ruby). The raw JSON schema format below is for the manual approach — including PHP&#x27;s <code>BetaRunnableTool</code>, which wraps a run closure around a hand-written schema — or SDKs without tool runner support.</p></blockquote>
+<p>Each tool requires a name, description, and JSON Schema for its inputs:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;get_weather&quot;,
+  &quot;description&quot;: &quot;Get current weather for a location&quot;,
+  &quot;input_schema&quot;: {
+    &quot;type&quot;: &quot;object&quot;,
+    &quot;properties&quot;: {
+      &quot;location&quot;: {
+        &quot;type&quot;: &quot;string&quot;,
+        &quot;description&quot;: &quot;City and state, e.g., San Francisco, CA&quot;
+      },
+      &quot;unit&quot;: {
+        &quot;type&quot;: &quot;string&quot;,
+        &quot;enum&quot;: [&quot;celsius&quot;, &quot;fahrenheit&quot;],
+        &quot;description&quot;: &quot;Temperature unit&quot;
+      }
+    },
+    &quot;required&quot;: [&quot;location&quot;]
+  }
+}</code></pre>
+<p><strong>Best practices for tool definitions:</strong></p>
+<ul><li>Use clear, descriptive names (e.g., <code>get_weather</code>, <code>search_database</code>, <code>send_email</code>)</li><li>Write detailed descriptions — Claude uses these to decide when to use the tool. Be **prescriptive about <em>when</em> to call it**, not just what it does (e.g. &quot;Call this when the user asks about current prices or recent events&quot;). On recent Opus models, which reach for tools more conservatively, trigger conditions in the description give measurable lift in should-call rate.</li><li>Include descriptions for each property</li><li>Use <code>enum</code> for parameters with a fixed set of values</li><li>Mark truly required parameters in <code>required</code>; make others optional with defaults</li></ul>
+<hr>
+<h3>Tool Choice Options</h3>
+<p>Control when Claude uses tools:</p>
+<p>| Value                             | Behavior                                      | | --------------------------------- | --------------------------------------------- | | <code>{&quot;type&quot;: &quot;auto&quot;}</code>                | Claude decides whether to use tools (default) | | <code>{&quot;type&quot;: &quot;any&quot;}</code>                 | Claude must use at least one tool             | | <code>{&quot;type&quot;: &quot;tool&quot;, &quot;name&quot;: &quot;...&quot;}</code> | Claude must use the specified tool            | | <code>{&quot;type&quot;: &quot;none&quot;}</code>                | Claude cannot use tools                       |</p>
+<p>Any <code>tool_choice</code> value can also include <code>&quot;disable_parallel_tool_use&quot;: true</code> to force Claude to use at most one tool per response. By default, Claude may request multiple tool calls in a single response.</p>
+<hr>
+<h3>Tool Runner vs Manual Loop</h3>
+<p><strong>Tool Runner (Recommended):</strong> The SDK&#x27;s tool runner handles the agentic loop automatically — it calls the API, detects tool use requests, executes your tool functions, feeds results back to Claude, and repeats until Claude stops calling tools. Available in Python, TypeScript, Java, Go, Ruby, PHP, and C# SDKs (beta). The Python SDK also provides MCP conversion helpers (<code>anthropic.lib.tools.mcp</code>) to convert MCP tools, prompts, and resources for use with the tool runner — see <code>python/claude-api/tool-use.md</code> for details. <strong>Default to the tool runner</strong> for any custom-tool agent.</p>
+<p><strong>The tool runner is not a black box — &quot;I need control&quot; is rarely a reason to drop to the manual loop.</strong> Each iteration yields the assistant message <em>before</em> the tools run and lets you intervene, so most &quot;fine-grained control&quot; needs are covered without hand-writing the loop:</p>
+<ul><li><strong>Human-in-the-loop approval / gating</strong> — gate in the tool&#x27;s run function (return a &quot;user declined&quot; result instead of executing), or inspect the tool call in the yielded message and override the pending request with <code>set_messages_params()</code> / <code>setMessagesParams()</code> / <code>append_messages()</code> / <code>pushMessages()</code> to allow or deny <em>before</em> the tool executes. The runner runs your function automatically only if you don&#x27;t intervene.</li><li><strong>Error interception</strong> — inspect the tool result before it returns to Claude (<code>generate_tool_call_response()</code> / <code>generateToolResponse()</code>); stop early or handle it yourself.</li><li><strong>Result modification</strong> — mutate the tool result before it goes back (e.g. add <code>cache_control</code> for prompt caching, or transform the output).</li><li><strong>Per-turn retries / param changes</strong> — e.g. bump <code>max_tokens</code> and re-run a truncated turn; bound the whole loop with <code>max_iterations</code>.</li><li><strong>Streaming and automatic compaction</strong> are both supported.</li></ul>
+<p>These hooks are SDK helper features, not separate API parameters — for the exact method names and worked examples, WebFetch the per-language SDK repo listed in <code>shared/live-sources.md</code> → <em>Claude API SDK Repositories</em> (the tool-runner helpers live in each repo&#x27;s <code>tools.md</code> / <code>helpers.md</code>). The bundled <code>python/claude-api/tool-use.md</code> and <code>typescript/claude-api/tool-use.md</code> show the basic tool-runner setup.</p>
+<p><strong>Don&#x27;t drop to a manual loop because of these misconceptions:</strong></p>
+<ul><li>The tool runner does not require Zod/Pydantic — <code>betaTool()</code> (TS) and <code>@beta_tool</code> (Python) accept raw JSON Schema; other SDKs use plain structs/maps/classes.</li><li>The runner makes detecting the final turn <em>easier</em>, not harder — iteration ends when Claude stops calling tools, and the last yielded message is the final response. Most SDKs also offer a one-shot variant (<code>runner.until_done()</code> / <code>runner.runUntilDone()</code> / <code>RunToCompletion()</code>).</li><li>Confirmation/approval gates work with the runner (see Security below).</li></ul>
+<p><strong>Manual Agentic Loop:</strong> Reach for this only when you want to own the <em>entire</em> loop — you need control the runner does not expose (e.g., a custom transport, request shapes the SDK cannot build, per-token streaming on SDKs whose runner does not support it), you&#x27;d rather not take the beta dependency, or your control flow doesn&#x27;t fit the runner&#x27;s per-turn hooks (e.g. interleaving unrelated work mid-loop). Approval gates, logging, interception, result modification, and conditional execution do <strong>not</strong> require it — the tool runner covers those (above). Loop until <code>stop_reason == &quot;end_turn&quot;</code>, always append the full <code>response.content</code> to preserve tool_use blocks, and ensure each <code>tool_result</code> includes the matching <code>tool_use_id</code>.</p>
+<p><strong>Stop reasons for server-side tools:</strong> When using server-side tools (code execution, web search, etc.), the API runs a server-side sampling loop. If this loop reaches its default limit of 10 iterations, the response will have <code>stop_reason: &quot;pause_turn&quot;</code>. To continue, re-send the user message and assistant response and make another API request — the server will resume where it left off. Do NOT add an extra user message like &quot;Continue.&quot; — the API detects the trailing <code>server_tool_use</code> block and knows to resume automatically.</p>
+<pre><code class="lang-python"># Handle pause_turn in your agentic loop
+if response.stop_reason == &quot;pause_turn&quot;:
+    messages = [
+        {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: user_query},
+        {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: response.content},
+    ]
+    # Make another API request — server resumes automatically
+    response = client.messages.create(
+        model=&quot;claude-opus-5&quot;, messages=messages, tools=tools
+    )</code></pre>
+<p><strong>Note:</strong> the SDK tool runners do not auto-resume <code>pause_turn</code> (as of <code>@anthropic-ai/sdk</code> 0.110.0 / <code>anthropic</code> 0.116.0) — a paused turn ends the runner and is returned as the final message, with no error. In TypeScript you can resume inside the iteration body (push the paused assistant turn back onto the runner); in Python the runner cannot be resumed mid-loop — restart a new runner with the paused turn appended, or handle <code>pause_turn</code> in a manual loop. See each language&#x27;s <code>tool-use.md</code> for the pattern.</p>
+<p>Set a <code>max_continuations</code> limit (e.g., 5) to prevent infinite loops. For the full guide, see: <code>https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons</code></p>
+<blockquote><p><strong>Security:</strong> The tool runner executes your tool functions automatically whenever Claude requests them. For tools with side effects (sending emails, modifying databases, financial transactions), validate inputs and gate destructive operations behind human approval. <strong>Both</strong> the tool runner and the manual loop support this — with the tool runner, gate inside the tool&#x27;s run function (prompt the user and return a &quot;user declined&quot; result instead of executing), or inspect the tool call in each yielded message and take over message history with <code>set_messages_params()</code> / <code>setMessagesParams()</code> to allow or deny <em>before</em> the tool runs (it executes your function automatically only if you don&#x27;t intervene); with the manual loop you gate inline before calling the function.</p></blockquote>
+<hr>
+<h3>Handling Tool Results</h3>
+<p>When Claude uses a tool, the response contains a <code>tool_use</code> block. You must:</p>
+<ol><li>Execute the tool with the provided input</li><li>Send the result back in a <code>tool_result</code> message</li><li>Continue the conversation</li></ol>
+<p><strong>Error handling in tool results:</strong> When a tool execution fails, set <code>&quot;is_error&quot;: true</code> and provide an informative error message. Claude will typically acknowledge the error and either try a different approach or ask for clarification.</p>
+<p><strong>Multiple tool calls:</strong> Claude can request multiple tools in a single response. Handle them all before continuing — send all results back in a single <code>user</code> message.</p>
+<hr>
+<h2>Server-Side Tools: Code Execution</h2>
+<p>The code execution tool lets Claude run code in a secure, sandboxed container. Unlike user-defined tools, server-side tools run on Anthropic&#x27;s infrastructure — you don&#x27;t execute anything client-side. Just include the tool definition and Claude handles the rest.</p>
+<h3>Key Facts</h3>
+<ul><li>Runs in an isolated container (1 CPU, 5 GiB RAM, 5 GiB disk)</li><li>No internet access (fully sandboxed)</li><li>Python 3.11 with data science libraries pre-installed</li><li>Containers persist for 30 days and can be reused across requests</li><li>Free when used with web search/web fetch tools; otherwise $0.05/hour after 1,550 free hours/month per organization</li></ul>
+<h3>Tool Definition</h3>
+<p>The tool requires no schema — just declare it in the <code>tools</code> array:</p>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;code_execution_20260120&quot;,
+  &quot;name&quot;: &quot;code_execution&quot;
+}</code></pre>
+<p>Claude automatically gains access to <code>bash_code_execution</code> (run shell commands) and <code>text_editor_code_execution</code> (create/view/edit files).</p>
+<h3>Pre-installed Python Libraries</h3>
+<ul><li><strong>Data science</strong>: pandas, numpy, scipy, scikit-learn, statsmodels</li><li><strong>Visualization</strong>: matplotlib, seaborn</li><li><strong>File processing</strong>: openpyxl, xlsxwriter, pillow, pypdf, pdfplumber, python-docx, python-pptx</li><li><strong>Math</strong>: sympy, mpmath</li><li><strong>Utilities</strong>: tqdm, python-dateutil, pytz, sqlite3</li></ul>
+<p>Additional packages can be installed at runtime via <code>pip install</code>.</p>
+<h3>Supported File Types for Upload</h3>
+<p>| Type   | Extensions                         | | ------ | ---------------------------------- | | Data   | CSV, Excel (.xlsx/.xls), JSON, XML | | Images | JPEG, PNG, GIF, WebP               | | Text   | .txt, .md, .py, .js, etc.          |</p>
+<h3>Container Reuse</h3>
+<p>Reuse containers across requests to maintain state (files, installed packages, variables). Extract the <code>container_id</code> from the first response and pass it to subsequent requests.</p>
+<h3>Response Structure</h3>
+<p>The response contains interleaved text and tool result blocks:</p>
+<ul><li><code>text</code> — Claude&#x27;s explanation</li><li><code>server_tool_use</code> — What Claude is doing</li><li><code>bash_code_execution_tool_result</code> — Code execution output (check <code>return_code</code> for success/failure)</li><li><code>text_editor_code_execution_tool_result</code> — File operation results</li></ul>
+<blockquote><p><strong>Security:</strong> Always sanitize filenames with <code>os.path.basename()</code> / <code>path.basename()</code> before writing downloaded files to disk to prevent path traversal attacks. Write files to a dedicated output directory.</p></blockquote>
+<hr>
+<h2>Server-Side Tools: Web Search and Web Fetch</h2>
+<p>Web search and web fetch let Claude search the web and retrieve page content. They run server-side — just include the tool definitions and Claude handles queries, fetching, and result processing automatically.</p>
+<h3>Tool Definitions</h3>
+<pre><code class="lang-json">[
+  { &quot;type&quot;: &quot;web_search_20260209&quot;, &quot;name&quot;: &quot;web_search&quot; },
+  { &quot;type&quot;: &quot;web_fetch_20260209&quot;, &quot;name&quot;: &quot;web_fetch&quot; }
+]</code></pre>
+<h3>Dynamic Filtering (Claude Opus 5 / Fable 5 / Opus 4.8 / Opus 4.7 / Opus 4.6 / Sonnet 5 / Sonnet 4.6)</h3>
+<p>The <code>web_search_20260209</code> and <code>web_fetch_20260209</code> versions support <strong>dynamic filtering</strong> — Claude writes and executes code to filter search results before they reach the context window, improving accuracy and token efficiency. Dynamic filtering is built into these tool versions and activates automatically; you do not need to separately declare the <code>code_execution</code> tool or pass any beta header.</p>
+<pre><code class="lang-json">{
+  &quot;tools&quot;: [
+    { &quot;type&quot;: &quot;web_search_20260209&quot;, &quot;name&quot;: &quot;web_search&quot; },
+    { &quot;type&quot;: &quot;web_fetch_20260209&quot;, &quot;name&quot;: &quot;web_fetch&quot; }
+  ]
+}</code></pre>
+<p>Without dynamic filtering, the previous <code>web_search_20250305</code> version is also available.</p>
+<blockquote><p><strong>Note:</strong> Only include the standalone <code>code_execution</code> tool when your application needs code execution for its own purposes (data analysis, file processing, visualization) independent of web search. Including it alongside <code>_20260209</code> web tools creates a second execution environment that can confuse the model.</p></blockquote>
+<hr>
+<h2>Server-Side Tools: Programmatic Tool Calling</h2>
+<p>With standard tool use, each tool call is a round trip: Claude calls, the result enters Claude&#x27;s context, Claude reasons, then calls the next tool. Chained calls accumulate latency and tokens — most of that intermediate data is never needed again.</p>
+<p>Programmatic tool calling lets Claude compose those calls into a script. The script runs in the code execution container; when it invokes a tool, the container pauses, the call executes, and the result returns to the running code (not to Claude&#x27;s context). The script processes it with normal control flow. Only the final output returns to Claude. Use it when chaining many tool calls or when intermediate results are large and should be filtered before reaching the context window.</p>
+<p>For full documentation, use WebFetch:</p>
+<ul><li>URL: <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/programmatic-tool-calling</code></li></ul>
+<hr>
+<h2>Server-Side Tools: Tool Search</h2>
+<p>The tool search tool lets Claude dynamically discover tools from large libraries without loading all definitions into the context window. Use it when you have many tools but only a few are relevant to any given request. Discovered tool schemas are appended to the request, not swapped in — this preserves the prompt cache (see <code>agent-design.md</code> §Caching for Agents).</p>
+<p>For full documentation, use WebFetch:</p>
+<ul><li>URL: <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-search-tool</code></li></ul>
+<hr>
+<h2>Mid-conversation tool changes (Beta)</h2>
+<p><strong>Beta header <code>mid-conversation-tool-changes-2026-07-01</code>; Claude Opus 5 onward.</strong> Normally <code>tools</code> is fixed for a conversation&#x27;s lifetime — editing it changes the very front of the prompt prefix and invalidates the entire cache (see <code>prompt-caching.md</code> § Invalidation hierarchy). This feature lets you add and remove tools between turns while the cached prefix survives.</p>
+<p>Both operations are content blocks on a <code>{&quot;role&quot;: &quot;system&quot;, ...}</code> message appended to <code>messages[]</code>, and both reference a tool by name via a <code>tool_reference</code>:</p>
+<pre><code class="lang-python"># Removal — must sit immediately before an assistant message, or last in messages.
+{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: [
+    {&quot;type&quot;: &quot;tool_removal&quot;, &quot;tool&quot;: {&quot;type&quot;: &quot;tool_reference&quot;, &quot;name&quot;: &quot;get_weather&quot;}},
+]}
+
+# Addition — surfaces a tool declared up front with defer_loading.
+{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: [
+    {&quot;type&quot;: &quot;tool_addition&quot;, &quot;tool&quot;: {&quot;type&quot;: &quot;tool_reference&quot;, &quot;name&quot;: &quot;get_forecast&quot;}},
+]}</code></pre>
+<p><strong>A tool you plan to add must already be declared in <code>tools[]</code> with <code>&quot;defer_loading&quot;: True</code>.</strong> Deferred tools are known to the request but not loaded into the model&#x27;s context until a <code>tool_addition</code> surfaces them:</p>
+<pre><code class="lang-python">tools = [
+    {&quot;name&quot;: &quot;get_weather&quot;, &quot;description&quot;: &quot;Get weather&quot;,
+     &quot;input_schema&quot;: {&quot;type&quot;: &quot;object&quot;, &quot;properties&quot;: {&quot;city&quot;: {&quot;type&quot;: &quot;string&quot;}}}},
+    {&quot;name&quot;: &quot;get_forecast&quot;, &quot;description&quot;: &quot;Get 5-day forecast&quot;,
+     &quot;input_schema&quot;: {&quot;type&quot;: &quot;object&quot;, &quot;properties&quot;: {&quot;city&quot;: {&quot;type&quot;: &quot;string&quot;}}},
+     &quot;defer_loading&quot;: True},
+]</code></pre>
+<p><strong>To change a tool&#x27;s definition</strong>, do it across two requests: send a <code>tool_removal</code> for the old definition on the first, then carry the conversation forward with the updated entry in <code>tools[]</code> on the next.</p>
+<blockquote><p>⚠️ Earlier previews used a different beta header and different block shapes; both are deprecated. Use <code>mid-conversation-tool-changes-2026-07-01</code> with <code>tool_addition</code> / <code>tool_removal</code> / <code>tool_reference</code>.</p></blockquote>
+<p>SDK typings lag these blocks — pass them as plain dicts in Python, or add a <code>@ts-expect-error</code> in TypeScript.</p>
+<p><strong>Choosing between this and tool search:</strong> tool search is for <em>discovery</em> — Claude finds what it needs from a large library on its own. Mid-conversation tool changes are for <em>control</em> — your application decides the tool set has changed (a mode switch, a resource that became available, a capability you want to revoke) and says so explicitly.</p>
+<hr>
+<h2>Agent Skills (Messages API)</h2>
+<p>Agent Skills package task-specific instructions and files that Claude loads when relevant (e.g., the Anthropic pre-built <code>pptx</code>, <code>xlsx</code>, <code>pdf</code>, <code>docx</code> skills). On the <strong>Messages API</strong>, skills are enabled via the <code>container</code> parameter alongside the code-execution tool — this is <strong>not</strong> the Managed Agents surface and does <strong>not</strong> use <code>client.beta.agents</code> / <code>sessions</code> / <code>environments</code>. Availability: see <code>shared/platform-availability.md</code>.</p>
+<p>Required on each request:</p>
+<ol><li><code>client.beta.messages.create(...)</code> with <strong>both</strong> beta flags: <code>code-execution-2025-08-25</code> <strong>and</strong> <code>skills-2025-10-02</code>.</li><li><code>container={&quot;skills&quot;: [{&quot;type&quot;: &quot;anthropic&quot;, &quot;skill_id&quot;: &quot;&lt;id&gt;&quot;, &quot;version&quot;: &quot;latest&quot;}]}</code> — the skills list selects which skills are available inside the execution container.</li><li><code>tools=[{&quot;type&quot;: &quot;code_execution_20260521&quot;, &quot;name&quot;: &quot;code_execution&quot;}]</code> — skills execute via code execution in the container.</li></ol>
+<pre><code class="lang-python">response = client.beta.messages.create(
+    model=&quot;claude-opus-5&quot;, max_tokens=16000,
+    betas=[&quot;code-execution-2025-08-25&quot;, &quot;skills-2025-10-02&quot;],
+    container={&quot;skills&quot;: [{&quot;type&quot;: &quot;anthropic&quot;, &quot;skill_id&quot;: &quot;pptx&quot;, &quot;version&quot;: &quot;latest&quot;}]},
+    tools=[{&quot;type&quot;: &quot;code_execution_20260521&quot;, &quot;name&quot;: &quot;code_execution&quot;}],
+    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Create a 3-slide presentation on X&quot;}],
+)</code></pre>
+<p>Generated files (<code>.pptx</code>, <code>.xlsx</code>, …) are written inside the container; the response carries a file ID for each. Download by passing that ID to the Files API (<code>client.beta.files.download(file_id)</code> / <code>GET /v1/files/{id}/content</code> with <code>anthropic-beta: files-api-2025-04-14</code>).</p>
+<p>List available skills via <code>GET /v1/skills</code> (requires <code>anthropic-beta: skills-2025-10-02</code>).</p>
+<hr>
+<h2>MCP Connector (Beta)</h2>
+<p>The MCP connector lets Claude call tools hosted on a remote MCP server directly from the Messages API — Anthropic makes the MCP connection server-side. Requires beta flag <code>mcp-client-2025-11-20</code> on <code>client.beta.messages.create(...)</code>. Availability: see <code>shared/platform-availability.md</code>.</p>
+<p><strong>Two parameters are required together:</strong></p>
+<ul><li><code>mcp_servers</code> — array of server connection definitions: <code>[{&quot;type&quot;: &quot;url&quot;, &quot;url&quot;: &quot;&lt;server URL&gt;&quot;, &quot;name&quot;: &quot;&lt;server-name&gt;&quot;, &quot;authorization_token&quot;: &quot;&lt;optional&gt;&quot;}]</code></li><li><code>tools</code> — must include an <code>mcp_toolset</code> entry that references the server by name: <code>[{&quot;type&quot;: &quot;mcp_toolset&quot;, &quot;mcp_server_name&quot;: &quot;&lt;server-name&gt;&quot;}]</code></li></ul>
+<p>The <code>mcp_server_name</code> in the toolset must match a <code>name</code> in <code>mcp_servers</code>. Omitting the <code>mcp_toolset</code> entry is rejected as a validation error — every server in <code>mcp_servers</code> must be referenced by exactly one toolset.</p>
+<pre><code class="lang-python">client.beta.messages.create(
+    model=&quot;claude-opus-5&quot;, max_tokens=1024,
+    betas=[&quot;mcp-client-2025-11-20&quot;],
+    mcp_servers=[{&quot;type&quot;: &quot;url&quot;, &quot;url&quot;: &quot;https://example/sse&quot;, &quot;name&quot;: &quot;example-mcp&quot;}],
+    tools=[{&quot;type&quot;: &quot;mcp_toolset&quot;, &quot;mcp_server_name&quot;: &quot;example-mcp&quot;}],
+    messages=[...],
+)</code></pre>
+<p>Go uses the typed constant <code>anthropic.AnthropicBetaMCPClient2025_11_20</code>; the older <code>…2025_04_04</code> constant is deprecated.</p>
+<p>Optional toolset fields: <code>default_config</code> (defaults for all tools, e.g. <code>{&quot;enabled&quot;: false}</code> for allowlist mode) and <code>configs</code> (per-tool overrides keyed by tool name).</p>
+<hr>
+<h2>Tool Use Examples</h2>
+<p>You can provide sample tool calls directly in your tool definitions to demonstrate usage patterns and reduce parameter errors. This helps Claude understand how to correctly format tool inputs, especially for tools with complex schemas.</p>
+<p>For full documentation, use WebFetch:</p>
+<ul><li>URL: <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/implement-tool-use</code></li></ul>
+<hr>
+<h2>Client-Side Tools: Computer Use</h2>
+<p>Computer use lets Claude interact with a desktop environment (screenshots, mouse, keyboard). It is a client-side tool — your application provides the environment and executes the actions Claude requests; Anthropic processes the screenshots and action requests in real time but does not host the environment or retain the data.</p>
+<p>For full documentation, use WebFetch:</p>
+<ul><li>URL: <code>https://platform.claude.com/docs/en/agents-and-tools/computer-use/overview</code></li></ul>
+<hr>
+<h2>Context Editing</h2>
+<p>Context editing clears stale tool results and thinking blocks from the transcript as a long-running agent accumulates turns. Unlike compaction (which summarizes), context editing prunes — the cleared content is removed, not replaced. Use it when old tool outputs are no longer relevant and you want to keep the transcript lean without losing the conversation structure.</p>
+<p><strong>Beta.</strong> Use <code>client.beta.messages.*</code> with beta <code>context-management-2025-06-27</code>. Configure via <code>context_management.edits</code> with a strategy type of <code>clear_tool_uses_20250919</code> (clear old tool results; optional <code>clear_tool_inputs: true</code> also clears the tool_use params) or <code>clear_thinking_20251015</code> (clear thinking blocks). These are <strong>not</strong> the compaction types — <code>compact_20260112</code> with beta <code>compact-2026-01-12</code> is the separate compaction feature.</p>
+<p>For full documentation, use WebFetch:</p>
+<ul><li>URL: <code>https://platform.claude.com/docs/en/build-with-claude/context-editing</code></li></ul>
+<hr>
+<h2>Server-Side Tools: Advisor (Beta)</h2>
+<p>The advisor tool pairs a faster, lower-cost <strong>executor</strong> model (the top-level <code>model</code> on the request) with a higher-intelligence <strong>advisor</strong> model (the <code>model</code> field inside the tool definition) that provides strategic guidance mid-generation. The executor does most of the token generation; the advisor is consulted for planning. Availability: see <code>shared/platform-availability.md</code>.</p>
+<h3>Tool Definition</h3>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;advisor_20260301&quot;,
+  &quot;name&quot;: &quot;advisor&quot;,
+  &quot;model&quot;: &quot;claude-opus-4-8&quot;
+}</code></pre>
+<p>Optional fields on the tool definition:</p>
+<ul><li><code>max_uses</code> — cap on advisor consultations per request. Exceeding it makes the <code>advisor_tool_result</code> block&#x27;s <code>content</code> the error object <code>{&quot;type&quot;: &quot;advisor_tool_result_error&quot;, &quot;error_code&quot;: &quot;max_uses_exceeded&quot;}</code> — the third member of the content union in the payload-shape table below.</li><li><code>max_tokens</code> — bounds the advisor&#x27;s total output (thinking + text) per call. At the cap the result block carries <code>stop_reason: &quot;max_tokens&quot;</code> and a truncation note is appended to the advice the executor sees; the server also emits a remaining-tokens budget block in the advisor&#x27;s prompt so it self-shapes toward the cap.</li><li><code>caching</code> — cache-control for the advisor&#x27;s own prompt, same shape as a cache breakpoint: <code>&quot;caching&quot;: {&quot;type&quot;: &quot;ephemeral&quot;, &quot;ttl&quot;: &quot;5m&quot;}</code> (<code>ttl</code> is <code>&quot;5m&quot;</code> or <code>&quot;1h&quot;</code>, default <code>&quot;5m&quot;</code>). Each call writes a cache entry at that TTL so later calls in the conversation read the stable prefix. Omitted = advisor prompt not cached.</li></ul>
+<p><strong>The advisor model must be at least as capable as the executor.</strong> An invalid pairing returns <code>400 invalid_request_error</code>. Valid pairs:</p>
+<p>| Executor (request <code>model</code>) | Valid advisor (tool <code>model</code>) | |---|---| | <code>claude-haiku-4-5</code> / <code>claude-sonnet-4-6</code> / <code>claude-sonnet-5</code> / <code>claude-opus-4-6</code> / <code>claude-opus-4-7</code> | <code>claude-opus-5</code>, <code>claude-fable-5</code>, <code>claude-mythos-5</code>, <code>claude-opus-4-8</code>, or <code>claude-opus-4-7</code> | | <code>claude-opus-4-8</code> | <code>claude-opus-5</code>, <code>claude-fable-5</code>, <code>claude-mythos-5</code>, or <code>claude-opus-4-8</code> | | <code>claude-opus-5</code> | <code>claude-opus-5</code>, <code>claude-fable-5</code>, or <code>claude-mythos-5</code> | | <code>claude-fable-5</code> | <code>claude-fable-5</code> or <code>claude-opus-5</code> | | <code>claude-mythos-5</code> | <code>claude-mythos-5</code> or <code>claude-opus-5</code> |</p>
+<blockquote><p>⚠️ <strong>The advisor&#x27;s payload shape differs by advisor model.</strong> The response block is always <code>advisor_tool_result</code>; what varies is its <strong><code>content</code></strong>, a discriminated union:</p>
+<p>| <code>content</code> type | Fields | When | |---|---|---| | <code>advisor_result</code> | <code>text</code>, <code>stop_reason</code> | Advisor returns plaintext (e.g. Opus 4.8) | | <code>advisor_redacted_result</code> | <code>encrypted_content</code>, <code>stop_reason</code> | Advisor returns encrypted output — Claude Opus 5, Claude Fable 5, Claude Mythos 5 | | <code>advisor_tool_result_error</code> | <code>error_code</code> | Consultation failed — <code>max_uses_exceeded</code>, <code>prompt_too_long</code>, <code>too_many_requests</code>, <code>overloaded</code>, <code>unavailable</code>, <code>execution_time_exceeded</code>, or <code>model_not_found</code> |</p>
+<p>So switch on <code>advisor_tool_result.content</code> type, not on the block type. Code that reads <code>.text</code> unconditionally gets nothing back from an Claude Opus 5 advisor, because the payload is under <code>encrypted_content</code> instead — and you cannot read it, only replay it.</p></blockquote>
+<p>Call via <code>client.beta.messages.create(...)</code> with <code>betas=[&quot;advisor-tool-2026-03-01&quot;]</code> (or the <code>anthropic-beta: advisor-tool-2026-03-01</code> header). In multi-turn conversations, append the full <code>response.content</code> — including any <code>advisor_tool_result</code> blocks — back to <code>messages</code> on the next turn. If you remove the advisor tool from <code>tools</code> on a later turn while the history still contains <code>advisor_tool_result</code> blocks, the API returns a 400.</p>
+<blockquote><p><strong>Advisor on Managed Agents:</strong> CMA sessions support an advisor too, configured as a <code>{&quot;type&quot;: &quot;advisor&quot;, &quot;model&quot;}</code> entry in the agent&#x27;s multiagent roster rather than as a tool definition — no <code>max_uses</code>/<code>max_tokens</code>/<code>caching</code> options, and advice is delivered as thread events on the session&#x27;s event stream rather than <code>advisor_tool_result</code> blocks. See <code>shared/managed-agents-multiagent.md</code> → Advisor.</p></blockquote>
+<hr>
+<h2>Client-Side Tools: Memory</h2>
+<p>The memory tool enables Claude to store and retrieve information across conversations through a memory file directory. Claude can create, read, update, and delete files that persist between sessions.</p>
+<h3>Key Facts</h3>
+<ul><li>Client-side tool — you control storage via your implementation</li><li>Supports commands: <code>view</code>, <code>create</code>, <code>str_replace</code>, <code>insert</code>, <code>delete</code>, <code>rename</code></li><li>Operates on files in a <code>/memories</code> directory</li><li>The Python, TypeScript, and Java SDKs provide helper classes/functions for implementing the memory backend</li></ul>
+<blockquote><p><strong>Security:</strong> Never store API keys, passwords, tokens, or other secrets in memory files. Be cautious with personally identifiable information (PII) — check data privacy regulations (GDPR, CCPA) before persisting user data. The reference implementations have no built-in access control; in multi-user systems, implement per-user memory directories and authentication in your tool handlers.</p></blockquote>
+<p>For full implementation examples, use WebFetch:</p>
+<ul><li>Docs: <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool.md</code></li></ul>
+<hr>
+<h2>Client-Side Tools: Bash and Text Editor</h2>
+<p>The bash and text editor tools are <strong>Anthropic-defined, schema-less</strong> tools. Declare them by <code>type</code> and <code>name</code> only — the input schema is built into the model and cannot be modified. <strong>Do not pass an <code>input_schema</code></strong>, and do not define a custom tool that happens to be named <code>&quot;bash&quot;</code> — that creates a user-defined tool without the built-in behavior.</p>
+<p>Both are <strong>client-executed</strong>: Claude returns a <code>tool_use</code> block, your code performs the action locally, and you send back a <code>tool_result</code>. The API is stateless; your application maintains the shell session or filesystem between turns.</p>
+<h3>Bash tool declaration</h3>
+<pre><code class="lang-json">{&quot;type&quot;: &quot;bash_20250124&quot;, &quot;name&quot;: &quot;bash&quot;}</code></pre>
+<p>| Language | Declaration | |---|---| | Python / TypeScript / Ruby / cURL | plain object <code>{&quot;type&quot;: &quot;bash_20250124&quot;, &quot;name&quot;: &quot;bash&quot;}</code> | | Go | <code>anthropic.ToolUnionParam{OfBashTool20250124: &amp;anthropic.ToolBash20250124Param{}}</code> | | Java | <code>.addTool(ToolBash20250124.builder().build())</code> from <code>com.anthropic.models.messages</code> | | C# | <code>Tools = [new ToolBash20250124()]</code> from <code>Anthropic.Models.Messages</code> | | PHP | <code>tools: [new \Anthropic\Messages\ToolBash20250124()]</code> |</p>
+<p>Claude&#x27;s <code>tool_use.input</code> contains either <code>{&quot;command&quot;: &quot;&lt;string&gt;&quot;}</code> or <code>{&quot;restart&quot;: true}</code>. Check for <code>restart</code> first (reset the session, return a confirmation string); otherwise run <code>command</code> and return combined stdout + stderr.</p>
+<blockquote><p><strong>Security — commands are untrusted model output.</strong> Run in an isolated environment (container, VM, or restricted user); apply an <strong>allowlist</strong> of permitted executables and reject shell operators (<code>&amp;&amp;</code>, <code>|</code>, <code>;</code>, `<code> </code> `<code>, </code>$()`); set timeouts and resource limits; log every command. A blocklist is not sufficient.</p></blockquote>
+<h3>Text editor tool declaration</h3>
+<pre><code class="lang-json">{&quot;type&quot;: &quot;text_editor_20250728&quot;, &quot;name&quot;: &quot;str_replace_based_edit_tool&quot;}</code></pre>
+<p>Optional field: <code>max_characters</code> to cap <code>view</code> output. Java exposes a typed <code>ToolTextEditor20250728</code> builder (<code>com.anthropic.models.messages</code>); other statically-typed SDKs follow the same naming pattern — see the Anthropic-Defined Tools section in <code>{lang}/claude-api/tool-use.md</code> for the exact class.</p>
+<blockquote><p><strong>Security — <code>path</code> is untrusted model output. Confine every file operation to a fixed project root.</strong> Before executing any command, resolve the model-supplied <code>path</code> to its canonical form and verify it remains within your project root; reject the request if it escapes (<code>..</code>, symlinks, absolute paths outside the root, URL-encoded traversal like <code>%2e%2e%2f</code>). Use your language&#x27;s built-in path utilities (e.g., Python <code>pathlib.Path.resolve()</code> then check <code>.is_relative_to(root)</code>). Never call <code>open()</code> / <code>writeFile</code> / <code>unlink</code> directly on the raw <code>path</code> value.</p></blockquote>
+<p><code>tool_use.input.command</code> is one of:</p>
+<p>| <code>command</code> | Other inputs | Action | |---|---|---| | <code>view</code> | <code>path</code>, optional <code>view_range</code> | Return file contents or directory listing | | <code>create</code> | <code>path</code>, <code>file_text</code> | Create/overwrite file with <code>file_text</code>. Create a backup if the file already exists. | | <code>str_replace</code> | <code>path</code>, <code>old_str</code>, <code>new_str</code> | Replace exactly one occurrence; error if 0 or &gt;1 matches | | <code>insert</code> | <code>path</code>, <code>insert_line</code>, <code>insert_text</code> | Insert <code>insert_text</code> after line <code>insert_line</code> (0 = beginning of file) |</p>
+<p>For both tools, on error return <code>{&quot;type&quot;: &quot;tool_result&quot;, &quot;tool_use_id&quot;: &quot;…&quot;, &quot;content&quot;: &quot;&lt;error text&gt;&quot;, &quot;is_error&quot;: true}</code> so Claude can recover.</p>
+<hr>
+<h2>Structured Outputs</h2>
+<p>Structured outputs constrain Claude&#x27;s responses to follow a specific JSON schema, guaranteeing valid, parseable output. This is not a separate tool — it enhances the Messages API response format and/or tool parameter validation.</p>
+<p>Two features are available:</p>
+<ul><li><strong>JSON outputs</strong> (<code>output_config.format</code>): Control Claude&#x27;s response format</li><li><strong>Strict tool use</strong> (<code>strict: true</code>): Guarantee valid tool parameter schemas</li></ul>
+<p><strong>Supported models:</strong> Claude Fable 5, Claude Opus 5, Claude Opus 4.8, Claude Sonnet 5, and Claude Haiku 4.5. Legacy models (Claude Opus 4.5, Claude Opus 4.1) also support structured outputs.</p>
+<blockquote><p><strong>Recommended:</strong> Use <code>client.messages.parse()</code> which automatically validates responses against your schema. When using <code>messages.create()</code> directly, use <code>output_config: {format: {...}}</code>. The <code>output_format</code> convenience parameter is also accepted by some SDK methods (e.g., <code>.parse()</code>), but <code>output_config.format</code> is the canonical API-level parameter.</p></blockquote>
+<h3>JSON Schema Limitations</h3>
+<p><strong>Supported:</strong></p>
+<ul><li>Basic types: object, array, string, integer, number, boolean, null</li><li><code>enum</code>, <code>const</code>, <code>anyOf</code>, <code>allOf</code>, <code>$ref</code>/<code>$def</code></li><li>String formats: <code>date-time</code>, <code>time</code>, <code>date</code>, <code>duration</code>, <code>email</code>, <code>hostname</code>, <code>uri</code>, <code>ipv4</code>, <code>ipv6</code>, <code>uuid</code></li><li><code>additionalProperties: false</code> (required for all objects)</li></ul>
+<p><strong>Not supported:</strong></p>
+<ul><li>Recursive schemas</li><li>Numerical constraints (<code>minimum</code>, <code>maximum</code>, <code>multipleOf</code>)</li><li>String constraints (<code>minLength</code>, <code>maxLength</code>)</li><li>Complex array constraints</li><li><code>additionalProperties</code> set to anything other than <code>false</code></li></ul>
+<p>The Python and TypeScript SDKs automatically handle unsupported constraints by removing them from the schema sent to the API and validating them client-side.</p>
+<h3>Important Notes</h3>
+<ul><li><strong>First request latency</strong>: New schemas incur a one-time compilation cost. Subsequent requests with the same schema use a 24-hour cache.</li><li><strong>Refusals</strong>: If Claude refuses for safety reasons (<code>stop_reason: &quot;refusal&quot;</code>), the output may not match your schema.</li><li><strong>Token limits</strong>: If <code>stop_reason: &quot;max_tokens&quot;</code>, output may be incomplete. Increase <code>max_tokens</code>.</li><li><strong>Incompatible with</strong>: Citations (returns 400 error), message prefilling.</li><li><strong>Works with</strong>: Batches API, streaming, token counting, extended thinking.</li></ul>
+<hr>
+<h2>Tips for Effective Tool Use</h2>
+<ol><li><strong>Provide detailed descriptions</strong>: Claude relies heavily on descriptions to understand when and how to use tools</li><li><strong>Use specific tool names</strong>: <code>get_current_weather</code> is better than <code>weather</code></li><li><strong>Validate inputs</strong>: Always validate tool inputs before execution</li><li><strong>Handle errors gracefully</strong>: Return informative error messages so Claude can adapt</li><li><strong>Limit tool count</strong>: Too many tools can confuse the model — keep the set focused</li><li><strong>Test tool interactions</strong>: Verify Claude uses tools correctly in various scenarios</li></ol>
+<p>For detailed tool use documentation, use WebFetch:</p>
+<ul><li>URL: <code>https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview</code></li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/tool-use-concepts.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

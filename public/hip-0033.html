@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,47 +196,28 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0033</h1><p class="lede">HIP-33: Container Registry Standard. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0033: Container Registry Standard</h1>
+<h1>hip-0033</h1><p class="lede">HIP-33: Container Registry Standard. Status Final. Hanzo architectural specification.</p><h1>HIP-0033: Container Registry Standard</h1>
 <h2>Abstract</h2>
-<p>This proposal defines the container registry standard for the Hanzo ecosystem. Hanzo Registry provides OCI-compatible container image storage, serving as the canonical source for all Hanzo service images across three tiers: GitHub Container Registry (GHCR) as the primary public registry, Docker Hub as the secondary distribution channel, and an in-cluster self-hosted registry for fast K8s pulls.</p>
+<p>The fleet registry is <strong><code>oci.hanzo.ai</code></strong> — an OCI registry backed by our own object store, authenticated by Hanzo IAM, with repositories org-namespaced as <code>oci.hanzo.ai/&lt;org&gt;/&lt;app&gt;</code>. Images and Helm charts share the one store; 190 CD Applications pull <code>oci.hanzo.ai/charts</code> on every sync, so it is load-bearing rather than an experiment.</p>
+<p><code>ghcr.io/&lt;org&gt;</code> keeps one purpose: <strong>already-published open-source artifacts that outside users pull</strong>. It is not a mirror and not a fallback.</p>
+<p><strong>This is a target, and the migration is unfinished.</strong> Measured on 2026-09-09, most first-party workloads still resolve from GHCR and 13 resolve from <code>oci.hanzo.ai</code>; the counts are in §Conformance status. What is settled is the direction and the rules below, not the current distribution.</p>
 <p><strong>Repository</strong>: <a href="https://github.com/hanzoai/registry">github.com/hanzoai/registry</a></p>
-<p>Every container artifact produced by Hanzo MUST flow through this standard. The goal is simple: one build, three destinations, zero ambiguity about where images live or how they are authenticated.</p>
+<p>The org prefix never mixes. Hanzo publishes under <code>hanzoai</code>, Lux under <code>luxfi</code>, Zoo under <code>zooai</code>, on whichever of the two hosts applies. A Lux image under a Hanzo prefix is a defect regardless of which registry it sits in.</p>
 <h2>Design Philosophy</h2>
-<h3>Why Own Registry Over Just GHCR/Docker Hub</h3>
-<p>The naive approach is to use GHCR or Docker Hub exclusively. This fails at scale for three concrete reasons:</p>
-<p><strong>1. Speed.</strong> AI service images are large. A typical Hanzo service image with model weights, CUDA runtime, and Python dependencies is 5-15 GB. Pulling that from an external registry over the public internet takes minutes. An in-cluster registry on the same network fabric delivers the same image in seconds. For Kubernetes rolling deployments where every second of pull time extends the rollout window, this is the difference between a 30-second deploy and a 5-minute deploy.</p>
-<p><strong>2. Rate limits.</strong> Docker Hub enforces pull rate limits: 100 pulls per 6 hours for anonymous users, 200 for authenticated free accounts. A Kubernetes cluster with 15 nodes that restarts pods frequently will hit these limits. GHCR is more generous but still rate-limited for high-frequency CI runners. An in-cluster registry has no rate limits.</p>
-<p><strong>3. Availability isolation.</strong> If Docker Hub or GitHub has an outage, your cluster cannot pull images and cannot schedule new pods. An in-cluster registry decouples your runtime availability from third-party SLA. Your existing pods continue running, and new pods can still be scheduled from cached layers.</p>
-<p>The self-hosted registry acts as both a primary pull source and a pull-through cache for upstream images. Kubernetes is configured to try the in-cluster registry first, falling back to GHCR only if the local copy is missing.</p>
-<h3>Why Multi-Registry Strategy</h3>
-<p>The three-tier strategy exists because each registry serves a different audience:</p>
-<pre><code>Build (GitHub Actions)
-  |
-  +---&gt; GHCR (ghcr.io/hanzoai/*)        [REQUIRED - must succeed]
-  |       Public images, CI integration
-  |       Free for public repos
-  |       Tightly coupled to GitHub Actions auth
-  |
-  +---&gt; Docker Hub (hanzoai/*)           [SECONDARY - continue-on-error]
-  |       Widest reach, `docker pull hanzoai/iam`
-  |       Discoverability on hub.docker.com
-  |       Rate-limited, credentials via KMS
-  |
-  +---&gt; In-Cluster Registry              [TERTIARY - K8s pull source]
-          Fastest pulls (cluster-local)
-          Pull-through cache for upstream
-          No rate limits</code></pre>
-<p><strong>GHCR must succeed</strong> because it is the source of truth. If the GHCR push fails, the build fails. This is deliberate: we never want a state where Docker Hub has an image that GHCR does not.</p>
-<p><strong>Docker Hub is continue-on-error</strong> because it is a distribution convenience, not a source of truth. Docker Hub credentials come from KMS and may rotate or temporarily fail. We do not want a Docker Hub authentication issue to block a production deployment. The actual Kubernetes deployment pulls from GHCR, not Docker Hub.</p>
-<p><strong>The in-cluster registry is populated</strong> either by explicit push from CI or by pull-through caching when Kubernetes first requests an image. It is not a CI target; it is a runtime optimization.</p>
+<h3>Why our own registry</h3>
+<p><strong>Quotas.</strong> The move off GHCR as the push target was to escape a third party&#x27;s push and artifact quotas. A build fleet that cannot push because a monthly allowance ran out is not a build fleet.</p>
+<p><strong>Speed.</strong> Service images carrying model weights, a CUDA runtime and a Python dependency tree run to 5-15 GB. Pulling that across the public internet takes minutes; pulling it from a registry on the same fabric takes seconds. In a rolling deployment every second of pull time extends the rollout window.</p>
+<p><strong>Availability.</strong> If the registry a cluster pulls from is somebody else&#x27;s, that company&#x27;s outage is our inability to schedule a pod. Running pods survive; new ones do not start.</p>
+<p><strong>One store for images and charts.</strong> A chart and the image it deploys are one release. Keeping them in two systems means two authentications, two retention policies, and two ways for a chart to reference an image that was never published.</p>
+<h3>Why IAM authorizes the pull, and there is no registry password</h3>
+<p>Per-repository authorization happens at <code>hanzo.id/v1/iam/registry/token</code> (HIP-0111): a client presents an IAM identity and receives a token scoped to the repository it asked for. There is no registry account, no shared push password and no per-repo credential to rotate — the same rule as everywhere else in the estate, that IAM is the sole authority for identity and tokens.</p>
+<p>A build reaches the registry through the public ingress exactly as an outside client does, so a build is granted no path an external client would not have. The registry Service itself is not opened to the build fleet.</p>
 <h3>How It Connects to Other HIPs</h3>
-<pre><code>HIP-0032 (CI/CD Standard)
+<pre><code>HIP-0036 (CI/CD Build System Standard)
+  |       Defines HOW images are built (buildx, multi-arch, caching)
   |
   +---&gt; HIP-0033 (this) Container Registry Standard
-  |       Defines WHERE images go and HOW they are authenticated
-  |
-  +---&gt; HIP-0036 (Build Standard)
-          Defines HOW images are built (buildx, multi-arch, caching)
+          Defines WHERE images go and HOW they are authenticated
 
 HIP-0014 (Application Deployment)
   |
@@ -239,19 +229,17 @@ HIP-0014 (Application Deployment)
 <ul><li>Content-addressable storage using SHA-256 digests</li><li>Manifest and manifest list (multi-arch index) support</li><li>Blob upload (monolithic and chunked)</li><li>Tag listing and deletion</li><li>Referrers API for artifact relationships</li></ul>
 <h3>Image Naming Convention</h3>
 <p>Images follow a strict naming hierarchy:</p>
-<pre><code># Primary (GHCR) - source of truth
-ghcr.io/hanzoai/{service}:{tag}
-ghcr.io/hanzoai/{service}:latest
-ghcr.io/hanzoai/{service}:{semver}
-ghcr.io/hanzoai/{service}:{branch}-{sha}
+<pre><code># The fleet registry — the push target and the pull source
+oci.hanzo.ai/&lt;org&gt;/&lt;app&gt;:{tag}
 
-# Secondary (Docker Hub) - distribution mirror
-docker.io/hanzoai/{service}:{tag}
+# Charts, in the same store
+oci.hanzo.ai/charts/&lt;chart&gt;:{version}
 
-# Tertiary (in-cluster) - runtime cache
-localhost:5000/hanzoai/{service}:{tag}</code></pre>
-<p>The <code>{service}</code> name MUST match the GitHub repository name. Examples:</p>
-<p>| Repository | GHCR Image | Docker Hub Image | |---|---|---| | <code>hanzoai/iam</code> | <code>ghcr.io/hanzoai/iam</code> | <code>hanzoai/iam</code> | | <code>hanzoai/cloud</code> | <code>ghcr.io/hanzoai/cloud</code> | <code>hanzoai/cloud</code> | | <code>hanzoai/llm</code> | <code>ghcr.io/hanzoai/llm</code> | <code>hanzoai/llm</code> | | <code>hanzoai/chat</code> | <code>ghcr.io/hanzoai/chat</code> | <code>hanzoai/chat</code> |</p>
+# Published open source, for outside users only
+ghcr.io/&lt;org&gt;/&lt;app&gt;:{tag}</code></pre>
+<p><code>&lt;app&gt;</code> MUST match the repository name, and <code>&lt;org&gt;</code> MUST be the repository&#x27;s own org. Examples:</p>
+<p>| Repository | Fleet image | Published OSS image | |---|---|---| | <code>hanzoai/iam</code> | <code>oci.hanzo.ai/hanzoai/iam</code> | <code>ghcr.io/hanzoai/iam</code> | | <code>hanzoai/cloud</code> | <code>oci.hanzo.ai/hanzoai/cloud</code> | <code>ghcr.io/hanzoai/cloud</code> | | <code>luxfi/node</code> | <code>oci.hanzo.ai/luxfi/node</code> | <code>ghcr.io/luxfi/node</code> | | <code>zooai/&lt;app&gt;</code> | <code>oci.hanzo.ai/zooai/&lt;app&gt;</code> | <code>ghcr.io/zooai/&lt;app&gt;</code> |</p>
+<p>There is no Docker Hub target. A &quot;convenience mirror&quot; a build is permitted to fail produces tags that disagree with the source of truth, at a cadence nobody watches, and a consumer cannot tell which they pulled.</p>
 <h3>Tag Strategy</h3>
 <p>Tags convey meaning. Every image MUST be tagged according to this scheme:</p>
 <p>| Tag Pattern | Meaning | Mutable | Example | |---|---|---|---| | <code>latest</code> | Most recent build from default branch | Yes | <code>iam:latest</code> | | <code>{semver}</code> | Semantic version from release | No | <code>iam:1.584.0</code> | | <code>{branch}-{sha}</code> | Branch build with commit SHA | No | <code>iam:main-a1b2c3d</code> | | <code>{branch}</code> | Latest build from named branch | Yes | <code>iam:main</code> |</p>
@@ -315,89 +303,18 @@ ghcr.io/hanzoai/iam-allinone:latest # ALLINONE target</code></pre>
 <ul><li>Kubernetes deployment controllers (trigger rollout on new <code>:latest</code>)</li><li>Vulnerability scanners (scan new images on push)</li><li>Audit logging (record who pushed what and when)</li></ul>
 <h2>Implementation</h2>
 <h3>Build and Push Pipeline</h3>
-<p>The build pipeline runs in GitHub Actions. The canonical workflow structure is:</p>
-<pre><code class="lang-yaml">jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      # 1. Fetch credentials from Hanzo KMS
-      - name: Fetch CI secrets from Hanzo KMS
-        id: kms
-        env:
-          KMS_CLIENT_ID: ${{ secrets.KMS_CLIENT_ID }}
-          KMS_CLIENT_SECRET: ${{ secrets.KMS_CLIENT_SECRET }}
-        run: |
-          # Authenticate to KMS via Universal Auth
-          ACCESS_TOKEN=&quot;$(curl -fsS -X POST \
-            &quot;${KMS_URL:-https://kms.hanzo.ai}/api/v1/auth/universal-auth/login&quot; \
-            -H &quot;Content-Type: application/json&quot; \
-            -d &quot;{\&quot;clientId\&quot;:\&quot;$KMS_CLIENT_ID\&quot;,\&quot;clientSecret\&quot;:\&quot;$KMS_CLIENT_SECRET\&quot;}&quot; \
-            | jq -r &#x27;.accessToken&#x27;)&quot;
-
-          # Fetch Docker Hub credentials
-          for name in DOCKERHUB_USERNAME DOCKERHUB_TOKEN; do
-            val=&quot;$(curl -fsS \
-              &quot;${KMS_URL}/api/v3/secrets/raw/${name}?workspaceSlug=gitops&amp;environment=prod&amp;secretPath=/ci&amp;viewSecretValue=true&quot; \
-              -H &quot;Authorization: Bearer ${ACCESS_TOKEN}&quot; \
-              | jq -r &#x27;.secret.secretValue&#x27;)&quot;
-            echo &quot;${name}=${val}&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
-          done
-
-      # 2. Set up multi-arch build environment
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-
-      # 3. Authenticate to both registries
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Log in to Docker Hub
-        id: dockerhub
-        continue-on-error: true
-        uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ steps.kms.outputs.DOCKERHUB_USERNAME }}
-          password: ${{ steps.kms.outputs.DOCKERHUB_TOKEN }}
-
-      # 4. Build and push to GHCR (MUST succeed)
-      - name: Build and push to GHCR
-        uses: docker/build-push-action@v5
-        with:
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta-ghcr.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # 5. Push to Docker Hub (continue-on-error)
-      - name: Push to Docker Hub
-        if: steps.dockerhub.outcome == &#x27;success&#x27;
-        continue-on-error: true
-        uses: docker/build-push-action@v5
-        with:
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta-dockerhub.outputs.tags }}
-          cache-from: type=gha</code></pre>
-<p>Key implementation details:</p>
-<ul><li><strong>Step 1</strong>: Credentials are never stored as GitHub Secrets directly. They are</li></ul>
-<p>  fetched at runtime from Hanzo KMS via Universal Auth. This means credential   rotation in KMS immediately takes effect without touching GitHub settings.</p>
-<ul><li><strong>Step 3</strong>: GHCR uses <code>GITHUB_TOKEN</code> (auto-provisioned by Actions). Docker Hub</li></ul>
-<p>  uses KMS-sourced credentials. The Docker Hub login is <code>continue-on-error: true</code>   so that a credential rotation glitch does not block the build.</p>
-<ul><li><strong>Step 4</strong>: GHCR push is mandatory. Build failure here fails the entire job.</li><li><strong>Step 5</strong>: Docker Hub push is conditional on successful login AND is itself</li></ul>
-<p>  <code>continue-on-error</code>. This is the &quot;GHCR primary, Docker Hub secondary&quot; policy.</p>
-<ul><li><strong>Caching</strong>: GitHub Actions cache (<code>type=gha</code>) stores layer cache across builds.</li></ul>
-<p>  The <code>cache-to: type=gha,mode=max</code> ensures all layers are cached, not just the   final stage.</p>
+<p>The pipeline is HIP-0036&#x27;s and is not restated here: one reusable workflow in <code>hanzoai/ci</code>, imported by a short <code>.hanzo/workflows/cicd.yml</code>, driven by the repository&#x27;s <code>hanzo.yml</code>. No repository writes its own push steps.</p>
+<p>What this HIP states about the push:</p>
+<ol><li><strong>One destination.</strong> The build pushes to <code>oci.hanzo.ai/&lt;org&gt;/&lt;app&gt;</code>. There is</li></ol>
+<p>   no second push, no mirror, and no <code>continue-on-error</code> publication lane.</p>
+<ol><li><strong>The credential is an IAM token, obtained per repository.</strong> The build</li></ol>
+<p>   authenticates to <code>hanzo.id/v1/iam/registry/token</code> with its machine identity    and receives a token scoped to the repository it named. No registry password    exists to store, leak or rotate.</p>
+<ol><li><strong>The push crosses the public ingress</strong>, exactly as an outside client&#x27;s would.</li></ol>
+<p>   The registry Service is not reachable from the build fleet directly, so a    compromised build has the reach of an internet client and no more.</p>
+<ol><li><strong>Multi-arch is one manifest list</strong>, <code>linux/amd64</code> and <code>linux/arm64</code>, so a</li></ol>
+<p>   single tag serves an amd64 cluster node and an arm64 developer machine without    emulation.</p>
 <h3>Kubernetes Pull Configuration</h3>
-<p>Kubernetes clusters are configured to pull images from GHCR with in-cluster fallback:</p>
+<p>Kubernetes pulls from <code>oci.hanzo.ai</code>, with the pull identity supplied as an <code>imagePullSecret</code> synced from KMS. Without a credential the kubelet asks anonymously and the pull fails in a way that reads as a missing image rather than a missing credential, so the secret is not optional:</p>
 <pre><code class="lang-yaml"># K8s deployment spec
 apiVersion: apps/v1
 kind: Deployment
@@ -445,13 +362,10 @@ http:
 <pre><code class="lang-yaml">deploy:
   needs: build
   steps:
-    - name: Configure kubectl
-      run: doctl kubernetes cluster kubeconfig save the cluster
-
-    - name: Deploy to K8s
+    - name: Deploy
       run: |
         kubectl set image deployment/iam \
-          iam=ghcr.io/hanzoai/iam:latest
+          iam=ghcr.io/hanzoai/iam:v1.33.25
         kubectl rollout status deployment/iam --timeout=300s
 
     - name: Verify health
@@ -461,36 +375,24 @@ http:
 <h2>Security</h2>
 <h3>Authentication Architecture</h3>
 <p>Registry authentication flows through Hanzo IAM. The Docker registry v2 authentication protocol works as follows:</p>
-<pre><code>1. Client attempts: docker pull registry.hanzo.ai/myimage
+<pre><code>1. Client attempts: docker pull oci.hanzo.ai/hanzoai/myimage
 2. Registry returns: 401 with WWW-Authenticate header
-3. Client requests token: GET /api/registry/token?service=registry.hanzo.ai&amp;scope=repository:myimage:pull
+3. Client requests token: GET /v1/iam/registry/token?service=oci.hanzo.ai&amp;scope=repository:hanzoai/myimage:pull
    (with Basic auth credentials)
 4. IAM validates credentials against user database
 5. IAM returns signed JWT with access claims
 6. Client retries pull with Bearer token
 7. Registry validates JWT signature via JWKS endpoint</code></pre>
 <p>IAM implements this via <code>GetRegistryToken</code> (see <code>controllers/registry_token.go</code>):</p>
-<ul><li>Authenticates user via Basic auth against IAM user database</li><li>Admin users receive all requested actions (pull, push, delete)</li><li>Non-admin users receive pull-only access regardless of request</li><li>Returns a 15-minute RS256-signed JWT with access claims</li><li>Registry verifies tokens via the JWKS endpoint at <code>/api/registry/jwks</code></li></ul>
+<ul><li>Authenticates user via Basic auth against IAM user database</li><li>Admin users receive all requested actions (pull, push, delete)</li><li>Non-admin users receive pull-only access regardless of request</li><li>Returns a 15-minute RS256-signed JWT with access claims</li><li>Registry verifies tokens via the JWKS endpoint at <code>/v1/iam/registry/jwks</code></li></ul>
 <h3>Signing Key Management</h3>
 <p>The registry token signing key follows a strict resolution chain:</p>
 <ol><li><code>REGISTRY_SIGNING_KEY</code> env var (inline PEM or <code>kms://SECRET_NAME</code> reference)</li><li><code>REGISTRY_SIGNING_KEY_FILE</code> env var (path to PEM file)</li><li><code>REGISTRY_SIGNING_KEY_SECRET</code> env var (KMS secret name, default: <code>IAM_REGISTRY_SIGNING_KEY</code>)</li></ol>
 <p>In production (<code>ENVIRONMENT=production</code>), a persistent signing key MUST be configured. The server will panic on startup if KMS key resolution fails. In development, an ephemeral RSA key is generated per process for convenience.</p>
 <h3>Credential Sources</h3>
-<p>| Registry | Credential Source | Auth Method | |---|---|---| | GHCR (CI push) | <code>GITHUB_TOKEN</code> (auto) | Token via GitHub Actions | | GHCR (K8s pull) | <code>ghcr-pull-secret</code> | Image pull secret | | Docker Hub (CI push) | KMS <code>DOCKERHUB_TOKEN</code> | Username/password via KMS | | In-cluster (push) | IAM user credentials | Basic auth -&gt; JWT | | In-cluster (pull) | IAM user credentials | Basic auth -&gt; JWT |</p>
-<p>Docker Hub credentials are NEVER stored as GitHub Secrets. They are fetched at CI runtime from Hanzo KMS via Universal Auth:</p>
-<pre><code class="lang-bash"># KMS authentication (from CI workflow)
-ACCESS_TOKEN=&quot;$(curl -fsS -X POST \
-  &quot;https://kms.hanzo.ai/api/v1/auth/universal-auth/login&quot; \
-  -H &quot;Content-Type: application/json&quot; \
-  -d &#x27;{&quot;clientId&quot;:&quot;...&quot;,&quot;clientSecret&quot;:&quot;...&quot;}&#x27;
-  | jq -r &#x27;.accessToken&#x27;)&quot;
-
-# Secret retrieval
-DOCKERHUB_TOKEN=&quot;$(curl -fsS \
-  &quot;https://kms.hanzo.ai/api/v3/secrets/raw/DOCKERHUB_TOKEN?workspaceSlug=gitops&amp;environment=prod&amp;secretPath=/ci&quot; \
-  -H &quot;Authorization: Bearer ${ACCESS_TOKEN}&quot; \
-  | jq -r &#x27;.secret.secretValue&#x27;)&quot;</code></pre>
-<p>This means credential rotation happens in KMS. No GitHub settings, no manual updates to CI configs, no secrets in source code.</p>
+<p>| Operation | Credential | Auth method | |---|---|---| | Push to <code>oci.hanzo.ai</code> | the build&#x27;s IAM machine identity | <code>client_credentials</code> → per-repository registry token | | Pull from <code>oci.hanzo.ai</code> | an <code>imagePullSecret</code> synced from KMS | the same token flow, presented by the kubelet | | Pull an upstream base image | none | anonymous, from wherever it is published |</p>
+<p>There is no registry username and no registry password anywhere in that table. The only durable credential is the machine identity, which IAM issues and IAM revokes — one authority, per HIP-0111 — and a build never holds a credential for a registry it does not itself push to.</p>
+<p>Rotation therefore happens in one place and takes effect on the next build. No forge settings to edit, no manifests to re-sync, no secret in source.</p>
 <h3>Image Signing with Sigstore</h3>
 <p>All release images SHOULD be signed using cosign (Sigstore project) for supply chain verification:</p>
 <pre><code class="lang-bash"># Sign after push (in CI)
@@ -542,13 +444,18 @@ registry_http_request_duration_seconds # Request latency histogram</code></pre>
 <p>| Metric | Threshold | Action | |---|---|---| | Storage usage | &gt; 80% capacity | Trigger GC, alert on-call | | Pull latency p99 | &gt; 5s | Check network, storage IOPS | | 5xx error rate | &gt; 1% | Page on-call | | Auth failure rate | &gt; 10% | Investigate credential issues |</p>
 <h3>Disaster Recovery</h3>
 <p>The in-cluster registry is a cache, not a source of truth. If it is lost:</p>
-<ol><li>Kubernetes continues pulling from GHCR (slower but functional)</li><li>Redeploy the registry from Helm chart</li><li>Cache repopulates organically on next pulls</li></ol>
-<p>GHCR and Docker Hub are managed by GitHub and Docker respectively. Our disaster recovery concern is limited to the in-cluster tier.</p>
+<p>The registry&#x27;s durability is its object store&#x27;s, not the pod&#x27;s: the workload is replaceable and the blobs are not held on its disk. Recovery is redeploying the workload against the same bucket.</p>
+<p>What that does not cover is the bucket. The store MUST be backed up on the same terms as any other durable state (HIP-0065), because an image nothing can pull is an outage that no amount of re-running CI shortens — the build that produced a given digest may no longer be reproducible.</p>
 <h2>Reference Implementation</h2>
-<p>The IAM service (<code>github.com/hanzoai/iam</code>) serves as the reference implementation for this standard. Its CI workflow at <code>.github/workflows/docker-deploy.yml</code> demonstrates:</p>
-<ul><li>KMS-sourced credentials</li><li>Multi-arch buildx builds</li><li>GHCR primary push (required)</li><li>Docker Hub secondary push (continue-on-error)</li><li>K8s rolling deployment from GHCR</li><li>Health verification after deploy</li></ul>
-<p>Its <code>controllers/registry_token.go</code> demonstrates:</p>
+<p>The registry token endpoint in <code>hanzoai/iam</code> is the reference implementation of the authorization half. The build half is <code>hanzoai/ci</code>&#x27;s one reusable workflow (HIP-0036); no repository has a reference workflow of its own to copy, which is the point.</p>
+<p>The IAM registry-token handler demonstrates:</p>
 <ul><li>Docker registry v2 token authentication</li><li>IAM-backed credential validation</li><li>Role-based access control (admin: push+pull, user: pull-only)</li><li>RSA-signed JWT token generation</li><li>JWKS public key endpoint for token verification</li><li>KMS-backed signing key resolution with ephemeral fallback</li></ul>
+<h2>Conformance status</h2>
+<p>Measured against the running cluster on 2026-09-09.</p>
+<p><strong>GHCR, still the majority pull source.</strong> Every first-party image running in the cluster resolves from GHCR under its own org, and the orgs do not mix: 189 <code>ghcr.io/hanzoai</code>, 73 <code>ghcr.io/luxfi</code>, 13 <code>ghcr.io/zooai</code>. The remainder are upstream base images (<code>python</code>, <code>docker.io/library</code>, <code>rancher/<em></code>, <code>quay.io/jetstack</code>, <code>registry.k8s.io/</em></code>), which is what the standard expects — third-party images are pulled, not published.</p>
+<p><strong>Docker Hub, retiring.</strong> <code>hub.docker.com/v2/repositories/hanzoai/{iam,console,commerce}</code> each still return <code>200</code>, so the old mirror&#x27;s tags are still published and still resolvable. Nothing in the cluster runs from <code>docker.io/hanzoai</code>. Those repositories are the residue of the three-tier scheme this revision removes; they are stale from the moment the second push stopped, and the honest fix is to archive them rather than leave tags that look current.</p>
+<p><strong><code>oci.hanzo.ai</code>, the target.</strong> <code>oci.hanzo.ai/v2/</code> returns <code>401</code> — an OCI registry demanding a token, not a <code>404</code> from a host that has no registry behind it — and 13 running images resolve from <code>oci.hanzo.ai/hanzoai</code>. The <code>registry:2</code> workload backing it runs in <code>hanzo-build</code> and <code>hanzo</code>.</p>
+<p>The token flow in §Authentication is the one that carries the <code>401</code>: a client is sent to <code>/v1/iam/registry/token</code> on IAM, which is the estate&#x27;s <code>/v1/</code> shape and not an <code>/api/</code> path.</p>
 <h2>Copyright</h2>
 <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</p>
 <footer>
@@ -570,5 +477,4 @@ registry_http_request_duration_seconds # Request latency histogram</code></pre>
 </div>
 <div class="fend"><a href="/hip-0033.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

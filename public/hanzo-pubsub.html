@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-pubsub</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-pubsub.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-pubsub">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-pubsub.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-pubsub</h1><p class="lede">Hanzo PubSub is a high-performance messaging system for pub/sub, persistent streams, and exactly-once delivery.</p><h1>Hanzo PubSub - Event Streaming and Message Queue</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-storage.md</code>, <code>hanzo/hanzo-platform.md</code>, <code>hanzo/hanzo-universe.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo PubSub is a <strong>high-performance messaging system</strong> for pub/sub, persistent streams, and exactly-once delivery. It is a fork of NATS Server with Hanzo branding and a bundled Kafka-compatible Redpanda sidecar. Written in Go. Provides the messaging backbone for Hanzo infrastructure.</p>
+<h3>Why Hanzo PubSub?</h3>
+<ul><li><strong>Pub/Sub Messaging</strong>: Subject-based routing with wildcard subscriptions</li><li><strong>JetStream</strong>: Persistent streams with configurable retention and replay</li><li><strong>Consumer Groups</strong>: Scalable consumption with automatic load balancing</li><li><strong>Exactly-Once Delivery</strong>: Deduplication and acknowledgment semantics</li><li><strong>Built-in Key-Value Store</strong>: Distributed KV on top of JetStream</li><li><strong>Built-in Object Store</strong>: Large object storage via JetStream</li><li><strong>Kafka Compatible</strong>: Bundled Redpanda sidecar speaks Kafka wire protocol</li><li><strong>Clustering</strong>: Horizontal scaling with automatic failover via Raft</li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Language</strong>: Go (module: <code>github.com/nats-io/nats-server/v2</code>)</li><li><strong>Go Version</strong>: 1.26</li><li><strong>License</strong>: Apache 2.0</li><li><strong>Kafka Sidecar</strong>: Redpanda v25.1.9</li></ul>
+<h3>OSS Base</h3>
+<p>Fork of <a href="https://github.com/nats-io/nats-server">NATS Server</a>. Repo: <code>hanzoai/pubsub</code>.</p>
+<h2>When to use</h2>
+<ul><li>Inter-service messaging in Hanzo infrastructure</li><li>Durable event streaming with replay capability</li><li>Work queues with load-balanced consumers</li><li>Real-time notifications and event-driven architectures</li><li>Kafka-compatible streaming (via Redpanda sidecar)</li><li>Lightweight distributed key-value or object storage</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Go 1.26+</strong> to build from source</li><li><strong>Docker</strong> for container deployment</li><li><strong>Persistent volume</strong> for JetStream data durability</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Repo | <code>github.com/hanzoai/pubsub</code> | | Module | <code>github.com/nats-io/nats-server/v2</code> (upstream path retained) | | Go Version | 1.26 | | License | Apache 2.0 | | Client Port | 4222 | | Monitoring Port | 8222 | | Cluster Port | 6222 | | WebSocket Port | 5222 | | Kafka Port | 9092 (Redpanda sidecar) | | Docker Image | <code>hanzoai/pubsub:latest</code> | | Binary | <code>pubsub</code> (built from <code>main.go</code>) | | Config | <code>/pubsub/conf/server.conf</code> |</p>
+<h2>One-file quickstart</h2>
+<h3>Docker</h3>
+<pre><code class="lang-bash">docker run -d --name hanzo-pubsub \
+ -p 4222:4222 \
+ -p 8222:8222 \
+ hanzoai/pubsub:latest</code></pre>
+<h3>Docker Compose</h3>
+<pre><code class="lang-yaml"># compose.yml
+services:
+ pubsub:
+ image: hanzoai/pubsub:latest
+ ports:
+ - &quot;4222:4222&quot; # Client connections
+ - &quot;8222:8222&quot; # HTTP monitoring
+ - &quot;6222:6222&quot; # Cluster routing
+ volumes:
+ - pubsub-data:/data
+ command: [&quot;--jetstream&quot;, &quot;--store_dir=/data&quot;]
+
+ # Optional: Kafka-compatible sidecar
+ kafka:
+ build: kafka/
+ ports:
+ - &quot;9092:9092&quot; # Kafka protocol
+ - &quot;8081:8081&quot; # Schema registry
+ - &quot;8082:8082&quot; # HTTP proxy
+ - &quot;9644:9644&quot; # Admin API
+
+volumes:
+ pubsub-data:</code></pre>
+<h3>Build from source</h3>
+<pre><code class="lang-bash">git clone https://github.com/hanzoai/pubsub.git
+cd pubsub
+go build -o pubsub .
+./pubsub --jetstream --store_dir /tmp/pubsub-data</code></pre>
+<h2>Core Concepts</h2>
+<h3>Architecture</h3>
+<pre><code>┌──────────────────────────────────────────────────┐
+│ Cluster │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐ │
+│ │ Node 1 │&lt;--&gt;│ Node 2 │&lt;--&gt;│ Node 3 │ │
+│ │ :4222 │ │ :4222 │ │ :4222 │ │
+│ └─────────┘ └─────────┘ └─────────┘ │
+│ │ │ │ │
+│ └──────────────┼──────────────┘ │
+│ │ │
+│ ┌───────┴───────┐ │
+│ │ JetStream │ │
+│ │ (Streams, │ │
+│ │ KV, ObjStore)│ │
+│ └───────────────┘ │
+└──────────────────────────────────────────────────┘
+
+ ┌───────────────────────┐
+ │ Redpanda Sidecar │
+ │ (Kafka :9092) │
+ │ (Schema Reg :8081) │
+ └───────────────────────┘</code></pre>
+<h3>Server Configuration</h3>
+<p>Default config at <code>docker/nats-server.conf</code>:</p>
+<pre><code class="lang-conf"># Client port
+port: 4222
+
+# HTTP monitoring
+monitor_port: 8222
+
+# Clustering
+cluster {
+ port: 6222
+ authorization {
+ user: ruser
+ password: T0pS3cr3t
+ timeout: 2
+ }
+ routes = []
+}</code></pre>
+<h3>Port Allocation</h3>
+<p>| Port | Protocol | Purpose | |------|----------|---------| | 4222 | TCP | Client connections (NATS protocol) | | 8222 | HTTP | Monitoring and management | | 6222 | TCP | Cluster routing between nodes | | 5222 | WebSocket | WebSocket client connections | | 9092 | TCP | Kafka protocol (Redpanda sidecar) | | 8081 | HTTP | Schema registry (Redpanda) | | 8082 | HTTP | HTTP proxy (Redpanda) | | 9644 | HTTP | Redpanda admin API |</p>
+<h3>Directory Structure</h3>
+<pre><code>pubsub/
+ main.go # Entry point (configures and runs server)
+ server/ # Core server implementation
+ conf/ # Configuration parser (lexer, parser)
+ internal/
+ antithesis/ # Deterministic testing
+ fastrand/ # Fast random number generation
+ ldap/ # LDAP authentication
+ ocsp/ # OCSP stapling
+ testhelper/ # Test utilities
+ kafka/
+ Dockerfile # Redpanda (Kafka-compatible) sidecar
+ logger/ # Logging
+ docker/
+ nats-server.conf # Default server configuration
+ Dockerfile.nightly # Nightly build
+ test/ # Integration tests
+ scripts/ # Build and CI scripts</code></pre>
+<h3>Client SDKs</h3>
+<p>| Language | Package | |----------|---------| | Go | <code>github.com/nats-io/nats.go</code> | | Python | <code>nats-py</code> (<code>pip install nats-py</code>) | | TypeScript | <code>nats</code> (<code>npm install nats</code>) | | Rust | <code>nats</code> (<code>cargo add nats</code>) |</p>
+<p>All NATS clients work directly with Hanzo PubSub (wire-compatible).</p>
+<h3>Usage Examples</h3>
+<p><strong>Basic Pub/Sub (Go):</strong></p>
+<pre><code class="lang-go">nc, _ := nats.Connect(&quot;nats://localhost:4222&quot;)
+defer nc.Close()
+
+// Subscribe
+nc.Subscribe(&quot;events.&gt;&quot;, func(msg *nats.Msg) {
+ fmt.Printf(&quot;Received: %s\n&quot;, string(msg.Data))
+})
+
+// Publish
+nc.Publish(&quot;events.user.created&quot;, []byte(`{&quot;user_id&quot;:&quot;123&quot;}`))</code></pre>
+<p><strong>JetStream Persistent Streams (Go):</strong></p>
+<pre><code class="lang-go">nc, _ := nats.Connect(&quot;nats://localhost:4222&quot;)
+js, _ := nc.JetStream()
+
+// Create stream
+js.AddStream(&amp;nats.StreamConfig{
+ Name: &quot;ORDERS&quot;,
+ Subjects: []string{&quot;orders.*&quot;},
+})
+
+// Publish
+js.Publish(&quot;orders.new&quot;, []byte(`{&quot;order_id&quot;:&quot;abc123&quot;}`))
+
+// Durable consumer
+sub, _ := js.PullSubscribe(&quot;orders.*&quot;, &quot;processor&quot;)
+msgs, _ := sub.Fetch(10)
+for _, msg := range msgs {
+ msg.Ack()
+}</code></pre>
+<h2>Performance</h2>
+<ul><li><strong>Throughput</strong>: 10M+ messages/second</li><li><strong>Latency</strong>: Sub-millisecond publish latency</li><li><strong>Connections</strong>: 100K+ concurrent connections per node</li></ul>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | JetStream not enabled | Missing flag | Add <code>--jetstream</code> to command | | Cluster routes not connecting | Auth mismatch | Verify <code>ruser:T0pS3cr3t</code> matches all nodes | | Kafka clients can&#x27;t connect | Redpanda not running | Start Kafka sidecar container | | Data lost on restart | No persistent volume | Mount volume at <code>--store_dir</code> path |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-storage.md</code> - S3-compatible object storage (uses PubSub for event notifications)</li><li><code>hanzo/hanzo-platform.md</code> - PaaS deployment</li><li><code>hanzo/hanzo-universe.md</code> - Production K8s infrastructure</li><li><code>hanzo/hanzo-database.md</code> - PostgreSQL database</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: pubsub, messaging, nats, kafka, streaming, events <strong>Prerequisites</strong>: Go 1.26+, Docker</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-pubsub.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

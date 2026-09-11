@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>deltasoup</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/deltasoup.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/deltasoup">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/deltasoup.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>deltasoup</h1><p class="lede">DeltaSoup enables community-driven model improvement through Byzantine-robust aggregation of personalized model deltas.</p><h1>DeltaSoup - Byzantine-Robust Community Learning</h1>
+<p><strong>Category</strong>: Zoo Gym Training Methods <strong>Skill Level</strong>: Advanced <strong>Prerequisites</strong>: Understanding of federated learning, Byzantine fault tolerance, differential privacy <strong>Related Skills</strong>: bitdelta.md, training-free-grpo.md, ../hanzo/hanzo-gym.md</p>
+<h2>Overview</h2>
+<p>DeltaSoup enables <strong>community-driven model improvement</strong> through Byzantine-robust aggregation of personalized model deltas. It allows thousands of users to contribute their fine-tuned improvements while filtering malicious contributions and protecting individual privacy through differential privacy.</p>
+<p><strong>Core Innovation</strong>: Byzantine-robust averaging + differential privacy + quality-based rewards for community-driven AI model evolution.</p>
+<h2>Why DeltaSoup?</h2>
+<h3>The Problem: Community AI Improvement</h3>
+<ul><li><strong>Centralized Training</strong>: Single organization controls model evolution</li><li><strong>No User Contribution</strong>: Users can&#x27;t contribute improvements back</li><li><strong>Malicious Actors</strong>: Bad actors can poison the model with adversarial fine-tuning</li><li><strong>Privacy Concerns</strong>: Individual contributions can be reverse-engineered</li></ul>
+<h3>The DeltaSoup Solution</h3>
+<ul><li><strong>Decentralized</strong>: Community-driven model improvement</li><li><strong>Byzantine-Robust</strong>: Filters malicious contributions automatically</li><li><strong>Privacy-Preserving</strong>: Differential privacy protects individual data</li><li><strong>Incentive-Aligned</strong>: Contributors earn rewards based on quality</li></ul>
+<h2>How DeltaSoup Works</h2>
+<h3>1. User Contributions</h3>
+<p>Users fine-tune the base model on their own data:</p>
+<pre><code class="lang-python"># User Alice fine-tunes model on her medical diagnosis data
+alice_model = fine_tune(base_model, alice_data)
+
+# User Bob fine-tunes model on his legal case analysis
+bob_model = fine_tune(base_model, bob_data)
+
+# User Charlie fine-tunes model on his financial reports
+charlie_model = fine_tune(base_model, charlie_data)</code></pre>
+<h3>2. Delta Extraction</h3>
+<p>Extract the delta (weight difference) from each user:</p>
+<pre><code class="lang-python"># Calculate deltas
+alice_delta = alice_model.weights - base_model.weights
+bob_delta = bob_model.weights - base_model.weights
+charlie_delta = charlie_model.weights - base_model.weights</code></pre>
+<h3>3. Byzantine-Robust Aggregation</h3>
+<p>Filter malicious contributions using Byzantine-robust averaging:</p>
+<pre><code class="lang-python"># Assume Charlie is malicious (extreme delta values)
+deltas = [alice_delta, bob_delta, charlie_delta]
+
+# Byzantine-robust averaging (Krum, Multi-Krum, or Trimmed Mean)
+aggregated_delta = byzantine_robust_average(deltas)
+
+# Charlie&#x27;s malicious delta is filtered out
+# Only Alice and Bob&#x27;s deltas are used</code></pre>
+<h3>4. Differential Privacy</h3>
+<p>Add noise to protect individual contributions:</p>
+<pre><code class="lang-python"># Add calibrated noise to aggregated delta
+noise = gaussian_noise(epsilon=1.0, delta=1e-5)
+private_delta = aggregated_delta + noise
+
+# Individual contributions cannot be reverse-engineered</code></pre>
+<h3>5. Model Update</h3>
+<p>Apply aggregated delta to base model:</p>
+<pre><code class="lang-python"># Create new community-improved model
+improved_model = base_model + private_delta
+
+# This becomes the new base for next round</code></pre>
+<h2>Aggregation Methods</h2>
+<p>DeltaSoup supports multiple Byzantine-robust aggregation methods:</p>
+<h3>1. Byzantine-Robust (Krum) - Default</h3>
+<p><strong>Best for</strong>: Filtering malicious contributions <strong>Assumes</strong>: &lt; 30% Byzantine actors</p>
+<pre><code class="lang-python">from zoo.gym import DeltaSoup, AggregationMethod, DeltaSoupConfig
+
+config = DeltaSoupConfig(
+    method=AggregationMethod.BYZANTINE_ROBUST,
+    byzantine_threshold=0.3  # Max 30% malicious
+)
+
+soup = DeltaSoup(config)</code></pre>
+<p><strong>How it works</strong>:</p>
+<ol><li>Calculate pairwise distances between all deltas</li><li>For each delta, sum distances to k nearest neighbors</li><li>Select delta with smallest sum (most &quot;central&quot;)</li><li>Repeat for multiple deltas (Multi-Krum)</li></ol>
+<h3>2. Trimmed Mean</h3>
+<p><strong>Best for</strong>: Robust averaging with fewer assumptions <strong>Assumes</strong>: Outliers exist but are minority</p>
+<pre><code class="lang-python">config = DeltaSoupConfig(
+    method=AggregationMethod.TRIMMED_MEAN,
+    trim_percent=0.2  # Trim 20% from each tail
+)</code></pre>
+<p><strong>How it works</strong>:</p>
+<ol><li>Sort delta values for each weight</li><li>Remove top 20% and bottom 20%</li><li>Average remaining 60%</li></ol>
+<h3>3. Weighted Mean</h3>
+<p><strong>Best for</strong>: Reputation-based aggregation <strong>Assumes</strong>: Users have established reputation scores</p>
+<pre><code class="lang-python">config = DeltaSoupConfig(
+    method=AggregationMethod.WEIGHTED_MEAN,
+    validate_contributions=True  # Validate quality
+)</code></pre>
+<p><strong>How it works</strong>:</p>
+<ol><li>Calculate reputation score for each user</li><li>Weight deltas by reputation</li><li>Compute weighted average</li></ol>
+<h2>Differential Privacy</h2>
+<p>DeltaSoup protects individual contributions through differential privacy:</p>
+<h3>Privacy Budget (ε, δ)</h3>
+<pre><code class="lang-python">config = DeltaSoupConfig(
+    differential_privacy=True,
+    privacy_epsilon=1.0,    # Privacy budget
+    privacy_delta=1e-5,     # Failure probability
+    noise_scale=0.01        # Noise scale
+)</code></pre>
+<p><strong>Privacy guarantees</strong>:</p>
+<ul><li><strong>ε = 0.1</strong>: Very strong privacy (high noise)</li><li><strong>ε = 1.0</strong>: Strong privacy (moderate noise, default)</li><li><strong>ε = 10.0</strong>: Weak privacy (low noise)</li></ul>
+<h3>Noise Calibration</h3>
+<pre><code class="lang-python"># Noise scale is calibrated to privacy budget
+noise_scale = sensitivity / (epsilon * sqrt(2 * log(1.25 / delta)))
+
+# Example:
+# sensitivity = 1.0 (max change from one user)
+# epsilon = 1.0
+# delta = 1e-5
+# noise_scale ≈ 0.01</code></pre>
+<h2>Contributor Profiles and Reputation</h2>
+<p>DeltaSoup tracks contributor quality and reputation:</p>
+<h3>Profile Tracking</h3>
+<pre><code class="lang-python">from zoo.gym import ContributorProfile
+
+# Create profile for user
+profile = ContributorProfile(user_id=&quot;alice&quot;)
+
+# Update reputation after contribution
+profile.update_reputation(quality_score=0.85)
+
+# Get aggregation weight
+weight = profile.get_weight()  # Returns reputation score</code></pre>
+<h3>Reputation Scoring</h3>
+<pre><code class="lang-python"># Exponential moving average (EMA) of quality scores
+alpha = 0.1  # Learning rate
+new_reputation = (1 - alpha) * old_reputation + alpha * quality_score
+
+# Example:
+# old_reputation = 0.8
+# quality_score = 0.9
+# new_reputation = 0.9 * 0.8 + 0.1 * 0.9 = 0.81</code></pre>
+<h3>Quality Validation</h3>
+<pre><code class="lang-python">config = DeltaSoupConfig(
+    validate_contributions=True,
+    quality_threshold=0.8,    # Min quality score
+    diversity_bonus=0.1        # Bonus for diverse contributions
+)
+
+# Contributions below quality threshold are rejected</code></pre>
+<h2>Reward System</h2>
+<p>Contributors earn rewards based on contribution quality:</p>
+<h3>Reward Configuration</h3>
+<pre><code class="lang-python">config = DeltaSoupConfig(
+    enable_rewards=True,
+    reward_pool=1000.0,         # Total reward pool
+    quality_weight=0.7,         # 70% weight for quality
+    participation_weight=0.3    # 30% weight for participation
+)</code></pre>
+<h3>Reward Calculation</h3>
+<pre><code class="lang-python"># Quality score (0-1): How much the contribution improves the model
+quality_score = evaluate_contribution(delta, validation_set)
+
+# Participation score (0-1): Consistency of contributions
+participation_score = contribution_count / max_contributions
+
+# Total score
+total_score = (
+    quality_weight * quality_score +
+    participation_weight * participation_score
+)
+
+# Reward proportional to total score
+reward = (total_score / sum(all_scores)) * reward_pool</code></pre>
+<h3>Example Rewards</h3>
+<pre><code class="lang-python"># 3 contributors:
+# Alice: quality=0.9, participation=0.8
+# Bob: quality=0.7, participation=1.0
+# Charlie: quality=0.5, participation=0.6
+
+# Total scores:
+# Alice: 0.7 * 0.9 + 0.3 * 0.8 = 0.87
+# Bob: 0.7 * 0.7 + 0.3 * 1.0 = 0.79
+# Charlie: 0.7 * 0.5 + 0.3 * 0.6 = 0.53
+
+# Rewards (reward_pool = 1000):
+# Alice: (0.87 / 2.19) * 1000 = 397
+# Bob: (0.79 / 2.19) * 1000 = 361
+# Charlie: (0.53 / 2.19) * 1000 = 242</code></pre>
+<h2>Installation</h2>
+<pre><code class="lang-bash"># Zoo Gym includes DeltaSoup by default
+git clone https://github.com/zooai/gym.git
+cd gym
+pip install -e .
+
+# Or via pip
+pip install zoo-gym</code></pre>
+<h2>Usage Examples</h2>
+<h3>Basic DeltaSoup Workflow</h3>
+<pre><code class="lang-python">from zoo.gym import DeltaSoup, DeltaSoupConfig, AggregationMethod
+
+# Configure DeltaSoup
+config = DeltaSoupConfig(
+    method=AggregationMethod.BYZANTINE_ROBUST,
+    byzantine_threshold=0.3,
+    differential_privacy=True,
+    privacy_epsilon=1.0,
+    enable_rewards=True,
+    min_contributors=3,
+    quality_threshold=0.8
+)
+
+# Create soup
+soup = DeltaSoup(config)
+
+# Users contribute their improvements
+soup.contribute(user_id=&quot;alice&quot;, model=model_alice)
+soup.contribute(user_id=&quot;bob&quot;, model=model_bob)
+soup.contribute(user_id=&quot;charlie&quot;, model=model_charlie)
+
+# Aggregate improvements (Byzantine-robust + differential privacy)
+aggregated_model = soup.aggregate()
+
+# Distribute rewards based on quality
+rewards = soup.calculate_rewards()
+print(rewards)  # {&#x27;alice&#x27;: 397, &#x27;bob&#x27;: 361, &#x27;charlie&#x27;: 242}
+
+# Save improved model
+soup.save_aggregated_model(&quot;./community_improved_model&quot;)</code></pre>
+<h3>Integration with BitDelta</h3>
+<pre><code class="lang-python">from zoo.gym import BitDeltaConfig, DeltaSoupConfig
+
+# Enable BitDelta compression for DeltaSoup
+deltasoup_config = DeltaSoupConfig(
+    method=AggregationMethod.BYZANTINE_ROBUST,
+    use_bitdelta=True,  # Compress deltas with BitDelta
+    compression_threshold=0.9  # 90% compression
+)
+
+# Users contribute compressed deltas (10× smaller)
+soup = DeltaSoup(deltasoup_config)
+soup.contribute_bitdelta(user_id=&quot;alice&quot;, delta=alice_bitdelta)
+soup.contribute_bitdelta(user_id=&quot;bob&quot;, delta=bob_bitdelta)
+
+# Aggregation works on compressed deltas
+aggregated_model = soup.aggregate()</code></pre>
+<h3>Production Community Learning</h3>
+<pre><code class="lang-python">from zoo.gym import CommunityLearningServer
+import asyncio
+
+# Initialize community learning server
+server = CommunityLearningServer(
+    base_model=&quot;Qwen/Qwen3-4B&quot;,
+    config=DeltaSoupConfig(
+        method=AggregationMethod.BYZANTINE_ROBUST,
+        differential_privacy=True,
+        enable_rewards=True,
+        min_contributors=10,
+        quality_threshold=0.8,
+        contribution_window=86400  # 24 hour window
+    )
+)
+
+# Start server
+await server.start()
+
+# Users submit contributions via API
+# Server aggregates contributions every 24 hours
+# Improved model is published to community</code></pre>
+<h3>Custom Quality Validation</h3>
+<pre><code class="lang-python">def custom_quality_validator(delta, base_model, validation_set):
+    &quot;&quot;&quot;Custom quality validation function&quot;&quot;&quot;
+    # Apply delta to base model
+    test_model = base_model + delta
+
+    # Evaluate on validation set
+    accuracy = evaluate(test_model, validation_set)
+
+    # Check for safety violations
+    jailbreak_rate = test_jailbreaks(test_model)
+
+    # Calculate quality score
+    quality = accuracy * (1 - jailbreak_rate)
+
+    return quality
+
+# Use custom validator
+config = DeltaSoupConfig(
+    validate_contributions=True,
+    quality_validator=custom_quality_validator
+)</code></pre>
+<h2>CLI Usage</h2>
+<pre><code class="lang-bash"># Create DeltaSoup aggregation
+llamafactory-cli deltasoup \
+    --base_model Qwen/Qwen3-4B \
+    --contributions ./contributions/*.delta \
+    --method byzantine_robust \
+    --byzantine_threshold 0.3 \
+    --differential_privacy \
+    --privacy_epsilon 1.0 \
+    --output_dir ./community_improved \
+    --enable_rewards \
+    --reward_pool 1000.0
+
+# Serve community-improved model
+llamafactory-cli serve \
+    --model_name_or_path ./community_improved \
+    --template qwen3 \
+    --port 8080</code></pre>
+<h2>Performance Benchmarks</h2>
+<h3>Aggregation Speed (1000 Contributors, Qwen3-4B)</h3>
+<p>| Method | Aggregation Time | Throughput | |--------|------------------|------------| | Mean | 0.5s | 2000 contributions/s | | Trimmed Mean | 1.2s | 833 contributions/s | | <strong>Byzantine-Robust</strong> | 8.5s | 118 contributions/s | | Weighted Mean | 0.8s | 1250 contributions/s |</p>
+<h3>Byzantine Attack Resistance (30% Malicious)</h3>
+<p>| Method | Attack Success Rate | Model Quality | |--------|---------------------|---------------| | Mean | 100% (poisoned) | 0% | | Trimmed Mean (20%) | 15% | 82% | | <strong>Byzantine-Robust</strong> | 2% | 97% | | Weighted Mean (reputation) | 5% | 93% |</p>
+<h3>Privacy vs Quality Trade-off</h3>
+<p>| Privacy (ε) | Noise Level | Model Quality | |-------------|-------------|---------------| | 0.1 | High | 65% | | 1.0 | Moderate | 92% | | 10.0 | Low | 98% | | ∞ (no privacy) | None | 100% |</p>
+<h2>Byzantine Attack Examples</h2>
+<h3>Attack 1: Large Magnitude Delta</h3>
+<pre><code class="lang-python"># Malicious user submits large magnitude delta
+malicious_delta = 1000 * torch.randn_like(base_model.weights)
+
+# Byzantine-robust aggregation detects and filters
+# Distance to other deltas is very large
+# Malicious delta is rejected</code></pre>
+<h3>Attack 2: Adversarial Fine-Tuning</h3>
+<pre><code class="lang-python"># Malicious user fine-tunes to maximize jailbreak success
+malicious_model = adversarial_fine_tune(
+    base_model,
+    objective=&quot;maximize_jailbreak&quot;
+)
+
+# Quality validation catches this
+quality_score = evaluate_contribution(malicious_delta, validation_set)
+# quality_score &lt; quality_threshold → rejected</code></pre>
+<h3>Attack 3: Coordinated Attack</h3>
+<pre><code class="lang-python"># Multiple malicious users coordinate their deltas
+malicious_users = [&quot;eve&quot;, &quot;mallory&quot;, &quot;trudy&quot;]
+coordinated_delta = ...
+
+# Byzantine-robust aggregation (Krum) still works if &lt; 30%
+# If malicious users &gt; 30%, aggregation may be compromised
+# Solution: Use reputation system to limit new users</code></pre>
+<h2>Integration with Hanzo Ecosystem</h2>
+<p>DeltaSoup is fully supported across the Hanzo ecosystem:</p>
+<h3>Python SDK</h3>
+<pre><code class="lang-python">from hanzo import Hanzo
+from zoo.gym import DeltaSoupConfig, AggregationMethod
+
+hanzo = Hanzo(inference_mode=&#x27;local&#x27;)
+
+# Contribute user improvement
+hanzo.contribute_improvement(
+    user_id=&quot;alice&quot;,
+    base_model=&quot;qwen3-4b&quot;,
+    improvement_data=alice_data,
+    config=DeltaSoupConfig(
+        method=AggregationMethod.BYZANTINE_ROBUST,
+        differential_privacy=True
+    )
+)
+
+# Aggregate community improvements
+improved_model = hanzo.aggregate_community_improvements(
+    base_model=&quot;qwen3-4b&quot;,
+    min_contributors=10
+)</code></pre>
+<h3>Go SDK</h3>
+<pre><code class="lang-go">package main
+
+import (
+    &quot;context&quot;
+    &quot;github.com/hanzoai/go-sdk&quot;
+    &quot;github.com/hanzoai/go-sdk/option&quot;
+)
+
+func main() {
+    client := hanzoai.NewClient(
+        option.WithInferenceMode(&quot;local&quot;),
+    )
+
+    // Contribute improvement
+    contribution, _ := client.CommunityLearning.Contribute(
+        context.Background(),
+        hanzoai.CommunityContributionParams{
+            UserID: hanzoai.F(&quot;alice&quot;),
+            BaseModel: hanzoai.F(&quot;qwen3-4b&quot;),
+            Delta: hanzoai.F(alice_delta),
+        },
+    )
+
+    // Check reward
+    println(&quot;Reward:&quot;, contribution.Reward)
+}</code></pre>
+<h3>Hanzo Node</h3>
+<pre><code class="lang-bash"># Start Hanzo Node with DeltaSoup support
+hanzo-node start --enable-deltasoup --community-dir ./community
+
+# Accept user contributions
+hanzo-node community accept --user alice --delta ./alice.delta
+
+# Aggregate improvements (daily)
+hanzo-node community aggregate \
+    --method byzantine_robust \
+    --min-contributors 10 \
+    --output ./improved_model
+
+# Distribute rewards
+hanzo-node community rewards distribute --pool 1000.0</code></pre>
+<h2>Security Considerations</h2>
+<h3>1. Byzantine Threshold</h3>
+<pre><code class="lang-python"># Byzantine-robust methods assume &lt; 30% malicious actors
+# If malicious actors &gt; 30%, aggregation may be compromised
+config = DeltaSoupConfig(
+    byzantine_threshold=0.3,  # Assume max 30% malicious
+    validate_contributions=True  # Additional validation
+)</code></pre>
+<h3>2. Reputation System</h3>
+<pre><code class="lang-python"># Use reputation to limit impact of new/untrusted users
+config = DeltaSoupConfig(
+    method=AggregationMethod.WEIGHTED_MEAN,
+    min_reputation=0.5,  # Require reputation &gt; 0.5
+    reputation_decay=0.9  # Reputation decays over time
+)</code></pre>
+<h3>3. Quality Validation</h3>
+<pre><code class="lang-python"># Always validate contributions before aggregation
+config = DeltaSoupConfig(
+    validate_contributions=True,
+    quality_threshold=0.8,  # Reject contributions &lt; 80%
+    safety_checks=True  # Check for jailbreak attempts
+)</code></pre>
+<h2>Best Practices</h2>
+<h3>1. Start with High Privacy</h3>
+<pre><code class="lang-python"># Production: Start with strong privacy, relax if needed
+config = DeltaSoupConfig(
+    differential_privacy=True,
+    privacy_epsilon=1.0,  # Strong privacy
+    privacy_delta=1e-5
+)</code></pre>
+<h3>2. Use Quality Thresholds</h3>
+<pre><code class="lang-python"># Always validate contribution quality
+config = DeltaSoupConfig(
+    validate_contributions=True,
+    quality_threshold=0.8,  # Reject low-quality contributions
+    diversity_bonus=0.1  # Encourage diverse improvements
+)</code></pre>
+<h3>3. Incremental Aggregation</h3>
+<pre><code class="lang-python"># Aggregate incrementally (daily/weekly) rather than all at once
+# This allows early detection of attacks
+config = DeltaSoupConfig(
+    contribution_window=86400,  # 24 hour window
+    min_contributors=10  # Minimum 10 contributors per round
+)</code></pre>
+<h2>Limitations and Considerations</h2>
+<h3>1. Byzantine Threshold</h3>
+<ul><li>Byzantine-robust methods assume &lt; 30% malicious actors</li><li>If malicious &gt; 30%, aggregation may be compromised</li><li>Use reputation system to mitigate this</li></ul>
+<h3>2. Privacy-Quality Trade-off</h3>
+<ul><li>Strong privacy (ε = 0.1) adds significant noise</li><li>Weak privacy (ε = 10) provides little protection</li><li>Recommended: ε = 1.0 for balance</li></ul>
+<h3>3. Cold Start Problem</h3>
+<ul><li>New users have low reputation scores</li><li>Early contributions may be underweighted</li><li>Solution: Bootstrap with trusted contributors</li></ul>
+<h2>Related Skills</h2>
+<ul><li><strong>bitdelta.md</strong> - Per-user personalization (10× compression, integrated with DeltaSoup)</li><li><strong>training-free-grpo.md</strong> - RLHF without value networks (default Zoo Gym training)</li><li><strong>../hanzo/hanzo-gym.md</strong> - Comprehensive Zoo Gym training guide</li><li><strong>../hanzo/python-sdk.md</strong> - Python SDK integration</li><li><strong>../hanzo/go-sdk.md</strong> - Go SDK integration</li><li><strong>../hanzo/hanzo-node.md</strong> - Local inference infrastructure</li></ul>
+<h2>Additional Resources</h2>
+<ul><li><strong>GitHub</strong>: https://github.com/zooai/gym</li><li><strong>Paper</strong>: https://arxiv.org/abs/1802.07927 (Byzantine-Robust Distributed Learning)</li><li><strong>Differential Privacy</strong>: https://arxiv.org/abs/1607.00133 (DP-SGD)</li><li><strong>Zoo Labs Foundation</strong>: https://zoo.ngo (501(c)(3) wildlife conservation)</li></ul>
+<hr>
+<p><strong>Remember</strong>: DeltaSoup enables <strong>community-driven AI model evolution</strong> with Byzantine-robust aggregation, differential privacy, and quality-based rewards - perfect for decentralized AI improvement while filtering malicious contributions and protecting user privacy.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/deltasoup.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

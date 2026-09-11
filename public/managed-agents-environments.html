@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>managed-agents-environments</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/managed-agents-environments.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/managed-agents-environments">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/managed-agents-environments.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>managed-agents-environments</h1><p class="lede">Creating a session requires an environmentid.</p><h1>Managed Agents — Environments &amp; Resources</h1>
+<h2>Environments</h2>
+<p>Creating a session requires an <code>environment_id</code>. Environments are <strong>reusable configuration templates</strong> for spinning up containers in Anthropic&#x27;s infrastructure — you might create different environments for different use cases (e.g. data visualization vs web development, with different package sets). Anthropic handles scaling, container lifecycle, and work orchestration.</p>
+<p><strong>Environment names must be unique.</strong> Creating an environment with an existing name returns 409.</p>
+<h3>Networking</h3>
+<p>| Network Policy   | Description                                                   | | ---------------- | ------------------------------------------------------------- | | <code>unrestricted</code>   | Full egress (except legal blocklist)                          | | <code>limited</code>        | Deny-by-default; opt in via <code>allowed_hosts</code> / <code>allow_package_managers</code> / <code>allow_mcp_servers</code> |</p>
+<pre><code class="lang-json">{
+  &quot;networking&quot;: {
+    &quot;type&quot;: &quot;limited&quot;,
+    &quot;allow_package_managers&quot;: true,
+    &quot;allow_mcp_servers&quot;: true,
+    &quot;allowed_hosts&quot;: [&quot;api.example.com&quot;]
+  }
+}</code></pre>
+<p>All three <code>limited</code> fields are optional. <code>allow_package_managers</code> (default <code>false</code>) permits PyPI/npm/etc.; <code>allow_mcp_servers</code> (default <code>false</code>) permits the agent&#x27;s configured MCP server endpoints without listing them in <code>allowed_hosts</code>.</p>
+<p><strong>MCP caveat:</strong> Under <code>limited</code> networking, either set <code>allow_mcp_servers: true</code> or add each MCP server domain to <code>allowed_hosts</code>. Otherwise the container can&#x27;t reach them and tools silently fail.</p>
+<h3>Creating an environment</h3>
+<p>The SDK adds <code>managed-agents-2026-04-01</code> automatically. TypeScript:</p>
+<pre><code class="lang-ts">const env = await client.beta.environments.create({
+  name: &quot;my_env&quot;,
+  config: {
+    type: &quot;cloud&quot;,
+    networking: { type: &quot;unrestricted&quot; },
+  },
+});</code></pre>
+<h3>Self-hosted sandboxes</h3>
+<p>To run tool execution in <strong>your own infrastructure</strong> instead of Anthropic&#x27;s, set <code>config: {type: &quot;self_hosted&quot;}</code> — the agent loop stays on Anthropic&#x27;s side, but <code>bash</code> / file ops / code execute in a container you control via an outbound-polling worker. The <code>networking</code> block does not apply (you control egress). Resource mounting (<code>file</code>, <code>github_repository</code>) and memory stores behave differently — see <code>shared/managed-agents-self-hosted-sandboxes.md</code> for the worker, credentials, and cloud-vs-self-hosted comparison.</p>
+<h3>Environment CRUD</h3>
+<p>| Operation        | Method   | Path                                       | Notes | | ---------------- | -------- | ------------------------------------------ | ----- | | Create           | <code>POST</code>   | <code>/v1/environments</code>                         | | | List             | <code>GET</code>    | <code>/v1/environments</code>                         | Paginated (<code>limit</code>, <code>after_id</code>, <code>before_id</code>) | | Get              | <code>GET</code>    | <code>/v1/environments/{id}</code>                    | | | Update           | <code>POST</code>   | <code>/v1/environments/{id}</code>                    | Changes apply only to <strong>new</strong> containers; existing sessions keep their original config | | Delete           | <code>DELETE</code> | <code>/v1/environments/{id}</code>                    | Returns 204. | | Archive          | <code>POST</code>   | <code>/v1/environments/{id}/archive</code>            | Makes it <strong>read-only</strong>; existing sessions continue, new sessions cannot reference it. No unarchive — terminal state. |</p>
+<hr>
+<h2>Resources</h2>
+<p>Attach files, GitHub repositories, and memory stores to a session. Resources are resolved during session creation, so a bad <code>file_id</code> or an unreachable repo surfaces on the create call rather than mid-run. Creating a session does <strong>not</strong> by itself start work or provision the sandbox — without <code>initial_events</code> the session is only registered, and the sandbox comes up when the session first needs it (see <code>shared/managed-agents-core.md</code> → Seeding a session with <code>initial_events</code>). Max <strong>999 file resources</strong> per session. Multiple GitHub repositories per session are supported. For <code>type: &quot;memory_store&quot;</code> resources (persistent cross-session memory — max 8 per session), see <code>shared/managed-agents-memory.md</code>.</p>
+<h3>File Uploads (input — host → agent)</h3>
+<p>Upload a file first via the Files API, then reference by <code>file_id</code> + <code>mount_path</code>:</p>
+<pre><code class="lang-ts">// 1. Upload
+const file = await client.beta.files.upload({
+  file: fs.createReadStream(&quot;data.csv&quot;),
+  purpose: &quot;agent&quot;,
+});
+
+// 2. Attach as a session resource
+const session = await client.beta.sessions.create({
+  agent: agent.id,
+  environment_id: envId,
+  resources: [
+    { type: &quot;file&quot;, file_id: file.id, mount_path: &quot;/workspace/data.csv&quot; }
+  ],
+});</code></pre>
+<p><strong><code>mount_path</code> is required</strong> and must be absolute. Parent directories are created automatically. Agent working directory defaults to <code>/workspace</code>. Files are mounted read-only — the agent writes modified versions to new paths.</p>
+<h3>Session outputs (output — agent → host)</h3>
+<p>The agent can write files to <code>/mnt/session/outputs/</code> during a session. These are automatically captured by the Files API and can be listed and downloaded afterwards:</p>
+<pre><code class="lang-ts">// After the turn completes, list output files scoped to this session:
+for await (const f of client.beta.files.list({
+  scope_id: session.id,
+  betas: [&quot;managed-agents-2026-04-01&quot;],
+})) {
+  console.log(f.filename, f.size_bytes);
+  const resp = await client.beta.files.download(f.id);
+  const text = await resp.text();
+}</code></pre>
+<p><strong>Requirements:</strong></p>
+<ul><li>The <code>write</code> tool (or <code>bash</code>) must be enabled for the agent to create output files.</li><li>Session-scoped <code>files.list</code> / <code>files.download</code> captures outputs written to <code>/mnt/session/outputs/</code>.</li><li>The filter parameter is <strong><code>scope_id</code></strong> (REST query param <code>?scope_id=&lt;session_id&gt;</code>). The SDK&#x27;s files resource auto-adds only the <code>files-api-2025-04-14</code> header, so pass <code>betas: [&quot;managed-agents-2026-04-01&quot;]</code> explicitly (or both headers on raw HTTP) — without it the API may reject <code>scope_id</code> as an unknown field. Requires <code>@anthropic-ai/sdk</code> ≥ 0.88.0 / <code>anthropic</code> (Python) ≥ 0.92.0 — older versions don&#x27;t type <code>scope_id</code>. The <code>ant</code> CLI does <strong>not</strong> expose this flag yet; use the SDK or curl.</li><li>Pass the session ID returned by <code>sessions.create()</code> verbatim (e.g. <code>sesn_011CZx...</code>) — the API validates the prefix.</li><li>There&#x27;s a brief indexing lag (~1–3s) between <code>session.status_idle</code> and output files appearing in <code>files.list</code>. Retry once or twice if empty.</li></ul>
+<blockquote><p><strong>Fallback when <code>scope_id</code> filtering is unavailable</strong> (older SDK, or endpoint returns an error): send a follow-up <code>user.message</code> asking the agent to <code>read</code> each file under <code>/mnt/session/outputs/</code> and return the contents. The agent streams the file bodies back as <code>agent.message</code> text. This works for text files only and costs output tokens — use it to unblock, not as the primary path.</p></blockquote>
+<p>This gives you a bidirectional file bridge: upload reference data in, download agent artifacts out.</p>
+<h3>GitHub Repositories</h3>
+<p>Clones a GitHub repository into the session container during initialization, before the agent begins execution. The agent can read, edit, commit, and push via <code>bash</code> (<code>git</code>). Multiple repositories per session are supported — add one <code>resources</code> entry per repo. Repositories are cached, so future sessions that use the same repository start faster.</p>
+<p>Mounting a repository also loads any skills stored in its root <code>.claude/skills</code> directory — discovered once per session, from the repository state checked out at session start (cloud sandboxes only). See <code>shared/managed-agents-tools.md</code> → Skills from a GitHub repository.</p>
+<p>Repositories are attached for the lifetime of the session — to change which repositories are mounted, create a new session. You <strong>can</strong> rotate a repository&#x27;s <code>authorization_token</code> on a running session via <code>client.beta.sessions.resources.update(resource_id, {session_id, authorization_token})</code>; the resource <code>id</code> is returned at session creation and by <code>resources.list()</code>.</p>
+<p><strong>Fields:</strong></p>
+<p>| Field | Required | Notes | |---|---|---| | <code>type</code> | ✅ | <code>&quot;github_repository&quot;</code> | | <code>url</code> | ✅ | The GitHub repository URL | | <code>authorization_token</code> | ✅ | GitHub Personal Access Token with repository access. <strong>Never echoed in API responses.</strong> | | <code>mount_path</code> | ❌ | Path where the repository will be cloned. Defaults to <code>/workspace/&lt;repo-name&gt;</code>. | | <code>checkout</code> | ❌ | <code>{type: &quot;branch&quot;, name: &quot;...&quot;}</code> or <code>{type: &quot;commit&quot;, sha: &quot;...&quot;}</code>. Defaults to the repo&#x27;s default branch. |</p>
+<p><strong>Token permission levels</strong> (fine-grained PATs):</p>
+<ul><li><code>Contents: Read</code> — clone only</li><li><code>Contents: Read and write</code> — push changes and create pull requests</li></ul>
+<p><strong>How auth works:</strong> <code>authorization_token</code> is never placed inside the container. <code>git pull</code> / <code>git push</code> and GitHub REST calls against the attached repository are routed through an Anthropic-side git proxy that injects the token after the request leaves the sandbox. Code running in the container — including anything the agent writes — cannot read or exfiltrate it.</p>
+<blockquote><p>‼️ <strong>To generate pull requests</strong> you also need GitHub <strong>MCP server</strong> access — the <code>github_repository</code> resource gives filesystem + git access only. See <code>shared/managed-agents-tools.md</code> → MCP Servers. The PR workflow is: edit files in the mounted repo → push branch via <code>bash</code> (authenticated via the git proxy using <code>authorization_token</code>) → create PR via the MCP <code>create_pull_request</code> tool (authenticated via the vault).</p></blockquote>
+<p><strong>TypeScript:</strong></p>
+<pre><code class="lang-ts">// 1. Create the agent — declare GitHub MCP (no auth here)
+const agent = await client.beta.agents.create(
+  {
+    name: &#x27;GitHub Agent&#x27;,
+    model: &#x27;claude-opus-5&#x27;,
+    mcp_servers: [
+      { type: &#x27;url&#x27;, name: &#x27;github&#x27;, url: &#x27;https://api.githubcopilot.com/mcp/&#x27; },
+    ],
+    tools: [
+      { type: &#x27;agent_toolset_20260401&#x27;, default_config: { enabled: true } },
+      { type: &#x27;mcp_toolset&#x27;, mcp_server_name: &#x27;github&#x27; },
+    ],
+  },
+);
+
+// 2. Start a session — attach vault for MCP auth + mount the repo
+const session = await client.beta.sessions.create({
+  agent: agent.id,
+  environment_id: envId,
+  vault_ids: [vaultId],  // vault contains the GitHub MCP OAuth credential
+  resources: [
+    {
+      type: &#x27;github_repository&#x27;,
+      url: &#x27;https://github.com/owner/repo&#x27;,
+      authorization_token: process.env.GITHUB_TOKEN,  // repo clone token (≠ MCP auth)
+      checkout: { type: &#x27;branch&#x27;, name: &#x27;main&#x27; },
+    },
+  ],
+});</code></pre>
+<p><strong>Python:</strong></p>
+<pre><code class="lang-python">import os
+
+agent = client.beta.agents.create(
+    name=&quot;GitHub Agent&quot;,
+    model=&quot;claude-opus-5&quot;,
+    mcp_servers=[{
+        &quot;type&quot;: &quot;url&quot;,
+        &quot;name&quot;: &quot;github&quot;,
+        &quot;url&quot;: &quot;https://api.githubcopilot.com/mcp/&quot;,
+    }],
+    tools=[
+        {&quot;type&quot;: &quot;agent_toolset_20260401&quot;, &quot;default_config&quot;: {&quot;enabled&quot;: True}},
+        {&quot;type&quot;: &quot;mcp_toolset&quot;, &quot;mcp_server_name&quot;: &quot;github&quot;},
+    ],
+)
+
+session = client.beta.sessions.create(
+    agent=agent.id,
+    environment_id=env_id,
+    vault_ids=[vault_id],  # vault contains the GitHub MCP OAuth credential
+    resources=[{
+        &quot;type&quot;: &quot;github_repository&quot;,
+        &quot;url&quot;: &quot;https://github.com/owner/repo&quot;,
+        &quot;authorization_token&quot;: os.environ[&quot;GITHUB_TOKEN&quot;],  # repo clone token (≠ MCP auth)
+        &quot;checkout&quot;: {&quot;type&quot;: &quot;branch&quot;, &quot;name&quot;: &quot;main&quot;},
+    }],
+)</code></pre>
+<hr>
+<h2>Files API</h2>
+<p>Upload and manage files for use as session resources, and download files the agent wrote to <code>/mnt/session/outputs/</code>.</p>
+<p>| Operation        | Method   | Path                                  | SDK | | ---------------- | -------- | ------------------------------------- | --- | | Upload           | <code>POST</code>   | <code>/v1/files</code>                           | <code>client.beta.files.upload({ file })</code> | | List             | <code>GET</code>    | <code>/v1/files?scope_id=...</code>              | <code>client.beta.files.list({ scope_id, betas: [&quot;managed-agents-2026-04-01&quot;] })</code> | | Get Metadata     | <code>GET</code>    | <code>/v1/files/{id}</code>                      | <code>client.beta.files.retrieveMetadata(id)</code> | | Download         | <code>GET</code>    | <code>/v1/files/{id}/content</code>              | <code>client.beta.files.download(id)</code> → <code>Response</code> | | Delete           | <code>DELETE</code> | <code>/v1/files/{id}</code>                      | <code>client.beta.files.delete(id)</code> |</p>
+<p>The <code>scope_id</code> filter on List scopes the results to files written to <code>/mnt/session/outputs/</code> by that session. Without the filter, you get all files uploaded to your account.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/managed-agents-environments.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-commerce</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-commerce.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-commerce">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-commerce.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-commerce</h1><p class="lede">Hanzo Commerce is the core product of Hanzo AI -- a multi-tenant e-commerce platform that powers billing, payments, subscriptions, storefronts, and API usage metering for the entire Hanzo ecosystem and external customers.</p><h1>Hanzo Commerce - Multi-Tenant E-Commerce and Billing Platform</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-platform.md</code>, <code>hanzo/hanzo-id.md</code>, <code>hanzo/hanzo-kms.md</code>, <code>hanzo/hanzo-console.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Commerce is the <strong>core product</strong> of Hanzo AI -- a multi-tenant e-commerce platform that powers billing, payments, subscriptions, storefronts, and API usage metering for the entire Hanzo ecosystem and external customers. It is a standalone Go binary (Cobra CLI + Gin HTTP) with 100+ data models, 4 database backends, 6 payment providers, 25+ third-party integrations, and a complete OpenAPI 3.0 specification.</p>
+<p><strong>Live at</strong>: https://commerce.hanzo.ai | <strong>API</strong>: https://api.hanzo.ai/v1 | <strong>Version</strong>: v1.36.5</p>
+<h3>Why Hanzo Commerce?</h3>
+<ul><li><strong>Full e-commerce platform</strong>: Products, variants, collections, carts, orders, checkout, fulfillment, shipping, tax, inventory, returns, disputes</li><li><strong>Multi-tenant</strong>: Namespace-isolated per organization with per-org databases</li><li><strong>4 database backends</strong>: SQLite (embedded, dev), PostgreSQL (production), MongoDB/FerretDB, ClickHouse (analytics)</li><li><strong>6 payment providers</strong>: Stripe, Square, PayPal, Authorize.net, Braintree, Adyen + crypto (Bitcoin, Ethereum)</li><li><strong>Usage-based billing</strong>: Ledger, credit grants, metering, tiered pricing, Temporal workflows</li><li><strong>AI-powered</strong>: Product recommendations via vector search (sqlite-vec / pgvector / Qdrant)</li><li><strong>Event-driven</strong>: NATS/JetStream pub/sub + ClickHouse analytics pipeline</li><li><strong>KMS-first secrets</strong>: All payment credentials via KMS (kms.hanzo.ai), zero plaintext</li><li><strong>IAM integrated</strong>: Dual auth -- legacy access tokens + hanzo.id OIDC JWT</li><li><strong>OpenAPI spec</strong>: 88KB spec at <code>/openapi.yaml</code> covering all endpoints</li></ul>
+<h3>Tech Stack</h3>
+<p>| Layer | Technology | |-------|-----------| | Language | Go 1.26, single binary | | HTTP | Gin web framework | | CLI | Cobra command framework | | Databases | SQLite + sqlite-vec, PostgreSQL + pgvector, MongoDB, ClickHouse | | KV Cache | Redis/Valkey (hanzoai/kv-go) | | Search | Meilisearch (hanzoai/search-go) | | Vector | Qdrant (hanzoai/vector-go) | | Object Storage | Hanzo S3 (hanzoai/storage-go) | | Pub/Sub | NATS + JetStream (hanzoai/pubsub-go) | | Tasks | Temporal SDK (billing workflows) | | ORM | hanzoai/orm v0.3.1 (generic CRUD, mixin.Model[T]) | | Analytics | ClickHouse (hanzoai/datastore-go) | | Auth | hanzo.id OIDC + legacy access tokens | | Secrets | KMS (Hanzo KMS-compatible REST) | | Crypto | luxfi/crypto, luxfi/geth, btcsuite | | Image | <code>ghcr.io/hanzoai/commerce:latest</code> | | Testing | Ginkgo v2 + Gomega |</p>
+<h3>Repo</h3>
+<p><code>github.com/hanzoai/commerce</code> -- Go module <code>github.com/hanzoai/commerce</code></p>
+<h2>When to use</h2>
+<p>Use this skill when:</p>
+<ul><li>Working with the commerce Go codebase or API</li><li>Configuring payment providers (Stripe, Square, PayPal, etc.)</li><li>Setting up billing, subscriptions, or usage metering</li><li>Understanding the multi-tenant data model</li><li>Deploying commerce to K8s</li><li>Integrating commerce with other Hanzo services (IAM, KMS, Console)</li><li>Working with the checkout flow or Stripe Connect</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>CGO_ENABLED=1</strong> for all builds (SQLite requires it)</li><li><strong>KMS credentials</strong> for payment provider access in production</li><li><strong>IAM</strong> (hanzo.id) for JWT-based authentication</li><li><strong>PVC is ReadWriteOnce</strong> -- deployment MUST use <code>strategy: Recreate</code>, not RollingUpdate</li><li><strong>Never store payment credentials in plaintext</strong> -- KMS is the single source of truth</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | API | <code>https://api.hanzo.ai/v1</code> (via gateway) | | Direct | <code>https://commerce.hanzo.ai</code> (port 8001) | | Auth | Bearer token (org API key or IAM JWT) | | Image | <code>ghcr.io/hanzoai/commerce:latest</code> | | K8s | <code>hanzo</code> namespace, <code>commerce</code> deployment, Recreate strategy | | Port | 8001 (container), 8090 (default local) | | Data | PVC <code>commerce-data</code> (10Gi, do-block-storage) | | KMS secret | <code>commerce-kms-auth</code> (client-id, client-secret, project-id) | | Repo | <code>github.com/hanzoai/commerce</code> | | OpenAPI | <code>/openapi.yaml</code> (88KB, 3.0.3) | | CI | Test on PR + Docker build/deploy on push to main |</p>
+<h2>Architecture</h2>
+<pre><code> +-----------------------+
+ | API Gateway |
+ | (api.hanzo.ai) |
+ +----------+------------+
+ |
+ +----------v------------+
+ | Commerce App |
+ | (Cobra + Gin) |
+ +------------------------+
+ | HTTP Routes (/api/v1) |
+ | Middleware Chain |
+ | Hook System |
+ +----+------+------+----+
+ | | |
+ +----------+ +---+---+ +----------+
+ | | | |
+ +--------v---+ +-----v--+ +-v--------+ +--v--------+
+ | SQLite/PG | | Redis | | NATS | | ClickHouse|
+ | (per-org) | | (cache)| | (events) | | (analytics|
+ +------------+ +--------+ +----------+ +-----------+
+ |
+ +--------v-----------+
+ | KMS | Meilisearch|
+ | (creds)| (search) |
+ +--------+------------+</code></pre>
+<h3>Multi-Tenancy Model</h3>
+<ul><li><strong>Namespace-based</strong>: <code>Organization.Name</code> IS the namespace</li><li>Per-org SQLite databases: <code>{COMMERCE_DIR}/orgs/{orgName}/data.db</code></li><li>Per-org PostgreSQL: tenant_id column isolation</li><li><code>middleware.Namespace()</code> sets context namespace for all downstream queries</li><li><code>&quot;platform&quot;</code> org returns empty namespace (admin bypass, documented)</li><li>Dual auth: legacy access tokens (org-bound) + IAM JWT (OIDC/JWKS via hanzo.id)</li></ul>
+<h3>Hook System</h3>
+<p>Extensible lifecycle hooks (Hanzo Base-compatible pattern):</p>
+<ul><li><code>OnBootstrap</code> -- app initialization</li><li><code>OnServe</code> -- before HTTP server starts</li><li><code>OnRouteSetup</code> -- add custom routes</li><li><code>OnTerminate</code> -- graceful shutdown</li><li><code>Hook[T]</code>, <code>TaggedHook[T]</code>, <code>Resolver</code> -- typed hook registry</li></ul>
+<h2>Directory Structure</h2>
+<pre><code>commerce/
+ commerce.go Main App framework (Config, Bootstrap, Routes, Serve, Shutdown)
+ cmd/commerce/ CLI entry point (main.go)
+
+ api/ HTTP Handlers (30+ resource groups)
+ accesstoken/ API token management
+ account/ User account (login, register, profile)
+ affiliate/ Affiliate program
+ auth/ OAuth2 token endpoint
+ billing/ Balance, usage, deposits, credits
+ cart/ Shopping cart
+ cdn/ CDN/asset serving
+ checkout/ Checkout sessions (Stripe Checkout)
+ contributor/ Contributor management
+ counter/ Atomic counters
+ coupon/ Coupon codes
+ customergroup/ Customer segmentation
+ dashv2/ Dashboard v2 API
+ data/ Generic data API
+ deploy/ Deploy management
+ form/ Form submissions
+ fulfillment/ Order fulfillment
+ inventory/ Inventory tracking
+ library/ Content library
+ namespace/ Namespace management (admin-only)
+ notification/ Notifications
+ order/ Order CRUD
+ organization/ Org management
+ pricing/ Price lists and rules
+ promotion/ Promotions
+ referrer/ Referral tracking
+ region/ Geographic regions
+ review/ Product reviews
+ search/ Search proxy
+ store/ Storefront
+ subscription/ Subscriptions
+ tax/ Tax calculation
+ transaction/ Transaction records
+ user/ User management
+ xd/ Cross-domain helpers
+
+ models/ Data Models (100+ entities)
+ product/ Product, variant, collection
+ order/ Order, lineitem, fulfillmentmodel
+ cart/ Shopping cart
+ subscription/ Subscription, subscriptionitem, subscriptionschedule
+ plan/ Subscription plans
+ payment/ Payments, paymentintent, paymentmethod
+ invoice/ Invoices
+ billing*/ billingevent, billinginvoice
+ credit/ Credits, creditgrant
+ coupon/ Coupons, discount, promotion, promotionrule, redemption
+ user/ User accounts
+ organization/ Multi-tenant orgs
+ token/ API tokens, oauthtoken, publishableapikey
+ wallet/ Crypto wallets
+ cryptobalance/ Crypto balances
+ cryptopaymentintent/ Crypto payment intents
+ networktoken/ Network tokens
+ tokensale/ Token sales
+ affiliate/ Affiliates
+ referral/ Referral programs
+ inventory/ Inventory, inventorylevel, stocklocation
+ shippingoption/ Shipping options, profiles, rates
+ fulfillment*/ Fulfillment providers, sets
+ region/ Regions, geozones, servicezones
+ taxrate/ Tax rates, rules, providers, regions
+ price/ Price, pricelist, priceset, pricepreference, pricerule, pricingrule
+ meter/ Usage metering
+ usagewatermark/ Usage watermarks
+ spendalert/ Spend alerts
+ balancetransaction/ Balance transactions
+ dispute/ Payment disputes
+ refund/ Refunds
+ fee/ Fees
+ payout/ Payouts
+ transfer/ Transfers
+ review/ Product reviews
+ form/ Form submissions
+ webhook/ Webhooks, webhookendpoint
+ notification/ Notifications
+ types/ Shared types (currency, etc.)
+ mixin/ Generic Model[T] mixin with CRUD
+ migrations/ Schema migrations
+ fixtures/ Test fixtures
+
+ billing/ Billing Engine
+ credit/ Credit system
+ engine/ Billing calculation engine
+ ledger/ Double-entry ledger
+ tier/ Tiered pricing
+ workflows/ Temporal billing workflows
+
+ payment/ Payment Processing
+ processor/ Payment processor interface
+ providers/ Provider implementations
+ adyen/ Adyen
+ braintree/ Braintree
+ lemonsqueezy/ Lemon Squeezy
+ paypal/ PayPal
+ recurly/ Recurly
+ router/ Payment routing logic
+
+ thirdparty/ Third-Party Integrations (25+)
+ authorizenet/ Authorize.net
+ bitcoin/ Bitcoin payments
+ ethereum/ Ethereum payments
+ square/ Square payments
+ paypal/ PayPal (legacy)
+ kms/ KMS client (secret management)
+ cardconnect/ CardConnect
+ cloudflare/ Cloudflare CDN
+ facebook/ Facebook integration
+ indiegogo/ Indiegogo crowdfunding
+ mailchimp/ Mailchimp email
+ mandrill/ Mandrill transactional email
+ mercury/ Mercury banking
+ mpc/ Multi-party computation
+ netlify/ Netlify deployment
+ reamaze/ Reamaze support
+ recaptcha/ reCAPTCHA
+ sendgrid/ SendGrid email
+ shipstation/ ShipStation fulfillment
+ shipwire/ Shipwire fulfillment
+ smtprelay/ SMTP relay
+ wire/ Wire transfers
+ woopra/ Woopra analytics
+ bigquery/ BigQuery analytics
+ paymentmethods/ Payment method registry
+
+ db/ Database Backends
+ sqlite.go SQLite + sqlite-vec (embedded, per-org)
+ postgres.go PostgreSQL + pgvector (production)
+ mongo.go MongoDB (alternative)
+ datastore.go ClickHouse via hanzoai/datastore-go (analytics)
+ db.go Manager, interface, pool
+ query.go Query builder (PascalCase -&gt; camelCase auto-conversion)
+ model.go Generic model interface
+ serialize.go JSON serialization
+
+ datastore/ Cloud Datastore abstraction layer
+ datastore.go Core datastore interface
+ get.go, put.go CRUD operations
+ delete.go Delete operations
+ key.go, key/ Key generation
+ query.go, query/ Query builder
+ parallel/ Parallel query execution
+
+ infra/ Infrastructure Clients
+ infra.go Manager (connect, health, close)
+ kv.go Redis/Valkey client
+ search.go Meilisearch client
+ vector.go Qdrant vector client
+ storage.go Hanzo S3 storage client
+ pubsub.go NATS/JetStream client
+ tasks.go Temporal task client
+ locking.go Distributed locking
+
+ hooks/ Hook System
+ hooks.go Registry, Hook[T] generic
+ tagged.go TaggedHook[T]
+ event.go Event types
+
+ events/ Event System
+ publisher.go NATS/JetStream publisher
+ client.go HTTP analytics client
+ bootstrap.go Stream bootstrap
+ schema.go Event schema
+
+ auth/ Authentication
+ auth.go Auth helpers
+ iam.go IAM (hanzo.id) OIDC/JWKS validation
+ password/ Password hashing
+
+ middleware/ HTTP Middleware
+ accesstoken.go API token auth
+ iammiddleware/ IAM JWT validation
+ oauthmiddleware/ OAuth middleware
+ organization.go Org resolution
+ cache.go Cache headers
+ cors.go CORS
+ error.go Error handler
+ logger.go Request logging
+
+ ai/ AI Features
+ recommendations.go Vector-based product recommendations
+
+ email/ Email System
+ email.go Email sending
+ emails.go Template rendering
+ subscribe.go Mailing list
+ tasks/ Async email tasks
+
+ cron/ Background Jobs
+ payout/ Payout processing
+ tasks/ Scheduled tasks
+
+ k8s/ Kubernetes Manifests
+ deployment.yaml Deployment (Recreate strategy, 1 replica)
+ service.yaml ClusterIP service (port 8001)
+ api-ingress.yaml Ingress for commerce.hanzo.ai
+ configmap.yaml Environment config
+ pvc.yaml PersistentVolumeClaim (10Gi)
+ kms-auth-secret.yaml KMS auth credentials
+ frontend-admin.yaml Admin UI deployment
+ frontend-site.yaml Marketing site deployment
+ frontend-store.yaml Storefront deployment
+
+ config/ Environment configs (dev, staging, production, sandbox)
+ templates/ Email and page templates
+ test/ Ginkgo test suites
+ test-integration/ Integration tests
+ demo/ Demo data
+ deploy/ Deployment scripts
+ docs/ Documentation
+ scripts/ Utility scripts
+ openapi.yaml OpenAPI 3.0.3 specification (88KB)
+ bench_test.go Benchmarks</code></pre>
+<h2>Running</h2>
+<pre><code class="lang-bash"># Development (SQLite, local)
+go run cmd/commerce/main.go serve --dev
+
+# Production (PostgreSQL)
+SQL_URL=postgresql://user:pass@host:5432/commerce \
+ KMS_ENABLED=true KMS_URL=http://kms:8080 \
+ ./commerce serve 0.0.0.0:8001
+
+# Seed an organization with plans and API tokens
+./commerce seed bootnode
+
+# Docker
+docker build --platform linux/amd64 -t ghcr.io/hanzoai/commerce:latest .</code></pre>
+<h2>Environment Variables</h2>
+<p>| Variable | Default | Purpose | |----------|---------|---------| | <code>COMMERCE_DIR</code> | <code>./commerce_data</code> | Data directory for SQLite DBs | | <code>COMMERCE_SECRET</code> | <code>change-me-in-production</code> | Encryption secret | | <code>COMMERCE_HTTP</code> | <code>127.0.0.1:8090</code> | Listen address | | <code>COMMERCE_DEV</code> | <code>false</code> | Development mode | | <code>SQL_URL</code> | - | PostgreSQL DSN (production) | | <code>KV_URL</code> | - | Redis/Valkey URL | | <code>SEARCH_URL</code> | - | Meilisearch URL | | <code>VECTOR_URL</code> | - | Qdrant URL | | <code>S3_URL</code> | - | Hanzo S3 URL | | <code>PUBSUB_URL</code> | - | NATS URL | | <code>TASKS_URL</code> | - | Temporal URL | | <code>DATASTORE_URL</code> | - | ClickHouse DSN | | <code>DOC_URL</code> | - | MongoDB URL | | <code>KMS_ENABLED</code> | <code>false</code> | Enable KMS secret management | | <code>KMS_URL</code> | - | KMS base URL | | <code>KMS_CLIENT_ID</code> | - | KMS Universal Auth client ID | | <code>KMS_CLIENT_SECRET</code> | - | KMS Universal Auth client secret | | <code>KMS_PROJECT_ID</code> | - | KMS project ID | | <code>KMS_ENVIRONMENT</code> | <code>prod</code> | KMS environment | | <code>IAM_ENABLED</code> | <code>true</code> | Enable IAM JWT validation | | <code>IAM_ISSUER</code> | <code>https://hanzo.id</code> | IAM issuer URL | | <code>IAM_CLIENT_ID</code> | - | IAM client ID | | <code>IAM_CLIENT_SECRET</code> | - | IAM client secret | | <code>ANALYTICS_ENDPOINT</code> | - | Analytics collector HTTP URL | | <code>INSIGHTS_ENABLED</code> | <code>false</code> | Hanzo Insights product analytics | | <code>ANALYTICS_ENABLED</code> | <code>false</code> | Umami-like web analytics |</p>
+<h2>API Endpoints</h2>
+<h3>Core Commerce</h3>
+<p>| Endpoint | Method | Purpose | |----------|--------|---------| | <code>/api/v1/store</code> | GET/POST | Storefront listing/create | | <code>/api/v1/product</code> | CRUD | Products | | <code>/api/v1/variant</code> | CRUD | Product variants | | <code>/api/v1/collection</code> | CRUD | Product collections | | <code>/api/v1/cart</code> | CRUD | Shopping carts | | <code>/api/v1/order</code> | CRUD | Orders | | <code>/api/v1/checkout</code> | POST | Payment processing | | <code>/api/v1/checkout/sessions</code> | POST | Stripe Checkout sessions | | <code>/api/v1/subscription</code> | CRUD | Subscriptions | | <code>/api/v1/coupon</code> | CRUD | Coupon codes | | <code>/api/v1/promotion</code> | CRUD | Promotions | | <code>/api/v1/inventory</code> | CRUD | Inventory tracking | | <code>/api/v1/fulfillment</code> | CRUD | Order fulfillment | | <code>/api/v1/review</code> | CRUD | Product reviews |</p>
+<h3>Billing</h3>
+<p>| Endpoint | Method | Purpose | |----------|--------|---------| | <code>/api/v1/billing/balance</code> | GET | Balance by user + currency (cents) | | <code>/api/v1/billing/balance/all</code> | GET | All currency balances | | <code>/api/v1/billing/usage</code> | POST | Record API usage (withdraw) | | <code>/api/v1/billing/deposit</code> | POST | Create deposit transaction | | <code>/api/v1/billing/credit</code> | POST | Grant starter credit ($5, 30-day expiry) | | <code>/api/v1/billing/zap</code> | POST | Clear balance |</p>
+<h3>Analytics</h3>
+<p>| Endpoint | Method | Purpose | |----------|--------|---------| | <code>/api/v1/analytics/event</code> | POST | Single event | | <code>/api/v1/analytics/events</code> | POST | Batch events | | <code>/api/v1/analytics/identify</code> | POST | User identification | | <code>/api/v1/analytics/pixel.gif</code> | GET | Pixel tracking | | <code>/api/v1/analytics/ai/message</code> | POST | AI message event | | <code>/api/v1/analytics/ai/completion</code> | POST | AI completion event |</p>
+<h3>Auth &amp; Admin</h3>
+<p>| Endpoint | Method | Purpose | |----------|--------|---------| | <code>/auth</code> | POST | OAuth2 password grant | | <code>/api/v1/account</code> | GET/POST | User account | | <code>/api/v1/user</code> | CRUD | User management (admin) | | <code>/api/v1/organization</code> | CRUD | Organization management | | <code>/api/v1/namespace</code> | CRUD | Namespace management (admin-only, authed) | | <code>/api/v1/accesstoken</code> | CRUD | API token management | | <code>/health</code> | GET | Health check |</p>
+<h2>KMS Secret Management</h2>
+<p>All payment credentials are stored in KMS. No fallback to org-stored fields.</p>
+<p><strong>Secret path convention</strong>:</p>
+<pre><code>/tenants/{orgName}/stripe/STRIPE_LIVE_ACCESS_TOKEN
+/tenants/{orgName}/stripe/STRIPE_TEST_ACCESS_TOKEN
+/tenants/{orgName}/stripe/STRIPE_PUBLISHABLE_KEY
+/tenants/{orgName}/square/SQUARE_PRODUCTION_ACCESS_TOKEN
+/tenants/{orgName}/square/SQUARE_PRODUCTION_LOCATION_ID
+/tenants/{orgName}/square/SQUARE_PRODUCTION_APPLICATION_ID
+/tenants/{orgName}/authorizenet/AUTHORIZENET_LIVE_LOGIN_ID
+/tenants/{orgName}/paypal/PAYPAL_LIVE_EMAIL</code></pre>
+<p><strong>Hydration</strong>: <code>kms.Hydrate(ctx, org)</code> populates all 25 provider credential fields. Called once after org resolution. Cache: 5min TTL, extends to 30min on KMS failure.</p>
+<p><strong>K8s</strong>: Single &quot;secret zero&quot; (<code>commerce-kms-auth</code>) holds KMS Universal Auth credentials.</p>
+<h2>Checkout Sessions</h2>
+<p><code>POST /api/v1/checkout/sessions</code> -- public endpoint (no token auth).</p>
+<p><strong>Request</strong>:</p>
+<pre><code class="lang-json">{
+ &quot;company&quot;: &quot;acme&quot;,
+ &quot;providerHint&quot;: &quot;stripe&quot;,
+ &quot;currency&quot;: &quot;usd&quot;,
+ &quot;org&quot;: &quot;acme&quot;,
+ &quot;customer&quot;: { &quot;email&quot;: &quot;user@example.com&quot; },
+ &quot;items&quot;: [{ &quot;productId&quot;: &quot;prod_xyz&quot;, &quot;quantity&quot;: 1 }],
+ &quot;successUrl&quot;: &quot;https://acme.com/success&quot;,
+ &quot;cancelUrl&quot;: &quot;https://acme.com/cancel&quot;
+}</code></pre>
+<p><strong>Response</strong>: <code>{ &quot;checkoutUrl&quot;: &quot;https://checkout.stripe.com/...&quot;, &quot;sessionId&quot;: &quot;cs_...&quot; }</code></p>
+<p>Org resolved from <code>X-Hanzo-Org</code> header or request body. Per-request Stripe client (multi-tenant safe).</p>
+<h2>Cross-Compilation</h2>
+<pre><code class="lang-bash"># Build for linux/amd64 from macOS (zig cross-compile for CGO)
+go mod vendor
+CC=&quot;zig cc -target x86_64-linux-musl&quot; CXX=&quot;zig c++ -target x86_64-linux-musl&quot; \
+ CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
+ go build -mod=vendor -ldflags=&quot;-s -w -extldflags &#x27;-static&#x27;&quot; \
+ -o commerce ./cmd/commerce/main.go
+
+# Push to GHCR
+docker build --platform linux/amd64 -t ghcr.io/hanzoai/commerce:latest .
+docker push ghcr.io/hanzoai/commerce:latest</code></pre>
+<h2>CI/CD</h2>
+<ul><li><strong>Test</strong>: On PR and push to main -- <code>go vet</code>, unit tests (billing, models, payment), Ginkgo suites</li><li><strong>Deploy</strong>: On push to main or tag -- reusable <code>hanzoai/.github</code> Docker build workflow, deploys to <code>hanzo</code> namespace</li></ul>
+<h2>Gotchas</h2>
+<p>| Issue | Detail | |-------|--------| | SQLite requires CGO | Always <code>CGO_ENABLED=1</code>, needs gcc/musl-dev | | PVC ReadWriteOnce | Deployment MUST use <code>Recreate</code> strategy | | Filter field names | PascalCase (Go struct) auto-converts to camelCase JSON in queries | | Boolean omitempty | <code>false</code> with omitempty may be NULL in JSON -- COALESCE handles it | | Healthcheck | Use <code>curl -f</code>, not <code>wget --spider</code> (Gin only handles GET) | | Colima cross-compile | QEMU crashes HTTP/2 on ARM Mac -- use zig cc instead | | Platform org bypass | <code>&quot;platform&quot;</code> org returns empty namespace (admin bypass, intentional) | | Global entities | Organization, User, Token use <code>DefaultNamespace = true</code> by design |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-id.md</code> -- IAM and OIDC authentication (hanzo.id)</li><li><code>hanzo/hanzo-kms.md</code> -- Secret management (kms.hanzo.ai)</li><li><code>hanzo/hanzo-console.md</code> -- Admin console</li><li><code>hanzo/hanzo-platform.md</code> -- PaaS deployment platform</li><li><code>hanzo/hanzo-cloud.md</code> -- Cloud dashboard</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: e-commerce, billing, payments, subscriptions, multi-tenant, API <strong>Prerequisites</strong>: Go, REST APIs, Kubernetes basics</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-commerce.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

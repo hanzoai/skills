@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>slack-gif-creator</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/slack-gif-creator.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/slack-gif-creator">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/slack-gif-creator.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>slack-gif-creator</h1><p class="lede">Knowledge and utilities for creating animated GIFs optimized for Slack. Provides constraints, validation tools, and animation concepts. Use when users request animated GIFs for Slack like &quot;make me a GIF of X doing Y for Slack.</p><h1>Slack GIF Creator</h1>
+<p>A toolkit providing utilities and knowledge for creating animated GIFs optimized for Slack.</p>
+<h2>Slack Requirements</h2>
+<p><strong>Dimensions:</strong></p>
+<ul><li>Emoji GIFs: 128x128 (recommended)</li><li>Message GIFs: 480x480</li></ul>
+<p><strong>Parameters:</strong></p>
+<ul><li>FPS: 10-30 (lower is smaller file size)</li><li>Colors: 48-128 (fewer = smaller file size)</li><li>Duration: Keep under 3 seconds for emoji GIFs</li></ul>
+<h2>Core Workflow</h2>
+<pre><code class="lang-python">from core.gif_builder import GIFBuilder
+from PIL import Image, ImageDraw
+
+# 1. Create builder
+builder = GIFBuilder(width=128, height=128, fps=10)
+
+# 2. Generate frames
+for i in range(12):
+    frame = Image.new(&#x27;RGB&#x27;, (128, 128), (240, 248, 255))
+    draw = ImageDraw.Draw(frame)
+
+    # Draw your animation using PIL primitives
+    # (circles, polygons, lines, etc.)
+
+    builder.add_frame(frame)
+
+# 3. Save with optimization
+builder.save(&#x27;output.gif&#x27;, num_colors=48, optimize_for_emoji=True)</code></pre>
+<h2>Drawing Graphics</h2>
+<h3>Working with User-Uploaded Images</h3>
+<p>If a user uploads an image, consider whether they want to:</p>
+<ul><li><strong>Use it directly</strong> (e.g., &quot;animate this&quot;, &quot;split this into frames&quot;)</li><li><strong>Use it as inspiration</strong> (e.g., &quot;make something like this&quot;)</li></ul>
+<p>Load and work with images using PIL:</p>
+<pre><code class="lang-python">from PIL import Image
+
+uploaded = Image.open(&#x27;file.png&#x27;)
+# Use directly, or just as reference for colors/style</code></pre>
+<h3>Drawing from Scratch</h3>
+<p>When drawing graphics from scratch, use PIL ImageDraw primitives:</p>
+<pre><code class="lang-python">from PIL import ImageDraw
+
+draw = ImageDraw.Draw(frame)
+
+# Circles/ovals
+draw.ellipse([x1, y1, x2, y2], fill=(r, g, b), outline=(r, g, b), width=3)
+
+# Stars, triangles, any polygon
+points = [(x1, y1), (x2, y2), (x3, y3), ...]
+draw.polygon(points, fill=(r, g, b), outline=(r, g, b), width=3)
+
+# Lines
+draw.line([(x1, y1), (x2, y2)], fill=(r, g, b), width=5)
+
+# Rectangles
+draw.rectangle([x1, y1, x2, y2], fill=(r, g, b), outline=(r, g, b), width=3)</code></pre>
+<p><strong>Don&#x27;t use:</strong> Emoji fonts (unreliable across platforms) or assume pre-packaged graphics exist in this skill.</p>
+<h3>Making Graphics Look Good</h3>
+<p>Graphics should look polished and creative, not basic. Here&#x27;s how:</p>
+<p><strong>Use thicker lines</strong> - Always set <code>width=2</code> or higher for outlines and lines. Thin lines (width=1) look choppy and amateurish.</p>
+<p><strong>Add visual depth</strong>:</p>
+<ul><li>Use gradients for backgrounds (<code>create_gradient_background</code>)</li><li>Layer multiple shapes for complexity (e.g., a star with a smaller star inside)</li></ul>
+<p><strong>Make shapes more interesting</strong>:</p>
+<ul><li>Don&#x27;t just draw a plain circle - add highlights, rings, or patterns</li><li>Stars can have glows (draw larger, semi-transparent versions behind)</li><li>Combine multiple shapes (stars + sparkles, circles + rings)</li></ul>
+<p><strong>Pay attention to colors</strong>:</p>
+<ul><li>Use vibrant, complementary colors</li><li>Add contrast (dark outlines on light shapes, light outlines on dark shapes)</li><li>Consider the overall composition</li></ul>
+<p><strong>For complex shapes</strong> (hearts, snowflakes, etc.):</p>
+<ul><li>Use combinations of polygons and ellipses</li><li>Calculate points carefully for symmetry</li><li>Add details (a heart can have a highlight curve, snowflakes have intricate branches)</li></ul>
+<p>Be creative and detailed! A good Slack GIF should look polished, not like placeholder graphics.</p>
+<h2>Available Utilities</h2>
+<h3>GIFBuilder (<code>core.gif_builder</code>)</h3>
+<p>Assembles frames and optimizes for Slack:</p>
+<pre><code class="lang-python">builder = GIFBuilder(width=128, height=128, fps=10)
+builder.add_frame(frame)  # Add PIL Image
+builder.add_frames(frames)  # Add list of frames
+builder.save(&#x27;out.gif&#x27;, num_colors=48, optimize_for_emoji=True, remove_duplicates=True)</code></pre>
+<h3>Validators (<code>core.validators</code>)</h3>
+<p>Check if GIF meets Slack requirements:</p>
+<pre><code class="lang-python">from core.validators import validate_gif, is_slack_ready
+
+# Detailed validation
+passes, info = validate_gif(&#x27;my.gif&#x27;, is_emoji=True, verbose=True)
+
+# Quick check
+if is_slack_ready(&#x27;my.gif&#x27;):
+    print(&quot;Ready!&quot;)</code></pre>
+<h3>Easing Functions (<code>core.easing</code>)</h3>
+<p>Smooth motion instead of linear:</p>
+<pre><code class="lang-python">from core.easing import interpolate
+
+# Progress from 0.0 to 1.0
+t = i / (num_frames - 1)
+
+# Apply easing
+y = interpolate(start=0, end=400, t=t, easing=&#x27;ease_out&#x27;)
+
+# Available: linear, ease_in, ease_out, ease_in_out,
+#           bounce_out, elastic_out, back_out</code></pre>
+<h3>Frame Helpers (<code>core.frame_composer</code>)</h3>
+<p>Convenience functions for common needs:</p>
+<pre><code class="lang-python">from core.frame_composer import (
+    create_blank_frame,         # Solid color background
+    create_gradient_background,  # Vertical gradient
+    draw_circle,                # Helper for circles
+    draw_text,                  # Simple text rendering
+    draw_star                   # 5-pointed star
+)</code></pre>
+<h2>Animation Concepts</h2>
+<h3>Shake/Vibrate</h3>
+<p>Offset object position with oscillation:</p>
+<ul><li>Use <code>math.sin()</code> or <code>math.cos()</code> with frame index</li><li>Add small random variations for natural feel</li><li>Apply to x and/or y position</li></ul>
+<h3>Pulse/Heartbeat</h3>
+<p>Scale object size rhythmically:</p>
+<ul><li>Use <code>math.sin(t <em> frequency </em> 2 * math.pi)</code> for smooth pulse</li><li>For heartbeat: two quick pulses then pause (adjust sine wave)</li><li>Scale between 0.8 and 1.2 of base size</li></ul>
+<h3>Bounce</h3>
+<p>Object falls and bounces:</p>
+<ul><li>Use <code>interpolate()</code> with <code>easing=&#x27;bounce_out&#x27;</code> for landing</li><li>Use <code>easing=&#x27;ease_in&#x27;</code> for falling (accelerating)</li><li>Apply gravity by increasing y velocity each frame</li></ul>
+<h3>Spin/Rotate</h3>
+<p>Rotate object around center:</p>
+<ul><li>PIL: <code>image.rotate(angle, resample=Image.BICUBIC)</code></li><li>For wobble: use sine wave for angle instead of linear</li></ul>
+<h3>Fade In/Out</h3>
+<p>Gradually appear or disappear:</p>
+<ul><li>Create RGBA image, adjust alpha channel</li><li>Or use <code>Image.blend(image1, image2, alpha)</code></li><li>Fade in: alpha from 0 to 1</li><li>Fade out: alpha from 1 to 0</li></ul>
+<h3>Slide</h3>
+<p>Move object from off-screen to position:</p>
+<ul><li>Start position: outside frame bounds</li><li>End position: target location</li><li>Use <code>interpolate()</code> with <code>easing=&#x27;ease_out&#x27;</code> for smooth stop</li><li>For overshoot: use <code>easing=&#x27;back_out&#x27;</code></li></ul>
+<h3>Zoom</h3>
+<p>Scale and position for zoom effect:</p>
+<ul><li>Zoom in: scale from 0.1 to 2.0, crop center</li><li>Zoom out: scale from 2.0 to 1.0</li><li>Can add motion blur for drama (PIL filter)</li></ul>
+<h3>Explode/Particle Burst</h3>
+<p>Create particles radiating outward:</p>
+<ul><li>Generate particles with random angles and velocities</li><li>Update each particle: <code>x += vx</code>, <code>y += vy</code></li><li>Add gravity: <code>vy += gravity_constant</code></li><li>Fade out particles over time (reduce alpha)</li></ul>
+<h2>Optimization Strategies</h2>
+<p>Only when asked to make the file size smaller, implement a few of the following methods:</p>
+<ol><li><strong>Fewer frames</strong> - Lower FPS (10 instead of 20) or shorter duration</li><li><strong>Fewer colors</strong> - <code>num_colors=48</code> instead of 128</li><li><strong>Smaller dimensions</strong> - 128x128 instead of 480x480</li><li><strong>Remove duplicates</strong> - <code>remove_duplicates=True</code> in save()</li><li><strong>Emoji mode</strong> - <code>optimize_for_emoji=True</code> auto-optimizes</li></ol>
+<pre><code class="lang-python"># Maximum optimization for emoji
+builder.save(
+    &#x27;emoji.gif&#x27;,
+    num_colors=48,
+    optimize_for_emoji=True,
+    remove_duplicates=True
+)</code></pre>
+<h2>Philosophy</h2>
+<p>This skill provides:</p>
+<ul><li><strong>Knowledge</strong>: Slack&#x27;s requirements and animation concepts</li><li><strong>Utilities</strong>: GIFBuilder, validators, easing functions</li><li><strong>Flexibility</strong>: Create the animation logic using PIL primitives</li></ul>
+<p>It does NOT provide:</p>
+<ul><li>Rigid animation templates or pre-made functions</li><li>Emoji font rendering (unreliable across platforms)</li><li>A library of pre-packaged graphics built into the skill</li></ul>
+<p><strong>Note on user uploads</strong>: This skill doesn&#x27;t include pre-built graphics, but if a user uploads an image, use PIL to load and work with it - interpret based on their request whether they want it used directly or just as inspiration.</p>
+<p>Be creative! Combine concepts (bouncing + rotating, pulsing + sliding, etc.) and use PIL&#x27;s full capabilities.</p>
+<h2>Dependencies</h2>
+<pre><code class="lang-bash">pip install pillow imageio numpy</code></pre>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/slack-gif-creator.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

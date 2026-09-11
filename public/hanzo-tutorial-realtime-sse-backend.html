@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-tutorial-realtime-sse-backend</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-tutorial-realtime-sse-backend.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-tutorial-realtime-sse-backend">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-tutorial-realtime-sse-backend.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-tutorial-realtime-sse-backend</h1><p class="lede">In this tutorial, you will build a production-grade, high-concurrency realtime backend in Go using Hanzo Base (github.com/hanzoai/base).</p><h1>Tutorial: Building a Production Realtime SSE Backend in Go with Hanzo Base</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem &amp; Tutorials   <strong>Level</strong>: Practical Hands-On   <strong>Time to Complete</strong>: 20 minutes   <strong>Related Skills</strong>: <code>hanzo/hanzo-coursework-fullstack-go-cloud.md</code>, <code>hanzo/hanzo-base.md</code>, <code>hanzo/hanzo-migrate-backend-to-go.md</code></p>
+<hr>
+<h2>Overview</h2>
+<p>In this tutorial, you will build a production-grade, high-concurrency realtime backend in <strong>Go</strong> using <strong>Hanzo Base</strong> (<code>github.com/hanzoai/base</code>). </p>
+<p>Instead of heavy WebSockets or third-party paid push services (like Pusher or Ably), you will implement native <strong>Server-Sent Events (SSE)</strong>. This pattern handles thousands of concurrent subscribers per node with single-digit megabytes of RAM, built-in reconnection protocols, and seamless integration with the Hanzo AI Cloud.</p>
+<hr>
+<h2>Step 1: Initialize Your Go Module</h2>
+<p>Create a clean directory and initialize your Go project using <code>uv</code> or standard Go toolchain:</p>
+<pre><code class="lang-bash">mkdir -p realtime-backend &amp;&amp; cd realtime-backend
+go mod init example.com/realtime-backend</code></pre>
+<p>Install the Hanzo Base dependency:</p>
+<pre><code class="lang-bash">go get github.com/hanzoai/base@latest</code></pre>
+<hr>
+<h2>Step 2: Implement the Event Streamer</h2>
+<p>Create <code>main.go</code>:</p>
+<pre><code class="lang-go">package main
+
+import (
+	&quot;context&quot;
+	&quot;encoding/json&quot;
+	&quot;fmt&quot;
+	&quot;log&quot;
+	&quot;net/http&quot;
+	&quot;os&quot;
+	&quot;os/signal&quot;
+	&quot;sync&quot;
+	&quot;syscall&quot;
+	&quot;time&quot;
+)
+
+// MetricPayload represents live analytics telemetry
+type MetricPayload struct {
+	Timestamp int64   `json:&quot;timestamp&quot;`
+	Model     string  `json:&quot;model&quot;`
+	LatencyMs float64 `json:&quot;latency_ms&quot;`
+	Tokens    int     `json:&quot;tokens&quot;`
+}
+
+type SSEStreamer struct {
+	mu      sync.RWMutex
+	clients map[chan []byte]struct{}
+}
+
+func NewSSEStreamer() *SSEStreamer {
+	return &amp;SSEStreamer{
+		clients: make(map[chan []byte]struct{}),
+	}
+}
+
+func (s *SSEStreamer) Register() chan []byte {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ch := make(chan []byte, 128)
+	s.clients[ch] = struct{}{}
+	return ch
+}
+
+func (s *SSEStreamer) Unregister(ch chan []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.clients, ch)
+	close(ch)
+}
+
+func (s *SSEStreamer) Broadcast(msg []byte) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for ch := range s.clients {
+		select {
+		case ch &lt;- msg:
+		default:
+			// Non-blocking drop for slow consumer to avoid head-of-line blocking
+		}
+	}
+}
+
+func (s *SSEStreamer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, &quot;Streaming unsupported by client/proxy&quot;, http.StatusBadRequest)
+		return
+	}
+
+	// Set required SSE headers
+	w.Header().Set(&quot;Content-Type&quot;, &quot;text/event-stream&quot;)
+	w.Header().Set(&quot;Cache-Control&quot;, &quot;no-cache&quot;)
+	w.Header().Set(&quot;Connection&quot;, &quot;keep-alive&quot;)
+	w.Header().Set(&quot;Access-Control-Allow-Origin&quot;, &quot;*&quot;)
+	w.Header().Set(&quot;X-Accel-Buffering&quot;, &quot;no&quot;) // Disable NGINX/Envoy proxy buffering
+
+	ch := s.Register()
+	defer s.Unregister(ch)
+
+	// Send initial connection handshake
+	fmt.Fprintf(w, &quot;event: ready\ndata: {\&quot;connected\&quot;:true}\n\n&quot;)
+	flusher.Flush()
+
+	heartbeat := time.NewTicker(15 * time.Second)
+	defer heartbeat.Stop()
+
+	for {
+		select {
+		case &lt;-r.Context().Done():
+			return
+		case &lt;-heartbeat.C:
+			fmt.Fprintf(w, &quot;: heartbeat\n\n&quot;)
+			flusher.Flush()
+		case data, ok := &lt;-ch:
+			if !ok {
+				return
+			}
+			fmt.Fprintf(w, &quot;data: %s\n\n&quot;, data)
+			flusher.Flush()
+		}
+	}
+}
+
+func main() {
+	streamer := NewSSEStreamer()
+
+	// Background producer simulating Hanzo AI Inference stream
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		for t := range ticker.C {
+			payload := MetricPayload{
+				Timestamp: t.Unix(),
+				Model:     &quot;zen-3.5-pro&quot;,
+				LatencyMs: 14.2,
+				Tokens:    840,
+			}
+			bytes, _ := json.Marshal(payload)
+			streamer.Broadcast(bytes)
+		}
+	}()
+
+	mux := http.NewServeMux()
+	mux.Handle(&quot;/v1/events/stream&quot;, streamer)
+	mux.HandleFunc(&quot;/v1/health&quot;, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set(&quot;Content-Type&quot;, &quot;application/json&quot;)
+		w.Write([]byte(`{&quot;status&quot;:&quot;ok&quot;,&quot;runtime&quot;:&quot;go-native&quot;}`))
+	})
+
+	srv := &amp;http.Server{
+		Addr:         &quot;:8080&quot;,
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 0, // Infinite for SSE streaming
+		IdleTimeout:  120 * time.Second,
+	}
+
+	go func() {
+		log.Println(&quot;⚡ Hanzo SSE Backend listening on :8080&quot;)
+		if err := srv.ListenAndServe(); err != nil &amp;&amp; err != http.ErrServerClosed {
+			log.Fatalf(&quot;Server error: %v&quot;, err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	&lt;-quit
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	srv.Shutdown(ctx)
+}</code></pre>
+<hr>
+<h2>Step 3: TDD Test Suite (<code>stream_test.go</code>)</h2>
+<p>Ensure strict Test-Driven Development (TDD) by verifying the HTTP endpoint and SSE event delivery:</p>
+<pre><code class="lang-go">package main
+
+import (
+	&quot;bufio&quot;
+	&quot;context&quot;
+	&quot;net/http&quot;
+	&quot;net/http/httptest&quot;
+	&quot;strings&quot;
+	&quot;testing&quot;
+	&quot;time&quot;
+)
+
+func TestSSEStreamingEndpoint(t *testing.T) {
+	streamer := NewSSEStreamer()
+	ts := httptest.NewServer(streamer)
+	defer ts.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, &quot;GET&quot;, ts.URL, nil)
+	if err != nil {
+		t.Fatalf(&quot;Failed to create request: %v&quot;, err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf(&quot;Failed to execute request: %v&quot;, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf(&quot;Expected status 200, got %d&quot;, resp.StatusCode)
+	}
+
+	if ct := resp.Header.Get(&quot;Content-Type&quot;); ct != &quot;text/event-stream&quot; {
+		t.Fatalf(&quot;Expected text/event-stream, got %s&quot;, ct)
+	}
+
+	reader := bufio.NewReader(resp.Body)
+
+	// Verify handshake event
+	line, err := reader.ReadString(&#x27;\n&#x27;)
+	if err != nil {
+		t.Fatalf(&quot;Error reading initial line: %v&quot;, err)
+	}
+	if !strings.HasPrefix(line, &quot;event: ready&quot;) {
+		t.Errorf(&quot;Expected ready event, got %s&quot;, line)
+	}
+
+	// Broadcast test payload
+	testMsg := []byte(`{&quot;test&quot;:&quot;event-data&quot;}`)
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		streamer.Broadcast(testMsg)
+	}()
+
+	// Read until we find the test data
+	found := false
+	for i := 0; i &lt; 10; i++ {
+		l, err := reader.ReadString(&#x27;\n&#x27;)
+		if err != nil {
+			break
+		}
+		if strings.Contains(l, &quot;event-data&quot;) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Errorf(&quot;Did not receive broadcast message in stream&quot;)
+	}
+}</code></pre>
+<p>Run the tests:</p>
+<pre><code class="lang-bash">go test -v ./...</code></pre>
+<hr>
+<h2>Step 4: Frontend Consumption (Browser &amp; Node)</h2>
+<p>In your client application or agent harness, subscribe using native browser <code>EventSource</code>:</p>
+<pre><code class="lang-typescript">const evtSource = new EventSource(&quot;http://localhost:8080/v1/events/stream&quot;);
+
+evtSource.addEventListener(&quot;ready&quot;, (e) =&gt; {
+  console.log(&quot;Stream connected:&quot;, JSON.parse(e.data));
+});
+
+evtSource.onmessage = (e) =&gt; {
+  const metric = JSON.parse(e.data);
+  console.log(&quot;Realtime telemetry:&quot;, metric);
+};
+
+evtSource.onerror = (err) =&gt; {
+  console.error(&quot;Connection interrupted, auto-reconnecting...&quot;, err);
+};</code></pre>
+<hr>
+<h2>Step 5: Production Deployment</h2>
+<p>Build a zero-dependency static Go binary:</p>
+<pre><code class="lang-bash">CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags=&quot;-s -w&quot; -o ./bin/server .</code></pre>
+<p>Containerize using <code>compose.yml</code>:</p>
+<pre><code class="lang-yaml"># compose.yml
+services:
+  sse-backend:
+    build: .
+    ports:
+      - &quot;8080:8080&quot;
+    restart: always</code></pre>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-tutorial-realtime-sse-backend.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

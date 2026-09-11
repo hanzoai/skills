@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-edge</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-edge.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-edge">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-edge.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-edge</h1><p class="lede">Hanzo Edge is an on-device AI inference runtime for running Zen models and any GGUF model locally on macOS, Linux, Web (WASM), and embedded devices.</p><h1>Hanzo Edge - On-Device AI Inference Runtime</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-engine.md</code>, <code>hanzo/hanzo-llm-gateway.md</code>, <code>hanzo/hanzo-candle.md</code>, <code>hanzo/zenlm.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo Edge is an <strong>on-device AI inference runtime</strong> for running Zen models and any GGUF model locally on macOS, Linux, Web (WASM), and embedded devices. Zero cloud dependency, full data privacy, zero network latency, works completely offline. Rust workspace with three crates. Live at <code>edge.hanzo.ai</code>.</p>
+<h3>Why Hanzo Edge?</h3>
+<ul><li><strong>On-device</strong>: Data never leaves the device, works offline</li><li><strong>Cross-platform</strong>: macOS (Metal), Linux (CPU/CUDA), Web (WASM), embedded (ARM)</li><li><strong>OpenAI-compatible</strong>: Local API server as drop-in replacement</li><li><strong>GGUF native</strong>: First-class quantized model support (Q4_K, Q5_K, Q8_0)</li><li><strong>Streaming</strong>: Token-by-token via SSE and callbacks</li><li><strong>HuggingFace Hub</strong>: Automatic model download and caching</li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Language</strong>: Rust (edition 2021)</li><li><strong>ML Backend</strong>: Candle (candle-core, candle-nn, candle-transformers v0.9)</li><li><strong>HTTP Server</strong>: Axum 0.7</li><li><strong>CLI</strong>: Clap 4</li><li><strong>WASM</strong>: wasm-bindgen 0.2, web-sys 0.3</li><li><strong>Tokenizer</strong>: HuggingFace tokenizers 0.20</li><li><strong>Async</strong>: Tokio 1</li></ul>
+<h3>OSS Base</h3>
+<p>Repo: <code>hanzoai/edge</code>. Built on <a href="https://github.com/hanzoai/ml">Hanzo ML</a> (Candle fork) for tensor operations.</p>
+<h2>When to use</h2>
+<ul><li>Running AI models locally with full data privacy</li><li>Mobile, embedded, or offline inference</li><li>In-browser AI via WebAssembly</li><li>Low-latency inference without network round-trips</li><li>Prototyping with local OpenAI-compatible API</li></ul>
+<h2>Edge vs Engine</h2>
+<p>| | <strong>Edge</strong> | <strong>Engine</strong> | |---|---|---| | <strong>Where</strong> | On-device (local CPU/GPU) | Cloud GPU clusters | | <strong>Latency</strong> | Zero network overhead | Network round-trip | | <strong>Privacy</strong> | Data never leaves device | Data sent to cloud | | <strong>Models</strong> | Quantized GGUF (Q4/Q5/Q8) | Full-precision (FP16/BF16) | | <strong>Best for</strong> | Mobile, embedded, offline, privacy | Production serving, large models, scale |</p>
+<h2>Hard requirements</h2>
+<ol><li><strong>Rust toolchain</strong> (stable)</li><li><strong>wasm-pack</strong> for WASM builds</li><li><strong>CUDA toolkit</strong> for NVIDIA GPU acceleration (optional)</li><li><strong>Xcode Command Line Tools</strong> for Metal on macOS (optional)</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Docs | <code>https://edge.hanzo.ai</code> | | Crates.io | <code>hanzo-edge</code>, <code>hanzo-edge-core</code>, <code>hanzo-edge-wasm</code> | | Image | <code>ghcr.io/hanzoai/edge:latest</code> | | API Port | 8080 (local serve) | | License | Apache-2.0 | | Repo | <code>github.com/hanzoai/edge</code> |</p>
+<h2>One-file quickstart</h2>
+<h3>Run a model locally</h3>
+<pre><code class="lang-bash"># Install
+cargo install hanzo-edge
+
+# Run inference (auto-downloads model from HuggingFace)
+hanzo-edge run --model zenlm/zen3-nano --prompt &quot;Hello!&quot;
+
+# Start OpenAI-compatible local server
+hanzo-edge serve --model zenlm/zen4-mini --port 8080
+
+# Then use from any OpenAI client
+curl http://localhost:8080/v1/chat/completions \
+ -H &quot;Content-Type: application/json&quot; \
+ -d &#x27;{
+ &quot;model&quot;: &quot;zen4-mini&quot;,
+ &quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Hello!&quot;}],
+ &quot;stream&quot;: true
+ }&#x27;</code></pre>
+<h3>Docker</h3>
+<pre><code class="lang-bash"># CPU inference
+docker run --rm -it ghcr.io/hanzoai/edge:latest \
+ run --model zenlm/zen3-nano --prompt &quot;Hello!&quot;
+
+# Serve as API
+docker run --rm -p 8080:8080 ghcr.io/hanzoai/edge:latest \
+ serve --model zenlm/zen3-nano --port 8080</code></pre>
+<h2>Core Concepts</h2>
+<h3>Architecture</h3>
+<pre><code>hanzo-edge (workspace)
++-- edge-core/ # Core inference runtime (library)
+| +-- src/
+| +-- lib.rs # Public API: Model, InferenceSession, SamplingParams
+| +-- model.rs # Model trait, GGUF loading, HF Hub download
+| +-- session.rs # Autoregressive generation + streaming iterator
+| +-- sampling.rs # Temperature, top-k, top-p, repeat penalty
+| +-- tokenizer.rs # HF tokenizer wrapper with EOS detection
++-- edge-cli/ # CLI binary
+| +-- src/
+| +-- main.rs # Clap-based CLI with 4 subcommands
+| +-- loader.rs # HF Hub download with progress bars
+| +-- cmd/
+| +-- run.rs # Streaming inference to stdout
+| +-- serve.rs # OpenAI-compatible HTTP server (Axum)
+| +-- bench.rs # TTFT, throughput, memory benchmarking
+| +-- info.rs # Model metadata inspection
++-- edge-wasm/ # WebAssembly module
+ +-- src/lib.rs # WASM bindings: EdgeModel, generate, generate_stream
+ +-- index.html # Demo page</code></pre>
+<h3>Crates</h3>
+<p>| Crate | Description | Install | |-------|-------------|---------| | <code>hanzo-edge-core</code> | Core inference runtime and <code>Model</code> trait | <code>cargo add hanzo-edge-core</code> | | <code>hanzo-edge</code> | CLI binary with run, serve, bench, info | <code>cargo install hanzo-edge</code> | | <code>hanzo-edge-wasm</code> | Browser WASM module with streaming | <code>wasm-pack build edge-wasm</code> |</p>
+<h3>Feature Flags</h3>
+<p>| Feature | Description | Build | |---------|-------------|-------| | <code>cpu</code> | CPU backend (default) | <code>cargo build --release</code> | | <code>metal</code> | Metal backend for macOS/iOS | <code>cargo build --release --features metal</code> | | <code>cuda</code> | CUDA backend for NVIDIA GPUs | <code>cargo build --release --features cuda</code> |</p>
+<h3>CLI Subcommands</h3>
+<pre><code class="lang-bash"># Streaming inference
+hanzo-edge run --model zenlm/zen-eco --prompt &quot;Write a haiku&quot; \
+ --max-tokens 128 --temperature 0.7 --top-p 0.9
+
+# Model metadata
+hanzo-edge info --model zenlm/zen4-mini
+
+# Benchmarking (TTFT, tok/s, memory)
+hanzo-edge bench --model zenlm/zen3-nano --prompt &quot;Hello&quot; \
+ --max-tokens 128 -n 5
+
+# OpenAI-compatible API server
+hanzo-edge serve --model zenlm/zen4-mini --port 8080</code></pre>
+<h3>API Server Endpoints</h3>
+<p>| Method | Path | Description | |--------|------|-------------| | <code>POST</code> | <code>/v1/chat/completions</code> | Chat completion (streaming + non-streaming) | | <code>POST</code> | <code>/v1/completions</code> | Text completion | | <code>GET</code> | <code>/v1/models</code> | List loaded models | | <code>GET</code> | <code>/health</code> | Health check |</p>
+<h3>Rust SDK Usage</h3>
+<pre><code class="lang-rust">use hanzo_edge_core::{load_model, InferenceSession, SamplingParams, ModelConfig};
+
+let config = ModelConfig {
+ model_id: &quot;zenlm/zen4-mini&quot;.to_string(),
+ model_file: Some(&quot;zen4-mini.Q4_K_M.gguf&quot;.to_string()),
+ ..Default::default()
+};
+let (mut model, tokenizer) = load_model(&amp;config)?;
+
+let params = SamplingParams {
+ temperature: 0.7,
+ top_p: 0.9,
+ top_k: 40,
+ max_tokens: 256,
+ repeat_penalty: 1.1,
+ repeat_last_n: 64,
+};
+let mut session = InferenceSession::new(&amp;mut *model, &amp;tokenizer, params);
+let output = session.generate(&quot;Explain quantum computing&quot;)?;</code></pre>
+<h3>WASM (Browser)</h3>
+<pre><code class="lang-bash"># Build
+wasm-pack build edge-wasm --target web</code></pre>
+<pre><code class="lang-javascript">import init, { EdgeModel } from &#x27;./pkg/edge_wasm.js&#x27;;
+
+await init();
+const model = new EdgeModel(modelBytes, tokenizerBytes);
+const output = model.generate(&quot;Hello!&quot;, 256, 0.7);
+
+// Streaming
+model.generate_stream(&quot;Write a poem&quot;, 256, 0.7, (token) =&gt; {
+ document.getElementById(&#x27;output&#x27;).textContent += token;
+});</code></pre>
+<h3>Zen Models for Edge</h3>
+<p>| Model | Params | Quantized Size | Use Case | |-------|--------|----------------|----------| | <code>zenlm/zen3-nano</code> | 600M | ~400MB (Q4_K_M) | Ultra-lightweight, embedded, IoT | | <code>zenlm/zen-eco</code> | 4B | ~2.5GB (Q4_K_M) | General purpose, mobile, tablets | | <code>zenlm/zen4-mini</code> | 8B | ~5GB (Q4_K_M) | High quality, desktop and laptop |</p>
+<h2>Building from Source</h2>
+<pre><code class="lang-bash">git clone https://github.com/hanzoai/edge &amp;&amp; cd edge
+
+# CPU
+cargo build --release -p hanzo-edge
+
+# Metal (Apple Silicon)
+cargo build --release -p hanzo-edge --features metal
+
+# CUDA
+cargo build --release -p hanzo-edge --features cuda
+
+# WASM
+make build-wasm
+
+# Tests
+cargo test --workspace
+
+# Lint
+cargo clippy --workspace -- -D warnings</code></pre>
+<h2>Platform Support</h2>
+<p>| Platform | Backend | Status | |----------|---------|--------| | macOS (Apple Silicon) | Metal | Production | | macOS (Intel) | CPU / Accelerate | Production | | Linux x86_64 | CPU | Production | | Linux x86_64 | CUDA | Production | | Linux ARM64 | CPU | Production | | Web (WASM) | CPU | Stable | | iOS | Metal / CoreML | Planned | | Android | Vulkan / NNAPI | Planned |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-engine.md</code> - Cloud GPU inference (complementary to Edge)</li><li><code>hanzo/hanzo-llm-gateway.md</code> - Unified LLM proxy for 100+ providers</li><li><code>hanzo/hanzo-candle.md</code> - Rust ML framework (tensor ops, used by Edge)</li><li><code>hanzo/zenlm.md</code> - Zen model family</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: edge, inference, wasm, on-device, gguf, rust <strong>Prerequisites</strong>: Rust toolchain, GGUF model understanding</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-edge.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

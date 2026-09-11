@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>prompt-caching</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/prompt-caching.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/prompt-caching">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/prompt-caching.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>prompt-caching</h1><p class="lede">This file covers how to design prompt-building code for effective caching.</p><h1>Prompt Caching — Design &amp; Optimization</h1>
+<p>This file covers how to design prompt-building code for effective caching. For language-specific syntax, see the <code>## Prompt Caching</code> section in each language&#x27;s README or single-file doc.</p>
+<h2>The one invariant everything follows from</h2>
+<p><strong>Prompt caching is a prefix match. Any change anywhere in the prefix invalidates everything after it.</strong></p>
+<p>The cache key is derived from the exact bytes of the rendered prompt up to each <code>cache_control</code> breakpoint. A single byte difference at position N — a timestamp, a reordered JSON key, a different tool in the list — invalidates the cache for all breakpoints at positions ≥ N.</p>
+<p>Render order is: <code>tools</code> → <code>system</code> → <code>messages</code>. A breakpoint on the last system block caches both tools and system together.</p>
+<p>Design the prompt-building path around this constraint. Get the ordering right and most caching works for free. Get it wrong and no amount of <code>cache_control</code> markers will help.</p>
+<hr>
+<h2>Workflow for optimizing existing code</h2>
+<p>When asked to add or optimize caching:</p>
+<ol><li><strong>Trace the prompt assembly path.</strong> Find where <code>system</code>, <code>tools</code>, and <code>messages</code> are constructed. Identify every input that flows into them.</li><li><strong>Classify each input by stability:</strong></li></ol>
+<ul><li>Never changes → belongs early in the prompt, before any breakpoint</li><li>Changes per-session → belongs after the global prefix, cache per-session</li><li>Changes per-turn → belongs at the end, after the last breakpoint</li><li>Changes per-request (timestamps, UUIDs, random IDs) → <strong>eliminate or move to the very end</strong></li></ul>
+<ol><li><strong>Check rendered order matches stability order.</strong> Stable content must physically precede volatile content. If a timestamp is interpolated into the system prompt header, everything after it is uncacheable regardless of markers.</li><li><strong>Place breakpoints at stability boundaries.</strong> See placement patterns below.</li><li><strong>Audit for silent invalidators.</strong> See anti-patterns table.</li></ol>
+<hr>
+<h2>Placement patterns</h2>
+<h3>Large system prompt shared across many requests</h3>
+<p>Put a breakpoint on the last system text block. If there are tools, they render before system — the marker on the last system block caches tools + system together.</p>
+<pre><code class="lang-json">&quot;system&quot;: [
+  {&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;&lt;large shared prompt&gt;&quot;, &quot;cache_control&quot;: {&quot;type&quot;: &quot;ephemeral&quot;}}
+]</code></pre>
+<h3>Multi-turn conversations</h3>
+<p>Put a breakpoint on the last content block of the most-recently-appended turn. Each subsequent request reuses the entire prior conversation prefix. Earlier breakpoints remain valid read points, so hits accrue incrementally as the conversation grows.</p>
+<pre><code class="lang-json">// Last content block of the last user turn
+messages[-1].content[-1].cache_control = {&quot;type&quot;: &quot;ephemeral&quot;}</code></pre>
+<h3>Shared prefix, varying suffix</h3>
+<p>Many requests share a large fixed preamble (few-shot examples, retrieved docs, instructions) but differ in the final question. Put the breakpoint at the end of the <strong>shared</strong> portion, not at the end of the whole prompt — otherwise every request writes a distinct cache entry and nothing is ever read.</p>
+<pre><code class="lang-json">&quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: [
+  {&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;&lt;shared context&gt;&quot;, &quot;cache_control&quot;: {&quot;type&quot;: &quot;ephemeral&quot;}},
+  {&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;&lt;varying question&gt;&quot;}  // no marker — differs every time
+]}]</code></pre>
+<h3>Mid-conversation system messages</h3>
+<p><strong>Claude Opus 5, Claude Opus 4.8, Claude Fable 5, and Claude Mythos 5; no beta header. Not available on Claude Sonnet 5</strong> — use top-level <code>system</code> there. (Sources conflict on Claude Sonnet 5: the model config marks it supported, but every canonical docs page omits it. Treat it as unsupported and catch the 400.) When an operator instruction arrives mid-conversation — a mode switch, updated context, dynamically injected state — send it as <code>{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;...&quot;}</code> appended to <code>messages[]</code>, rather than editing top-level <code>system</code>. Editing top-level <code>system</code> changes the prefix ahead of the entire conversation history, so every cached turn is re-processed uncached; a <code>role: &quot;system&quot;</code> message sits after the history and leaves the cached prefix intact.</p>
+<pre><code class="lang-json">// Top-level system stays byte-identical; new instruction goes after the cached history
+&quot;system&quot;: [{&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;&lt;stable core&gt;&quot;, &quot;cache_control&quot;: {&quot;type&quot;: &quot;ephemeral&quot;}}],
+&quot;messages&quot;: [
+  ...history,
+  {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;...&quot;},
+  {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;Terse mode enabled — keep responses under 40 words.&quot;}
+]</code></pre>
+<p>This is also the prompt-injection-safe replacement for embedding operator instructions as text inside a user turn (the <code>&lt;system-reminder&gt;</code> pattern): both have the same caching profile, but <code>role: &quot;system&quot;</code> is the non-spoofable operator channel, whereas text inside user/tool content can be forged by anything that writes to user-visible input.</p>
+<p>Must follow a <code>role: &quot;user&quot;</code> message (or an <code>assistant</code> message ending in server-tool use), and must be either the last entry in <code>messages</code> or be followed by an <code>assistant</code> turn; cannot be <code>messages[0]</code> — use top-level <code>system</code> for the initial prompt. Content is text-only. Unsupported models return a 400 (<code>BadRequestError</code>: <code>role &#x27;system&#x27; is not supported on this model</code>); catch that error and fall back to putting the instruction in a user-turn <code>&lt;system-reminder&gt;</code> block.</p>
+<h3>Prompts that change from the beginning every time</h3>
+<p>Don&#x27;t cache. If the first 1K tokens differ per request, there is no reusable prefix. Adding <code>cache_control</code> only pays the cache-write premium with zero reads. Leave it off.</p>
+<hr>
+<h2>Architectural guidance</h2>
+<p>These are the decisions that matter more than marker placement. Fix these first.</p>
+<p><strong>Keep the system prompt frozen.</strong> Don&#x27;t interpolate &quot;current date: X&quot;, &quot;mode: Y&quot;, &quot;user name: Z&quot; into the system prompt — those sit at the front of the prefix and invalidate everything downstream. Inject dynamic context later in <code>messages</code> instead — as a <code>{&quot;role&quot;: &quot;system&quot;, ...}</code> message where supported (see § Mid-conversation system messages above), or as text in a user message otherwise. A message at turn 5 invalidates nothing before turn 5.</p>
+<p><strong>Don&#x27;t change tools or model mid-conversation.</strong> Tools render at position 0; adding, removing, or reordering a tool invalidates the entire cache. Same for switching models (caches are model-scoped). If you need &quot;modes&quot;, don&#x27;t swap the tool set — give Claude a tool that records the mode transition, or pass the mode as message content. Serialize tools deterministically (sort by name).</p>
+<p><strong>Fork operations must reuse the parent&#x27;s exact prefix.</strong> Side computations (summarization, compaction, sub-agents) often spin up a separate API call. If the fork rebuilds <code>system</code> / <code>tools</code> / <code>model</code> with any difference, it misses the parent&#x27;s cache entirely. Copy the parent&#x27;s <code>system</code>, <code>tools</code>, and <code>model</code> verbatim, then append fork-specific content at the end.</p>
+<hr>
+<h2>Silent invalidators</h2>
+<p>When reviewing code, grep for these inside anything that feeds the prompt prefix:</p>
+<p>| Pattern | Why it breaks caching | |---|---| | <code>datetime.now()</code> / <code>Date.now()</code> / <code>time.time()</code> in system prompt | Prefix changes every request | | <code>uuid4()</code> / <code>crypto.randomUUID()</code> / request IDs early in content | Same — every request is unique | | <code>json.dumps(d)</code> without <code>sort_keys=True</code> / iterating a <code>set</code> | Non-deterministic serialization → prefix bytes differ | | f-string interpolating session/user ID into system prompt | Per-user prefix; no cross-user sharing | | Conditional system sections (<code>if flag: system += ...</code>) | Every flag combination is a distinct prefix | | <code>tools=build_tools(user)</code> where set varies per user | Tools render at position 0; nothing caches across users |</p>
+<p>Fix by moving the dynamic piece after the last breakpoint, making it deterministic, or deleting it if it&#x27;s not load-bearing.</p>
+<hr>
+<h2>API reference</h2>
+<pre><code class="lang-json">&quot;cache_control&quot;: {&quot;type&quot;: &quot;ephemeral&quot;}              // 5-minute TTL (default)
+&quot;cache_control&quot;: {&quot;type&quot;: &quot;ephemeral&quot;, &quot;ttl&quot;: &quot;1h&quot;} // 1-hour TTL</code></pre>
+<ul><li>Max <strong>4</strong> <code>cache_control</code> breakpoints per request.</li><li>Goes on any content block: system text blocks, tool definitions, message content blocks (<code>text</code>, <code>image</code>, <code>tool_use</code>, <code>tool_result</code>, <code>document</code>).</li><li>Top-level <code>cache_control</code> on <code>messages.create()</code> auto-places on the last cacheable block — simplest option when you don&#x27;t need fine-grained placement.</li><li>Minimum cacheable prefix is model-dependent. Shorter prefixes silently won&#x27;t cache even with a marker — no error, just <code>cache_creation_input_tokens: 0</code>:</li></ul>
+<p>| Model | Minimum | |---|---:| | Claude Opus 5, Claude Fable 5, Claude Mythos 5 | 512 tokens | | Opus 4.8, Claude Sonnet 5, Sonnet 4.6, Sonnet 4.5, Opus 4.1, Opus 4, Sonnet 4 | 1024 tokens | | Opus 4.7, Mythos Preview, Haiku 3.5 | 2048 tokens | | Opus 4.6, Opus 4.5, Haiku 4.5 | 4096 tokens |</p>
+<p><strong>The minimum is not monotonic across generations</strong> — 512 on the newest models, but 4096 on Opus 4.6/4.5 and Haiku 4.5. A 3K-token prompt caches on Claude Opus 5, Opus 4.8, and Sonnet 4.5, and silently won&#x27;t on Opus 4.6 or Haiku 4.5. Claude Opus 5 halves the Opus 4.8 minimum (1024 → 512), so prompts previously too short to cache now create entries with no code change.</p>
+<p>These minimums apply on <strong>every</strong> platform where the model is available — the old Amazon Bedrock override for Claude Fable 5 was removed, and no per-platform exception remains.</p>
+<p><strong>Economics:</strong> Cache reads cost ~0.1× base input price. Cache writes cost <strong>1.25× for 5-minute TTL, 2× for 1-hour TTL</strong>. Break-even depends on TTL: with 5-minute TTL, two requests break even (1.25× + 0.1× = 1.35× vs 2× uncached); with 1-hour TTL, you need at least three requests (2× + 0.2× = 2.2× vs 3× uncached). The 1-hour TTL keeps entries alive across gaps in bursty traffic, but the doubled write cost means it needs more reads to pay off.</p>
+<hr>
+<h2>Verifying cache hits</h2>
+<p>The response <code>usage</code> object reports cache activity:</p>
+<p>| Field | Meaning | |---|---| | <code>cache_creation_input_tokens</code> | Tokens written to cache this request (you paid the ~1.25× write premium) | | <code>cache_read_input_tokens</code> | Tokens served from cache this request (you paid ~0.1×) | | <code>input_tokens</code> | Tokens processed at full price (not cached) |</p>
+<p>If <code>cache_read_input_tokens</code> is zero across repeated requests with identical prefixes, a silent invalidator is at work — diff the rendered prompt bytes between two requests to find it.</p>
+<p><strong><code>input_tokens</code> is the uncached remainder only.</strong> Total prompt size = <code>input_tokens + cache_creation_input_tokens + cache_read_input_tokens</code>. If your agent ran for hours but <code>input_tokens</code> shows 4K, the rest was served from cache — check the sum, not the single field.</p>
+<p>Language-specific access: <code>response.usage.cache_read_input_tokens</code> (Python/TS/Ruby), <code>$message-&gt;usage-&gt;cacheReadInputTokens</code> (PHP), <code>resp.Usage.CacheReadInputTokens</code> (Go/C#), <code>.usage().cacheReadInputTokens()</code> (Java).</p>
+<hr>
+<h2>Invalidation hierarchy</h2>
+<p>Not every parameter change invalidates everything. The API has three cache tiers, and changes only invalidate their own tier and below:</p>
+<p>| Change | Tools cache | System cache | Messages cache | |---|:---:|:---:|:---:| | Tool definitions (add/remove/reorder) | ❌ | ❌ | ❌ | | Model switch | ❌ | ❌ | ❌ | | <code>speed</code>, web-search, citations toggle | ✅ | ❌ | ❌ | | System prompt content | ✅ | ❌ | ❌ | | <code>tool_choice</code>, images, <code>thinking</code> enable/disable | ✅ | ✅ | ❌ | | Message content | ✅ | ✅ | ❌ |</p>
+<p>Implication: you can change <code>tool_choice</code> per-request or toggle <code>thinking</code> without losing the tools+system cache. Don&#x27;t over-worry about these — only tool-definition and model changes force a full rebuild.</p>
+<p><strong>Two of these rows have a cache-preserving escape hatch</strong>, each by moving the change out of the top-level request and into a system message inside <code>messages[]</code>, after the cached prefix. <strong>Availability differs per row</strong> — the two are not gated together:</p>
+<p>| Top-level change that invalidates | Cache-preserving form | Available on | |---|---|---| | Tool definitions (add/remove) | <code>tool_addition</code> / <code>tool_removal</code> blocks — see <code>shared/tool-use-concepts.md</code> § Mid-conversation tool changes | Claude Opus 5 onward, behind <code>mid-conversation-tool-changes-2026-07-01</code> | | System prompt content | A <code>{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;…&quot;}</code> message — see § Mid-conversation system messages above | Claude Opus 5, Claude Opus 4.8, Claude Fable 5, Claude Mythos 5 — <strong>already available today</strong>, no beta header |</p>
+<p>Model switch has no escape hatch: caches are model-scoped. Keep the main loop on one model and spawn a subagent for cheaper sub-tasks (see <code>agent-design.md</code> § Caching for Agents).</p>
+<hr>
+<h2>20-block lookback window</h2>
+<p>Each breakpoint walks backward <strong>at most 20 content blocks</strong> to find a prior cache entry. If a single turn adds more than 20 blocks (common in agentic loops with many tool_use/tool_result pairs), the next request&#x27;s breakpoint won&#x27;t find the previous cache and silently misses.</p>
+<p>Fix: place an intermediate breakpoint every ~15 blocks in long turns, or put the marker on a block that&#x27;s within 20 of the previous turn&#x27;s last cached block.</p>
+<hr>
+<h2>Concurrent-request timing</h2>
+<p>A cache entry becomes readable only after the first response <strong>begins streaming</strong>. N parallel requests with identical prefixes all pay full price — none can read what the others are still writing.</p>
+<p>For fan-out patterns: send 1 request, await the first streamed token (not the full response), then fire the remaining N−1. They&#x27;ll read the cache the first one just wrote.</p>
+<h2>Pre-warming the cache</h2>
+<p>To eliminate the cache-miss latency on the <em>first</em> real request, send a <strong><code>max_tokens: 0</code></strong> request at startup (or on an interval). The API runs prefill — writing the cache at your <code>cache_control</code> breakpoint — and returns immediately with <code>content: []</code>, <code>stop_reason: &quot;max_tokens&quot;</code>, and a populated <code>usage</code> block (zero output tokens billed; normal cache-write charge on <code>cache_creation_input_tokens</code>).</p>
+<p><strong>When to pre-warm</strong> — pre-warming trades a cache-write charge <em>now</em> for lower TTFT on the <em>next</em> real request. It&#x27;s worth it when all three hold: (a) first-request latency is user-visible (chat/voice/interactive — not background jobs), (b) the shared prefix is large enough that a cold write is noticeably slow, and (c) there&#x27;s a moment <em>before</em> traffic to fire it — app startup, worker boot, post-deploy, start of a scheduled window.</p>
+<p>| Skip pre-warming when… | Because | |---|---| | Traffic is continuous (requests ≤ TTL apart) | The first real request warms the cache and every subsequent one hits it; a separate warm call is a pure extra write | | The prefix is small or below the cacheable minimum | The cold-write penalty is negligible | | The prefix varies per request/user | Nothing shared to pre-warm | | You&#x27;d pre-warm many distinct prefixes speculatively | Each is a ~1.25× write; cost can exceed the latency you save |</p>
+<p><strong>Scheduled re-warms:</strong> only needed when traffic has gaps longer than the TTL. If real requests arrive more often than every 5 minutes, they keep the cache warm on their own — don&#x27;t add an interval re-warm. For bursty traffic with long idle gaps, either re-warm just under the TTL or switch to <code>ttl: &quot;1h&quot;</code> and re-warm less often.</p>
+<pre><code class="lang-python">client.messages.create(
+    model=&quot;claude-opus-5&quot;,
+    max_tokens=0,
+    system=[{
+        &quot;type&quot;: &quot;text&quot;,
+        &quot;text&quot;: SYSTEM_PROMPT,
+        &quot;cache_control&quot;: {&quot;type&quot;: &quot;ephemeral&quot;},
+    }],
+    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;warmup&quot;}],
+)</code></pre>
+<p><strong>Breakpoint placement:</strong> put <code>cache_control</code> on the <strong>last block shared with the real request</strong> (the system prompt or tool definitions) — <strong>not</strong> on the placeholder user message, and <strong>not</strong> via top-level automatic caching (which would key the cache to the placeholder). The placeholder can be any non-whitespace string; it&#x27;s read during prefill but never answered.</p>
+<p><strong>Rejected combinations:</strong> <code>max_tokens: 0</code> is an <code>invalid_request_error</code> with <code>stream: true</code>, <code>thinking.type: &quot;enabled&quot;</code>, <code>output_config.format</code>, <code>tool_choice</code> of <code>{&quot;type&quot;:&quot;tool&quot;}</code> or <code>{&quot;type&quot;:&quot;any&quot;}</code>, or inside a Message Batches request.</p>
+<p><strong>TTL still applies</strong> — re-warm at least every 5 minutes for the default cache, or use the 1-hour TTL. This replaces the older <code>max_tokens: 1</code> workaround (no single-token reply to discard, no output tokens billed, intent is unambiguous).</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/prompt-caching.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

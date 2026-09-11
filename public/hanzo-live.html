@@ -1,0 +1,966 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-live</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-live.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-live">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-live.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-live</h1><p class="lede">Hanzo Live provides real-time AI streaming infrastructure for building responsive, collaborative AI applications.</p><h1>Hanzo Live - Real-Time AI Streaming</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem  <strong>Skill Level</strong>: Intermediate to Advanced <strong>Prerequisites</strong>: WebSockets, async programming, streaming concepts</p>
+<h2>Overview</h2>
+<p>Hanzo Live provides real-time AI streaming infrastructure for building responsive, collaborative AI applications. Unlike traditional request-response AI APIs that require waiting for complete responses, Hanzo Live delivers token-by-token streaming with sub-50ms latency, enabling fluid conversational interfaces and real-time collaboration.</p>
+<p><strong>Core Philosophy</strong>: Stream everything - tokens, thoughts, tool calls, and state updates for immediate user feedback.</p>
+<h2>Key Features</h2>
+<h3>⚡ Ultra-Low Latency Streaming</h3>
+<ul><li><strong>Sub-50ms first token</strong>: Immediate response start</li><li><strong>Token-by-token delivery</strong>: Smooth text generation</li><li><strong>WebSocket transport</strong>: Bidirectional real-time communication</li><li><strong>Edge deployment</strong>: Minimize geographic latency</li></ul>
+<h3>🔄 Real-Time Collaboration</h3>
+<ul><li><strong>Multi-user sessions</strong>: Share AI conversations live</li><li><strong>Presence indicators</strong>: See who&#x27;s online and typing</li><li><strong>Collaborative editing</strong>: Multiple users, one AI stream</li><li><strong>Cursor tracking</strong>: Real-time user positions</li></ul>
+<h3>🎯 Advanced Streaming Patterns</h3>
+<ul><li><strong>Thought streaming</strong>: See AI reasoning process</li><li><strong>Tool call streaming</strong>: Watch tool execution in real-time</li><li><strong>Progress indicators</strong>: Loading states and completion metrics</li><li><strong>Error recovery</strong>: Graceful handling of stream interruptions</li></ul>
+<h3>🛠 Developer Experience</h3>
+<ul><li><strong>TypeScript SDK</strong>: Type-safe streaming clients</li><li><strong>React hooks</strong>: Drop-in streaming components</li><li><strong>State management</strong>: Automatic stream state tracking</li><li><strong>Reconnection</strong>: Automatic resume on disconnect</li></ul>
+<h2>Architecture</h2>
+<pre><code>┌─────────────┐ WebSocket ┌──────────────┐
+│ Client │ ◄─────────────────────► │ Hanzo Live │
+│ (Browser) │ │ Server │
+└─────────────┘ └──────────────┘
+ │
+ │ HTTP/gRPC
+ ▼
+ ┌──────────────┐
+ │ Hanzo Node │
+ │ (Local) │
+ └──────────────┘</code></pre>
+<h2>Installation</h2>
+<h3>Server Setup</h3>
+<pre><code class="lang-bash"># Install Hanzo Live server
+npm install -g @hanzo/live-server
+
+# Or with Docker
+docker pull hanzoai/live-server
+
+# Start server
+hanzo-live serve \
+ --port 3001 \
+ --node-url http://localhost:8080 \
+ --redis redis://localhost:6379</code></pre>
+<h3>Client Installation</h3>
+<pre><code class="lang-bash"># React/Next.js projects
+npm install @hanzo/live
+
+# Vanilla JavaScript
+npm install @hanzo/live-client
+
+# Python clients
+pip install hanzo-live</code></pre>
+<h2>Quick Start</h2>
+<h3>Basic Streaming (React)</h3>
+<pre><code class="lang-tsx">import { useHanzoLive } from &#x27;@hanzo/live&#x27;
+
+function ChatApp() {
+ const { 
+ messages,
+ isStreaming,
+ sendMessage 
+ } = useHanzoLive({
+ url: &#x27;ws://localhost:3001&#x27;,
+ model: &#x27;llama-3-8b&#x27;
+ })
+
+ return (
+ &lt;div&gt;
+ {messages.map((msg, i) =&gt; (
+ &lt;div key={i}&gt;
+ &lt;strong&gt;{msg.role}:&lt;/strong&gt; {msg.content}
+ &lt;/div&gt;
+ ))}
+ 
+ {isStreaming &amp;&amp; &lt;div&gt;AI is typing...&lt;/div&gt;}
+ 
+ &lt;input 
+ onKeyPress={(e) =&gt; {
+ if (e.key === &#x27;Enter&#x27;) {
+ sendMessage(e.target.value)
+ }
+ }}
+ /&gt;
+ &lt;/div&gt;
+ )
+}</code></pre>
+<h3>Streaming with TypeScript SDK</h3>
+<pre><code class="lang-typescript">import { HanzoLiveClient } from &#x27;@hanzo/live-client&#x27;
+
+const client = new HanzoLiveClient({
+ url: &#x27;ws://localhost:3001&#x27;,
+ model: &#x27;llama-3-8b&#x27;
+})
+
+// Connect
+await client.connect()
+
+// Start streaming
+const stream = await client.chat({
+ messages: [
+ { role: &#x27;user&#x27;, content: &#x27;Explain quantum computing&#x27; }
+ ]
+})
+
+// Handle tokens as they arrive
+for await (const token of stream) {
+ process.stdout.write(token)
+}</code></pre>
+<h3>Streaming with Python</h3>
+<pre><code class="lang-python">from hanzo_live import HanzoLiveClient
+
+client = HanzoLiveClient(&#x27;ws://localhost:3001&#x27;)
+
+# Synchronous streaming
+for token in client.stream_chat(
+ messages=[
+ {&#x27;role&#x27;: &#x27;user&#x27;, &#x27;content&#x27;: &#x27;Write a poem&#x27;}
+ ],
+ model=&#x27;llama-3-8b&#x27;
+):
+ print(token, end=&#x27;&#x27;, flush=True)
+
+# Async streaming
+async for token in client.stream_chat_async(...):
+ await display_token(token)</code></pre>
+<h2>Core Features</h2>
+<h3>1. Token-by-Token Streaming</h3>
+<pre><code class="lang-tsx">import { useStreamingCompletion } from &#x27;@hanzo/live&#x27;
+
+function StreamingChat() {
+ const {
+ content, // Current accumulated content
+ isStreaming, // Is actively streaming?
+ tokensPerSecond, // Real-time speed metric
+ stop // Cancel stream
+ } = useStreamingCompletion({
+ model: &#x27;llama-3-8b&#x27;,
+ onToken: (token) =&gt; {
+ // Called for each token
+ console.log(&#x27;Token:&#x27;, token)
+ },
+ onComplete: (fullText) =&gt; {
+ // Called when stream ends
+ console.log(&#x27;Complete:&#x27;, fullText)
+ }
+ })
+
+ return (
+ &lt;div&gt;
+ &lt;div className=&quot;content&quot;&gt;{content}&lt;/div&gt;
+ {isStreaming &amp;&amp; (
+ &lt;div className=&quot;metrics&quot;&gt;
+ {tokensPerSecond.toFixed(1)} tokens/sec
+ &lt;button onClick={stop}&gt;Stop&lt;/button&gt;
+ &lt;/div&gt;
+ )}
+ &lt;/div&gt;
+ )
+}</code></pre>
+<h3>2. Thought Process Streaming</h3>
+<pre><code class="lang-tsx">import { useThoughtStream } from &#x27;@hanzo/live&#x27;
+
+function ThoughtfulChat() {
+ const {
+ thoughts, // Array of thinking steps
+ answer, // Final answer
+ isThinking // Is currently thinking?
+ } = useThoughtStream({
+ model: &#x27;qwen-2-7b&#x27;,
+ showThoughts: true
+ })
+
+ return (
+ &lt;div&gt;
+ {thoughts.map((thought, i) =&gt; (
+ &lt;div key={i} className=&quot;thought&quot;&gt;
+ &lt;span className=&quot;step&quot;&gt;Step {i+1}:&lt;/span&gt; {thought}
+ &lt;/div&gt;
+ ))}
+ 
+ {isThinking &amp;&amp; &lt;div className=&quot;loader&quot;&gt;Thinking...&lt;/div&gt;}
+ 
+ {answer &amp;&amp; (
+ &lt;div className=&quot;answer&quot;&gt;
+ &lt;strong&gt;Answer:&lt;/strong&gt; {answer}
+ &lt;/div&gt;
+ )}
+ &lt;/div&gt;
+ )
+}</code></pre>
+<h3>3. Tool Call Streaming</h3>
+<pre><code class="lang-tsx">import { useToolStream } from &#x27;@hanzo/live&#x27;
+
+function ToolAwareChat() {
+ const {
+ messages,
+ toolCalls, // In-progress tool calls
+ toolResults, // Completed tool results
+ isExecuting // Is executing tools?
+ } = useToolStream({
+ model: &#x27;gpt-4&#x27;,
+ tools: [
+ {
+ name: &#x27;search_web&#x27;,
+ description: &#x27;Search the web&#x27;,
+ parameters: { query: &#x27;string&#x27; }
+ }
+ ]
+ })
+
+ return (
+ &lt;div&gt;
+ {toolCalls.map((call, i) =&gt; (
+ &lt;div key={i} className=&quot;tool-call&quot;&gt;
+ &lt;span className=&quot;tool-name&quot;&gt;{call.name}&lt;/span&gt;
+ &lt;span className=&quot;tool-args&quot;&gt;{JSON.stringify(call.arguments)}&lt;/span&gt;
+ {call.status === &#x27;running&#x27; &amp;&amp; &lt;Spinner /&gt;}
+ {call.status === &#x27;complete&#x27; &amp;&amp; &lt;CheckMark /&gt;}
+ &lt;/div&gt;
+ ))}
+ 
+ {toolResults.map((result, i) =&gt; (
+ &lt;div key={i} className=&quot;tool-result&quot;&gt;
+ {result.output}
+ &lt;/div&gt;
+ ))}
+ &lt;/div&gt;
+ )
+}</code></pre>
+<h3>4. Multi-User Collaboration</h3>
+<pre><code class="lang-tsx">import { useCollaborativeSession } from &#x27;@hanzo/live&#x27;
+
+function CollaborativeChat() {
+ const {
+ messages,
+ users, // Connected users
+ userActivity, // Who&#x27;s typing, thinking, etc
+ sendMessage,
+ inviteUser
+ } = useCollaborativeSession({
+ sessionId: &#x27;project-brainstorm&#x27;,
+ userId: currentUser.id
+ })
+
+ return (
+ &lt;div&gt;
+ &lt;div className=&quot;users&quot;&gt;
+ {users.map(user =&gt; (
+ &lt;div key={user.id} className=&quot;user&quot;&gt;
+ &lt;Avatar src={user.avatar} /&gt;
+ &lt;span&gt;{user.name}&lt;/span&gt;
+ {userActivity[user.id] === &#x27;typing&#x27; &amp;&amp; &lt;TypingIndicator /&gt;}
+ &lt;/div&gt;
+ ))}
+ &lt;/div&gt;
+
+ &lt;div className=&quot;messages&quot;&gt;
+ {messages.map((msg, i) =&gt; (
+ &lt;div key={i} className={`message ${msg.userId}`}&gt;
+ &lt;Avatar src={getUserAvatar(msg.userId)} /&gt;
+ &lt;div className=&quot;content&quot;&gt;{msg.content}&lt;/div&gt;
+ &lt;/div&gt;
+ ))}
+ &lt;/div&gt;
+
+ &lt;button onClick={() =&gt; inviteUser(email)}&gt;
+ Invite Collaborator
+ &lt;/button&gt;
+ &lt;/div&gt;
+ )
+}</code></pre>
+<h3>5. Progress Indicators</h3>
+<pre><code class="lang-tsx">import { useStreamingProgress } from &#x27;@hanzo/live&#x27;
+
+function ProgressiveChat() {
+ const {
+ progress, // 0-100 completion percentage
+ estimatedTime, // ETA in seconds
+ tokensGenerated, // Tokens so far
+ totalTokens // Expected total
+ } = useStreamingProgress({
+ model: &#x27;llama-3-70b&#x27;,
+ maxTokens: 1000
+ })
+
+ return (
+ &lt;div&gt;
+ &lt;ProgressBar value={progress} max={100} /&gt;
+ &lt;div className=&quot;stats&quot;&gt;
+ &lt;span&gt;{tokensGenerated} / {totalTokens} tokens&lt;/span&gt;
+ &lt;span&gt;ETA: {estimatedTime}s&lt;/span&gt;
+ &lt;/div&gt;
+ &lt;/div&gt;
+ )
+}</code></pre>
+<h2>Advanced Patterns</h2>
+<h3>Streaming with Error Recovery</h3>
+<pre><code class="lang-typescript">import { HanzoLiveClient } from &#x27;@hanzo/live-client&#x27;
+
+const client = new HanzoLiveClient({
+ url: &#x27;ws://localhost:3001&#x27;,
+ 
+ // Automatic reconnection
+ reconnect: {
+ enabled: true,
+ maxAttempts: 5,
+ delayMs: 1000,
+ exponentialBackoff: true
+ },
+ 
+ // Resume incomplete streams
+ resumeOnReconnect: true
+})
+
+client.on(&#x27;error&#x27;, (error) =&gt; {
+ console.error(&#x27;Stream error:&#x27;, error)
+ // Error handled, stream continues
+})
+
+client.on(&#x27;reconnect&#x27;, (attempt) =&gt; {
+ console.log(`Reconnecting (attempt ${attempt})...`)
+})
+
+client.on(&#x27;reconnected&#x27;, () =&gt; {
+ console.log(&#x27;Reconnected, resuming stream&#x27;)
+})
+
+// Start streaming with error handling
+try {
+ for await (const token of client.stream({...})) {
+ display(token)
+ }
+} catch (error) {
+ if (error.code === &#x27;STREAM_INTERRUPTED&#x27;) {
+ // Stream was interrupted but will resume
+ await client.waitForReconnect()
+ }
+}</code></pre>
+<h3>Streaming with Caching</h3>
+<pre><code class="lang-typescript">import { HanzoLiveClient } from &#x27;@hanzo/live-client&#x27;
+
+const client = new HanzoLiveClient({
+ url: &#x27;ws://localhost:3001&#x27;,
+ 
+ // Enable response caching
+ cache: {
+ enabled: true,
+ backend: &#x27;redis&#x27;,
+ ttl: 3600, // 1 hour
+ 
+ // Semantic caching (cache similar queries)
+ semantic: true,
+ similarityThreshold: 0.95
+ }
+})
+
+// First request streams from model
+const stream1 = await client.stream({
+ messages: [{ role: &#x27;user&#x27;, content: &#x27;What is 2+2?&#x27; }]
+})
+
+for await (const token of stream1) {
+ console.log(token)
+}
+
+// Second request streams from cache (instant)
+const stream2 = await client.stream({
+ messages: [{ role: &#x27;user&#x27;, content: &#x27;What is 2+2?&#x27; }]
+})
+
+for await (const token of stream2) {
+ console.log(token) // Same output, but instant
+}</code></pre>
+<h3>Server-Sent Events Alternative</h3>
+<pre><code class="lang-typescript">// For clients that don&#x27;t support WebSockets
+import { HanzoLiveSSE } from &#x27;@hanzo/live-client&#x27;
+
+const client = new HanzoLiveSSE({
+ url: &#x27;https://api.hanzo.ai/live&#x27;
+})
+
+// SSE streaming (one-way, server → client)
+const eventSource = await client.stream({
+ messages: [{ role: &#x27;user&#x27;, content: &#x27;Hello&#x27; }]
+})
+
+eventSource.addEventListener(&#x27;token&#x27;, (event) =&gt; {
+ console.log(&#x27;Token:&#x27;, event.data)
+})
+
+eventSource.addEventListener(&#x27;complete&#x27;, (event) =&gt; {
+ console.log(&#x27;Stream complete&#x27;)
+ eventSource.close()
+})
+
+eventSource.addEventListener(&#x27;error&#x27;, (event) =&gt; {
+ console.error(&#x27;Stream error:&#x27;, event)
+})</code></pre>
+<h3>Multiplexed Streams</h3>
+<pre><code class="lang-typescript">import { HanzoLiveClient } from &#x27;@hanzo/live-client&#x27;
+
+const client = new HanzoLiveClient({
+ url: &#x27;ws://localhost:3001&#x27;,
+ multiplexing: true // Multiple streams over one WebSocket
+})
+
+// Start multiple streams concurrently
+const [stream1, stream2, stream3] = await Promise.all([
+ client.stream({ messages: [{ role: &#x27;user&#x27;, content: &#x27;Query 1&#x27; }] }),
+ client.stream({ messages: [{ role: &#x27;user&#x27;, content: &#x27;Query 2&#x27; }] }),
+ client.stream({ messages: [{ role: &#x27;user&#x27;, content: &#x27;Query 3&#x27; }] })
+])
+
+// Process streams in parallel
+await Promise.all([
+ processStream(stream1, &#x27;Stream 1&#x27;),
+ processStream(stream2, &#x27;Stream 2&#x27;),
+ processStream(stream3, &#x27;Stream 3&#x27;)
+])</code></pre>
+<h2>Integration with Hanzo Ecosystem</h2>
+<h3>With Hanzo Node (Local Streaming)</h3>
+<pre><code class="lang-typescript">// Hanzo Live automatically routes to Hanzo Node for local streaming
+
+import { HanzoLiveClient } from &#x27;@hanzo/live-client&#x27;
+
+const client = new HanzoLiveClient({
+ url: &#x27;ws://localhost:3001&#x27;,
+ 
+ // Prefer local inference
+ preferLocal: true,
+ localNodeUrl: &#x27;http://localhost:8080&#x27;,
+ 
+ // Fallback to cloud if needed
+ fallbackToCloud: true
+})
+
+// Stream from local Hanzo Node (privacy-first)
+const stream = await client.stream({
+ messages: [{ role: &#x27;user&#x27;, content: &#x27;Sensitive data query&#x27; }],
+ forceLocal: true // Never use cloud
+})</code></pre>
+<h3>With Hanzo MCP (Tool Streaming)</h3>
+<pre><code class="lang-typescript">import { HanzoLiveClient } from &#x27;@hanzo/live-client&#x27;
+
+const client = new HanzoLiveClient({
+ url: &#x27;ws://localhost:3001&#x27;,
+ 
+ // MCP integration for tools
+ mcp: {
+ enabled: true,
+ servers: [&#x27;http://localhost:8081&#x27;]
+ }
+})
+
+// Stream with MCP tools
+const stream = await client.stream({
+ messages: [{ role: &#x27;user&#x27;, content: &#x27;Search the codebase&#x27; }],
+ tools: &#x27;auto&#x27;, // Auto-discover from MCP
+ streamToolCalls: true // Stream tool execution
+})
+
+for await (const event of stream) {
+ if (event.type === &#x27;token&#x27;) {
+ console.log(&#x27;Token:&#x27;, event.data)
+ } else if (event.type === &#x27;tool_call&#x27;) {
+ console.log(&#x27;Tool:&#x27;, event.tool, event.args)
+ } else if (event.type === &#x27;tool_result&#x27;) {
+ console.log(&#x27;Result:&#x27;, event.result)
+ }
+}</code></pre>
+<h3>With @hanzo/ui Components</h3>
+<pre><code class="lang-tsx">import { AIChat, StreamingText } from &#x27;@hanzo/ui&#x27;
+import { HanzoLiveProvider } from &#x27;@hanzo/live&#x27;
+
+function App() {
+ return (
+ &lt;HanzoLiveProvider
+ url=&quot;ws://localhost:3001&quot;
+ model=&quot;llama-3-8b&quot;
+ &gt;
+ {/* AIChat automatically uses Hanzo Live for streaming */}
+ &lt;AIChat 
+ streaming 
+ showThoughts
+ enableTools
+ /&gt;
+ 
+ {/* Or use individual streaming components */}
+ &lt;StreamingText 
+ source=&quot;hanzo-live&quot;
+ onToken={(token) =&gt; console.log(token)}
+ /&gt;
+ &lt;/HanzoLiveProvider&gt;
+ )
+}</code></pre>
+<h3>With Hanzo Python SDK</h3>
+<pre><code class="lang-python">from hanzo import Hanzo
+from hanzo_live import HanzoLiveServer
+
+# Initialize Hanzo SDK for local inference
+hanzo = Hanzo(inference_mode=&#x27;local&#x27;)
+
+# Create Hanzo Live server that uses SDK
+server = HanzoLiveServer(
+ hanzo_client=hanzo,
+ host=&#x27;0.0.0.0&#x27;,
+ port=3001,
+ 
+ # Enable multiplexing for concurrent streams
+ multiplexing=True,
+ max_concurrent_streams=100
+)
+
+# Custom stream handler
+@server.on_stream
+async def handle_stream(messages, model, **kwargs):
+ # Use Hanzo SDK for inference
+ response = hanzo.chat.completions.create(
+ messages=messages,
+ model=model,
+ stream=True
+ )
+ 
+ # Stream tokens to client
+ for chunk in response:
+ token = chunk.choices[0].delta.content
+ if token:
+ yield {&#x27;type&#x27;: &#x27;token&#x27;, &#x27;data&#x27;: token}
+ 
+ yield {&#x27;type&#x27;: &#x27;complete&#x27;}
+
+# Start server
+await server.serve()</code></pre>
+<h2>Production Deployment</h2>
+<h3>Docker Deployment</h3>
+<pre><code class="lang-dockerfile"># Dockerfile for Hanzo Live server
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install Hanzo Live
+RUN npm install -g @hanzo/live-server
+
+# Copy configuration
+COPY hanzo-live.config.js .
+
+# Expose WebSocket port
+EXPOSE 3001
+
+# Start server
+CMD [&quot;hanzo-live&quot;, &quot;serve&quot;, \
+ &quot;--port&quot;, &quot;3001&quot;, \
+ &quot;--node-url&quot;, &quot;http://hanzo-node:8080&quot;, \
+ &quot;--redis&quot;, &quot;redis://redis:6379&quot;]</code></pre>
+<pre><code class="lang-yaml"># docker-compose.yml
+version: &#x27;3.8&#x27;
+
+services:
+ hanzo-live:
+ build: .
+ ports:
+ - &quot;3001:3001&quot;
+ depends_on:
+ - hanzo-node
+ - redis
+ environment:
+ - NODE_URL=http://hanzo-node:8080
+ - REDIS_URL=redis://redis:6379
+ - MAX_CONNECTIONS=10000
+ - STREAM_TIMEOUT=300
+
+ hanzo-node:
+ image: hanzoai/node:latest
+ ports:
+ - &quot;8080:8080&quot;
+ volumes:
+ - ./models:/models
+ environment:
+ - GPU_LAYERS=auto
+
+ redis:
+ image: redis:7-alpine
+ ports:
+ - &quot;6379:6379&quot;</code></pre>
+<h3>Kubernetes Deployment</h3>
+<pre><code class="lang-yaml"># hanzo-live-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: hanzo-live
+spec:
+ replicas: 3
+ selector:
+ matchLabels:
+ app: hanzo-live
+ template:
+ metadata:
+ labels:
+ app: hanzo-live
+ spec:
+ containers:
+ - name: hanzo-live
+ image: hanzoai/live-server:latest
+ ports:
+ - containerPort: 3001
+ env:
+ - name: NODE_URL
+ value: &quot;http://hanzo-node:8080&quot;
+ - name: REDIS_URL
+ value: &quot;redis://redis:6379&quot;
+ resources:
+ requests:
+ memory: &quot;512Mi&quot;
+ cpu: &quot;500m&quot;
+ limits:
+ memory: &quot;2Gi&quot;
+ cpu: &quot;2000m&quot;
+ livenessProbe:
+ httpGet:
+ path: /health
+ port: 3001
+ initialDelaySeconds: 10
+ periodSeconds: 30
+ readinessProbe:
+ httpGet:
+ path: /ready
+ port: 3001
+ initialDelaySeconds: 5
+ periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: hanzo-live
+spec:
+ type: LoadBalancer
+ ports:
+ - port: 3001
+ targetPort: 3001
+ protocol: TCP
+ selector:
+ app: hanzo-live</code></pre>
+<h3>Edge Deployment (Cloudflare Workers)</h3>
+<pre><code class="lang-typescript">// Hanzo Live on Cloudflare Workers for ultra-low latency
+import { HanzoLiveEdge } from &#x27;@hanzo/live-edge&#x27;
+
+export default {
+ async fetch(request: Request, env: Env) {
+ const upgradeHeader = request.headers.get(&#x27;Upgrade&#x27;)
+ 
+ if (upgradeHeader === &#x27;websocket&#x27;) {
+ // Handle WebSocket upgrade
+ const server = new HanzoLiveEdge({
+ nodeUrl: env.HANZO_NODE_URL,
+ kv: env.CACHE_KV,
+ durable: env.SESSIONS_DO
+ })
+ 
+ return server.handleWebSocket(request)
+ }
+ 
+ return new Response(&#x27;Hanzo Live Edge&#x27;, { status: 200 })
+ }
+}</code></pre>
+<h2>Monitoring and Observability</h2>
+<h3>Real-Time Metrics</h3>
+<pre><code class="lang-typescript">import { HanzoLiveClient } from &#x27;@hanzo/live-client&#x27;
+
+const client = new HanzoLiveClient({
+ url: &#x27;ws://localhost:3001&#x27;,
+ 
+ // Enable metrics collection
+ metrics: {
+ enabled: true,
+ endpoint: &#x27;http://prometheus:9090&#x27;
+ }
+})
+
+// Metrics automatically tracked:
+// - hanzo_live_connections_total
+// - hanzo_live_streams_active
+// - hanzo_live_tokens_per_second
+// - hanzo_live_latency_ms (p50, p95, p99)
+// - hanzo_live_errors_total
+// - hanzo_live_cache_hits_total</code></pre>
+<h3>Custom Analytics</h3>
+<pre><code class="lang-typescript">client.on(&#x27;stream_start&#x27;, (event) =&gt; {
+ analytics.track(&#x27;Stream Started&#x27;, {
+ model: event.model,
+ userId: event.userId
+ })
+})
+
+client.on(&#x27;stream_complete&#x27;, (event) =&gt; {
+ analytics.track(&#x27;Stream Complete&#x27;, {
+ duration: event.duration,
+ tokens: event.totalTokens,
+ tokensPerSecond: event.tokensPerSecond
+ })
+})
+
+client.on(&#x27;stream_error&#x27;, (event) =&gt; {
+ analytics.track(&#x27;Stream Error&#x27;, {
+ error: event.error,
+ model: event.model
+ })
+})</code></pre>
+<h2>Best Practices</h2>
+<h3>1. Always Show Streaming Indicators</h3>
+<pre><code class="lang-tsx">// ✅ Good - clear streaming feedback
+{isStreaming &amp;&amp; &lt;StreamingIndicator /&gt;}
+
+// ❌ Avoid - no user feedback
+{/* No indicator */}</code></pre>
+<h3>2. Handle Disconnections Gracefully</h3>
+<pre><code class="lang-typescript">// ✅ Good - automatic reconnection
+const client = new HanzoLiveClient({
+ reconnect: { enabled: true, maxAttempts: 5 },
+ resumeOnReconnect: true
+})
+
+// ❌ Avoid - no reconnection logic
+const client = new HanzoLiveClient({})</code></pre>
+<h3>3. Use Appropriate Buffer Sizes</h3>
+<pre><code class="lang-typescript">// ✅ Good - balanced buffering
+const client = new HanzoLiveClient({
+ bufferSize: 16, // Buffer 16 tokens
+ flushInterval: 50 // Flush every 50ms
+})
+
+// ❌ Avoid - no buffering (choppy) or too much (laggy)</code></pre>
+<h3>4. Implement Proper Error States</h3>
+<pre><code class="lang-tsx">// ✅ Good - comprehensive error handling
+{error &amp;&amp; &lt;ErrorMessage error={error} onRetry={retry} /&gt;}
+
+// ❌ Avoid - silent failures
+{/* No error display */}</code></pre>
+<h3>5. Clean Up Resources</h3>
+<pre><code class="lang-typescript">// ✅ Good - proper cleanup
+useEffect(() =&gt; {
+ const client = new HanzoLiveClient({...})
+ return () =&gt; client.disconnect()
+}, [])
+
+// ❌ Avoid - memory leaks
+// (no cleanup on unmount)</code></pre>
+<h2>Next Steps</h2>
+<ol><li><strong>Read @hanzo/ui Documentation</strong> - Streaming UI components</li><li><strong>Explore Hanzo Node</strong> - Local inference for streaming</li><li><strong>Check Hanzo MCP</strong> - Tool integration in streams</li><li><strong>See WebSocket Guide</strong> - Advanced WebSocket patterns</li></ol>
+<h2>Related Skills</h2>
+<ul><li><strong>hanzo-ui.md</strong> - React streaming components</li><li><strong>hanzo-node.md</strong> - Local inference infrastructure</li><li><strong>hanzo-mcp.md</strong> - Tool calling in streams</li><li><strong>realtime/INDEX.md</strong> - WebSocket and SSE patterns</li></ul>
+<hr>
+<p><strong>Remember</strong>: Hanzo Live enables responsive, collaborative AI experiences with ultra-low latency streaming - use it for any real-time AI application.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-live.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

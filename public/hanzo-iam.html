@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-iam</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-iam.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-iam">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-iam.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-iam</h1><p class="lede">Hanzo IAM is the server-side identity and access management service for the Hanzo ecosystem.</p><p>&lt;!-- Updated: 2026-07-23 --&gt;</p>
+<h1>Hanzo IAM - Identity and Access Management Server</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-id.md</code>, <code>hanzo/hanzo-platform.md</code>, <code>hanzo/hanzo-kms.md</code>, <code>hanzo/hanzo-cloud.md</code> <strong>Spec</strong>: HIP-0111 (auth) + HIP-0112 (cloud topology). Ground truth: <code>~/work/hanzo/CLAUDE.md</code>.</p>
+<h2>Overview</h2>
+<p>Hanzo IAM is the <strong>server-side identity and access management service</strong> for the Hanzo ecosystem. Written in Go (Beego framework) with a React admin UI, providing OAuth 2.0/OIDC/SAML/CAS/LDAP/SCIM/WebAuthn/TOTP/RADIUS authentication and authorization. Serves SSO across hanzo.id, lux.id, zoolabs.id, and pars.id. Includes built-in MCP (Model Context Protocol) server for AI agent identity management.</p>
+<h3>Clean server vs retired fork</h3>
+<ul><li><strong><code>hanzoai/iam</code></strong> — the <strong>clean rewrite</strong> and the ONLY server. It is <strong>embedded in <code>hanzoai/cloud</code></strong> and serves the canonical OIDC surface under **<code>/v1/iam/*</code>** (see endpoints below). This is what production runs.</li><li><strong><code>hanzoai/iam-v1</code></strong> — the <strong>retired</strong> predecessor. Do not build, deploy, or reference it for new work. The current server deliberately continues the version line to supersede it (MVS).</li><li><strong>Clients never talk to this server&#x27;s admin internals</strong> — they authenticate with the <strong><code>@hanzo/iam</code></strong> SDK against <code>/v1/iam/oauth/*</code>. See <code>hanzo/hanzo-id.md</code>.</li></ul>
+<h3>Why Hanzo IAM?</h3>
+<ul><li><strong>Multi-protocol</strong>: OAuth 2.0, OIDC, SAML, CAS, LDAP, SCIM, WebAuthn, TOTP, RADIUS -- all in one binary</li><li><strong>40+ social providers</strong>: GitHub, Google, Apple, Microsoft, Discord, MetaMask, Web3Onboard, and more</li><li><strong>Multi-tenant</strong>: Multiple organizations and applications in a single deployment</li><li><strong>RBAC + Casbin</strong>: Role-based access control with fine-grained permissions via Casbin policy engine</li><li><strong>MCP-native</strong>: Built-in MCP server for AI agents to manage users, apps, and permissions</li><li><strong>User balance tracking</strong>: Credit balance system for billing integration with Hanzo Commerce/Cloud</li><li><strong>Web3 auth</strong>: MetaMask and Web3Onboard wallet login natively supported</li><li><strong>WAF</strong>: Built-in Coraza web application firewall</li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Backend</strong>: Go 1.26, Beego v2 web framework, xorm ORM</li><li><strong>Frontend (admin UI)</strong>: React 18, Ant Design 5, craco, pnpm</li><li><strong>Database</strong>: PostgreSQL (primary), MySQL, SQLite (embedded)</li><li><strong>Session store</strong>: Redis/Valkey (auto-discovers <code>hanzo-kv</code> or <code>redis</code> in K8s)</li><li><strong>Auth libraries</strong>: casbin/casbin v2, go-webauthn, go-jose, gosaml2, go-ldap</li><li><strong>Identity providers</strong>: markbates/goth + custom implementations in <code>idp/</code> directory</li><li><strong>Image</strong>: <code>ghcr.io/hanzoai/iam:latest</code></li><li><strong>Repo</strong>: <code>github.com/hanzoai/iam</code> — original work, Apache-2.0 (retired predecessor: <code>github.com/hanzoai/iam-v1</code>)</li></ul>
+<h2>When to use</h2>
+<ul><li>Deploying or managing the IAM backend server itself</li><li>Configuring organizations, applications, or OAuth providers</li><li>Managing users, roles, and permissions via the admin API</li><li>Setting up LDAP/SAML/SCIM enterprise federation</li><li>Integrating billing/credits with the IAM user balance system</li><li>Debugging server-side auth issues (token generation, provider callbacks)</li><li>Using MCP tools for AI agent identity operations</li></ul>
+<p>For <strong>client-side OAuth flows</strong> (login UI, token extraction, redirect handling), see <code>hanzo/hanzo-id.md</code> instead.</p>
+<h2>Hard requirements</h2>
+<ol><li><strong>PostgreSQL</strong> (or MySQL/SQLite) database</li><li><strong>Redis/Valkey</strong> for session storage (optional -- falls back to file sessions)</li><li><strong>init_data.json</strong> for bootstrap organizations, applications, and admin user</li><li><strong>TLS termination</strong> via Caddy, ingress, or reverse proxy for production</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Admin UI | <code>https://iam.hanzo.ai</code> (internal) | | Login UI | <code>https://hanzo.id</code> (separate repo: hanzoai/id) | | API port | 8000 | | LDAP port | 389 (LDAPS: 636) | | RADIUS port | 1812 | | Image | <code>ghcr.io/hanzoai/iam:latest</code> | | Go module | <code>github.com/hanzoai/iam</code> | | Go version | 1.26 | | Frontend | React 18 + Ant Design 5 (pnpm) | | Config | <code>conf/app.conf</code> (Beego INI format) | | Init data | <code>init_data.json</code> | | Repo | <code>github.com/hanzoai/iam</code> | | License | Apache-2.0 |</p>
+<h2>Domains served</h2>
+<p>Brands are selected <strong>host-based</strong> (one deployment, many origins). The brand host is the OIDC <strong>issuer</strong>; <code>iam.hanzo.ai</code> is the internal cluster/admin host and is <strong>never</strong> the issuer.</p>
+<p>| Domain | Purpose | |--------|---------| | <code>hanzo.id</code> | Hanzo AI accounts (issuer) | | <code>lux.id</code> | Lux Network accounts (issuer) | | <code>zoolabs.id</code> | Zoo Labs accounts (issuer) — NOT <code>zoo.id</code> | | <code>pars.id</code> | Pars accounts (issuer) | | <code>id.bootno.de</code> | Bootnode accounts (issuer) | | <code>id.ad.nexus</code> | Ad Nexus accounts (issuer) | | <code>iam.hanzo.ai</code> | Internal backend/admin host (NOT an issuer) |</p>
+<h2>One-file quickstart</h2>
+<h3>Docker (quickest)</h3>
+<pre><code class="lang-bash">docker run -d --name hanzo-iam -p 8000:8000 ghcr.io/hanzoai/iam:latest
+# Open http://localhost:8000 for admin UI</code></pre>
+<h3>Docker Compose (full stack)</h3>
+<pre><code class="lang-yaml"># compose.yml
+services:
+ iam:
+ image: ghcr.io/hanzoai/iam:latest
+ ports:
+ - &quot;8000:8000&quot;
+ environment:
+ - DATABASE_URL=postgres://hanzo:hanzo@postgres:5432/iam?sslmode=disable
+ - REDIS_URL=redis://redis:6379
+ - IAM_ORIGIN=https://hanzo.id
+ - ENABLE_MULTI_TENANT=true
+ - ALLOWED_ORIGINS=hanzo.id,zoolabs.id,lux.id,pars.id,iam.hanzo.ai
+ volumes:
+ - ./init_data.json:/app/init_data.json:ro
+ depends_on:
+ postgres:
+ condition: service_healthy
+
+ postgres:
+ image: ghcr.io/hanzoai/sql:latest
+ environment:
+ POSTGRES_USER: hanzo
+ POSTGRES_PASSWORD: &quot;${POSTGRES_PASSWORD}&quot;
+ POSTGRES_DB: iam
+ volumes:
+ - postgres_data:/var/lib/postgresql/data
+ healthcheck:
+ test: [&quot;CMD-SHELL&quot;, &quot;pg_isready -U hanzo -d iam&quot;]
+ interval: 10s
+ timeout: 5s
+ retries: 5
+
+ redis:
+ image: ghcr.io/hanzoai/kv:latest
+ command: kv-server --appendonly yes
+ volumes:
+ - redis_data:/data
+
+volumes:
+ postgres_data:
+ redis_data:</code></pre>
+<h3>From source</h3>
+<pre><code class="lang-bash">git clone https://github.com/hanzoai/iam.git
+cd iam
+
+# Backend
+go build -o server .
+
+# Frontend
+cd web &amp;&amp; pnpm install &amp;&amp; pnpm run build &amp;&amp; cd ..
+
+# Configure
+cp conf/app.dev.conf conf/app.conf
+# Edit conf/app.conf with your database credentials
+
+# Run
+./server</code></pre>
+<h3>Admin API examples</h3>
+<pre><code class="lang-bash"># Get all users in an organization
+curl -s &quot;https://iam.hanzo.ai/v1/iam/get-users?owner=hanzo&quot; \
+ -H &quot;Authorization: Bearer ${ADMIN_TOKEN}&quot;
+
+# Create a new application
+curl -X POST &quot;https://iam.hanzo.ai/v1/iam/add-application&quot; \
+ -H &quot;Authorization: Bearer ${ADMIN_TOKEN}&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -d &#x27;{
+ &quot;owner&quot;: &quot;admin&quot;,
+ &quot;name&quot;: &quot;app-myservice&quot;,
+ &quot;organization&quot;: &quot;hanzo&quot;,
+ &quot;clientId&quot;: &quot;my-client-id&quot;,
+ &quot;clientSecret&quot;: &quot;my-client-secret&quot;,
+ &quot;redirectUris&quot;: [&quot;https://myservice.hanzo.ai/callback&quot;],
+ &quot;expireInHours&quot;: 168,
+ &quot;grantTypes&quot;: [&quot;authorization_code&quot;, &quot;refresh_token&quot;]
+ }&#x27;
+
+# Update user balance (billing integration)
+curl -X POST &quot;https://iam.hanzo.ai/v1/iam/update-user&quot; \
+ -H &quot;Authorization: Bearer ${ADMIN_TOKEN}&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -d &#x27;{
+ &quot;owner&quot;: &quot;hanzo&quot;,
+ &quot;name&quot;: &quot;username&quot;,
+ &quot;balance&quot;: 10000
+ }&#x27;</code></pre>
+<h2>Core Concepts</h2>
+<h3>Architecture</h3>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│ Hanzo IAM Server (Go) │
+├──────────────┬──────────────┬──────────────┬─────────────────┤
+│ OAuth2/OIDC │ SAML/CAS │ LDAP/SCIM │ WebAuthn/MFA │
+├──────────────┴──────────────┴──────────────┴─────────────────┤
+│ Beego Router → Controllers → Object (business logic) │
+├──────────────┬──────────────┬──────────────┬─────────────────┤
+│ 40+ IdPs │ Casbin RBAC │ MCP Server │ WAF (Coraza) │
+├──────────────┴──────────────┴──────────────┴─────────────────┤
+│ PostgreSQL/MySQL/SQLite │ Redis/Valkey │ File Storage │
+└───────────────────────────┴────────────────┴─────────────────┘
+ ↑ ↑ ↑
+ ┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐
+ │ hanzo.id │ │ cloud. │ │ platform. │
+ │ (login UI) │ │ hanzo.ai │ │ hanzo.ai │
+ └─────────────┘ └─────────────┘ └─────────────┘</code></pre>
+<h3>Directory Structure</h3>
+<pre><code>iam/
+├── main.go # Entry point (Beego bootstrap, filter chain)
+├── conf/ # Configuration files (INI format)
+│ ├── app.conf # Active config (gitignored in prod)
+│ ├── app.dev.conf # Docker dev (PostgreSQL)
+│ ├── app.prod.conf # Production (hanzo.id)
+│ ├── app.staging.conf # Staging (stg.hanzo.id)
+│ └── waf.conf # Coraza WAF rules
+├── controllers/ # HTTP handlers (Beego controllers)
+│ ├── auth.go # OAuth2 authorization flows
+│ ├── token.go # Token issuance and validation
+│ ├── account.go # User account management
+│ ├── user.go # User CRUD
+│ ├── application.go # Application management
+│ ├── organization.go # Organization management
+│ ├── permission.go # Permission management
+│ ├── role.go # Role management
+│ ├── mfa.go # Multi-factor authentication
+│ ├── webauthn.go # WebAuthn/Passkeys
+│ ├── saml.go # SAML SSO
+│ ├── cas.go # CAS protocol
+│ ├── ldap.go # LDAP management
+│ ├── scim.go # SCIM provisioning
+│ ├── webhook.go # Webhook management
+│ ├── wellknown_oidc_discovery.go # .well-known endpoints
+│ └── wellknown_oauth_prm.go # OAuth metadata
+├── object/ # Core business logic (models + ORM)
+│ ├── adapter.go # Database adapter
+│ ├── ormer.go # xorm ORM setup
+│ └── transaction.go # Billing transactions
+├── routers/ # Beego filters and route definitions
+│ ├── router.go # All API route registrations
+│ ├── authz_filter.go # Authorization filter
+│ ├── cors_filter.go # CORS handling
+│ ├── secure_cookie_filter.go # Secure cookie enforcement
+│ ├── static_filter.go # SPA static file serving
+│ └── mcp_util.go # MCP protocol utilities
+├── idp/ # Identity provider implementations
+│ ├── github.go, google.go, facebook.go, ... # 30+ providers
+│ ├── metamask.go, web3onboard.go # Web3 providers
+│ ├── goth.go # Goth library integration (40+ providers)
+│ └── provider.go # Provider interface
+├── mcp/ # MCP (Model Context Protocol) server
+│ ├── base.go # MCP server setup and tool registry
+│ ├── auth.go # MCP auth tools
+│ ├── application.go # MCP app management tools
+│ └── permission.go # MCP permission tools
+├── authz/ # Casbin authorization engine
+├── ldap/ # LDAP server implementation
+├── radius/ # RADIUS server implementation
+├── scim/ # SCIM protocol implementation
+├── captcha/ # CAPTCHA generation
+├── certificate/ # X.509 certificate management
+├── email/ # Email templates and sending
+├── notification/ # Push notifications
+├── proxy/ # HTTP client proxy
+├── storage/ # File storage backends
+├── web/ # React admin UI (Ant Design)
+│ ├── src/ # React source
+│ └── package.json # pnpm, React 18, Ant Design 5
+├── init_data.json # Bootstrap data (orgs, apps, users)
+├── compose.yml # Production Docker Compose
+├── Dockerfile # Multi-stage (frontend + backend + alpine)
+├── Makefile # Build, test, deploy commands
+└── k8s.yaml # Kubernetes deployment manifest</code></pre>
+<h3>Filter Chain (request lifecycle)</h3>
+<p>The <code>main.go</code> registers Beego filters in this order:</p>
+<ol><li><code>SecureCookieFilter</code> (BeforeStatic) -- enforce secure cookies behind TLS</li><li><code>StaticFilter</code> (BeforeRouter) -- serve React SPA static files</li><li><code>AutoSigninFilter</code> (BeforeRouter) -- auto-sign-in from cookies</li><li><code>CorsFilter</code> (BeforeRouter) -- CORS headers</li><li><code>TimeoutFilter</code> (BeforeRouter) -- request timeout enforcement</li><li><code>ApiFilter</code> (BeforeRouter) -- API auth and rate limiting</li><li><code>PrometheusFilter</code> (BeforeRouter) -- metrics collection</li><li><code>RecordMessage</code> (BeforeRouter) -- audit logging</li><li><code>FieldValidationFilter</code> (BeforeRouter) -- input validation</li></ol>
+<h3>Redis Auto-Discovery</h3>
+<p>The server auto-discovers Redis in Kubernetes by trying DNS lookups for <code>hanzo-kv</code> and <code>redis</code> service names. Falls back to file-based sessions if no Redis is available.</p>
+<h3>Init Data</h3>
+<p><code>init_data.json</code> bootstraps the database on first run:</p>
+<p>| Entity | Defaults | |--------|----------| | Organization | <code>hanzo</code> (dark theme, primary color #fd4444) | | Applications | <code>app-hanzo</code>, <code>app-cloud</code>, <code>app-commerce</code> | | Admin user | <code>admin@hanzo.ai</code> with configurable balance | | Certificates | RSA certs for JWT signing |</p>
+<p>Set <code>initDataNewOnly = true</code> in conf to avoid overwriting existing data on restart.</p>
+<h3>Billing Integration</h3>
+<p>IAM tracks user credit balances. The flow is:</p>
+<ol><li><strong>Commerce</strong> processes payments and calls IAM API to add credits</li><li><strong>Cloud</strong> consumes AI tokens and debits balance via IAM transactions</li><li><strong>IAM</strong> is the source of truth for user credit balances</li></ol>
+<h3>MCP Server</h3>
+<p>The built-in MCP server (in <code>mcp/</code> directory) exposes IAM operations as MCP tools for AI agents:</p>
+<ul><li><strong>Auth tools</strong>: Validate tokens, get user info, check permissions</li><li><strong>Application tools</strong>: List/create/update OAuth applications</li><li><strong>Permission tools</strong>: Manage roles, permissions, and Casbin policies</li></ul>
+<h3>Supported Identity Providers</h3>
+<p>Native implementations in <code>idp/</code> directory:</p>
+<p>| Category | Providers | |----------|-----------| | Code hosting | GitHub, GitLab, Gitee, Bitbucket | | Social | Google, Facebook, Twitter, LinkedIn, Discord, Reddit | | Enterprise | ADFS, Okta, Azure AD B2C, SAML (any) | | Messaging | Telegram, Lark, DingTalk, WeChat, WeCom, Line, Slack | | Web3 | MetaMask, Web3Onboard | | Regional | Alipay, Baidu, Bilibili, Douyin, QQ, Weibo, Kwai | | Via Goth | 40+ additional providers |</p>
+<h2>Configuration</h2>
+<h3>Beego INI config (<code>conf/app.conf</code>)</h3>
+<pre><code class="lang-ini">appname = hanzo-iam
+httpport = 8000
+runmode = dev
+driverName = postgres
+dataSourceName = user=hanzo password=xxx host=postgres port=5432 sslmode=disable dbname=hanzo_iam
+dbName = hanzo_iam
+redisEndpoint = redis:6379
+authState = &quot;hanzo&quot;
+origin = https://hanzo.id
+staticBaseUrl = &quot;https://cdn.hanzo.ai&quot;
+ldapServerPort = 389
+ldapsServerPort = 636
+radiusServerPort = 1812
+radiusDefaultOrganization = &quot;hanzo&quot;
+initDataNewOnly = true
+initDataFile = &quot;./init_data.json&quot;
+logConfig = {&quot;adapter&quot;:&quot;file&quot;, &quot;filename&quot;: &quot;logs/hanzo-iam.log&quot;, &quot;maxdays&quot;:99999}
+quota = {&quot;organization&quot;: -1, &quot;user&quot;: -1, &quot;application&quot;: -1, &quot;provider&quot;: -1}</code></pre>
+<h3>Environment Variables</h3>
+<pre><code class="lang-bash"># Database
+POSTGRES_USER=hanzo
+POSTGRES_PASSWORD=&lt;generate-secure-password&gt;
+POSTGRES_DB=iam
+
+# IAM server
+IAM_ORIGIN=https://iam.hanzo.ai
+ENCRYPTION_KEY=&lt;32-byte-hex-key&gt;
+ENABLE_MULTI_TENANT=true
+ALLOWED_ORIGINS=hanzo.id,zoolabs.id,lux.id,pars.id,iam.hanzo.ai
+
+# Per-org client secrets (override init_data.json placeholders)
+HANZO_CLIENT_SECRET=&lt;generate-secret&gt;
+ZOO_CLIENT_SECRET=&lt;generate-secret&gt;
+LUX_CLIENT_SECRET=&lt;generate-secret&gt;
+PARS_CLIENT_SECRET=&lt;generate-secret&gt;
+
+# Email (optional)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=noreply@hanzo.ai
+SMTP_PASSWORD=&lt;email-password&gt;</code></pre>
+<h3>MySQL vs PostgreSQL</h3>
+<p><strong>PostgreSQL</strong> (recommended):</p>
+<pre><code class="lang-ini">driverName = postgres
+dataSourceName = user=hanzo password=xxx host=postgres port=5432 sslmode=disable dbname=hanzo_iam</code></pre>
+<p><strong>MySQL</strong> (dataSourceName must NOT include database name -- it is appended from <code>dbName</code>):</p>
+<pre><code class="lang-ini">driverName = mysql
+dataSourceName = hanzo:pass@tcp(localhost:3306)/
+dbName = hanzo_iam</code></pre>
+<h2>Makefile Commands</h2>
+<pre><code class="lang-bash">make dev # Start local dev with Docker Compose (PostgreSQL)
+make dev-down # Stop local dev
+make run # Run Go server locally (go run)
+make backend # Build Go binary to bin/manager
+make frontend # Build React admin UI (pnpm)
+make ut # Run Go unit tests with coverage
+make docker-build # Build Docker image
+make docker-push # Push to ghcr.io/hanzoai/iam
+make deploy # Helm deploy to K8s
+make staging # Start staging compose
+make prod # Start production compose
+make build-prod # Build and push production image</code></pre>
+<h2>API Endpoints</h2>
+<h3>OAuth2/OIDC — canonical surface (HIP-0111, host-relative to the issuer)</h3>
+<p>These are the ONLY client-facing paths. There is no legacy <code>/oauth/<em></code> and no <code>/api/login/</em></code>. The <code>@hanzo/iam</code> SDK (<code>src/paths.ts</code> <code>OIDC_PATHS</code>) is the single source of truth; clients import it, never hardcode a path.</p>
+<p>| Endpoint | Path | Method | |----------|------|--------| | Authorize | <code>/v1/iam/oauth/authorize</code> | GET | | Token | <code>/v1/iam/oauth/token</code> | POST | | Introspect | <code>/v1/iam/oauth/introspect</code> | POST | | Revoke | <code>/v1/iam/oauth/revoke</code> | POST | | UserInfo | <code>/v1/iam/oauth/userinfo</code> | GET | | Device | <code>/v1/iam/oauth/device</code> | POST | | Logout | <code>/v1/iam/oauth/logout</code> | GET | | OIDC Discovery | <code>/.well-known/openid-configuration</code> | GET | | JWKS | <code>/v1/iam/.well-known/jwks</code> | GET |</p>
+<p>PKCE <code>S256</code> always; <code>client_secret_basic</code>; scopes <code>openid profile email</code>; <code>client_id = &lt;org&gt;-&lt;app&gt;</code>. GOTCHA: any unregistered path returns a <code>200 text/html</code> SPA catch-all (silent breakage, not a 404) — clients MUST hit these exact paths and keep <code>originFrontend</code> EMPTY so discovery stays host-relative.</p>
+<h3>Admin REST API (<code>/v1/iam/</code>)</h3>
+<p>| Resource | Endpoints | |----------|-----------| | Users | <code>get-users</code>, <code>get-user</code>, <code>add-user</code>, <code>update-user</code>, <code>delete-user</code> | | Organizations | <code>get-organizations</code>, <code>get-organization</code>, <code>add-organization</code>, <code>update-organization</code> | | Applications | <code>get-applications</code>, <code>get-application</code>, <code>add-application</code>, <code>update-application</code> | | Providers | <code>get-providers</code>, <code>get-provider</code>, <code>add-provider</code>, <code>update-provider</code> | | Roles | <code>get-roles</code>, <code>get-role</code>, <code>add-role</code>, <code>update-role</code>, <code>delete-role</code> | | Permissions | <code>get-permissions</code>, <code>get-permission</code>, <code>add-permission</code>, <code>update-permission</code> | | Tokens | <code>get-tokens</code>, <code>get-token</code>, <code>delete-token</code> | | Sessions | <code>get-sessions</code>, <code>delete-session</code> | | Records | <code>get-records</code> (audit log) | | Webhooks | <code>get-webhooks</code>, <code>add-webhook</code>, <code>update-webhook</code> | | Account | <code>get-account</code>, <code>signup</code>, <code>login</code>, <code>logout</code> | | Verification | <code>send-verification-code</code>, <code>verify-code</code> | | MFA | <code>mfa-setup-initiate</code>, <code>mfa-setup-verify</code>, <code>mfa-setup-enable</code> |</p>
+<h3>Protocol Endpoints</h3>
+<p>| Protocol | Path | |----------|------| | SAML | <code>/api/saml/redirect</code>, <code>/api/saml/metadata</code> | | CAS | <code>/cas/login</code>, <code>/cas/logout</code>, <code>/cas/serviceValidate</code>, <code>/cas/proxyValidate</code> | | LDAP | Port 389 (LDAPS 636) | | RADIUS | Port 1812 | | SCIM | <code>/scim/v2/Users</code>, <code>/scim/v2/Groups</code> | | Registry token | <code>/v2/token</code> (Docker registry auth) |</p>
+<h3>Metrics</h3>
+<p>Prometheus metrics exposed at <code>/api/metrics</code>.</p>
+<h2>SDK Integration — ONE package: <code>@hanzo/iam</code></h2>
+<p>Clients authenticate with the <strong><code>@hanzo/iam</code></strong> SDK (npm, 0.13.7) against the canonical <code>/v1/iam/oauth/*</code> endpoints. The retired <code>@hanzo/iam-js-sdk</code> and any hand-rolled OAuth are forbidden. Full client contract: <code>hanzo/hanzo-id.md</code>.</p>
+<h3>TypeScript — browser (PKCE)</h3>
+<pre><code class="lang-typescript">import { configureIam, startLogin, handleCallback, getUser } from &quot;@hanzo/iam/browser&quot;
+
+configureIam({
+  serverUrl: &quot;https://hanzo.id&quot;,   // brand host / issuer
+  clientId: &quot;hanzo-app&quot;,           // &lt;org&gt;-&lt;app&gt;
+  redirectUri: &quot;https://app.hanzo.ai/auth/callback&quot;,
+})
+await startLogin()                 // PKCE S256 handled by the SDK
+await handleCallback()             // on the callback route (run once)
+const user = await getUser()       // { sub, email, owner, ... }</code></pre>
+<h3>TypeScript — server-side token validation</h3>
+<pre><code class="lang-typescript">import { validateToken } from &quot;@hanzo/iam/server&quot;
+const claims = await validateToken(bearer, { serverUrl: &quot;https://hanzo.id&quot; })
+const orgID = claims.owner         // scope all queries to the org</code></pre>
+<p>Go/other services validate the JWT against JWKS (<code>/v1/iam/.well-known/jwks</code>) — in practice the gateway (<code>api.hanzo.ai</code>) does this and injects <code>X-Org-Id</code>/<code>X-User-Id</code>/<code>X-User-Email</code> for downstream services (and strips any client-supplied identity headers first).</p>
+<h2>Production Deployment</h2>
+<h3>K8s (hanzo-k8s cluster)</h3>
+<p>IAM runs on the hanzo-k8s cluster at <code>24.199.76.156</code>:</p>
+<ul><li>Namespace: <code>hanzo</code></li><li>Service: <code>iam</code></li><li>Database: <code>postgres.hanzo.svc</code> (db: <code>iam</code>)</li><li>Secrets: via KMS (<code>kms.hanzo.ai</code>)</li></ul>
+<h3>CI/CD</h3>
+<ul><li><strong>Build</strong>: Go tests with PostgreSQL, frontend build (pnpm), Go build with race detection, gofumpt lint, Cypress E2E</li><li><strong>Release</strong>: Semantic versioning, GitHub Release, Docker push to <code>ghcr.io/hanzoai/iam</code></li><li><strong>Deploy</strong>: Push to main triggers multi-arch Docker build (amd64/arm64) and SSH deploy</li></ul>
+<h3>Health Check</h3>
+<pre><code class="lang-bash">curl -f http://localhost:8000/healthz</code></pre>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | &quot;Access denied to database hanzo_iamhanzo_iam&quot; | MySQL dataSourceName includes dbname | End with <code>/</code> not <code>/dbname</code> | | &quot;could not open pg_filenode.map&quot; | PostgreSQL volume corruption | <code>docker compose down -v &amp;&amp; docker volume prune</code> | | Tokens expire instantly | <code>expireInHours=0</code> on app | Set <code>expireInHours=168</code> in the IAM app config | | Client gets a <code>200</code> HTML page instead of tokens | Wrong path hit the SPA catch-all | Use canonical <code>/v1/iam/oauth/*</code>; keep <code>originFrontend</code> empty; use the <code>@hanzo/iam</code> SDK (never a hardcoded path or <code>genericOAuth({discoveryUrl})</code>) | | &quot;Missing PKCE code verifier&quot; at callback | Callback effect ran twice / single-use code | Run <code>handleCallback</code> once (see hanzo-id.md); upgrade <code>@hanzo/iam</code> to 0.13.8+ | | initData overwrites on restart | <code>initDataNewOnly=false</code> | Set <code>initDataNewOnly=true</code> in conf | | App owner queries fail | Apps under <code>owner=admin</code> not org | WHERE <code>owner=&#x27;admin&#x27;</code> not org name | | Redis not found | No Redis endpoint configured | Auto-discovers <code>hanzo-kv</code> or <code>redis</code> DNS; set <code>redisEndpoint</code> explicitly | | LDAP not starting | Port 389 in use | Check <code>ldapServerPort</code> in conf | | WAF blocking requests | Coraza rules too strict | Adjust <code>conf/waf.conf</code> |</p>
+<h2>Multi-tenant deployment example</h2>
+<p>A canonical multi-tenant deployment (e.g., a regulated-tokenization tenant + a biometric-identity tenant in the same IAM instance) uses:</p>
+<p><strong>Organisations</strong>: <code>&lt;tenant1&gt;</code> (canonical) + <code>&lt;tenant2&gt;</code> (peer).</p>
+<p><strong>SPA apps</strong> (<code>authorization_code</code>):</p>
+<ul><li><code>&lt;tenant2&gt;-admin</code> — operator dashboard at <code>&lt;tenant2&gt;.{env}.&lt;domain&gt;</code></li><li><code>&lt;tenant2&gt;-verify</code> — standalone IDV flow at <code>verify.{env}.&lt;domain&gt;</code></li></ul>
+<p><strong>Service app</strong> (<code>client_credentials</code>):</p>
+<ul><li><code>&lt;tenant2&gt;-daemon</code> with <code>aud=&lt;tenant2&gt;-daemon,&lt;tenant1&gt;-kms</code> (needs both:</li></ul>
+<p>  the daemon scope for inbound calls + <code>&lt;tenant1&gt;-kms</code> to read secrets)</p>
+<p><strong>Internal docs sites</strong> are typically gated by NextAuth v5 + Google OAuth restricted to a corporate email domain, separate from IAM (engineering-only surface).</p>
+<p>Companion docs live in the tenant&#x27;s own repo under <code>internal/content/docs/</code> and <code>papers/</code>.</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-id.md</code> - Client-side login UI and OAuth flows (Next.js)</li><li><code>hanzo/hanzo-platform.md</code> - PaaS (uses IAM for auth)</li><li><code>hanzo/hanzo-kms.md</code> - Secret management (also uses IAM)</li><li><code>hanzo/hanzo-cloud.md</code> - Cloud dashboard (uses IAM for auth + billing)</li><li><code>hanzo/hanzo-console.md</code> - Admin console (uses IAM for auth)</li><li><code>hanzo/hanzo-commerce.md</code> - Commerce (writes user balances to IAM)</li><li><code>hanzo/hanzo-universe.md</code> - K8s infrastructure manifests</li><li>(downstream tenant skill packs live in the tenant&#x27;s own repo)</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-05-12</p>
+<h3>Recent Changes (2026-03-28)</h3>
+<ul><li><strong>Password grant support</strong>: OAuth2 <code>password</code> grant type now works when enabled on the application. Previously the switch statement fell through to a nil token crash.</li><li><strong>CI</strong>: Removed lint gate from Docker build workflow (lint was timing out and blocking image pushes).</li></ul>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: iam, iam, oauth2, oidc, saml, ldap, scim, webauthn, identity, authentication, authorization, sso <strong>Prerequisites</strong>: Go, Docker, PostgreSQL, OAuth2/OIDC concepts</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-iam.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,7 +196,7 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0305</h1><p class="lede">HIP-305: esign: shared-DB tenancy via team-where, not file-per-tenant. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0305: esign: shared-DB tenancy via team-where, not file-per-tenant</h1>
+<h1>hip-0305</h1><p class="lede">HIP-305: esign: shared-DB tenancy via team-where, not file-per-tenant. Status Final. Hanzo architectural specification.</p><h1>HIP-0305: esign: shared-DB tenancy via team-where, not file-per-tenant</h1>
 <h2>Abstract</h2>
 <p>The canonical database architecture (<code>hanzoai/.github</code> → <code>profile/ARCHITECTURE-DATABASES.md</code>) mandates one Base SQLite file per <code>(org, user, project)</code> for every internal app — <em>&quot;the file <strong>is</strong> the tenant boundary. Do not add a tenant column.&quot;</em> Decision #7 of that document is explicit that <strong>&quot;Deviation needs a HIP, not a Slack thread.&quot;</strong> This is that HIP.</p>
 <p>esign (a Documenso fork) is being migrated SQL → Base SQLite (PR <code>hanzoai/esign#7</code>). Its data shape does not fit file-per-tenant:</p>
@@ -214,6 +223,17 @@ footer a{color:var(--soft)}
 <p>File-per-tenant gives stronger isolation: an in-process bug (a handler that forgets <code>buildTeamWhereQuery</code>) can leak across orgs in a shared file, whereas a per-tenant file makes cross-org reads physically impossible. We accept this weaker boundary because per-tenant files would have required <strong>re-architecting global identity</strong> (sessions, accounts, passkeys, the many-orgs-per-user model) — out of scope for, and orthogonal to, a SQL→SQLite storage migration. The codec-throw + trigger layers are the compensating controls that keep a forgotten predicate from silently corrupting or leaking auth-relevant state.</p>
 <h2>Reversibility</h2>
 <p>File-per-tenant remains future work <strong>iff</strong> global identity is also refactored to be org-addressable at request entry (a tenant resolver before <code>validateSessionToken</code>, and a sharding story for <code>User</code>/<code>Session</code>/<code>Account</code>). Until that work is scoped, the shared file + <code>team-where</code> boundary is the settled position for esign. A follow-up HIP supersedes this one if/when global identity is reworked; this HIP is the authority in the interim.</p>
+<h2>Conformance status</h2>
+<p>Measured against <code>hanzoai/esign</code> at <code>643d0fd3e</code> on 2026-09-09. The deviation this HIP argues for is the one that shipped, and the schema says so in the datasource block — it cites this HIP by number as the reason the estate&#x27;s file-per-tenant rule does not apply here:</p>
+<pre><code class="lang-prisma">datasource db {
+  // Single shared SQLite file via Hanzo Base. Tenancy is enforced at the
+  // query layer via buildTeamWhereQuery keyed on the authenticated user
+  // (see ./tenant.ts). DATABASE_URL points at one sign.db file shared
+  // across all orgs. See HIP-0305 for the architectural deviation ...
+  provider = &quot;sqlite&quot;
+  url      = env(&quot;DATABASE_URL&quot;)
+}</code></pre>
+<p><code>provider = &quot;sqlite&quot;</code> closes the SQL → Base migration the abstract describes. <code>buildTeamWhereQuery</code> is defined in <code>packages/prisma/tenant.ts</code> and reached from 54 files, including every handler under <code>packages/trpc/zap/server/handlers/</code> (<code>envelope</code>, <code>team</code>, <code>organisation</code>, <code>webhook</code>, <code>admin</code>) — so the predicate is the boundary in practice and not only in the proposal. esign serves at <code>esign.hanzo.ai</code>, which redirects an anonymous caller to <code>/signin</code>.</p>
 <footer>
 <div class="fmap">
   <div><b>Build</b>
@@ -233,5 +253,4 @@ footer a{color:var(--soft)}
 </div>
 <div class="fend"><a href="/hip-0305.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

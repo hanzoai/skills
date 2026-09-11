@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-network</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-network.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-network">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-network.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-network</h1><p class="lede">Hanzo Network enables distributed AI agent execution across heterogeneous devices (M1 MacBooks, NVIDIA GPUs, Linux servers, Raspberry Pis, etc.) with automatic peer discovery, device capability detection, and intelligent load balancing.</p><h1>Hanzo Network - Distributed AI Agent Topology</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Skill Level</strong>: Intermediate to Advanced <strong>Prerequisites</strong>: Understanding of distributed systems, P2P networking, gRPC <strong>Related Skills</strong>: python-sdk.md, go-sdk.md, hanzo-node.md, hanzo-mcp.md</p>
+<h2>Overview</h2>
+<p>Hanzo Network enables <strong>distributed AI agent execution</strong> across heterogeneous devices (M1 MacBooks, NVIDIA GPUs, Linux servers, Raspberry Pis, etc.) with automatic peer discovery, device capability detection, and intelligent load balancing.</p>
+<p><strong>Core Innovation</strong>: Scan QR code (or use config file) → Join network → Share compute → Run AI agents across devices seamlessly.</p>
+<h2>Why Hanzo Network?</h2>
+<h3>The Problem: Siloed AI Compute</h3>
+<ul><li><strong>Single device limited</strong>: Your MacBook can&#x27;t leverage your desktop&#x27;s GPU</li><li><strong>Manual configuration</strong>: Complex networking setup required</li><li><strong>No discovery</strong>: Can&#x27;t find other devices on network automatically</li><li><strong>Wasted compute</strong>: Idle machines not utilized</li><li><strong>Heterogeneous chaos</strong>: M1, NVIDIA, CPU - all different</li></ul>
+<h3>The Hanzo Network Solution</h3>
+<ul><li><strong>Automatic discovery</strong>: UDP broadcast finds peers instantly</li><li><strong>QR code joining</strong>: Scan code → Join network (no manual config)</li><li><strong>Device capabilities</strong>: Auto-detect M1, M2, M3, RTX 4090, etc.</li><li><strong>Intelligent routing</strong>: Route AI workloads to optimal device</li><li><strong>100% Python/Go parity</strong>: Same features in Python SDK and Go Node</li></ul>
+<h2>Architecture</h2>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│ Heterogeneous Device Network │
+├──────────────────────────────────────────────────────────┤
+│ │
+│ ┌────────────┐ ┌────────────┐ ┌────────────┐ │
+│ │ MacBook M3 │ │ RTX 4090 │ │ Raspberry │ │
+│ │ 16GB RAM │ │ 24GB VRAM │ │ Pi 4 8GB │ │
+│ │ 14.2 TFLOPS│ │ 82.6 TFLOPS│ │ 0.1 TFLOPS │ │
+│ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ │
+│ │ │ │ │
+│ └────────┬────────┴────────┬────────┘ │
+│ │ UDP Discovery │ │
+│ │ gRPC Comms │ │
+│ │ State Sync │ │
+│ ┌────────┴────────┬────────┴────────┐ │
+│ │ │ │ │
+│ ┌─────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐ │
+│ │ Agent A │ │ Agent B │ │ Agent C │ │
+│ │ (Research) │ │ (Code Gen) │ │ (Monitor) │ │
+│ └────────────┘ └────────────┘ └────────────┘ │
+│ │
+└──────────────────────────────────────────────────────────┘
+
+Routing Logic:
+- Heavy LLM inference → RTX 4090 (82.6 TFLOPS)
+- Light tasks → M3 MacBook (14.2 TFLOPS)
+- Background monitoring → Raspberry Pi (0.1 TFLOPS)</code></pre>
+<h2>Key Features</h2>
+<h3>1. Automatic Peer Discovery</h3>
+<p><strong>UDP Broadcast Discovery</strong> (Python &amp; Go):</p>
+<ul><li>Broadcasts node presence on local network</li><li>Discovers other nodes automatically</li><li>Maintains peer health checks</li><li>Supports network interface prioritization</li></ul>
+<p><strong>Manual Discovery</strong> (JSON Config):</p>
+<ul><li>Explicit peer configuration</li><li>Works across VPNs/Tailscale</li><li>No UDP broadcast needed</li><li>QR code scanning (planned)</li></ul>
+<h3>2. Device Capability Detection</h3>
+<p><strong>Supported Platforms</strong>:</p>
+<ul><li><strong>macOS</strong>: M1, M1 Pro, M1 Max, M2, M2 Pro, M2 Max, M3, M3 Pro, M3 Max, M4</li><li><strong>Linux</strong>: NVIDIA GPUs (RTX 4090, 4080, 4070, 3090, 3080), AMD GPUs</li><li><strong>Windows</strong>: NVIDIA GPUs, Intel integrated</li><li><strong>ARM</strong>: Raspberry Pi, Jetson Nano, other ARM devices</li></ul>
+<p><strong>Detected Metrics</strong>:</p>
+<ul><li><strong>Model</strong>: Device name (MacBook Pro, Linux Box, etc.)</li><li><strong>Chip</strong>: Processor (Apple M3, NVIDIA RTX 4090, etc.)</li><li><strong>Memory</strong>: Total RAM in MB</li><li><strong>FLOPS</strong>: FP32, FP16, INT8 performance in TFLOPS</li></ul>
+<h3>3. Distributed Agent Execution</h3>
+<p><strong>Cross-Node State Synchronization</strong>:</p>
+<ul><li>Shared state across all nodes</li><li>Real-time updates via gRPC</li><li>Conflict resolution</li><li>Checkpoint/restore</li></ul>
+<p><strong>Load Balancing</strong>:</p>
+<ul><li>Route to device with optimal capabilities</li><li>Consider memory, TFLOPS, current load</li><li>Fallback if primary device busy</li><li>Parallel execution across multiple devices</li></ul>
+<h3>4. Network Topology Configuration</h3>
+<p><strong>QR Code Joining</strong> (Planned):</p>
+<pre><code class="lang-python"># Device 1: Generate QR code
+network = create_distributed_network(name=&quot;my-network&quot;)
+qr_code = network.generate_join_qr()
+print_qr(qr_code) # Display QR code
+
+# Device 2: Scan and join
+network = join_network_from_qr(scan_qr())
+# Automatically discovers peers and shares capabilities</code></pre>
+<p><strong>JSON Config</strong> (Current):</p>
+<pre><code class="lang-json">{
+ &quot;peers&quot;: {
+ &quot;macbook-m3&quot;: {
+ &quot;address&quot;: &quot;192.168.1.10&quot;,
+ &quot;port&quot;: 5681,
+ &quot;device_capabilities&quot;: {
+ &quot;model&quot;: &quot;MacBook Pro&quot;,
+ &quot;chip&quot;: &quot;Apple M3 Max&quot;,
+ &quot;memory&quot;: 65536,
+ &quot;flops&quot;: {
+ &quot;fp32&quot;: 14.20,
+ &quot;fp16&quot;: 28.40,
+ &quot;int8&quot;: 56.80
+ }
+ }
+ },
+ &quot;gpu-server&quot;: {
+ &quot;address&quot;: &quot;192.168.1.20&quot;,
+ &quot;port&quot;: 5682,
+ &quot;device_capabilities&quot;: {
+ &quot;model&quot;: &quot;GPU Server&quot;,
+ &quot;chip&quot;: &quot;NVIDIA GEFORCE RTX 4090&quot;,
+ &quot;memory&quot;: 131072,
+ &quot;flops&quot;: {
+ &quot;fp32&quot;: 82.58,
+ &quot;fp16&quot;: 165.16,
+ &quot;int8&quot;: 330.32
+ }
+ }
+ }
+ }
+}</code></pre>
+<h2>Installation</h2>
+<h3>Python SDK</h3>
+<pre><code class="lang-bash"># Install hanzo-network
+pip install hanzo-network
+
+# Or from source
+cd `github.com/hanzoai/python-sdk`pkg/hanzo-network
+pip install -e .</code></pre>
+<h3>Go Node (Rust/Go Implementation)</h3>
+<pre><code class="lang-bash"># Clone Lux node (contains Go network implementation)
+git clone https://github.com/luxfi/node.git
+cd node
+
+# Build node
+make build
+
+# Run with distributed network
+./build/luxd --network-peer-list=&quot;192.168.1.10:5681,192.168.1.20:5682&quot;</code></pre>
+<h2>Usage Examples</h2>
+<h3>Python: Automatic Discovery (UDP)</h3>
+<pre><code class="lang-python">from hanzo_network import create_distributed_network, create_agent
+
+# Create agents
+weather_agent = create_agent(
+ name=&quot;weather&quot;,
+ description=&quot;Get weather information&quot;,
+ tools=[&quot;web_search&quot;, &quot;api_call&quot;]
+)
+
+math_agent = create_agent(
+ name=&quot;math&quot;,
+ description=&quot;Solve math problems&quot;,
+ tools=[&quot;calculator&quot;, &quot;wolfram_alpha&quot;]
+)
+
+# Create distributed network with UDP discovery
+network = create_distributed_network(
+ agents=[weather_agent, math_agent],
+ name=&quot;my-network&quot;,
+ node_id=&quot;node-1&quot;,
+ listen_port=5681,
+ broadcast_port=5678 # All nodes use same broadcast port
+)
+
+# Start network (discovers peers automatically)
+await network.start(wait_for_peers=0)
+
+# Check discovered peers
+status = network.get_network_status()
+print(f&quot;Discovered {status[&#x27;peer_count&#x27;]} peers&quot;)
+
+# Execute agent (routes to optimal device automatically)
+result = await network.run(&quot;What&#x27;s the weather in San Francisco?&quot;, initial_agent=weather_agent)
+print(result)</code></pre>
+<h3>Python: Manual Discovery (JSON Config)</h3>
+<pre><code class="lang-python">from hanzo_network import create_distributed_network, create_agent
+
+# Create network with manual discovery
+network = create_distributed_network(
+ agents=[agent1, agent2],
+ name=&quot;my-network&quot;,
+ node_id=&quot;macbook-m3&quot;, # Must match config file
+ discovery_mode=&quot;manual&quot;,
+ config_path=&quot;./network_topology.json&quot;
+)
+
+# Start network (reads config file)
+await network.start()
+
+# Peers are loaded from config file
+# Health checks run every 5 seconds</code></pre>
+<h3>Python: Multi-Node Setup</h3>
+<p><strong>Node 1 (MacBook M3)</strong>:</p>
+<pre><code class="lang-python">network1 = create_distributed_network(
+ agents=[weather_agent],
+ node_id=&quot;node-1&quot;,
+ listen_port=5681,
+ broadcast_port=5678,
+ device_capabilities={
+ &quot;model&quot;: &quot;MacBook Pro&quot;,
+ &quot;chip&quot;: &quot;Apple M3&quot;,
+ &quot;memory&quot;: 16384,
+ &quot;flops&quot;: {&quot;fp32&quot;: 3.55, &quot;fp16&quot;: 7.10, &quot;int8&quot;: 14.20}
+ }
+)
+await network1.start()</code></pre>
+<p><strong>Node 2 (RTX 4090 Server)</strong>:</p>
+<pre><code class="lang-python">network2 = create_distributed_network(
+ agents=[llm_agent],
+ node_id=&quot;node-2&quot;,
+ listen_port=5682,
+ broadcast_port=5678, # Same broadcast port
+ device_capabilities={
+ &quot;model&quot;: &quot;GPU Server&quot;,
+ &quot;chip&quot;: &quot;NVIDIA GEFORCE RTX 4090&quot;,
+ &quot;memory&quot;: 131072,
+ &quot;flops&quot;: {&quot;fp32&quot;: 82.58, &quot;fp16&quot;: 165.16, &quot;int8&quot;: 330.32}
+ }
+)
+await network2.start()</code></pre>
+<p>Nodes automatically discover each other and share agent capabilities.</p>
+<h3>Go: Distributed Network</h3>
+<pre><code class="lang-go">package main
+
+import (
+ &quot;context&quot;
+ &quot;github.com/luxfi/node/network&quot;
+ &quot;github.com/luxfi/node/network/peer&quot;
+)
+
+func main() {
+ // Create network config
+ config := network.Config{
+ ListenAddr: &quot;0.0.0.0:5681&quot;,
+ BroadcastPort: 5678,
+ HealthCheckInterval: time.Second * 5,
+ }
+
+ // Create network
+ net, err := network.NewNetwork(config)
+ if err != nil {
+ panic(err)
+ }
+
+ // Start peer discovery
+ net.Start(context.Background())
+
+ // Get discovered peers
+ peers := net.GetPeers()
+ for _, peer := range peers {
+ fmt.Printf(&quot;Peer: %s (%s)\n&quot;, peer.ID(), peer.IP())
+ }
+
+ // Execute agent on optimal peer
+ result, err := net.ExecuteAgent(ctx, &quot;weather&quot;, query)
+ if err != nil {
+ panic(err)
+ }
+
+ fmt.Println(result)
+}</code></pre>
+<h2>Device Capability Detection</h2>
+<h3>Python: Auto-Detection</h3>
+<pre><code class="lang-python">from hanzo_network.topology import device_capabilities
+
+# Automatically detect current device
+caps = device_capabilities()
+
+print(f&quot;Model: {caps.model}&quot;)
+print(f&quot;Chip: {caps.chip}&quot;)
+print(f&quot;Memory: {caps.memory}MB&quot;)
+print(f&quot;FLOPS: {caps.flops}&quot;)
+
+# Example output on M3 MacBook:
+# Model: MacBook Pro
+# Chip: Apple M3
+# Memory: 16384MB
+# FLOPS: fp32: 3.55 TFLOPS, fp16: 7.10 TFLOPS, int8: 14.20 TFLOPS</code></pre>
+<h3>Go: Auto-Detection</h3>
+<pre><code class="lang-go">package main
+
+import (
+ &quot;fmt&quot;
+ &quot;github.com/luxfi/node/network/peer&quot;
+)
+
+func main() {
+ // Auto-detect device capabilities
+ caps := peer.DetectDeviceCapabilities()
+
+ fmt.Printf(&quot;Model: %s\n&quot;, caps.Model)
+ fmt.Printf(&quot;Chip: %s\n&quot;, caps.Chip)
+ fmt.Printf(&quot;Memory: %dMB\n&quot;, caps.Memory)
+ fmt.Printf(&quot;FP32: %.2f TFLOPS\n&quot;, caps.Flops.FP32)
+}</code></pre>
+<h3>Supported Devices and FLOPS</h3>
+<p>| Device | FP32 TFLOPS | FP16 TFLOPS | INT8 TFLOPS | Memory | |--------|-------------|-------------|-------------|---------| | <strong>Apple M1</strong> | 2.29 | 4.58 | 9.16 | 8-16GB | | <strong>Apple M1 Pro</strong> | 5.30 | 10.60 | 21.20 | 16-32GB | | <strong>Apple M1 Max</strong> | 10.60 | 21.20 | 42.40 | 32-64GB | | <strong>Apple M2</strong> | 3.55 | 7.10 | 14.20 | 8-24GB | | <strong>Apple M3</strong> | 3.55 | 7.10 | 14.20 | 8-24GB | | <strong>Apple M3 Max</strong> | 14.20 | 28.40 | 56.80 | 36-128GB | | <strong>Apple M4</strong> | 4.26 | 8.52 | 17.04 | 16-32GB | | <strong>RTX 4090</strong> | 82.58 | 165.16 | 330.32 | 24GB | | <strong>RTX 4080</strong> | 48.74 | 97.48 | 194.96 | 16GB | | <strong>RTX 4070</strong> | 29.0 | 58.0 | 116.0 | 12GB | | <strong>RTX 3090</strong> | 35.6 | 71.2 | 142.4 | 24GB | | <strong>RTX 3080</strong> | 29.8 | 59.6 | 119.2 | 10GB |</p>
+<h2>Intelligent Agent Routing</h2>
+<h3>Capability-Based Routing</h3>
+<pre><code class="lang-python">from hanzo_network import create_distributed_network, RoutingStrategy
+
+# Create network with intelligent routing
+network = create_distributed_network(
+ agents=[light_agent, heavy_agent],
+ routing_strategy=RoutingStrategy.CAPABILITY_BASED
+)
+
+# Light agent routed to M3 MacBook (3.55 TFLOPS)
+result1 = await network.run(&quot;Simple math: 2+2&quot;, initial_agent=light_agent)
+
+# Heavy agent routed to RTX 4090 (82.58 TFLOPS)
+result2 = await network.run(&quot;Generate image from prompt&quot;, initial_agent=heavy_agent)</code></pre>
+<h3>Load-Balanced Routing</h3>
+<pre><code class="lang-python"># Create network with load balancing
+network = create_distributed_network(
+ agents=[agent1, agent2, agent3],
+ routing_strategy=RoutingStrategy.LEAST_LOADED
+)
+
+# Requests automatically distributed across devices
+# based on current load
+for i in range(100):
+ result = await network.run(f&quot;Query {i}&quot;, initial_agent=agent1)</code></pre>
+<h3>Custom Routing Logic</h3>
+<pre><code class="lang-python">def custom_router(agents, state, peers):
+ &quot;&quot;&quot;Route based on device capabilities and task type&quot;&quot;&quot;
+
+ # Get task requirements
+ requires_gpu = &quot;image&quot; in state.query.lower()
+ requires_memory = len(state.context) &gt; 10000
+
+ # Find optimal peer
+ if requires_gpu:
+ # Route to peer with highest TFLOPS
+ best_peer = max(peers, key=lambda p: p.capabilities.flops.fp16)
+ return best_peer
+ elif requires_memory:
+ # Route to peer with most RAM
+ best_peer = max(peers, key=lambda p: p.capabilities.memory)
+ return best_peer
+ else:
+ # Use least loaded peer
+ best_peer = min(peers, key=lambda p: p.current_load)
+ return best_peer
+
+# Use custom router
+network = create_distributed_network(
+ agents=[agent1, agent2],
+ custom_router=custom_router
+)</code></pre>
+<h2>Python/Go Feature Parity</h2>
+<h3>Feature Comparison</h3>
+<p>| Feature | Python SDK | Go Node | Status | |---------|------------|---------|--------| | <strong>UDP Discovery</strong> | ✅ | ✅ | 100% parity | | <strong>Manual Discovery</strong> | ✅ | ✅ | 100% parity | | <strong>Device Capabilities</strong> | ✅ | ✅ | 100% parity | | <strong>gRPC Communication</strong> | ✅ | ✅ | 100% parity | | <strong>State Synchronization</strong> | ✅ | ✅ | 100% parity | | <strong>Load Balancing</strong> | ✅ | ✅ | 100% parity | | <strong>Health Checks</strong> | ✅ | ✅ | 100% parity | | <strong>Agent Execution</strong> | ✅ | ✅ | 100% parity | | <strong>QR Code Joining</strong> | 🔄 Planned | 🔄 Planned | Coming soon | | <strong>Tailscale VPN</strong> | ✅ | ✅ | 100% parity |</p>
+<h3>Interoperability</h3>
+<pre><code class="lang-python"># Python node can discover and communicate with Go node
+# Go node can discover and communicate with Python node
+# Both use same gRPC protocol and discovery mechanism
+
+# Example: Python node + Go node
+# Python (MacBook):
+python_network = create_distributed_network(node_id=&quot;python-node&quot;)
+
+# Go (GPU Server):
+# luxd --network-id=go-node --listen-addr=0.0.0.0:5682
+
+# They discover each other automatically!
+# Python can execute agents on Go node and vice versa</code></pre>
+<h2>QR Code Joining (Planned Feature)</h2>
+<h3>Vision</h3>
+<p>Scan QR code to join heterogeneous devices to the same network:</p>
+<p><strong>Device 1 (Host - MacBook)</strong>:</p>
+<pre><code class="lang-python">network = create_distributed_network(name=&quot;hanzo-home&quot;)
+
+# Generate QR code with network info
+qr_data = network.generate_join_qr()
+# QR contains: network_id, listen_addr, encryption_key, capabilities
+
+print_qr(qr_data) # Display QR code on screen</code></pre>
+<p><strong>Device 2 (Join - Raspberry Pi)</strong>:</p>
+<pre><code class="lang-python"># Scan QR code (using camera or manual input)
+qr_data = scan_qr()
+
+# Join network automatically
+network = join_network_from_qr(qr_data)
+# Automatically configures peer discovery, encryption, capabilities
+
+# Now part of the network!
+status = network.get_network_status()
+print(f&quot;Joined network with {status[&#x27;peer_count&#x27;]} peers&quot;)</code></pre>
+<p><strong>Current Workaround</strong>: Use JSON config files + QR code generator:</p>
+<pre><code class="lang-python">import qrcode
+import json
+
+# Generate config
+config = {
+ &quot;peers&quot;: {
+ &quot;macbook&quot;: {
+ &quot;address&quot;: &quot;192.168.1.10&quot;,
+ &quot;port&quot;: 5681,
+ &quot;device_capabilities&quot;: {...}
+ }
+ }
+}
+
+# Generate QR code
+qr = qrcode.make(json.dumps(config))
+qr.save(&quot;network_join.png&quot;)
+
+# Device 2: Scan QR, save to config.json, join network</code></pre>
+<h2>Production Deployment</h2>
+<h3>Multi-Device Setup</h3>
+<p><strong>1. Home Office Setup</strong> (3 devices):</p>
+<pre><code>┌─────────────────────────────────────────────────┐
+│ Home Office Network │
+├─────────────────────────────────────────────────┤
+│ MacBook M3 (16GB) → Light tasks + UI │
+│ GPU Server RTX 4090 (24GB) → Heavy LLM │
+│ Raspberry Pi 4 (8GB) → Background monitoring │
+└─────────────────────────────────────────────────┘
+
+# MacBook (coordinator)
+network = create_distributed_network(
+ node_id=&quot;macbook&quot;,
+ agents=[ui_agent, light_agent],
+ listen_port=5681
+)
+
+# GPU Server (compute)
+network = create_distributed_network(
+ node_id=&quot;gpu-server&quot;,
+ agents=[llm_agent, image_agent],
+ listen_port=5682
+)
+
+# Raspberry Pi (monitor)
+network = create_distributed_network(
+ node_id=&quot;rpi&quot;,
+ agents=[health_monitor, log_agent],
+ listen_port=5683
+)</code></pre>
+<p><strong>2. Startup Setup</strong> (5+ devices):</p>
+<pre><code>┌─────────────────────────────────────────────────┐
+│ Startup Distributed AI Network │
+├─────────────────────────────────────────────────┤
+│ 2× MacBook Pro M3 Max → Development │
+│ 3× GPU Server RTX 4090 → Production inference │
+│ 1× Monitor Server → Metrics + logs │
+└─────────────────────────────────────────────────┘
+
+# Use manual discovery (JSON config) for reliability
+# config.json contains all 6 devices
+network = create_distributed_network(
+ discovery_mode=&quot;manual&quot;,
+ config_path=&quot;./production_network.json&quot;,
+ routing_strategy=RoutingStrategy.LEAST_LOADED
+)</code></pre>
+<h3>Security and VPN</h3>
+<p><strong>Tailscale Integration</strong> (Recommended):</p>
+<pre><code class="lang-python"># All devices on Tailscale VPN
+# Automatic encrypted mesh network
+# Access from anywhere securely
+
+network = create_distributed_network(
+ node_id=&quot;mobile-macbook&quot;,
+ tailscale=True, # Use Tailscale IPs
+ discovery_mode=&quot;manual&quot;,
+ config_path=&quot;./tailscale_network.json&quot;
+)
+
+# Peers use Tailscale IPs (100.x.x.x)
+# Encrypted by default, zero-config</code></pre>
+<p><strong>Manual TLS</strong> (Advanced):</p>
+<pre><code class="lang-python">network = create_distributed_network(
+ node_id=&quot;secure-node&quot;,
+ tls_cert=&quot;/path/to/cert.pem&quot;,
+ tls_key=&quot;/path/to/key.pem&quot;,
+ tls_ca=&quot;/path/to/ca.pem&quot;,
+ verify_peers=True
+)</code></pre>
+<h2>Monitoring and Debugging</h2>
+<h3>Network Status</h3>
+<pre><code class="lang-python"># Get network status
+status = network.get_network_status()
+
+print(f&quot;Node ID: {status[&#x27;node_id&#x27;]}&quot;)
+print(f&quot;Peers: {status[&#x27;peer_count&#x27;]}&quot;)
+print(f&quot;Agents: {status[&#x27;agent_count&#x27;]}&quot;)
+print(f&quot;Active tasks: {status[&#x27;active_tasks&#x27;]}&quot;)
+
+for peer_id, peer in status[&#x27;peers&#x27;].items():
+ print(f&quot;\nPeer: {peer_id}&quot;)
+ print(f&quot; Address: {peer[&#x27;address&#x27;]}&quot;)
+ print(f&quot; Healthy: {peer[&#x27;healthy&#x27;]}&quot;)
+ print(f&quot; Capabilities: {peer[&#x27;capabilities&#x27;]}&quot;)
+ print(f&quot; Load: {peer[&#x27;current_load&#x27;]:.1%}&quot;)</code></pre>
+<h3>Health Checks</h3>
+<pre><code class="lang-python"># Check peer health
+health = await network.check_peer_health(&quot;gpu-server&quot;)
+print(f&quot;Healthy: {health.healthy}&quot;)
+print(f&quot;Latency: {health.latency_ms}ms&quot;)
+print(f&quot;Last seen: {health.last_seen}&quot;)
+
+# Auto-healing: unhealthy peers removed automatically
+# Health checks run every 5 seconds</code></pre>
+<h3>Debug Logging</h3>
+<pre><code class="lang-python">import logging
+
+# Enable debug logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Detailed network logs
+# - Peer discovery
+# - gRPC communication
+# - Agent routing
+# - State synchronization</code></pre>
+<h2>Best Practices</h2>
+<h3>1. Use UDP Discovery for LAN</h3>
+<pre><code class="lang-python"># Same local network → UDP discovery (zero config)
+network = create_distributed_network(
+ broadcast_port=5678, # All devices use same port
+ listen_port=5681 # Unique per device
+)</code></pre>
+<h3>2. Use Manual Discovery for Production</h3>
+<pre><code class="lang-python"># Production/VPN → Manual discovery (reliable)
+network = create_distributed_network(
+ discovery_mode=&quot;manual&quot;,
+ config_path=&quot;./production_network.json&quot;
+)</code></pre>
+<h3>3. Route by Capability</h3>
+<pre><code class="lang-python"># Let Hanzo Network choose optimal device
+# Based on TFLOPS, memory, current load
+network = create_distributed_network(
+ routing_strategy=RoutingStrategy.CAPABILITY_BASED
+)</code></pre>
+<h3>4. Health Check Intervals</h3>
+<pre><code class="lang-python"># Production: longer intervals (less overhead)
+network = create_distributed_network(
+ health_check_interval=30 # 30 seconds
+)
+
+# Development: shorter intervals (faster detection)
+network = create_distributed_network(
+ health_check_interval=5 # 5 seconds
+)</code></pre>
+<h2>Troubleshooting</h2>
+<h3>Peers Not Discovering</h3>
+<p><strong>Problem</strong>: Devices on same network not finding each other</p>
+<p><strong>Solutions</strong>:</p>
+<ol><li>Check broadcast port matches: <code>broadcast_port=5678</code></li><li>Check firewall allows UDP: <code>sudo ufw allow 5678/udp</code></li><li>Check network interface: <code>--network-interface=en0</code></li><li>Try manual discovery instead</li></ol>
+<h3>High Latency</h3>
+<p><strong>Problem</strong>: Slow agent execution across devices</p>
+<p><strong>Solutions</strong>:</p>
+<ol><li>Check peer health: <code>network.check_peer_health()</code></li><li>Use local agents for low-latency tasks</li><li>Enable Tailscale for VPN optimization</li><li>Reduce health check frequency</li></ol>
+<h3>Device Not Detected</h3>
+<p><strong>Problem</strong>: Device capabilities showing as &quot;Unknown&quot;</p>
+<p><strong>Solutions</strong>:</p>
+<ol><li>Update device detection: <code>pip install -U hanzo-network</code></li><li>Manually specify capabilities: <code>device_capabilities={...}</code></li><li>Check system profiler: <code>system_profiler SPHardwareDataType</code></li><li>Submit PR to add your device</li></ol>
+<h2>Related Skills</h2>
+<ul><li><strong>python-sdk.md</strong> - Python SDK for Hanzo AI</li><li><strong>go-sdk.md</strong> - Go SDK for backend services</li><li><strong>hanzo-node.md</strong> - Local AI inference infrastructure</li><li><strong>hanzo-mcp.md</strong> - Model Context Protocol integration</li><li><strong>hanzo-engine.md</strong> - Native Rust inference engine</li></ul>
+<h2>Additional Resources</h2>
+<ul><li><strong>GitHub</strong>: https://github.com/hanzoai/network</li><li><strong>Python Package</strong>: https://pypi.org/project/hanzo-network/</li><li><strong>Lux Node</strong>: https://github.com/luxfi/node (Go implementation)</li><li><strong>Hanzo AI</strong>: https://hanzo.ai</li></ul>
+<hr>
+<p><strong>Remember</strong>: Hanzo Network enables <strong>distributed AI agent execution</strong> across heterogeneous devices with automatic discovery, device capability detection, and intelligent routing - perfect for leveraging all your compute resources (M1 MacBook + RTX 4090 + Raspberry Pi) seamlessly.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-network.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

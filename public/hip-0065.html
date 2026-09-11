@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,13 +196,13 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0065</h1><p class="lede">HIP-65: Backup &amp; Disaster Recovery Standard. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0065: Backup &amp; Disaster Recovery Standard</h1>
+<h1>hip-0065</h1><p class="lede">HIP-65: Backup &amp; Disaster Recovery Standard. Status Final. Hanzo architectural specification.</p><h1>HIP-0065: Backup &amp; Disaster Recovery Standard</h1>
 <h2>Abstract</h2>
-<p>This proposal defines the unified backup and disaster recovery (DR) standard for all stateful services in the Hanzo ecosystem. Every data store -- SQL (HIP-0029), KV/KV (HIP-0028), Hanzo Datastore (HIP-0047), MinIO/S3 (HIP-0032), model artifacts, training checkpoints, datasets, and configuration secrets -- MUST be backed up, verified, and recoverable through the single Hanzo Backup service defined here.</p>
-<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/backup">github.com/hanzoai/backup</a> <strong>Image</strong>: <code>ghcr.io/hanzoai/backup:latest</code> <strong>Port</strong>: 8065 (backup controller API) <strong>License</strong>: Apache-2.0</p>
+<p>This proposal defines the unified backup and disaster recovery (DR) standard for all stateful services in the Hanzo ecosystem. Every data store -- SQL (HIP-1104), Valkey/KV (HIP-1164), Hanzo Datastore (HIP-1241), MinIO/S3 (HIP-0405), model artifacts, training checkpoints, datasets, and configuration secrets -- MUST be backed up, verified, and recoverable through the single Hanzo Backup service defined here.</p>
+<p><strong>Repository</strong>: none yet -- the backup controller described below is proposed, not built. <strong>Image</strong>: none yet. The <code>ghcr.io/hanzoai/backup</code> name is already taken by an unrelated service, so this controller needs a different one when it ships. <strong>Port</strong>: 8065 (backup controller API) <strong>License</strong>: Apache-2.0</p>
 <h2>Motivation</h2>
-<p>Hanzo operates 15+ stateful services across two Kubernetes clusters (the cluster, lux-k8s). Each service adopted its own backup approach:</p>
-<ul><li><strong>PostgreSQL</strong> runs a CronJob with <code>pg_dump</code> every 6 hours (HIP-0029).</li><li><strong>KV</strong> relies on RDB snapshots that only persist to the local PVC.</li><li><strong>Hanzo Datastore</strong> has no automated backup; operators run manual <code>BACKUP</code> commands.</li><li><strong>MinIO</strong> replicates buckets between clusters but has no off-site copy.</li><li><strong>Model artifacts</strong> are stored in S3 buckets with no versioning policy.</li><li><strong>KMS secrets</strong> are backed up only through the KMS built-in export.</li></ul>
+<p>Hanzo operates 15+ stateful services across two Kubernetes clusters (hanzo-k8s, lux-k8s). Each service adopted its own backup approach:</p>
+<ul><li><strong>PostgreSQL</strong> runs a CronJob with <code>pg_dump</code> every 6 hours (HIP-1104).</li><li><strong>KV</strong> relies on RDB snapshots that only persist to the local PVC.</li><li><strong>Hanzo Datastore</strong> has no automated backup; operators run manual <code>BACKUP</code> commands.</li><li><strong>MinIO</strong> replicates buckets between clusters but has no off-site copy.</li><li><strong>Model artifacts</strong> are stored in S3 buckets with no versioning policy.</li><li><strong>KMS secrets</strong> are backed up only through the KMS built-in export.</li></ul>
 <p>This patchwork creates five problems:</p>
 <ol><li><strong>No unified Recovery Point Objective (RPO).</strong> Some services can lose 6 hours</li></ol>
 <p>   of data (SQL) while others can lose days (Hanzo Datastore). There is no    organizational agreement on acceptable data loss per service tier.</p>
@@ -221,16 +230,16 @@ footer a{color:var(--soft)}
 <h2>Specification</h2>
 <h3>Service Tiers and RPO/RTO Targets</h3>
 <p>Every Hanzo service is assigned one of three tiers:</p>
-<p>| Tier | RPO | RTO | Backup Frequency | Replication | Examples | |------|-----|-----|------------------|-------------|----------| | <strong>Critical</strong> | 1 minute | 5 minutes | Continuous (WAL/AOF streaming) | Synchronous cross-region | SQL (IAM, Cloud), KMS secrets | | <strong>Standard</strong> | 1 hour | 1 hour | Hourly snapshots | Async cross-region | KV/KV, Hanzo Datastore, MinIO buckets | | <strong>Archival</strong> | 24 hours | 4 hours | Daily snapshots | Async, single copy | Model artifacts, training datasets, logs |</p>
+<p>| Tier | RPO | RTO | Backup Frequency | Replication | Examples | |------|-----|-----|------------------|-------------|----------| | <strong>Critical</strong> | 1 minute | 5 minutes | Continuous (WAL/AOF streaming) | Synchronous cross-region | SQL (IAM, Cloud), KMS secrets | | <strong>Standard</strong> | 1 hour | 1 hour | Hourly snapshots | Async cross-region | Valkey/KV, Hanzo Datastore, MinIO buckets | | <strong>Archival</strong> | 24 hours | 4 hours | Daily snapshots | Async, single copy | Model artifacts, training datasets, logs |</p>
 <p>RPO = Recovery Point Objective (maximum acceptable data loss). RTO = Recovery Time Objective (maximum acceptable downtime during recovery).</p>
 <h3>Backup Targets</h3>
 <p>The backup controller manages the following data stores:</p>
 <pre><code>Backup Controller (:8065)
   │
-  ├── PostgreSQL (HIP-0029)  ── pg_basebackup + WAL archiving
-  ├── KV/KV      (HIP-0028)  ── RDB snapshot export
-  ├── Hanzo Datastore (HIP-0047)  ── BACKUP DATABASE ... TO S3
-  ├── MinIO/S3   (HIP-0032)  ── mc mirror (bucket replication)
+  ├── PostgreSQL (HIP-1104)  ── pg_basebackup + WAL archiving
+  ├── Valkey/KV  (HIP-1164)  ── RDB snapshot export
+  ├── Hanzo Datastore (HIP-1241)  ── BACKUP DATABASE ... TO S3
+  ├── MinIO/S3   (HIP-0405)  ── mc mirror (bucket replication)
   ├── Model Weights / Checkpoints / Datasets  ── versioned S3
   └── Config / Secrets  ── Velero + KMS export
           │
@@ -247,8 +256,8 @@ footer a{color:var(--soft)}
 <p>   establishes a restore baseline. PITR replays WAL on top of the most recent    base backup.</p>
 <p>   To restore to a specific point in time:</p>
 <p>   ``<code>bash    # Restore base backup    backup-pg-restore --base-backup 20260223_000000 \      --target-time &quot;2026-02-23 14:30:00 UTC&quot; \      --endpoint s3://hanzo-backups    </code>``</p>
-<p>The existing <code>pg_dump</code> CronJob (HIP-0029) continues as a logical backup for selective per-database restore. It supplements but does not replace PITR.</p>
-<h4>KV/KV (Standard Tier)</h4>
+<p>The existing <code>pg_dump</code> CronJob (HIP-1104) continues as a logical backup for selective per-database restore. It supplements but does not replace PITR.</p>
+<h4>Valkey/KV (Standard Tier)</h4>
 <p>KV supports two persistence formats:</p>
 <ul><li><strong>RDB snapshots</strong>: Point-in-time binary dumps. Compact and fast to restore.</li><li><strong>AOF (Append Only File)</strong>: Write-ahead log of every command. Higher fidelity</li></ul>
 <p>  but larger and slower to replay.</p>
@@ -279,7 +288,7 @@ mc mirror --watch --overwrite \
 <ol><li><strong>Datasets</strong>: Training and evaluation data. Versioned using content-addressed</li></ol>
 <p>   hashing (SHA-256 of the dataset manifest). Immutable once published.</p>
 <p>All artifacts are stored in dedicated MinIO buckets with lifecycle rules:</p>
-<p>| Artifact Type | Bucket | Versioning | Retention | |---------------|--------|------------|-----------| | Model weights (released) | <code>models-release</code> | Enabled | Permanent | | Model weights (experimental) | <code>models-dev</code> | Enabled | 90 days | | Training checkpoints | <code>training-checkpoints</code> | Disabled | 30 days post-run | | Datasets (published) | <code>datasets</code> | Enabled (content-addressed) | Permanent | | Datasets (staging) | <code>datasets-staging</code> | Disabled | 14 days |</p>
+<p>| Artifact Type | Bucket | Versioning | Retention | |---------------|--------|------------|-----------| | Model weights (released) | <code>models-release</code> | Enabled | Permanent | | Model weights (experimental) | <code>models-dev</code> | Enabled | 90 days | | Training checkpoints | <code>training-checkpoints</code> | Disabled | 30 days post-run | | Datasets (published) | <code>dataset</code> | Enabled (content-addressed) | Permanent | | Datasets (staging) | <code>datasets-staging</code> | Disabled | 14 days |</p>
 <h4>Configuration and Secrets (Critical Tier)</h4>
 <p>Two mechanisms protect cluster configuration:</p>
 <ol><li><strong>Velero</strong>: Backs up all Kubernetes API objects (Deployments, StatefulSets,</li></ol>
@@ -295,14 +304,14 @@ s3://hanzo-backups     ──async──→  s3://hanzo-backups-secondary
 <p>Replication lag for async cross-region copy MUST stay below 15 minutes under normal operation. The backup controller monitors replication lag and alerts when it exceeds the threshold.</p>
 <h3>Point-in-Time Recovery (PITR)</h3>
 <p>PITR is available for SQL via WAL archiving. The recovery window is configurable per cluster:</p>
-<p>| Cluster | PITR Window | WAL Retention | |---------|-------------|---------------| | the cluster | 7 days | 7 days of WAL segments | | lux-k8s | 7 days | 7 days of WAL segments |</p>
+<p>| Cluster | PITR Window | WAL Retention | |---------|-------------|---------------| | hanzo-k8s | 7 days | 7 days of WAL segments | | lux-k8s | 7 days | 7 days of WAL segments |</p>
 <p>To perform PITR:</p>
 <pre><code class="lang-bash"># 1. Stop the target SQL instance
 kubectl scale statefulset postgres --replicas=0
 
 # 2. Restore base backup + replay WAL to target time
 backup-pg-restore \
-  --cluster the cluster \
+  --cluster hanzo-k8s \
   --target-time &quot;2026-02-23 14:30:00 UTC&quot; \
   --output /var/lib/postgresql/data
 
@@ -345,16 +354,16 @@ BACKUP_KMS_ENDPOINT:      https://kms.hanzo.ai/api
 BACKUP_SECONDARY_REGION:  # Secondary S3 endpoint for cross-region copy</code></pre>
 <p>Resource requests: 256Mi memory, 200m CPU. Limits: 512Mi memory, 1 CPU. The controller Service exposes port 8065 within the cluster.</p>
 <h3>API Endpoints</h3>
-<p>| Method | Path | Description | |--------|------|-------------| | <code>GET</code> | <code>/api/v1/status</code> | Backup system health and last backup times | | <code>GET</code> | <code>/api/v1/backups</code> | List all backups with metadata | | <code>POST</code> | <code>/api/v1/backups</code> | Trigger an ad-hoc backup for a specific store | | <code>POST</code> | <code>/api/v1/restore</code> | Initiate a restore operation | | <code>GET</code> | <code>/api/v1/verify</code> | Last verification results | | <code>POST</code> | <code>/api/v1/verify</code> | Trigger an ad-hoc verification | | <code>GET</code> | <code>/api/v1/metrics</code> | Prometheus-compatible metrics |</p>
+<p>| Method | Path | Description | |--------|------|-------------| | <code>GET</code> | <code>/v1/backup/status</code> | Backup system health and last backup times | | <code>GET</code> | <code>/v1/backup/backups</code> | List all backups with metadata | | <code>POST</code> | <code>/v1/backup/backups</code> | Trigger an ad-hoc backup for a specific store | | <code>POST</code> | <code>/v1/backup/restore</code> | Initiate a restore operation | | <code>GET</code> | <code>/v1/backup/verify</code> | Last verification results | | <code>POST</code> | <code>/v1/backup/verify</code> | Trigger an ad-hoc verification | | <code>GET</code> | <code>/v1/backup/metrics</code> | Prometheus-compatible metrics |</p>
 <h3>Disaster Recovery Runbooks</h3>
 <h4>Runbook 1: Single-Service Database Corruption</h4>
 <p>Scenario: A bad migration corrupts the <code>iam</code> database. RTO: 5 minutes.</p>
-<ol><li>Identify corruption timestamp from application logs.</li><li><code>POST /api/v1/restore</code> with <code>store=postgresql</code>, <code>database=iam</code>,</li></ol>
+<ol><li>Identify corruption timestamp from application logs.</li><li><code>POST /v1/backup/restore</code> with <code>store=sql</code>,</li></ol>
 <p>   <code>target_time=&lt;pre-corruption&gt;</code>, <code>method=pitr</code>.</p>
 <ol><li>Controller stops IAM pods, restores base backup, replays WAL to target time.</li><li>Controller restarts IAM and runs health check. Verify login flow manually.</li></ol>
 <h4>Runbook 2: Full Cluster Loss</h4>
-<p>Scenario: the cluster is destroyed (provider outage). RTO: 1 hour.</p>
-<ol><li>Provision new Kubernetes cluster in secondary region.</li><li><code>velero restore create --from-backup hanzo-cluster-backup-latest</code></li><li><code>backup-pg-restore --cluster the cluster --latest</code></li><li><code>backup-kv-restore --cluster the cluster --latest</code></li><li><code>backup-ch-restore --cluster the cluster --latest</code></li><li>Update DNS (hanzo.id, cloud.hanzo.ai, etc.) to new cluster IP.</li><li>Verify all services via <code>/healthz</code> endpoints.</li></ol>
+<p>Scenario: hanzo-k8s is destroyed (provider outage). RTO: 1 hour.</p>
+<ol><li>Provision new Kubernetes cluster in secondary region.</li><li><code>velero restore create --from-backup hanzo-cluster-backup-latest</code></li><li><code>backup-pg-restore --cluster hanzo-k8s --latest</code></li><li><code>backup-kv-restore --cluster hanzo-k8s --latest</code></li><li><code>backup-ch-restore --cluster hanzo-k8s --latest</code></li><li>Update DNS (hanzo.id, cloud.hanzo.ai, etc.) to new cluster IP.</li><li>Verify all services via <code>/healthz</code> endpoints.</li></ol>
 <h4>Runbook 3: Model Artifact Recovery</h4>
 <p>Scenario: Production model accidentally deleted. RTO: 15 minutes.</p>
 <ol><li>Identify model version from inference error logs.</li><li><code>mc cp --version-id &lt;ver&gt; backup/models-release/&lt;model&gt; prod/models-release/</code></li><li>Restart inference pods. Verify via test prompt.</li></ol>
@@ -376,7 +385,7 @@ BACKUP_SECONDARY_REGION:  # Secondary S3 endpoint for cross-region copy</code></
 <h3>Phase 4: Multi-Cloud DR</h3>
 <p>Extend cross-region replication to cross-cloud. Secondary backups stored on a different cloud provider (AWS S3, GCS) ensure recovery even if the primary cloud provider experiences a global outage.</p>
 <h2>References</h2>
-<ol><li><a href="./hip-0027-secrets-management-standard.md">HIP-0027: Secrets Management Standard</a></li><li><a href="./hip-0028-key-value-store-standard.md">HIP-0028: Key-Value Store Standard</a></li><li><a href="./hip-0029-relational-database-standard.md">HIP-0029: Relational Database Standard</a></li><li>HIP-0032: Object Storage Standard</li><li><a href="./hip-0047-analytics-datastore-standard.md">HIP-0047: Analytics Datastore Standard</a></li><li><a href="https://velero.io/docs/">Velero Documentation</a></li><li><a href="https://www.postgresql.org/docs/16/continuous-archiving.html">PostgreSQL PITR</a></li><li><a href="https://clickhouse.com/docs/en/operations/backup">ClickHouse BACKUP</a></li><li><a href="https://min.io/docs/minio/linux/administration/bucket-replication.html">MinIO Replication</a></li></ol>
+<ol><li><a href="./hip-0027-secrets-management-standard.md">HIP-0027: Secrets Management Standard</a></li><li><a href="./hip-1164-provisioning-stores-on-demand.md">HIP-1164: Provisioning — Stores on Demand</a></li><li><a href="./hip-1104-base-hosted-backend.md">HIP-1104: Base — The Hosted Backend</a></li><li><a href="./hip-0405-s3-crd.md">HIP-0405: S3 CRD</a></li><li><a href="./hip-1241-metrics-one-store-three-signals.md">HIP-1241: Metrics — One Native Store, Three Signals</a></li><li><a href="https://velero.io/docs/">Velero Documentation</a></li><li><a href="https://www.postgresql.org/docs/16/continuous-archiving.html">PostgreSQL PITR</a></li><li><a href="https://clickhouse.com/docs/en/operations/backup">ClickHouse BACKUP</a></li><li><a href="https://min.io/docs/minio/linux/administration/bucket-replication.html">MinIO Replication</a></li></ol>
 <h2>Copyright</h2>
 <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</p>
 <footer>
@@ -398,5 +407,4 @@ BACKUP_SECONDARY_REGION:  # Secondary S3 endpoint for cross-region copy</code></
 </div>
 <div class="fend"><a href="/hip-0065.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

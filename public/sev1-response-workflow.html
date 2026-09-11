@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>sev1-response-workflow</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/sev1-response-workflow.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/sev1-response-workflow">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/sev1-response-workflow.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>sev1-response-workflow</h1><p class="lede">This document provides a complete walkthrough of responding to a SEV-1 (critical) incident from detection to postmortem.</p><h1>SEV-1 Incident Response Workflow</h1>
+<p>This document provides a complete walkthrough of responding to a SEV-1 (critical) incident from detection to postmortem.</p>
+<h2>Scenario</h2>
+<p><strong>Incident</strong>: High error rate (35%) in payment processing API <strong>Detection</strong>: Automated monitoring alert at 14:25 UTC <strong>Impact</strong>: 50% of payment transactions failing, affecting thousands of users</p>
+<hr>
+<h2>Phase 1: Detection and Declaration (14:25 - 14:35 UTC)</h2>
+<h3>14:25 - Alert Fires</h3>
+<p><strong>PagerDuty Alert</strong>:</p>
+<pre><code>CRITICAL: High Error Rate in Payment API
+Error rate: 35% (threshold: 5%)
+Dashboard: https://grafana.example.com/d/payments
+Runbook: https://runbooks.example.com/payments/high-error-rate</code></pre>
+<p><strong>On-call engineer (Alice) receives page</strong></p>
+<h3>14:27 - Initial Assessment</h3>
+<p>Alice acknowledges alert and checks dashboard:</p>
+<pre><code class="lang-bash"># Quick checks
+curl https://api.example.com/health
+# Returns: {&quot;status&quot;: &quot;degraded&quot;, &quot;payment_api&quot;: &quot;unhealthy&quot;}
+
+# Check recent deployments
+kubectl rollout history deployment/payment-service | tail -5
+# Shows: deployment v2.3.1 at 14:15 UTC (10 minutes ago)
+
+# Check error logs
+kubectl logs -l app=payment-service --since=15m | grep ERROR | head -20
+# Shows: database connection errors</code></pre>
+<p><strong>Assessment</strong>:</p>
+<ul><li>Error rate 35% and climbing</li><li>Started ~14:20 UTC (5 min after deployment)</li><li>Database connection errors in logs</li><li>Likely related to deployment v2.3.1</li></ul>
+<h3>14:30 - Declare SEV-1</h3>
+<p>Alice determines this is SEV-1:</p>
+<ul><li>[x] &gt;50% of users affected (payments are critical)</li><li>[x] Revenue impact (thousands of failed transactions)</li><li>[x] SLA breach imminent (99.9% monthly availability)</li></ul>
+<p><strong>Actions</strong>:</p>
+<pre><code class="lang-bash"># 1. Create incident in tracking system
+./create_incident.py create \
+  --title &quot;High error rate in payment API&quot; \
+  --severity SEV-1 \
+  --impact &quot;50% of payment transactions failing&quot; \
+  --service payment-api \
+  --detected-by monitoring
+
+# Output: Created incident: INC-20251027-ABC123
+
+# 2. Create PagerDuty incident
+python pagerduty-integration.py create \
+  --incident-id INC-20251027-ABC123 \
+  --service-id PXXXXXX \
+  --title &quot;SEV-1: Payment API High Error Rate&quot;
+
+# 3. Create Slack war room
+python slack-incident-bot.py create-war-room \
+  --incident-id INC-20251027-ABC123 \
+  --title &quot;High error rate in payment API&quot; \
+  --severity SEV-1 \
+  --ic-user-id U123ABC  # Alice
+
+# Output: Created war room: #incident-20251027-abc123</code></pre>
+<h3>14:32 - Initial War Room Message</h3>
+<p><strong>Alice posts in #incident-20251027-abc123</strong>:</p>
+<pre><code>@here SEV-1 Incident Declared
+
+INC-20251027-ABC123: High error rate in payment API
+
+IMPACT:
+- 35% error rate in payment transactions
+- Affecting 50% of users attempting payments
+- Started: ~14:20 UTC (correlates with deployment v2.3.1)
+
+CURRENT STATUS: Investigating
+
+TEAM:
+- IC: @alice
+- On-call: @alice (same person, need backup)
+
+FIRST ACTIONS:
+- Assessing rollback vs. fix
+- Need database team to check connection pool
+- Communications: notify support team NOW
+
+Next update in 15 minutes.</code></pre>
+<h3>14:33 - Page Additional Team</h3>
+<pre><code class="lang-bash"># Page database specialist
+pagerduty incident create \
+  --service database-service \
+  --title &quot;DB connection errors - Payment incident&quot; \
+  --urgency high
+
+# Page engineering manager for IC support
+pagerduty incident create \
+  --escalation-policy eng-management \
+  --title &quot;SEV-1 needs IC support&quot;
+
+# Invite to war room
+python slack-incident-bot.py invite \
+  --channel incident-20251027-abc123 \
+  --users U234BCD,U345CDE  # Bob (DB), Charlie (Mgr)</code></pre>
+<h3>14:35 - Initial Customer Notification</h3>
+<p><strong>Communications Lead (auto-assigned or manually)</strong>:</p>
+<pre><code class="lang-markdown">Subject: [SEV-1] Payment Processing Issue
+
+We are currently experiencing elevated error rates in payment processing.
+
+IMPACT:
+- Some payment transactions may fail
+- Users may see error messages during checkout
+- Started at: 14:20 UTC
+
+STATUS:
+- Issue identified and team actively investigating
+- Working on mitigation
+
+NEXT UPDATE:
+- Will provide update in 30 minutes
+- Status page: https://status.example.com
+
+We apologize for the inconvenience.</code></pre>
+<hr>
+<h2>Phase 2: Mitigation (14:35 - 14:50 UTC)</h2>
+<h3>14:36 - Team Assembled</h3>
+<p><strong>War room participants</strong>:</p>
+<ul><li>Alice (IC)</li><li>Bob (Database Team, Tech Lead)</li><li>Charlie (Engineering Manager)</li><li>Diana (Communications)</li><li>Eve (Scribe)</li></ul>
+<p><strong>Charlie (Mgr) posts</strong>:</p>
+<pre><code>[14:36] @charlie Taking formal IC role. @alice moving to tech lead.
+
+Roles:
+- IC: @charlie
+- Tech Lead: @alice
+- Database SME: @bob
+- Communications: @diana
+- Scribe: @eve
+
+@alice, what&#x27;s your recommendation? Rollback or investigate?</code></pre>
+<h3>14:37 - Rollback Decision</h3>
+<p><strong>Timeline in war room</strong>:</p>
+<pre><code>[14:37] @alice [OBSERVATION] Deployment v2.3.1 correlates exactly with error spike
+[14:38] @alice [OBSERVATION] Logs show &quot;connection pool exhausted&quot; errors
+[14:38] @bob [OBSERVATION] DB connection count at 95/100 (near max)
+[14:39] @bob [OBSERVATION] Queries look normal, but higher volume than usual
+[14:40] @charlie [DECISION] Rollback deployment v2.3.1 to v2.3.0
+[14:40] @alice [ACTION] Starting rollback now</code></pre>
+<p><strong>Rollback execution</strong>:</p>
+<pre><code class="lang-bash"># 1. Rollback deployment
+kubectl rollout undo deployment/payment-service
+
+# 2. Verify rollback
+kubectl rollout status deployment/payment-service
+# Output: successfully rolled out
+
+# 3. Monitor metrics
+watch -n 5 &#x27;curl -s https://api.example.com/metrics | grep payment_error_rate&#x27;</code></pre>
+<h3>14:42 - Rollback Complete</h3>
+<pre><code>[14:42] @alice [ACTION] Rollback complete, v2.3.0 now running
+[14:43] @alice [OBSERVATION] Error rate still at 30%
+[14:43] @charlie [DECISION] Rollback didn&#x27;t help immediately, monitor for 5 minutes</code></pre>
+<h3>14:45 - Mitigation Working</h3>
+<pre><code>[14:45] @alice [OBSERVATION] Error rate declining: 22%
+[14:46] @bob [OBSERVATION] DB connection count dropping: 75/100
+[14:47] @alice [OBSERVATION] Error rate at 10%
+[14:48] @alice [OBSERVATION] Error rate at 3%</code></pre>
+<h3>14:48 - Additional Mitigation</h3>
+<pre><code>[14:48] @bob [RECOMMENDATION] Increase connection pool to prevent recurrence
+[14:49] @charlie [DECISION] Proceed with pool increase
+[14:49] @bob [ACTION] Increasing pool from 20 to 50</code></pre>
+<pre><code class="lang-bash"># Increase connection pool
+kubectl set env deployment/payment-service DB_POOL_SIZE=50
+
+# Verify
+kubectl get deployment payment-service -o jsonpath=&#x27;{.spec.template.spec.containers[0].env[?(@.name==&quot;DB_POOL_SIZE&quot;)].value}&#x27;
+# Output: 50</code></pre>
+<h3>14:50 - Error Rate Normalized</h3>
+<pre><code>[14:50] @alice [OBSERVATION] Error rate back to baseline: 0.5%
+[14:50] @charlie [DECISION] Monitoring for 15 minutes before declaring resolved</code></pre>
+<h3>14:50 - Update Customers</h3>
+<pre><code class="lang-markdown">Subject: [SEV-1] Update #1 - Payment Processing Issue
+
+UPDATE #1 - 14:50 UTC
+
+CURRENT STATUS: Mitigated
+
+ACTIONS TAKEN:
+- 14:40 UTC: Rolled back recent deployment
+- 14:49 UTC: Increased database connection pool capacity
+- Error rate decreased from 35% to 0.5% (baseline)
+
+CURRENT EFFORTS:
+- Monitoring for stability before declaring resolved
+- Investigating root cause
+
+NEXT UPDATE: 15:20 UTC (or when resolved)</code></pre>
+<hr>
+<h2>Phase 3: Monitoring and Resolution (14:50 - 15:15 UTC)</h2>
+<h3>14:50 - 15:05: Monitoring Period</h3>
+<pre><code>[14:52] @alice [OBSERVATION] All metrics stable for 2 minutes
+[14:55] @alice [OBSERVATION] No new errors in logs
+[14:58] @bob [OBSERVATION] DB connection pool at healthy 15/50 utilization
+[15:00] @alice [OBSERVATION] Payment success rate back to 99.5% (normal)
+[15:02] @alice [OBSERVATION] No customer complaints in last 10 minutes
+[15:05] @alice [OBSERVATION] 15 minutes stable, all criteria met</code></pre>
+<h3>15:05 - Pre-Resolution Checklist</h3>
+<p><strong>Charlie (IC) verifies resolution criteria</strong>:</p>
+<pre><code>Resolution Criteria:
+✓ Error rate back to baseline (&lt;0.5%)
+✓ Latency within SLO (p95 &lt; 500ms)
+✓ Throughput recovered to normal
+✓ All health checks passing
+✓ No active alerts
+✓ User-facing functionality verified
+✓ Support ticket volume normal
+✓ No customer reports for 15+ minutes
+✓ System stable for 15+ minutes
+✓ Related systems healthy
+✓ Dependencies verified operational
+
+ALL CRITERIA MET</code></pre>
+<h3>15:07 - Declare Resolved</h3>
+<pre><code>[15:07] @charlie [DECISION] Declaring incident RESOLVED
+[15:07] @charlie [NOTIFICATION] Incident INC-20251027-ABC123 is RESOLVED
+[15:07] @charlie [ACTION] @diana send resolution notification
+[15:08] @charlie [ACTION] @eve schedule postmortem for tomorrow 10:00 UTC</code></pre>
+<p><strong>Update systems</strong>:</p>
+<pre><code class="lang-bash"># Update incident status
+./create_incident.py update INC-20251027-ABC123 \
+  --status resolved \
+  --event &quot;Incident resolved&quot; \
+  --author charlie
+
+# Resolve PagerDuty incident
+python pagerduty-integration.py resolve \
+  --incident-id PXXXXXX \
+  --resolution &quot;Rolled back deployment and increased connection pool&quot;
+
+# Update Slack
+python slack-incident-bot.py post-resolution \
+  --channel incident-20251027-abc123 \
+  --incident-id INC-20251027-ABC123 \
+  --duration &quot;45 minutes&quot; \
+  --resolution &quot;Rolled back deployment v2.3.1 and increased DB connection pool to 50&quot;</code></pre>
+<h3>15:10 - Final Customer Notification</h3>
+<pre><code class="lang-markdown">Subject: [RESOLVED] Payment Processing Issue Resolved
+
+The incident affecting payment processing has been RESOLVED.
+
+SUMMARY:
+- Started: 14:20 UTC
+- Resolved: 15:07 UTC
+- Duration: 47 minutes
+- Impact: Elevated error rates in payment transactions
+
+RESOLUTION:
+- Rolled back deployment v2.3.1
+- Increased database connection pool capacity
+- Service is now operating normally
+- Monitoring for continued stability
+
+ROOT CAUSE:
+- Preliminary: Deployment introduced query changes that exhausted DB connection pool
+- Full postmortem will be published within 48 hours
+
+NO ACTION REQUIRED from users. All pending payments will be automatically retried.
+
+We apologize for any inconvenience this may have caused.</code></pre>
+<h3>15:12 - Thank Team</h3>
+<pre><code>[15:12] @charlie Thank you team for excellent response:
+- @alice: Quick diagnosis and rollback
+- @bob: Fast DB analysis and mitigation
+- @diana: Clear customer communications
+- @eve: Great timeline documentation
+
+MTTR: 47 minutes from detection to resolution
+
+Postmortem: Tomorrow 10:00 UTC in this channel
+This war room will stay open for documentation.</code></pre>
+<hr>
+<h2>Phase 4: Post-Incident (Next 48 hours)</h2>
+<h3>Hour 1: Immediate Follow-up</h3>
+<p><strong>Actions</strong>:</p>
+<pre><code class="lang-bash"># Compile timeline
+python slack-incident-bot.py export-timeline \
+  --channel incident-20251027-abc123 \
+  --output timeline.json
+
+# Gather metrics
+curl &quot;https://grafana.example.com/api/dashboards/uid/payments&quot; &gt; metrics.json
+
+# Take screenshots of key graphs
+# (manual or automated)
+
+# Begin postmortem draft
+./generate_postmortem.py \
+  --incident-id INC-20251027-ABC123 \
+  --authors alice,bob,charlie \
+  --template deployment \
+  --output postmortems/INC-20251027-ABC123.md</code></pre>
+<h3>Hour 24: Postmortem Draft</h3>
+<p><strong>Draft sections completed</strong>:</p>
+<ul><li>Executive summary</li><li>Timeline (from war room logs)</li><li>Impact assessment</li><li>Root cause analysis (Five Whys)</li><li>What went well / poorly</li><li>Initial action items</li></ul>
+<p><strong>Key findings</strong>:</p>
+<ol><li><strong>Immediate cause</strong>: Deployment v2.3.1 introduced N+1 query pattern</li><li><strong>Contributing factors</strong>: Connection pool too small, no load testing</li><li><strong>Latent conditions</strong>: No automated pool sizing, no query performance monitoring</li></ol>
+<h3>Hour 26: Postmortem Meeting</h3>
+<p><strong>Agenda</strong> (1 hour):</p>
+<pre><code>10:00-10:05: Read executive summary
+10:05-10:15: Walk through timeline
+10:15-10:25: What went well
+10:25-10:40: What went poorly (blameless!)
+10:40-10:55: Action items
+10:55-11:00: Assign owners and deadlines</code></pre>
+<p><strong>Action Items Defined</strong>:</p>
+<p><strong>Prevent Recurrence</strong>:</p>
+<ul><li>[ ] Add connection pool monitoring alerts (Bob, Nov 3)</li><li>[ ] Implement query performance monitoring (Alice, Nov 10)</li><li>[ ] Add automated load testing to CI/CD (Charlie, Nov 17)</li><li>[ ] Review all N+1 query patterns in codebase (Dev team, Nov 20)</li></ul>
+<p><strong>Improve Detection</strong>:</p>
+<ul><li>[ ] Add synthetic payment transaction monitor (Alice, Nov 5)</li><li>[ ] Lower error rate alert threshold to 2% (Bob, Nov 1)</li></ul>
+<p><strong>Improve Response</strong>:</p>
+<ul><li>[ ] Create runbook for connection pool issues (Bob, Nov 1)</li><li>[ ] Document rollback decision criteria (Charlie, Nov 3)</li></ul>
+<p><strong>Improve Processes</strong>:</p>
+<ul><li>[ ] Require load test results for DB-heavy changes (Manager, Nov 10)</li><li>[ ] Add DB query review to code review checklist (Team, Nov 5)</li></ul>
+<h3>Hour 48: Publish Postmortem</h3>
+<p><strong>Published to</strong>:</p>
+<ul><li>Internal wiki</li><li>Engineering blog (sanitized)</li><li>Shared in #engineering</li></ul>
+<p><strong>Follow-up scheduled</strong>:</p>
+<ul><li>1 week: Check-in on action items</li><li>1 month: Review completion rate</li><li>Quarterly: Review effectiveness</li></ul>
+<hr>
+<h2>Metrics Captured</h2>
+<h3>Response Metrics</h3>
+<ul><li><strong>MTTD</strong> (Mean Time To Detect): 5 minutes (14:20 issue start → 14:25 alert)</li><li><strong>MTTA</strong> (Mean Time To Acknowledge): 2 minutes (14:25 alert → 14:27 ack)</li><li><strong>MTTR</strong> (Mean Time To Repair): 47 minutes (14:20 start → 15:07 resolved)</li><li><strong>Time to IC</strong>: 10 minutes (14:25 alert → 14:35 formal IC)</li><li><strong>Time to Mitigation</strong>: 20 minutes (14:25 alert → 14:45 error rate declining)</li></ul>
+<h3>Impact Metrics</h3>
+<ul><li><strong>Duration</strong>: 47 minutes</li><li><strong>Failed Requests</strong>: ~15,000 payment API calls</li><li><strong>Users Affected</strong>: ~5,000 unique users</li><li><strong>Revenue Impact</strong>: ~$25,000 in failed transactions</li><li><strong>Support Tickets</strong>: 234 tickets</li></ul>
+<h3>Response Quality</h3>
+<ul><li><strong>Communication Cadence</strong>: Initial (10min), Update (20min), Resolution (47min)</li><li><strong>Team Response</strong>: 5 people engaged within 15 minutes</li><li><strong>Rollback Speed</strong>: 5 minutes to complete</li><li><strong>Resolution Criteria</strong>: All 11 criteria verified</li></ul>
+<hr>
+<h2>Lessons Learned</h2>
+<h3>What Went Well</h3>
+<ol><li>✅ <strong>Fast detection</strong>: Monitoring alerted within 5 minutes</li><li>✅ <strong>Quick rollback</strong>: Recognized deployment correlation and acted fast</li><li>✅ <strong>Clear communication</strong>: Regular updates kept stakeholders informed</li><li>✅ <strong>Team coordination</strong>: War room structure kept everyone aligned</li><li>✅ <strong>Good documentation</strong>: Timeline made postmortem easy to write</li></ol>
+<h3>What Went Poorly</h3>
+<ol><li>❌ <strong>Deployment caused issue</strong>: Should have caught in testing</li><li>❌ <strong>No load testing</strong>: Last load test was 3 months old</li><li>❌ <strong>Missing alerts</strong>: No alert for connection pool utilization</li><li>❌ <strong>Code review gap</strong>: N+1 pattern not caught in review</li><li>❌ <strong>Manual pool sizing</strong>: Should be automated based on traffic</li></ol>
+<h3>Key Takeaways</h3>
+<ol><li><strong>Load testing must be automated</strong> and run on every deploy</li><li><strong>Connection pool needs monitoring</strong> with alerts before exhaustion</li><li><strong>Code review needs performance checklist</strong> for database queries</li><li><strong>Rollback is the safe default</strong> when deployment correlates with issues</li><li><strong>War room structure works</strong> - clear roles, regular updates, good documentation</li></ol>
+<hr>
+<h2>Template Sections for Future Incidents</h2>
+<p>This workflow can be adapted for other SEV-1 incidents by:</p>
+<ol><li>Replacing payment API scenario with actual service</li><li>Adjusting mitigation steps based on root cause</li><li>Keeping same structure: Detection → Mitigation → Resolution → Postmortem</li><li>Using same communication templates</li><li>Following same metrics collection</li></ol>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/sev1-response-workflow.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

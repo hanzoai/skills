@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>exchange-example</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/exchange-example.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/exchange-example">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/exchange-example.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>exchange-example</h1><p class="lede">This example captures a common failure mode: the shell is close, but the new system still reads as a different product because screen topology, typography, control geometry and information hierarchy diverge.</p><h1>Worked example: exchange1 -&gt; exchange2</h1>
+<p>This example captures a common failure mode: the shell is close, but the new system still reads as a different product because screen topology, typography, control geometry and information hierarchy diverge.</p>
+<p>Canonical comparison shown in the example: 1440x900, light theme, reference on the left and target on the right.</p>
+<h2>Global findings</h2>
+<h3>Already close enough to stop touching first</h3>
+<ul><li>Main shell horizontal anchor is aligned closely enough to make page-level comparison meaningful.</li><li>The target intentionally retains its own house font, a real dark theme, semantic landmarks, achromatic asset marks, selected elevation treatment and pinned disclosure text. Treat these as <code>EXEMPT</code> unless the project changes direction.</li></ul>
+<h3>Still blocking visual parity</h3>
+<ul><li>Reference body type is visibly larger/heavier; target type is smaller/lighter and uses a fractional ramp.</li><li>Spacing/control construction differs; target controls are materially taller and have a different inner rhythm.</li><li>Most important: multiple routes have different primary information architecture. Fixing colors or radii will not solve them.</li></ul>
+<h2>Swap</h2>
+<h3>Reference topology</h3>
+<p><code>header -&gt; trade tabs -&gt; sell card -&gt; circular swap control -&gt; buy card -&gt; primary CTA</code></p>
+<p>No standalone page H1 between tabs and form. The form is the visual subject.</p>
+<h3>Target currently</h3>
+<p><code>header -&gt; trade tabs -&gt; H1 &quot;Swap&quot; -&gt; sell card -&gt; swap control -&gt; buy card -&gt; helper link -&gt; CTA -&gt; disclosure links -&gt; footer</code></p>
+<p>The target also shows different fixture values, an inline &quot;predicted&quot; badge and an always-visible decimals/helper treatment.</p>
+<h3>Required convergence</h3>
+<ol><li>Remove the redundant <code>Swap</code> H1 from the baseline parity state. The active tab is sufficient context.</li><li>Normalize fixture state so both sides show the same sell amount, buy amount and token selections before geometry is judged.</li><li>Align the form card top, width and inter-card overlap to the reference after typography/control primitives are fixed.</li><li>Keep target-only prediction/explanation behavior, but hide it until it is relevant or place it in a compact details affordance that does not expand the baseline form.</li><li>Make the primary action occupy the same full form width and vertical position as the reference.</li><li>Keep disclosure/compliance copy, but prevent it from collapsing the application workspace: place it below the primary viewport flow or in the approved disclosure region without shifting the trade form.</li><li>Recheck header extras (<code>network</code>, <code>sign in</code>) so they do not change the search/nav alignment.</li></ol>
+<h3>Acceptance</h3>
+<ul><li>same visible sequence from tabs through CTA</li><li>no extra H1/helper row before CTA</li><li>form width/top within tolerance</li><li>same fixture values/state</li><li>disclosure does not enter the reference&#x27;s empty workspace above the fold</li></ul>
+<h2>Explore</h2>
+<h3>Reference topology</h3>
+<p><code>header -&gt; 5-column metric strip -&gt; tabs + right toolbar -&gt; quiet content/empty state</code></p>
+<p>The failure state is sparse. It does not become a dashboard of failed cards.</p>
+<h3>Target currently</h3>
+<p><code>header -&gt; H1 + explanatory paragraph -&gt; 4 metrics -&gt; two failed chart cards -&gt; tabs -&gt; full-width failure card -&gt; endpoint diagnostic -&gt; footer</code></p>
+<p>Tabs are also different in ordering/content and the target defaults to a different primary section.</p>
+<h3>Required convergence</h3>
+<ol><li>Remove the Explore hero/H1/explainer from the primary reference state. Put explanation behind help/info if it must remain.</li><li>Rebuild the top area as the same flat horizontal metric strip. Match number of visible slots, widths, labels/values hierarchy and separators for the mapped data.</li><li>Match reference tab order and default active tab when the corresponding capabilities exist. Do not silently substitute a different default.</li><li>Restore the right-side toolbar footprint next to tabs. Map available target filters into that geometry.</li><li>Collapse failed chart shells in the no-data/error state. Do not show two large empty/failure cards when the reference shows quiet whitespace.</li><li>Replace the full-width failure card with the reference&#x27;s restrained empty/error line. Put raw endpoint/debug information behind <code>Details</code> or a developer-only disclosure.</li><li>Keep footer/disclosures below the reference workspace boundary.</li></ol>
+<h3>Acceptance</h3>
+<ul><li>metric strip is the first content region after header</li><li>no hero text or failed chart cards in the baseline error state</li><li>tabs/order/default match mapped reference behavior</li><li>empty/error message is quiet and occupies comparable footprint</li><li>right toolbar exists at the same anchor</li></ul>
+<h2>Positions</h2>
+<h3>Reference topology</h3>
+<p><code>header -&gt; &quot;Your positions&quot; heading -&gt; disconnected-wallet prompt card -&gt; three compact informational cards</code></p>
+<p>Before connection, no address explorer dominates the page.</p>
+<h3>Target currently</h3>
+<p><code>header -&gt; &quot;Positions&quot; heading -&gt; holder address input -&gt; name-holder action -&gt; empty-holder card -&gt; pair-address card -&gt; footer</code></p>
+<p>The target&#x27;s address-based explorer is valid functionality but is primary when the reference makes wallet connection primary.</p>
+<h3>Required convergence</h3>
+<ol><li>Make the disconnected-wallet state the default parity state.</li><li>Match the reference heading wording/scale/position if product copy permits.</li><li>Recreate the compact wallet prompt card footprint, icon area, explanatory line and two actions (<code>New position</code>, <code>Connect wallet</code> or mapped equivalents).</li><li>Restore the three compact informational/feature cards beneath it, using target-safe copy/assets if exact reference content is unavailable.</li><li>Preserve holder/pair address lookup, but move it behind a secondary <code>View by address</code> action, expandable panel, or subsequent route so it does not replace the disconnected state.</li><li>Do not show large empty lookup cards until the user activates lookup mode.</li></ol>
+<h3>Acceptance</h3>
+<ul><li>disconnected first viewport has the same region sequence and approximate occupied area</li><li>address tools are not primary before user requests them</li><li>no footer rises into the reference&#x27;s open workspace</li></ul>
+<h2>Add / new position</h2>
+<h3>Reference topology</h3>
+<p><code>header -&gt; breadcrumb -&gt; H1 &quot;New position&quot; + top-right utility controls -&gt; two-column wizard: stepper sidebar | main selection card</code></p>
+<p>Main card contains pair selection, fee-tier section and a full-width Continue action.</p>
+<h3>Target currently</h3>
+<p><code>header -&gt; centered H1 &quot;Add to a range&quot; -&gt; two inline asset pickers -&gt; wallet message -&gt; explanatory links -&gt; footer</code></p>
+<p>This is not the same screen shape even though both expose two asset pickers.</p>
+<h3>Required convergence</h3>
+<ol><li>Convert the page to the reference wizard composition rather than restyling the centered mini-form.</li><li>Add breadcrumb and left-aligned <code>New position</code> hierarchy.</li><li>Add the left stepper/sidebar with Step 1 active and Step 2 inactive.</li><li>Move asset pickers into the main right card with the same two-field horizontal composition.</li><li>Add/match the fee-tier region when supported. If target cannot supply a valid fee-tier choice, mark the region <code>EXEMPT</code> or show a truthful disabled/not-applicable state without inventing functionality.</li><li>Match Reset/version/settings utility control placement when target has equivalents.</li><li>Move <code>Add to a pair</code> / <code>Add under a hook</code> explanations out of the primary wizard footprint; surface them as secondary choices after or beside the mapped workflow.</li><li>Match Continue button position and disabled state.</li></ol>
+<h3>Acceptance</h3>
+<ul><li>breadcrumb + H1 + utility row match reference hierarchy</li><li>visible two-column wizard structure exists</li><li>stepper and main card anchors match</li><li>asset selection lives inside main card, not as a centered standalone row</li><li>target-only explanatory flows do not replace the wizard</li></ul>
+<h2>Limit</h2>
+<h3>Reference topology</h3>
+<p><code>header -&gt; trade tabs -&gt; limit-price card with quick offsets -&gt; sell card -&gt; swap control -&gt; buy card -&gt; CTA -&gt; compact warning</code></p>
+<p>No standalone H1. Quick price actions live inside the first card.</p>
+<h3>Target currently</h3>
+<p><code>header -&gt; trade tabs -&gt; H1 &quot;Limit&quot; -&gt; sell card -&gt; buy card -&gt; separate Price field -&gt; transfer-duration 2x2 cards -&gt; helper link -&gt; blocked CTA</code></p>
+<h3>Required convergence</h3>
+<ol><li>Remove redundant H1 from the baseline form.</li><li>Reorder the primary controls to match the reference: limit price first, then sell, swap control, buy, CTA.</li><li>If the target cannot compute reference Market/+1/+5/+10 presets because the chain lacks the required AMM spot price, do not fake them. Preserve a visually compatible price region and mark the unavailable preset behavior as an explicit functional exemption.</li><li>Move transfer-duration controls out of the middle of the core trade stack. If required, place them in a compact advanced section below the reference-equivalent stack or reveal them after core order inputs are valid.</li><li>Keep target explanations progressive rather than permanently expanding the form.</li><li>Match the compact warning region at the bottom if a mapped warning is needed.</li></ol>
+<h3>Acceptance</h3>
+<ul><li>same primary input order</li><li>duration UI no longer splits the reference trade stack</li><li>unavailable preset behavior is documented, not simulated</li><li>form footprint closely matches reference before optional advanced controls open</li></ul>
+<h2>Send</h2>
+<h3>Reference topology</h3>
+<p><code>dimmed trade screen -&gt; centered Send crypto modal</code></p>
+<p>Modal contains header + close button, large sending value, token selector, recipient field and primary CTA.</p>
+<h3>Target currently</h3>
+<p>A standalone Send page with H1, amount card, recipient field, parsed transaction facts, helper links, CTA and footer.</p>
+<h3>Required convergence</h3>
+<ol><li>This is a <code>MODE</code> mismatch: implement Send as a modal/drawer state over the trade screen for parity.</li><li>Direct <code>/send</code> navigation should deep-link into the same modal-open state rather than render a separate page, if routing architecture permits.</li><li>Match modal width, vertical anchor, overlay opacity, header/close layout and stacked field order.</li><li>Put the target&#x27;s recipient validation/transaction facts inside the modal only after input exists, or behind a compact details disclosure. They must not enlarge the untouched baseline modal.</li><li>Keep the same target validation/business logic; only change its presentation mode and hierarchy.</li></ol>
+<h3>Acceptance</h3>
+<ul><li>background trade screen remains visible and dimmed</li><li>Send is not a standalone baseline page</li><li>modal region sequence matches reference</li><li>extra diagnostics are conditional</li></ul>
+<h2>Buy</h2>
+<h3>Reference topology</h3>
+<p><code>header -&gt; trade tabs -&gt; buy card with large $ value + preset chips -&gt; provider/secondary row -&gt; primary CTA</code></p>
+<h3>Target currently</h3>
+<p><code>header -&gt; trade tabs -&gt; H1 &quot;Buy&quot; -&gt; compliance/safety explanation card -&gt; links -&gt; footer</code></p>
+<p>The target intentionally does not offer a fiat purchase flow. This is a functional divergence, not a reason to fabricate one.</p>
+<h3>Required convergence</h3>
+<ol><li>Keep the target&#x27;s no-fiat/no-registered-firm behavior. Do not create enabled purchase controls merely to imitate the screenshot.</li><li>Remove the redundant H1 if the active tab provides sufficient context.</li><li>Place the safety explanation in a compact panel occupying approximately the reference buy-card footprint rather than a separate page narrative.</li><li>If useful, render reference-like preset/value affordances only when they are clearly disabled/non-actionable and cannot mislead; otherwise preserve the reference card footprint using truthful explanatory content.</li><li>Keep disclosure links compact and below the main card rather than allowing the page to become a document.</li><li>Keep the footer below the application workspace.</li></ol>
+<h3>Acceptance</h3>
+<ul><li>page reads as the same trade-tab layout and density</li><li>no fake enabled fiat path</li><li>safety/compliance difference is explicit but does not create a different page architecture</li></ul>
+<h2>Landing</h2>
+<h3>Reference topology</h3>
+<p><code>header -&gt; large centered hero composition -&gt; headline -&gt; elevated swap card -&gt; short supporting line</code></p>
+<p>The reference also has subtle blurred decorative marks and a landing-specific header action.</p>
+<h3>Target currently</h3>
+<p>The same headline and swap concept exist, but they start much higher, the card is flatter, compliance/helper content expands below it and the next page section begins inside the captured viewport.</p>
+<h3>Required convergence</h3>
+<ol><li>Match hero vertical rhythm: push the headline and trade card to the same visual center/lower center of the viewport.</li><li>Match headline width, size, weight and line box after the global typography fix.</li><li>Give the landing trade card the reference-specific elevation/border treatment and footprint; do not assume the inner app form and landing card must share identical outer treatment.</li><li>Reintroduce subtle decorative background marks if they are part of the approved brand treatment; keep them non-interactive and low contrast.</li><li>Match the short supporting line position under the card using truthful target copy.</li><li>Prevent the next major section from entering the canonical 900px viewport if the reference keeps the hero isolated.</li><li>Map landing-specific header actions without breaking the global header alignment.</li></ol>
+<h3>Acceptance</h3>
+<ul><li>headline and card vertical centers closely match reference</li><li>hero remains isolated within first viewport</li><li>card outer elevation/footprint matches the landing reference</li><li>supporting copy occupies the same small role</li></ul>
+<h2>Cross-screen rule from this example</h2>
+<p>The target is not primarily failing because of palette. It is failing because many routes are different <em>screen archetypes</em>: full page vs modal, mini-form vs wizard, explorer vs wallet prompt, diagnostic dashboard vs quiet empty state. Fix those archetypes before asking for another pixel-polish pass.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/exchange-example.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>grader</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/grader.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/grader">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/grader.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>grader</h1><p class="lede">Evaluate expectations against an execution transcript and outputs.</p><h1>Grader Agent</h1>
+<p>Evaluate expectations against an execution transcript and outputs.</p>
+<h2>Role</h2>
+<p>The Grader reviews a transcript and output files, then determines whether each expectation passes or fails. Provide clear evidence for each judgment.</p>
+<p>You have two jobs: grade the outputs, and critique the evals themselves. A passing grade on a weak assertion is worse than useless — it creates false confidence. When you notice an assertion that&#x27;s trivially satisfied, or an important outcome that no assertion checks, say so.</p>
+<h2>Inputs</h2>
+<p>You receive these parameters in your prompt:</p>
+<ul><li><strong>expectations</strong>: List of expectations to evaluate (strings)</li><li><strong>transcript_path</strong>: Path to the execution transcript (markdown file)</li><li><strong>outputs_dir</strong>: Directory containing output files from execution</li></ul>
+<h2>Process</h2>
+<h3>Step 1: Read the Transcript</h3>
+<ol><li>Read the transcript file completely</li><li>Note the eval prompt, execution steps, and final result</li><li>Identify any issues or errors documented</li></ol>
+<h3>Step 2: Examine Output Files</h3>
+<ol><li>List files in outputs_dir</li><li>Read/examine each file relevant to the expectations. If outputs aren&#x27;t plain text, use the inspection tools provided in your prompt — don&#x27;t rely solely on what the transcript says the executor produced.</li><li>Note contents, structure, and quality</li></ol>
+<h3>Step 3: Evaluate Each Assertion</h3>
+<p>For each expectation:</p>
+<ol><li><strong>Search for evidence</strong> in the transcript and outputs</li><li><strong>Determine verdict</strong>:</li></ol>
+<ul><li><strong>PASS</strong>: Clear evidence the expectation is true AND the evidence reflects genuine task completion, not just surface-level compliance</li><li><strong>FAIL</strong>: No evidence, or evidence contradicts the expectation, or the evidence is superficial (e.g., correct filename but empty/wrong content)</li></ul>
+<ol><li><strong>Cite the evidence</strong>: Quote the specific text or describe what you found</li></ol>
+<h3>Step 4: Extract and Verify Claims</h3>
+<p>Beyond the predefined expectations, extract implicit claims from the outputs and verify them:</p>
+<ol><li><strong>Extract claims</strong> from the transcript and outputs:</li></ol>
+<ul><li>Factual statements (&quot;The form has 12 fields&quot;)</li><li>Process claims (&quot;Used pypdf to fill the form&quot;)</li><li>Quality claims (&quot;All fields were filled correctly&quot;)</li></ul>
+<ol><li><strong>Verify each claim</strong>:</li></ol>
+<ul><li><strong>Factual claims</strong>: Can be checked against the outputs or external sources</li><li><strong>Process claims</strong>: Can be verified from the transcript</li><li><strong>Quality claims</strong>: Evaluate whether the claim is justified</li></ul>
+<ol><li><strong>Flag unverifiable claims</strong>: Note claims that cannot be verified with available information</li></ol>
+<p>This catches issues that predefined expectations might miss.</p>
+<h3>Step 5: Read User Notes</h3>
+<p>If <code>{outputs_dir}/user_notes.md</code> exists:</p>
+<ol><li>Read it and note any uncertainties or issues flagged by the executor</li><li>Include relevant concerns in the grading output</li><li>These may reveal problems even when expectations pass</li></ol>
+<h3>Step 6: Critique the Evals</h3>
+<p>After grading, consider whether the evals themselves could be improved. Only surface suggestions when there&#x27;s a clear gap.</p>
+<p>Good suggestions test meaningful outcomes — assertions that are hard to satisfy without actually doing the work correctly. Think about what makes an assertion <em>discriminating</em>: it passes when the skill genuinely succeeds and fails when it doesn&#x27;t.</p>
+<p>Suggestions worth raising:</p>
+<ul><li>An assertion that passed but would also pass for a clearly wrong output (e.g., checking filename existence but not file content)</li><li>An important outcome you observed — good or bad — that no assertion covers at all</li><li>An assertion that can&#x27;t actually be verified from the available outputs</li></ul>
+<p>Keep the bar high. The goal is to flag things the eval author would say &quot;good catch&quot; about, not to nitpick every assertion.</p>
+<h3>Step 7: Write Grading Results</h3>
+<p>Save results to <code>{outputs_dir}/../grading.json</code> (sibling to outputs_dir).</p>
+<h2>Grading Criteria</h2>
+<p><strong>PASS when</strong>:</p>
+<ul><li>The transcript or outputs clearly demonstrate the expectation is true</li><li>Specific evidence can be cited</li><li>The evidence reflects genuine substance, not just surface compliance (e.g., a file exists AND contains correct content, not just the right filename)</li></ul>
+<p><strong>FAIL when</strong>:</p>
+<ul><li>No evidence found for the expectation</li><li>Evidence contradicts the expectation</li><li>The expectation cannot be verified from available information</li><li>The evidence is superficial — the assertion is technically satisfied but the underlying task outcome is wrong or incomplete</li><li>The output appears to meet the assertion by coincidence rather than by actually doing the work</li></ul>
+<p><strong>When uncertain</strong>: The burden of proof to pass is on the expectation.</p>
+<h3>Step 8: Read Executor Metrics and Timing</h3>
+<ol><li>If <code>{outputs_dir}/metrics.json</code> exists, read it and include in grading output</li><li>If <code>{outputs_dir}/../timing.json</code> exists, read it and include timing data</li></ol>
+<h2>Output Format</h2>
+<p>Write a JSON file with this structure:</p>
+<pre><code class="lang-json">{
+  &quot;expectations&quot;: [
+    {
+      &quot;text&quot;: &quot;The output includes the name &#x27;John Smith&#x27;&quot;,
+      &quot;passed&quot;: true,
+      &quot;evidence&quot;: &quot;Found in transcript Step 3: &#x27;Extracted names: John Smith, Sarah Johnson&#x27;&quot;
+    },
+    {
+      &quot;text&quot;: &quot;The spreadsheet has a SUM formula in cell B10&quot;,
+      &quot;passed&quot;: false,
+      &quot;evidence&quot;: &quot;No spreadsheet was created. The output was a text file.&quot;
+    },
+    {
+      &quot;text&quot;: &quot;The assistant used the skill&#x27;s OCR script&quot;,
+      &quot;passed&quot;: true,
+      &quot;evidence&quot;: &quot;Transcript Step 2 shows: &#x27;Tool: Bash - python ocr_script.py image.png&#x27;&quot;
+    }
+  ],
+  &quot;summary&quot;: {
+    &quot;passed&quot;: 2,
+    &quot;failed&quot;: 1,
+    &quot;total&quot;: 3,
+    &quot;pass_rate&quot;: 0.67
+  },
+  &quot;execution_metrics&quot;: {
+    &quot;tool_calls&quot;: {
+      &quot;Read&quot;: 5,
+      &quot;Write&quot;: 2,
+      &quot;Bash&quot;: 8
+    },
+    &quot;total_tool_calls&quot;: 15,
+    &quot;total_steps&quot;: 6,
+    &quot;errors_encountered&quot;: 0,
+    &quot;output_chars&quot;: 12450,
+    &quot;transcript_chars&quot;: 3200
+  },
+  &quot;timing&quot;: {
+    &quot;executor_duration_seconds&quot;: 165.0,
+    &quot;grader_duration_seconds&quot;: 26.0,
+    &quot;total_duration_seconds&quot;: 191.0
+  },
+  &quot;claims&quot;: [
+    {
+      &quot;claim&quot;: &quot;The form has 12 fillable fields&quot;,
+      &quot;type&quot;: &quot;factual&quot;,
+      &quot;verified&quot;: true,
+      &quot;evidence&quot;: &quot;Counted 12 fields in field_info.json&quot;
+    },
+    {
+      &quot;claim&quot;: &quot;All required fields were populated&quot;,
+      &quot;type&quot;: &quot;quality&quot;,
+      &quot;verified&quot;: false,
+      &quot;evidence&quot;: &quot;Reference section was left blank despite data being available&quot;
+    }
+  ],
+  &quot;user_notes_summary&quot;: {
+    &quot;uncertainties&quot;: [&quot;Used 2023 data, may be stale&quot;],
+    &quot;needs_review&quot;: [],
+    &quot;workarounds&quot;: [&quot;Fell back to text overlay for non-fillable fields&quot;]
+  },
+  &quot;eval_feedback&quot;: {
+    &quot;suggestions&quot;: [
+      {
+        &quot;assertion&quot;: &quot;The output includes the name &#x27;John Smith&#x27;&quot;,
+        &quot;reason&quot;: &quot;A hallucinated document that mentions the name would also pass — consider checking it appears as the primary contact with matching phone and email from the input&quot;
+      },
+      {
+        &quot;reason&quot;: &quot;No assertion checks whether the extracted phone numbers match the input — I observed incorrect numbers in the output that went uncaught&quot;
+      }
+    ],
+    &quot;overall&quot;: &quot;Assertions check presence but not correctness. Consider adding content verification.&quot;
+  }
+}</code></pre>
+<h2>Field Descriptions</h2>
+<ul><li><strong>expectations</strong>: Array of graded expectations</li><li><strong>text</strong>: The original expectation text</li><li><strong>passed</strong>: Boolean - true if expectation passes</li><li><strong>evidence</strong>: Specific quote or description supporting the verdict</li><li><strong>summary</strong>: Aggregate statistics</li><li><strong>passed</strong>: Count of passed expectations</li><li><strong>failed</strong>: Count of failed expectations</li><li><strong>total</strong>: Total expectations evaluated</li><li><strong>pass_rate</strong>: Fraction passed (0.0 to 1.0)</li><li><strong>execution_metrics</strong>: Copied from executor&#x27;s metrics.json (if available)</li><li><strong>output_chars</strong>: Total character count of output files (proxy for tokens)</li><li><strong>transcript_chars</strong>: Character count of transcript</li><li><strong>timing</strong>: Wall clock timing from timing.json (if available)</li><li><strong>executor_duration_seconds</strong>: Time spent in executor subagent</li><li><strong>total_duration_seconds</strong>: Total elapsed time for the run</li><li><strong>claims</strong>: Extracted and verified claims from the output</li><li><strong>claim</strong>: The statement being verified</li><li><strong>type</strong>: &quot;factual&quot;, &quot;process&quot;, or &quot;quality&quot;</li><li><strong>verified</strong>: Boolean - whether the claim holds</li><li><strong>evidence</strong>: Supporting or contradicting evidence</li><li><strong>user_notes_summary</strong>: Issues flagged by the executor</li><li><strong>uncertainties</strong>: Things the executor wasn&#x27;t sure about</li><li><strong>needs_review</strong>: Items requiring human attention</li><li><strong>workarounds</strong>: Places where the skill didn&#x27;t work as expected</li><li><strong>eval_feedback</strong>: Improvement suggestions for the evals (only when warranted)</li><li><strong>suggestions</strong>: List of concrete suggestions, each with a <code>reason</code> and optionally an <code>assertion</code> it relates to</li><li><strong>overall</strong>: Brief assessment — can be &quot;No suggestions, evals look solid&quot; if nothing to flag</li></ul>
+<h2>Guidelines</h2>
+<ul><li><strong>Be objective</strong>: Base verdicts on evidence, not assumptions</li><li><strong>Be specific</strong>: Quote the exact text that supports your verdict</li><li><strong>Be thorough</strong>: Check both transcript and output files</li><li><strong>Be consistent</strong>: Apply the same standard to each expectation</li><li><strong>Explain failures</strong>: Make it clear why evidence was insufficient</li><li><strong>No partial credit</strong>: Each expectation is pass or fail, not partial</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/grader.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

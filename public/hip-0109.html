@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,7 +196,7 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0109</h1><p class="lede">HIP-109: Hanzo ML Cloud Toolkit. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0109: Hanzo ML Cloud Toolkit</h1>
+<h1>hip-0109</h1><p class="lede">HIP-109: Hanzo ML Cloud Toolkit. Status Final. Hanzo architectural specification.</p><h1>HIP-0109: Hanzo ML Cloud Toolkit</h1>
 <h2>Abstract</h2>
 <p>The Hanzo ML Cloud Toolkit is the Hanzo-native ML operator and control plane that lives in <code>~/work/hanzo/operator</code> (Rust, BSD-3). It replaces the functional surface of the prior open-source ML operator estate (training, experiment tracking, hyperparameter sweeps, pipelines, notebooks, model registry, inference serving) <strong>without taking that estate as a dependency</strong>. Seven <code>hanzo.ai/v1</code> Custom Resource Definitions reconciled by one Rust binary, mounted under the unified <code>cloud</code> HTTP surface from HIP-0106, talking to Hanzo primitives: <code>hanzoai/iam</code> (auth), <code>hanzoai/vfs</code> (artifacts), <code>hanzoai/datastore</code> (metrics), <code>hanzoai/base</code> (per-tenant SQLite), <code>hanzoai/tasks</code> (DAG runner), <code>hanzoai/o11y</code> (general observability), <code>hanzoai/insights</code> (LLM-specific observability), <code>hanzoai/engine</code> (inference), <code>hanzoai/ml</code> (Candle-based ML primitives), <code>hanzoai/cloud</code> (control plane mux).</p>
 <p><strong>Brand and scope policy.</strong> <code>hanzoai/ml</code> STAYS the primitive Rust ML toolkit (Candle core + tensor ops + model primitives). It does NOT absorb control-plane responsibilities; those land in <code>hanzoai/operator</code>. <code>hanzoai/ml</code> is consumed by training-container images that the operator schedules — it is not the scheduler. One way to do everything: <code>ml/</code> is primitives, <code>operator/</code> is control plane, <code>cloud/</code> is the HTTP mux, and the protocols at the edges are MCP for tools, A2A for federation, and ZAP between Hanzo subsystems.</p>
@@ -198,7 +207,7 @@ footer a{color:var(--soft)}
 <h2>Specification</h2>
 <h3>Lifecycle CRDs at <code>hanzo.ai/v1</code></h3>
 <p>The operator owns these Kinds:</p>
-<p>| Kind | Plural | Short | What it owns | |---|---|---|---| | <code>TrainingJob</code> | <code>trainingjobs</code> | <code>mlj</code> | Distributed training pods. One unified type with <code>spec.framework: tensorflow | pytorch | mpi | xgboost | jax | candle | hanzo-ml</code>. Backs all training-job variants from the open-source operator family. | | <code>Experiment</code> | <code>experiments</code> | <code>mlx</code> | Tracking experiment. Status surfaces metric streams from <code>hanzoai/datastore</code>; artifacts via <code>hanzoai/vfs</code>; run config in per-tenant <code>hanzoai/base</code>. | | <code>Sweep</code> | <code>sweeps</code> | <code>mls</code> | Hyperparameter sweep. Owns N child <code>TrainingJob</code>s with parameter assignments; runs Bayesian / grid / random search per <code>spec.algorithm</code>. | | <code>Pipeline</code> | <code>pipelines</code> | <code>mlp</code> | DAG of steps. Each step is a <code>TrainingJob</code>, <code>Inference</code>, or generic container task. Durable execution by delegating to <code>hanzoai/tasks</code> (HIP-0108). | | <code>Notebook</code> | <code>notebooks</code> | <code>mln</code> | Per-tenant JupyterLab pod with IAM SSO sidecar. Storage is a PVC backed by <code>hanzoai/vfs</code>. Idle eviction per HIP-0108 tier-2 supervisor. | | <code>Model</code> | <code>models</code> | <code>mlm</code> | Model registry entry. Metadata (versions, lineage, signatures, framework, tags) in per-tenant <code>hanzoai/base</code>; blobs in <code>hanzoai/vfs</code>. | | <code>Inference</code> | <code>inferences</code> | <code>mli</code> | Inference service. Routes to <code>hanzoai/engine</code> for Hanzo-native serving, or to an external runtime container when <code>spec.runtime: external</code>. |</p>
+<p>| Kind | Plural | Short | What it owns | |---|---|---|---| | <code>TrainingJob</code> | <code>trainingjobs</code> | <code>mlj</code> | Distributed training pods. One unified type with <code>spec.framework: tensorflow | pytorch | mpi | xgboost | jax | candle | hanzo-ml</code>. Backs all training-job variants from the open-source operator family. | | <code>Experiment</code> | <code>experiment</code> | <code>mlx</code> | Tracking experiment. Status surfaces metric streams from <code>hanzoai/datastore</code>; artifacts via <code>hanzoai/vfs</code>; run config in per-tenant <code>hanzoai/base</code>. | | <code>Sweep</code> | <code>sweeps</code> | <code>mls</code> | Hyperparameter sweep. Owns N child <code>TrainingJob</code>s with parameter assignments; runs Bayesian / grid / random search per <code>spec.algorithm</code>. | | <code>Pipeline</code> | <code>pipelines</code> | <code>mlp</code> | DAG of steps. Each step is a <code>TrainingJob</code>, <code>Inference</code>, or generic container task. Durable execution by delegating to <code>hanzoai/tasks</code> (HIP-0108). | | <code>Notebook</code> | <code>notebooks</code> | <code>mln</code> | Per-tenant JupyterLab pod with IAM SSO sidecar. Storage is a PVC backed by <code>hanzoai/vfs</code>. Idle eviction per HIP-0108 tier-2 supervisor. | | <code>Model</code> | <code>models</code> | <code>mlm</code> | Model registry entry. Metadata (versions, lineage, signatures, framework, tags) in per-tenant <code>hanzoai/base</code>; blobs in <code>hanzoai/vfs</code>. | | <code>Inference</code> | <code>inferences</code> | <code>mli</code> | Inference service. Routes to <code>hanzoai/engine</code> for Hanzo-native serving, or to an external runtime container when <code>spec.runtime: external</code>. |</p>
 <p>All seven are namespaced. All seven follow the operator&#x27;s existing phase lifecycle: <code>Pending → Creating → Running → Degraded → Deleting</code>. All seven mint standard <code>status.conditions</code> (<code>Ready</code>, <code>Synced</code>, <code>Available</code>).</p>
 <h3>Replacement table</h3>
 <p>The operator estate this displaces, and the Hanzo CRD that subsumes each:</p>
@@ -520,12 +529,10 @@ POST   /v1/ml/inference/{name}:predict      → forward predict call to engine</
 <p>  <code>/v1/ml/*</code>)</p>
 <ul><li>HIP-0108 — On-Demand Supervisor + Warm Pool (tier-2 idle eviction</li></ul>
 <p>  for notebooks and inference replicas)</p>
-<ul><li>HIP-0067 — Federated Learning Standard (downstream consumer of</li></ul>
-<p>  <code>TrainingJob</code>)</p>
 <ul><li>HIP-0010 — MCP Integration Standards (the protocol the ML tools</li></ul>
 <p>  surface speaks)</p>
 <ul><li>Upstream references (do NOT vendor or fork): Kubeflow project</li></ul>
-<p>  (https://www.kubeflow.org), MLflow (https://mlflow.org), Katib   (https://www.kubeflow.org/docs/components/katib/), KServe   (https://kserve.github.io), Seldon Core   (https://www.seldon.io/solutions/seldon-core).</p>
+<p>  (https://www.kubeflow.org), MLflow (https://mlflow.org), Katib   (https://www.kubeflow.org/docs/components/katib/), KServe   (https://kserve.github.io), Seldon Core   (https://github.com/SeldonIO/seldon-core).</p>
 <footer>
 <div class="fmap">
   <div><b>Build</b>
@@ -545,5 +552,4 @@ POST   /v1/ml/inference/{name}:predict      → forward predict call to engine</
 </div>
 <div class="fend"><a href="/hip-0109.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,10 +196,10 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0105</h1><p class="lede">HIP-105: In-Process Extension Runtime Standard. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0105: In-Process Extension Runtime Standard</h1>
+<h1>hip-0105</h1><p class="lede">HIP-105: In-Process Extension Runtime Standard. Status Final. Hanzo architectural specification.</p><h1>HIP-0105: In-Process Extension Runtime Standard</h1>
 <h2>Abstract</h2>
 <p>This proposal defines how user-supplied code is loaded and executed <strong>inside a running Hanzo Go service</strong> — distinct from the K8s-scale FaaS surface in HIP-0060. The same service binary can host extensions in four engines — <strong>native Go</strong>, <strong>goja</strong> (pure-Go JS interpreter), <strong>wazero</strong> (pure-Go WASM runtime), and <strong>v8go</strong> (V8 via cgo) — and pick the right one per extension via an <code>extension.json</code> manifest. The Runtime interface is one type with four implementations; switching engines is a one-line manifest change.</p>
-<p><strong>Reference implementation</strong>: <code>~/work/hanzo/base/plugins/{extruntime,gojavm,wasmvm,v8vm}</code> (<a href="https://github.com/hanzoai/base/pull/3">hanzoai/base#3</a>, landed 2026-05-19). Full benchmark write-up at <code>~/work/hanzo/base/docs/EXTENSIONS_BENCHMARK.md</code>.</p>
+<p><strong>Reference implementation</strong>: <code>~/work/hanzo/base/plugins/{extruntime,gojavm,wasmvm,v8vm}</code> (<a href="https://github.com/hanzoai/base/tree/main/plugins">hanzoai/base/plugins</a>, landed 2026-05-19). Full benchmark write-up at <code>~/work/hanzo/base/docs/EXTENSIONS_BENCHMARK.md</code>.</p>
 <h2>Motivation</h2>
 <p>Hanzo services regularly need to run <strong>user-supplied code</strong> without spinning up a Knative pod or shelling out to a sidecar:</p>
 <ul><li>Per-record validators and computed fields in Hanzo Base</li><li>Per-org policy / authz rules in Hanzo IAM and Gateway</li><li>Custom prompt transformers in the LLM Gateway</li><li>Tool implementations for agents (MCP-side tool functions)</li><li>Webhook body transformations</li><li>Custom CRDT merge resolvers</li><li>Per-tenant feature flags evaluated against context</li></ul>
@@ -263,8 +272,8 @@ type Capabilities struct {
 <h3>Default behavior when ctx is cancelled</h3>
 <p>| Runtime | Cancellation semantics | |---|---| | native | Cooperative — user code MUST check <code>ctx.Err()</code> | | goja | Cooperative — <code>vm.Interrupt()</code> fires only at function-call opcodes; tight numeric loops without yield points can resist abort | | wazero | Hard — <code>module.Close()</code> destroys the instance immediately; the runtime replenishes its pool from a background context | | v8go | Hard — <code>Isolate.TerminateExecution()</code> aborts within ~ms |</p>
 <h3>Pool sizing</h3>
-<p>Every runtime maintains a per-module pool of pre-warmed instances / contexts so per-invocation cost stays microsecond-scale. Each runtime exposes an env override. <strong>Defaults were revised after the scale study (see below): wazero default reduced to 4</strong> because pool=8 produced 256K wasm instances at T=1000 with zero latency benefit.</p>
-<p>| Runtime | Env | Default | Notes | |---|---|---|---| | goja | <code>BASE_GOJAVM_POOL_SIZE</code> | 8 | Cheap per-pool-item (~9 KB Go heap); 8 is safe. | | wazero | <code>BASE_WASMVM_POOL_SIZE</code> | <strong>4</strong> | Each instance is ~80 KB linear memory; larger pools waste RAM with no throughput gain. | | v8go | <code>BASE_V8VM_POOL_SIZE</code> | 8 | Sized for context pool, but see scale findings — v8go is <strong>NOT recommended for production</strong> at meaningful concurrency. | | pyvm | <code>BASE_PYVM_POOL_SIZE</code> | 4 | Each Python sub-interpreter is ~4.6 MB. Pool of 4 = ~18 MB baseline. Default tuned to balance per-module memory vs cold-start cost. |</p>
+<p>Every runtime maintains a per-module pool of pre-warmed instances / contexts so per-invocation cost stays microsecond-scale. Each runtime exposes an env override. Anything &lt;=0 or unparseable falls back to the default.</p>
+<p>| Runtime | Env | Default | Notes | |---|---|---|---| | goja | <code>BASE_GOJAVM_POOL_SIZE</code> | 8 | Cheap per-pool-item (~9 KB Go heap); 8 is safe. | | wazero | <code>BASE_WASMVM_POOL_SIZE</code> | 8 | Wasm modules amortize compilation, so the pool exists to soak bursty hook traffic rather than to save instantiation. | | v8go | <code>BASE_V8VM_POOL_SIZE</code> | 8 | Sized for context pool, but see scale findings — v8go is <strong>NOT recommended for production</strong> at meaningful concurrency. | | pyvm | <code>BASE_PYVM_POOL_SIZE</code> | 4 | Each Python sub-interpreter is ~4.6 MB. Pool of 4 = ~18 MB baseline. Default tuned to balance per-module memory vs cold-start cost. | | starlark | <code>BASE_STARKVM_POOL_SIZE</code> | 8 | Pre-warmed <code>*starlark.Thread</code> instances. |</p>
 <p>Native doesn&#x27;t pool — functions are stateless Go calls.</p>
 <h2>Benchmark data</h2>
 <p>Run on Apple M1 Max, Go 1.26.3, median of 3 runs at <code>-benchtime=2s</code>. Workload: <code>validate(email, age)</code> — JSON in, JSON out, ~20 lines of logic.</p>
@@ -300,14 +309,10 @@ type Capabilities struct {
 <h2>The new standard</h2>
 <p><strong>Go-native is the default.</strong> Every metric in the benchmark — serial perf, parallel scaling, cold start, memory, binary size — favors native by a factor of 2-50×. There is <strong>no scenario in this benchmark where any other runtime beats native on raw performance.</strong> If the code is Hanzo-authored and the language constraint allows Go, write it in Go.</p>
 <p><strong>Pick another runtime only when one of these four exceptional conditions holds:</strong></p>
-<h3>Mount points where extensions run</h3>
-<p>Per HIP-0106, the <code>superbase</code> binary mounts extension runtimes in two places:</p>
-<ol><li><strong>In-process Base hooks</strong> (the original HIP-0105 scope): per-record</li></ol>
-<p>   onCreate/onUpdate/onDelete hooks, scheduled jobs, custom validators.    Read from <code>&lt;base-data-dir&gt;/hz_hooks/&lt;name&gt;/extension.json</code>.</p>
-<ol><li><strong>Web routes via <code>hanzoai/zip</code></strong>: ANY HIP-0105 runtime is also</li></ol>
-<p>   mountable as an HTTP route via <code>app.Module(method+path, runtime,    modulePath)</code>. Read from <code>&lt;service-dir&gt;/hz_routes/&lt;name&gt;/extension.json</code>    OR registered programmatically.</p>
-<p>The runtime contract is identical in both surfaces. Same <code>.zap</code> schemas generate the same I/O types. Same crash isolation. Same scale characteristics. <strong>One abstraction, two mount points.</strong></p>
-<p>Multi-tenant operators MUST set <code>AllowedRuntimes</code> (or equivalent gate) at the zip / Base config level to exclude runtimes lacking hard sandbox (pyvm, v8go-experimental).</p>
+<h3>How a host loads extensions</h3>
+<p><code>Loader.LoadDir(ctx, dir)</code> scans <code>dir</code> for subdirectories holding an <code>extension.json</code>, resolves each manifest&#x27;s <code>runtime</code> against the runtimes linked into the binary, and returns the loaded modules by name. A manifest naming a runtime the binary does not carry is logged and skipped, not fatal — which is what lets one binary serve hosts built with different runtime sets.</p>
+<p>That is the whole loading contract. WHERE a host points it — a hooks directory, a per-service directory, a path from config — is the host&#x27;s decision and belongs to HIP-0106, not here. This HIP specifies what a runtime is and how a module is loaded; it does not name directories on anyone&#x27;s disk.</p>
+<p>A host that exposes extensions to more than one tenant is responsible for admitting only runtimes whose isolation it accepts. pyvm and v8vm share process memory and have no hard sandbox.</p>
 <h3>Decision tree</h3>
 <ol><li><strong>Is the code Hanzo-authored and Go-permissible?</strong> → <strong>native</strong>.</li></ol>
 <p>   Default; no further questions.</p>
@@ -324,7 +329,7 @@ type Capabilities struct {
 <ol><li><strong>Are you tempted to use v8go for &quot;modern JS perf&quot;?</strong> → **Don&#x27;t, for</li></ol>
 <p>   production.** v8go v0.9 SIGSEGVs inside libv8 at modest concurrency    (~100 invokers). The <code>plugins/v8vm</code> runtime ships but is for    benchmarking and experimental use only until upstream ships    per-context isolation that resolves the crash.</p>
 <ol><li>**Do you need REAL CPython (with the full ecosystem including</li></ol>
-<p>   numpy, pandas, cryptography) inside the Go binary, and is your    deployment SINGLE-TENANT?<strong> → </strong>pyvm**. CPython 3.13 embedded via    a small direct cgo bridge (<code>plugins/pyvm/pyvm_bridge.{c,h}</code>, ~150    lines). The canonical Hanzo Go binding for embedded CPython is    <a href="https://github.com/hanzoai/cpy3"><code>github.com/hanzoai/cpy3</code></a> — a    fork of <code>go-python/cpy3</code> with Python 3.12+ removed-API polyfills,    a <code>SubInterpreter</code> wrapper, <code>IsGILDisabled()</code> detection, a    <code>LoadSource</code>+<code>CallJSONFunctionByName</code> JSON hot-path helper, and a    3.13t build script. pyvm chooses the inline bridge because the    consolidated <code>pyvm_invoke</code> (1 cgo call per Invoke) is ~30% faster    than routing through the cpy3 wrappers for the JSON-pipe    embedding contract.</p>
+<p>   numpy, pandas, cryptography) inside the Go binary, and is your    deployment SINGLE-TENANT?<strong> → </strong>pyvm**. CPython 3.13 embedded via    a small direct cgo bridge: <code>plugins/pyvm/pyvm_bridge.{c,h}</code> includes    <code>&lt;Python.h&gt;</code> and calls <code>Py_InitializeEx(0)</code>, leaving signal handling    to Go. There is no intermediate binding library. The bridge    consolidates a whole invocation into one cgo call (<code>pyvm_invoke</code>),    which is the point: per-call cgo crossings, not CPython, dominate    the JSON-pipe embedding contract.</p>
 <p>   Beats wazero AS by ~2× serial and has the lowest per-invocation    memory (496 B/op) of any sandboxed runtime measured. Sub-interpreter    pool gives per-tenant-style isolation within the single-process    deployment.</p>
 <p>   <strong>DO NOT use pyvm in multi-tenant builds.</strong> A C extension segfault    in any tenant&#x27;s code kills the entire host process and every other    tenant. Multi-tenant operators must policy-reject <code>runtime: pyvm</code>    in extension manifests. Gate with <code>-tags pyvm</code> at build time;    default off.</p>
 <p>   Python 3.13 free-threading (PEP 703, <code>python3.13t</code>) is detected at    runtime via <code>pyvm.GilDisabled()</code>; when present, the GIL is a no-op    and OWN_GIL sub-interpreters become unnecessary for parallelism.    <strong>Measured 2026-05-18 on Apple M1 Max, default <code>BASE_PYVM_POOL_SIZE=4</code>:    free-threading is a non-event for pyvm&#x27;s embedding workload.</strong></p>
@@ -348,11 +353,11 @@ type Capabilities struct {
 <p>  The Hanzo wazero runtime auto-refills the pool from a background ctx to   keep pool size stable. Memory pressure from refills under sustained   cancellation is something to watch in observability.</p>
 <ul><li>V8go&#x27;s <code>TerminateExecution</code> is <strong>isolate-wide</strong>. Because Hanzo serializes</li></ul>
 <p>  on the isolate today, the cancellation target is unambiguous. If/when   v8go grows per-context isolation, the cancellation story has to be   re-examined.</p>
-<h2>Migration path for existing services</h2>
-<p>| Service | Today | Action | |---|---|---| | <code>hanzoai/base</code> plugins/jsvm | goja hooks via <code>.base.js</code> files | Keep as-is. New extensions land in <code>plugins/extruntime</code> via manifest. | | <code>hanzoai/iam</code> policy rules | Hardcoded Go | No action. | | <code>hanzoai/gateway</code> route transforms | Hardcoded Go | Open: convert to extension surface if customer authoring becomes a requirement. Until then, native Go in-repo. | | <code>hanzoai/llm</code> prompt filters | Hardcoded Python | Recommend native Go reimplementation; if customer-authored transforms become a feature, wazero. | | <code>hanzoai/mcp</code> tool functions | Per-tool Go + Rust | Already varied. New tools should land as wasm via wazero. | | <code>hanzoai/agents</code> custom tools | Per-tool Go | Same. | | Hanzo Functions (HIP-0060) | Knative pods, Python/Go/Rust/TS | Out of scope — different workload class. |</p>
 <h2>Reference implementation</h2>
-<ul><li><strong>Branch</strong>: <code>hanzoai/base#3</code> — <code>feat/wasmvm-and-v8vm</code></li><li><strong>Packages</strong>:</li><li><code>plugins/extruntime/</code> — interface, manifest, native impl, loader</li><li><code>plugins/gojavm/</code> — goja adapter</li><li><code>plugins/wasmvm/</code> — wazero (pure Go)</li><li><code>plugins/v8vm/</code> — v8go (cgo, <code>-tags v8vm</code>, stub for default build)</li><li><code>plugins/extbench/</code> — fixtures + benchmark harness across 5 variants</li><li><strong>Tests</strong>: extruntime 7/7 + gojavm 14/14 + wasmvm 6/6 + v8vm 9/9</li><li><strong>Verification</strong>: <code>go build ./...</code> clean, <code>go build -tags v8vm</code> clean,</li></ul>
-<p>  <code>go test -race ./plugins/...</code> clean</p>
+<ul><li><strong>Packages</strong> (<code>hanzoai/base</code>, on <code>main</code>):</li><li><code>plugins/extruntime/</code> — interface, manifest, native impl, loader</li><li><code>plugins/gojavm/</code> — goja adapter</li><li><code>plugins/wasmvm/</code> — wazero (pure Go)</li><li><code>plugins/pyvm/</code> — CPython via <code>pyvm_bridge.{c,h}</code> (cgo)</li><li><code>plugins/starkvm/</code> — Starlark</li><li><code>plugins/v8vm/</code> — v8go (cgo, <code>-tags v8vm</code>, stub for the default build)</li><li><code>plugins/extbench/</code> — fixtures + benchmark harness</li><li><strong>Tests</strong>, on the default build: extruntime 6 passed, gojavm 7 passed,</li></ul>
+<p>  wasmvm 2 passed and 4 skipped, v8vm 0 — its tests are behind   <code>//go:build v8vm</code>, so the default build compiles the stub and runs   nothing.</p>
+<ul><li><strong>Verification</strong>: <code>go build ./plugins/...</code> and <code>go test ./plugins/...</code></li></ul>
+<p>  are clean. The <code>v8vm</code> tag is NOT verified: <code>rogchap.com/v8go v0.9.0</code> is   declared in <code>go.mod</code> but absent from the module cache, so a tagged   build cannot reach the compiler without fetching it.</p>
 <h2>Backwards compatibility</h2>
 <p>The existing <code>plugins/jsvm</code> API (goja-based hooks for <code>.base.js</code> files) is <strong>untouched</strong>. Old hooks continue to work via the old path. The new extension runtime is <strong>additive</strong> — opt in by writing an <code>extension.json</code>.</p>
 <h2>Security considerations</h2>
@@ -374,7 +379,7 @@ type Capabilities struct {
 <ol><li><strong>Host API surface</strong> — what can extension code call back into? DB</li></ol>
 <p>   access, HTTP fetch, KMS reads, log emission? Each runtime needs    plumbing. Suggest a separate HIP for the host-API contract once we have    a concrete extension that exercises it.</p>
 <h2>References</h2>
-<ul><li>Reference implementation PR: <a href="https://github.com/hanzoai/base/pull/3">hanzoai/base#3</a></li><li>Benchmark writeup: <code>~/work/hanzo/base/docs/EXTENSIONS_BENCHMARK.md</code></li><li>wazero: https://github.com/tetratelabs/wazero</li><li>goja: https://github.com/dop251/goja</li><li>v8go: https://github.com/rogchap/v8go</li><li>AssemblyScript: https://www.assemblyscript.org/</li><li>HIP-0014 (Application Deployment Standard) — service-level binaries</li><li>HIP-0026 (Identity and Access Management Standard) — per-org isolation</li><li>HIP-0060 (Serverless Functions Standard) — K8s-scale FaaS, complementary</li></ul>
+<ul><li>Reference implementation: <a href="https://github.com/hanzoai/base/tree/main/plugins">hanzoai/base/plugins</a></li><li>Benchmark writeup: <code>~/work/hanzo/base/docs/EXTENSIONS_BENCHMARK.md</code></li><li>wazero: https://github.com/tetratelabs/wazero</li><li>goja: https://github.com/dop251/goja</li><li>v8go: https://github.com/rogchap/v8go</li><li>AssemblyScript: https://www.assemblyscript.org/</li><li>HIP-0014 (Application Deployment Standard) — service-level binaries</li><li>HIP-0026 (Identity and Access Management Standard) — per-org isolation</li><li>HIP-0060 (Serverless Functions Standard) — K8s-scale FaaS, complementary</li></ul>
 <footer>
 <div class="fmap">
   <div><b>Build</b>
@@ -394,5 +399,4 @@ type Capabilities struct {
 </div>
 <div class="fend"><a href="/hip-0105.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-trpc-openapi</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-trpc-openapi.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-trpc-openapi">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-trpc-openapi.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-trpc-openapi</h1><p class="lede">@hanzo/trpc-openapi is a TypeScript library that generates OpenAPI 3.x documents from tRPC v11 routers and provides HTTP adapters to serve tRPC procedures as REST endpoints.</p><h1>Hanzo tRPC OpenAPI - Generate OpenAPI Specs from tRPC Routers</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-platform.md</code>, <code>hanzo/hanzo-openapi.md</code></p>
+<h2>Overview</h2>
+<p><code>@hanzo/trpc-openapi</code> is a TypeScript library that generates <strong>OpenAPI 3.x documents</strong> from tRPC v11 routers and provides HTTP adapters to serve tRPC procedures as REST endpoints. Published on npm as <code>@hanzo/trpc-openapi</code>. This is a maintained fork of the abandoned <code>trpc-to-openapi</code> project with Hanzo-specific enhancements.</p>
+<h3>Why @hanzo/trpc-openapi?</h3>
+<ul><li><strong>tRPC + REST</strong>: Expose tRPC procedures as standard REST endpoints without duplicating code</li><li><strong>OpenAPI doc generation</strong>: Auto-generate Swagger/OpenAPI specs from your tRPC router definitions</li><li><strong>Multiple adapters</strong>: Express, Fastify, Next.js (pages + app router), Nuxt, Koa, Fetch API, standalone Node HTTP</li><li><strong>Zod v4 native</strong>: Built for Zod v4 with <code>zod-openapi</code> v5 integration</li><li><strong>Optional meta</strong>: Procedures without <code>.meta({ openapi: ... })</code> are still exposed with sensible defaults (method from procedure type, path from procedure path)</li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Language</strong>: TypeScript 5.8</li><li><strong>Runtime</strong>: Node.js</li><li><strong>Package Manager</strong>: pnpm</li><li><strong>tRPC</strong>: v11.1.0+ (peer dependency)</li><li><strong>Zod</strong>: v4.x (peer dependency)</li><li><strong>OpenAPI</strong>: <code>openapi3-ts</code> v4.4.0, <code>zod-openapi</code> v5.x (peer dependency)</li><li><strong>Testing</strong>: Jest 29 + ts-jest</li><li><strong>Linting</strong>: ESLint + Prettier</li><li><strong>Build</strong>: TypeScript compiler (dual CJS + ESM output)</li></ul>
+<h3>OSS Base</h3>
+<p>Fork of <a href="https://www.npmjs.com/package/trpc-to-openapi">trpc-to-openapi</a>. Hanzo-specific additions:</p>
+<ul><li>Optional input/output parameters are required by default in generated docs</li><li><code>.meta</code> is optional for all procedures (auto-generates defaults)</li><li><code>override</code> flag: use only provided openapi object, no defaults merged</li><li><code>additional</code> flag: merge provided openapi on top of defaults</li></ul>
+<p>Repo: <code>github.com/hanzoai/trpc-openapi</code></p>
+<h2>When to use</h2>
+<ul><li>Exposing tRPC procedures as REST/OpenAPI endpoints</li><li>Generating OpenAPI/Swagger documentation from tRPC routers</li><li>Building APIs that need both tRPC and REST access</li><li>Incremental migration between REST and tRPC</li><li>Auto-documenting Hanzo platform tRPC services</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>@trpc/server</strong> <code>^11.1.0</code></li><li><strong>zod</strong> <code>^4.0.0</code> (Zod v4, not v3)</li><li><strong>zod-openapi</strong> <code>^5.0.1</code></li><li><strong>Node.js</strong> 22+ (based on <code>@types/node ^22</code>)</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | npm Package | <code>@hanzo/trpc-openapi</code> | | Version | <code>0.0.17</code> | | Repo | <code>github.com/hanzoai/trpc-openapi</code> | | Branch | <code>main</code> | | License | MIT | | tRPC Version | <code>^11.1.0</code> (peer dep) | | Zod Version | <code>^4.0.0</code> (peer dep) | | Build | <code>pnpm build</code> (runs tests first) | | Test | <code>pnpm test</code> | | Exports | CJS (<code>dist/cjs/</code>) + ESM (<code>dist/esm/</code>) |</p>
+<h2>One-file quickstart</h2>
+<h3>Install</h3>
+<pre><code class="lang-bash">pnpm add @hanzo/trpc-openapi
+# peer deps
+pnpm add @trpc/server zod zod-openapi</code></pre>
+<h3>Define a tRPC router with OpenAPI metadata</h3>
+<pre><code class="lang-typescript">import { initTRPC } from &#x27;@trpc/server&#x27;;
+import { z } from &#x27;zod&#x27;;
+import { OpenApiMeta, generateOpenApiDocument, createOpenApiExpressMiddleware } from &#x27;@hanzo/trpc-openapi&#x27;;
+import express from &#x27;express&#x27;;
+
+// 1. Create tRPC instance with OpenApiMeta
+const t = initTRPC.meta&lt;OpenApiMeta&gt;().create();
+
+// 2. Define router with openapi metadata
+const appRouter = t.router({
+ getUser: t.procedure
+ .meta({ openapi: { method: &#x27;GET&#x27;, path: &#x27;/users/{id}&#x27; } })
+ .input(z.object({ id: z.string() }))
+ .output(z.object({ id: z.string(), name: z.string() }))
+ .query(({ input }) =&gt; ({ id: input.id, name: &#x27;Hanzo User&#x27; })),
+
+ createUser: t.procedure
+ .meta({ openapi: { method: &#x27;POST&#x27;, path: &#x27;/users&#x27;, protect: true } })
+ .input(z.object({ name: z.string(), email: z.string().email() }))
+ .output(z.object({ id: z.string(), name: z.string() }))
+ .mutation(({ input }) =&gt; ({ id: &#x27;usr_new&#x27;, name: input.name })),
+});
+
+// 3. Generate OpenAPI document
+const openApiDoc = generateOpenApiDocument(appRouter, {
+ title: &#x27;My API&#x27;,
+ version: &#x27;1.0.0&#x27;,
+ baseUrl: &#x27;http://localhost:3000&#x27;,
+});
+
+// 4. Serve REST endpoints
+const app = express();
+app.get(&#x27;/openapi.json&#x27;, (req, res) =&gt; res.json(openApiDoc));
+app.use(&#x27;/api&#x27;, createOpenApiExpressMiddleware({ router: appRouter }));
+app.listen(3000);</code></pre>
+<h2>Core Concepts</h2>
+<h3>Architecture</h3>
+<pre><code>┌──────────────────────┐
+│ tRPC Router │
+│ (procedures + meta) │
+└──────┬───────────────┘
+ │
+ ┌────▼────────────────────┐
+ │ generateOpenApiDocument │──── OpenAPI 3.x JSON
+ └────┬────────────────────┘
+ │
+ ┌────▼────────────────────┐
+ │ HTTP Adapter │──── REST endpoints
+ │ (Express/Fastify/Next) │ GET /users/{id}
+ └─────────────────────────┘ POST /users</code></pre>
+<h3>Adapters</h3>
+<p>| Adapter | Import | Handler Factory | |---------|--------|-----------------| | Express | <code>@hanzo/trpc-openapi</code> | <code>createOpenApiExpressMiddleware</code> | | Fastify | <code>@hanzo/trpc-openapi</code> | <code>fastifyTRPCOpenApiPlugin</code> | | Next.js Pages | <code>@hanzo/trpc-openapi</code> | <code>createOpenApiNextHandler</code> | | Next.js App Router | <code>@hanzo/trpc-openapi</code> | <code>createOpenApiFetchHandler</code> | | Nuxt | <code>@hanzo/trpc-openapi</code> | <code>createOpenApiNuxtHandler</code> | | Koa | <code>@hanzo/trpc-openapi</code> | <code>createOpenApiKoaMiddleware</code> | | Fetch | <code>@hanzo/trpc-openapi</code> | <code>createOpenApiFetchHandler</code> | | Node HTTP | <code>@hanzo/trpc-openapi</code> | <code>createOpenApiHttpHandler</code> | | Standalone | <code>@hanzo/trpc-openapi</code> | <code>createOpenApiHttpHandler</code> (with <code>http.createServer</code>) |</p>
+<h3>OpenApiMeta Fields</h3>
+<p>| Field | Type | Default | Description | |-------|------|---------|-------------| | <code>method</code> | <code>GET\|POST\|PATCH\|PUT\|DELETE</code> | (from proc type) | HTTP method | | <code>path</code> | <code>/${string}</code> | (from proc path) | URL path with <code>{param}</code> placeholders | | <code>enabled</code> | <code>boolean</code> | <code>true</code> | Include in OpenAPI doc and adapters | | <code>protect</code> | <code>boolean</code> | <code>true</code> | Require Authorization header | | <code>override</code> | <code>boolean</code> | <code>false</code> | Use only provided openapi object (no defaults) | | <code>additional</code> | <code>boolean</code> | <code>false</code> | Merge provided openapi on top of defaults | | <code>tags</code> | <code>string[]</code> | -- | Grouping tags | | <code>summary</code> | <code>string</code> | -- | Short description | | <code>description</code> | <code>string</code> | -- | Verbose description | | <code>deprecated</code> | <code>boolean</code> | <code>false</code> | Mark as deprecated | | <code>contentTypes</code> | <code>string[]</code> | <code>[&#x27;application/json&#x27;]</code> | Accepted content types | | <code>requestHeaders</code> | <code>ZodObject</code> | -- | Custom request headers schema | | <code>responseHeaders</code> | <code>ZodObject</code> | -- | Custom response headers schema | | <code>errorResponses</code> | <code>number[]\|Record&lt;number,string&gt;</code> | -- | Error response codes |</p>
+<h3>Input Handling</h3>
+<ul><li><strong>GET/DELETE</strong>: Input from URL query parameters (auto-coerced to <code>number</code>, <code>boolean</code>, <code>bigint</code>, <code>date</code>)</li><li><strong>POST/PATCH/PUT</strong>: Input from JSON request body</li><li><strong>Path parameters</strong>: Defined as <code>{paramName}</code> in the path, must exist in input schema as <code>string</code>, <code>number</code>, <code>bigint</code>, or <code>date</code></li></ul>
+<h3>Filtering Procedures</h3>
+<pre><code class="lang-typescript">const doc = generateOpenApiDocument&lt;{ isPublic: boolean }&gt;(appRouter, {
+ title: &#x27;API&#x27;,
+ version: &#x27;1.0.0&#x27;,
+ baseUrl: &#x27;http://localhost:3000&#x27;,
+ filter: ({ metadata }) =&gt; metadata.isPublic === true,
+});</code></pre>
+<h2>Directory structure</h2>
+<pre><code>trpc-openapi/
+├── src/
+│ ├── index.ts # Re-exports everything
+│ ├── types.ts # OpenApiMeta, OpenApiMethod, response types
+│ ├── generator/
+│ │ ├── index.ts # generateOpenApiDocument()
+│ │ ├── paths.ts # OpenAPI path generation
+│ │ └── schema.ts # Zod-to-OpenAPI schema conversion
+│ ├── adapters/
+│ │ ├── express.ts # Express middleware
+│ │ ├── fastify.ts # Fastify plugin
+│ │ ├── next.ts # Next.js handler (pages + app)
+│ │ ├── nuxt.ts # Nuxt handler
+│ │ ├── koa.ts # Koa middleware
+│ │ ├── fetch.ts # Fetch API handler
+│ │ ├── standalone.ts # Standalone Node HTTP
+│ │ └── node-http/ # Core Node HTTP handler
+│ └── utils/ # Internal utilities
+├── test/
+│ ├── generator.test.ts # 115KB of generator tests
+│ └── adapters/ # Adapter-specific tests
+├── examples/
+│ ├── with-express/
+│ ├── with-fastify/
+│ ├── with-nextjs/
+│ ├── with-nextjs-appdir/
+│ └── with-nuxtjs/
+├── dist/
+│ ├── cjs/ # CommonJS build output
+│ └── esm/ # ESM build output
+├── package.json # @hanzo/trpc-openapi v0.0.17
+├── tsconfig.json
+└── jest.config.ts</code></pre>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | <code>zod is not a function</code> | Using Zod v3 instead of v4 | Upgrade to <code>zod ^4.0.0</code> | | Procedures missing from OpenAPI doc | <code>enabled: false</code> in meta | Remove or set <code>enabled: true</code> | | Query params not parsed | Complex types in GET input | Use <code>z.preprocess()</code> for objects/arrays in query params | | 404 on REST endpoint | Path mismatch | Ensure <code>meta.openapi.path</code> matches exactly, paths are case-insensitive | | Auth not working | <code>protect: true</code> but no <code>createContext</code> | Implement <code>createContext</code> to extract <code>Authorization</code> header | | Type error with meta | tRPC not configured with <code>OpenApiMeta</code> | Use <code>initTRPC.meta&lt;OpenApiMeta&gt;().create()</code> |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-platform.md</code> - PaaS platform (uses tRPC + this library)</li><li><code>hanzo/hanzo-openapi.md</code> - OpenAPI specification patterns</li><li><code>hanzo/hanzo-llm-gateway.md</code> - LLM gateway API</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: trpc, openapi, swagger, rest, api <strong>Prerequisites</strong>: TypeScript, tRPC v11, Zod v4</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-trpc-openapi.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

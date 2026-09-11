@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,10 +196,10 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0004</h1><p class="lede">HIP-4: LLM Gateway - Unified AI Provider Interface. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0004: LLM Gateway - Unified AI Provider Interface</h1>
+<h1>hip-0004</h1><p class="lede">HIP-4: LLM Gateway - Unified AI Provider Interface. Status Final. Hanzo architectural specification.</p><h1>HIP-0004: LLM Gateway - Unified AI Provider Interface</h1>
 <h2>Abstract</h2>
 <p>This proposal defines the LLM Gateway specification, Hanzo&#x27;s unified proxy for 100+ LLM providers with OpenAI-compatible API, intelligent routing, cost optimization, and enterprise features. The gateway serves as the central infrastructure for all AI operations in the Hanzo ecosystem.</p>
-<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/llm">github.com/hanzoai/llm</a>   <strong>Port</strong>: 4000   <strong>Docker</strong>: <code>hanzoai/llm-gateway:latest</code></p>
+<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/gateway">github.com/hanzoai/gateway</a> (historically <code>hanzoai/llm</code>) <strong>Port</strong>: 4000 <strong>Image</strong>: <code>oci.hanzo.ai/hanzoai/gateway</code> (HIP-0033) <strong>Upstream credentials</strong>: none in this process — see §Deployment and HIP-0143</p>
 <h2>Motivation</h2>
 <p>Current AI infrastructure challenges:</p>
 <ol><li><strong>Provider Fragmentation</strong>: Each provider has different APIs</li><li><strong>Cost Management</strong>: No unified billing or optimization</li><li><strong>Reliability Issues</strong>: Single points of failure</li><li><strong>Feature Gaps</strong>: Providers have different capabilities</li><li><strong>Compliance Requirements</strong>: No unified audit/security layer</li></ol>
@@ -276,18 +285,13 @@ cache:
   
 providers:
   openai:
-    api_key: ${OPENAI_API_KEY}
-    models:
-      - gpt-4-turbo
-      - gpt-3.5-turbo
+    models: [...]
     rate_limit: 10000/min
-    
+
   anthropic:
-    api_key: ${ANTHROPIC_API_KEY}
-    models:
-      - claude-3-opus
-      - claude-3-sonnet
+    models: [...]
     rate_limit: 5000/min</code></pre>
+<p><strong>No provider block carries a key.</strong> The gateway asks <code>egress</code> for a call and names the provider; egress holds the credential in KMS custody and returns what the upstream said (HIP-0143). A <code>provider.api_key</code> field is the design egress replaces: a key in this file is a key in the process&#x27;s memory, in its config volume, and in whatever reads either.</p>
 <h4>OpenAI-Compatible API</h4>
 <pre><code class="lang-python"># Python client example
 from openai import OpenAI
@@ -461,62 +465,30 @@ Alerting:
   - GDPR compliance
   - Encryption at rest/transit
   - No logging mode</code></pre>
-<h3>Deployment Options</h3>
-<h4>Docker Compose</h4>
-<pre><code class="lang-yaml">version: &#x27;3.8&#x27;
-
-services:
-  llm-gateway:
-    image: hanzoai/llm-gateway:latest
-    ports:
-      - &quot;4000:4000&quot;
-    environment:
-      - DATABASE_URL=postgresql://...
-      - REDIS_URL=redis://...
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    volumes:
-      - ./config.yaml:/app/config.yaml
-      
-  postgres:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=llm_gateway
-      - POSTGRES_PASSWORD=secret
-      
-  redis:
-    image: redis:7-alpine
-    
-  prometheus:
-    image: prom/prometheus
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml</code></pre>
-<h4>Kubernetes</h4>
+<h3>Deployment</h3>
+<p>The gateway holds <strong>no upstream credential</strong>. It is a caller of <code>egress</code> (HIP-0143), which means the deployment carries a machine identity and nothing that spends:</p>
 <pre><code class="lang-yaml">apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: llm-gateway
+  name: gateway
 spec:
   replicas: 3
-  selector:
-    matchLabels:
-      app: llm-gateway
   template:
-    metadata:
-      labels:
-        app: llm-gateway
     spec:
       containers:
       - name: gateway
-        image: hanzoai/llm-gateway:latest
-        ports:
-        - containerPort: 4000
+        image: oci.hanzo.ai/hanzoai/gateway
         env:
-        - name: OPENAI_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: llm-secrets
-              key: openai-key</code></pre>
+        # what it needs to identify ITSELF — not what it spends
+        - name: IAM_CLIENT_ID
+          valueFrom: { secretKeyRef: { name: gateway-env, key: IAM_CLIENT_ID } }
+        - name: IAM_CLIENT_SECRET
+          valueFrom: { secretKeyRef: { name: gateway-env, key: IAM_CLIENT_SECRET } }
+        - name: EGRESS_ADDRESS
+          value: egress.hanzo.ai:9653</code></pre>
+<p>The Secret is materialized from KMS by the KMSSecret controller at the path HIP-0136 derives (<code>hanzo/gateway/&lt;NAME&gt;@prod</code>); the chart carries a reference and never a value.</p>
+<p><strong>The test for whether this is done is falsifiable</strong>: enumerate the pod&#x27;s environment and mounted secrets and find no upstream provider key. A gateway that still holds one has not adopted egress, it has moved the key.</p>
+<p>State follows HIP-0144: there is no <code>llm_gateway</code> database and no gateway-owned Postgres or Redis. What the gateway keeps — routing state, budgets, a response cache — is per-tenant at rank 1 or in the one shared KV, and usage events go to the column store, which is what event data is for.</p>
 <h3>SDK Support</h3>
 <pre><code class="lang-python"># Python SDK
 from hanzoai import LLMGateway
@@ -566,5 +538,4 @@ const response = await gateway.chat.completions.create({
 </div>
 <div class="fend"><a href="/hip-0004.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-vllm</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-vllm.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-vllm">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-vllm.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-vllm</h1><p class="lede">Hanzo vLLM is a Rust LLM inference server with an OpenAI-compatible API, PagedAttention, continuous batching, and multi-GPU/multi-node support.</p><h1>Hanzo vLLM - Rust-Based LLM Inference Engine</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-candle.md</code>, <code>hanzo/hanzo-cloud.md</code>, <code>hanzo/hanzo-llm-gateway.md</code>, <code>hanzo/hanzo-engine.md</code></p>
+<h2>Overview</h2>
+<p>Hanzo vLLM is a <strong>Rust LLM inference server</strong> with an OpenAI-compatible API, PagedAttention, continuous batching, and multi-GPU/multi-node support. Fork of <code>EricLBuehler/candle-vllm</code>, built on top of <code>guoqingbao/candle</code> (a fork of Hugging Face&#x27;s Candle ML framework). Binary name: <code>candle-vllm</code>. Version 0.2.1.</p>
+<h3>Why Hanzo vLLM?</h3>
+<ul><li><strong>Pure Rust</strong>: No Python runtime -- single binary, fast cold start, minimal dependencies</li><li><strong>OpenAI API compatible</strong>: Drop-in replacement at <code>/v1/chat/completions</code> and <code>/v1/models</code></li><li><strong>PagedAttention</strong>: Efficient KV cache management for high throughput</li><li><strong>Continuous batching</strong>: Batched decoding across concurrent requests</li><li><strong>Multi-GPU</strong>: Both multi-process (recommended) and multi-threaded modes via NCCL</li><li><strong>Multi-node</strong>: MPI runner for distributed inference across machines</li><li><strong>Apple Silicon</strong>: Metal backend for Mac inference (GGUF models)</li><li><strong>Quantization</strong>: In-situ quantization, GGUF, GPTQ, AWQ, Marlin formats</li><li><strong>11 model architectures</strong>: LLAMA, Mistral, Phi, Qwen2/3, Yi, StableLM, Gemma-2/3, DeepSeek, QwQ, GLM4</li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Language</strong>: Rust (edition 2021)</li><li><strong>ML Framework</strong>: Candle (guoqingbao/candle fork, v0.8.3)</li><li><strong>HTTP Server</strong>: Axum 0.7.4 with tower-http CORS</li><li><strong>Tokenizer</strong>: HuggingFace tokenizers 0.21.2</li><li><strong>GPU</strong>: CUDA + NCCL (multi-GPU), Metal (Apple Silicon)</li><li><strong>Quantization</strong>: Custom CUDA kernels (<code>kernels/</code>), Metal kernels (<code>metal-kernels/</code>)</li><li><strong>Distributed</strong>: MPI (optional, for multi-node)</li><li><strong>Template Engine</strong>: MiniJinja (chat templates)</li></ul>
+<h3>OSS Base</h3>
+<p>Repo: <code>hanzoai/vllm</code> (90MB). Fork of <code>EricLBuehler/candle-vllm</code>. MIT License (Copyright 2023 Eric Buehler). Default branch: <code>master</code>.</p>
+<h2>When to use</h2>
+<ul><li>Serving LLMs locally with an OpenAI-compatible API</li><li>Running inference on Apple Silicon (Metal) without Python</li><li>Multi-GPU inference for large models (DeepSeek-R1 671B)</li><li>Production inference where a single Rust binary is preferred over Python vLLM</li><li>Quantized model serving (GGUF, GPTQ, AWQ, Marlin)</li></ul>
+<h2>When NOT to use</h2>
+<ul><li><strong>LLM Gateway routing</strong>: Use <code>hanzo/hanzo-llm-gateway.md</code> (proxies to 100+ providers)</li><li><strong>Python vLLM</strong>: If you need the full Python vLLM ecosystem (LoRA, speculative decoding, vision models)</li><li><strong>Training</strong>: This is inference-only; use MLX or PyTorch for training</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Rust 1.83.0+</strong> toolchain</li><li><strong>CUDA Toolkit</strong> in PATH for GPU builds (NVIDIA)</li><li><strong>Metal</strong> for Apple Silicon builds</li><li><strong>NCCL</strong> for multi-GPU</li><li><strong>MPI</strong> (libopenmpi-dev) for multi-node</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Binary | <code>candle-vllm</code> | | Version | <code>0.2.1</code> | | Default Port | <code>2000</code> | | API | OpenAI-compatible (<code>/v1/chat/completions</code>, <code>/v1/models</code>) | | Repo | <code>github.com/hanzoai/vllm</code> | | Branch | <code>master</code> | | License | MIT | | Upstream | <code>EricLBuehler/candle-vllm</code> |</p>
+<h2>Supported Models</h2>
+<p>| Model | Type | BF16 Speed (A100) | Quantized Speed | |-------|------|--------------------|-----------------| | LLAMA | llama/llama3 | 65 tks/s (8B) | 115 tks/s (8B, Marlin) | | Mistral | mistral | 70 tks/s (7B) | 115 tks/s (7B, Marlin) | | Phi | phi2/phi3 | 107 tks/s (3.8B) | 135 tks/s (3.8B) | | Qwen2/Qwen3 | qwen2/qwen3 | 81 tks/s (8B) | - | | Yi | yi | 75 tks/s (6B) | 105 tks/s (6B) | | StableLM | stable-lm | 99 tks/s (3B) | - | | Gemma-2/3 | gemma/gemma3 | 60 tks/s (9B) | 73 tks/s (9B, Marlin) | | DeepSeek R1 Distill | deep-seek | 48 tks/s (14B) | 62 tks/s (14B) | | DeepSeek V2/V3/R1 | deep-seek | - | ~20 tks/s (AWQ 671B, tp=8) | | QwQ-32B | qwen2 | 30 tks/s (32B, tp=2) | 36 tks/s (32B, Q4K) | | GLM4 | glm4 | 55 tks/s (9B) | 92 tks/s (9B, Q4K) |</p>
+<h2>Repository Structure</h2>
+<pre><code>vllm/
+ Cargo.toml # candle-vllm v0.2.1, feature flags
+ build.rs
+ LICENSE # MIT
+ README.md
+ README-CN.md
+ src/
+ main.rs # CLI entry, Axum server setup
+ lib.rs # Core library exports
+ openai/ # OpenAI-compatible API layer
+ openai_server.rs # Axum routes (/v1/chat/completions, /v1/models)
+ communicator.rs # Request/response coordination
+ distributed.rs # Multi-GPU/multi-node communication
+ streaming.rs # SSE streaming responses
+ requests.rs # Request types
+ responses.rs # Response types
+ sampling_params.rs # Temperature, top-k, top-p, penalties
+ logits_processor.rs # Token sampling logic
+ utils.rs
+ conversation/ # Chat template handling
+ models/ # Model implementations (17 files)
+ llama.rs, mistral.rs, phi2.rs, phi3.rs
+ qwen.rs, yi.rs, stable_lm.rs, gemma.rs, gemma3.rs
+ glm4.rs, deepseek.rs
+ quantized_llama.rs, quantized_phi3.rs
+ quantized_qwen.rs, quantized_glm4.rs
+ linear.rs # Shared linear layer (Marlin/GPTQ)
+ mod.rs # Model registry and loading
+ pipelines/ # Inference pipeline
+ pipeline.rs # Model loading, weight management
+ llm_engine.rs # Continuous batching engine
+ mod.rs
+ backend/ # Low-level inference backend
+ paged_attention.rs # PagedAttention implementation
+ cache.rs # KV cache management
+ gguf.rs # GGUF format loader
+ gptq.rs # GPTQ format loader
+ heartbeat.rs # Health monitoring
+ progress.rs # Loading progress bars
+ custom_ops/ # Custom operations
+ mod.rs
+ paged_attention/ # PagedAttention core algorithms
+ scheduler/ # Request scheduling (continuous batching)
+ kernels/ # CUDA kernels
+ Cargo.toml
+ build.rs # CUDA kernel compilation
+ src/
+ metal-kernels/ # Metal kernels (Apple Silicon)
+ Cargo.toml
+ src/
+ examples/
+ chat.py # Python chat client
+ benchmark.py # Batch throughput benchmark
+ convert_marlin.py # GPTQ to Marlin conversion
+ convert_awq_marlin.py # AWQ to Marlin conversion
+ llama.py # Simple LLAMA example
+ tests/</code></pre>
+<h2>Build</h2>
+<pre><code class="lang-bash"># Clone
+git clone git@github.com:hanzoai/vllm.git
+cd vllm
+
+# Apple Silicon (Metal)
+cargo build --release --features metal
+
+# CUDA single-node (single or multi-GPU)
+export PATH=$PATH:/usr/local/cuda/bin/
+cargo build --release --features cuda,nccl
+
+# CUDA with flash attention (faster for long context)
+cargo build --release --features cuda,nccl,flash-attn
+
+# CUDA multi-node (MPI)
+sudo apt install libopenmpi-dev openmpi-bin clang libclang-dev -y
+cargo build --release --features cuda,nccl,mpi</code></pre>
+<h3>Cargo Features</h3>
+<p>| Feature | What it enables | |---------|----------------| | <code>cuda</code> | NVIDIA GPU support + CUDA kernels | | <code>metal</code> | Apple Silicon GPU support + Metal kernels | | <code>nccl</code> | Multi-GPU communication (requires cuda) | | <code>flash-attn</code> | Flash Attention (requires cuda, faster long-context) | | <code>mpi</code> | Multi-node distributed inference | | <code>accelerate</code> | Apple Accelerate framework | | <code>mkl</code> | Intel MKL | | <code>cudnn</code> | cuDNN |</p>
+<h2>Running Models</h2>
+<h3>Uncompressed (BF16/F16)</h3>
+<pre><code class="lang-bash"># From local path
+target/release/candle-vllm --port 2000 \
+ --weight-path /home/DeepSeek-R1-Distill-Llama-8B/ llama3 \
+ --temperature 0. --penalty 1.0
+
+# From HuggingFace
+target/release/candle-vllm \
+ --model-id deepseek-ai/DeepSeek-R1-0528-Qwen3-8B qwen3</code></pre>
+<h3>GGUF Quantized</h3>
+<pre><code class="lang-bash"># Apple Silicon
+cargo run --release --features metal -- --port 2000 --dtype bf16 \
+ --weight-file /home/qwq-32b-q4_k_m.gguf qwen2 \
+ --quant gguf --temperature 0. --penalty 1.0
+
+# From HuggingFace
+target/release/candle-vllm \
+ --model-id unsloth/DeepSeek-R1-0528-Qwen3-8B-GGUF \
+ --weight-file DeepSeek-R1-0528-Qwen3-8B-Q2_K.gguf qwen3 --quant gguf</code></pre>
+<h3>In-Situ Quantization</h3>
+<pre><code class="lang-bash"># Load unquantized model as quantized
+target/release/candle-vllm --port 2000 \
+ --weight-path /home/Meta-Llama-3.1-8B-Instruct/ llama3 --quant q4k</code></pre>
+<p>Quantization options: <code>q4_0</code>, <code>q4_1</code>, <code>q5_0</code>, <code>q5_1</code>, <code>q8_0</code>, <code>q2k</code>, <code>q3k</code>, <code>q4k</code>, <code>q5k</code>, <code>q6k</code></p>
+<h3>GPTQ/Marlin</h3>
+<pre><code class="lang-bash">target/release/candle-vllm --dtype bf16 --port 2000 \
+ --weight-path /home/model-GPTQ-4bit qwen2 \
+ --quant gptq --temperature 0. --penalty 1.0</code></pre>
+<h3>Multi-GPU</h3>
+<pre><code class="lang-bash"># Multi-process mode (recommended)
+cargo run --release --features cuda,nccl -- \
+ --multi-process --dtype bf16 --port 2000 \
+ --device-ids &quot;0,1&quot; --weight-path /home/QwQ-32B/ qwen2 \
+ --penalty 1.0 --temperature 0.
+
+# GPU count must be power of 2 (2, 4, 8)</code></pre>
+<h3>DeepSeek-R1 671B (CPU offloading)</h3>
+<pre><code class="lang-bash"># Convert AWQ to Marlin format
+python3 examples/convert_awq_marlin.py \
+ --src /data/DeepSeek-R1-AWQ/ --dst /data/DeepSeek-R1-AWQ-Marlin/
+
+# Run on 8x A100 with 120/256 experts offloaded to CPU
+cargo run --release --features cuda,nccl -- \
+ --log --multi-process --dtype bf16 --port 2000 \
+ --device-ids &quot;0,1,2,3,4,5,6,7&quot; \
+ --weight-path /data/DeepSeek-R1-AWQ-Marlin/ deep-seek \
+ --quant awq --temperature 0. --penalty 1.0 \
+ --num-experts-offload-per-rank 15</code></pre>
+<h2>Sending Requests</h2>
+<h3>curl</h3>
+<pre><code class="lang-bash">curl -X POST &quot;http://127.0.0.1:2000/v1/chat/completions&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer YOUR_API_KEY&quot; \
+ -d &#x27;{
+ &quot;model&quot;: &quot;llama&quot;,
+ &quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Hello&quot;}],
+ &quot;temperature&quot;: 0.7,
+ &quot;max_tokens&quot;: 128
+ }&#x27;</code></pre>
+<h3>Python (OpenAI SDK)</h3>
+<pre><code class="lang-python">import openai
+openai.api_key = &quot;EMPTY&quot;
+openai.base_url = &quot;http://localhost:2000/v1/&quot;
+
+completion = openai.chat.completions.create(
+ model=&quot;llama&quot;,
+ messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Explain Rust.&quot;}],
+ max_tokens=64,
+)
+print(completion.choices[0].message.content)</code></pre>
+<h3>Chat Client</h3>
+<pre><code class="lang-bash">pip install openai rich click
+python3 examples/chat.py # Plain text
+python3 examples/chat.py --thinking True # Reasoning models
+python3 examples/chat.py --live # Markdown rendering</code></pre>
+<h3>Benchmark</h3>
+<pre><code class="lang-bash">python3 examples/benchmark.py --batch 16 --max_tokens 1024</code></pre>
+<h2>Key Parameters</h2>
+<p>| Parameter | Description | Default | |-----------|-------------|---------| | <code>--port</code> | Server port | 2000 | | <code>--dtype</code> | Data type (bf16, f16) | Model default | | <code>--weight-path</code> | Local model directory | - | | <code>--model-id</code> | HuggingFace model ID | - | | <code>--weight-file</code> | Specific weight file (GGUF) | - | | <code>--quant</code> | Quantization format | None | | <code>--device-ids</code> | GPU IDs (&quot;0,1,2,3&quot;) | &quot;0&quot; | | <code>--multi-process</code> | Multi-process GPU mode | false | | <code>--kvcache-mem-gpu</code> | KV cache GPU memory (MB) | 4096 | | <code>--max-gen-tokens</code> | Max output tokens | 1/5 of max_seq_len | | <code>--temperature</code> | Sampling temperature | 0.7 | | <code>--penalty</code> | Repetition penalty | 1.0 | | <code>--top-k</code> | Top-k sampling | - | | <code>--top-p</code> | Top-p (nucleus) sampling | - | | <code>--thinking</code> | Enable reasoning mode | false | | <code>--log</code> | Enable logging | false | | <code>--num-experts-offload-per-rank</code> | CPU offload (MoE models) | 0 |</p>
+<h2>Relationship to Hanzo Candle</h2>
+<p>Hanzo vLLM depends on <code>guoqingbao/candle</code> (a fork of <code>huggingface/candle</code>) for tensor operations, neural network layers, and GPU backends. The Hanzo Candle repo (<code>hanzoai/candle</code>) is the same Candle framework but maintained under the Hanzo org. They serve different purposes:</p>
+<ul><li><strong>hanzoai/candle</strong> -- ML framework (tensors, layers, GPU ops)</li><li><strong>hanzoai/vllm</strong> -- Inference server (API, batching, scheduling, PagedAttention) built on Candle</li></ul>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-candle.md</code> - Rust ML framework (underlying tensor engine)</li><li><code>hanzo/hanzo-cloud.md</code> - Cloud LLM inference API (uses this as a backend)</li><li><code>hanzo/hanzo-llm-gateway.md</code> - LLM proxy gateway (routes to this and 100+ providers)</li><li><code>hanzo/hanzo-engine.md</code> - GPU scheduling and ML job management</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: vllm, inference, rust, llm, gpu, metal, quantization <strong>Prerequisites</strong>: Rust 1.83+, CUDA or Metal, model weights</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-vllm.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

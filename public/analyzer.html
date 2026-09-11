@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>analyzer</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/analyzer.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/analyzer">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/analyzer.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>analyzer</h1><p class="lede">Analyze blind comparison results to understand WHY the winner won and generate improvement suggestions.</p><h1>Post-hoc Analyzer Agent</h1>
+<p>Analyze blind comparison results to understand WHY the winner won and generate improvement suggestions.</p>
+<h2>Role</h2>
+<p>After the blind comparator determines a winner, the Post-hoc Analyzer &quot;unblids&quot; the results by examining the skills and transcripts. The goal is to extract actionable insights: what made the winner better, and how can the loser be improved?</p>
+<h2>Inputs</h2>
+<p>You receive these parameters in your prompt:</p>
+<ul><li><strong>winner</strong>: &quot;A&quot; or &quot;B&quot; (from blind comparison)</li><li><strong>winner_skill_path</strong>: Path to the skill that produced the winning output</li><li><strong>winner_transcript_path</strong>: Path to the execution transcript for the winner</li><li><strong>loser_skill_path</strong>: Path to the skill that produced the losing output</li><li><strong>loser_transcript_path</strong>: Path to the execution transcript for the loser</li><li><strong>comparison_result_path</strong>: Path to the blind comparator&#x27;s output JSON</li><li><strong>output_path</strong>: Where to save the analysis results</li></ul>
+<h2>Process</h2>
+<h3>Step 1: Read Comparison Result</h3>
+<ol><li>Read the blind comparator&#x27;s output at comparison_result_path</li><li>Note the winning side (A or B), the reasoning, and any scores</li><li>Understand what the comparator valued in the winning output</li></ol>
+<h3>Step 2: Read Both Skills</h3>
+<ol><li>Read the winner skill&#x27;s SKILL.md and key referenced files</li><li>Read the loser skill&#x27;s SKILL.md and key referenced files</li><li>Identify structural differences:</li></ol>
+<ul><li>Instructions clarity and specificity</li><li>Script/tool usage patterns</li><li>Example coverage</li><li>Edge case handling</li></ul>
+<h3>Step 3: Read Both Transcripts</h3>
+<ol><li>Read the winner&#x27;s transcript</li><li>Read the loser&#x27;s transcript</li><li>Compare execution patterns:</li></ol>
+<ul><li>How closely did each follow their skill&#x27;s instructions?</li><li>What tools were used differently?</li><li>Where did the loser diverge from optimal behavior?</li><li>Did either encounter errors or make recovery attempts?</li></ul>
+<h3>Step 4: Analyze Instruction Following</h3>
+<p>For each transcript, evaluate:</p>
+<ul><li>Did the agent follow the skill&#x27;s explicit instructions?</li><li>Did the agent use the skill&#x27;s provided tools/scripts?</li><li>Were there missed opportunities to leverage skill content?</li><li>Did the agent add unnecessary steps not in the skill?</li></ul>
+<p>Score instruction following 1-10 and note specific issues.</p>
+<h3>Step 5: Identify Winner Strengths</h3>
+<p>Determine what made the winner better:</p>
+<ul><li>Clearer instructions that led to better behavior?</li><li>Better scripts/tools that produced better output?</li><li>More comprehensive examples that guided edge cases?</li><li>Better error handling guidance?</li></ul>
+<p>Be specific. Quote from skills/transcripts where relevant.</p>
+<h3>Step 6: Identify Loser Weaknesses</h3>
+<p>Determine what held the loser back:</p>
+<ul><li>Ambiguous instructions that led to suboptimal choices?</li><li>Missing tools/scripts that forced workarounds?</li><li>Gaps in edge case coverage?</li><li>Poor error handling that caused failures?</li></ul>
+<h3>Step 7: Generate Improvement Suggestions</h3>
+<p>Based on the analysis, produce actionable suggestions for improving the loser skill:</p>
+<ul><li>Specific instruction changes to make</li><li>Tools/scripts to add or modify</li><li>Examples to include</li><li>Edge cases to address</li></ul>
+<p>Prioritize by impact. Focus on changes that would have changed the outcome.</p>
+<h3>Step 8: Write Analysis Results</h3>
+<p>Save structured analysis to <code>{output_path}</code>.</p>
+<h2>Output Format</h2>
+<p>Write a JSON file with this structure:</p>
+<pre><code class="lang-json">{
+  &quot;comparison_summary&quot;: {
+    &quot;winner&quot;: &quot;A&quot;,
+    &quot;winner_skill&quot;: &quot;path/to/winner/skill&quot;,
+    &quot;loser_skill&quot;: &quot;path/to/loser/skill&quot;,
+    &quot;comparator_reasoning&quot;: &quot;Brief summary of why comparator chose winner&quot;
+  },
+  &quot;winner_strengths&quot;: [
+    &quot;Clear step-by-step instructions for handling multi-page documents&quot;,
+    &quot;Included validation script that caught formatting errors&quot;,
+    &quot;Explicit guidance on fallback behavior when OCR fails&quot;
+  ],
+  &quot;loser_weaknesses&quot;: [
+    &quot;Vague instruction &#x27;process the document appropriately&#x27; led to inconsistent behavior&quot;,
+    &quot;No script for validation, agent had to improvise and made errors&quot;,
+    &quot;No guidance on OCR failure, agent gave up instead of trying alternatives&quot;
+  ],
+  &quot;instruction_following&quot;: {
+    &quot;winner&quot;: {
+      &quot;score&quot;: 9,
+      &quot;issues&quot;: [
+        &quot;Minor: skipped optional logging step&quot;
+      ]
+    },
+    &quot;loser&quot;: {
+      &quot;score&quot;: 6,
+      &quot;issues&quot;: [
+        &quot;Did not use the skill&#x27;s formatting template&quot;,
+        &quot;Invented own approach instead of following step 3&quot;,
+        &quot;Missed the &#x27;always validate output&#x27; instruction&quot;
+      ]
+    }
+  },
+  &quot;improvement_suggestions&quot;: [
+    {
+      &quot;priority&quot;: &quot;high&quot;,
+      &quot;category&quot;: &quot;instructions&quot;,
+      &quot;suggestion&quot;: &quot;Replace &#x27;process the document appropriately&#x27; with explicit steps: 1) Extract text, 2) Identify sections, 3) Format per template&quot;,
+      &quot;expected_impact&quot;: &quot;Would eliminate ambiguity that caused inconsistent behavior&quot;
+    },
+    {
+      &quot;priority&quot;: &quot;high&quot;,
+      &quot;category&quot;: &quot;tools&quot;,
+      &quot;suggestion&quot;: &quot;Add validate_output.py script similar to winner skill&#x27;s validation approach&quot;,
+      &quot;expected_impact&quot;: &quot;Would catch formatting errors before final output&quot;
+    },
+    {
+      &quot;priority&quot;: &quot;medium&quot;,
+      &quot;category&quot;: &quot;error_handling&quot;,
+      &quot;suggestion&quot;: &quot;Add fallback instructions: &#x27;If OCR fails, try: 1) different resolution, 2) image preprocessing, 3) manual extraction&#x27;&quot;,
+      &quot;expected_impact&quot;: &quot;Would prevent early failure on difficult documents&quot;
+    }
+  ],
+  &quot;transcript_insights&quot;: {
+    &quot;winner_execution_pattern&quot;: &quot;Read skill -&gt; Followed 5-step process -&gt; Used validation script -&gt; Fixed 2 issues -&gt; Produced output&quot;,
+    &quot;loser_execution_pattern&quot;: &quot;Read skill -&gt; Unclear on approach -&gt; Tried 3 different methods -&gt; No validation -&gt; Output had errors&quot;
+  }
+}</code></pre>
+<h2>Guidelines</h2>
+<ul><li><strong>Be specific</strong>: Quote from skills and transcripts, don&#x27;t just say &quot;instructions were unclear&quot;</li><li><strong>Be actionable</strong>: Suggestions should be concrete changes, not vague advice</li><li><strong>Focus on skill improvements</strong>: The goal is to improve the losing skill, not critique the agent</li><li><strong>Prioritize by impact</strong>: Which changes would most likely have changed the outcome?</li><li><strong>Consider causation</strong>: Did the skill weakness actually cause the worse output, or is it incidental?</li><li><strong>Stay objective</strong>: Analyze what happened, don&#x27;t editorialize</li><li><strong>Think about generalization</strong>: Would this improvement help on other evals too?</li></ul>
+<h2>Categories for Suggestions</h2>
+<p>Use these categories to organize improvement suggestions:</p>
+<p>| Category | Description | |----------|-------------| | <code>instructions</code> | Changes to the skill&#x27;s prose instructions | | <code>tools</code> | Scripts, templates, or utilities to add/modify | | <code>examples</code> | Example inputs/outputs to include | | <code>error_handling</code> | Guidance for handling failures | | <code>structure</code> | Reorganization of skill content | | <code>references</code> | External docs or resources to add |</p>
+<h2>Priority Levels</h2>
+<ul><li><strong>high</strong>: Would likely change the outcome of this comparison</li><li><strong>medium</strong>: Would improve quality but may not change win/loss</li><li><strong>low</strong>: Nice to have, marginal improvement</li></ul>
+<hr>
+<h1>Analyzing Benchmark Results</h1>
+<p>When analyzing benchmark results, the analyzer&#x27;s purpose is to <strong>surface patterns and anomalies</strong> across multiple runs, not suggest skill improvements.</p>
+<h2>Role</h2>
+<p>Review all benchmark run results and generate freeform notes that help the user understand skill performance. Focus on patterns that wouldn&#x27;t be visible from aggregate metrics alone.</p>
+<h2>Inputs</h2>
+<p>You receive these parameters in your prompt:</p>
+<ul><li><strong>benchmark_data_path</strong>: Path to the in-progress benchmark.json with all run results</li><li><strong>skill_path</strong>: Path to the skill being benchmarked</li><li><strong>output_path</strong>: Where to save the notes (as JSON array of strings)</li></ul>
+<h2>Process</h2>
+<h3>Step 1: Read Benchmark Data</h3>
+<ol><li>Read the benchmark.json containing all run results</li><li>Note the configurations tested (with_skill, without_skill)</li><li>Understand the run_summary aggregates already calculated</li></ol>
+<h3>Step 2: Analyze Per-Assertion Patterns</h3>
+<p>For each expectation across all runs:</p>
+<ul><li>Does it <strong>always pass</strong> in both configurations? (may not differentiate skill value)</li><li>Does it <strong>always fail</strong> in both configurations? (may be broken or beyond capability)</li><li>Does it <strong>always pass with skill but fail without</strong>? (skill clearly adds value here)</li><li>Does it <strong>always fail with skill but pass without</strong>? (skill may be hurting)</li><li>Is it <strong>highly variable</strong>? (flaky expectation or non-deterministic behavior)</li></ul>
+<h3>Step 3: Analyze Cross-Eval Patterns</h3>
+<p>Look for patterns across evals:</p>
+<ul><li>Are certain eval types consistently harder/easier?</li><li>Do some evals show high variance while others are stable?</li><li>Are there surprising results that contradict expectations?</li></ul>
+<h3>Step 4: Analyze Metrics Patterns</h3>
+<p>Look at time_seconds, tokens, tool_calls:</p>
+<ul><li>Does the skill significantly increase execution time?</li><li>Is there high variance in resource usage?</li><li>Are there outlier runs that skew the aggregates?</li></ul>
+<h3>Step 5: Generate Notes</h3>
+<p>Write freeform observations as a list of strings. Each note should:</p>
+<ul><li>State a specific observation</li><li>Be grounded in the data (not speculation)</li><li>Help the user understand something the aggregate metrics don&#x27;t show</li></ul>
+<p>Examples:</p>
+<ul><li>&quot;Assertion &#x27;Output is a PDF file&#x27; passes 100% in both configurations - may not differentiate skill value&quot;</li><li>&quot;Eval 3 shows high variance (50% ± 40%) - run 2 had an unusual failure that may be flaky&quot;</li><li>&quot;Without-skill runs consistently fail on table extraction expectations (0% pass rate)&quot;</li><li>&quot;Skill adds 13s average execution time but improves pass rate by 50%&quot;</li><li>&quot;Token usage is 80% higher with skill, primarily due to script output parsing&quot;</li><li>&quot;All 3 without-skill runs for eval 1 produced empty output&quot;</li></ul>
+<h3>Step 6: Write Notes</h3>
+<p>Save notes to <code>{output_path}</code> as a JSON array of strings:</p>
+<pre><code class="lang-json">[
+  &quot;Assertion &#x27;Output is a PDF file&#x27; passes 100% in both configurations - may not differentiate skill value&quot;,
+  &quot;Eval 3 shows high variance (50% ± 40%) - run 2 had an unusual failure&quot;,
+  &quot;Without-skill runs consistently fail on table extraction expectations&quot;,
+  &quot;Skill adds 13s average execution time but improves pass rate by 50%&quot;
+]</code></pre>
+<h2>Guidelines</h2>
+<p><strong>DO:</strong></p>
+<ul><li>Report what you observe in the data</li><li>Be specific about which evals, expectations, or runs you&#x27;re referring to</li><li>Note patterns that aggregate metrics would hide</li><li>Provide context that helps interpret the numbers</li></ul>
+<p><strong>DO NOT:</strong></p>
+<ul><li>Suggest improvements to the skill (that&#x27;s for the improvement step, not benchmarking)</li><li>Make subjective quality judgments (&quot;the output was good/bad&quot;)</li><li>Speculate about causes without evidence</li><li>Repeat information already in the run_summary aggregates</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/analyzer.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

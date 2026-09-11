@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,14 +196,14 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0014</h1><p class="lede">HIP-14: Application Deployment Standard. Status Draft. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0014: Application Deployment Standard</h1>
+<h1>hip-0014</h1><p class="lede">HIP-14: Application Deployment Standard. Status Final. Hanzo architectural specification.</p><h1>HIP-0014: Application Deployment Standard</h1>
 <h2>Abstract</h2>
 <p>This proposal defines the application deployment standard for the Hanzo ecosystem. The Hanzo Platform is a self-hosted PaaS (Platform as a Service) built as a fork of <a href="https://github.com/Dokploy/dokploy">Dokploy</a>, an open-source application deployment platform. It provides a standardized pipeline for building, deploying, scaling, and monitoring all Hanzo services -- from the LLM Gateway to the Chat frontend to internal tooling.</p>
 <p>Every Hanzo service MUST be deployable through Platform. The deployment flow is: git push to repository, Platform detects the change, builds a container image, pushes it to the registry, deploys it to the target environment, runs health checks, and either promotes the deployment or rolls back. Developers interact with Platform through a web UI at <strong>platform.hanzo.ai</strong> or through the <code>hanzo</code> CLI. They never run <code>kubectl apply</code> or <code>docker compose up</code> on production infrastructure directly.</p>
-<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/platform">github.com/hanzoai/platform</a> <strong>Production</strong>: https://platform.hanzo.ai <strong>Port</strong>: 3000 (Platform UI), 5173 (legacy admin) <strong>Docker</strong>: <code>ghcr.io/hanzoai/platform:latest</code> <strong>Cluster</strong>: the cluster (<code>24.199.76.156</code>)</p>
+<p><strong>Repository</strong>: <a href="https://github.com/hanzoai/platform">github.com/hanzoai/platform</a> <strong>Production</strong>: https://platform.hanzo.ai <strong>Port</strong>: 3000 (Platform UI), 5173 (legacy admin) <strong>Docker</strong>: <code>ghcr.io/hanzoai/platform:latest</code> <strong>Cluster</strong>: hanzo-k8s (<code>24.199.76.156</code>)</p>
 <h2>Motivation</h2>
 <h3>The Problem</h3>
-<p>Hanzo operates 30+ services across two Kubernetes clusters (the cluster, lux-k8s). Without a standardized deployment layer, each team deploys independently:</p>
+<p>Hanzo operates 30+ services across two Kubernetes clusters (hanzo-k8s, lux-k8s). Without a standardized deployment layer, each team deploys independently:</p>
 <ol><li><strong>Manual kubectl</strong>: Engineers write Kubernetes manifests by hand, SSH into the cluster, and <code>kubectl apply</code>. Manifests drift between what is in Git and what is deployed. A typo in a resource limit brings down a service with no audit trail of who changed what.</li></ol>
 <ol><li><strong>Inconsistent build pipelines</strong>: The LLM Gateway uses a Makefile. Chat uses <code>pnpm build</code>. The Python SDK uses <code>uv</code>. IAM uses <code>go build</code>. Each project invents its own CI/CD workflow. A new engineer onboarding to any project must first reverse-engineer how it gets built and deployed.</li></ol>
 <ol><li><strong>No rollback mechanism</strong>: When a bad deploy goes out, the recovery path is &quot;find the previous Docker image tag, edit the Kubernetes manifest, apply it, hope the health check passes.&quot; Under pressure (production outage at 2 AM), this process takes 15-30 minutes. A PaaS provides instant rollback to the previous known-good image.</li></ol>
@@ -249,13 +258,14 @@ services:
     port: 3000                        # Container port for web services.
     protocol: http                    # http | grpc | tcp (default: http).
     healthcheck:
-      path: /api/health               # HTTP path for health check (default: /).
+      path: /healthz                  # Health is at the root, never under /api/ (HIP-0119).
       interval: 30s                   # Time between checks (default: 30s).
       timeout: 5s                     # Per-check timeout (default: 5s).
       retries: 3                      # Failures before marking unhealthy (default: 3).
     domains:
       - cloud.hanzo.ai                # Custom domains. TLS provisioned automatically.
-      - api.hanzo.ai/v2               # Path-based routing supported.
+      - api.hanzo.ai/v1/cloud         # Path-based routing. `/v1/` only — never an
+                                      # /api/ segment and never a v2 (HIP-0119).
 
   - type: worker                      # Background workers have no port or domain.
     command: node worker.js
@@ -267,23 +277,22 @@ services:
     schedule: &quot;0 */6 * * *&quot;           # Standard cron syntax.
 
 env:
-  - name: DATABASE_URL
-    secret: true                      # Resolved from KMS at deploy time.
-    kms_key: CLOUD_DATABASE_URL       # KMS secret key name.
-    kms_project: hanzo-cloud          # KMS project (default: matches app name).
-    kms_env: prod                     # KMS environment (default: matches deploy target).
+  - name: IAM_CLIENT_SECRET
+    secret: true                      # A KMS reference, never a value.
+    kms_path: /cloud                  # The app that READS it (HIP-0136).
+    kms_env: prod                     # The one environment on this plane.
   - name: NODE_ENV
     value: production                 # Plaintext env var. Stored in Platform DB.
   - name: LOG_LEVEL
     value: info
 
 resources:
-  postgres:                           # Managed SQL (optional).
-    version: &quot;16&quot;
-    storage: 10Gi
-  redis:                              # Managed KV (optional).
-    version: &quot;7&quot;
-    maxmemory: 256mb</code></pre>
+  store: tenant                       # tenant | events | shared (HIP-0144).
+                                      # `tenant` is a per-org Base file and is
+                                      # the default; `events` is the column
+                                      # store; `shared` requests a tenancy on
+                                      # the ONE shared SQL or KV.</code></pre>
+<p><code>resources</code> does not provision an instance. There is no per-app Postgres and no per-app Redis to ask for: a request names which rank of the shared tier the app is a tenant of, and a service that needs to be at <code>shared</code> justifies it in its own HIP (HIP-0144 §5).</p>
 <p>When <code>runtime: auto</code> is specified (or the field is omitted), Platform detects the runtime by inspecting the repository:</p>
 <p>| Detection Signal | Runtime | |-----------------|---------| | <code>Dockerfile</code> exists | docker | | <code>package.json</code> with <code>engines.node</code> | node (matching version) | | <code>requirements.txt</code> or <code>pyproject.toml</code> | python | | <code>go.mod</code> | go | | <code>Cargo.toml</code> | rust | | None of the above | Error: cannot detect runtime |</p>
 <p>If a <code>Dockerfile</code> is present, it always takes precedence over language-based detection. This ensures that teams with custom build requirements can always escape to full Docker control.</p>
@@ -344,7 +353,7 @@ hanzo rollback --to 3             # Roll back to the 3rd most recent deployment<
 <p>When a secret is rotated in KMS, the next deployment of the affected service automatically picks up the new value. For immediate rotation without redeployment, Platform supports a &quot;restart&quot; action that restarts containers with fresh environment variables from KMS.</p>
 <h3>Log Streaming and Monitoring</h3>
 <p>Platform aggregates logs from all containers and exposes them through:</p>
-<ul><li><strong>Web UI</strong>: Real-time log streaming with search, filter by service/timestamp/severity.</li><li><strong>CLI</strong>: <code>hanzo logs --follow</code> for tail-like streaming.</li><li><strong>API</strong>: <code>GET /api/v1/apps/{app}/logs?since=1h&amp;level=error</code> for programmatic access.</li></ul>
+<ul><li><strong>Web UI</strong>: Real-time log streaming with search, filter by service/timestamp/severity.</li><li><strong>CLI</strong>: <code>hanzo logs --follow</code> for tail-like streaming.</li><li><strong>API</strong>: <code>GET /v1/platform/apps/{app}/logs?since=1h&amp;level=error</code> for programmatic access.</li></ul>
 <p>Logs are retained for 30 days in Platform&#x27;s database. For long-term retention, logs can be forwarded to an external sink (e.g., Loki, Elasticsearch) via a configurable log drain.</p>
 <p>Platform also exposes basic metrics per application:</p>
 <p>| Metric | Source | Description | |--------|--------|-------------| | CPU usage | cAdvisor / Docker stats | Per-container CPU utilization | | Memory usage | cAdvisor / Docker stats | Per-container RSS | | Request count | Traefik access logs | HTTP requests per second | | Response time | Traefik access logs | p50, p95, p99 latency | | Error rate | Traefik access logs | 4xx and 5xx responses per second | | Container restarts | Docker / K8s events | Crash loop detection |</p>
@@ -469,42 +478,44 @@ hanzo domains my-app remove ex.com   # Remove a domain</code></pre>
                                    │ (registry)  │
                                    └─────────────┘</code></pre>
 <h3>Authentication: OAuth2 via Hanzo IAM</h3>
-<p>Platform authenticates users via Hanzo IAM (HIP-26) using the OAuth 2.0 Authorization Code Grant with PKCE. The integration uses <a href="https://better-auth.com/">Better Auth</a>, the authentication library used by Dokploy, with a custom <code>hanzo</code> provider:</p>
-<pre><code class="lang-typescript">// platform/pkg/platform/src/lib/auth.ts (simplified)
+<p>Platform authenticates users via Hanzo IAM using the OAuth 2.0 Authorization Code Grant with PKCE. <strong>HIP-0111 is normative for the client contract</strong>, and Platform holds no exception to it: it integrates through <code>@hanzo/iam</code>, which owns the paths, and writes no OIDC URL of its own.</p>
+<pre><code class="lang-typescript">// platform/pkg/platform/src/lib/auth.ts
 import { betterAuth } from &quot;better-auth&quot;;
-
-const iamUrl = process.env.HANZO_IAM_URL
-  || process.env.HANZO_IAM_ENDPOINT
-  || process.env.HANZO_IAM_SERVER_URL
-  || process.env.IAM_ENDPOINT
-  || &quot;https://hanzo.id&quot;;
+import { genericOAuth } from &quot;better-auth/plugins&quot;;
+import { iamProvider } from &quot;@hanzo/iam/betterauth&quot;;
 
 export const auth = betterAuth({
-  socialProviders: {
-    hanzo: {
-      clientId: process.env.HANZO_IAM_CLIENT_ID || process.env.HANZO_CLIENT_ID,
-      clientSecret: process.env.HANZO_IAM_CLIENT_SECRET || process.env.HANZO_CLIENT_SECRET,
-      issuer: iamUrl,
-      authorization: `${iamUrl}/oauth/authorize`,
-      token: `${iamUrl}/oauth/token`,
-      userinfo: `${iamUrl}/api/userinfo`,
-    },
-  },
+  plugins: [
+    genericOAuth({
+      config: [
+        iamProvider({
+          serverUrl: process.env.IAM_ENDPOINT!,        // one name, no fallbacks
+          clientId: process.env.IAM_CLIENT_ID!,        // `hanzo-platform`
+          clientSecret: process.env.IAM_CLIENT_SECRET!, // a KMS reference
+        }),
+      ],
+    }),
+  ],
 });</code></pre>
-<p>When a user clicks &quot;Sign in with Hanzo&quot; on the Platform login page:</p>
-<ol><li>Platform redirects to <code>hanzo.id/oauth/authorize</code> with PKCE challenge.</li><li>User authenticates at hanzo.id (password, WebAuthn, or social login).</li><li>hanzo.id redirects back to <code>platform.hanzo.ai/callback</code> with authorization code.</li><li>Platform exchanges the code for tokens.</li><li>Platform reads the user&#x27;s org memberships from the token claims.</li><li>User sees only applications belonging to their organizations.</li></ol>
-<p>For users who previously logged in via GitHub (legacy Dokploy flow), Platform matches the IAM email against existing user records. This prevents duplicate identity silos.</p>
+<p>An earlier revision of this HIP is worth naming, because it is the shape a reader would otherwise copy. It resolved the IAM origin through <strong>four</strong> environment variable names with fallbacks, took the client id from two more, and then wrote the endpoints out by hand as <code>${iamUrl}/oauth/authorize</code> and <code>${iamUrl}/oauth/token</code>. Those two paths are not served (HIP-0111 §4.4), and IAM answers an unregistered path with a <code>200 text/html</code> catch-all rather than a <code>404</code> — so the failure is not &quot;route not found&quot;, it is an OAuth library dying on <code>content-type must be application/json</code>, which reads as a server bug and is not one. Four names for one value is the same defect at the configuration layer: the one that is set is discovered by elimination.</p>
+<p><code>iamProvider()</code> returns explicit <code>/v1/iam/oauth/*</code> endpoints and never relies on discovery resolution, which is the second failure it forecloses.</p>
+<p>When a user signs in:</p>
+<ol><li>Platform redirects to <code>/v1/iam/oauth/authorize</code> with a PKCE <code>S256</code> challenge.</li><li>The user authenticates at the brand&#x27;s IAM (password, WebAuthn, or a shared</li></ol>
+<p>   social provider — configured once per network, never per app).</p>
+<ol><li>IAM redirects back to the registered callback with an authorization code.</li><li>Platform exchanges the code for tokens at <code>/v1/iam/oauth/token</code>.</li><li>Platform reads the tenant from the validated <code>owner</code> claim and scopes every</li></ol>
+<p>   query to it. A consumer that finds no org MUST fail closed rather than fall    back to a default org — that is a tenant-isolation defect (HIP-0111 §5).</p>
+<ol><li>The user sees only applications belonging to their organizations.</li></ol>
 <h3>Database</h3>
-<p>Platform uses SQL (HIP-29) to store:</p>
-<ul><li>Application definitions (name, org, repo, branch, runtime configuration)</li><li>Deployment history (image tags, Git commits, status, timestamps)</li><li>Environment variables (plaintext values only -- secrets are KMS references)</li><li>Domain configurations</li><li>Audit log entries</li><li>User sessions (via Better Auth)</li></ul>
-<p>The database is <code>platform</code> on <code>localhost</code> in the Kubernetes cluster .</p>
+<p>Platform&#x27;s state follows HIP-0144. It stores:</p>
+<ul><li>Application definitions (name, org, repo, branch, runtime configuration)</li><li>Deployment history (image tags, Git commits, status, timestamps)</li><li>Environment variables (plaintext values only -- secrets are KMS references)</li><li>Domain configurations</li><li>Audit log entries</li><li>User sessions</li></ul>
+<p>There is no <code>platform</code> database. Platform is a tenant of the shared tier at the rank HIP-0144 sets, and environment variables it holds are KMS references (HIP-0136), never values — which is why the list above can say &quot;plaintext values only&quot;.</p>
 <h3>Container Registry</h3>
-<p>Built images are pushed to GitHub Container Registry (GHCR) at <code>ghcr.io/hanzoai/</code>. The image naming convention is:</p>
-<pre><code>ghcr.io/hanzoai/&lt;org&gt;-&lt;app&gt;:&lt;git-sha-short&gt;
-ghcr.io/hanzoai/&lt;org&gt;-&lt;app&gt;:latest</code></pre>
+<p>Built images are pushed to the fleet registry, <code>oci.hanzo.ai</code>, org-namespaced. HIP-0033 is the one statement of this; the naming convention here is its application:</p>
+<pre><code>oci.hanzo.ai/&lt;org&gt;/&lt;app&gt;:&lt;git-sha-short&gt;
+oci.hanzo.ai/&lt;org&gt;/&lt;app&gt;:&lt;semver&gt;</code></pre>
 <p>Examples:</p>
-<ul><li><code>ghcr.io/hanzoai/hanzo-cloud:abc123f</code></li><li><code>ghcr.io/hanzoai/hanzo-iam:latest</code></li><li><code>ghcr.io/hanzoai/lux-gateway:def456a</code></li></ul>
-<p>GHCR was chosen over self-hosted registries (Harbor, MinIO-backed) because it requires zero operational overhead and integrates natively with GitHub Actions for CI-triggered builds.</p>
+<ul><li><code>oci.hanzo.ai/hanzoai/cloud:abc123f</code></li><li><code>oci.hanzo.ai/hanzoai/iam:1.33.4</code></li><li><code>oci.hanzo.ai/luxfi/gateway:def456a</code></li></ul>
+<p>The org prefix never mixes, and a floating tag never reaches a cluster: the declared state pins a semver tag (HIP-0036 §Deployment).</p>
 <h3>Reverse Proxy</h3>
 <p>Traefik handles all ingress routing, TLS termination, and load balancing. Platform dynamically updates Traefik&#x27;s configuration when domains are added, removed, or when deployments change:</p>
 <ul><li><strong>TLS</strong>: Automatic certificate provisioning via Let&#x27;s Encrypt ACME.</li><li><strong>Routing</strong>: Host-based and path-based routing rules.</li><li><strong>Load balancing</strong>: Round-robin across healthy instances.</li><li><strong>Health checks</strong>: Active health probes per backend.</li><li><strong>Rate limiting</strong>: Per-IP rate limiting for public endpoints.</li><li><strong>Headers</strong>: Automatic security headers (HSTS, X-Frame-Options, X-Content-Type-Options).</li></ul>
@@ -550,7 +561,7 @@ spec:
       ports:
         - port: 53
           protocol: UDP</code></pre>
-<p>Applications must explicitly declare their network dependencies in the manifest. Platform generates NetworkPolicy rules that allow only declared communication paths. For example, if <code>cloud</code> declares <code>resources.postgres</code>, Platform creates a NetworkPolicy allowing egress from the <code>cloud</code> pods to the SQL service on port 5432.</p>
+<p>Applications must explicitly declare their network dependencies in the manifest. Platform generates NetworkPolicy rules that allow only declared communication paths. An app declaring <code>store: shared</code> gets egress to the shared SQL or KV and to nothing else; an app at <code>tenant</code> needs no such rule at all, which is one more reason the rank is ordered the way it is.</p>
 <h3>Audit Logging</h3>
 <p>Every action in Platform is logged to the <code>audit_log</code> table:</p>
 <p>| Field | Type | Description | |-------|------|-------------| | id | UUID | Event ID | | timestamp | timestamptz | When the event occurred | | user_id | string | IAM user who performed the action | | user_email | string | Email for human-readable logs | | org | string | Organization context | | app | string | Application name (if applicable) | | action | string | <code>deploy</code>, <code>rollback</code>, <code>scale</code>, <code>env.set</code>, <code>env.delete</code>, <code>domain.add</code>, <code>domain.remove</code>, <code>app.create</code>, <code>app.delete</code> | | details | jsonb | Action-specific metadata (image tag, scale count, env var name, etc.) | | ip_address | inet | Client IP | | user_agent | string | Client user agent |</p>
@@ -566,7 +577,7 @@ roles:
   developer: [&quot;hanzo-engineers&quot;]
   viewer: [&quot;hanzo-all&quot;]</code></pre>
 <h2>References</h2>
-<ol><li><a href="https://github.com/Dokploy/dokploy">Dokploy</a> - Open-source application deployment platform (Apache 2.0)</li><li><a href="https://traefik.io/">Traefik</a> - Cloud-native reverse proxy and load balancer</li><li><a href="https://better-auth.com/">Better Auth</a> - Authentication library for TypeScript applications</li><li><a href="https://github.com/moby/buildkit">BuildKit</a> - Concurrent, cache-efficient, and Dockerfile-agnostic builder toolkit</li><li><a href="https://letsencrypt.org/">Let&#x27;s Encrypt</a> - Free, automated TLS certificate authority</li><li><a href="./hip-0026-identity-access-management-standard.md">HIP-26: Identity &amp; Access Management Standard</a> - IAM for authentication</li><li><a href="./hip-0027-secrets-management-standard.md">HIP-27: Secrets Management Standard</a> - KMS for secret injection</li><li><a href="./hip-0029-relational-database-standard.md">HIP-29: Relational Database Standard</a> - SQL for deployment state</li><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-4: LLM Gateway</a> - Example service deployed via Platform</li><li><a href="https://github.com/hanzoai/platform">Hanzo Platform Repository</a></li></ol>
+<ol><li><a href="https://github.com/Dokploy/dokploy">Dokploy</a> - Open-source application deployment platform (Apache 2.0)</li><li><a href="https://traefik.io/">Traefik</a> - Cloud-native reverse proxy and load balancer</li><li><a href="https://better-auth.com/">Better Auth</a> - Authentication library for TypeScript applications</li><li><a href="https://github.com/moby/buildkit">BuildKit</a> - Concurrent, cache-efficient, and Dockerfile-agnostic builder toolkit</li><li><a href="https://letsencrypt.org/">Let&#x27;s Encrypt</a> - Free, automated TLS certificate authority</li><li><a href="./hip-0026-identity-access-management-standard.md">HIP-26: Identity &amp; Access Management Standard</a> - IAM for authentication</li><li><a href="./hip-0027-secrets-management-standard.md">HIP-27: Secrets Management Standard</a> - KMS for secret injection</li><li><a href="./hip-1104-base-hosted-backend.md">HIP-1104: Base — The Hosted Backend</a> - SQL for deployment state</li><li><a href="./hip-0004-llm-gateway-unified-ai-provider-interface.md">HIP-4: LLM Gateway</a> - Example service deployed via Platform</li><li><a href="https://github.com/hanzoai/platform">Hanzo Platform Repository</a></li></ol>
 <h2>Copyright</h2>
 <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</p>
 <footer>
@@ -588,5 +599,4 @@ roles:
 </div>
 <div class="fend"><a href="/hip-0014.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

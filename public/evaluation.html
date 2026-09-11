@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>evaluation</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/evaluation.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/evaluation">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/evaluation.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>evaluation</h1><p class="lede">This document provides guidance on creating comprehensive evaluations for MCP servers.</p><h1>MCP Server Evaluation Guide</h1>
+<h2>Overview</h2>
+<p>This document provides guidance on creating comprehensive evaluations for MCP servers. Evaluations test whether LLMs can effectively use your MCP server to answer realistic, complex questions using only the tools provided.</p>
+<hr>
+<h2>Quick Reference</h2>
+<h3>Evaluation Requirements</h3>
+<ul><li>Create 10 human-readable questions</li><li>Questions must be READ-ONLY, INDEPENDENT, NON-DESTRUCTIVE</li><li>Each question requires multiple tool calls (potentially dozens)</li><li>Answers must be single, verifiable values</li><li>Answers must be STABLE (won&#x27;t change over time)</li></ul>
+<h3>Output Format</h3>
+<pre><code class="lang-xml">&lt;evaluation&gt;
+   &lt;qa_pair&gt;
+      &lt;question&gt;Your question here&lt;/question&gt;
+      &lt;answer&gt;Single verifiable answer&lt;/answer&gt;
+   &lt;/qa_pair&gt;
+&lt;/evaluation&gt;</code></pre>
+<hr>
+<h2>Purpose of Evaluations</h2>
+<p>The measure of quality of an MCP server is NOT how well or comprehensively the server implements tools, but how well these implementations (input/output schemas, docstrings/descriptions, functionality) enable LLMs with no other context and access ONLY to the MCP servers to answer realistic and difficult questions.</p>
+<h2>Evaluation Overview</h2>
+<p>Create 10 human-readable questions requiring ONLY READ-ONLY, INDEPENDENT, NON-DESTRUCTIVE, and IDEMPOTENT operations to answer. Each question should be:</p>
+<ul><li>Realistic</li><li>Clear and concise</li><li>Unambiguous</li><li>Complex, requiring potentially dozens of tool calls or steps</li><li>Answerable with a single, verifiable value that you identify in advance</li></ul>
+<h2>Question Guidelines</h2>
+<h3>Core Requirements</h3>
+<ol><li><strong>Questions MUST be independent</strong></li></ol>
+<ul><li>Each question should NOT depend on the answer to any other question</li><li>Should not assume prior write operations from processing another question</li></ul>
+<ol><li><strong>Questions MUST require ONLY NON-DESTRUCTIVE AND IDEMPOTENT tool use</strong></li></ol>
+<ul><li>Should not instruct or require modifying state to arrive at the correct answer</li></ul>
+<ol><li><strong>Questions must be REALISTIC, CLEAR, CONCISE, and COMPLEX</strong></li></ol>
+<ul><li>Must require another LLM to use multiple (potentially dozens of) tools or steps to answer</li></ul>
+<h3>Complexity and Depth</h3>
+<ol><li><strong>Questions must require deep exploration</strong></li></ol>
+<ul><li>Consider multi-hop questions requiring multiple sub-questions and sequential tool calls</li><li>Each step should benefit from information found in previous questions</li></ul>
+<ol><li><strong>Questions may require extensive paging</strong></li></ol>
+<ul><li>May need paging through multiple pages of results</li><li>May require querying old data (1-2 years out-of-date) to find niche information</li><li>The questions must be DIFFICULT</li></ul>
+<ol><li><strong>Questions must require deep understanding</strong></li></ol>
+<ul><li>Rather than surface-level knowledge</li><li>May pose complex ideas as True/False questions requiring evidence</li><li>May use multiple-choice format where LLM must search different hypotheses</li></ul>
+<ol><li><strong>Questions must not be solvable with straightforward keyword search</strong></li></ol>
+<ul><li>Do not include specific keywords from the target content</li><li>Use synonyms, related concepts, or paraphrases</li><li>Require multiple searches, analyzing multiple related items, extracting context, then deriving the answer</li></ul>
+<h3>Tool Testing</h3>
+<ol><li><strong>Questions should stress-test tool return values</strong></li></ol>
+<ul><li>May elicit tools returning large JSON objects or lists, overwhelming the LLM</li><li>Should require understanding multiple modalities of data:</li><li>IDs and names</li><li>Timestamps and datetimes (months, days, years, seconds)</li><li>File IDs, names, extensions, and mimetypes</li><li>URLs, GIDs, etc.</li><li>Should probe the tool&#x27;s ability to return all useful forms of data</li></ul>
+<ol><li><strong>Questions should MOSTLY reflect real human use cases</strong></li></ol>
+<ul><li>The kinds of information retrieval tasks that HUMANS assisted by an LLM would care about</li></ul>
+<ol><li><strong>Questions may require dozens of tool calls</strong></li></ol>
+<ul><li>This challenges LLMs with limited context</li><li>Encourages MCP server tools to reduce information returned</li></ul>
+<ol><li><strong>Include ambiguous questions</strong></li></ol>
+<ul><li>May be ambiguous OR require difficult decisions on which tools to call</li><li>Force the LLM to potentially make mistakes or misinterpret</li><li>Ensure that despite AMBIGUITY, there is STILL A SINGLE VERIFIABLE ANSWER</li></ul>
+<h3>Stability</h3>
+<ol><li><strong>Questions must be designed so the answer DOES NOT CHANGE</strong></li></ol>
+<ul><li>Do not ask questions that rely on &quot;current state&quot; which is dynamic</li><li>For example, do not count:</li><li>Number of reactions to a post</li><li>Number of replies to a thread</li><li>Number of members in a channel</li></ul>
+<ol><li><strong>DO NOT let the MCP server RESTRICT the kinds of questions you create</strong></li></ol>
+<ul><li>Create challenging and complex questions</li><li>Some may not be solvable with the available MCP server tools</li><li>Questions may require specific output formats (datetime vs. epoch time, JSON vs. MARKDOWN)</li><li>Questions may require dozens of tool calls to complete</li></ul>
+<h2>Answer Guidelines</h2>
+<h3>Verification</h3>
+<ol><li><strong>Answers must be VERIFIABLE via direct string comparison</strong></li></ol>
+<ul><li>If the answer can be re-written in many formats, clearly specify the output format in the QUESTION</li><li>Examples: &quot;Use YYYY/MM/DD.&quot;, &quot;Respond True or False.&quot;, &quot;Answer A, B, C, or D and nothing else.&quot;</li><li>Answer should be a single VERIFIABLE value such as:</li><li>User ID, user name, display name, first name, last name</li><li>Channel ID, channel name</li><li>Message ID, string</li><li>URL, title</li><li>Numerical quantity</li><li>Timestamp, datetime</li><li>Boolean (for True/False questions)</li><li>Email address, phone number</li><li>File ID, file name, file extension</li><li>Multiple choice answer</li><li>Answers must not require special formatting or complex, structured output</li><li>Answer will be verified using DIRECT STRING COMPARISON</li></ul>
+<h3>Readability</h3>
+<ol><li><strong>Answers should generally prefer HUMAN-READABLE formats</strong></li></ol>
+<ul><li>Examples: names, first name, last name, datetime, file name, message string, URL, yes/no, true/false, a/b/c/d</li><li>Rather than opaque IDs (though IDs are acceptable)</li><li>The VAST MAJORITY of answers should be human-readable</li></ul>
+<h3>Stability</h3>
+<ol><li><strong>Answers must be STABLE/STATIONARY</strong></li></ol>
+<ul><li>Look at old content (e.g., conversations that have ended, projects that have launched, questions answered)</li><li>Create QUESTIONS based on &quot;closed&quot; concepts that will always return the same answer</li><li>Questions may ask to consider a fixed time window to insulate from non-stationary answers</li><li>Rely on context UNLIKELY to change</li><li>Example: if finding a paper name, be SPECIFIC enough so answer is not confused with papers published later</li></ul>
+<ol><li><strong>Answers must be CLEAR and UNAMBIGUOUS</strong></li></ol>
+<ul><li>Questions must be designed so there is a single, clear answer</li><li>Answer can be derived from using the MCP server tools</li></ul>
+<h3>Diversity</h3>
+<ol><li><strong>Answers must be DIVERSE</strong></li></ol>
+<ul><li>Answer should be a single VERIFIABLE value in diverse modalities and formats</li><li>User concept: user ID, user name, display name, first name, last name, email address, phone number</li><li>Channel concept: channel ID, channel name, channel topic</li><li>Message concept: message ID, message string, timestamp, month, day, year</li></ul>
+<ol><li><strong>Answers must NOT be complex structures</strong></li></ol>
+<ul><li>Not a list of values</li><li>Not a complex object</li><li>Not a list of IDs or strings</li><li>Not natural language text</li><li>UNLESS the answer can be straightforwardly verified using DIRECT STRING COMPARISON</li><li>And can be realistically reproduced</li><li>It should be unlikely that an LLM would return the same list in any other order or format</li></ul>
+<h2>Evaluation Process</h2>
+<h3>Step 1: Documentation Inspection</h3>
+<p>Read the documentation of the target API to understand:</p>
+<ul><li>Available endpoints and functionality</li><li>If ambiguity exists, fetch additional information from the web</li><li>Parallelize this step AS MUCH AS POSSIBLE</li><li>Ensure each subagent is ONLY examining documentation from the file system or on the web</li></ul>
+<h3>Step 2: Tool Inspection</h3>
+<p>List the tools available in the MCP server:</p>
+<ul><li>Inspect the MCP server directly</li><li>Understand input/output schemas, docstrings, and descriptions</li><li>WITHOUT calling the tools themselves at this stage</li></ul>
+<h3>Step 3: Developing Understanding</h3>
+<p>Repeat steps 1 &amp; 2 until you have a good understanding:</p>
+<ul><li>Iterate multiple times</li><li>Think about the kinds of tasks you want to create</li><li>Refine your understanding</li><li>At NO stage should you READ the code of the MCP server implementation itself</li><li>Use your intuition and understanding to create reasonable, realistic, but VERY challenging tasks</li></ul>
+<h3>Step 4: Read-Only Content Inspection</h3>
+<p>After understanding the API and tools, USE the MCP server tools:</p>
+<ul><li>Inspect content using READ-ONLY and NON-DESTRUCTIVE operations ONLY</li><li>Goal: identify specific content (e.g., users, channels, messages, projects, tasks) for creating realistic questions</li><li>Should NOT call any tools that modify state</li><li>Will NOT read the code of the MCP server implementation itself</li><li>Parallelize this step with individual sub-agents pursuing independent explorations</li><li>Ensure each subagent is only performing READ-ONLY, NON-DESTRUCTIVE, and IDEMPOTENT operations</li><li>BE CAREFUL: SOME TOOLS may return LOTS OF DATA which would cause you to run out of CONTEXT</li><li>Make INCREMENTAL, SMALL, AND TARGETED tool calls for exploration</li><li>In all tool call requests, use the <code>limit</code> parameter to limit results (&lt;10)</li><li>Use pagination</li></ul>
+<h3>Step 5: Task Generation</h3>
+<p>After inspecting the content, create 10 human-readable questions:</p>
+<ul><li>An LLM should be able to answer these with the MCP server</li><li>Follow all question and answer guidelines above</li></ul>
+<h2>Output Format</h2>
+<p>Each QA pair consists of a question and an answer. The output should be an XML file with this structure:</p>
+<pre><code class="lang-xml">&lt;evaluation&gt;
+   &lt;qa_pair&gt;
+      &lt;question&gt;Find the project created in Q2 2024 with the highest number of completed tasks. What is the project name?&lt;/question&gt;
+      &lt;answer&gt;Website Redesign&lt;/answer&gt;
+   &lt;/qa_pair&gt;
+   &lt;qa_pair&gt;
+      &lt;question&gt;Search for issues labeled as &quot;bug&quot; that were closed in March 2024. Which user closed the most issues? Provide their username.&lt;/question&gt;
+      &lt;answer&gt;sarah_dev&lt;/answer&gt;
+   &lt;/qa_pair&gt;
+   &lt;qa_pair&gt;
+      &lt;question&gt;Look for pull requests that modified files in the /api directory and were merged between January 1 and January 31, 2024. How many different contributors worked on these PRs?&lt;/question&gt;
+      &lt;answer&gt;7&lt;/answer&gt;
+   &lt;/qa_pair&gt;
+   &lt;qa_pair&gt;
+      &lt;question&gt;Find the repository with the most stars that was created before 2023. What is the repository name?&lt;/question&gt;
+      &lt;answer&gt;data-pipeline&lt;/answer&gt;
+   &lt;/qa_pair&gt;
+&lt;/evaluation&gt;</code></pre>
+<h2>Evaluation Examples</h2>
+<h3>Good Questions</h3>
+<p><strong>Example 1: Multi-hop question requiring deep exploration (GitHub MCP)</strong></p>
+<pre><code class="lang-xml">&lt;qa_pair&gt;
+   &lt;question&gt;Find the repository that was archived in Q3 2023 and had previously been the most forked project in the organization. What was the primary programming language used in that repository?&lt;/question&gt;
+   &lt;answer&gt;Python&lt;/answer&gt;
+&lt;/qa_pair&gt;</code></pre>
+<p>This question is good because:</p>
+<ul><li>Requires multiple searches to find archived repositories</li><li>Needs to identify which had the most forks before archival</li><li>Requires examining repository details for the language</li><li>Answer is a simple, verifiable value</li><li>Based on historical (closed) data that won&#x27;t change</li></ul>
+<p><strong>Example 2: Requires understanding context without keyword matching (Project Management MCP)</strong></p>
+<pre><code class="lang-xml">&lt;qa_pair&gt;
+   &lt;question&gt;Locate the initiative focused on improving customer onboarding that was completed in late 2023. The project lead created a retrospective document after completion. What was the lead&#x27;s role title at that time?&lt;/question&gt;
+   &lt;answer&gt;Product Manager&lt;/answer&gt;
+&lt;/qa_pair&gt;</code></pre>
+<p>This question is good because:</p>
+<ul><li>Doesn&#x27;t use specific project name (&quot;initiative focused on improving customer onboarding&quot;)</li><li>Requires finding completed projects from specific timeframe</li><li>Needs to identify the project lead and their role</li><li>Requires understanding context from retrospective documents</li><li>Answer is human-readable and stable</li><li>Based on completed work (won&#x27;t change)</li></ul>
+<p><strong>Example 3: Complex aggregation requiring multiple steps (Issue Tracker MCP)</strong></p>
+<pre><code class="lang-xml">&lt;qa_pair&gt;
+   &lt;question&gt;Among all bugs reported in January 2024 that were marked as critical priority, which assignee resolved the highest percentage of their assigned bugs within 48 hours? Provide the assignee&#x27;s username.&lt;/question&gt;
+   &lt;answer&gt;alex_eng&lt;/answer&gt;
+&lt;/qa_pair&gt;</code></pre>
+<p>This question is good because:</p>
+<ul><li>Requires filtering bugs by date, priority, and status</li><li>Needs to group by assignee and calculate resolution rates</li><li>Requires understanding timestamps to determine 48-hour windows</li><li>Tests pagination (potentially many bugs to process)</li><li>Answer is a single username</li><li>Based on historical data from specific time period</li></ul>
+<p><strong>Example 4: Requires synthesis across multiple data types (CRM MCP)</strong></p>
+<pre><code class="lang-xml">&lt;qa_pair&gt;
+   &lt;question&gt;Find the account that upgraded from the Starter to Enterprise plan in Q4 2023 and had the highest annual contract value. What industry does this account operate in?&lt;/question&gt;
+   &lt;answer&gt;Healthcare&lt;/answer&gt;
+&lt;/qa_pair&gt;</code></pre>
+<p>This question is good because:</p>
+<ul><li>Requires understanding subscription tier changes</li><li>Needs to identify upgrade events in specific timeframe</li><li>Requires comparing contract values</li><li>Must access account industry information</li><li>Answer is simple and verifiable</li><li>Based on completed historical transactions</li></ul>
+<h3>Poor Questions</h3>
+<p><strong>Example 1: Answer changes over time</strong></p>
+<pre><code class="lang-xml">&lt;qa_pair&gt;
+   &lt;question&gt;How many open issues are currently assigned to the engineering team?&lt;/question&gt;
+   &lt;answer&gt;47&lt;/answer&gt;
+&lt;/qa_pair&gt;</code></pre>
+<p>This question is poor because:</p>
+<ul><li>The answer will change as issues are created, closed, or reassigned</li><li>Not based on stable/stationary data</li><li>Relies on &quot;current state&quot; which is dynamic</li></ul>
+<p><strong>Example 2: Too easy with keyword search</strong></p>
+<pre><code class="lang-xml">&lt;qa_pair&gt;
+   &lt;question&gt;Find the pull request with title &quot;Add authentication feature&quot; and tell me who created it.&lt;/question&gt;
+   &lt;answer&gt;developer123&lt;/answer&gt;
+&lt;/qa_pair&gt;</code></pre>
+<p>This question is poor because:</p>
+<ul><li>Can be solved with a straightforward keyword search for exact title</li><li>Doesn&#x27;t require deep exploration or understanding</li><li>No synthesis or analysis needed</li></ul>
+<p><strong>Example 3: Ambiguous answer format</strong></p>
+<pre><code class="lang-xml">&lt;qa_pair&gt;
+   &lt;question&gt;List all the repositories that have Python as their primary language.&lt;/question&gt;
+   &lt;answer&gt;repo1, repo2, repo3, data-pipeline, ml-tools&lt;/answer&gt;
+&lt;/qa_pair&gt;</code></pre>
+<p>This question is poor because:</p>
+<ul><li>Answer is a list that could be returned in any order</li><li>Difficult to verify with direct string comparison</li><li>LLM might format differently (JSON array, comma-separated, newline-separated)</li><li>Better to ask for a specific aggregate (count) or superlative (most stars)</li></ul>
+<h2>Verification Process</h2>
+<p>After creating evaluations:</p>
+<ol><li><strong>Examine the XML file</strong> to understand the schema</li><li><strong>Load each task instruction</strong> and in parallel using the MCP server and tools, identify the correct answer by attempting to solve the task YOURSELF</li><li><strong>Flag any operations</strong> that require WRITE or DESTRUCTIVE operations</li><li><strong>Accumulate all CORRECT answers</strong> and replace any incorrect answers in the document</li><li><strong>Remove any <code>&lt;qa_pair&gt;</code></strong> that require WRITE or DESTRUCTIVE operations</li></ol>
+<p>Remember to parallelize solving tasks to avoid running out of context, then accumulate all answers and make changes to the file at the end.</p>
+<h2>Tips for Creating Quality Evaluations</h2>
+<ol><li><strong>Think Hard and Plan Ahead</strong> before generating tasks</li><li><strong>Parallelize Where Opportunity Arises</strong> to speed up the process and manage context</li><li><strong>Focus on Realistic Use Cases</strong> that humans would actually want to accomplish</li><li><strong>Create Challenging Questions</strong> that test the limits of the MCP server&#x27;s capabilities</li><li><strong>Ensure Stability</strong> by using historical data and closed concepts</li><li><strong>Verify Answers</strong> by solving the questions yourself using the MCP server tools</li><li><strong>Iterate and Refine</strong> based on what you learn during the process</li></ol>
+<hr>
+<h1>Running Evaluations</h1>
+<p>After creating your evaluation file, you can use the provided evaluation harness to test your MCP server.</p>
+<h2>Setup</h2>
+<ol><li><strong>Install Dependencies</strong></li></ol>
+<p>   ``<code>bash    pip install -r scripts/requirements.txt    </code>``</p>
+<p>   Or install manually:    ``<code>bash    pip install anthropic mcp    </code>``</p>
+<ol><li><strong>Set API Key</strong></li></ol>
+<p>   ``<code>bash    export ANTHROPIC_API_KEY=your_api_key_here    </code>``</p>
+<h2>Evaluation File Format</h2>
+<p>Evaluation files use XML format with <code>&lt;qa_pair&gt;</code> elements:</p>
+<pre><code class="lang-xml">&lt;evaluation&gt;
+   &lt;qa_pair&gt;
+      &lt;question&gt;Find the project created in Q2 2024 with the highest number of completed tasks. What is the project name?&lt;/question&gt;
+      &lt;answer&gt;Website Redesign&lt;/answer&gt;
+   &lt;/qa_pair&gt;
+   &lt;qa_pair&gt;
+      &lt;question&gt;Search for issues labeled as &quot;bug&quot; that were closed in March 2024. Which user closed the most issues? Provide their username.&lt;/question&gt;
+      &lt;answer&gt;sarah_dev&lt;/answer&gt;
+   &lt;/qa_pair&gt;
+&lt;/evaluation&gt;</code></pre>
+<h2>Running Evaluations</h2>
+<p>The evaluation script (<code>scripts/evaluation.py</code>) supports three transport types:</p>
+<p><strong>Important:</strong></p>
+<ul><li><strong>stdio transport</strong>: The evaluation script automatically launches and manages the MCP server process for you. Do not run the server manually.</li><li><strong>sse/http transports</strong>: You must start the MCP server separately before running the evaluation. The script connects to the already-running server at the specified URL.</li></ul>
+<h3>1. Local STDIO Server</h3>
+<p>For locally-run MCP servers (script launches the server automatically):</p>
+<pre><code class="lang-bash">python scripts/evaluation.py \
+  -t stdio \
+  -c python \
+  -a my_mcp_server.py \
+  evaluation.xml</code></pre>
+<p>With environment variables:</p>
+<pre><code class="lang-bash">python scripts/evaluation.py \
+  -t stdio \
+  -c python \
+  -a my_mcp_server.py \
+  -e API_KEY=abc123 \
+  -e DEBUG=true \
+  evaluation.xml</code></pre>
+<h3>2. Server-Sent Events (SSE)</h3>
+<p>For SSE-based MCP servers (you must start the server first):</p>
+<pre><code class="lang-bash">python scripts/evaluation.py \
+  -t sse \
+  -u https://example.com/mcp \
+  -H &quot;Authorization: Bearer token123&quot; \
+  -H &quot;X-Custom-Header: value&quot; \
+  evaluation.xml</code></pre>
+<h3>3. HTTP (Streamable HTTP)</h3>
+<p>For HTTP-based MCP servers (you must start the server first):</p>
+<pre><code class="lang-bash">python scripts/evaluation.py \
+  -t http \
+  -u https://example.com/mcp \
+  -H &quot;Authorization: Bearer token123&quot; \
+  evaluation.xml</code></pre>
+<h2>Command-Line Options</h2>
+<pre><code>usage: evaluation.py [-h] [-t {stdio,sse,http}] [-m MODEL] [-c COMMAND]
+                     [-a ARGS [ARGS ...]] [-e ENV [ENV ...]] [-u URL]
+                     [-H HEADERS [HEADERS ...]] [-o OUTPUT]
+                     eval_file
+
+positional arguments:
+  eval_file             Path to evaluation XML file
+
+optional arguments:
+  -h, --help            Show help message
+  -t, --transport       Transport type: stdio, sse, or http (default: stdio)
+  -m, --model           Claude model to use (default: claude-3-7-sonnet-20250219)
+  -o, --output          Output file for report (default: print to stdout)
+
+stdio options:
+  -c, --command         Command to run MCP server (e.g., python, node)
+  -a, --args            Arguments for the command (e.g., server.py)
+  -e, --env             Environment variables in KEY=VALUE format
+
+sse/http options:
+  -u, --url             MCP server URL
+  -H, --header          HTTP headers in &#x27;Key: Value&#x27; format</code></pre>
+<h2>Output</h2>
+<p>The evaluation script generates a detailed report including:</p>
+<ul><li><strong>Summary Statistics</strong>:</li><li>Accuracy (correct/total)</li><li>Average task duration</li><li>Average tool calls per task</li><li>Total tool calls</li></ul>
+<ul><li><strong>Per-Task Results</strong>:</li><li>Prompt and expected response</li><li>Actual response from the agent</li><li>Whether the answer was correct (✅/❌)</li><li>Duration and tool call details</li><li>Agent&#x27;s summary of its approach</li><li>Agent&#x27;s feedback on the tools</li></ul>
+<h3>Save Report to File</h3>
+<pre><code class="lang-bash">python scripts/evaluation.py \
+  -t stdio \
+  -c python \
+  -a my_server.py \
+  -o evaluation_report.md \
+  evaluation.xml</code></pre>
+<h2>Complete Example Workflow</h2>
+<p>Here&#x27;s a complete example of creating and running an evaluation:</p>
+<ol><li><strong>Create your evaluation file</strong> (<code>my_evaluation.xml</code>):</li></ol>
+<pre><code class="lang-xml">&lt;evaluation&gt;
+   &lt;qa_pair&gt;
+      &lt;question&gt;Find the user who created the most issues in January 2024. What is their username?&lt;/question&gt;
+      &lt;answer&gt;alice_developer&lt;/answer&gt;
+   &lt;/qa_pair&gt;
+   &lt;qa_pair&gt;
+      &lt;question&gt;Among all pull requests merged in Q1 2024, which repository had the highest number? Provide the repository name.&lt;/question&gt;
+      &lt;answer&gt;backend-api&lt;/answer&gt;
+   &lt;/qa_pair&gt;
+   &lt;qa_pair&gt;
+      &lt;question&gt;Find the project that was completed in December 2023 and had the longest duration from start to finish. How many days did it take?&lt;/question&gt;
+      &lt;answer&gt;127&lt;/answer&gt;
+   &lt;/qa_pair&gt;
+&lt;/evaluation&gt;</code></pre>
+<ol><li><strong>Install dependencies</strong>:</li></ol>
+<pre><code class="lang-bash">pip install -r scripts/requirements.txt
+export ANTHROPIC_API_KEY=your_api_key</code></pre>
+<ol><li><strong>Run evaluation</strong>:</li></ol>
+<pre><code class="lang-bash">python scripts/evaluation.py \
+  -t stdio \
+  -c python \
+  -a github_mcp_server.py \
+  -e GITHUB_TOKEN=ghp_xxx \
+  -o github_eval_report.md \
+  my_evaluation.xml</code></pre>
+<ol><li><strong>Review the report</strong> in <code>github_eval_report.md</code> to:</li></ol>
+<ul><li>See which questions passed/failed</li><li>Read the agent&#x27;s feedback on your tools</li><li>Identify areas for improvement</li><li>Iterate on your MCP server design</li></ul>
+<h2>Troubleshooting</h2>
+<h3>Connection Errors</h3>
+<p>If you get connection errors:</p>
+<ul><li><strong>STDIO</strong>: Verify the command and arguments are correct</li><li><strong>SSE/HTTP</strong>: Check the URL is accessible and headers are correct</li><li>Ensure any required API keys are set in environment variables or headers</li></ul>
+<h3>Low Accuracy</h3>
+<p>If many evaluations fail:</p>
+<ul><li>Review the agent&#x27;s feedback for each task</li><li>Check if tool descriptions are clear and comprehensive</li><li>Verify input parameters are well-documented</li><li>Consider whether tools return too much or too little data</li><li>Ensure error messages are actionable</li></ul>
+<h3>Timeout Issues</h3>
+<p>If tasks are timing out:</p>
+<ul><li>Use a more capable model (e.g., <code>claude-3-7-sonnet-20250219</code>)</li><li>Check if tools are returning too much data</li><li>Verify pagination is working correctly</li><li>Consider simplifying complex questions</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/evaluation.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

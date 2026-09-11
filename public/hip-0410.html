@@ -8,11 +8,20 @@
    the dot field and the hairline rules only read on black, and a naive
    inversion would wash both out. Every colour is painted explicitly so the page
    never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
 :root{
   --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
   --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
   /* Controls are pills and surfaces are soft, as on hanzo.ai. */
   --r:999px; --r-soft:14px;
 }
@@ -187,15 +196,18 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0410</h1><p class="lede">HIP-410: LLM CRD. Status Active. Hanzo&#x27;s own standard — read this before implementing against it.</p><h1>HIP-0410: LLM CRD</h1>
+<h1>hip-0410</h1><p class="lede">HIP-410: LLM CRD. Status Final. Hanzo architectural specification.</p><h1>HIP-0410: LLM CRD</h1>
 <h2>Abstract</h2>
-<p>The <code>LLM</code> CRD is the facade Kind for the Hanzo LLM gateway (<code>hanzoai/gateway</code>, which historically also lived as <code>hanzoai/llm</code>). It proxies 100+ upstream model providers and exposes a unified OpenAI-compatible API. The reconciler delegates to the <code>Service</code> controller. See HIP-004 and HIP-044 for design.</p>
+<p>The <code>LLM</code> CRD is the facade Kind for the Hanzo LLM gateway (<code>hanzoai/gateway</code>, which historically also lived as <code>hanzoai/llm</code>). It proxies 100+ upstream model providers and exposes a unified OpenAI-compatible API. The reconciler delegates to the <code>Service</code> controller. See HIP-004 for design.</p>
 <h2>Specification</h2>
 <h3>Group + version</h3>
 <p><code>hanzo.ai/v1</code>, plural <code>llms</code>, shortname <code>llm</code>.</p>
 <h3>Spec fields</h3>
 <p>Same shape as <code>Service</code> (HIP-400). Conventionally:</p>
-<ul><li><code>image.repository</code>: <code>ghcr.io/hanzoai/gateway</code></li><li><code>ports</code>: <code>containerPort: 4000</code></li><li>consumes <code>gateway-secrets</code> via <code>envFrom</code> (ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)</li><li>has dependencies on <code>SQL</code>, <code>KV</code>, and <code>console</code></li></ul>
+<ul><li><code>image.repository</code>: <code>oci.hanzo.ai/hanzoai/gateway</code></li><li><code>ports</code>: <code>containerPort: 4000</code></li><li><code>kmsSecrets</code> supplies its own machine identity — <code>IAM_CLIENT_ID</code> /</li></ul>
+<p>  <code>IAM_CLIENT_SECRET</code> at <code>hanzo/gateway/&lt;NAME&gt;@prod</code> (HIP-0136) — and nothing   that spends. <strong>It carries no upstream provider key.</strong> An earlier revision of   this HIP had it consume <code>gateway-secrets</code> via <code>envFrom</code> with   <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code> and the rest; those keys are in KMS   custody behind <code>egress</code> now, and the gateway asks egress for a call rather than   holding a credential (HIP-0143).</p>
+<ul><li>depends on <code>egress</code>, and on the shared stores per HIP-0144 rather than on</li></ul>
+<p>  instances of its own</p>
 <h3>Example CR</h3>
 <pre><code class="lang-yaml">apiVersion: hanzo.ai/v1
 kind: LLM
@@ -204,16 +216,18 @@ metadata:
   namespace: hanzo
 spec:
   image:
-    repository: ghcr.io/hanzoai/gateway
+    repository: oci.hanzo.ai/hanzoai/gateway
     tag: 2.14.1
   replicas: 2
   ports:
     - name: http
       containerPort: 4000
       servicePort: 80
-  envFrom:
-    - secretRef:
-        name: gateway-secrets
+  kmsSecrets:
+    - name: gateway-env-kms-sync
+      secretsPath: /gateway
+      keys: [IAM_CLIENT_ID, IAM_CLIENT_SECRET]
+      secretName: gateway-env
   resources:
     requests: { cpu: 500m, memory: 1Gi }
     limits:   { cpu: 2,    memory: 4Gi }</code></pre>
@@ -222,7 +236,7 @@ spec:
 <h3>Operator reconciler</h3>
 <p><code>~/work/hanzo/operator/src/controllers/service.rs</code> (via <code>LLM</code> facade).</p>
 <h3>Related services</h3>
-<ul><li>HIP-0004, HIP-0043, HIP-0044 (LLM gateway, inference, API gateway standards)</li></ul>
+<ul><li>HIP-0004, HIP-0043 (LLM gateway, inference standards)</li><li>HIP-0143 (egress — where the upstream credentials live)</li><li>HIP-0136 (the path the machine identity is addressed at)</li><li>HIP-0144 (the stores it is a tenant of)</li></ul>
 <h2>Status</h2>
 <p>Implemented in <code>hanzoai/operator</code> v0.3.0+. CR <code>gateway</code> active in cluster.</p>
 <footer>
@@ -244,5 +258,4 @@ spec:
 </div>
 <div class="fend"><a href="/hip-0410.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
 </footer>
-</div>
-</body></html>
+</div></body></html>

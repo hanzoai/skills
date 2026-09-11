@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-authorizenet</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/hanzo-authorizenet.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-authorizenet">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-authorizenet.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-authorizenet</h1><p class="lede">AuthorizeNet-Go is a Go client library for the Authorize.net XML/JSON API.</p><h1>Hanzo AuthorizeNet-Go - Authorize.net Payment Gateway Client for Go</h1>
+<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-commerce.md</code>, <code>hanzo/hanzo-billing.md</code></p>
+<h2>Overview</h2>
+<p>AuthorizeNet-Go is a <strong>Go client library for the Authorize.net XML/JSON API</strong>. It covers three major API surfaces: <strong>AIM</strong> (Advanced Integration Method) for payment transactions, <strong>CIM</strong> (Customer Information Manager) for stored payment profiles, and <strong>ARB</strong> (Automated Recurring Billing) for subscriptions. Also includes transaction reporting, fraud management, and batch settlement queries. Zero external dependencies -- standard library only (<code>net/http</code>, <code>encoding/json</code>).</p>
+<h3>Why AuthorizeNet-Go?</h3>
+<ul><li><strong>Full AIM/CIM/ARB coverage</strong>: Charge, auth-only, capture, void, refund, customer profiles, subscriptions</li><li><strong>Zero dependencies</strong>: Pure Go standard library</li><li><strong>Client struct pattern</strong>: Instantiate with <code>New(name, key, testMode)</code>, all methods hang off <code>*Client</code></li><li><strong>Sandbox support</strong>: Toggle between test and production endpoints</li><li><strong>Custom HTTP client</strong>: Inject your own <code>*http.Client</code> (useful for App Engine, proxies)</li></ul>
+<h3>Tech Stack</h3>
+<ul><li><strong>Language</strong>: Go (pre-modules, no go.mod -- use <code>go get</code>)</li><li><strong>Package</strong>: <code>github.com/hanzoai/authorizenet-go</code></li><li><strong>Dependencies</strong>: None (standard library only)</li><li><strong>CI</strong>: Travis CI (Go 1.8)</li><li><strong>License</strong>: MIT</li><li><strong>Upstream</strong>: Fork of <code>hunterlong/AuthorizeCIM</code></li></ul>
+<h3>OSS Base</h3>
+<p>Repo: <code>hanzoai/authorizenet-go</code> (3 stars). Default branch: <code>master</code>.</p>
+<h2>When to use</h2>
+<ul><li>Processing credit card payments (charge, auth-only, capture, void, refund)</li><li>Storing customer payment profiles for repeat billing (CIM)</li><li>Creating recurring subscriptions (ARB)</li><li>Querying settled/unsettled batches and transaction details</li><li>Managing fraud holds (approve/decline held transactions)</li><li>Any Go service that needs Authorize.net integration</li></ul>
+<h2>Hard requirements</h2>
+<ol><li><strong>Authorize.net API credentials</strong> (API Login ID + Transaction Key)</li><li><strong>Sandbox account</strong> for testing: https://developer.authorize.net/hello_world/sandbox/</li><li><strong>Go 1.8+</strong> (no modules required, uses <code>go get</code>)</li></ol>
+<h2>Quick reference</h2>
+<p>| Item | Value | |------|-------| | Package | <code>github.com/hanzoai/authorizenet-go</code> | | Go version | 1.8+ (no go.mod) | | API protocol | JSON over HTTPS (Authorize.net XML/JSON API v1) | | Test endpoint | <code>https://apitest.authorize.net/xml/v1/request.api</code> | | Live endpoint | <code>https://api.authorize.net/xml/v1/request.api</code> | | Default branch | <code>master</code> | | License | MIT | | Repo | <code>github.com/hanzoai/authorizenet-go</code> |</p>
+<h2>One-file quickstart</h2>
+<pre><code class="lang-go">package main
+
+import (
+ &quot;fmt&quot;
+ &quot;os&quot;
+
+ authorizenet &quot;github.com/hanzoai/authorizenet-go&quot;
+)
+
+func main() {
+ client := authorizenet.New(
+ os.Getenv(&quot;AUTHORIZENET_API_NAME&quot;),
+ os.Getenv(&quot;AUTHORIZENET_API_KEY&quot;),
+ true, // testMode
+ )
+
+ // Verify connection
+ connected, err := client.IsConnected()
+ if err != nil || !connected {
+ fmt.Println(&quot;Failed to connect:&quot;, err)
+ os.Exit(1)
+ }
+
+ // Charge a card
+ txn := authorizenet.NewTransaction{
+ Amount: &quot;15.90&quot;,
+ CreditCard: authorizenet.CreditCard{
+ CardNumber: &quot;4007000000027&quot;,
+ ExpirationDate: &quot;10/27&quot;,
+ CardCode: &quot;123&quot;,
+ },
+ BillTo: &amp;authorizenet.BillTo{
+ FirstName: &quot;Jane&quot;,
+ LastName: &quot;Doe&quot;,
+ Address: &quot;123 Main St&quot;,
+ City: &quot;Los Angeles&quot;,
+ State: &quot;CA&quot;,
+ Zip: &quot;90001&quot;,
+ Country: &quot;USA&quot;,
+ },
+ }
+
+ res, err := txn.Charge(*client)
+ if err != nil {
+ fmt.Println(&quot;Error:&quot;, err)
+ os.Exit(1)
+ }
+
+ if res.Approved() {
+ fmt.Println(&quot;Approved! Transaction ID:&quot;, res.TransactionID())
+ } else {
+ fmt.Println(&quot;Declined:&quot;, res.Response.Errors)
+ }
+}</code></pre>
+<h2>Core Concepts</h2>
+<h3>Architecture</h3>
+<pre><code>authorizenet.New(name, key, testMode) -&gt; *Client
+ |
+ |-- Client.IsConnected()
+ |-- Client.GetMerchantDetails()
+ |-- Client.GetProfileIds()
+ |-- Client.GetPaymentProfileIds()
+ |-- Client.SubscriptionList(search)
+ |-- Client.UnsettledBatchList()
+ |-- Client.UnSettledBatch()
+ |
+ NewTransaction (payment operations)
+ |-- txn.Charge(client) # authCaptureTransaction
+ |-- txn.AuthOnly(client) # authOnlyTransaction
+ |-- txn.Refund(client) # refundTransaction
+ |-- txn.ChargeProfile(customer, client)
+ |
+ PreviousTransaction (post-auth operations)
+ |-- prev.Capture(client) # priorAuthCaptureTransaction
+ |-- prev.Void(client) # voidTransaction
+ |-- prev.Approve(client) # approve held transaction
+ |-- prev.Decline(client) # decline held transaction
+ |-- prev.Info(client) # get transaction details
+ |
+ Profile (CIM customer profiles)
+ |-- profile.CreateProfile(client)
+ |-- profile.UpdateProfile(client)
+ |-- profile.UpdatePaymentProfile(client)
+ |-- profile.CreateShipping(client)
+ |-- profile.UpdateShippingProfile(client)
+ |
+ Customer (CIM queries)
+ |-- customer.Info(client)
+ |-- customer.Validate(client)
+ |-- customer.DeleteProfile(client)
+ |-- customer.DeletePaymentProfile(client)
+ |-- customer.DeleteShippingProfile(client)
+ |
+ Subscription (ARB)
+ |-- sub.Charge(client)
+ |-- sub.Update(client)
+ |
+ SetSubscription (ARB queries)
+ |-- setSub.Info(client)
+ |-- setSub.Status(client)
+ |-- setSub.Cancel(client)
+ |
+ Range (reporting)
+ |-- range.SettledBatch(client)
+ |-- range.Transactions(client)
+ |-- range.Statistics(client)</code></pre>
+<h3>Client Initialization</h3>
+<pre><code class="lang-go">// Test mode (sandbox)
+client := authorizenet.New(&quot;apiLoginId&quot;, &quot;transactionKey&quot;, true)
+
+// Production mode
+client := authorizenet.New(&quot;apiLoginId&quot;, &quot;transactionKey&quot;, false)
+
+// Custom HTTP client (e.g., for App Engine)
+client.SetHTTPClient(customHTTPClient)
+
+// Verbose logging
+client.Verbose = true</code></pre>
+<h3>Response Checking</h3>
+<p>All responses embed <code>MessagesResponse</code> which provides:</p>
+<pre><code class="lang-go">res.Ok() // bool - ResultCode == &quot;Ok&quot;
+res.Approved() // bool - ResponseCode == &quot;1&quot; or &quot;4&quot; (held)
+res.Held() // bool - ResponseCode == &quot;4&quot;
+res.TransactionID() // string
+res.AVS() // AVS struct with avsResultCode, cvvResultCode, cavvResultCode
+res.ErrorMessage() // string - first error message
+res.Message() // string - first message text</code></pre>
+<h3>Interval Helpers for Subscriptions</h3>
+<pre><code class="lang-go">authorizenet.IntervalWeekly() // every 7 days
+authorizenet.IntervalMonthly() // every 1 month
+authorizenet.IntervalQuarterly() // every 3 months
+authorizenet.IntervalYearly() // every 365 days
+authorizenet.IntervalDays(&quot;15&quot;) // every N days
+authorizenet.IntervalMonths(&quot;6&quot;) // every N months</code></pre>
+<h3>Time Helpers for Reporting</h3>
+<pre><code class="lang-go">authorizenet.Now() // current UTC time
+authorizenet.LastWeek() // 1 day ago (note: misnamed, actually yesterday)
+authorizenet.LastMonth() // 1 month ago
+authorizenet.LastYear() // 1 year ago
+authorizenet.CurrentDate() // &quot;2006-01-02&quot; formatted string</code></pre>
+<h2>Directory structure</h2>
+<pre><code>github.com/hanzoai/authorizenet-go/
+ authorizenet.go # Client struct, New(), SendRequest(), SetHTTPClient(), AVS
+ payment_transactions.go # NewTransaction (Charge, AuthOnly, Refund), PreviousTransaction
+ # (Void, Capture), all payment types and request/response structs
+ transaction_responses.go # Response helpers: Approved(), Ok(), Held(), TransactionID(), AVS()
+ customer_profile.go # CIM: Profile CRUD, Customer CRUD, PaymentProfile, ShippingProfile
+ recurring_billing.go # ARB: Subscription create/update/cancel/status/list
+ transaction_reporting.go # Reporting: settled batches, unsettled, transaction details,
+ # batch statistics, merchant details
+ fraud_management.go # Unsettled batch list, approve/decline held transactions
+ time_references.go # Time and interval helper functions
+ customer_profile_test.go # CIM integration tests
+ payment_transactions_test.go # Payment integration tests
+ recurring_billing_test.go # ARB integration tests
+ transaction_reporting_test.go # Reporting integration tests
+ fraud_management_test.go # Fraud management tests
+ xcleanup_test.go # Test cleanup (runs last due to x prefix)
+ examples/
+ new_transaction/
+ main.go # Example: charge + void
+ .travis.yml # CI config (Go 1.8)
+ .codeclimate.yml # Code climate config
+ LICENSE # MIT
+ README.md # Full API documentation with examples</code></pre>
+<h2>API Coverage</h2>
+<p>| Area | Operations | Status | |------|-----------|--------| | <strong>AIM: Payments</strong> | Charge, AuthOnly, Capture, Void, Refund, ChargeProfile | Complete | | <strong>CIM: Profiles</strong> | Create/Get/Update/Delete Customer Profile | Complete | | <strong>CIM: Payment Profiles</strong> | Create/Get/Update/Delete/Validate Payment Profile | Complete | | <strong>CIM: Shipping</strong> | Create/Get/Update/Delete Shipping Address | Complete | | <strong>ARB: Subscriptions</strong> | Create/Update/Cancel/Status/Info/List | Complete | | <strong>Reporting</strong> | Settled Batches, Unsettled, Transaction List, Transaction Details, Batch Statistics, Merchant Details | Complete | | <strong>Fraud</strong> | Unsettled Batch List, Approve/Decline Held Transactions | Complete | | <strong>Not Implemented</strong> | Bank Account (debit/credit), Split Tender, Token Card, Accept Payment, Hosted Payment Page | Stubs only |</p>
+<h2>Troubleshooting</h2>
+<p>| Issue | Cause | Solution | |-------|-------|----------| | &quot;E00007: User authentication failed&quot; | Wrong API credentials | Verify API Login ID and Transaction Key | | &quot;E00003: Root element is missing&quot; | Malformed JSON | Check struct field tags, ensure <code>json.Marshal</code> succeeds | | Tests fail with duplicate transaction | Sandbox dedup | MailChimp sandbox rejects identical transactions within 2 min | | <code>nil pointer</code> on response check | Error not checked before accessing response fields | Always check <code>err != nil</code> before using response | | BOM in response | Authorize.net returns UTF-8 BOM | Library strips <code>\xef\xbb\xbf</code> prefix automatically | | Custom HTTP client needed | App Engine / proxy environments | Use <code>client.SetHTTPClient(httpClient)</code> |</p>
+<h2>Related Skills</h2>
+<ul><li><code>hanzo/hanzo-commerce.md</code> - E-commerce platform (payment processing)</li><li><code>hanzo/hanzo-billing.md</code> - Billing and subscription management</li><li><code>hanzo/hanzo-commerce-api.md</code> - Commerce API</li></ul>
+<hr>
+<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: payments, authorize-net, credit-card, subscriptions, go, api-client <strong>Prerequisites</strong>: Go 1.8+, Authorize.net sandbox or production credentials</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-authorizenet.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>
