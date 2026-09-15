@@ -28,7 +28,10 @@ Hanzo is a comprehensive AI ecosystem -- from frontier models (Zen MoDE) to prod
 
 ## Skill Catalog
 
-### Infrastructure & Deployment (8 skills)
+### Infrastructure & Deployment (9 skills)
+
+**Hanzo Static Sites & CI/CD** (`hanzo-static-sites-cd.md`)
+Unified standard for static sites, CI/CD dual-workflow synchronization (.github + .hanzo), deterministic hanzo.yml configs, Sites plane /v1/site deployment, and strict NO-STRIPE Hanzo Commerce (Square/crypto/wire) checkout via pay.hanzo.ai.
 
 **Hanzo K8s** (`hanzo-k8s.md`)
 K8s infrastructure. hanzo-k8s (prod, 22 nodes), lux-k8s (blockchain). DOKS on DigitalOcean SFO3. Kustomize deploys.
