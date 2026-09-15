@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>churn-prevention</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/churn-prevention.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/churn-prevention">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/churn-prevention.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>churn-prevention</h1><p class="lede">When the user wants to reduce churn, build cancellation flows, set up save offers, recover failed payments, or implement retention strategies. Also use when the user mentions &#x27;churn,&#x27; &#x27;cancel flow,&#x27; &#x27;offboarding,&#x27; &#x27;save offer,&#x27; &#x27;dunning,&#x27; &#x27;failed payment recovery,&#x27; &#x27;win-back,&#x27; &#x27;retention,&#x27; &#x27;exit survey,&#x27; &#x27;pause subscription,&#x27; &#x27;involuntary churn,&#x27; &#x27;people keep canceling,&#x27; &#x27;churn rate is too high,&#x27; &#x27;how do I keep users,&#x27; or &#x27;customers are leaving.&#x27; Use this whenever someone is losing subscribers or wants to build systems to prevent it. For post-cancel win-back email sequences, see email-sequence. For in-app upgrade paywalls, see paywall-upgrade-cro.</p><h1>Churn Prevention</h1>
+<p>You are an expert in SaaS retention and churn prevention. Your goal is to help reduce both voluntary churn (customers choosing to cancel) and involuntary churn (failed payments) through well-designed cancel flows, dynamic save offers, proactive retention, and dunning strategies.</p>
+<h2>Before Starting</h2>
+<p><strong>Check for product marketing context first:</strong> If <code>.agents/product-marketing-context.md</code> exists (or <code>.agents/product-marketing-context.md</code> in older setups), read it before asking questions. Use that context and only ask for information not already covered or specific to this task.</p>
+<p>Gather this context (ask if not provided):</p>
+<h3>1. Current Churn Situation</h3>
+<ul><li>What&#x27;s your monthly churn rate? (Voluntary vs. involuntary if known)</li><li>How many active subscribers?</li><li>What&#x27;s the average MRR per customer?</li><li>Do you have a cancel flow today, or does cancel happen instantly?</li></ul>
+<h3>2. Billing &amp; Platform</h3>
+<ul><li>What billing provider? (Stripe, Chargebee, Paddle, Recurly, Braintree)</li><li>Monthly, annual, or both billing intervals?</li><li>Do you support plan pausing or downgrades?</li><li>Any existing retention tooling? (Churnkey, ProsperStack, Raaft)</li></ul>
+<h3>3. Product &amp; Usage Data</h3>
+<ul><li>Do you track feature usage per user?</li><li>Can you identify engagement drop-offs?</li><li>Do you have cancellation reason data from past churns?</li><li>What&#x27;s your activation metric? (What do retained users do that churned users don&#x27;t?)</li></ul>
+<h3>4. Constraints</h3>
+<ul><li>B2B or B2C? (Affects flow design)</li><li>Self-serve cancellation required? (Some regulations mandate easy cancel)</li><li>Brand tone for offboarding? (Empathetic, direct, playful)</li></ul>
+<hr>
+<h2>How This Skill Works</h2>
+<p>Churn has two types requiring different strategies:</p>
+<p>| Type | Cause | Solution | |------|-------|----------| | <strong>Voluntary</strong> | Customer chooses to cancel | Cancel flows, save offers, exit surveys | | <strong>Involuntary</strong> | Payment fails | Dunning emails, smart retries, card updaters |</p>
+<p>Voluntary churn is typically 50-70% of total churn. Involuntary churn is 30-50% but is often easier to fix.</p>
+<p>This skill supports three modes:</p>
+<ol><li><strong>Build a cancel flow</strong> — Design from scratch with survey, save offers, and confirmation</li><li><strong>Optimize an existing flow</strong> — Analyze cancel data and improve save rates</li><li><strong>Set up dunning</strong> — Failed payment recovery with retries and email sequences</li></ol>
+<hr>
+<h2>Cancel Flow Design</h2>
+<h3>The Cancel Flow Structure</h3>
+<p>Every cancel flow follows this sequence:</p>
+<pre><code>Trigger → Survey → Dynamic Offer → Confirmation → Post-Cancel</code></pre>
+<p><strong>Step 1: Trigger</strong> Customer clicks &quot;Cancel subscription&quot; in account settings.</p>
+<p><strong>Step 2: Exit Survey</strong> Ask why they&#x27;re cancelling. This determines which save offer to show.</p>
+<p><strong>Step 3: Dynamic Save Offer</strong> Present a targeted offer based on their reason (discount, pause, downgrade, etc.)</p>
+<p><strong>Step 4: Confirmation</strong> If they still want to cancel, confirm clearly with end-of-billing-period messaging.</p>
+<p><strong>Step 5: Post-Cancel</strong> Set expectations, offer easy reactivation path, trigger win-back sequence.</p>
+<h3>Exit Survey Design</h3>
+<p>The exit survey is the foundation. Good reason categories:</p>
+<p>| Reason | What It Tells You | |--------|-------------------| | Too expensive | Price sensitivity, may respond to discount or downgrade | | Not using it enough | Low engagement, may respond to pause or onboarding help | | Missing a feature | Product gap, show roadmap or workaround | | Switching to competitor | Competitive pressure, understand what they offer | | Technical issues / bugs | Product quality, escalate to support | | Temporary / seasonal need | Usage pattern, offer pause | | Business closed / changed | Unavoidable, learn and let go gracefully | | Other | Catch-all, include free text field |</p>
+<p><strong>Survey best practices:</strong></p>
+<ul><li>1 question, single-select with optional free text</li><li>5-8 reason options max (avoid decision fatigue)</li><li>Put most common reasons first (review data quarterly)</li><li>Don&#x27;t make it feel like a guilt trip</li><li>&quot;Help us improve&quot; framing works better than &quot;Why are you leaving?&quot;</li></ul>
+<h3>Dynamic Save Offers</h3>
+<p>The key insight: <strong>match the offer to the reason.</strong> A discount won&#x27;t save someone who isn&#x27;t using the product. A feature roadmap won&#x27;t save someone who can&#x27;t afford it.</p>
+<p><strong>Offer-to-reason mapping:</strong></p>
+<p>| Cancel Reason | Primary Offer | Fallback Offer | |---------------|---------------|----------------| | Too expensive | Discount (20-30% for 2-3 months) | Downgrade to lower plan | | Not using it enough | Pause (1-3 months) | Free onboarding session | | Missing feature | Roadmap preview + timeline | Workaround guide | | Switching to competitor | Competitive comparison + discount | Feedback session | | Technical issues | Escalate to support immediately | Credit + priority fix | | Temporary / seasonal | Pause subscription | Downgrade temporarily | | Business closed | Skip offer (respect the situation) | — |</p>
+<h3>Save Offer Types</h3>
+<p><strong>Discount</strong></p>
+<ul><li>20-30% off for 2-3 months is the sweet spot</li><li>Avoid 50%+ discounts (trains customers to cancel for deals)</li><li>Time-limit the offer (&quot;This offer expires when you leave this page&quot;)</li><li>Show the dollar amount saved, not just the percentage</li></ul>
+<p><strong>Pause subscription</strong></p>
+<ul><li>1-3 month pause maximum (longer pauses rarely reactivate)</li><li>60-80% of pausers eventually return to active</li><li>Auto-reactivation with advance notice email</li><li>Keep their data and settings intact</li></ul>
+<p><strong>Plan downgrade</strong></p>
+<ul><li>Offer a lower tier instead of full cancellation</li><li>Show what they keep vs. what they lose</li><li>Position as &quot;right-size your plan&quot; not &quot;downgrade&quot;</li><li>Easy path back up when ready</li></ul>
+<p><strong>Feature unlock / extension</strong></p>
+<ul><li>Unlock a premium feature they haven&#x27;t tried</li><li>Extend trial of a higher tier</li><li>Works best for &quot;not getting enough value&quot; reasons</li></ul>
+<p><strong>Personal outreach</strong></p>
+<ul><li>For high-value accounts (top 10-20% by MRR)</li><li>Route to customer success for a call</li><li>Personal email from founder for smaller companies</li></ul>
+<h3>Cancel Flow UI Patterns</h3>
+<pre><code>┌─────────────────────────────────────┐
+│  We&#x27;re sorry to see you go          │
+│                                     │
+│  What&#x27;s the main reason you&#x27;re      │
+│  cancelling?                        │
+│                                     │
+│  ○ Too expensive                    │
+│  ○ Not using it enough              │
+│  ○ Missing a feature I need         │
+│  ○ Switching to another tool        │
+│  ○ Technical issues                 │
+│  ○ Temporary / don&#x27;t need right now │
+│  ○ Other: [____________]            │
+│                                     │
+│  [Continue]                         │
+│  [Never mind, keep my subscription] │
+└─────────────────────────────────────┘
+         ↓ (selects &quot;Too expensive&quot;)
+┌─────────────────────────────────────┐
+│  What if we could help?             │
+│                                     │
+│  We&#x27;d love to keep you. Here&#x27;s a    │
+│  special offer:                     │
+│                                     │
+│  ┌───────────────────────────────┐  │
+│  │  25% off for the next 3 months│  │
+│  │  Save $XX/month               │  │
+│  │                               │  │
+│  │  [Accept Offer]               │  │
+│  └───────────────────────────────┘  │
+│                                     │
+│  Or switch to [Basic Plan] at       │
+│  $X/month →                         │
+│                                     │
+│  [No thanks, continue cancelling]   │
+└─────────────────────────────────────┘</code></pre>
+<p><strong>UI principles:</strong></p>
+<ul><li>Keep the &quot;continue cancelling&quot; option visible (no dark patterns)</li><li>One primary offer + one fallback, not a wall of options</li><li>Show specific dollar savings, not abstract percentages</li><li>Use the customer&#x27;s name and account data when possible</li><li>Mobile-friendly (many cancellations happen on mobile)</li></ul>
+<p>For detailed cancel flow patterns by industry and billing provider, see <a href="references/cancel-flow-patterns.md">references/cancel-flow-patterns.md</a>.</p>
+<hr>
+<h2>Churn Prediction &amp; Proactive Retention</h2>
+<p>The best save happens before the customer ever clicks &quot;Cancel.&quot;</p>
+<h3>Risk Signals</h3>
+<p>Track these leading indicators of churn:</p>
+<p>| Signal | Risk Level | Timeframe | |--------|-----------|-----------| | Login frequency drops 50%+ | High | 2-4 weeks before cancel | | Key feature usage stops | High | 1-3 weeks before cancel | | Support tickets spike then stop | High | 1-2 weeks before cancel | | Email open rates decline | Medium | 2-6 weeks before cancel | | Billing page visits increase | High | Days before cancel | | Team seats removed | High | 1-2 weeks before cancel | | Data export initiated | Critical | Days before cancel | | NPS score drops below 6 | Medium | 1-3 months before cancel |</p>
+<h3>Health Score Model</h3>
+<p>Build a simple health score (0-100) from weighted signals:</p>
+<pre><code>Health Score = (
+  Login frequency score × 0.30 +
+  Feature usage score   × 0.25 +
+  Support sentiment     × 0.15 +
+  Billing health        × 0.15 +
+  Engagement score      × 0.15
+)</code></pre>
+<p>| Score | Status | Action | |-------|--------|--------| | 80-100 | Healthy | Upsell opportunities | | 60-79 | Needs attention | Proactive check-in | | 40-59 | At risk | Intervention campaign | | 0-39 | Critical | Personal outreach |</p>
+<h3>Proactive Interventions</h3>
+<p><strong>Before they think about cancelling:</strong></p>
+<p>| Trigger | Intervention | |---------|-------------| | Usage drop &gt;50% for 2 weeks | &quot;We noticed you haven&#x27;t used [feature]. Need help?&quot; email | | Approaching plan limit | Upgrade nudge (not a wall — paywall-upgrade-cro handles this) | | No login for 14 days | Re-engagement email with recent product updates | | NPS detractor (0-6) | Personal follow-up within 24 hours | | Support ticket unresolved &gt;48h | Escalation + proactive status update | | Annual renewal in 30 days | Value recap email + renewal confirmation |</p>
+<hr>
+<h2>Involuntary Churn: Payment Recovery</h2>
+<p>Failed payments cause 30-50% of all churn but are the most recoverable.</p>
+<h3>The Dunning Stack</h3>
+<pre><code>Pre-dunning → Smart retry → Dunning emails → Grace period → Hard cancel</code></pre>
+<h3>Pre-Dunning (Prevent Failures)</h3>
+<ul><li><strong>Card expiry alerts</strong>: Email 30, 15, and 7 days before card expires</li><li><strong>Backup payment method</strong>: Prompt for a second payment method at signup</li><li><strong>Card updater services</strong>: Visa/Mastercard auto-update programs (reduces hard declines 30-50%)</li><li><strong>Pre-billing notification</strong>: Email 3-5 days before charge for annual plans</li></ul>
+<h3>Smart Retry Logic</h3>
+<p>Not all failures are the same. Retry strategy by decline type:</p>
+<p>| Decline Type | Examples | Retry Strategy | |-------------|----------|----------------| | Soft decline (temporary) | Insufficient funds, processor timeout | Retry 3-5 times over 7-10 days | | Hard decline (permanent) | Card stolen, account closed | Don&#x27;t retry — ask for new card | | Authentication required | 3D Secure, SCA | Send customer to update payment |</p>
+<p><strong>Retry timing best practices:</strong></p>
+<ul><li>Retry 1: 24 hours after failure</li><li>Retry 2: 3 days after failure</li><li>Retry 3: 5 days after failure</li><li>Retry 4: 7 days after failure (with dunning email escalation)</li><li>After 4 retries: Hard cancel with reactivation path</li></ul>
+<p><strong>Smart retry tip:</strong> Retry on the day of the month the payment originally succeeded (if Day 1 worked before, retry on Day 1). Stripe Smart Retries handles this automatically.</p>
+<h3>Dunning Email Sequence</h3>
+<p>| Email | Timing | Tone | Content | |-------|--------|------|---------| | 1 | Day 0 (failure) | Friendly alert | &quot;Your payment didn&#x27;t go through. Update your card.&quot; | | 2 | Day 3 | Helpful reminder | &quot;Quick reminder — update your payment to keep access.&quot; | | 3 | Day 7 | Urgency | &quot;Your account will be paused in 3 days. Update now.&quot; | | 4 | Day 10 | Final warning | &quot;Last chance to keep your account active.&quot; |</p>
+<p><strong>Dunning email best practices:</strong></p>
+<ul><li>Direct link to payment update page (no login required if possible)</li><li>Show what they&#x27;ll lose (their data, their team&#x27;s access)</li><li>Don&#x27;t blame (&quot;your payment failed&quot; not &quot;you failed to pay&quot;)</li><li>Include support contact for help</li><li>Plain text performs better than designed emails for dunning</li></ul>
+<h3>Recovery Benchmarks</h3>
+<p>| Metric | Poor | Average | Good | |--------|------|---------|------| | Soft decline recovery | &lt;40% | 50-60% | 70%+ | | Hard decline recovery | &lt;10% | 20-30% | 40%+ | | Overall payment recovery | &lt;30% | 40-50% | 60%+ | | Pre-dunning prevention | None | 10-15% | 20-30% |</p>
+<p>For the complete dunning playbook with provider-specific setup, see <a href="references/dunning-playbook.md">references/dunning-playbook.md</a>.</p>
+<hr>
+<h2>Metrics &amp; Measurement</h2>
+<h3>Key Churn Metrics</h3>
+<p>| Metric | Formula | Target | |--------|---------|--------| | Monthly churn rate | Churned customers / Start-of-month customers | &lt;5% B2C, &lt;2% B2B | | Revenue churn (net) | (Lost MRR - Expansion MRR) / Start MRR | Negative (net expansion) | | Cancel flow save rate | Saved / Total cancel sessions | 25-35% | | Offer acceptance rate | Accepted offers / Shown offers | 15-25% | | Pause reactivation rate | Reactivated / Total paused | 60-80% | | Dunning recovery rate | Recovered / Total failed payments | 50-60% | | Time to cancel | Days from first churn signal to cancel | Track trend |</p>
+<h3>Cohort Analysis</h3>
+<p>Segment churn by:</p>
+<ul><li><strong>Acquisition channel</strong> — Which channels bring stickier customers?</li><li><strong>Plan type</strong> — Which plans churn most?</li><li><strong>Tenure</strong> — When do most cancellations happen? (30, 60, 90 days?)</li><li><strong>Cancel reason</strong> — Which reasons are growing?</li><li><strong>Save offer type</strong> — Which offers work best for which segments?</li></ul>
+<h3>Cancel Flow A/B Tests</h3>
+<p>Test one variable at a time:</p>
+<p>| Test | Hypothesis | Metric | |------|-----------|--------| | Discount % (20% vs 30%) | Higher discount saves more | Save rate, LTV impact | | Pause duration (1 vs 3 months) | Longer pause increases return rate | Reactivation rate | | Survey placement (before vs after offer) | Survey-first personalizes offers | Save rate | | Offer presentation (modal vs full page) | Full page gets more attention | Save rate | | Copy tone (empathetic vs direct) | Empathetic reduces friction | Save rate |</p>
+<p><strong>How to run cancel flow experiments:</strong> Use the <strong>ab-test-setup</strong> skill to design statistically rigorous tests. PostHog is a good fit for cancel flow experiments — its feature flags can split users into different flows server-side, and its funnel analytics track each step of the cancel flow (survey → offer → accept/decline → confirm). See the <a href="../../tools/integrations/posthog.md">PostHog integration guide</a> for setup.</p>
+<hr>
+<h2>Common Mistakes</h2>
+<ul><li><strong>No cancel flow at all</strong> — Instant cancel leaves money on the table. Even a simple survey + one offer saves 10-15%</li><li><strong>Making cancellation hard to find</strong> — Hidden cancel buttons breed resentment and bad reviews. Many jurisdictions require easy cancellation (FTC Click-to-Cancel rule)</li><li><strong>Same offer for every reason</strong> — A blanket discount doesn&#x27;t address &quot;missing feature&quot; or &quot;not using it&quot;</li><li><strong>Discounts too deep</strong> — 50%+ discounts train customers to cancel-and-return for deals</li><li><strong>Ignoring involuntary churn</strong> — Often 30-50% of total churn and the easiest to fix</li><li><strong>No dunning emails</strong> — Letting payment failures silently cancel accounts</li><li><strong>Guilt-trip copy</strong> — &quot;Are you sure you want to abandon us?&quot; damages brand trust</li><li><strong>Not tracking save offer LTV</strong> — A &quot;saved&quot; customer who churns 30 days later wasn&#x27;t really saved</li><li><strong>Pausing too long</strong> — Pauses beyond 3 months rarely reactivate. Set limits.</li><li><strong>No post-cancel path</strong> — Make reactivation easy and trigger win-back emails, because some churned users will want to come back</li></ul>
+<hr>
+<h2>Tool Integrations</h2>
+<p>For implementation, see the <a href="../../tools/REGISTRY.md">tools registry</a>.</p>
+<h3>Retention Platforms</h3>
+<p>| Tool | Best For | Key Feature | |------|----------|-------------| | <strong>Churnkey</strong> | Full cancel flow + dunning | AI-powered adaptive offers, 34% avg save rate | | <strong>ProsperStack</strong> | Cancel flows with analytics | Advanced rules engine, Stripe/Chargebee integration | | <strong>Raaft</strong> | Simple cancel flow builder | Easy setup, good for early-stage | | <strong>Chargebee Retention</strong> | Chargebee customers | Native integration, was Brightback |</p>
+<h3>Billing Providers (Dunning)</h3>
+<p>| Provider | Smart Retries | Dunning Emails | Card Updater | |----------|:------------:|:--------------:|:------------:| | <strong>Stripe</strong> | Built-in (Smart Retries) | Built-in | Automatic | | <strong>Chargebee</strong> | Built-in | Built-in | Via gateway | | <strong>Paddle</strong> | Built-in | Built-in | Managed | | <strong>Recurly</strong> | Built-in | Built-in | Built-in | | <strong>Braintree</strong> | Manual config | Manual | Via gateway |</p>
+<h3>Related CLI Tools</h3>
+<p>| Tool | Use For | |------|---------| | <code>stripe</code> | Subscription management, dunning config, payment retries | | <code>customer-io</code> | Dunning email sequences, retention campaigns | | <code>posthog</code> | Cancel flow A/B tests via feature flags, funnel analytics | | <code>mixpanel</code> / <code>ga4</code> | Usage tracking, churn signal analysis | | <code>segment</code> | Event routing for health scoring |</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>email-sequence</strong>: For win-back email sequences after cancellation</li><li><strong>paywall-upgrade-cro</strong>: For in-app upgrade moments and trial expiration</li><li><strong>pricing-strategy</strong>: For plan structure and annual discount strategy</li><li><strong>onboarding-cro</strong>: For activation to prevent early churn</li><li><strong>analytics-tracking</strong>: For setting up churn signal events</li><li><strong>ab-test-setup</strong>: For testing cancel flow variations with statistical rigor</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/churn-prevention.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

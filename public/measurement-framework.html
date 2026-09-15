@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>measurement-framework</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/measurement-framework.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/measurement-framework">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/measurement-framework.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>measurement-framework</h1><p class="lede">Every plan needs a measurement section that tells the team how to know if the plan is working.</p><h1>Measurement Framework — KPIs, North Stars, Cadence</h1>
+<p>Every plan needs a measurement section that tells the team how to know if the plan is working. This doc is the source for Section 13&#x27;s measurement subsection.</p>
+<p><strong>Related docs:</strong></p>
+<ul><li><code>growth-patterns.md</code> — the 3-3-2-2-2 VC growth path (3× in years 1–2, 2× in years 3–7 from $1M ARR) and which phase of SaaS growth the company is in ($0–10K / $10K–100K / $100K–1M+)</li><li><code>budget-planning.md</code> — CAC calculation (blended, not paid-only) and the forecasting reality check (forecasts under $100M ARR are educated guesses, not precise predictions)</li></ul>
+<h2>The north-star principle</h2>
+<p>A north star is one metric that captures the business-model thesis at the highest level. It should:</p>
+<ul><li>Be derivable from the funnel + revenue model</li><li>Move slowly enough to be a strategic compass (not whipsawed by weekly noise)</li><li>Trade off correctly against other metrics — improving the north star should generally improve the business</li></ul>
+<p>Don&#x27;t default to &quot;ARR&quot; or &quot;MRR&quot; alone. Those are outcomes, not norths. Pick something that captures the business model.</p>
+<h2>North-star patterns by business model</h2>
+<h3>B2B SaaS (subscription)</h3>
+<ul><li><strong>Net Revenue Retention (NRR)</strong> — keeps existing customers + expansion in focus</li><li>Alternative: &quot;Logo retention × expansion ARR&quot;</li><li>Why: ARR alone hides churn / lets gross-add growth mask product fit problems</li></ul>
+<h3>D2C consumer app (subscription)</h3>
+<ul><li><strong>Blended LTV / blended CAC</strong> — keeps unit economics honest as paid layer scales</li><li>Alternative: &quot;Day-35 paid users from cohort × LTV&quot;</li><li>Why: monthly subscription metrics are volatile; cohort × LTV smooths it</li></ul>
+<h3>Hybrid hardware + software (e.g., Quietude)</h3>
+<ul><li><strong>Blended LTV / blended CAC across hardware + software</strong> — captures the wedge thesis</li><li>Alternative: &quot;Hardware-buyers-to-subscriber conversion × blended margin&quot;</li><li>Why: hardware revenue isn&#x27;t free (cost to make); subscription revenue isn&#x27;t expensive to acquire if hardware funds it</li></ul>
+<h3>Marketplace (two-sided)</h3>
+<ul><li><strong>Liquidity ratio × take-rate</strong> — captures both sides + monetization</li><li>Alternative: &quot;Monthly transacting users × take-rate × repeat frequency&quot;</li><li>Why: GMV alone doesn&#x27;t capture whether the marketplace is becoming a habit</li></ul>
+<h3>Developer tool / open source</h3>
+<ul><li><strong>Weekly active developers × paid-conversion</strong> — captures both adoption and monetization</li><li>Alternative: &quot;Weekly active orgs × seats per org × ARPU&quot;</li></ul>
+<h3>Content / media business</h3>
+<ul><li><strong>Daily active readers / listeners × ad revenue per session</strong> — captures both reach and monetization</li><li>Alternative: &quot;Subscriber count × retention × ARPU&quot;</li></ul>
+<h3>Commerce (DTC, non-subscription)</h3>
+<ul><li><strong>Repeat purchase rate × AOV × frequency</strong> — captures monetization layered on quality of customer</li><li>Alternative: &quot;Customer LTV / CAC × payback period&quot;</li></ul>
+<h2>Leading indicators by AARRR stage</h2>
+<p>After the north star, every plan needs leading indicators per AARRR stage. These move faster than the north star and trigger investigations.</p>
+<h3>Acquisition leading indicators</h3>
+<ul><li>Organic visits/month, total + per pillar (SEO health)</li><li>App Store / Play Store visit-to-install rate (ASO health)</li><li>Founder-led social channel growth → email subscriber conversion (LinkedIn / X / Substack funnels)</li><li>Event-to-app conversion rate (event ROI)</li><li>Ambassador-attributed visits (referral funnel)</li><li>Paid CAC by channel (when paid is firing)</li></ul>
+<h3>Activation leading indicators</h3>
+<ul><li>Day 1 / Day 7 / Day 35 → paid conversion rate</li><li>Onboarding session-completion rate</li><li>First key-action completion (post-signup activation event)</li><li>App Store conversion rate (install → trial → paid)</li><li>Trial → paid conversion rate</li></ul>
+<h3>Retention leading indicators</h3>
+<ul><li>Day 30 / Day 60 / Day 90 retention</li><li>Monthly churn rate (gross + net)</li><li>Lifecycle email engagement (open / click / unsubscribe by flow)</li><li>Hardware → app activation rate (for hybrid businesses)</li><li>Win-back / reactivation rate</li></ul>
+<h3>Referral leading indicators</h3>
+<ul><li>Ambassador-attributed new subs (via Dub or similar)</li><li>Share-after-value moment rate (% of users sharing)</li><li>Two-sided referral completion rate</li><li>Guides program referrals (when live)</li><li>NPS score (if surveyed)</li></ul>
+<h3>Revenue leading indicators</h3>
+<ul><li>ARPU by cohort</li><li>Annual plan adoption %</li><li>Cohort LTV by source</li><li>Plan mix shifts</li><li>Eye-mask / hardware attach rate (for hybrid)</li><li>Expansion revenue (B2B)</li></ul>
+<h2>Review cadence</h2>
+<p>The plan should specify three rhythms:</p>
+<h3>Weekly (operational sync)</h3>
+<ul><li><strong>Who:</strong> fCMO ↔ founder (CEO usually)</li><li><strong>Duration:</strong> 30 min</li><li><strong>Format:</strong> AARRR scoreboard (current vs. last week numbers across the leading indicators) + this week&#x27;s ships + blockers</li><li><strong>Output:</strong> Action items, decisions made</li></ul>
+<h3>Monthly (metrics review)</h3>
+<ul><li><strong>Who:</strong> fCMO + founder + extended team (CXO, product lead, designer if applicable)</li><li><strong>Duration:</strong> 60–90 min</li><li><strong>Format:</strong> Full metrics review + comparison against quarterly KPI targets + qualitative learnings + idea bank reprioritization</li><li><strong>Output:</strong> Possible plan adjustments, hire decisions</li></ul>
+<h3>Quarterly (plan recalibration)</h3>
+<ul><li><strong>Who:</strong> fCMO + founders + key advisors</li><li><strong>Duration:</strong> 2–3 hours</li><li><strong>Format:</strong> Full plan review against 90-day and 12-month outcomes, channel-level analysis, funding-stage transition check, recalibration of next 90 days</li><li><strong>Output:</strong> Updated plan (could be v2 / v3 document iteration)</li></ul>
+<h2>KPI target setting</h2>
+<p>For each quarter in Section 10, the plan must include 3–5 specific KPI targets. These should be:</p>
+<ul><li><strong>Specific</strong> — not &quot;improve retention,&quot; but &quot;Day 30 retention from 22% → 30%&quot;</li><li><strong>Measurable</strong> — pull from a wired data source</li><li><strong>Stretch but plausible</strong> — based on funnel state + historical patterns</li><li><strong>Decision-triggering</strong> — if missed, what does that mean? (Adjust strategy, kill a channel, etc.)</li></ul>
+<h3>KPI target patterns by quarter</h3>
+<p><strong>Q1 (foundation quarter):</strong></p>
+<ul><li>Mostly <em>bedrock</em> metrics — fixing leaks. &quot;Headphones-gate conversion drop reverses.&quot; &quot;Day 1 → paid +25–50%.&quot;</li><li>Some <em>foundation</em> metrics — laying tracks. &quot;4 SEO pillars staked.&quot; &quot;App Store rewrite shipped.&quot;</li><li>Avoid bold growth targets — the foundations aren&#x27;t in yet</li></ul>
+<p><strong>Q2 (validation quarter):</strong></p>
+<ul><li>Mostly <em>validation</em> metrics — does what we built work? &quot;Paid CAC &lt; $X blended.&quot; &quot;Organic traffic 1,500–3,500/mo.&quot;</li><li>Some <em>cohort</em> metrics — do new cohorts behave better? &quot;Day 7 retention for Q2 cohort vs. Q1.&quot;</li></ul>
+<p><strong>Q3 (scaling quarter):</strong></p>
+<ul><li>Mostly <em>scaling</em> metrics — how far does it go? &quot;Paid scaling to $20–30K/mo with CAC steady.&quot; &quot;First B2B install reference case live.&quot;</li><li>Some <em>capability</em> metrics — what new things are live? &quot;First Guides pilot launched.&quot;</li></ul>
+<p><strong>Q4 (compound quarter):</strong></p>
+<ul><li>Mostly <em>compound</em> metrics — is the flywheel turning? &quot;50%+ of new subs from non-paid channels.&quot; &quot;Ambassador-driven 15–25% of new subs.&quot;</li><li>Some <em>narrative</em> metrics — does the Series A story write itself? &quot;Blended LTV/CAC &gt; 3.&quot;</li></ul>
+<h2>Anchoring against the VC growth path</h2>
+<p>For VC-backed clients past $1M ARR, anchor 12-month and multi-year targets against the <strong>3-3-2-2-2 rule</strong> (3× in years 1 and 2, then 2× in years 3 through 7). Hitting it is rare; most companies don&#x27;t. Anchoring against it forces the plan to either match it and show how, or explicitly defend choosing a slower trajectory. Full table and context in <code>growth-patterns.md</code>.</p>
+<p>For non-VC-backed companies (bootstrapped, founder-funded, profit-focused), the 3-3-2-2-2 doesn&#x27;t apply. Use linear-pattern targets (&quot;$X MRR added per month&quot;) or step-function targets (&quot;$Y revenue jump after the enterprise tier launches&quot;) instead.</p>
+<h2>Forecasting reality check</h2>
+<p>A plan derives a budget and an annual goal. It does not produce a 12-month month-by-month forecast that&#x27;s reliably accurate to the dollar.</p>
+<p><strong>Unless the company is publicly traded, all forecasts are educated guesses.</strong> No startup under $100M ARR consistently hits month-by-month forecasts. Quarterly review is when the plan adjusts — not when variance is treated as failure.</p>
+<p>What the plan commits to honestly:</p>
+<ul><li>The annual goal is a defensible direction-of-travel</li><li>The budget is the resource commitment that makes the goal plausible</li><li>The 90-day roadmap (Section 9) is what&#x27;s actionable now</li><li>Month-to-month projection is illustrative, not promised</li></ul>
+<p>Founders who over-engineer the forecast end up explaining variance every month instead of executing. The plan should resist this — name the annual target, the quarterly KPIs, and the kill criteria. Don&#x27;t promise the month.</p>
+<p>Full context in <code>budget-planning.md</code>.</p>
+<h2>Kill criteria</h2>
+<p>For every channel or initiative, the plan should specify when to stop. Often missing from plans, kill criteria force discipline.</p>
+<p>Examples:</p>
+<ul><li>&quot;If a paid channel has CAC &gt; 2× target after 30 days at meaningful spend, pause.&quot;</li><li>&quot;If onboarding Variant 3 doesn&#x27;t show statistically meaningful lift (or directional lift + congruent qualitative signal) after 4 weeks, move to Variant 1.&quot;</li><li>&quot;If lifecycle Flow 4 has open rate &lt; 12% after 6 weeks, redo subject lines + audience segmentation.&quot;</li></ul>
+<h2>Guardrail metrics</h2>
+<p>Some metrics get a hard guardrail (cannot drop below threshold). Useful for protecting brand or unit economics during aggressive growth.</p>
+<p>Examples:</p>
+<ul><li>&quot;Brand voice complaint rate &gt; 1% of customer feedback triggers content review.&quot;</li><li>&quot;Paid CAC &gt; $X for two consecutive months pauses paid scaling pending audit.&quot;</li><li>&quot;App Store rating drops below 4.5 triggers product review.&quot;</li></ul>
+<h2>Data sources mapping</h2>
+<p>The plan should name where each metric comes from. This makes it auditable.</p>
+<p>| Metric | Source | |---|---| | Organic traffic | GA4 / Ahrefs | | App Store conversion | App Store Connect | | Funnel conversion (Day N → paid) | Internal analytics (Mixpanel / Amplitude) or App Store Connect cohort export | | Retention | Customer.io segments + product analytics | | MRR / ARR | Stripe (via MCP if wired) | | Plan mix | Stripe | | Lifecycle email metrics | Customer.io | | Ambassador attribution | Dub.co | | Hardware → app activation | Shopify + App Store + internal join | | NPS | Survey tool (Customer.io / Typeform / SurveyMonkey) |</p>
+<h2>When data isn&#x27;t wired</h2>
+<p>If a metric can&#x27;t currently be measured, flag it in Section 13&#x27;s open decisions. Example:</p>
+<blockquote><p>&quot;Hardware → app activation rate not currently visible in the App Store dashboard. Requires Shopify ↔ App Store Connect join. Q1 work item.&quot;</p></blockquote>
+<p>A plan with un-measurable goals is a plan that can&#x27;t be validated. Surface the instrumentation work explicitly.</p>
+<h2>Reporting cadence + automation</h2>
+<p>Where possible, auto-generate the metrics review rather than building it manually each time. Stripe MCP + GA4 MCP + Customer.io MCP can pull most of what&#x27;s needed.</p>
+<p>For Tier 1 clients, a simple weekly metrics email to the team (Markdown table, generated via skills + MCPs) costs nothing and creates discipline.</p>
+<p>For Tier 2+ clients, consider a real dashboard (Hex, Metabase, Looker, or internal tool).</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/measurement-framework.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ai-writing-detection</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/ai-writing-detection.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/ai-writing-detection">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ai-writing-detection.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ai-writing-detection</h1><p class="lede">Words, phrases, and punctuation patterns commonly associated with AI-generated text.</p><h1>AI Writing Detection</h1>
+<p>Words, phrases, and punctuation patterns commonly associated with AI-generated text. Avoid these to ensure writing sounds natural and human.</p>
+<p>Sources: Grammarly (2025), Microsoft 365 Life Hacks (2025), GPTHuman (2025), Walter Writes (2025), Textero (2025), Plagiarism Today (2025), Rolling Stone (2025), MDPI Blog (2025)</p>
+<hr>
+<h2>Contents</h2>
+<ul><li>Em Dashes: The Primary AI Tell</li><li>Overused Verbs</li><li>Overused Adjectives</li><li>Overused Transitions and Connectors</li><li>Phrases That Signal AI Writing (Opening Phrases, Transitional Phrases, Concluding Phrases, Structural Patterns)</li><li>Filler Words and Empty Intensifiers</li><li>Academic-Specific AI Tells</li><li>How to Self-Check</li></ul>
+<h2>Em Dashes: The Primary AI Tell</h2>
+<p><strong>The em dash (—) has become one of the most reliable markers of AI-generated content.</strong></p>
+<p>Em dashes are longer than hyphens (-) and are used for emphasis, interruptions, or parenthetical information. While they have legitimate uses in writing, AI models drastically overuse them.</p>
+<h3>Why Em Dashes Signal AI Writing</h3>
+<ul><li>AI models were trained on edited books, academic papers, and style guides where em dashes appear frequently</li><li>AI uses em dashes as a shortcut for sentence variety instead of commas, colons, or parentheses</li><li>Most human writers rarely use em dashes because they don&#x27;t exist as a standard keyboard key</li><li>The overuse is so consistent that it has become the unofficial signature of ChatGPT writing</li></ul>
+<h3>What To Do Instead</h3>
+<p>| Instead of | Use | |------------|-----| | The results—which were surprising—showed... | The results, which were surprising, showed... | | This approach—unlike traditional methods—allows... | This approach, unlike traditional methods, allows... | | The study found—as expected—that... | The study found, as expected, that... | | Communication skills—both written and verbal—are essential | Communication skills (both written and verbal) are essential |</p>
+<h3>Guidelines</h3>
+<ul><li>Use commas for most parenthetical information</li><li>Use colons to introduce explanations or lists</li><li>Use parentheses for supplementary information</li><li>Reserve em dashes for rare, deliberate emphasis only</li><li>If you find yourself using more than one em dash per page, revise</li></ul>
+<hr>
+<h2>Overused Verbs</h2>
+<p>| Avoid | Use Instead | |-------|-------------| | delve (into) | explore, examine, investigate, look at | | leverage | use, apply, draw on | | optimise | improve, refine, enhance | | utilise | use | | facilitate | help, enable, support | | foster | encourage, support, develop, nurture | | bolster | strengthen, support, reinforce | | underscore | emphasise, highlight, stress | | unveil | reveal, show, introduce, present | | navigate | manage, handle, work through | | streamline | simplify, make more efficient | | enhance | improve, strengthen | | endeavour | try, attempt, effort | | ascertain | find out, determine, establish | | elucidate | explain, clarify, make clear |</p>
+<hr>
+<h2>Overused Adjectives</h2>
+<p>| Avoid | Use Instead | |-------|-------------| | robust | strong, reliable, thorough, solid | | comprehensive | complete, thorough, full, detailed | | pivotal | key, critical, central, important | | crucial | important, key, essential, critical | | vital | important, essential, necessary | | transformative | significant, important, major | | cutting-edge | new, advanced, recent, modern | | groundbreaking | new, original, significant | | innovative | new, original, creative | | seamless | smooth, easy, effortless | | intricate | complex, detailed, complicated | | nuanced | subtle, complex, detailed | | multifaceted | complex, varied, diverse | | holistic | complete, whole, comprehensive |</p>
+<hr>
+<h2>Overused Transitions and Connectors</h2>
+<p>| Avoid | Use Instead | |-------|-------------| | furthermore | also, in addition, and | | moreover | also, and, besides | | notwithstanding | despite, even so, still | | that being said | however, but, still | | at its core | essentially, fundamentally, basically | | to put it simply | in short, simply put | | it is worth noting that | note that, importantly | | in the realm of | in, within, regarding | | in the landscape of | in, within | | in today&#x27;s [anything] | currently, now, today |</p>
+<hr>
+<h2>Phrases That Signal AI Writing</h2>
+<h3>Opening Phrases to Avoid</h3>
+<ul><li>&quot;In today&#x27;s fast-paced world...&quot;</li><li>&quot;In today&#x27;s digital age...&quot;</li><li>&quot;In an era of...&quot;</li><li>&quot;In the ever-evolving landscape of...&quot;</li><li>&quot;In the realm of...&quot;</li><li>&quot;It&#x27;s important to note that...&quot;</li><li>&quot;Let&#x27;s delve into...&quot;</li><li>&quot;Imagine a world where...&quot;</li></ul>
+<h3>Transitional Phrases to Avoid</h3>
+<ul><li>&quot;That being said...&quot;</li><li>&quot;With that in mind...&quot;</li><li>&quot;It&#x27;s worth mentioning that...&quot;</li><li>&quot;At its core...&quot;</li><li>&quot;To put it simply...&quot;</li><li>&quot;In essence...&quot;</li><li>&quot;This begs the question...&quot;</li></ul>
+<h3>Concluding Phrases to Avoid</h3>
+<ul><li>&quot;In conclusion...&quot;</li><li>&quot;To sum up...&quot;</li><li>&quot;By [doing X], you can [achieve Y]...&quot;</li><li>&quot;In the final analysis...&quot;</li><li>&quot;All things considered...&quot;</li><li>&quot;At the end of the day...&quot;</li></ul>
+<h3>Structural Patterns to Avoid</h3>
+<ul><li>&quot;Whether you&#x27;re a [X], [Y], or [Z]...&quot; (listing three examples after &quot;whether&quot;)</li><li>&quot;It&#x27;s not just [X], it&#x27;s also [Y]...&quot;</li><li>&quot;Think of [X] as [elaborate metaphor]...&quot;</li><li>Starting sentences with &quot;By&quot; followed by a gerund: &quot;By understanding X, you can Y...&quot;</li></ul>
+<hr>
+<h2>Filler Words and Empty Intensifiers</h2>
+<p>These words often add nothing to meaning. Remove them or find specific alternatives:</p>
+<ul><li>absolutely</li><li>actually</li><li>basically</li><li>certainly</li><li>clearly</li><li>definitely</li><li>essentially</li><li>extremely</li><li>fundamentally</li><li>incredibly</li><li>interestingly</li><li>naturally</li><li>obviously</li><li>quite</li><li>really</li><li>significantly</li><li>simply</li><li>surely</li><li>truly</li><li>ultimately</li><li>undoubtedly</li><li>very</li></ul>
+<hr>
+<h2>Academic-Specific AI Tells</h2>
+<p>| Avoid | Use Instead | |-------|-------------| | shed light on | clarify, explain, reveal | | pave the way for | enable, allow, make possible | | a myriad of | many, numerous, various | | a plethora of | many, numerous, several | | paramount | very important, essential, critical | | pertaining to | about, regarding, concerning | | prior to | before | | subsequent to | after | | in light of | because of, given, considering | | with respect to | about, regarding, for | | in terms of | regarding, for, about | | the fact that | that (or rewrite sentence) |</p>
+<hr>
+<h2>How to Self-Check</h2>
+<ol><li>Read your text aloud. If phrases sound unnatural in speech, revise them</li><li>Ask: &quot;Would I say this in a conversation with a colleague?&quot;</li><li>Check for repetitive sentence structures</li><li>Look for clusters of the words listed above</li><li>Ensure varied sentence lengths (not all similar length)</li><li>Verify each intensifier adds genuine meaning</li></ol>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ai-writing-detection.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

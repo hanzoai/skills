@@ -1,5 +1,5 @@
 ---
-description: Discover and activate relevant skills (61 skills)
+description: Discover and activate relevant skills from the library
 argument-hint: [category|search-term] (optional)
 ---
 

@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>scoring-models</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/scoring-models.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/scoring-models">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/scoring-models.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>scoring-models</h1><p class="lede">Detailed scoring templates, example models by business type, and calibration guidance.</p><h1>Lead Scoring Models</h1>
+<p>Detailed scoring templates, example models by business type, and calibration guidance.</p>
+<h2>Explicit Scoring Template (Fit)</h2>
+<h3>Company Attributes</h3>
+<p>| Attribute | Criteria | Points | |-----------|----------|--------| | <strong>Company size</strong> | 1-10 employees | +5 | | | 11-50 employees | +10 | | | 51-200 employees | +15 | | | 201-1000 employees | +20 | | | 1000+ employees | +15 (unless enterprise-focused, then +25) | | <strong>Industry</strong> | Primary target industry | +20 | | | Secondary target industry | +10 | | | Non-target industry | 0 | | <strong>Revenue</strong> | Under $1M | +5 | | | $1M-$10M | +10 | | | $10M-$100M | +15 | | | $100M+ | +20 | | <strong>Geography</strong> | Primary market | +10 | | | Secondary market | +5 | | | Non-target market | 0 |</p>
+<h3>Contact Attributes</h3>
+<p>| Attribute | Criteria | Points | |-----------|----------|--------| | <strong>Job title</strong> | C-suite (CEO, CTO, CMO) | +25 | | | VP level | +20 | | | Director level | +15 | | | Manager level | +10 | | | Individual contributor | +5 | | <strong>Department</strong> | Primary buying department | +15 | | | Adjacent department | +5 | | | Unrelated department | 0 | | <strong>Seniority</strong> | Decision maker | +20 | | | Influencer | +10 | | | End user | +5 |</p>
+<h3>Technology Attributes</h3>
+<p>| Attribute | Criteria | Points | |-----------|----------|--------| | <strong>Tech stack</strong> | Uses complementary tool | +15 | | | Uses competitor | +10 (they understand the category) | | | Uses tool you replace | +20 | | <strong>Tech maturity</strong> | Modern stack (cloud, SaaS-forward) | +10 | | | Legacy stack | +5 |</p>
+<hr>
+<h2>Implicit Scoring Template (Engagement)</h2>
+<h3>High-Intent Signals</h3>
+<p>| Signal | Points | Decay | |--------|--------|-------| | <strong>Demo request</strong> | +30 | None | | <strong>Pricing page visit</strong> | +20 | -5 per week | | <strong>Free trial signup</strong> | +25 | None | | <strong>Contact sales form</strong> | +30 | None | | <strong>Case study page (2+)</strong> | +15 | -5 per 2 weeks | | <strong>Comparison page visit</strong> | +15 | -5 per week | | <strong>ROI calculator used</strong> | +20 | -5 per 2 weeks |</p>
+<h3>Medium-Intent Signals</h3>
+<p>| Signal | Points | Decay | |--------|--------|-------| | <strong>Webinar registration</strong> | +10 | -5 per month | | <strong>Webinar attendance</strong> | +15 | -5 per month | | <strong>Whitepaper download</strong> | +10 | -5 per month | | <strong>Blog visit (3+ in a week)</strong> | +10 | -5 per 2 weeks | | <strong>Email click</strong> | +5 per click | -2 per month | | <strong>Email open (3+)</strong> | +5 | -2 per month | | <strong>Social media engagement</strong> | +5 | -2 per month |</p>
+<h3>Low-Intent Signals</h3>
+<p>| Signal | Points | Decay | |--------|--------|-------| | <strong>Single blog visit</strong> | +2 | -2 per month | | <strong>Newsletter open</strong> | +2 | -1 per month | | <strong>Single email open</strong> | +1 | -1 per month | | <strong>Visited homepage only</strong> | +1 | -1 per week |</p>
+<h3>Product Usage Signals (PLG)</h3>
+<p>| Signal | Points | Decay | |--------|--------|-------| | <strong>Created account</strong> | +15 | None | | <strong>Completed onboarding</strong> | +20 | None | | <strong>Used core feature (3+ times)</strong> | +25 | -5 per month inactive | | <strong>Invited team member</strong> | +25 | None | | <strong>Hit usage limit</strong> | +20 | -10 per month | | <strong>Exported data</strong> | +10 | -5 per month | | <strong>Connected integration</strong> | +15 | None | | <strong>Daily active for 5+ days</strong> | +20 | -10 per 2 weeks inactive |</p>
+<hr>
+<h2>Negative Scoring Signals</h2>
+<p>| Signal | Points | Notes | |--------|--------|-------| | <strong>Competitor email domain</strong> | -50 | Auto-flag for review | | <strong>Student email (.edu)</strong> | -30 | May still be valid in some cases | | <strong>Personal email (gmail, yahoo)</strong> | -10 | Less relevant for B2B; adjust for SMB | | <strong>Unsubscribe from emails</strong> | -20 | Reduce engagement score | | <strong>Bounce (hard)</strong> | -50 | Remove from scoring | | <strong>Spam complaint</strong> | -100 | Remove from all sequences | | <strong>Job title: Student/Intern</strong> | -25 | Low buying authority | | <strong>Job title: Consultant</strong> | -10 | May be evaluating for client | | <strong>No website visit in 90 days</strong> | -15 | Score decay | | <strong>Invalid phone number</strong> | -10 | Data quality signal | | <strong>Careers page visitor only</strong> | -30 | Likely a job seeker |</p>
+<hr>
+<h2>Example Scoring Models</h2>
+<h3>Model 1: PLG SaaS (ACV $500-$5K)</h3>
+<p><strong>Weight: 30% fit / 70% engagement (heavily favor product usage)</strong></p>
+<p><strong>Fit criteria:</strong></p>
+<ul><li>Company size 10-500: +15</li><li>Target industry: +10</li><li>Manager+ role: +10</li><li>Uses complementary tool: +10</li></ul>
+<p><strong>Engagement criteria:</strong></p>
+<ul><li>Created free account: +15</li><li>Completed onboarding: +20</li><li>Used core feature 3+ times: +25</li><li>Invited team member: +25</li><li>Hit usage limit: +20</li><li>Pricing page visit: +15</li></ul>
+<p><strong>Negative:</strong></p>
+<ul><li>Personal email: -10</li><li>No login in 14 days: -15</li><li>Competitor domain: -50</li></ul>
+<p><strong>MQL threshold: 60 points</strong> <strong>Recalibration: Monthly</strong> (fast feedback loop with high volume)</p>
+<hr>
+<h3>Model 2: Enterprise Sales-Led (ACV $50K+)</h3>
+<p><strong>Weight: 60% fit / 40% engagement (fit is critical at this ACV)</strong></p>
+<p><strong>Fit criteria:</strong></p>
+<ul><li>Company size 500+: +20</li><li>Revenue $50M+: +15</li><li>Target industry: +15</li><li>VP+ title: +20</li><li>Decision maker confirmed: +15</li><li>Uses competitor: +10</li></ul>
+<p><strong>Engagement criteria:</strong></p>
+<ul><li>Demo request: +30</li><li>Multiple stakeholders engaged: +20</li><li>Attended executive webinar: +15</li><li>Downloaded ROI guide: +10</li><li>Visited pricing page 2+: +15</li></ul>
+<p><strong>Negative:</strong></p>
+<ul><li>Company too small (&lt;100): -30</li><li>Individual contributor only: -15</li><li>Competitor domain: -50</li></ul>
+<p><strong>MQL threshold: 75 points</strong> <strong>Recalibration: Quarterly</strong> (longer sales cycles, smaller sample size)</p>
+<hr>
+<h3>Model 3: Mid-Market Hybrid (ACV $5K-$25K)</h3>
+<p><strong>Weight: 50% fit / 50% engagement (balanced approach)</strong></p>
+<p><strong>Fit criteria:</strong></p>
+<ul><li>Company size 50-1000: +15</li><li>Target industry: +10</li><li>Manager-VP title: +15</li><li>Target geography: +10</li><li>Uses complementary tool: +10</li></ul>
+<p><strong>Engagement criteria:</strong></p>
+<ul><li>Demo request or trial signup: +25</li><li>Pricing page visit: +15</li><li>Case study download: +10</li><li>Webinar attendance: +10</li><li>Email engagement (3+ clicks): +10</li><li>Blog visits (5+ pages): +10</li></ul>
+<p><strong>Negative:</strong></p>
+<ul><li>Personal email: -10</li><li>No engagement in 30 days: -10</li><li>Competitor domain: -50</li><li>Student/intern title: -25</li></ul>
+<p><strong>MQL threshold: 65 points</strong> <strong>Recalibration: Quarterly</strong></p>
+<hr>
+<h2>Threshold Calibration</h2>
+<h3>Setting the Initial Threshold</h3>
+<ol><li><strong>Pull closed-won data</strong> from the last 6-12 months</li><li><strong>Retroactively score</strong> each deal using your new model</li><li><strong>Find the natural breakpoint</strong> — what score separated wins from losses?</li><li><strong>Set threshold</strong> just below where 80% of closed-won deals would have scored</li><li><strong>Validate</strong> against closed-lost — if many closed-lost score above threshold, tighten criteria</li></ol>
+<h3>Calibration Cadence</h3>
+<p>| Business Type | Recalibration Frequency | Why | |---------------|------------------------|-----| | PLG / High volume | Monthly | Fast feedback loop, lots of data | | Mid-market | Quarterly | Moderate cycle length | | Enterprise | Quarterly to semi-annually | Long cycles, small sample size |</p>
+<h3>Calibration Steps</h3>
+<ol><li><strong>Pull MQL-to-closed data</strong> for the calibration period</li><li><strong>Compare scored MQLs vs. actual outcomes:</strong></li></ol>
+<ul><li>High score + closed-won = correctly scored</li><li>High score + closed-lost = possible false positive (tighten)</li><li>Low score + closed-won = possible false negative (loosen)</li></ul>
+<ol><li><strong>Adjust weights</strong> based on which attributes actually correlated with wins</li><li><strong>Adjust threshold</strong> if MQL volume is too high (raise) or too low (lower)</li><li><strong>Document changes</strong> and communicate to sales team</li></ol>
+<h3>Warning Signs Your Model Needs Recalibration</h3>
+<ul><li>MQL-to-SQL acceptance rate drops below 30%</li><li>Sales consistently rejects MQLs as &quot;not ready&quot;</li><li>High-scoring leads don&#x27;t convert; low-scoring leads do</li><li>MQL volume spikes without corresponding revenue</li><li>New product/market changes since last calibration</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/scoring-models.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

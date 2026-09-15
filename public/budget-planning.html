@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>budget-planning</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/budget-planning.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/budget-planning">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/budget-planning.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>budget-planning</h1><p class="lede">The problem with most SaaS marketing budgets is that they&#x27;re pulled out of thin air — a number that hopefully doesn&#x27;t constrain growth too much, but doesn&#x27;t anchor in customer-acquisition economics either.</p><h1>Budget Planning — Scientific Methods for Setting the Marketing Budget</h1>
+<p>The problem with most SaaS marketing budgets is that they&#x27;re pulled out of thin air — a number that hopefully doesn&#x27;t constrain growth too much, but doesn&#x27;t anchor in customer-acquisition economics either. The result: when someone asks &quot;why this number?&quot; there&#x27;s no answer.</p>
+<p>Two scientific methods solve this. Use one (not both) in Section 8 (Revenue) and Section 10 (12-month outlook) of every plan.</p>
+<p>Excerpted and adapted from <em>Founding Marketing</em> by Corey Haines.</p>
+<h2>Method 1 — Revenue-Based (5–40% of annual revenue)</h2>
+<p><strong>Direction:</strong> budget → revenue goal.</p>
+<p>You start with what the company can comfortably spend on marketing, then forecast what revenue that spend can plausibly generate.</p>
+<h3>The ranges</h3>
+<p>| Posture | % of ARR | When to use | |---|---|---| | <strong>Conservative (profit-preserving)</strong> | 5% | Established business focused on profit distribution; bootstrapped; founder-paid customer base | | <strong>Standard growth</strong> | 15–25% | Most healthy SaaS in the seed-to-Series-A range | | <strong>Aggressive growth (deploying raised capital)</strong> | up to 40% | Recently funded round, mandate to deploy fast, board accepts burn |</p>
+<p>For reference: public SaaS companies routinely report sales-and-marketing spend between 20% and 55% of revenue (Zoom historically ran between 20% and 55% across years).</p>
+<h3>The math (Conservative example)</h3>
+<p>Business at $1M ARR, 5% allocation:</p>
+<ul><li>Annual marketing budget: <strong>$50,000</strong></li><li>Blended CAC: $100 → can acquire <strong>500 new customers</strong></li><li>ARPC: $50/mo → adds <strong>$300K</strong> to ARR</li><li>Account for 15% annual churn → 85% × $300K = <strong>+$255K net new ARR</strong></li><li>End-of-year goal: <strong>$1.255M ARR</strong></li></ul>
+<h3>The math (Aggressive example)</h3>
+<p>Business at $1M ARR, 40% allocation:</p>
+<ul><li>Annual marketing budget: <strong>$400,000</strong></li><li>Blended CAC: $100 → can acquire <strong>4,000 new customers</strong></li><li>ARPC: $50/mo → adds <strong>$2.4M</strong> to ARR</li><li>End-of-year goal: <strong>$3.4M ARR</strong></li></ul>
+<h3>Two keys to making this method work</h3>
+<ol><li><strong>Know your blended CAC</strong> (see &quot;Calculating CAC&quot; below)</li><li><strong>Match the allocation percentage to your actual ambition.</strong> A founder running 5% allocation while telling the board they expect to triple revenue is showing two incompatible signals.</li></ol>
+<h2>Method 2 — Goal-Based (reverse-engineered from the revenue target)</h2>
+<p><strong>Direction:</strong> revenue goal → budget.</p>
+<p>You start with the revenue goal and work backward through the unit economics to derive the budget required to hit it. Best for:</p>
+<ul><li>Companies just starting up (no historical CAC baseline yet, working from first principles)</li><li>Companies anticipating outside capital (need to defend the ask)</li><li>Companies using revenue-based financing (Pipe, Capchase, Founderpath)</li></ul>
+<h3>The formula</h3>
+<pre><code>Marketing budget = [(New ARR / (ARPC × 12)) × CAC] / annual retention rate</code></pre>
+<h3>Worked example: $1M ARR → $2M ARR</h3>
+<p>Step 1 — How much new ARR per customer? ARPC × 12 = $50 × 12 = <strong>$600 ARR per new customer</strong></p>
+<p>Step 2 — How many new customers do we need? $1,000,000 / $600 = <strong>1,667 new customers</strong></p>
+<p>Step 3 — What&#x27;s the raw acquisition cost? 1,667 × $100 CAC = <strong>$166,700</strong></p>
+<p>Step 4 — Account for churn (15% annual = 85% retention) $166,700 / 0.85 = <strong>$196,118</strong> (round to <strong>$200K</strong>)</p>
+<p>When someone asks how you got to the budget, walk them through the four steps. It&#x27;s defensible.</p>
+<h3>Why this formula and not something simpler</h3>
+<p>The four steps each correspond to a real economic reality:</p>
+<ul><li>Step 1 converts MRR-language into the ARR-language a board talks in</li><li>Step 2 names the customer count, which is what the funnel actually has to deliver</li><li>Step 3 anchors the budget in the cost of acquisition</li><li>Step 4 acknowledges that churned customers don&#x27;t count toward net new ARR, so the budget needs to cover the gap</li></ul>
+<h3>Required buffer</h3>
+<p><strong>Always add 10–20% as &quot;experimental budget&quot;</strong> on top of the formula output. CAC is the main dependency; if CAC comes in 50% higher than estimated, the cascading effect is missing the revenue goal. It is much cheaper to overestimate CAC than to underestimate it.</p>
+<p>The experimental budget also funds the experiments that find your next channel before your current one plateaus (see <code>growth-patterns.md</code> — channel S-curves).</p>
+<h2>The VC growth path (3-3-2-2-2 rule)</h2>
+<p>Once a company has crossed $1M ARR and taken a Series A, the implicit benchmark VCs expect is:</p>
+<p>| Year | ARR multiple | Cumulative ARR (from $1M start) | |---|---|---| | Year 0 | — | $1M | | Year +1 | 3× | $3M | | Year +2 | 3× | $9M | | Year +3 | 2× | $18M | | Year +4 | 2× | $36M | | Year +5 | 2× | $72M | | Year +6 | 2× | $144M | | Year +7 | 2× | $288M |</p>
+<p>That&#x27;s the 3-3-2-2-2 rule. Useful when:</p>
+<ul><li>The plan needs to map 12-month and 36-month milestones to VC expectations</li><li>The founder is mid-raise and the board needs to see a plausible path to the next round</li><li>Section 10 (12-month outlook) needs anchoring against an industry benchmark, not just internal ambition</li></ul>
+<p>Most companies miss it. That&#x27;s fine. Knowing the benchmark gives the team a defensible reason to either match it or explicitly choose not to.</p>
+<h2>Calculating CAC (blended, not paid-only)</h2>
+<p>If there&#x27;s no historical CAC, use a baseline: <strong>one year of revenue from the smallest paid plan.</strong> Deploy the budget, capture actual CAC data, replace the baseline with the measured number for the next planning cycle.</p>
+<p>For an established CAC calculation, <strong>CAC must be blended.</strong> Include:</p>
+<ul><li>Marketing salaries (full loaded cost, not just base)</li><li>Advertising spend</li><li>Marketing tech stack costs</li><li>Content production costs (writers, designers, video editors)</li><li>Agency / contractor retainers</li><li>SDR / BDR salaries if doing outbound</li><li>Tools (CRM, marketing automation, analytics)</li></ul>
+<p>Then divide by the number of new customers acquired in the period. That blended number is the one to use in either budgeting method.</p>
+<p>The mistake to avoid: calculating CAC from paid ad spend alone. A company that &quot;doesn&#x27;t run ads&quot; still has a CAC — it&#x27;s just hidden in the content team, the founder&#x27;s time, the SEO contractor, the conference booth.</p>
+<h2>The reality check on forecasting</h2>
+<p>This whole framework derives a budget and a revenue goal — not a 12-month month-by-month forecast accurate to the dollar.</p>
+<p><strong>Unless the company is publicly traded, all forecasts are educated guesses.</strong> No startup under $100M ARR reliably hits forecasts to the month. The honest framing for the plan:</p>
+<ul><li>The annual goal is a defensible direction-of-travel</li><li>The budget is the resource commitment that makes the goal plausible</li><li>The 90-day roadmap (Section 9) is what&#x27;s actionable now</li><li>Month-to-month variance is expected; quarterly review is when the plan adjusts</li></ul>
+<p>What&#x27;s actionable: how to deploy the budget, what concrete moves to execute, what to adjust when real data comes in.</p>
+<p>What&#x27;s not actionable: trying to forecast traffic, pipeline, retention curves, conversion rates, and channel mix all down to the decimal point and expecting that forecast to hold. Founders who over-engineer the forecast tend to spend the plan period explaining variance instead of executing.</p>
+<p><strong>Rule for the plan:</strong> the budget number is honest. The annual goal is honest. The month-by-month projection is illustrative.</p>
+<h2>How this flows into the plan</h2>
+<p>| Section | What to include | |---|---| | <strong>3 (Current state)</strong> | Current monthly marketing spend broken down by line (paid, tools, content, headcount, retainers). Compute current %-of-ARR allocation. | | <strong>8 (Revenue)</strong> | The unit-economics table (CAC, ARPC, churn) that feeds whichever budget method you&#x27;re using. | | <strong>10 (12-month outlook)</strong> | Apply Method 1 or Method 2 to derive the 12-month budget and the resulting revenue goal. Anchor against the 3-3-2-2-2 rule if Series A+ and VC-backed. | | <strong>11 (Ops stack)</strong> | Show the budget allocation across the AARRR stages — what % to Acquisition, Activation, etc. The ops-stack mapping informs which line items grow when the next funding tier unlocks. | | <strong>13 (Open decisions)</strong> | If CAC is unknown or contested, flag it as the highest-impact open decision — every other number depends on it. |</p>
+<h2>When to choose which method</h2>
+<ul><li><strong>Method 1 (Revenue-Based)</strong> when the company has historical CAC data, a profit/burn posture, and the question is &quot;given our posture, what&#x27;s a plausible goal.&quot;</li><li><strong>Method 2 (Goal-Based)</strong> when the company has a specific goal (board mandate, VC milestone, fundraise target) and the question is &quot;what budget do we need to hit it.&quot;</li></ul>
+<p>For most plans in the seed-to-Series-A range, Method 2 is more useful — it forces the conversation about whether the goal is funded.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/budget-planning.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

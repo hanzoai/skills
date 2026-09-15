@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>remotion-video</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/remotion-video.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/remotion-video">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/remotion-video.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>remotion-video</h1><p class="lede">Remotion video composition knowledge — 6 template specs, storyboard-to-composition mapping, frame calculations, animation catalog, transition types, platform rules, retention triggers, and anti-patterns for video production</p><h1>Remotion Video Skill</h1>
+<p>Specialized knowledge base for mapping creative video concepts to Remotion compositions. Covers template selection, storyboard-to-composition translation, timing and pacing rules, animation and transition catalogs, platform-specific constraints, brand integration, retention psychology, and anti-patterns. This skill is consumed by the video-producer agent and integrates with the copywriting, video-production, and platform-mastery skills.</p>
+<hr>
+<h2>Trigger Conditions</h2>
+<p>Use this skill when the user asks to:</p>
+<ul><li>Create a video, reel, short, or explainer</li><li>Produce an animated carousel from existing slide content</li><li>Map a storyboard to a Remotion composition</li><li>Select the right video template for a given topic</li><li>Calculate frame timing for video scenes</li><li>Choose animations or transitions for video content</li><li>Optimize video pacing for retention</li><li>Convert carousel slides into animated video format</li><li>Render a video using Remotion</li><li>Review or improve an existing video storyboard</li></ul>
+<hr>
+<h2>Template Registry</h2>
+<p>Six composition templates are available, each with specific constraints and scene flow patterns.</p>
+<h3>1. ReelTips</h3>
+<p>| Property | Value | |----------|-------| | Aspect Ratio | 9:16 (1080x1920) | | FPS | 30 | | Duration Range | 15-60 seconds (450-1800 frames) | | Scene Flow | hook(3s) &gt; points(5s each) &gt; CTA(4s) | | Background | Dark gradient with accent color from brand | | Default Animations | fade-in + scale-in for hook, alternating slide-left/right for points, bounce for CTA | | Best For | Quick tips, lists, how-tos, hacks |</p>
+<p><strong>Props Schema:</strong></p>
+<pre><code class="lang-typescript">{
+  template: &quot;ReelTips&quot;,
+  fps: 30,
+  width: 1080,
+  height: 1920,
+  brand: BrandProps,
+  scenes: SceneProps[],  // types: hook, point, cta
+  showProgressBar: boolean,
+  showWatermark: boolean
+}</code></pre>
+<h3>2. ReelBeforeAfter</h3>
+<p>| Property | Value | |----------|-------| | Aspect Ratio | 9:16 (1080x1920) | | FPS | 30 | | Duration Range | 15-30 seconds (450-900 frames) | | Scene Flow | hook(3s) &gt; comparisons(6s each) &gt; reveal(4s) &gt; CTA(3s) | | Background | Split dark/light for before/after contrast | | Default Animations | wipe transitions for comparisons, slide for reveal | | Best For | Transformations, comparisons, results, upgrades |</p>
+<p><strong>Props Schema:</strong></p>
+<pre><code class="lang-typescript">{
+  template: &quot;ReelBeforeAfter&quot;,
+  fps: 30,
+  width: 1080,
+  height: 1920,
+  brand: BrandProps,
+  scenes: SceneProps[],  // types: hook, comparison, point, cta
+  showProgressBar: boolean,
+  showWatermark: boolean
+}</code></pre>
+<h3>3. ReelNumbers</h3>
+<p>| Property | Value | |----------|-------| | Aspect Ratio | 9:16 (1080x1920) | | FPS | 30 | | Duration Range | 15-30 seconds (450-900 frames) | | Scene Flow | hook(3s) &gt; number+context(5s each) &gt; insight(5s) &gt; CTA(3s) | | Background | Solid dark with accent-colored number highlights | | Default Animations | counter-up for numbers, fade for context text | | Best For | Statistics, data points, metrics, growth numbers |</p>
+<p><strong>Props Schema:</strong></p>
+<pre><code class="lang-typescript">{
+  template: &quot;ReelNumbers&quot;,
+  fps: 30,
+  width: 1080,
+  height: 1920,
+  brand: BrandProps,
+  scenes: SceneProps[],  // types: hook, number, point, cta
+  showProgressBar: boolean,
+  showWatermark: boolean
+}</code></pre>
+<h3>4. ExplainerSteps</h3>
+<p>| Property | Value | |----------|-------| | Aspect Ratio | 16:9 (1920x1080) | | FPS | 30 | | Duration Range | 60-180 seconds (1800-5400 frames) | | Scene Flow | intro(5s) &gt; steps(15s each) &gt; summary grid(10s) &gt; CTA(5s) | | Background | Clean light or branded gradient | | Default Animations | slide-up for steps, scale-in for summary | | Best For | Tutorials, how-to guides, processes, setup guides |</p>
+<p><strong>Props Schema:</strong></p>
+<pre><code class="lang-typescript">{
+  template: &quot;ExplainerSteps&quot;,
+  fps: 30,
+  width: 1920,
+  height: 1080,
+  brand: BrandProps,
+  scenes: SceneProps[],  // types: hook, step, point, cta
+  showProgressBar: boolean,
+  showWatermark: boolean
+}</code></pre>
+<h3>5. ExplainerDemo</h3>
+<p>| Property | Value | |----------|-------| | Aspect Ratio | 16:9 (1920x1080) | | FPS | 30 | | Duration Range | 30-120 seconds (900-3600 frames) | | Scene Flow | problem(5s) &gt; solution intro(5s) &gt; features(15s each) &gt; social proof(10s) &gt; CTA(5s) | | Background | Branded gradient or solid | | Default Animations | fade transitions, scale for features | | Best For | Product demos, feature showcases, SaaS walkthroughs |</p>
+<p><strong>Props Schema:</strong></p>
+<pre><code class="lang-typescript">{
+  template: &quot;ExplainerDemo&quot;,
+  fps: 30,
+  width: 1920,
+  height: 1080,
+  brand: BrandProps,
+  scenes: SceneProps[],  // types: hook, point, demo, cta
+  showProgressBar: boolean,
+  showWatermark: boolean
+}</code></pre>
+<h3>6. CarouselAnimated</h3>
+<p>| Property | Value | |----------|-------| | Aspect Ratio | 4:5 (1080x1350) | | FPS | 30 | | Duration Range | 15-60 seconds (450-1800 frames) | | Scene Flow | cover(4s) &gt; content slides(4s each) &gt; CTA(4s) | | Background | Inherits from carousel design spec or brand palette | | Default Animations | slide-left transitions between slides | | Best For | Animated versions of existing carousel content |</p>
+<p><strong>Props Schema:</strong></p>
+<pre><code class="lang-typescript">{
+  template: &quot;CarouselAnimated&quot;,
+  fps: 30,
+  width: 1080,
+  height: 1350,
+  brand: BrandProps,
+  scenes: SceneProps[],  // types: hook, point, cta
+  showProgressBar: boolean,
+  showWatermark: boolean
+}</code></pre>
+<hr>
+<h2>Storyboard-to-Composition Mapping</h2>
+<h3>Mapping Rules</h3>
+<p>The storyboard YAML produced by the video-producer agent must be translated into a Remotion composition JSON. Follow these rules exactly.</p>
+<h4>Scene Type Mapping</h4>
+<p>| Storyboard Scene Type | Remotion SceneProps.type | Typical Animation | Notes | |----------------------|-------------------------|-------------------|-------| | <code>hook</code> | <code>&quot;hook&quot;</code> | fade-in, scale-in | Always first scene. Must fire immediately. | | <code>point</code> | <code>&quot;point&quot;</code> | slide-left, slide-right | Content scenes. Alternate directions for pattern interrupt. | | <code>comparison</code> | <code>&quot;comparison&quot;</code> | wipe, slide-left | Before/after pairs. Use wipe for dramatic reveal. | | <code>number</code> | <code>&quot;number&quot;</code> | counter-up | Numbers animate from 0 to target value. | | <code>step</code> | <code>&quot;step&quot;</code> | slide-up, fade-in | Tutorial steps. Numbered prominently. | | <code>demo</code> | <code>&quot;demo&quot;</code> | scale-in, fade-in | Product feature highlights. | | <code>cta</code> | <code>&quot;cta&quot;</code> | bounce, scale-in | Always last scene. Brand handle visible. |</p>
+<h4>Frame Calculation</h4>
+<pre><code>For each scene in storyboard.scenes:
+  scene.durationFrames = scene.duration * storyboard.fps
+  scene.startFrame = sum of all previous scenes&#x27; durationFrames
+
+Total composition frames:
+  totalFrames = sum of all scene durationFrames</code></pre>
+<p><strong>Example calculation (30fps):</strong></p>
+<pre><code>Scene 1 (hook, 3s):     startFrame=0,    durationFrames=90
+Scene 2 (point, 5s):    startFrame=90,   durationFrames=150
+Scene 3 (point, 5s):    startFrame=240,  durationFrames=150
+Scene 4 (point, 5s):    startFrame=390,  durationFrames=150
+Scene 5 (cta, 4s):      startFrame=540,  durationFrames=120
+Total:                   totalFrames=660  (22 seconds)</code></pre>
+<h4>Brand Injection</h4>
+<p>Map brand-voice.yaml colors to Remotion BrandProps:</p>
+<pre><code class="lang-yaml"># Input: brand-voice.yaml
+visual_identity:
+  colors:
+    primary: &quot;#6c5ce7&quot;
+    secondary: &quot;#00cec9&quot;
+    background: &quot;#0a0a0a&quot;
+    text: &quot;#ffffff&quot;
+    accent: &quot;#fd79a8&quot;
+  handle: &quot;@myhandle&quot;
+  name: &quot;My Brand&quot;
+
+# Output: BrandProps
+brand:
+  name: &quot;My Brand&quot;
+  handle: &quot;@myhandle&quot;
+  colors:
+    primary: &quot;#6c5ce7&quot;
+    secondary: &quot;#00cec9&quot;
+    background: &quot;#0a0a0a&quot;
+    text: &quot;#ffffff&quot;
+    accent: &quot;#fd79a8&quot;
+  watermark_position: &quot;bottom-right&quot;</code></pre>
+<h4>Composition Assembly</h4>
+<pre><code class="lang-json">{
+  &quot;template&quot;: &quot;&lt;from storyboard.template&gt;&quot;,
+  &quot;fps&quot;: 30,
+  &quot;width&quot;: &quot;&lt;from template spec&gt;&quot;,
+  &quot;height&quot;: &quot;&lt;from template spec&gt;&quot;,
+  &quot;totalFrames&quot;: &quot;&lt;calculated sum&gt;&quot;,
+  &quot;brand&quot;: &quot;&lt;BrandProps from brand-voice.yaml&gt;&quot;,
+  &quot;scenes&quot;: [
+    {
+      &quot;type&quot;: &quot;&lt;mapped scene type&gt;&quot;,
+      &quot;startFrame&quot;: &quot;&lt;calculated&gt;&quot;,
+      &quot;durationFrames&quot;: &quot;&lt;scene.duration * fps&gt;&quot;,
+      &quot;text&quot;: &quot;&lt;from storyboard scene&gt;&quot;,
+      &quot;subtext&quot;: &quot;&lt;from storyboard scene, optional&gt;&quot;,
+      &quot;icon&quot;: &quot;&lt;from storyboard scene, optional&gt;&quot;,
+      &quot;animation&quot;: &quot;&lt;from storyboard scene&gt;&quot;,
+      &quot;transition&quot;: &quot;&lt;from storyboard scene, default crossfade&gt;&quot;
+    }
+  ],
+  &quot;showProgressBar&quot;: true,
+  &quot;showWatermark&quot;: true
+}</code></pre>
+<hr>
+<h2>Timing and Pacing</h2>
+<h3>Duration Rules by Scene Type</h3>
+<p>| Scene Type | Minimum | Recommended | Maximum | Notes | |-----------|---------|-------------|---------|-------| | <code>hook</code> | 1.5s | 2-3s | 3s | Must fire immediately. Hook text readable in under 2s. | | <code>point</code> | 3s | 4-6s | 8s | One concept per scene. Text + subtext readable in duration. | | <code>comparison</code> | 4s | 6-8s | 10s | Before/after pair needs time to register contrast. | | <code>number</code> | 3s | 4-5s | 6s | Counter-up animation needs 2-3s, context text needs 2s. | | <code>step</code> | 8s | 12-15s | 20s | Tutorial steps need reading time + comprehension. | | <code>demo</code> | 8s | 12-15s | 20s | Product features need visual demonstration time. | | <code>cta</code> | 2s | 3-4s | 5s | Short, clear, actionable. Don&#x27;t linger. |</p>
+<h3>Pacing by Platform</h3>
+<p>| Platform | Total Duration Sweet Spot | Scene Pacing | Hook Window | |----------|--------------------------|-------------|-------------| | Instagram Reels | 15-30s | Fast (3-5s per scene) | &lt; 1.5s | | YouTube Shorts | 30-60s | Medium (4-6s per scene) | &lt; 2s | | TikTok | 15-60s | Fast (3-5s per scene) | &lt; 1s | | YouTube (long) | 60-180s | Measured (8-15s per scene) | &lt; 3s |</p>
+<h3>Pacing Rules</h3>
+<ol><li><strong>3-5 second visual change rule</strong>: No scene should go more than 5 seconds without a visible change (animation, new text, transition, or motion element).</li><li><strong>Descending duration</strong>: Later scenes can be slightly shorter than earlier ones to create acceleration toward the CTA.</li><li><strong>Hook compression</strong>: The hook scene should feel urgent. 2-3 seconds maximum. If the hook needs more time, the text is too long.</li><li><strong>CTA brevity</strong>: The CTA scene is not for new information. Keep it under 4 seconds. The viewer has already decided to act or not.</li><li><strong>Reading speed</strong>: Assume 150 words per minute for on-screen text. A 5-second scene supports approximately 12 words.</li></ol>
+<hr>
+<h2>Animation Catalog</h2>
+<p>Ten animation types are available. Each maps to a Remotion animation implementation using <code>useCurrentFrame()</code> and <code>interpolate()</code>.</p>
+<p>| Animation | Description | Best For | Remotion Implementation | |-----------|-------------|----------|------------------------| | <code>fade-in</code> | Opacity from 0 to 1 over 15 frames | Hook scenes, gentle reveals | <code>interpolate(frame, [0, 15], [0, 1])</code> on opacity | | <code>fade-out</code> | Opacity from 1 to 0 over 15 frames | Scene exits, before transitions | <code>interpolate(frame, [end-15, end], [1, 0])</code> on opacity | | <code>slide-left</code> | Element enters from right edge, slides to center | Content points (odd positions) | <code>interpolate(frame, [0, 20], [width, 0])</code> on translateX | | <code>slide-right</code> | Element enters from left edge, slides to center | Content points (even positions) | <code>interpolate(frame, [0, 20], [-width, 0])</code> on translateX | | <code>slide-up</code> | Element enters from bottom, slides to center | Steps, reveals, lists | <code>interpolate(frame, [0, 20], [height, 0])</code> on translateY | | <code>scale-in</code> | Element scales from 0.5 to 1.0 with slight bounce | Hooks, reveals, emphasis | <code>interpolate(frame, [0, 20], [0.5, 1])</code> on scale with spring config | | <code>bounce</code> | Element enters with elastic bounce effect | CTAs, emphasis, fun reveals | <code>spring({ frame, fps, config: { damping: 8, stiffness: 100 } })</code> | | <code>typewriter</code> | Text appears character by character | Quotes, statements, dramatic reveals | Render substring <code>text.slice(0, charIndex)</code> per frame | | <code>counter-up</code> | Number counts from 0 to target value | Statistics, metrics, data | <code>interpolate(frame, [0, durationFrames], [0, targetNumber])</code> rounded | | <code>wipe</code> | Horizontal wipe reveals new content | Before/after reveals, dramatic transitions | ClipPath animation from <code>inset(0 100% 0 0)</code> to <code>inset(0 0 0 0)</code> |</p>
+<h3>Animation Selection Rules</h3>
+<ol><li><strong>Hook scenes</strong>: Use <code>fade-in</code>, <code>scale-in</code>, or <code>wipe</code>. Never use <code>slide-left</code> or <code>slide-right</code> for the first scene — they feel like continuation, not an opening.</li><li><strong>Point scenes</strong>: Alternate <code>slide-left</code> and <code>slide-right</code> for pattern interrupt. Same direction on every scene is monotonous.</li><li><strong>Number scenes</strong>: Always use <code>counter-up</code> for the number itself. Use <code>fade-in</code> for the context text below.</li><li><strong>CTA scenes</strong>: Use <code>bounce</code> or <code>scale-in</code> for emphasis. The CTA must feel like an arrival, not a slide.</li><li><strong>Comparison scenes</strong>: Use <code>wipe</code> for dramatic before/after reveals. <code>slide-left</code>/<code>slide-right</code> for less dramatic comparisons.</li><li><strong>Step scenes</strong>: Use <code>slide-up</code> consistently for all steps. The upward motion creates a sense of building/progressing.</li><li><strong>Never use more than 3 different animation types</strong> in a single video. Consistency is more important than variety.</li></ol>
+<h3>Animation Timing</h3>
+<p>| Animation | Default Duration (frames) | At 30fps | |-----------|--------------------------|----------| | fade-in | 15 | 0.5s | | fade-out | 15 | 0.5s | | slide-left | 20 | 0.67s | | slide-right | 20 | 0.67s | | slide-up | 20 | 0.67s | | scale-in | 20 | 0.67s | | bounce | 30 | 1.0s | | typewriter | varies (2 frames/char) | varies | | counter-up | matches scene duration | varies | | wipe | 25 | 0.83s |</p>
+<hr>
+<h2>Transitions</h2>
+<p>Four transition types connect scenes. Transitions occur between the end of one scene and the start of the next.</p>
+<p>| Transition | Frame Duration | At 30fps | Description | Best For | |-----------|---------------|----------|-------------|----------| | <code>crossfade</code> | 15 frames | 0.5s | Outgoing scene fades out while incoming fades in. Smooth and professional. | Default for most scene changes. Points, steps, generic transitions. | | <code>wipe</code> | 20 frames | 0.67s | Horizontal wipe reveals the new scene from left to right. Dramatic. | Before/after reveals, comparison pairs, dramatic moments. | | <code>cut</code> | 0 frames | 0s | Instant switch. No transition effect. Sharp and immediate. | Hook scene start (always use cut for the first scene), rhythm breaks. | | <code>slide</code> | 15 frames | 0.5s | Outgoing scene slides out while incoming slides in from opposite edge. | Carousel-animated (mimics swipe gesture), sequential content. |</p>
+<h3>Transition Rules</h3>
+<ol><li><strong>First scene always uses <code>cut</code></strong>: The video must start immediately. No fade-in from black — the hook text must be visible from frame 1.</li><li><strong>Default is <code>crossfade</code></strong>: When no transition is specified, use crossfade. It is the safest and most professional option.</li><li><strong>Use <code>wipe</code> sparingly</strong>: Maximum 2 wipe transitions per video. Overuse makes the video feel gimmicky.</li><li><strong><code>slide</code> for CarouselAnimated</strong>: The slide transition mimics the Instagram carousel swipe gesture, making animated carousels feel native.</li><li><strong>Transition frames overlap</strong>: Transitions consume frames from both the outgoing and incoming scenes. They do not add to total duration.</li></ol>
+<hr>
+<h2>Platform Rules</h2>
+<h3>Instagram Reels</h3>
+<p>| Parameter | Value | Notes | |-----------|-------|-------| | Aspect Ratio | 9:16 (1080x1920) | Mandatory for full-screen Reels | | Max Duration | 90 seconds | Algorithm favors 15-30s for reach | | Min Duration | 3 seconds | Below 3s feels like an error | | Sweet Spot | 15-30 seconds | Highest completion rate and reach | | Hook Window | &lt; 1.5 seconds | Text must be readable immediately | | Safe Zones | 250px top, 400px bottom | Avoid UI overlay areas (username, music, buttons) | | Audio | Optional (motion-only supported) | Add caption overlay for sound-off viewers |</p>
+<h3>YouTube Shorts</h3>
+<p>| Parameter | Value | Notes | |-----------|-------|-------| | Aspect Ratio | 9:16 (1080x1920) | Same as Reels | | Max Duration | 60 seconds | Hard limit enforced by YouTube | | Min Duration | 15 seconds | Below 15s may not get Shorts shelf | | Sweet Spot | 30-60 seconds | YouTube Shorts audience tolerates longer content | | Hook Window | &lt; 2 seconds | Slightly more forgiving than IG | | Safe Zones | 200px top, 350px bottom | Similar to Reels but slightly different UI | | Audio | Recommended | YouTube Shorts discovery relies more on audio |</p>
+<h3>TikTok</h3>
+<p>| Parameter | Value | Notes | |-----------|-------|-------| | Aspect Ratio | 9:16 (1080x1920) | Standard vertical | | Max Duration | 3 minutes (180s) | Extended from original 60s | | Min Duration | 5 seconds | Below 5s may not surface in For You | | Sweet Spot | 15-60 seconds | Depends on content type | | Hook Window | &lt; 1 second | TikTok has the shortest attention span | | Safe Zones | 150px top, 500px bottom | Large bottom safe zone for comments/buttons | | Audio | Strongly recommended | TikTok is audio-first platform |</p>
+<h3>YouTube (Horizontal)</h3>
+<p>| Parameter | Value | Notes | |-----------|-------|-------| | Aspect Ratio | 16:9 (1920x1080) | Standard horizontal | | Max Duration | No limit | Platform supports any length | | Min Duration | 30 seconds | Below 30s feels rushed for horizontal | | Sweet Spot | 60-180 seconds | For explainers and demos | | Hook Window | &lt; 3 seconds | More patient audience | | Safe Zones | Minimal | Full-screen video, no UI overlays during playback | | Audio | Expected | Horizontal YouTube content almost always has narration |</p>
+<hr>
+<h2>Brand Integration</h2>
+<h3>Color Mapping from brand-voice.yaml</h3>
+<pre><code class="lang-yaml"># brand-voice.yaml colors map to video elements:
+primary:     # Scene accent colors, progress bar fill, icon highlights
+secondary:   # Secondary highlights, subtext emphasis, background accents
+background:  # Video background color, gradient base
+text:        # All text (headlines, body, subtext)
+accent:      # CTA button color, emphasis elements, counter-up numbers</code></pre>
+<h3>Color Application by Scene Type</h3>
+<p>| Scene Type | Background | Text | Accent Usage | |-----------|-----------|------|-------------| | hook | background color or dark gradient | text color, large | accent on key word or underline | | point | background color | text color | primary on icon, secondary on subtext | | comparison | split: muted background / vibrant background | text color | accent on &quot;after&quot; state | | number | background color | text color for context | accent on the animated number | | step | background color | text color | primary on step number | | demo | background color or branded gradient | text color | accent on feature highlights | | cta | accent color as background or accent border | text color (inverted if needed) | accent dominant |</p>
+<h3>Watermark Positioning</h3>
+<p>The brand watermark (@handle) is rendered by the <code>BrandWatermark</code> component:</p>
+<p>| Position | Pixel Offset | Best For | |----------|-------------|----------| | <code>bottom-right</code> | 40px from bottom, 40px from right | Default. Most natural position. | | <code>bottom-left</code> | 40px from bottom, 40px from left | When bottom-right conflicts with platform UI | | <code>top-right</code> | 40px from top, 40px from right | When bottom area is crowded |</p>
+<p><strong>Watermark rules:</strong></p>
+<ul><li>Fade-in at the start of the first scene, stays visible for entire video</li><li>Opacity: 0.7 (visible but not distracting)</li><li>Font size: 18-22px</li><li>Color: text color from brand at 70% opacity</li><li>Never place over the main text area of any scene</li></ul>
+<h3>Progress Bar</h3>
+<p>The animated progress bar shows video progress (0% to 100% over the full duration):</p>
+<ul><li><strong>Position</strong>: Top of frame (default) or bottom of frame</li><li><strong>Height</strong>: 4px</li><li><strong>Color</strong>: primary color from brand</li><li><strong>Background</strong>: white at 20% opacity</li><li><strong>Animation</strong>: Width interpolates from 0% to 100% linearly across totalFrames</li></ul>
+<hr>
+<h2>Retention Triggers</h2>
+<h3>Visual Change Cadence</h3>
+<p>The single most important retention factor in short-form video is <strong>visual change frequency</strong>. The human brain habituates to static visuals in 3-5 seconds and the viewer&#x27;s finger moves to scroll.</p>
+<p><strong>Rule: A visible change must occur every 3-5 seconds.</strong></p>
+<p>Types of visible changes (in order of impact):</p>
+<ol><li><strong>Scene transition</strong> — new background, new text, new layout (strongest)</li><li><strong>Animation start</strong> — text slides in, number counts up, element scales (strong)</li><li><strong>Color shift</strong> — background gradient animates, accent color pulses (moderate)</li><li><strong>Progress bar movement</strong> — visible progress update (weak but cumulative)</li></ol>
+<h3>Retention Trigger Catalog</h3>
+<p>| Trigger | Implementation | Why It Works | |---------|---------------|-------------| | Motion on every scene | All scenes have entrance animations | Static text = scroll away. Motion = visual interest. | | Counter-up for numbers | Numbers animate from 0 to target | Brain tracks counting, creates micro-anticipation. | | Alternating slide directions | Odd scenes slide-left, even slide-right | Pattern interrupt prevents visual habituation. | | Progress bar | Animated bar from 0% to 100% | Creates completion motivation (endowed progress effect). | | Hook in first 1.5s | Text visible from frame 1, no fade-from-black | First impression determines stay/go. No wasted time. | | Text in motion | Typewriter, slide, fade — never just &quot;appear&quot; | Motion triggers peripheral vision attention. | | Color contrast on key words | Accent color on numbers, names, key terms | Draws eye to the most important information. | | Scene type variety | Mix hooks, points, numbers, comparisons | Different layouts prevent monotony. |</p>
+<h3>Retention Anti-Pattern Checklist</h3>
+<p>Before finalizing any storyboard, verify these are NOT present:</p>
+<pre><code>Retention Anti-Pattern Checklist:
+[ ] No scene exceeds 8 seconds without a visual change
+[ ] No two consecutive scenes use the same animation direction
+[ ] Hook scene text is visible from frame 1 (no fade-from-black)
+[ ] CTA scene is under 5 seconds (viewer has already decided)
+[ ] No &quot;intro&quot; scene before the hook (no logos, no &quot;welcome to...&quot;)
+[ ] Total duration is within platform sweet spot
+[ ] Progress bar is enabled (completion motivation)
+[ ] At least 1 counter-up animation if content contains numbers
+[ ] No scene has more than 20 words of text</code></pre>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>Content Anti-Patterns</h3>
+<p>| Anti-Pattern | Why It Fails | Fix | |-------------|-------------|-----| | Scene &gt; 8s without visual change | Viewer habituates, scrolls away | Split scene or add mid-scene animation | | Static text (no animation) | Looks like a screenshot, not a video | Add entrance animation to every text element | | No CTA at the end | Viewer watches but takes no action | Always end with a clear, single CTA | | Hook &gt; 3 seconds | Loses viewers before the content starts | Compress hook to 2-3s max. If text is too long, simplify. | | Intro/logo before hook | Wastes the critical first 1.5s | Hook first, always. Brand watermark handles attribution. | | Slow pacing (&gt;6s per point scene) | Feels like a slideshow, not a video | Speed up to 4-5s per point. Cut unnecessary subtext. | | Too many words per scene | Text unreadable in scene duration | Max 20 words per scene. 12 words is ideal for 5s scenes. | | Same animation on every scene | Monotonous, no pattern interrupts | Alternate directions, mix animation types (max 3 types). |</p>
+<h3>Technical Anti-Patterns</h3>
+<p>| Anti-Pattern | Why It Fails | Fix | |-------------|-------------|-----| | Duration outside template range | Remotion render may fail or produce bad output | Check template duration constraints before composing | | Wrong aspect ratio for platform | Video appears letterboxed or cropped | Match template aspect ratio to target platform | | Transition frames exceeding scene duration | Scene content gets cut by transition overlap | Ensure scene durationFrames &gt; transition frame count | | Missing brand colors | Video looks generic, no brand recognition | Always load and inject BrandProps from brand-voice.yaml | | Counter-up without sufficient duration | Number animation too fast to read | Minimum 3s for counter-up scenes | | Watermark over main text | Blocks content, looks amateur | Position watermark in corner away from text area |</p>
+<h3>Strategic Anti-Patterns</h3>
+<p>| Anti-Pattern | Why It Fails | Fix | |-------------|-------------|-----| | Using explainer template for reel content | Wrong pacing, wrong audience expectations | Match template to content type and platform | | 60s reel for a 3-point topic | Padded content feels thin, hurts retention | Shorter content = shorter video. 3 points = 25-30s reel. | | Animated carousel without original carousel | No source content to adapt | Use reel or explainer template instead. CarouselAnimated is for converting existing content. | | Ignoring platform safe zones | Text hidden behind platform UI elements | Respect safe zone margins per platform | | No progress bar on reels | Viewer has no sense of video length | Always enable progress bar for short-form content |</p>
+<hr>
+<h2>Carousel-to-Video Conversion</h2>
+<h3>When to Use CarouselAnimated</h3>
+<p>Convert existing HTML carousel content to animated video when:</p>
+<ul><li>The user explicitly requests an animated version of an existing carousel</li><li>Cross-posting strategy targets video-first platforms (TikTok, YouTube Shorts)</li><li>Carousel performance data suggests video would perform better</li><li>The content is evergreen and worth repurposing</li></ul>
+<h3>Conversion Rules</h3>
+<h4>Slide-to-Scene Mapping</h4>
+<pre><code>Carousel slide_plan:                    Video storyboard:
+  slide 1 (cover)           --&gt;         scene 1 (hook, 4s, fade-in)
+  slide 2 (content)         --&gt;         scene 2 (point, 4s, slide-left)
+  slide 3 (content)         --&gt;         scene 3 (point, 4s, slide-right)
+  ...                                   ...
+  slide N (cta)             --&gt;         scene N (cta, 4s, bounce)</code></pre>
+<h4>Content Adaptation</h4>
+<p>| Carousel Element | Video Adaptation | |-----------------|-----------------| | Slide headline | Scene text (keep as-is, already optimized) | | Slide body text | Scene subtext (may need trimming for reading speed) | | Slide bullets | Convert to sequential text reveals within scene | | Slide icon/emoji | Scene icon (keep as-is) | | Progress dots | Replace with animated progress bar | | Brand watermark | Map to BrandWatermark component |</p>
+<h4>Timing Calculation</h4>
+<pre><code>Carousel with N slides:
+  Each slide becomes a 4-second scene
+  Total duration = N * 4 seconds
+
+  Example: 7-slide carousel = 28-second video
+
+  If total &gt; 60s: reduce per-scene duration to 3s
+  If total &lt; 15s: increase per-scene duration to 5s</code></pre>
+<h4>Transition for Carousel-Animated</h4>
+<p>Always use <code>slide</code> transition for CarouselAnimated. This mimics the Instagram carousel swipe gesture and makes the animated version feel like a natural extension of the carousel format.</p>
+<h4>Design Spec Inheritance</h4>
+<p>When converting from an existing carousel, the CarouselAnimated template inherits:</p>
+<ul><li>Color palette from the carousel&#x27;s <code>design_spec.palette</code></li><li>Brand handle from the carousel&#x27;s <code>design_spec.brand.handle</code></li><li>Typography style from the carousel&#x27;s <code>design_spec.typography</code></li></ul>
+<p>Do not re-derive these from brand-voice.yaml — use the carousel&#x27;s existing design decisions for visual consistency between the static and animated versions.</p>
+<hr>
+<h2>Shared Components Reference</h2>
+<p>Six Remotion React components are available for all templates:</p>
+<p>| Component | Purpose | Props | |-----------|---------|-------| | <code>AnimatedText</code> | Renders text with specified animation type and delay | <code>text</code>, <code>animation</code>, <code>delay</code>, <code>style</code> | | <code>ProgressBar</code> | Animated bar showing video progress (0-100%) | <code>position</code> (&quot;top&quot; or &quot;bottom&quot;), <code>color</code>, <code>height</code> | | <code>BrandWatermark</code> | Brand handle overlay in corner, fades in on first scene | <code>handle</code>, <code>position</code>, <code>color</code>, <code>opacity</code> | | <code>TransitionWipe</code> | Renders transition effect between scenes | <code>type</code> (&quot;crossfade&quot;, &quot;wipe&quot;, &quot;cut&quot;, &quot;slide&quot;), <code>durationFrames</code> | | <code>BackgroundGradient</code> | Animated gradient background with subtle color shift | <code>colors</code> (array), <code>direction</code>, <code>animationSpeed</code> | | <code>CounterUp</code> | Counts from 0 to target number with easing | <code>target</code>, <code>durationFrames</code>, <code>style</code>, <code>easing</code> |</p>
+<hr>
+<h2>Output Contract</h2>
+<pre><code class="lang-yaml">output_contract:
+  skill: remotion-video
+  format: composition_json
+  required_fields:
+    template: string       # Must match a registered template name
+    fps: integer           # Always 30
+    width: integer         # From template spec
+    height: integer        # From template spec
+    totalFrames: integer   # Calculated sum of all scene durationFrames
+    brand: BrandProps      # From brand-voice.yaml
+    scenes: SceneProps[]   # Mapped from storyboard
+    showProgressBar: boolean
+    showWatermark: boolean
+  scene_required_fields:
+    type: string           # hook | point | comparison | number | step | demo | cta
+    startFrame: integer    # Calculated cumulative position
+    durationFrames: integer # scene.duration * fps
+    text: string           # Scene headline text
+    animation: string      # From animation catalog
+  scene_optional_fields:
+    subtext: string
+    icon: string
+    transition: string     # Default: crossfade
+  validation:
+    total_frames_within_template_range: true
+    all_animations_in_catalog: true
+    all_transitions_in_catalog: true
+    frame_calculations_correct: true
+    brand_colors_present: true
+    no_scene_exceeds_max_duration: true</code></pre>
+<hr>
+<h2>Remotion Environment Discovery &amp; Rendering</h2>
+<h3>CRITICAL: Run this discovery routine BEFORE any render attempt.</h3>
+<p>The Remotion CLI may be installed differently on each user&#x27;s machine. Never assume a fixed path or command. Follow this discovery sequence exactly.</p>
+<h3>Step 1: Locate the Remotion Project</h3>
+<p>The Remotion project lives inside the plugin directory. Discover its path dynamically:</p>
+<pre><code class="lang-bash"># Strategy 1: Relative to the  plugin root
+PROJECT_ROOT=&quot;$(find . -maxdepth 4 -name &#x27;brand-voice.yaml&#x27; -exec dirname {} \; 2&gt;/dev/null | head -1)&quot;
+REMOTION_PROJECT=&quot;${PROJECT_ROOT}/remotion&quot;
+
+# Strategy 2: If brand-voice.yaml not found, search for remotion/src/Root.tsx
+REMOTION_PROJECT=&quot;$(find . -maxdepth 5 -path &#x27;*/remotion&#x27; -type d 2&gt;/dev/null | head -1)&quot;
+
+# Strategy 3: Check common Claude Code plugin locations
+PLUGIN_LOCATIONS=(
+  &quot;${HOME}/.claude/plugins&quot;
+  &quot;${HOME}/Downloads&quot;
+  &quot;$(pwd)&quot;
+)
+for loc in &quot;${PLUGIN_LOCATIONS[@]}&quot;; do
+  if [ -f &quot;${loc}/remotion/src/Root.tsx&quot; ] || [ -f &quot;${loc}/remotion/index.ts&quot; ]; then
+    REMOTION_PROJECT=&quot;${loc}/remotion&quot;
+    break
+  fi
+done</code></pre>
+<p><strong>Validation:</strong> After locating, confirm the project is valid:</p>
+<pre><code class="lang-bash"># Must have at least one of these entry points
+[ -f &quot;${REMOTION_PROJECT}/index.ts&quot; ] || [ -f &quot;${REMOTION_PROJECT}/src/Root.tsx&quot; ]</code></pre>
+<h3>Step 2: Determine the Entry Point</h3>
+<p> has two Remotion entry point structures. Detect which one is active:</p>
+<pre><code class="lang-bash"># Preferred: Full project with 6 compositions (src/ structure)
+if [ -f &quot;${REMOTION_PROJECT}/src/Root.tsx&quot; ] &amp;&amp; [ -f &quot;${REMOTION_PROJECT}/src/compositions/index.ts&quot; ]; then
+  ENTRY_POINT=&quot;${REMOTION_PROJECT}/src/index.ts&quot;
+  ENTRY_TYPE=&quot;full&quot;
+  # Available compositions: ReelTips, ReelBeforeAfter, ReelNumbers, ExplainerSteps, ExplainerDemo, CarouselAnimated
+
+# Fallback: Simplified structure (root-level)
+elif [ -f &quot;${REMOTION_PROJECT}/index.ts&quot; ]; then
+  ENTRY_POINT=&quot;${REMOTION_PROJECT}/index.ts&quot;
+  ENTRY_TYPE=&quot;simple&quot;
+  # Available compositions: ReelTips only (others must be added)
+fi</code></pre>
+<p><strong>Entry point decision table:</strong></p>
+<p>| Structure | Entry Point | Compositions | When to Use | |-----------|-------------|-------------|-------------| | <code>src/</code> (full) | <code>remotion/src/index.ts</code> | All 6 templates | Default — use this when available | | Root-level (simple) | <code>remotion/index.ts</code> | ReelTips only | Fallback if src/ not present |</p>
+<h3>Step 3: Discover the Remotion CLI</h3>
+<p>Remotion CLI can be installed in multiple ways. Check in order of preference:</p>
+<pre><code class="lang-bash"># Method 1: Local npx (most reliable — uses project&#x27;s node_modules)
+cd &quot;${REMOTION_PROJECT}&quot; &amp;&amp; npx remotion --version 2&gt;/dev/null
+REMOTION_CMD=&quot;npx remotion&quot;
+
+# Method 2: Project-level node_modules binary
+if [ -x &quot;${REMOTION_PROJECT}/node_modules/.bin/remotion&quot; ]; then
+  REMOTION_CMD=&quot;${REMOTION_PROJECT}/node_modules/.bin/remotion&quot;
+fi
+
+# Method 3:  parent node_modules (if deps installed at  level)
+REMOTION_BIN=&quot;${PROJECT_ROOT}/node_modules/.bin/remotion&quot;
+if [ -x &quot;${REMOTION_BIN}&quot; ]; then
+  REMOTION_CMD=&quot;${REMOTION_BIN}&quot;
+fi
+
+# Method 4: Global install
+if command -v remotion &amp;&gt;/dev/null; then
+  REMOTION_CMD=&quot;remotion&quot;
+fi
+
+# Method 5: Not found — install needed
+if [ -z &quot;${REMOTION_CMD}&quot; ]; then
+  echo &quot;Remotion not found. Installing...&quot;
+  cd &quot;${REMOTION_PROJECT}&quot; &amp;&amp; npm install
+  REMOTION_CMD=&quot;npx remotion&quot;
+fi</code></pre>
+<p><strong>Discovery result table:</strong></p>
+<p>| Method | Command | Reliability | Notes | |--------|---------|-------------|-------| | <code>npx remotion</code> | High | Uses local node_modules, auto-resolves version | <strong>Preferred</strong> | | <code>./node_modules/.bin/remotion</code> | High | Direct binary, no npx overhead | Fast alternative | | Global <code>remotion</code> | Medium | May version-mismatch with project deps | Check version compatibility | | Not found | — | — | Run <code>npm install</code> in remotion project dir |</p>
+<h3>Step 4: Verify Dependencies</h3>
+<p>Before rendering, confirm all dependencies are installed:</p>
+<pre><code class="lang-bash">cd &quot;${REMOTION_PROJECT}&quot;
+
+# Check if node_modules exists and has remotion
+if [ ! -d &quot;node_modules/remotion&quot; ]; then
+  echo &quot;Installing Remotion dependencies...&quot;
+  npm install
+fi
+
+# Verify Chrome Headless Shell (Remotion downloads this automatically on first render)
+# No manual action needed — Remotion handles this. But if it fails:
+# npx remotion browser ensure</code></pre>
+<h3>Step 5: Render Commands</h3>
+<p>Use the discovered <code>REMOTION_CMD</code> and <code>ENTRY_POINT</code> to execute renders:</p>
+<pre><code class="lang-bash"># Ensure output directory exists
+mkdir -p &quot;${PROJECT_ROOT}/.output/videos/$(date +%Y-%m-%d-%H%M%S)&quot;
+OUTPUT_DIR=&quot;${PROJECT_ROOT}/.output/videos/$(date +%Y-%m-%d-%H%M%S)&quot;
+
+# List available compositions (verify before render)
+cd &quot;${REMOTION_PROJECT}&quot; &amp;&amp; ${REMOTION_CMD} compositions &quot;${ENTRY_POINT}&quot;
+
+# Render MP4 video
+cd &quot;${REMOTION_PROJECT}&quot; &amp;&amp; ${REMOTION_CMD} render &quot;${ENTRY_POINT}&quot; &lt;CompositionId&gt; &quot;${OUTPUT_DIR}/video.mp4&quot;
+
+# Render a still frame (preview/thumbnail)
+cd &quot;${REMOTION_PROJECT}&quot; &amp;&amp; ${REMOTION_CMD} still &quot;${ENTRY_POINT}&quot; &lt;CompositionId&gt; &quot;${OUTPUT_DIR}/preview.png&quot; --frame=45
+
+# Open Remotion Studio (interactive preview in browser)
+cd &quot;${REMOTION_PROJECT}&quot; &amp;&amp; ${REMOTION_CMD} studio &quot;${ENTRY_POINT}&quot;</code></pre>
+<p><strong>Passing dynamic props (from composition.json):</strong></p>
+<pre><code class="lang-bash"># Pass scene data from the storyboard via --props flag
+cd &quot;${REMOTION_PROJECT}&quot; &amp;&amp; ${REMOTION_CMD} render &quot;${ENTRY_POINT}&quot; ReelTips &quot;${OUTPUT_DIR}/video.mp4&quot; \
+  --props=&quot;${OUTPUT_DIR}/composition.json&quot;</code></pre>
+<h3>Step 6: Cross-Platform Considerations</h3>
+<p>| Platform | Working Dir Separator | Shell | NPX Available | Notes | |----------|----------------------|-------|---------------|-------| | <strong>macOS</strong> | <code>/</code> | zsh/bash | Yes (with Node) | Default dev platform. <code>open file.mp4</code> to play. | | <strong>Linux</strong> | <code>/</code> | bash | Yes (with Node) | <code>xdg-open file.mp4</code> to play. May need <code>apt install chromium</code> for headless. | | <strong>Windows (native)</strong> | <code>\</code> | PowerShell/cmd | Yes (with Node) | Use <code>start file.mp4</code> to play. Paths need backslash or quotes. | | <strong>Windows (WSL)</strong> | <code>/</code> | bash | Yes (with Node) | Render inside WSL, output accessible at <code>/mnt/c/...</code>. <code>explorer.exe file.mp4</code> to play. |</p>
+<p><strong>macOS-specific:</strong></p>
+<pre><code class="lang-bash"># Render and open
+cd &quot;${REMOTION_PROJECT}&quot; &amp;&amp; ${REMOTION_CMD} render &quot;${ENTRY_POINT}&quot; ReelTips out/video.mp4 &amp;&amp; open out/video.mp4</code></pre>
+<p><strong>Linux-specific:</strong></p>
+<pre><code class="lang-bash"># Ensure headless Chrome dependencies
+sudo apt-get install -y chromium-browser 2&gt;/dev/null || true
+cd &quot;${REMOTION_PROJECT}&quot; &amp;&amp; ${REMOTION_CMD} render &quot;${ENTRY_POINT}&quot; ReelTips out/video.mp4 &amp;&amp; xdg-open out/video.mp4</code></pre>
+<p><strong>WSL-specific:</strong></p>
+<pre><code class="lang-bash"># Render in WSL, open in Windows
+cd &quot;${REMOTION_PROJECT}&quot; &amp;&amp; ${REMOTION_CMD} render &quot;${ENTRY_POINT}&quot; ReelTips out/video.mp4
+explorer.exe &quot;$(wslpath -w out/video.mp4)&quot;</code></pre>
+<h3>Step 7: Performance Tuning</h3>
+<pre><code class="lang-bash"># Default concurrency (auto-detected from CPU cores)
+${REMOTION_CMD} render &quot;${ENTRY_POINT}&quot; ReelTips out/video.mp4
+
+# Explicit concurrency (use 50-75% of available cores)
+${REMOTION_CMD} render &quot;${ENTRY_POINT}&quot; ReelTips out/video.mp4 --concurrency=8
+
+# Lower quality for fast preview
+${REMOTION_CMD} render &quot;${ENTRY_POINT}&quot; ReelTips out/preview.mp4 --jpeg-quality=60 --scale=0.5
+
+# High quality for publication
+${REMOTION_CMD} render &quot;${ENTRY_POINT}&quot; ReelTips out/video.mp4 --jpeg-quality=90 --crf=18</code></pre>
+<h3>Troubleshooting</h3>
+<p>| Error | Cause | Fix | |-------|-------|-----| | <code>remotion: command not found</code> | CLI not installed | <code>cd ${REMOTION_PROJECT} &amp;&amp; npm install</code> then use <code>npx remotion</code> | | <code>Cannot find module &#x27;remotion&#x27;</code> | Dependencies not installed | <code>cd ${REMOTION_PROJECT} &amp;&amp; npm install</code> | | <code>Could not find composition</code> | Wrong entry point or composition ID | Run <code>${REMOTION_CMD} compositions ${ENTRY_POINT}</code> to list available | | <code>Chrome Headless Shell not found</code> | First render, downloading | Wait for auto-download, or run <code>npx remotion browser ensure</code> | | <code>ENOMEM</code> / out of memory | Video too long or high concurrency | Reduce <code>--concurrency</code> or add <code>--scale=0.5</code> | | <code>ENOSPC</code> / disk space | Not enough disk for render frames | Free 500MB+ before rendering | | <code>Timed out</code> | Render exceeds 5min | Reduce duration, lower quality, or increase <code>--timeout</code> | | <code>JSX element type &#x27;X&#x27; does not have any construct</code> | TypeScript/React version mismatch | Check <code>tsconfig.json</code> has <code>&quot;jsx&quot;: &quot;react-jsx&quot;</code> | | <code>Module not found: @remotion/cli/config</code> | Old remotion.config.ts API | Update to <code>import { Config } from &quot;@remotion/cli/config&quot;</code> |</p>
+<h3>Complete Discovery Script (copy-paste ready)</h3>
+<pre><code class="lang-bash">#!/bin/bash
+#  Remotion Discovery — run from project root
+set -e
+
+# 1. Find  root
+PROJECT_ROOT=&quot;$(find . -maxdepth 4 -name &#x27;brand-voice.yaml&#x27; -exec dirname {} \; 2&gt;/dev/null | head -1)&quot;
+if [ -z &quot;$PROJECT_ROOT&quot; ]; then
+  echo &quot;ERROR: brand-voice.yaml not found. Run /grow setup first.&quot;
+  exit 1
+fi
+
+# 2. Find Remotion project
+REMOTION_PROJECT=&quot;${PROJECT_ROOT}/remotion&quot;
+if [ ! -d &quot;$REMOTION_PROJECT&quot; ]; then
+  echo &quot;ERROR: Remotion project not found at ${REMOTION_PROJECT}&quot;
+  exit 1
+fi
+
+# 3. Determine entry point
+if [ -f &quot;${REMOTION_PROJECT}/src/compositions/index.ts&quot; ]; then
+  ENTRY_POINT=&quot;src/index.ts&quot;
+  echo &quot;Entry: full (6 compositions)&quot;
+else
+  ENTRY_POINT=&quot;index.ts&quot;
+  echo &quot;Entry: simple (ReelTips only)&quot;
+fi
+
+# 4. Ensure dependencies
+if [ ! -d &quot;${REMOTION_PROJECT}/node_modules/remotion&quot; ]; then
+  echo &quot;Installing dependencies...&quot;
+  cd &quot;$REMOTION_PROJECT&quot; &amp;&amp; npm install
+fi
+
+# 5. Verify
+cd &quot;$REMOTION_PROJECT&quot; &amp;&amp; npx remotion compositions &quot;$ENTRY_POINT&quot;
+
+echo &quot;&quot;
+echo &quot;Remotion ready!&quot;
+echo &quot;  Project: ${REMOTION_PROJECT}&quot;
+echo &quot;  Entry:   ${ENTRY_POINT}&quot;
+echo &quot;  Render:  cd ${REMOTION_PROJECT} &amp;&amp; npx remotion render ${ENTRY_POINT} &lt;CompositionId&gt; out/video.mp4&quot;
+echo &quot;  Studio:  cd ${REMOTION_PROJECT} &amp;&amp; npx remotion studio ${ENTRY_POINT}&quot;</code></pre>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/remotion-video.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

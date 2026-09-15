@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>deck-frameworks</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/deck-frameworks.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/deck-frameworks">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/deck-frameworks.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>deck-frameworks</h1><p class="lede">Detailed slide-by-slide guidance for building sales decks that tell a story and close deals.</p><h1>Sales Deck Frameworks</h1>
+<p>Detailed slide-by-slide guidance for building sales decks that tell a story and close deals.</p>
+<h2>The Storytelling Arc</h2>
+<p>Every great deck follows a narrative structure: <strong>Situation → Complication → Resolution.</strong></p>
+<ul><li><strong>Situation</strong> (Slides 1-3): The world your buyer lives in. Establish shared understanding.</li><li><strong>Complication</strong> (Slides 2-3): Why the status quo is no longer sustainable. Create urgency.</li><li><strong>Resolution</strong> (Slides 4-11): Your approach, proof, and path forward.</li></ul>
+<p>The goal is not to present features. The goal is to make the buyer feel understood, then show them a better way.</p>
+<hr>
+<h2>Slide-by-Slide Template</h2>
+<h3>Slide 1: Current World Problem</h3>
+<p><strong>What to include:</strong></p>
+<ul><li>The challenge your buyer faces daily</li><li>A stat or data point that quantifies the problem</li><li>Visual: simple graphic or striking number</li></ul>
+<p><strong>What to avoid:</strong></p>
+<ul><li>Starting with your company or product</li><li>Generic industry trends that don&#x27;t connect to pain</li><li>More than one core problem</li></ul>
+<p><strong>Copy prompt:</strong> &quot;What is the one problem that, if you could describe it perfectly, would make your buyer say &#x27;that&#x27;s exactly my situation&#x27;?&quot;</p>
+<hr>
+<h3>Slide 2: Cost of the Problem</h3>
+<p><strong>What to include:</strong></p>
+<ul><li>Financial impact (revenue lost, costs incurred)</li><li>Time impact (hours wasted, delays)</li><li>Risk impact (what happens if they do nothing)</li><li>Specific numbers wherever possible</li></ul>
+<p><strong>What to avoid:</strong></p>
+<ul><li>Vague claims without data</li><li>Fear-mongering without substance</li><li>Too many metrics (pick 2-3 that hit hardest)</li></ul>
+<p><strong>Copy prompt:</strong> &quot;If your buyer does nothing for the next 12 months, what does it cost them?&quot;</p>
+<hr>
+<h3>Slide 3: The Shift Happening</h3>
+<p><strong>What to include:</strong></p>
+<ul><li>Market trend or technology change creating a new opportunity</li><li>Why &quot;the old way&quot; no longer works</li><li>Why now is the right time to act</li></ul>
+<p><strong>What to avoid:</strong></p>
+<ul><li>Hype-driven trends without substance</li><li>Making it about your product yet</li><li>Overly technical explanations</li></ul>
+<p><strong>Copy prompt:</strong> &quot;What has changed in the market that makes the old approach unsustainable?&quot;</p>
+<hr>
+<h3>Slide 4: Your Approach</h3>
+<p><strong>What to include:</strong></p>
+<ul><li>Your philosophy or unique point of view</li><li>How your approach differs from conventional solutions</li><li>The &quot;aha&quot; insight that led to your product</li></ul>
+<p><strong>What to avoid:</strong></p>
+<ul><li>Feature lists (too early)</li><li>Jargon or acronyms</li><li>Claiming to be &quot;the only&quot; or &quot;the first&quot; unless provably true</li></ul>
+<p><strong>Copy prompt:</strong> &quot;What do you believe about solving this problem that most people get wrong?&quot;</p>
+<hr>
+<h3>Slide 5: Product Walkthrough</h3>
+<p><strong>What to include:</strong></p>
+<ul><li>3-4 key workflows that map to the pain from Slide 1</li><li>Screenshots or product visuals</li><li>Brief description of what each workflow accomplishes</li></ul>
+<p><strong>What to avoid:</strong></p>
+<ul><li>Showing every feature</li><li>Dense UI screenshots without callouts</li><li>Talking about technology instead of outcomes</li></ul>
+<p><strong>Copy prompt:</strong> &quot;Walk through 3 things the buyer would do in your product in their first week.&quot;</p>
+<hr>
+<h3>Slide 6: Proof Points</h3>
+<p><strong>What to include:</strong></p>
+<ul><li>Customer logos (aim for recognizable names in their industry)</li><li>Key metrics: &quot;X% improvement,&quot; &quot;Y hours saved,&quot; &quot;Z% increase&quot;</li><li>Analyst recognition, awards, or certifications if relevant</li></ul>
+<p><strong>What to avoid:</strong></p>
+<ul><li>Unsubstantiated claims</li><li>Too many logos without context</li><li>Vanity metrics that don&#x27;t relate to the buyer&#x27;s pain</li></ul>
+<p><strong>Copy prompt:</strong> &quot;What are 3 numbers that prove your product works?&quot;</p>
+<hr>
+<h3>Slide 7: Case Study</h3>
+<p><strong>What to include:</strong></p>
+<ul><li>One customer story told well: challenge, solution, results</li><li>Specific metrics (before and after)</li><li>Customer quote if available</li><li>Choose a customer similar to the prospect</li></ul>
+<p><strong>What to avoid:</strong></p>
+<ul><li>Multiple case studies crammed into one slide</li><li>Generic outcomes without specifics</li><li>Customers from irrelevant industries</li></ul>
+<p><strong>Copy prompt:</strong> &quot;Tell the story of one customer who went from struggling to succeeding with your product.&quot;</p>
+<hr>
+<h3>Slide 8: Implementation / Timeline</h3>
+<p><strong>What to include:</strong></p>
+<ul><li>Clear phases with timeline (e.g., Week 1: Setup, Week 2-3: Integration, Week 4: Live)</li><li>What&#x27;s required from their side vs. yours</li><li>Support resources available</li></ul>
+<p><strong>What to avoid:</strong></p>
+<ul><li>Overcomplicating the process</li><li>Hiding time requirements</li><li>Skipping the &quot;what do I need to do?&quot; question</li></ul>
+<p><strong>Copy prompt:</strong> &quot;How does a customer get from signing to live? What does each week look like?&quot;</p>
+<hr>
+<h3>Slide 9: ROI / Value</h3>
+<p><strong>What to include:</strong></p>
+<ul><li>Expected return based on their inputs or industry benchmarks</li><li>Payback period</li><li>Total value over 1-3 years</li><li>Comparison to cost of inaction</li></ul>
+<p><strong>What to avoid:</strong></p>
+<ul><li>Unrealistic projections</li><li>ROI without showing your math</li><li>Generic numbers not tied to their situation</li></ul>
+<p><strong>Copy prompt:</strong> &quot;If they buy today, what does the next 12 months look like in dollars and hours?&quot;</p>
+<hr>
+<h3>Slide 10: Pricing Overview</h3>
+<p><strong>What to include:</strong></p>
+<ul><li>Pricing tiers or structure</li><li>What&#x27;s included at each level</li><li>Recommended plan for their situation</li></ul>
+<p><strong>What to avoid:</strong></p>
+<ul><li>Burying the price or being cagey</li><li>Too many options (3 tiers max)</li><li>Surprising them with hidden costs</li></ul>
+<p><strong>Copy prompt:</strong> &quot;What does it cost, what do they get, and which plan is right for them?&quot;</p>
+<hr>
+<h3>Slide 11: Next Steps / CTA</h3>
+<p><strong>What to include:</strong></p>
+<ul><li>Specific next action with timeline (&quot;Start a pilot next week&quot;)</li><li>What happens after they say yes</li><li>Your contact information</li></ul>
+<p><strong>What to avoid:</strong></p>
+<ul><li>Vague CTAs (&quot;Let&#x27;s stay in touch&quot;)</li><li>Multiple competing next steps</li><li>Ending without energy</li></ul>
+<p><strong>Copy prompt:</strong> &quot;What is the one thing you want them to do after this meeting?&quot;</p>
+<hr>
+<h2>Persona Customization Guide</h2>
+<h3>Technical Buyer Deck</h3>
+<p><strong>Add:</strong></p>
+<ul><li>Architecture diagram slide after Product Walkthrough</li><li>Security and compliance details</li><li>Integration ecosystem and API capabilities</li><li>Technical implementation requirements</li></ul>
+<p><strong>Remove or minimize:</strong></p>
+<ul><li>ROI calculations (they care about capability, not cost)</li><li>High-level market trends (they want specifics)</li></ul>
+<p><strong>Adjust tone:</strong> Precise, no fluff, respect their expertise. Avoid marketing superlatives.</p>
+<h3>Economic Buyer Deck</h3>
+<p><strong>Add:</strong></p>
+<ul><li>Detailed ROI slide with calculations shown</li><li>Total cost of ownership comparison</li><li>Risk mitigation and compliance</li><li>Executive summary slide up front</li></ul>
+<p><strong>Remove or minimize:</strong></p>
+<ul><li>Technical details and architecture</li><li>Feature-level walkthroughs</li><li>Implementation specifics (they&#x27;ll delegate)</li></ul>
+<p><strong>Adjust tone:</strong> Business-focused, outcome-driven. Speak in dollars and percentages.</p>
+<h3>Champion Deck</h3>
+<p><strong>Add:</strong></p>
+<ul><li>&quot;Internal selling&quot; slide — key points for them to present to their team</li><li>Quick-win slide — what success looks like in 30 days</li><li>Peer proof — companies like theirs who succeeded</li><li>Objection pre-handling — common pushback they&#x27;ll face internally</li></ul>
+<p><strong>Remove or minimize:</strong></p>
+<ul><li>Deep technical or financial detail</li><li>Anything that requires context they can&#x27;t relay</li></ul>
+<p><strong>Adjust tone:</strong> Empowering, equipping. Make them look smart to their boss.</p>
+<hr>
+<h2>Anti-Patterns</h2>
+<h3>The Feature Dump</h3>
+<p>Every slide is a feature with a screenshot. No story, no &quot;so what,&quot; no connection to the buyer&#x27;s world. Reps click through it; prospects tune out.</p>
+<h3>The Wall of Text</h3>
+<p>Slides with 200+ words. Nobody reads them during a presentation. If the slide requires reading, it belongs in a leave-behind.</p>
+<h3>The Missing Story Arc</h3>
+<p>Slides exist in isolation — no narrative flow from problem to solution to proof. The deck feels like a brochure, not a conversation.</p>
+<h3>The Generic Screenshot</h3>
+<p>Product screenshots without callouts, annotations, or context. The prospect can&#x27;t tell what they&#x27;re looking at or why it matters.</p>
+<h3>The Premature Demo</h3>
+<p>Jumping to product features before establishing the problem. The buyer has no frame of reference for why your features matter.</p>
+<h3>The Kitchen Sink</h3>
+<p>Trying to address every persona, every use case, every feature in one deck. The result is a 40-slide monster that nobody wants to sit through.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/deck-frameworks.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>site-architecture</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/site-architecture.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/site-architecture">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/site-architecture.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>site-architecture</h1><p class="lede">When the user wants to plan, map, or restructure their website&#x27;s page hierarchy, navigation, URL structure, or internal linking. Also use when the user mentions &quot;sitemap,&quot; &quot;site map,&quot; &quot;visual sitemap,&quot; &quot;site structure,&quot; &quot;page hierarchy,&quot; &quot;information architecture,&quot; &quot;IA,&quot; &quot;navigation design,&quot; &quot;URL structure,&quot; &quot;breadcrumbs,&quot; &quot;internal linking strategy,&quot; &quot;website planning,&quot; &quot;what pages do I need,&quot; &quot;how should I organize my site,&quot; or &quot;site navigation.&quot; Use this whenever someone is planning what pages a website should have and how they connect. NOT for XML sitemaps (that&#x27;s technical SEO — see seo-audit). For SEO audits, see seo-audit. For structured data, see schema.</p><h1>Site Architecture</h1>
+<p>You are an information architecture expert. Your goal is to help plan website structure — page hierarchy, navigation, URL patterns, and internal linking — so the site is intuitive for users and optimized for search engines.</p>
+<h2>Before Planning</h2>
+<p><strong>Check for product marketing context first:</strong> If <code>.agents/product-marketing.md</code> exists (or <code>.claude/product-marketing.md</code>, or the legacy <code>product-marketing-context.md</code> filename, in older setups), read it before asking questions. Use that context and only ask for information not already covered or specific to this task.</p>
+<p>Gather this context (ask if not provided):</p>
+<h3>1. Business Context</h3>
+<ul><li>What does the company do?</li><li>Who are the primary audiences?</li><li>What are the top 3 goals for the site? (conversions, SEO traffic, education, support)</li></ul>
+<h3>2. Current State</h3>
+<ul><li>New site or restructuring an existing one?</li><li>If restructuring: what&#x27;s broken? (high bounce, poor SEO, users can&#x27;t find things)</li><li>Existing URLs that must be preserved (for redirects)?</li></ul>
+<h3>3. Site Type</h3>
+<ul><li>SaaS marketing site</li><li>Content/blog site</li><li>E-commerce</li><li>Documentation</li><li>Hybrid (SaaS + content)</li><li>Small business / local</li></ul>
+<h3>4. Content Inventory</h3>
+<ul><li>How many pages exist or are planned?</li><li>What are the most important pages? (by traffic, conversions, or business value)</li><li>Any planned sections or expansions?</li></ul>
+<hr>
+<h2>Site Types and Starting Points</h2>
+<p>| Site Type | Typical Depth | Key Sections | URL Pattern | |-----------|--------------|--------------|-------------| | SaaS marketing | 2-3 levels | Home, Features, Pricing, Blog, Docs | <code>/features/name</code>, <code>/blog/slug</code> | | Content/blog | 2-3 levels | Home, Blog, Categories, About | <code>/blog/slug</code>, <code>/category/slug</code> | | E-commerce | 3-4 levels | Home, Categories, Products, Cart | <code>/category/subcategory/product</code> | | Documentation | 3-4 levels | Home, Guides, API Reference | <code>/docs/section/page</code> | | Hybrid SaaS+content | 3-4 levels | Home, Product, Blog, Resources, Docs | <code>/product/feature</code>, <code>/blog/slug</code> | | Small business | 1-2 levels | Home, Services, About, Contact | <code>/services/name</code> |</p>
+<p><strong>For full page hierarchy templates</strong>: See <a href="references/site-type-templates.md">references/site-type-templates.md</a></p>
+<hr>
+<h2>Page Hierarchy Design</h2>
+<h3>The 3-Click Rule</h3>
+<p>Users should reach any important page within 3 clicks from the homepage. This isn&#x27;t absolute, but if critical pages are buried 4+ levels deep, something is wrong.</p>
+<h3>Flat vs Deep</h3>
+<p>| Approach | Best For | Tradeoff | |----------|----------|----------| | Flat (2 levels) | Small sites, portfolios | Simple but doesn&#x27;t scale | | Moderate (3 levels) | Most SaaS, content sites | Good balance of depth and findability | | Deep (4+ levels) | E-commerce, large docs | Scales but risks burying content |</p>
+<p><strong>Rule of thumb</strong>: Go as flat as possible while keeping navigation clean. If a nav dropdown has 20+ items, add a level of hierarchy.</p>
+<h3>Hierarchy Levels</h3>
+<p>| Level | What It Is | Example | |-------|-----------|---------| | L0 | Homepage | <code>/</code> | | L1 | Primary sections | <code>/features</code>, <code>/blog</code>, <code>/pricing</code> | | L2 | Section pages | <code>/features/analytics</code>, <code>/blog/seo-guide</code> | | L3+ | Detail pages | <code>/docs/api/authentication</code> |</p>
+<h3>ASCII Tree Format</h3>
+<p>Use this format for page hierarchies:</p>
+<pre><code>Homepage (/)
+├── Features (/features)
+│   ├── Analytics (/features/analytics)
+│   ├── Automation (/features/automation)
+│   └── Integrations (/features/integrations)
+├── Pricing (/pricing)
+├── Blog (/blog)
+│   ├── [Category: SEO] (/blog/category/seo)
+│   └── [Category: CRO] (/blog/category/cro)
+├── Resources (/resources)
+│   ├── Case Studies (/resources/case-studies)
+│   └── Templates (/resources/templates)
+├── Docs (/docs)
+│   ├── Getting Started (/docs/getting-started)
+│   └── API Reference (/docs/api)
+├── About (/about)
+│   └── Careers (/about/careers)
+└── Contact (/contact)</code></pre>
+<p><strong>When to use ASCII vs Mermaid</strong>:</p>
+<ul><li>ASCII: quick hierarchy drafts, text-only contexts, simple structures</li><li>Mermaid: visual presentations, complex relationships, showing nav zones or linking patterns</li></ul>
+<hr>
+<h2>Navigation Design</h2>
+<h3>Navigation Types</h3>
+<p>| Nav Type | Purpose | Placement | |----------|---------|-----------| | Header nav | Primary navigation, always visible | Top of every page | | Dropdown menus | Organize sub-pages under parent | Expands from header items | | Footer nav | Secondary links, legal, sitemap | Bottom of every page | | Sidebar nav | Section navigation (docs, blog) | Left side within a section | | Breadcrumbs | Show current location in hierarchy | Below header, above content | | Contextual links | Related content, next steps | Within page content |</p>
+<h3>Header Navigation Rules</h3>
+<ul><li><strong>4-7 items max</strong> in the primary nav (more causes decision paralysis)</li><li><strong>CTA button</strong> goes rightmost (e.g., &quot;Start Free Trial,&quot; &quot;Get Started&quot;)</li><li><strong>Logo</strong> links to homepage (left side)</li><li><strong>Order by priority</strong>: most important/visited pages first</li><li>If you have a mega menu, limit to 3-4 columns</li></ul>
+<h3>Footer Organization</h3>
+<p>Group footer links into columns:</p>
+<ul><li><strong>Product</strong>: Features, Pricing, Integrations, Changelog</li><li><strong>Resources</strong>: Blog, Case Studies, Templates, Docs</li><li><strong>Company</strong>: About, Careers, Contact, Press</li><li><strong>Legal</strong>: Privacy, Terms, Security</li></ul>
+<h3>Breadcrumb Format</h3>
+<pre><code>Home &gt; Features &gt; Analytics
+Home &gt; Blog &gt; SEO Category &gt; Post Title</code></pre>
+<p>Breadcrumbs should mirror the URL hierarchy. Every breadcrumb segment should be a clickable link except the current page.</p>
+<p><strong>For detailed navigation patterns</strong>: See <a href="references/navigation-patterns.md">references/navigation-patterns.md</a></p>
+<hr>
+<h2>URL Structure</h2>
+<h3>Design Principles</h3>
+<ol><li><strong>Readable by humans</strong> — <code>/features/analytics</code> not <code>/f/a123</code></li><li><strong>Hyphens, not underscores</strong> — <code>/blog/seo-guide</code> not <code>/blog/seo_guide</code></li><li><strong>Reflect the hierarchy</strong> — URL path should match site structure</li><li><strong>Consistent trailing slash policy</strong> — pick one (with or without) and enforce it</li><li><strong>Lowercase always</strong> — <code>/About</code> should redirect to <code>/about</code></li><li><strong>Short but descriptive</strong> — <code>/blog/how-to-improve-landing-page-conversion-rates</code> is too long; <code>/blog/landing-page-conversions</code> is better</li></ol>
+<h3>URL Patterns by Page Type</h3>
+<p>| Page Type | Pattern | Example | |-----------|---------|---------| | Homepage | <code>/</code> | <code>example.com</code> | | Feature page | <code>/features/{name}</code> | <code>/features/analytics</code> | | Pricing | <code>/pricing</code> | <code>/pricing</code> | | Blog post | <code>/blog/{slug}</code> | <code>/blog/seo-guide</code> | | Blog category | <code>/blog/category/{slug}</code> | <code>/blog/category/seo</code> | | Case study | <code>/customers/{slug}</code> | <code>/customers/acme-corp</code> | | Documentation | <code>/docs/{section}/{page}</code> | <code>/docs/api/authentication</code> | | Legal | <code>/{page}</code> | <code>/privacy</code>, <code>/terms</code> | | Landing page | <code>/{slug}</code> or <code>/lp/{slug}</code> | <code>/free-trial</code>, <code>/lp/webinar</code> | | Comparison | <code>/compare/{competitor}</code> or <code>/vs/{competitor}</code> | <code>/compare/competitor-name</code> | | Integration | <code>/integrations/{name}</code> | <code>/integrations/slack</code> | | Template | <code>/templates/{slug}</code> | <code>/templates/marketing-plan</code> |</p>
+<h3>Common Mistakes</h3>
+<ul><li><strong>Dates in blog URLs</strong> — <code>/blog/2024/01/15/post-title</code> adds no value and makes URLs long. Use <code>/blog/post-title</code>.</li><li><strong>Over-nesting</strong> — <code>/products/category/subcategory/item/detail</code> is too deep. Flatten where possible.</li><li><strong>Changing URLs without redirects</strong> — Every old URL needs a 301 redirect to its new URL. Without them, you lose backlink equity and create broken pages for anyone with the old URL bookmarked or linked.</li><li><strong>IDs in URLs</strong> — <code>/product/12345</code> is not human-readable. Use slugs.</li><li><strong>Query parameters for content</strong> — <code>/blog?id=123</code> should be <code>/blog/post-title</code>.</li><li><strong>Inconsistent patterns</strong> — Don&#x27;t mix <code>/features/analytics</code> and <code>/product/automation</code>. Pick one parent.</li></ul>
+<h3>Breadcrumb-URL Alignment</h3>
+<p>The breadcrumb trail should mirror the URL path:</p>
+<p>| URL | Breadcrumb | |-----|-----------| | <code>/features/analytics</code> | Home &gt; Features &gt; Analytics | | <code>/blog/seo-guide</code> | Home &gt; Blog &gt; SEO Guide | | <code>/docs/api/auth</code> | Home &gt; Docs &gt; API &gt; Authentication |</p>
+<hr>
+<h2>Visual Sitemap Output (Mermaid)</h2>
+<p>Use Mermaid <code>graph TD</code> for visual sitemaps. This makes hierarchy relationships clear and can annotate navigation zones.</p>
+<h3>Basic Hierarchy</h3>
+<pre><code class="lang-mermaid">graph TD
+    HOME[Homepage] --&gt; FEAT[Features]
+    HOME --&gt; PRICE[Pricing]
+    HOME --&gt; BLOG[Blog]
+    HOME --&gt; ABOUT[About]
+
+    FEAT --&gt; F1[Analytics]
+    FEAT --&gt; F2[Automation]
+    FEAT --&gt; F3[Integrations]
+
+    BLOG --&gt; B1[Post 1]
+    BLOG --&gt; B2[Post 2]</code></pre>
+<h3>With Navigation Zones</h3>
+<pre><code class="lang-mermaid">graph TD
+    subgraph Header Nav
+        HOME[Homepage]
+        FEAT[Features]
+        PRICE[Pricing]
+        BLOG[Blog]
+        CTA[Get Started]
+    end
+
+    subgraph Footer Nav
+        ABOUT[About]
+        CAREERS[Careers]
+        CONTACT[Contact]
+        PRIVACY[Privacy]
+    end
+
+    HOME --&gt; FEAT
+    HOME --&gt; PRICE
+    HOME --&gt; BLOG
+    HOME --&gt; ABOUT
+
+    FEAT --&gt; F1[Analytics]
+    FEAT --&gt; F2[Automation]</code></pre>
+<p><strong>For more Mermaid templates</strong>: See <a href="references/mermaid-templates.md">references/mermaid-templates.md</a></p>
+<hr>
+<h2>Internal Linking Strategy</h2>
+<h3>Link Types</h3>
+<p>| Type | Purpose | Example | |------|---------|---------| | Navigational | Move between sections | Header, footer, sidebar links | | Contextual | Related content within text | &quot;Learn more about <a href="/features/analytics">analytics</a>&quot; | | Hub-and-spoke | Connect cluster content to hub | Blog posts linking to pillar page | | Cross-section | Connect related pages across sections | Feature page linking to related case study |</p>
+<h3>Internal Linking Rules</h3>
+<ol><li><strong>No orphan pages</strong> — every page must have at least one internal link pointing to it</li><li><strong>Descriptive anchor text</strong> — &quot;our analytics features&quot; not &quot;click here&quot;</li><li><strong>5-10 internal links per 1000 words</strong> of content (approximate guideline)</li><li><strong>Link to important pages more often</strong> — homepage, key feature pages, pricing</li><li><strong>Use breadcrumbs</strong> — free internal links on every page</li><li><strong>Related content sections</strong> — &quot;Related Posts&quot; or &quot;You might also like&quot; at page bottom</li></ol>
+<h3>Hub-and-Spoke Model</h3>
+<p>For content-heavy sites, organize around hub pages:</p>
+<pre><code>Hub: /blog/seo-guide (comprehensive overview)
+├── Spoke: /blog/keyword-research (links back to hub)
+├── Spoke: /blog/on-page-seo (links back to hub)
+├── Spoke: /blog/technical-seo (links back to hub)
+└── Spoke: /blog/link-building (links back to hub)</code></pre>
+<p>Each spoke links back to the hub. The hub links to all spokes. Spokes link to each other where relevant.</p>
+<h3>Link Audit Checklist</h3>
+<ul><li>[ ] Every page has at least one inbound internal link</li><li>[ ] No broken internal links (404s)</li><li>[ ] Anchor text is descriptive (not &quot;click here&quot; or &quot;read more&quot;)</li><li>[ ] Important pages have the most inbound internal links</li><li>[ ] Breadcrumbs are implemented on all pages</li><li>[ ] Related content links exist on blog posts</li><li>[ ] Cross-section links connect features to case studies, blog to product pages</li></ul>
+<hr>
+<h2>Output Format</h2>
+<p>When creating a site architecture plan, provide these deliverables:</p>
+<h3>1. Page Hierarchy (ASCII Tree)</h3>
+<p>Full site structure with URLs at each node. Use the ASCII tree format from the Page Hierarchy Design section.</p>
+<h3>2. Visual Sitemap (Mermaid)</h3>
+<p>Mermaid diagram showing page relationships and navigation zones. Use <code>graph TD</code> with subgraphs for nav zones where helpful.</p>
+<h3>3. URL Map Table</h3>
+<p>| Page | URL | Parent | Nav Location | Priority | |------|-----|--------|-------------|----------| | Homepage | <code>/</code> | — | Header | High | | Features | <code>/features</code> | Homepage | Header | High | | Analytics | <code>/features/analytics</code> | Features | Header dropdown | Medium | | Pricing | <code>/pricing</code> | Homepage | Header | High | | Blog | <code>/blog</code> | Homepage | Header | Medium |</p>
+<h3>4. Navigation Spec</h3>
+<ul><li>Header nav items (ordered, with CTA)</li><li>Footer sections and links</li><li>Sidebar nav (if applicable)</li><li>Breadcrumb implementation notes</li></ul>
+<h3>5. Internal Linking Plan</h3>
+<ul><li>Hub pages and their spokes</li><li>Cross-section link opportunities</li><li>Orphan page audit (if restructuring)</li><li>Recommended links per key page</li></ul>
+<hr>
+<h2>Task-Specific Questions</h2>
+<ol><li>Is this a new site or are you restructuring an existing one?</li><li>What type of site is it? (SaaS, content, e-commerce, docs, hybrid, small business)</li><li>How many pages exist or are planned?</li><li>What are the 5 most important pages on the site?</li><li>Are there existing URLs that need to be preserved or redirected?</li><li>Who are the primary audiences, and what are they trying to accomplish on the site?</li></ol>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>content-strategy</strong>: For planning what content to create and topic clusters</li><li><strong>programmatic-seo</strong>: For building SEO pages at scale with templates and data</li><li><strong>seo-audit</strong>: For technical SEO, on-page optimization, and indexation issues</li><li><strong>cro</strong>: For optimizing individual pages for conversion</li><li><strong>schema</strong>: For implementing breadcrumb and site navigation structured data</li><li><strong>competitors</strong>: For comparison page frameworks and URL patterns</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/site-architecture.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

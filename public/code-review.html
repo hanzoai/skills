@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>code-review</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/code-review.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/code-review">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/code-review.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>code-review</h1><p class="lede">Review code for actionable defects. Correctness is the core; performance and security are optional sub-cases of the same engine. Anchors on agreements between participants across a boundary, forces a violating execution, and refutes every candidate before reporting. Use when asked to review changes, find bugs, audit a codebase, or check whether a fix is safe.</p><h1>Code Review</h1>
+<h2>Purpose</h2>
+<p>Most review output is noise: a list of things that <em>look</em> wrong, unranked, unrefuted, and impossible to act on. This skill produces the opposite — a small number of findings, each with a required behaviour, a feasible trigger, a concrete contradiction, an observable consequence, and the strongest counterargument already checked.</p>
+<p>Its central bet: <strong>the defects reviewers miss are rarely visible inside one file.</strong> They are disagreements between two participants that each look reasonable alone — a caller and a callee, a producer and a consumer, a writer and a later reader, two branches that should establish the same state. A checklist applied file-by-file cannot see those, because the two halves are never in view at the same time. So the unit of review here is the <strong>agreement</strong>, not the file.</p>
+<h2>Structure: one engine, three anchors</h2>
+<p>Code review is the skill. <strong>Correctness is its core</strong> — the dimension generic tooling covers worst, and the one described in full below. <strong>Performance and security are sub-cases</strong>: the same engine, the same refutation discipline, the same report contract, with a different anchor and one or two extra rules each.</p>
+<p>| Sub-case | Anchor | Where its rules live | |---|---|---| | <strong>Correctness</strong> <em>(core, default)</em> | Agreements between participants across a boundary | This file + <code>references/correctness-taxonomy.md</code> | | <strong>Performance</strong> | Workload → resource demand → growth or contention → consequence | <code>references/performance-review.md</code> | | <strong>Security</strong> | Source → trust boundary → sink, with an attacker controlling the source | <code>references/security-review.md</code> |</p>
+<p>Read a sub-case&#x27;s file only when that sub-case is selected. Each is short on purpose: it states what <em>differs</em>, and the rest of this file still applies.</p>
+<p>Sub-cases are independently <em>activated</em>, not mutually exclusive. One root cause can carry correctness and security impact — report it once, with both impacts.</p>
+<h2>Invocation</h2>
+<pre><code>/pm-ai-shipping:code-review
+/pm-ai-shipping:code-review dimensions=correctness scope=changes
+/pm-ai-shipping:code-review dimensions=performance,security
+/pm-ai-shipping:code-review dimensions=all</code></pre>
+<p>Claude Code ships its own bundled <code>/code-review</code>. Use the plugin-qualified form above when you mean this one.</p>
+<p>These are instruction arguments, not shell flags.</p>
+<ul><li><strong>Default: <code>correctness</code>.</strong> Bare &quot;review this&quot; or &quot;find bugs&quot; means correctness only.</li><li>An explicit list selects exactly those sub-cases; <code>all</code> selects three. Never silently reinterpret</li></ul>
+<p>  an unknown or empty selection — ask.</p>
+<ul><li><strong>Scope:</strong> use what was asked. Otherwise review working changes if present, else the repository.</li><li><strong>State the selected dimensions, the scope and the comparison baseline before investigating.</strong></li><li>Reviewing changes means following dependencies <em>beyond</em> the changed lines, and distinguishing</li></ul>
+<p>  defects the change <strong>introduced</strong> from defects it merely <strong>revealed</strong>.</p>
+<ul><li>Review and report. Apply fixes only when asked.</li></ul>
+<h2>Shared engine</h2>
+<p>Every sub-case uses one skeleton. Only the anchor and the refutation rules differ.</p>
+<p><strong>Map a flow → identify an obligation → inspect every participant → construct a violating execution → trace the consequence → attempt refutation → report.</strong></p>
+<p>Build one minimal map first: inputs, major execution flows, who owns which state, external dependencies, observable effects. Each selected sub-case enriches it — do not build three maps, and do not make a security-only run wait on correctness mapping.</p>
+<h2>Correctness: the agreement engine</h2>
+<p>A <em>boundary</em> is semantic, not a file split. It separates a caller and a callee, two callbacks, two executions of the same function, a producer and a consumer, or a value written now and read later.</p>
+<p>For each consequential agreement, hold these in working notes — not in the report:</p>
+<pre><code>Participants:
+Value, entity or effect exchanged:
+Authority (who decides the real answer):
+Identity and lifetime/version:
+Required relationship:
+Evidence for that relationship:
+Relevant transitions or orderings:
+Observable consumer or consequence:</code></pre>
+<p><strong>Establish the obligation without inventing intent.</strong> Evidence comes from specifications, documented contracts, language or protocol semantics, tests that encode an expectation, or a necessary producer/consumer relationship. A consumer&#x27;s implementation alone does not prove the consumer is right. Where participants disagree, say why the disagreement produces a <em>wrong outcome</em> — sometimes the contradiction is certain while which side should change is genuinely open. Missing documentation is a limitation, not automatically a finding.</p>
+<p><strong>Start where agreements are most likely to break:</strong> values transformed or negotiated, identities reassigned, work becoming asynchronous, state persisted and reloaded, several effects that must agree. Then do a local pass over ordinary decisions, arithmetic, boundaries and error branches — the anchor must not become a filter that discards plain bugs.</p>
+<h3>Force a violating execution</h3>
+<p>A suspicion is not a finding until you construct the execution that breaks it. Where the implementation permits:</p>
+<ul><li>make a <strong>requested</strong> value differ from the <strong>accepted or effective</strong> one;</li><li>keep two operations live at once and vary their completion order;</li><li>change the relevant identity or generation between observation and use;</li><li>compare distinct transitions that should end in equivalent state;</li><li>inject failure between effects, and interruption before completion;</li><li>exercise empty, exact-boundary and adjacent-boundary inputs.</li></ul>
+<p>Establish that each case is actually reachable. Do not assume it.</p>
+<h3>Two lenses that need a forced probe, not a mention</h3>
+<p>Across a large evaluation of planted runtime defects in real codebases, two classes were almost never <em>even reported</em> by strong agents — not missed at the fix, missed at the look. Naming them in a checklist will not help; each needs an explicit probe:</p>
+<ol><li><strong>Authority reconciliation.</strong> Follow a proposed value through validation, normalisation,</li></ol>
+<p>   negotiation or commit, and find downstream state still derived from the <strong>proposal</strong> where the    authority can return something different. <em>A requested value is not an applied value.</em> Probe:    force them apart and ask what still reads the request.</p>
+<ol><li><strong>Identity and correlation.</strong> Trace how an operation&#x27;s result finds its originating entity, then</li></ol>
+<p>   establish that the key is unique, stable and live for long enough — under overlap, reordering,    removal and reuse. A label, a position or arrival order is suspicious exactly when those    properties can fail. Probe: run two operations concurrently and complete them out of order.</p>
+<p>The full set of thirteen diagnostic lenses, each with a detection tell, is in <code>references/correctness-taxonomy.md</code>. They are overlapping lenses, not a quota to fill.</p>
+<h2>Refutation: the discipline that makes this worth running</h2>
+<p>A candidate becomes a finding only with all five:</p>
+<ol><li><strong>A supported obligation</strong> — what must hold, and on what evidence.</li><li><strong>A feasible execution</strong> — inputs, state and ordering the real system permits.</li><li><strong>A concrete contradiction</strong> — where the obligation fails.</li><li><strong>An observable consequence</strong> — wrong output, state, effect, completion or progress.</li><li><strong>An examined counterargument</strong> — the strongest mechanism that would prevent or repair it.</li></ol>
+<p>Actively hunt for the refutation: an enclosing guarantee that makes the execution impossible; synchronisation excluding the interleaving; reconciliation before any consequential read; an intentional contract; a precondition excluding the input; a different owner responsible for it.</p>
+<p>| Outcome | Rule | |---|---| | <strong>Keep</strong> | Evidence establishes the defect; the counterargument checked does not prevent it. | | <strong>Drop</strong> | Cited evidence defeats the execution, the obligation or the consequence. | | <strong>Unresolved</strong> | An essential contract or runtime fact is unknown. List it <em>separately from findings</em>. |</p>
+<p>Do not import the security sub-case&#x27;s attacker/victim test into correctness. <strong>A correctness defect can harm only the person who triggered it and still be serious.</strong> Equally, &quot;keep unless disproved&quot; is too permissive here — an ungrounded suspicion with no constructed execution is not a finding. When both sub-cases are active, apply each test only to its own dimension.</p>
+<p><strong>Absorption is not prevention.</strong> The most expensive refutation mistake is finding something downstream that happens to hide the defect - a cache that usually holds the value, a retry that usually succeeds, a default that is usually right - and dropping the finding. That is not a guarantee, it is a coincidence with good odds, and it fails the day the absorber is cold, evicted or reconfigured. Drop only on a mechanism that makes the execution <em>impossible</em>, and say which mechanism it was. For the same reason, <strong>&quot;it works nearly always&quot; describes a race, not a refutation</strong> - a timing window that usually resolves correctly is a finding, and the fact that you had to reason about which side usually wins is the evidence.</p>
+<p>Passing tests, unfamiliar code, a suspicious name, a missing test and a sibling difference are evidence to investigate — none of them is proof, and none is refutation. Deduplicate by violated agreement and root cause, never by file. There is no findings quota; zero supported findings is a valid result.</p>
+<h2>Parallelism</h2>
+<p>Fan out over <strong>complete flows or connected groups of agreements</strong> — never over files, and never one agent per taxonomy class. Partitioning by file is precisely the split that hides cross-boundary defects, which are the ones worth finding.</p>
+<ol><li>The coordinator builds the initial map and identifies shared state.</li><li>Each worker gets a bounded flow, its participants, the selected sub-cases and open questions.</li><li>Workers inspect <strong>both sides</strong> of their agreements and may follow dependencies outside their list.</li><li>Workers return candidates, cited evidence, completed refutations and unresolved relationships.</li><li>The coordinator reconciles assumptions and any relationship that crosses assignments.</li><li>Strong candidates get a separate verification pass before they are reported.</li></ol>
+<p><strong>Allow overlapping reads.</strong> Two workers reading the same authority is far cheaper than either one holding half its contract. Keep integration capacity in reserve: an unresolved relationship spanning two assignments stays unexamined until someone closes it. One level of fan-out is the target; if delegation is unavailable or the scope is small, run the same procedure sequentially.</p>
+<p><strong>Run workers on the strongest model available, and match the current session&#x27;s effort level.</strong> This is recall-first work: a missed cross-boundary flow is the costly failure, and a worker that silently drops to a cheaper model or a lower effort is the cheapest way to lose one. If any worker is rerouted or downgraded, say which in the report — a reader who assumes one model saw everything will misjudge the coverage.</p>
+<p><strong>One model. Name it on every worker.</strong> Fan-out here buys coverage, not a second opinion. Pass the coordinator&#x27;s own model explicitly on each spawn — &quot;inherit&quot; is not a routing decision, and a worker that quietly lands on a cheaper model is the easiest way to lose a finding. <strong>Do not bring in a different model</strong>, to review or to cross-check, unless you are explicitly asked: mixing models makes the result unattributable, and when this skill is being measured or compared across models, one foreign worker invalidates the number. The independent second-model pass is a separate, explicitly-invoked step (<code>/ship-check</code> Step 6), never something this skill reaches for on its own.</p>
+<p><strong>Tell workers they are reading, not editing.</strong> A review worker needs to read, search and navigate; it must not modify the tree. State that in the worker&#x27;s instructions — a worker that starts editing drifts from reviewing into &quot;helpfully&quot; fixing and stops reporting what it silently repaired, and the findings can no longer be checked against the code they describe. Say it in the prompt rather than assuming the host will enforce it, and confirm the tree is unchanged when the run ends.</p>
+<h2>Report</h2>
+<p>Lead with supported findings, ordered by impact. Keep severity separate from evidential strength.</p>
+<pre><code>Review scope:
+Comparison baseline:
+Selected dimensions:
+
+[Severity] [Dimension] Concrete consequence
+  Expectation:  required behaviour, and the evidence for it
+  Trigger:      feasible preconditions and execution
+  Defect:       the violated relationship
+  Evidence:     source locations for EVERY participant
+  Impact:       observable consequence and affected scope
+  Refutation:   strongest counterargument checked, and why it fails
+  Remedy:       minimal correction to the violated relationship
+  Verification: what was executed, versus established from source
+
+Coverage:
+Unexamined areas and essential unknowns:</code></pre>
+<p>Cite <strong>both</strong> participants for a cross-boundary defect, and do not group findings only by file — that hides the relationship the review exists to find.</p>
+<p><strong>Coverage means work performed, not boxes ticked.</strong> For each selected sub-case report: examined with supported findings · examined, none supported · not applicable, with reason · not examined, with reason. Zero findings in a category does <strong>not</strong> mean &quot;not covered&quot;, and a table of ticks is not evidence of completeness. Say &quot;no supported findings in the examined scope&quot; — never that the code is bug-free.</p>
+<h2>Notes</h2>
+<ul><li>Say explicitly what is well built. A review that only accuses is easy to dismiss.</li><li>The two sub-cases have mature commands behind them: <code>/security-audit-static</code> (trust boundaries,</li></ul>
+<p>  sinks, OWASP backstop) and <code>/performance-audit-static</code> (over-fetching, indexes, caching). Run the   command when the sub-case is the whole job; use the reference file when it is one dimension of a   broader review. This skill does not restate either.</p>
+<ul><li>For the doc-vs-code axis use the <code>intended-vs-implemented</code> skill.</li><li>A static review produces code-review findings, not confirmed exploits or measured regressions.</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/code-review.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

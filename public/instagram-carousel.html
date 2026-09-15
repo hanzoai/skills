@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>instagram-carousel</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/instagram-carousel.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/instagram-carousel">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/instagram-carousel.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>instagram-carousel</h1><p class="lede">Instagram carousel expertise — 6 carousel structures, slide-by-slide blueprints, IG algorithm optimization, engagement triggers, visual hierarchy rules, and platform-specific anti-patterns</p><h1>Instagram Carousel Skill</h1>
+<p>Specialized knowledge base for creating high-performing Instagram carousels. Covers structure selection, slide-by-slide content architecture, visual design rules, algorithm optimization, and engagement mechanics. This skill is consumed by the carousel-designer agent and integrates with the copywriting and platform-mastery skills.</p>
+<h2>🔒 MANDATORY — Read before generating any carousel</h2>
+<p>Before producing any carousel structure, read in this order:</p>
+<ol><li><code>reference/voice/GOLDEN-DOC.md</code> — canonical voice for @melgarafael / AutomatikLabs</li><li><code>reference/voice/LINHA-EDITORIAL.md</code> — pillars, angulações</li><li><code>reference/voice/virais/INDEX.md</code> — master viral index</li><li><code>reference/voice/virais/PATTERNS/{category}.md</code> for the editorial category of the request (viralizacao / lead-capture / saves-retencao / venda)</li><li><code>reference/design-system/DESIGN-SYSTEM.md</code> — visual DS (default lime-geist variant)</li><li><code>brand-voice.yaml</code> sections: <code>voice</code>, <code>anti_slop</code>, <code>viral_intelligence</code>, <code>design_system</code></li></ol>
+<p><strong>Viral intelligence rules:</strong></p>
+<ul><li>Apply patterns tagged <code>voice_fit: aligns</code> and <code>replicable: yes</code> directly</li><li>NEVER copy patterns tagged <code>voice_fit: conflicts</code></li><li>Patterns with <code>seen_count &gt;= 3</code> and aligned voice have priority</li><li>Each carousel cites the inspiring viral in a comment for traceability</li></ul>
+<hr>
+<h2>Trigger Conditions</h2>
+<p>Use this skill when the user asks to:</p>
+<ul><li>Create an Instagram carousel or carrossel</li><li>Design slide content for Instagram posts</li><li>Optimize carousel posts for engagement</li><li>Build educational, storytelling, or listicle carousels</li><li>Create before/after transformation posts</li><li>Design tutorial or step-by-step carousel content</li><li>Create quote-series carousels</li><li>Adapt content into carousel format for Instagram</li><li>Improve an existing carousel&#x27;s structure or copy</li><li>Select the right carousel type for a given topic</li></ul>
+<hr>
+<h2>Brand Voice Integration</h2>
+<p><strong>MANDATORY:</strong> Before generating ANY carousel content, load the brand voice configuration.</p>
+<pre><code class="lang-python">from brand_voice.config import load_brand_voice
+brand = load_brand_voice()</code></pre>
+<p>Every slide must:</p>
+<ol><li>Match <code>brand.tone</code> descriptors in headline and body text</li><li>Avoid all terms in <code>brand.avoid</code> and <code>anti_slop.banned_phrases</code></li><li>Follow <code>anti_slop.style_rules</code> — carousels are especially vulnerable to slop because each slide has limited space and every word must earn its place</li><li>Respect <code>brand.visual_identity</code> for colors, fonts, and logo placement</li><li>Use the brand&#x27;s language register (formal vs casual, technical vs accessible)</li></ol>
+<h3>Anti-Slop in Slide Text</h3>
+<p>Carousel slides have 50 words maximum per slide. With so few words, a single slop phrase wastes 10-20% of available space. Apply these additional carousel-specific anti-slop rules:</p>
+<p>| Slop Pattern | Problem | Replacement | |--------------|---------|-------------| | &quot;Voce sabia que...&quot; on every slide | Repetitive filler | Use only once, on slide 2 max | | &quot;Nesse post voce vai aprender&quot; | Wastes cover real estate | Jump straight to the hook | | &quot;Vamos la?&quot; | Empty filler | Cut entirely or replace with a specific promise | | &quot;Confira as dicas&quot; | Generic, zero information | Name the specific benefit | | &quot;Fique ate o final&quot; | Begging, not compelling | Create curiosity that pulls naturally | | &quot;Dica de ouro&quot; | Overused cliche | State the tip directly | | Excessive emoji chains | Visual noise, not hierarchy | 1 emoji per concept max |</p>
+<hr>
+<h2>6 Carousel Structures</h2>
+<p>Each structure below includes a complete slide-by-slide blueprint. The number of slides is flexible (3-10), but the structural logic must be preserved.</p>
+<h3>1. Educativo (Educational)</h3>
+<p><strong>Best for:</strong> Teaching a concept, sharing expertise, establishing authority. <strong>Typical slides:</strong> 7-10 <strong>Algorithm strength:</strong> High save rate (people save to reference later).</p>
+<h4>Slide-by-Slide Blueprint</h4>
+<p>| Slide | Type | Content | Design Rules | |-------|------|---------|-------------| | 1 | Cover | Hook question or bold claim. 3-7 words max. Must create a knowledge gap. | Largest text on any slide. Single focal point. No subtitle. | | 2 | Context | Frame the problem or topic. &quot;Voce ja percebeu que...&quot; or a surprising statistic. | Slightly smaller headline. 1-2 sentences body. Optional icon. | | 3-8 | Points | One concept per slide. Icon + headline (5-8 words) + 2-3 bullet points (8-12 words each). | Consistent layout across all point slides. Visual hierarchy: icon &gt; headline &gt; bullets. Progress indicator visible. | | 9 | Summary | (Optional) Quick recap of all points — numbered list, one line each. | Condensed layout. All points visible at once. | | 10 | CTA | &quot;Salva esse post&quot; + &quot;Segue @handle pra mais conteudo&quot;. | Two clear actions. Brand handle prominent. Optional: &quot;Manda pra alguem que precisa&quot;. |</p>
+<h4>Educativo Example Structure (7 slides)</h4>
+<pre><code>Slide 1: &quot;5 erros que matam seu engajamento&quot;
+Slide 2: &quot;87% dos perfis cometem pelo menos 3 desses erros&quot;
+Slide 3: Erro 1 — Postar sem horario estrategico
+Slide 4: Erro 2 — Ignorar os saves como metrica
+Slide 5: Erro 3 — CTA generico ou ausente
+Slide 6: Erro 4 — Slides sem hierarquia visual
+Slide 7: CTA — &quot;Salva pra revisar antes de postar | Segue @handle&quot;</code></pre>
+<hr>
+<h3>2. Storytelling (Narrative)</h3>
+<p><strong>Best for:</strong> Personal stories, case studies, brand origin stories, lessons learned. <strong>Typical slides:</strong> 6-8 <strong>Algorithm strength:</strong> High time-spent (people read through the entire story), high share rate.</p>
+<h4>Slide-by-Slide Blueprint</h4>
+<p>| Slide | Type | Content | Design Rules | |-------|------|---------|-------------| | 1 | Cover | Intriguing statement that creates curiosity. Not a question — a statement that demands explanation. &quot;Eu perdi R$40k em 3 meses.&quot; | Bold, large text. Dark or dramatic background. No context — just the hook. | | 2 | Setup | Set the scene. Who, when, where. Establish the status quo before the conflict. | Narrative text, 2-3 short sentences. Conversational tone. | | 3 | Conflict | The problem, the mistake, the challenge. Escalate tension. Make the reader feel the weight. | Can use slightly more text. Emotional language. Visual contrast (darker tones or red accents). | | 4 | Turning Point | The moment of change. What happened? What did you realize? What decision did you make? | Shorter text — one powerful sentence or two. Transitional visual. | | 5 | Resolution | The outcome. What changed? Show the transformation. Use specifics (numbers, timelines, results). | Lighter/brighter visual tone. Concrete data. Before/after contrast if applicable. | | 6 | Lesson | The takeaway. One clear, actionable lesson the reader can apply to their own life. | Framed differently — quote style, highlighted box, or different typography. | | 7 | CTA | &quot;Manda pra alguem que precisa ouvir isso&quot; + &quot;Comenta se voce ja passou por algo parecido&quot;. | Engagement-focused CTA. Invite the reader into the story. |</p>
+<h4>Storytelling Narrative Arc</h4>
+<pre><code>Cover: CURIOSITY (stop the scroll)
+  ↓
+Setup: CONTEXT (ground the reader)
+  ↓
+Conflict: TENSION (make them care)
+  ↓
+Turning Point: PIVOT (the aha moment)
+  ↓
+Resolution: PAYOFF (deliver the goods)
+  ↓
+Lesson: TAKEAWAY (make it actionable)
+  ↓
+CTA: CONNECTION (bring them closer)</code></pre>
+<hr>
+<h3>3. Listicle (List)</h3>
+<p><strong>Best for:</strong> Tips, tools, resources, habits, mistakes, examples. <strong>Typical slides:</strong> 7-10 <strong>Algorithm strength:</strong> High save rate, predictable swipe pattern keeps time-spent high.</p>
+<h4>Slide-by-Slide Blueprint</h4>
+<p>| Slide | Type | Content | Design Rules | |-------|------|---------|-------------| | 1 | Cover | Number + hook. &quot;7 ferramentas gratuitas que uso todo dia.&quot; The number is the anchor. | Large number (oversized, accent color). Hook text below. | | 2-8 | Items | One item per slide. Number prominent + title (3-6 words) + description (1-2 sentences, 15-25 words). | Consistent layout: number in accent color, title bold, description regular weight. Each slide self-contained. | | 9 | Bonus | (Optional) &quot;Bonus: [extra item]&quot; — rewards the reader for swiping to the end. | Same layout as items but visually distinguished (different accent or &quot;BONUS&quot; badge). | | 10 | CTA | &quot;Salva pra consultar depois&quot; + &quot;Qual desses voce ja usa? Comenta ai&quot;. | Save-focused CTA (listicles are reference material). |</p>
+<h4>Listicle Numbering Rules</h4>
+<ul><li>Always use the number on every slide — it creates momentum (&quot;3/7&quot; makes people want to reach 7/7)</li><li>The cover number must match the total items (if you say &quot;7 ferramentas&quot;, deliver exactly 7)</li><li>Order matters: strongest or most surprising items at positions 1, 2, and last</li><li>The middle items (positions 3-5) should maintain quality — no filler</li></ul>
+<hr>
+<h3>4. Antes-Depois (Before/After)</h3>
+<p><strong>Best for:</strong> Transformations, results, comparisons, upgrades, redesigns. <strong>Typical slides:</strong> 6-8 <strong>Algorithm strength:</strong> High share rate (visual contrast is inherently shareable), high save rate.</p>
+<h4>Slide-by-Slide Blueprint</h4>
+<p>| Slide | Type | Content | Design Rules | |-------|------|---------|-------------| | 1 | Cover | Transformation hook. &quot;De [before state] pra [after state] em [timeframe].&quot; | Split visual or arrow motif. Before/after implied but not shown yet. | | 2 | Before Context | Set the &quot;before&quot; scene. What was the situation? Pain points, metrics, or visual state. | Muted colors, gray tones, or desaturated palette. &quot;ANTES&quot; label visible. | | 3-4 | Before Details | Specific problems, screenshots, metrics, or descriptions of the &quot;before&quot; state. One problem per slide. | Same muted palette. Use icons or small visuals to illustrate each problem. | | 5 | Transition | &quot;O que mudou&quot; or &quot;O que fizemos&quot; — brief description of the action taken. | Visual bridge: half muted, half vibrant. Arrow or divider element. | | 6-7 | After Details | Specific improvements, new metrics, visual results. One improvement per slide. | Vibrant colors, brand palette at full saturation. &quot;DEPOIS&quot; label visible. | | 8 | CTA | &quot;Quer o mesmo resultado? Link na bio&quot; or &quot;Salva pra quando precisar&quot;. | Result-focused CTA. Can include a mini before/after summary. |</p>
+<h4>Before/After Contrast Rules</h4>
+<ul><li>The visual difference between &quot;before&quot; and &quot;after&quot; slides must be immediately obvious</li><li>Use color temperature: cool/gray for before, warm/vibrant for after</li><li>Include at least one concrete metric in the after section (percentage, time, money)</li><li>Never fake results — anti-slop applies to transformation claims too</li></ul>
+<hr>
+<h3>5. Tutorial (Step-by-Step)</h3>
+<p><strong>Best for:</strong> How-to content, processes, recipes, workflows, setup guides. <strong>Typical slides:</strong> 7-10 <strong>Algorithm strength:</strong> Highest save rate of all types (people save tutorials for later execution).</p>
+<h4>Slide-by-Slide Blueprint</h4>
+<p>| Slide | Type | Content | Design Rules | |-------|------|---------|-------------| | 1 | Cover | &quot;Como [achieve result]&quot; or &quot;Passo a passo: [outcome].&quot; Tell them exactly what they will learn. | Clear outcome promise. &quot;Tutorial&quot; or &quot;Passo a passo&quot; badge optional. | | 2 | Overview | (Optional) What they need before starting — tools, prerequisites, context. | Checklist format. Keep short — 3-5 items max. | | 3-8 | Steps | One step per slide. &quot;Passo [N]:&quot; + instruction headline + 1-2 sentences of detail. Include a visual example, screenshot, or illustration. | Numbered prominently. Instruction text clear and actionable. Use imperative verbs: &quot;Abra&quot;, &quot;Clique&quot;, &quot;Escreva&quot;, &quot;Configure&quot;. | | 9 | Result | Show the expected outcome. &quot;Pronto! Agora voce tem [result].&quot; | Celebratory visual. Show the finished product or result. | | 10 | CTA | &quot;Salva esse tutorial pra fazer depois&quot; + &quot;Marca alguem que precisa aprender isso&quot;. | Save-heavy CTA. Tutorials are the #1 saved format on Instagram. |</p>
+<h4>Tutorial Writing Rules</h4>
+<ul><li>Every step must be independently actionable — someone following along should be able to execute it</li><li>Use imperative verbs at the start of each step (&quot;Abra o app&quot;, &quot;Selecione a opcao&quot;, &quot;Digite o valor&quot;)</li><li>Include one visual reference per step when possible (screenshot, diagram, icon)</li><li>Number every step — sequential numbering creates a sense of progress</li><li>If a step is complex, split it into two slides rather than cramming</li></ul>
+<hr>
+<h3>6. Quote-Series (Curated Quotes)</h3>
+<p><strong>Best for:</strong> Motivation, thought leadership, curated wisdom, niche quotes. <strong>Typical slides:</strong> 6-8 <strong>Algorithm strength:</strong> High share rate (people share quotes via DM), moderate save rate.</p>
+<h4>Slide-by-Slide Blueprint</h4>
+<p>| Slide | Type | Content | Design Rules | |-------|------|---------|-------------| | 1 | Cover | Theme statement. &quot;5 frases que mudaram minha forma de pensar sobre [topic].&quot; | Clean design. Theme text prominent. No quote on the cover. | | 2-7 | Quotes | One quote per slide. Quote text (15-30 words) + attribution (name, optional title or context). | Quote in large, elegant typography. Attribution smaller, below or beside. Consistent layout. Optional: decorative quotation marks. | | 8 | CTA | &quot;Qual frase mais te impactou? Comenta o numero&quot; + &quot;Manda pra alguem que precisa ler isso&quot;. | Engagement CTA — asking them to pick a favorite drives comments. |</p>
+<h4>Quote Selection Rules</h4>
+<ul><li>Curate for coherence — all quotes should orbit the same theme</li><li>Mix well-known and lesser-known sources for freshness</li><li>Avoid over-quoted cliches (&quot;Be the change you wish to see&quot; is not stopping anyone&#x27;s scroll)</li><li>Add context when needed: &quot;Sobre disciplina:&quot; or &quot;Sobre comecar:&quot; before the quote</li><li>Attribution is mandatory — unattributed quotes lose credibility</li></ul>
+<hr>
+<h2>Instagram Rules &amp; Constraints</h2>
+<h3>Hard Limits</h3>
+<p>| Parameter | Value | Notes | |-----------|-------|-------| | Max slides per carousel | 10 | Instagram enforces this. Plan for 7-10. | | Min slides per carousel | 3 | Fewer than 3 defeats the carousel purpose. | | Optimal aspect ratio | 4:5 (1080x1350px) | Takes maximum vertical feed space. More visibility = more engagement. | | Alternative ratios | 1:1 (1080x1080), 9:16 (1080x1920 for Stories) | Square for clean aesthetic, 9:16 for Story-adapted carousels. | | Max file size per image | 30MB | Stay well under this. | | Supported formats | JPEG, PNG | PNG for text-heavy slides (sharper). JPEG for photo-heavy. |</p>
+<h3>Typography Constraints</h3>
+<p>| Element | Minimum Size | Recommended Size | Notes | |---------|-------------|-----------------|-------| | Body text | 28px | 32-36px | Must be legible on a phone screen held at arm&#x27;s length. | | Headlines | 48px | 56-72px | Larger = more scroll-stopping power. | | Cover hook | 56px | 64-96px | The cover text should dominate the slide. | | Caption/attribution | 20px | 24-28px | For sources, fine print, or secondary info. | | Progress indicator | 14px | 16-18px | Small but visible. |</p>
+<h3>Content Density Rules</h3>
+<p>| Metric | Limit | Rationale | |--------|-------|-----------| | Words per slide (content) | Max 50 | More than 50 words = wall of text, people skip. | | Words per slide (cover) | Max 7 | Cover must be scannable in under 1 second. | | Bullet points per slide | Max 4 | 3 is ideal. More than 4 loses readability. | | Words per bullet | Max 12 | Bullets are scannable fragments, not sentences. | | Ideas per slide | 1 | One concept. One takeaway. Period. |</p>
+<hr>
+<h2>Cover Slide Mastery</h2>
+<p>The cover slide is the single most important element of your carousel. It determines whether someone swipes or scrolls past. Invest 50% of your creative energy here.</p>
+<h3>Cover Slide Principles</h3>
+<ol><li><strong>One message, large text.</strong> The cover should communicate a single idea that creates a knowledge gap or emotional reaction.</li><li><strong>3-7 words maximum.</strong> If your cover needs more than 7 words, you haven&#x27;t distilled the hook enough.</li><li><strong>Curiosity over information.</strong> The cover&#x27;s job is NOT to inform — it is to make them swipe. The information comes on slides 2+.</li><li><strong>No metadata on the cover.</strong> Never waste cover space on &quot;Slide 1 de 7&quot;, &quot;Deslize para o lado&quot;, or &quot;Novo post&quot;. The user knows how carousels work.</li><li><strong>Visual dominance.</strong> Text should occupy 60-80% of the visual weight of the cover. Background should support, not compete.</li></ol>
+<h3>Hook Patterns That Work</h3>
+<p>| Pattern | Template | Example | |---------|----------|---------| | Error/Mistake | &quot;X erros que [negative consequence]&quot; | &quot;5 erros que matam seu engajamento&quot; | | How-To + Result | &quot;Como [result] em [timeframe]&quot; | &quot;Como dobrar seus saves em 30 dias&quot; | | Stop Doing | &quot;Pare de [common mistake]&quot; | &quot;Pare de postar sem estrategia&quot; | | Number + Bold Claim | &quot;[Number] [things] que [unexpected outcome]&quot; | &quot;3 habitos que separam amadores de profissionais&quot; | | Question | &quot;[Provocative question]?&quot; | &quot;Voce esta jogando conteudo fora?&quot; | | Contrarian | &quot;[Common belief] esta errado&quot; | &quot;Postar todo dia nao funciona&quot; | | Confession | &quot;Eu [vulnerable admission]&quot; | &quot;Eu perdi 10k seguidores em 1 mes&quot; | | Challenge | &quot;Voce consegue [difficult thing]?&quot; | &quot;Voce consegue criar conteudo sem essas 5 muletas?&quot; |</p>
+<h3>Cover Slide Anti-Patterns</h3>
+<ul><li>&quot;Deslize para o lado&quot; — patronizing, wastes space</li><li>&quot;Novo post!&quot; — zero information, zero curiosity</li><li>&quot;Slide 1 de 7&quot; — metadata, not content</li><li>&quot;Voce precisa ver isso&quot; — vague clickbait</li><li>Using a stock photo as the cover with small overlaid text — text must dominate</li><li>Putting the CTA on the cover — kills curiosity, inverts the funnel</li><li>Using more than 2 fonts on the cover — visual noise</li></ul>
+<hr>
+<h2>CTA Patterns (Last Slide)</h2>
+<p>The CTA slide converts passive viewers into engaged followers. Every carousel must end with a clear call to action.</p>
+<h3>Primary CTA Templates</h3>
+<p>| CTA Type | Template | Algorithm Signal | |----------|----------|-----------------| | Save | &quot;Salva esse post pra consultar depois&quot; | Saves (strongest IG signal) | | Share | &quot;Manda pra alguem que precisa ouvir isso&quot; | Shares (second strongest signal) | | Follow | &quot;Segue @handle pra mais conteudo como esse&quot; | Follower growth | | Comment | &quot;Comenta [emoji] se voce ja passou por isso&quot; | Comments (engagement depth) | | Link | &quot;Link na bio pra [specific resource]&quot; | Off-platform conversion |</p>
+<h3>Double CTA Strategy</h3>
+<p>Always combine two CTAs for maximum algorithm impact:</p>
+<pre><code>Primary: Save + Follow
+&quot;Salva esse post pra revisar depois e segue @handle pra mais conteudo como esse&quot;
+
+Primary: Share + Comment
+&quot;Manda pra um amigo que precisa e comenta qual dica voce vai aplicar primeiro&quot;
+
+Primary: Save + Comment
+&quot;Salva pra consultar e me conta: qual ponto mais te surpreendeu?&quot;</code></pre>
+<h3>CTA Slide Design Rules</h3>
+<ul><li>CTA text should be visually distinct from content slides (different layout, centered, or boxed)</li><li>Include the brand handle (@handle) prominently</li><li>Keep the CTA under 25 words total</li><li>Use imperative verbs: &quot;Salva&quot;, &quot;Manda&quot;, &quot;Segue&quot;, &quot;Comenta&quot;</li><li>Optional: include a small visual summary or key takeaway alongside the CTA</li></ul>
+<hr>
+<h2>Anti-Patterns (What NOT To Do)</h2>
+<h3>Content Anti-Patterns</h3>
+<p>| Anti-Pattern | Why It Fails | Fix | |-------------|-------------|-----| | More than 50 words per slide | Wall of text, people skip | Ruthlessly edit. One idea per slide. | | Font smaller than 28px | Illegible on mobile | Increase font size, reduce text amount. | | No visual hierarchy | Everything looks the same, nothing stands out | Use 3 levels: headline (large, bold), body (medium, regular), caption (small, light). | | Inconsistent design between slides | Looks unprofessional, breaks immersion | Use a template. Same fonts, colors, layout grid across all slides. | | No progress indicator | Reader has no sense of position or completion | Add dots, slide numbers, or a progress bar. | | CTA on the first slide | Kills curiosity, puts the ask before the value | CTA belongs on the LAST slide only. | | Generic stock photo backgrounds | Looks like every other carousel | Use solid colors, gradients, or brand-specific imagery. |</p>
+<h3>Design Anti-Patterns</h3>
+<p>| Anti-Pattern | Why It Fails | Fix | |-------------|-------------|-----| | More than 3 fonts | Visual chaos | 1 headline font + 1 body font. Max 2. | | Text touching slide edges | Looks cramped, gets clipped on some devices | Maintain 60-80px safe margin on all sides. | | Low contrast text | Fails accessibility, hard to read outdoors | Minimum 4.5:1 contrast ratio for body text, 3:1 for large text. | | Decorative elements competing with text | Distracts from the message | Background elements at 10-20% opacity max. Text always wins. | | Different text alignment per slide | Inconsistent, disorienting | Pick one alignment (left or center) and stick with it. | | Busy gradients behind text | Reduces readability | Gradient as accent only, never behind body text. Use solid overlay if needed. |</p>
+<h3>Strategic Anti-Patterns</h3>
+<p>| Anti-Pattern | Why It Fails | Fix | |-------------|-------------|-----| | Carousel with only 2-3 slides | Too short for algorithm engagement | Minimum 5 slides for meaningful swipe-through. | | All text, no visual variety | Monotonous swipe experience | Vary slide types: text, icon+text, quote, visual example. | | No carousel type / mixed structure | Confusing narrative, reader drops off | Pick one structure and follow it consistently. | | Repurposing a blog post word-for-word | Too dense, not designed for slide format | Rewrite for slides: one idea per slide, visual hierarchy, scannable text. | | Same CTA on every post | Audience fatigue | Rotate CTAs: save, share, comment, follow. |</p>
+<hr>
+<h2>Palette by Niche</h2>
+<p>Color palette selection significantly impacts carousel performance. The right palette signals the content niche before a single word is read.</p>
+<h3>Tech / SaaS</h3>
+<pre><code class="lang-yaml">palette:
+  background: &quot;#0a0a0a&quot; or &quot;#1a1a2e&quot;
+  text_primary: &quot;#ffffff&quot;
+  text_secondary: &quot;#a0a0b0&quot;
+  accent_primary: &quot;#6c5ce7&quot;  # purple
+  accent_secondary: &quot;#00cec9&quot;  # teal
+  style: dark-premium or gradient
+  mood: &quot;innovative, technical, premium&quot;</code></pre>
+<h3>Health / Wellness</h3>
+<pre><code class="lang-yaml">palette:
+  background: &quot;#ffffff&quot; or &quot;#f5f5f0&quot;
+  text_primary: &quot;#2d3436&quot;
+  text_secondary: &quot;#636e72&quot;
+  accent_primary: &quot;#00b894&quot;  # green
+  accent_secondary: &quot;#dfe6e9&quot;  # light gray
+  style: clean-educator or minimal
+  mood: &quot;natural, trustworthy, calming&quot;</code></pre>
+<h3>Finance / Business</h3>
+<pre><code class="lang-yaml">palette:
+  background: &quot;#0a1628&quot; or &quot;#ffffff&quot;
+  text_primary: &quot;#ffffff&quot; or &quot;#1a1a2e&quot;
+  text_secondary: &quot;#8395a7&quot;
+  accent_primary: &quot;#d4a574&quot;  # gold
+  accent_secondary: &quot;#2c3e50&quot;  # navy
+  style: dark-premium or minimal
+  mood: &quot;authoritative, premium, trustworthy&quot;</code></pre>
+<h3>Creative / Design</h3>
+<pre><code class="lang-yaml">palette:
+  background: &quot;#ff6b6b&quot; or &quot;#a29bfe&quot; or &quot;#fdcb6e&quot;  # vibrant solid color
+  text_primary: &quot;#ffffff&quot; or &quot;#2d3436&quot;
+  text_secondary: varies by background
+  accent_primary: contrasting vibrant
+  accent_secondary: complementary vibrant
+  style: vibrant-creator or bold
+  mood: &quot;energetic, bold, expressive&quot;</code></pre>
+<h3>Education</h3>
+<pre><code class="lang-yaml">palette:
+  background: &quot;#f8f9fa&quot; or &quot;#edf2f7&quot;
+  text_primary: &quot;#2d3436&quot;
+  text_secondary: &quot;#636e72&quot;
+  accent_primary: &quot;#0984e3&quot;  # blue
+  accent_secondary: &quot;#74b9ff&quot;  # light blue
+  style: clean-educator
+  mood: &quot;accessible, clear, professional&quot;</code></pre>
+<h3>Personal Brand</h3>
+<pre><code class="lang-yaml">palette:
+  background: &quot;from brand-voice.yaml → visual_identity.colors.background&quot;
+  text_primary: &quot;from brand-voice.yaml → visual_identity.colors.text&quot;
+  text_secondary: derived from text_primary at 60% opacity
+  accent_primary: &quot;from brand-voice.yaml → visual_identity.colors.primary&quot;
+  accent_secondary: &quot;from brand-voice.yaml → visual_identity.colors.secondary&quot;
+  style: auto-selected from brand tone
+  mood: &quot;consistent with brand personality&quot;</code></pre>
+<h3>Palette Application Rules</h3>
+<ol><li><strong>Cover slide:</strong> Accent color dominant (background or large text). Maximum visual impact.</li><li><strong>Content slides:</strong> Neutral background, accent for headlines and icons only. Readability first.</li><li><strong>CTA slide:</strong> Accent color returns prominently. Bookend visual consistency with cover.</li><li><strong>Never use more than 4 colors</strong> in a single carousel (background, text, primary accent, secondary accent).</li><li><strong>Test in dark mode:</strong> Many users browse Instagram in dark mode. Ensure colors work on both light and dark device screens.</li></ol>
+<hr>
+<h2>Narrative Progression Framework</h2>
+<p>Every carousel, regardless of type, follows a fundamental narrative arc. This framework ensures the swipe experience feels satisfying rather than random.</p>
+<h3>The 5-Stage Progression</h3>
+<pre><code>HOOK → PROBLEM → SOLUTION(S) → PROOF/EXAMPLE → CTA</code></pre>
+<p>| Stage | Slides | Purpose | Engagement Goal | |-------|--------|---------|----------------| | Hook | Slide 1 | Stop the scroll. Create a gap. | Impression → Swipe | | Problem | Slide 2 | Frame why this matters. Make it personal. | Swipe → Investment | | Solution(s) | Slides 3-7 | Deliver the value. One point per slide. | Investment → Time Spent | | Proof/Example | Slide 8-9 | Validate with data, screenshots, or story. | Time Spent → Trust | | CTA | Slide 10 | Convert attention into action. | Trust → Save/Share/Follow |</p>
+<h3>Progression Rules</h3>
+<ol><li><strong>Never front-load all value on slide 2.</strong> Distribute insights across slides to maximize swipe-through.</li><li><strong>Create micro-hooks between slides.</strong> End each slide with an implicit &quot;and here&#x27;s another one...&quot; to pull them forward.</li><li><strong>The middle slides must maintain quality.</strong> Slides 4-6 are where drop-off happens. Keep these strong.</li><li><strong>Slide 2 is the commitment point.</strong> If they swipe past slide 1 and read slide 2, they are likely to complete the carousel. Slide 2 must reward the initial swipe.</li><li><strong>The last content slide before the CTA should be the strongest point.</strong> It is the freshest in memory when they reach the CTA.</li></ol>
+<hr>
+<h2>Engagement Triggers</h2>
+<p>Specific techniques to increase saves, shares, comments, and swipe-through rate.</p>
+<h3>Question Triggers (Drive Comments)</h3>
+<p>Place on slide 2 or the CTA slide to maximize comment engagement:</p>
+<p>| Trigger | Example | Where | |---------|---------|-------| | Relatable question | &quot;Voce ja cometeu esse erro?&quot; | Slide 2 | | This-or-that | &quot;Voce prefere [A] ou [B]?&quot; | CTA slide | | Self-identification | &quot;Comenta 1 se [option A], 2 se [option B]&quot; | CTA slide | | Confession prompt | &quot;Conta aqui: qual desses voce ainda faz?&quot; | CTA slide | | Opinion poll | &quot;Concorda ou discorda? Comenta ai&quot; | CTA slide |</p>
+<h3>Data Triggers (Build Credibility)</h3>
+<p>Concrete numbers stop the scroll and build trust:</p>
+<p>| Trigger | Example | Where | |---------|---------|-------| | Surprising statistic | &quot;87% dos marketers nao medem saves&quot; | Slide 2 or 3 | | Specific result | &quot;Cresci 4.200 seguidores em 60 dias&quot; | Cover or slide 2 | | Time-bound claim | &quot;Em 30 dias, sem anuncios&quot; | Cover modifier | | Comparison metric | &quot;2x mais engajamento que posts estaticos&quot; | Supporting slide |</p>
+<h3>Contrast Triggers (Create Visual/Conceptual Tension)</h3>
+<p>| Trigger | Example | Where | |---------|---------|-------| | Before/after | Visual comparison of transformation | Slides 2-3 vs 6-7 | | Right/wrong | &quot;O que a maioria faz vs o que funciona&quot; | Point slides | | Myth/reality | &quot;Mito: postar mais = crescer mais. Realidade: ...&quot; | Slide 2-3 | | Expectation/result | &quot;O que eu esperava vs o que aconteceu&quot; | Storytelling slides |</p>
+<h3>Curiosity Triggers (Increase Swipe-Through)</h3>
+<p>| Trigger | Example | Where | |---------|---------|-------| | Open loop | &quot;E o terceiro erro e o mais perigoso...&quot; | End of a slide, resolved on next | | Numbered list promise | &quot;7 ferramentas (a #5 mudou meu jogo)&quot; | Cover — promises value ahead | | &quot;Voce sabia que...&quot; | Unexpected fact that reframes the topic | Slide 2 | | Controversy/contrarian | &quot;[Common belief] esta errado. Veja por que:&quot; | Cover or slide 2 | | Incomplete revelation | &quot;O segredo esta em...&quot; (continued on next slide) | Any content slide |</p>
+<h3>Emoji as Visual Anchors</h3>
+<p>Emoji serve as rapid visual cues, not decoration. Rules:</p>
+<ul><li>1 emoji per headline or key point maximum</li><li>Use consistently: same emoji for same concept type across slides</li><li>Functional emoji: checkmarks for tips, X for errors, arrows for steps, numbers for lists</li><li>Never: emoji chains, random emoji, emoji replacing words entirely</li><li>Recommended set: check, x, arrow_right, brain, bulb, fire, chart, star, warning, point_right</li></ul>
+<hr>
+<h2>Platform-Specific Optimization</h2>
+<h3>Best Posting Times for Carousels</h3>
+<p>Carousels need more time-on-content than static posts. Post when your audience has time to swipe, not just scroll.</p>
+<p>| Day | Best Times (BRT) | Notes | |-----|------------------|-------| | Monday | 11:00-13:00 | People settling into the week, consuming content at lunch | | Tuesday-Thursday | 11:00-13:00, 19:00-21:00 | Lunch break + evening wind-down are peak carousel times | | Friday | 10:00-12:00 | Morning focus, engagement drops after lunch as weekend starts | | Saturday | 10:00-12:00 | Casual morning browsing | | Sunday | 17:00-20:00 | Sunday evening prep-for-the-week consumption |</p>
+<p><strong>Important:</strong> These are baselines. Always check your own Instagram Insights for your specific audience&#x27;s active hours.</p>
+<h3>Caption Strategy</h3>
+<p>The caption complements the carousel — it does not repeat it.</p>
+<h4>Caption Structure</h4>
+<pre><code>[Hook line — first 125 characters visible before &quot;...mais&quot;]
+
+[1-2 paragraphs expanding on the carousel&#x27;s topic. Add context,
+a personal angle, or bonus information not in the slides.]
+
+[CTA that mirrors the last slide&#x27;s CTA]
+
+.
+.
+.
+[Hashtags — in a separate block, visually separated]</code></pre>
+<h4>Caption Rules</h4>
+<ol><li><strong>First line is the hook.</strong> It appears below the carousel in the feed. Must complement the cover slide, not repeat it.</li><li><strong>Add value beyond the slides.</strong> The caption should give a reason to read even after swiping through all slides.</li><li><strong>Include a CTA in the caption.</strong> Reinforce the slide CTA: &quot;Salva esse post&quot; or &quot;Marca alguem&quot;.</li><li><strong>Keep it scannable.</strong> Line breaks between paragraphs. No walls of text.</li><li><strong>Caption length:</strong> 300-800 characters for carousels. Longer than static posts, shorter than Reels.</li></ol>
+<h3>Hashtag Strategy for Carousel Posts</h3>
+<p>| Category | Count | Examples | |----------|-------|---------| | Niche-specific | 3-5 | #marketingdigitalbr, #dicasdeinstagram, #conteudoeducativo | | Topic-specific | 3-5 | #carouselpost, #dicasparaempreendedores, #socialmediatips | | Branded | 1-2 | #suamarca, #suaserie | | Total | 8-12 | Sweet spot. More than 15 looks spammy. |</p>
+<h4>Hashtag Placement</h4>
+<ul><li><strong>Option A:</strong> At the end of the caption, separated by line breaks</li><li><strong>Option B:</strong> In the first comment (cleaner caption, same reach)</li><li><strong>Never:</strong> Inline with caption text (&quot;Aprenda #marketing #digital hoje&quot;)</li></ul>
+<h3>Alt Text for Accessibility</h3>
+<p>Every carousel slide should have descriptive alt text. This also improves discoverability through Instagram search.</p>
+<h4>Alt Text Rules</h4>
+<ul><li>Describe the visual content AND the text content of each slide</li><li>Format: &quot;Slide [N] of [carousel title]: [description of visual] with text reading &#x27;[key text]&#x27;&quot;</li><li>Keep under 100 characters per slide</li><li>Do not stuff keywords — write for screen reader users first</li><li>Instagram allows alt text per image in the carousel</li></ul>
+<h4>Alt Text Example</h4>
+<pre><code>Slide 1: Cover slide with dark background and large white text reading &quot;5 erros que matam seu engajamento&quot;
+Slide 2: Infographic showing 87% statistic with text &quot;87% dos perfis cometem pelo menos 3 desses erros&quot;
+Slide 3: Educational slide with warning icon and text &quot;Erro 1: Postar sem horario estrategico&quot;</code></pre>
+<h3>Cross-Posting Adaptation</h3>
+<p>Carousel content can be repurposed, but each platform has different rules.</p>
+<p>| Platform | Format | Key Differences | |----------|--------|----------------| | <strong>LinkedIn</strong> | PDF carousel (document post) | Professional tone, more text per slide acceptable (up to 80 words), no emoji anchors, add source citations | | <strong>Twitter/X</strong> | Thread or image series (4 max per tweet) | Condense to key points, more provocative hooks, no progress indicators needed | | <strong>Pinterest</strong> | Long-form infographic (2:3 or 1:2.1 ratio) | Combine all slides into one tall image, keyword-rich description, link to source | | <strong>TikTok</strong> | Photo carousel or slideshow video | Add trending audio, text overlays instead of embedded text, vertical 9:16 format | | <strong>Blog</strong> | Embedded or expanded into article | Expand each slide into a paragraph, add internal links, SEO-optimize |</p>
+<h4>Cross-Posting Anti-Patterns</h4>
+<ul><li>Posting the exact same images on LinkedIn (different audience, different tone)</li><li>Posting Instagram carousels as Twitter images without condensing the message</li><li>Forgetting to adjust aspect ratio for Pinterest (Instagram 4:5 crops wrong on Pinterest)</li><li>Not removing Instagram-specific CTAs (&quot;Salva esse post&quot;) when posting elsewhere</li></ul>
+<hr>
+<h2>Output Contract</h2>
+<h3>Carousel Output Schema</h3>
+<pre><code class="lang-yaml">output_contract:
+  skill: instagram-carousel
+  format: structured_slide_plan
+  required_sections:
+    - slide_plan:
+        type: string  # carousel type (educativo|storytelling|listicle|antes-depois|tutorial|quote-series)
+        total_slides: integer  # 3-10
+        slides:
+          - slide_number: integer
+            type: string  # cover | content | context | transition | summary | cta
+            headline: string  # max 10 words (7 for cover)
+            body: string  # max 50 words per slide
+            bullets: list  # max 4 items, max 12 words each
+            icon: string  # emoji or icon name
+            cta_text: string  # for CTA slides only
+            cta_action: string  # save | share | follow | comment | link
+    - design_spec:
+        palette: string  # niche palette name or custom
+        style: string  # minimal | bold | gradient | clean-educator | dark-premium | vibrant-creator
+        dimensions: string  # &quot;1080x1350&quot; default
+        fonts:
+          headline: string
+          body: string
+    - quality_checks:
+        cover_words: integer  # must be &lt;= 7
+        max_words_per_slide: integer  # must be &lt;= 50
+        total_slides: integer  # must be 3-10
+        has_progress_indicator: boolean
+        has_cta: boolean
+        anti_slop_passed: boolean
+        brand_voice_matched: boolean
+        visual_hierarchy_consistent: boolean
+  validation:
+    anti_slop: true
+    brand_voice: true
+    platform_constraints: true
+    accessibility_alt_text: true</code></pre>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/instagram-carousel.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

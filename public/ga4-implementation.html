@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ga4-implementation</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/ga4-implementation.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/ga4-implementation">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ga4-implementation.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ga4-implementation</h1><p class="lede">Detailed implementation guide for Google Analytics 4.</p><h1>GA4 Implementation Reference</h1>
+<p>Detailed implementation guide for Google Analytics 4.</p>
+<h2>Contents</h2>
+<ul><li>Configuration (data streams, enhanced measurement events, recommended events)</li><li>Custom Events (gtag.js implementation, Google Tag Manager)</li><li>Conversions Setup (creating conversions, conversion values)</li><li>Custom Dimensions and Metrics (when to use, setup steps, examples)</li><li>Audiences (creating audiences, audience examples)</li><li>Debugging (DebugView, real-time reports, common issues)</li><li>Data Quality (filters, cross-domain tracking, session settings)</li><li>Integration with Google Ads (linking, audience export)</li></ul>
+<h2>Configuration</h2>
+<h3>Data Streams</h3>
+<ul><li>One stream per platform (web, iOS, Android)</li><li>Enable enhanced measurement for automatic tracking</li><li>Configure data retention (2 months default, 14 months max)</li><li>Enable Google Signals (for cross-device, if consented)</li></ul>
+<h3>Enhanced Measurement Events (Automatic)</h3>
+<p>| Event | Description | Configuration | |-------|-------------|---------------| | page_view | Page loads | Automatic | | scroll | 90% scroll depth | Toggle on/off | | outbound_click | Click to external domain | Automatic | | site_search | Search query used | Configure parameter | | video_engagement | YouTube video plays | Toggle on/off | | file_download | PDF, docs, etc. | Configurable extensions |</p>
+<h3>Recommended Events</h3>
+<p>Use Google&#x27;s predefined events when possible for enhanced reporting:</p>
+<p><strong>All properties:</strong></p>
+<ul><li>login, sign_up</li><li>share</li><li>search</li></ul>
+<p><strong>E-commerce:</strong></p>
+<ul><li>view_item, view_item_list</li><li>add_to_cart, remove_from_cart</li><li>begin_checkout</li><li>add_payment_info</li><li>purchase, refund</li></ul>
+<p><strong>Games:</strong></p>
+<ul><li>level_up, unlock_achievement</li><li>post_score, spend_virtual_currency</li></ul>
+<p>Reference: https://support.google.com/analytics/answer/9267735</p>
+<hr>
+<h2>Custom Events</h2>
+<h3>gtag.js Implementation</h3>
+<pre><code class="lang-javascript">// Basic event
+gtag(&#x27;event&#x27;, &#x27;signup_completed&#x27;, {
+  &#x27;method&#x27;: &#x27;email&#x27;,
+  &#x27;plan&#x27;: &#x27;free&#x27;
+});
+
+// Event with value
+gtag(&#x27;event&#x27;, &#x27;purchase&#x27;, {
+  &#x27;transaction_id&#x27;: &#x27;T12345&#x27;,
+  &#x27;value&#x27;: 99.99,
+  &#x27;currency&#x27;: &#x27;USD&#x27;,
+  &#x27;items&#x27;: [{
+    &#x27;item_id&#x27;: &#x27;SKU123&#x27;,
+    &#x27;item_name&#x27;: &#x27;Product Name&#x27;,
+    &#x27;price&#x27;: 99.99
+  }]
+});
+
+// User properties
+gtag(&#x27;set&#x27;, &#x27;user_properties&#x27;, {
+  &#x27;user_type&#x27;: &#x27;premium&#x27;,
+  &#x27;plan_name&#x27;: &#x27;pro&#x27;
+});
+
+// User ID (for logged-in users)
+gtag(&#x27;config&#x27;, &#x27;GA_MEASUREMENT_ID&#x27;, {
+  &#x27;user_id&#x27;: &#x27;USER_ID&#x27;
+});</code></pre>
+<h3>Google Tag Manager (dataLayer)</h3>
+<pre><code class="lang-javascript">// Custom event
+dataLayer.push({
+  &#x27;event&#x27;: &#x27;signup_completed&#x27;,
+  &#x27;method&#x27;: &#x27;email&#x27;,
+  &#x27;plan&#x27;: &#x27;free&#x27;
+});
+
+// Set user properties
+dataLayer.push({
+  &#x27;user_id&#x27;: &#x27;12345&#x27;,
+  &#x27;user_type&#x27;: &#x27;premium&#x27;
+});
+
+// E-commerce purchase
+dataLayer.push({
+  &#x27;event&#x27;: &#x27;purchase&#x27;,
+  &#x27;ecommerce&#x27;: {
+    &#x27;transaction_id&#x27;: &#x27;T12345&#x27;,
+    &#x27;value&#x27;: 99.99,
+    &#x27;currency&#x27;: &#x27;USD&#x27;,
+    &#x27;items&#x27;: [{
+      &#x27;item_id&#x27;: &#x27;SKU123&#x27;,
+      &#x27;item_name&#x27;: &#x27;Product Name&#x27;,
+      &#x27;price&#x27;: 99.99,
+      &#x27;quantity&#x27;: 1
+    }]
+  }
+});
+
+// Clear ecommerce before sending (best practice)
+dataLayer.push({ ecommerce: null });
+dataLayer.push({
+  &#x27;event&#x27;: &#x27;view_item&#x27;,
+  &#x27;ecommerce&#x27;: {
+    // ...
+  }
+});</code></pre>
+<hr>
+<h2>Conversions Setup</h2>
+<h3>Creating Conversions</h3>
+<ol><li><strong>Collect the event</strong> - Ensure event is firing in GA4</li><li><strong>Mark as conversion</strong> - Admin &gt; Events &gt; Mark as conversion</li><li><strong>Set counting method</strong>:</li></ol>
+<ul><li>Once per session (leads, signups)</li><li>Every event (purchases)</li></ul>
+<ol><li><strong>Import to Google Ads</strong> - For conversion-optimized bidding</li></ol>
+<h3>Conversion Values</h3>
+<pre><code class="lang-javascript">// Event with conversion value
+gtag(&#x27;event&#x27;, &#x27;purchase&#x27;, {
+  &#x27;value&#x27;: 99.99,
+  &#x27;currency&#x27;: &#x27;USD&#x27;
+});</code></pre>
+<p>Or set default value in GA4 Admin when marking conversion.</p>
+<hr>
+<h2>Custom Dimensions and Metrics</h2>
+<h3>When to Use</h3>
+<p><strong>Custom dimensions:</strong></p>
+<ul><li>Properties you want to segment/filter by</li><li>User attributes (plan type, industry)</li><li>Content attributes (author, category)</li></ul>
+<p><strong>Custom metrics:</strong></p>
+<ul><li>Numeric values to aggregate</li><li>Scores, counts, durations</li></ul>
+<h3>Setup Steps</h3>
+<ol><li>Admin &gt; Data display &gt; Custom definitions</li><li>Create dimension or metric</li><li>Choose scope:</li></ol>
+<ul><li><strong>Event</strong>: Per event (content_type)</li><li><strong>User</strong>: Per user (account_type)</li><li><strong>Item</strong>: Per product (product_category)</li></ul>
+<ol><li>Enter parameter name (must match event parameter)</li></ol>
+<h3>Examples</h3>
+<p>| Dimension | Scope | Parameter | Description | |-----------|-------|-----------|-------------| | User Type | User | user_type | Free, trial, paid | | Content Author | Event | author | Blog post author | | Product Category | Item | item_category | E-commerce category |</p>
+<hr>
+<h2>Audiences</h2>
+<h3>Creating Audiences</h3>
+<p>Admin &gt; Data display &gt; Audiences</p>
+<p><strong>Use cases:</strong></p>
+<ul><li>Remarketing audiences (export to Ads)</li><li>Segment analysis</li><li>Trigger-based events</li></ul>
+<h3>Audience Examples</h3>
+<p><strong>High-intent visitors:</strong></p>
+<ul><li>Viewed pricing page</li><li>Did not convert</li><li>In last 7 days</li></ul>
+<p><strong>Engaged users:</strong></p>
+<ul><li>3+ sessions</li><li>Or 5+ minutes total engagement</li></ul>
+<p><strong>Purchasers:</strong></p>
+<ul><li>Purchase event</li><li>For exclusion or lookalike</li></ul>
+<hr>
+<h2>Debugging</h2>
+<h3>DebugView</h3>
+<p>Enable with:</p>
+<ul><li>URL parameter: <code>?debug_mode=true</code></li><li>Chrome extension: GA Debugger</li><li>gtag: <code>&#x27;debug_mode&#x27;: true</code> in config</li></ul>
+<p>View at: Reports &gt; Configure &gt; DebugView</p>
+<h3>Real-Time Reports</h3>
+<p>Check events within 30 minutes: Reports &gt; Real-time</p>
+<h3>Common Issues</h3>
+<p><strong>Events not appearing:</strong></p>
+<ul><li>Check DebugView first</li><li>Verify gtag/GTM firing</li><li>Check filter exclusions</li></ul>
+<p><strong>Parameter values missing:</strong></p>
+<ul><li>Custom dimension not created</li><li>Parameter name mismatch</li><li>Data still processing (24-48 hrs)</li></ul>
+<p><strong>Conversions not recording:</strong></p>
+<ul><li>Event not marked as conversion</li><li>Event name doesn&#x27;t match</li><li>Counting method (once vs. every)</li></ul>
+<hr>
+<h2>Data Quality</h2>
+<h3>Filters</h3>
+<p>Admin &gt; Data streams &gt; [Stream] &gt; Configure tag settings &gt; Define internal traffic</p>
+<p><strong>Exclude:</strong></p>
+<ul><li>Internal IP addresses</li><li>Developer traffic</li><li>Testing environments</li></ul>
+<h3>Cross-Domain Tracking</h3>
+<p>For multiple domains sharing analytics:</p>
+<ol><li>Admin &gt; Data streams &gt; [Stream] &gt; Configure tag settings</li><li>Configure your domains</li><li>List all domains that should share sessions</li></ol>
+<h3>Session Settings</h3>
+<p>Admin &gt; Data streams &gt; [Stream] &gt; Configure tag settings</p>
+<ul><li>Session timeout (default 30 min)</li><li>Engaged session duration (10 sec default)</li></ul>
+<hr>
+<h2>Integration with Google Ads</h2>
+<h3>Linking</h3>
+<ol><li>Admin &gt; Product links &gt; Google Ads links</li><li>Enable auto-tagging in Google Ads</li><li>Import conversions in Google Ads</li></ol>
+<h3>Audience Export</h3>
+<p>Audiences created in GA4 can be used in Google Ads for:</p>
+<ul><li>Remarketing campaigns</li><li>Customer match</li><li>Similar audiences</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ga4-implementation.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

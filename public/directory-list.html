@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>directory-list</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/directory-list.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/directory-list">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/directory-list.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>directory-list</h1><p class="lede">Canonical list of directories organized by tier.</p><h1>Directory List — Full Reference</h1>
+<p>Canonical list of directories organized by tier. DR values are approximate and drift over time — verify via Ahrefs or Moz before building a plan around them.</p>
+<p><strong>Column legend:</strong></p>
+<ul><li><strong>DR</strong> — Domain Rating (Ahrefs). Higher = more link equity passed.</li><li><strong>Dofollow</strong> — Whether the backlink passes SEO value. Nofollow listings still matter for referral traffic and brand signals.</li><li><strong>Cost</strong> — Free unless noted.</li></ul>
+<hr>
+<h2>Tier 1 — Flagship Launch Platforms</h2>
+<p>Submit only during launch week. These are time-sensitive with limited re-submission windows.</p>
+<p>| Directory | DR | Dofollow | Cost | Notes | |---|---|---|---|---| | <strong>Product Hunt</strong> | 91 | Yes | Free | The anchor event. Requires 3-week warm-up. 2026 algorithm weights comment quality over upvotes. Launch Tue/Wed/Thu at 12:01 AM PT. | | <strong>Hacker News (Show HN)</strong> | 91 | Nofollow | Free | Only if you have a genuine technical angle. Post title format: &quot;Show HN: [Product] — [hook]&quot;. Moderator death penalty for hype. | | <strong>BetaList</strong> | 64 | Yes | Free (paid expedite ~$99) | Best for pre-launch waitlist building. Submission → 2–4 week queue unless expedited. | | <strong>Launching Next</strong> | ~30 | Yes | Free | Editorial curation — needs a compelling story. | | <strong>Fazier</strong> | ~30 | Yes | Free | Daily ranking with much lower competition than PH. Achievable #1. | | <strong>Uneed</strong> | ~40 | Yes | Free | Curated, smaller audience, quality backlink. | | <strong>Microlaunch</strong> | ~30 | Yes | Free | Month-long visibility vs one-day spike. | | <strong>OpenHunts</strong> | ~25 | Yes | Free | Indie-maker friendly, reports 14%+ conversion rates. | | <strong>DevHunt</strong> | ~35 | Yes | Free | Dev-focused. Best fit for developer tools and technical products. | | <strong>PeerPush</strong> | ~25 | Yes | Free | Similar to Fazier. Low competition. | | <strong>LaunchVault</strong> | ~20 | Yes | Free | Anti-VC positioning. Good for bootstrapped narrative. | | <strong>What Launched Today</strong> | ~20 | Yes | Free | Guaranteed visibility on launch day regardless of votes. | | <strong>Firsto</strong> | ~25 | Yes | Free tier | Sustained discovery, not one-day spike. | | <strong>GetByte</strong> | ~20 | Yes | Free | Lightweight listing + promotional support. | | <strong>Best of Web</strong> | ~30 | Yes | Free | Easy fast submission, free dofollow. | | <strong>Tiny Launch</strong> | ~20 | Yes | Free | Lightweight, fast approval. | | <strong>PitchWall</strong> | ~25 | Yes | Free | Indie-hacker friendly. |</p>
+<hr>
+<h2>Tier 2 — Startup / SaaS / Software Directories</h2>
+<p>Submit during launch week and continue rolling submissions thereafter.</p>
+<p>| Directory | DR | Dofollow | Cost | Notes | |---|---|---|---|---| | <strong>AlternativeTo</strong> | 79 | Nofollow | Free | Massive SEO value despite nofollow. Submit as alternative to your top 4 competitors. | | <strong>SaaSHub</strong> | 77 | Yes | Free | Ranks well for &quot;[tool] alternatives&quot; queries. High intent. | | <strong>G2</strong> | 92 | Yes | Free listing | 10 reviews required for Grid appearance. Paid badges start at $2,999/yr. | | <strong>Capterra</strong> | 93 | Yes | Free listing | Owned by G2 (acquired Feb 2026). Reviews drive everything. | | <strong>GetApp</strong> | 78 | Yes | Free | Auto-syncs from Capterra in some cases. Owned by G2. | | <strong>SourceForge</strong> | 92 | Yes | Free | Legacy but still high DR. Trivial to list. | | <strong>Slashdot</strong> | ~88 | Yes | Free | Legacy but high DR. Company profile submission. | | <strong>Startup Stash</strong> | ~50 | Yes | Free | Curated, organized by startup need. | | <strong>SideProjectors</strong> | ~35 | Yes | Free | Discovery + marketplace. Community-driven. | | <strong>F6S</strong> | 65 | Yes | Free | Startup platform used by accelerators. | | <strong>Stackshare</strong> | ~60 | Yes | Free | Dev-centric. Show your tech stack. | | <strong>Resource.fyi</strong> | ~40 | Yes | Free | Curated for designers/devs/marketers. | | <strong>Shipybara</strong> | ~30 | Yes | Free | Shows which companies use your tool. | | <strong>TrustRadius</strong> | 72 | Yes | Free | Smaller but respected B2B review platform. | | <strong>Crozdesk</strong> | ~55 | Yes | Free | Feeds into Gartner ecosystem. | | <strong>Software Advice</strong> | 88 | Yes | Free | Gartner property. Auto-syncs with Capterra in some categories. | | <strong>TheSaaSDirectory</strong> | 88 | Yes | Free | SaaS-specific directory. Good categorization. | | <strong>Tech.co</strong> | 80 | Yes | Free | Startup/SaaS directory + media. | | <strong>Taalk</strong> | 80 | Yes | Free | Startup directory. | | <strong>Startup Fame</strong> | 77 | Yes | Free | Startup showcase directory. | | <strong>Indie Hackers</strong> | 76 | Yes | Free | Build-in-public community + product directory. | | <strong>Slant</strong> | 75 | Yes | Free | &quot;What is the best...&quot; recommendation platform. | | <strong>Gust</strong> | 75 | Yes | Free | Startup/investor platform. Profile with links. | | <strong>Inc42</strong> | 75 | Yes | Free | Indian startup media + directory. | | <strong>Wefunder</strong> | 76 | Yes | Free | Equity crowdfunding. Product profile with links. | | <strong>Startups.com</strong> | 68 | Yes | Free | Startup community + resources. | | <strong>IndieHustles</strong> | 66 | Yes | Free | Indie SaaS directory. | | <strong>SaaSWorthy</strong> | 65 | Yes | Free | SaaS review/comparison site. | | <strong>ToolsFine</strong> | 65 | Yes | Free | SaaS tool directory. | | <strong>Bizcommunity</strong> | 65 | Yes | Free | Business news + directory. | | <strong>StartUs</strong> | 62 | Yes | Free | Startup directory + insights. | | <strong>Today Launches</strong> | 60 | Yes | Free | Daily launch directory. | | <strong>StartupBuffer</strong> | 57 | Yes | Free | Startup promotion platform. | | <strong>Feedough</strong> | 55 | Yes | Free | Startup resources + directory. | | <strong>Indie Hacker Tools</strong> | 55 | Yes | Free | Tools for indie hackers. | | <strong>Open Launch</strong> | 55 | Yes | Free | Product launch directory. | | <strong>New SaaSly</strong> | 52 | Yes | Free | New SaaS product directory. | | <strong>Business Software</strong> | 49 | Yes | Free | Business software directory. | | <strong>Promote Project</strong> | 47 | Yes | Free | Project promotion directory. | | <strong>FiveTaco</strong> | 47 | Yes | Free | SaaS tool directory. | | <strong>Cuspera</strong> | 45 | Yes | Free | SaaS comparison platform. | | <strong>BetaBound</strong> | 45 | Yes | Free | Beta testing community + directory. | | <strong>Makerthrive</strong> | 45 | Yes | Free | Maker community + tools. | | <strong>StartupTracker</strong> | 44 | Yes | Free | Startup tracking directory. | | <strong>BusinessHunt</strong> | 43 | Yes | Free | Business product directory. | | <strong>Launched.io</strong> | 40 | Yes | Free | Launch directory. | | <strong>ProfitHunt</strong> | 40 | Yes | Free | Profitable startup directory. | | <strong>10words</strong> | 40 | Yes | Free | SaaS directory (10-word descriptions). | | <strong>TrustMRR</strong> | 40 | Yes | Free | MRR-verified startup directory. | | <strong>the agentDir</strong> | 35 | Yes | Free | Open directory. | | <strong>Build Voyage</strong> | 33 | Yes | Free | Startup builder directory. | | <strong>AlphaDigits</strong> | 32 | Yes | Free | SaaS directory. |</p>
+<hr>
+<h2>Tier 3 — AI Tool Directories</h2>
+<p>Relevant only for AI-native products. Submit during weeks 1–3.</p>
+<h3>Tier 3A — Flagship AI directories</h3>
+<p>| Directory | DR | Monthly Traffic | Notes | |---|---|---|---| | <strong>There&#x27;s An AI For That (TAAFT)</strong> | 76 | 2M+ | Largest AI directory. Task-based search. Worth the effort to list well. | | <strong>Futurepedia</strong> | 70 | 1M+ | 5,000+ tools, 54 categories. Matt Wolfe YouTube (2M+ subs) drives traffic. | | <strong>Toolify.ai</strong> | 71 | 500K+ | 26K+ tools, 450+ categories. Tracks traffic trends. | | <strong>Future Tools (futuretools.io)</strong> | 69 | 400K+ | Curated by Matt Wolfe. Smaller but influential. | | <strong>AI Tools Neilpatel</strong> | 91 | n/a | Highest DR free AI directory. | | <strong>Good AI Tools</strong> | 66 | n/a | Curated, quality over quantity. | | <strong>NewTools.site</strong> | 51 | n/a | Dofollow backlink for every approved submission. |</p>
+<h3>Tier 3B — Mid-tier AI directories</h3>
+<p>| Directory | Est. DR | Notes | |---|---|---| | <strong>aitools.inc</strong> | ~66 | &quot;10x your output&quot; positioning. | | <strong>AIStage</strong> | ~66 | Includes open source + news. | | <strong>AItrendytools</strong> | ~69 | Comprehensive listing. | | <strong>Grabon AI Directory</strong> | ~70 | High DR, broad audience. | | <strong>TopAI.tools</strong> | ~60 | Task-based search similar to TAAFT. | | <strong>Supertools</strong> | ~61 | Clean interface, good categorization. | | <strong>AI Tools Directory</strong> (aitoolsdirectory.com) | ~55 | Curated; featured placement available. | | <strong>AI Tools Love</strong> | ~25 | Comparison-focused. | | <strong>AIChief</strong> | ~35 | Business-focused. | | <strong>LogicBalls</strong> | ~40 | 3,500+ verified tools. | | <strong>SaasAITools</strong> | ~30 | SaaS + AI crossover. | | <strong>PoweredByAI</strong> | ~35 | Growing directory with newsletter reach. | | <strong>TheAISurf</strong> | ~30 | Newer, actively promoting submissions. | | <strong>Aixyz</strong> | ~30 | 1,500+ tools, smart filters. | | <strong>AI Pedia Hub</strong> | ~40 | &quot;Largest directory, updated daily.&quot; | | <strong>Dofollow.Tools</strong> | ~30 | Explicitly free dofollow backlinks. | | <strong>AIBacklinkList</strong> | ~25 | Aggregated list of 2500+ AI backlink opportunities. | | <strong>AI Scout</strong> | ~25 | Emerging, less competition. | | <strong>AiMatchPro</strong> | ~20 | Use-case search. | | <strong>GPTForge</strong> | ~30 | Domain created 2025 — DR 88 from source list is implausible. Verify via Ahrefs. | | <strong>AI Tools Guide</strong> | 77 | Curated AI tools directory. | | <strong>AIToolly</strong> | 69 | AI tool discovery. | | <strong>All The AI Tools</strong> | 66 | Comprehensive AI tool listing. | | <strong>Aiforme.wiki</strong> | 66 | AI tool wiki/directory. | | <strong>Noxilo</strong> | 66 | AI tools directory. | | <strong>AI Generation</strong> | 55 | AI tools directory. | | <strong>Every AI</strong> | 55 | AI tool aggregator. | | <strong>BAI.tools</strong> | 53 | AI tools directory. | | <strong>The Rundown Tools</strong> | 40 | AI newsletter&#x27;s tool directory. | | <strong>AI NavHub</strong> | 38 | AI navigation directory. | | <strong>WhatTheAI</strong> | 35 | AI tools directory. | | <strong>ToolAI</strong> | 31 | AI tools directory. | | <strong>LLM Relevance</strong> | 30 | LLM-focused directory. |</p>
+<hr>
+<h2>Tier 4 — AI Agent &amp; MCP Server Registries</h2>
+<p>Relevant only if the product exposes agent capabilities or MCP servers. These are a real moat for AI-native tools — traditional SaaS products cannot list here.</p>
+<p>| Directory | Category | Notes | |---|---|---| | <strong>AI Agents List (aiagentslist.com)</strong> | Agents | Hosts the 593+ MCP server directory. | | <strong>Glama.ai MCP servers</strong> | MCP | 20K+ security-graded MCP servers. A/B/C/F grades matter — optimize for a good grade. | | <strong>APITracker MCP directory</strong> | MCP | 110+ servers, 90 official integrations. | | <strong>Linux Foundation MCP Registry</strong> | MCP | Canonical registry (PR-based submission, low volume but high signal). Anthropic donated MCP to LF in Dec 2025. | | <strong>AI Agent Store</strong> | Agents | Compare agents, platforms, frameworks. | | <strong>AI Agents Base</strong> | Agents | All-in-one directory. | | <strong>AI Agents Directory</strong> | Agents | Specialized, updated daily. | | <strong>AI Agents Verse</strong> | Agents | Curated directory. | | <strong>AgentHunter</strong> | Agents | &quot;Discover the best AI agents.&quot; | | <strong>Add AI Directory</strong> | Agents | Catalogs agents + tools. | | <strong>AI Agents Live</strong> | Agents | Discovery + sharing. | | <strong>AI Agents Marketplace</strong> | Agents | Organized by 300+ human role equivalents. |</p>
+<hr>
+<h2>Tier 5 — No-Code Directories</h2>
+<p>Relevant for no-code platforms and builder tools.</p>
+<p>| Directory | Est. DR | Notes | |---|---|---| | <strong>NoCodeFinder</strong> | ~45 | Accepts submissions. | | <strong>No Code MBA Tools Directory</strong> | ~55 | Categorized by project type. | | <strong>We Are No Code Tools Repository</strong> | ~40 | Curated. | | <strong>NoCodeList</strong> | ~30 | — | | <strong>NoCodeDevs</strong> | ~25 | — | | <strong>NoCode.Tech</strong> | ~35 | — | | <strong>MakerPad / Zapier</strong> | ~62 | Now owned by Zapier. No-code tool directory. | | <strong>NoCodeFounders</strong> | ~45 | No-code community + forum. |</p>
+<hr>
+<h2>Tier 6 — &quot;Best of&quot; Listicles (Editorial Outreach)</h2>
+<p>Not directories per se — these are blog posts on high-DR domains that you get included in via cold outreach. Often more valuable than directories because they combine a dofollow backlink with editorial trust + in-market buyer traffic + AI citation weight.</p>
+<p><strong>Search patterns to find opportunities:</strong></p>
+<ul><li><code>&quot;best [category] tools&quot; 2026</code></li><li><code>&quot;best [competitor] alternative&quot;</code></li><li><code>&quot;top AI [category]&quot;</code></li><li><code>&quot;[category] tools review&quot;</code></li></ul>
+<p><strong>Outreach template (short):</strong></p>
+<blockquote><p>Hey [name], saw your post on [best X tools]. We launched [product] recently — thought it might be worth a mention. Happy to give you a free account + credits for readers. Here&#x27;s a 60s demo: [link]. No worries if not a fit.</p></blockquote>
+<p><strong>Target:</strong> 10 inclusions in 30 days. Each = dofollow backlink from DR 40–70 + referral traffic + AI citation fuel.</p>
+<hr>
+<h2>Tier 7 — Integration Marketplaces</h2>
+<p>Only relevant once the product has integrations. These are the highest-DR backlinks available — worth engineering effort just to land them.</p>
+<p>| Directory | DR | Notes | |---|---|---| | <strong>Zapier App Directory</strong> | 91 | Requires working Zapier integration. | | <strong>HubSpot App Marketplace</strong> | 93 | Requires HubSpot app. | | <strong>Slack App Directory</strong> | 89 | Requires Slack integration. | | <strong>Airtable Marketplace</strong> | 82 | Requires Airtable integration. | | <strong>Notion Integrations Gallery</strong> | 88 | Requires Notion integration. | | <strong>Make (Integromat)</strong> | ~70 | Requires Make module. | | <strong>Pipedream</strong> | ~70 | Requires Pipedream action. |</p>
+<hr>
+<h2>Tier 8 — Profile &amp; Content Platforms</h2>
+<p>Create a profile or publish content on these high-DR platforms to earn a dofollow backlink. These are not traditional directories — they&#x27;re content and identity platforms where your profile or published content links back to your site. Highest DR backlinks available without building integrations.</p>
+<p>| Platform | DR | Category | Type | Notes | |---|---|---|---|---| | <strong>WordPress.com</strong> | 100 | Any | Blog | Create a free blog, link to main site in posts and profile. | | <strong>Blogger</strong> | 100 | Any | Blog | Google property. Free blog with dofollow links. | | <strong>Tumblr</strong> | 99 | Design | Blog | Highest DR blog platform. Project blog or microblog. | | <strong>GitHub</strong> | 98 | Tech | Code host | Profile + repo README links. Every software product should have this. | | <strong>SoundCloud</strong> | 96 | Music | Profile | Niche — relevant for audio/music products. | | <strong>Weebly</strong> | 95 | Any | Blog | Free site builder with dofollow profile link. | | <strong>SlideShare</strong> | 95 | Any | Content | Upload pitch decks, guides, presentations. | | <strong>Flickr</strong> | 95 | Photography | Profile | Product screenshot galleries with profile link. | | <strong>GitLab</strong> | 94 | Tech | Code host | Profile link. Mirror repos if open source. | | <strong>eBay Stores</strong> | 94 | E-commerce | Profile | Niche — relevant for physical/digital goods. | | <strong>Etsy</strong> | 93 | E-commerce | Profile | Niche — templates, digital downloads. | | <strong>Substack</strong> | 93 | Tech | Newsletter | Publish product updates, thought leadership. High-intent readers. | | <strong>Bitbucket</strong> | 93 | Tech | Code host | Profile link. Atlassian property. | | <strong>Scribd</strong> | 93 | Any | Content | Upload whitepapers, guides, case studies. | | <strong>Disqus</strong> | 93 | Professional | Profile | Profile with website link. Comment on industry blogs. | | <strong>Behance</strong> | 93 | Design | Profile | Portfolio/project links. Best for design-adjacent products. | | <strong>Pastebin</strong> | 93 | Tech | Code host | Code snippets with profile link. | | <strong>Patreon</strong> | 93 | Creator | Profile | Creator page with product links. | | <strong>Imgur</strong> | 93 | Any | Profile | Image hosting with profile link. | | <strong>Dun &amp; Bradstreet</strong> | 93 | B2B | Directory | Business credibility. Feeds AI training corpora. | | <strong>Ghost.org</strong> | 92 | Any | Blog | Publish content with dofollow links. | | <strong>Evernote</strong> | 92 | Any | Content | Public notebooks with links. | | <strong>Issuu</strong> | 92 | Any | Content | Upload marketing PDFs, brochures, reports. | | <strong>CodePen</strong> | 92 | Tech | Profile | Front-end demos and profile link. | | <strong>Kaggle</strong> | 92 | AI | Profile | AI/data science community. Notebooks with links. | | <strong>Houzz</strong> | 92 | Home | Profile | Niche — home/interior products. | | <strong>LiveJournal</strong> | 91 | Any | Blog | Legacy but high DR. Blog with dofollow links. | | <strong>Bandcamp</strong> | 91 | Music | Profile | Niche — audio products. | | <strong>Dev.to</strong> | 90 | Tech | Blog | Technical articles with dofollow links. Cross-post with canonical URL. | | <strong>Gravatar</strong> | 90 | Professional | Profile | Profile with website link. Quick setup. | | <strong>Replit</strong> | 90 | Tech | Code host | Profile link. Interactive demos. | | <strong>CodeProject</strong> | 90 | Tech | Blog | Technical articles for dev audience. | | <strong>Jimdo</strong> | 89 | Any | Blog | Free site builder with profile link. | | <strong>Calameo</strong> | 89 | Any | Content | Digital publishing platform. Upload PDFs. | | <strong>Buy Me a Coffee</strong> | 88 | Creator | Profile | Creator page with product links. | | <strong>ArtStation</strong> | 88 | Design | Profile | Portfolio for creative/design products. | | <strong>500px</strong> | 88 | Photography | Profile | Product imagery with profile link. | | <strong>IndiaMART</strong> | 87 | B2B | Profile | Indian B2B marketplace. Niche but high DR. | | <strong>Strikingly</strong> | 87 | Any | Blog | Free one-page site with backlink. | | <strong>Hashnode</strong> | 85 | Tech | Blog | Dev blogging. Custom domain support. Dofollow links. | | <strong>About.me</strong> | 85 | Professional | Profile | One-page profile. Quick dofollow backlink. | | <strong>Mixcloud</strong> | 85 | Music | Profile | Niche — audio/podcast products. | | <strong>4Shared</strong> | 85 | Any | Content | File sharing with profile link. | | <strong>HubPages</strong> | 84 | Any | Blog | Article publishing platform. | | <strong>AppSumo</strong> | 84 | E-commerce | Marketplace | SaaS deals marketplace. Great for launch visibility + backlink. | | <strong>TeachersPayTeachers</strong> | 84 | Education | Profile | Niche — education products. | | <strong>AuthorStream</strong> | 70 | Any | Content | Presentation sharing. | | <strong>Model Mayhem</strong> | 72 | Design | Profile | Niche — creative industry. | | <strong>Penzu</strong> | 60 | Any | Blog | Online journal with profile link. | | <strong>Crevado</strong> | 50 | Design | Profile | Portfolio platform. | | <strong>MyFolio</strong> | 55 | Design | Profile | Portfolio platform. |</p>
+<hr>
+<h2>Tier 9 — Local Business &amp; General Directories</h2>
+<p>Relevant for products with a physical presence, local customer base, or business address. Also useful for any product wanting pure DR-building backlinks from established directories.</p>
+<p>| Directory | DR | Category | Notes | |---|---|---|---| | <strong>Manta</strong> | 76 | Local business | US business directory. Free listing. | | <strong>ActiveSearchResults</strong> | 74 | General | Search engine directory. | | <strong>Hotfrog</strong> | 72 | Local business | International business directory. | | <strong>Spoke</strong> | 70 | B2B | Business profile directory. | | <strong>Locanto</strong> | 70 | General | Classifieds + business listings. International. | | <strong>MerchantCircle</strong> | 68 | Local business | US small business directory. | | <strong>Just Landed</strong> | 65 | Local business | International directory. | | <strong>Showmelocal</strong> | 64 | Local business | US local search directory. | | <strong>Cylex</strong> | 64 | Local business | International business directory. | | <strong>Brownbook</strong> | 63 | Local business | Global business directory. | | <strong>Tupalo</strong> | 62 | Local business | European business directory. | | <strong>WebWiki</strong> | 60 | General | Website directory with reviews. | | <strong>iBegin</strong> | 60 | Local business | US business directory. | | <strong>CitySquares</strong> | 55 | Local business | US local business directory. | | <strong>eLocal</strong> | 55 | Local business | US service provider directory. | | <strong>2FindLocal</strong> | 53 | Local business | US local directory. | | <strong>Chamber of Commerce</strong> | 50 | Local business | Business directory + resources. | | <strong>FindUsLocal</strong> | 50 | Local business | Local search directory. | | <strong>ezlocal</strong> | 50 | Local business | US local business listings. | | <strong>Yellow Pages Goes Green</strong> | 49 | Local business | Eco-friendly business directory. | | <strong>Where To?</strong> | 46 | Local business | Local discovery directory. |</p>
+<hr>
+<h2>Tier 10 — Forums &amp; Communities</h2>
+<p>Create a profile and participate in relevant communities. Most give dofollow profile links. Value comes from both the backlink and referral traffic from genuine participation. Follow the 90/10 rule: 90% helpful, 10% promotional.</p>
+<p>| Forum | DR | Category | Notes | |---|---|---|---| | <strong>Strava Clubs</strong> | 90 | Fitness | Niche — fitness/health products only. | | <strong>Foursquare</strong> | 90 | Hospitality | Business listing with dofollow link. | | <strong>SitePoint Forums</strong> | 89 | Tech | Web dev community. Genuine participation required. | | <strong>Mumsnet Forums</strong> | 85 | Family | Niche — family/parenting products. Large UK audience. | | <strong>Digital Point</strong> | 82 | Marketing | SEO/marketing forum. | | <strong>WebmasterWorld</strong> | 77 | Marketing | SEO/webmaster community. High editorial standards. | | <strong>BlackHatWorld</strong> | 77 | Marketing | SEO/marketing forum. Despite the name, has legitimate discussions. | | <strong>GrowthHackers</strong> | 76 | Marketing | Growth marketing community. Dofollow articles + profile. | | <strong>Warrior Forum</strong> | 73 | Marketing | Internet marketing community. | | <strong>Apsense</strong> | 72 | Marketing | Business networking + marketing forum. | | <strong>ActiveRain</strong> | 70 | Real estate | Niche — real estate industry. | | <strong>Quibblo</strong> | 55 | General | Quiz/poll community with profile links. |</p>
+<hr>
+<h2>Tier 11 — Press Release, Article &amp; Blog Directory Sites</h2>
+<p>Publish articles or press releases to earn dofollow backlinks. Best for product launches, funding announcements, major feature releases. Some accept any topic, others are PR-specific.</p>
+<h3>Article &amp; Blog Directories</h3>
+<p>| Site | DR | Type | Notes | |---|---|---|---| | <strong>EzineArticles</strong> | 80 | Article | Established article directory. Editorial review. | | <strong>Feedspot</strong> | 80 | Blog directory | Blog discovery + RSS aggregation. Submit your blog. | | <strong>Alltop</strong> | 73 | Blog directory | Guy Kawasaki&#x27;s blog aggregator. | | <strong>ArticlesBase</strong> | 70 | Article | Article publishing platform. | | <strong>Blogarama</strong> | 64 | Blog directory | Blog directory with categories. | | <strong>Sooper Articles</strong> | 60 | Article | Article submission site. | | <strong>OnToplist</strong> | 60 | Blog directory | Blog ranking directory. | | <strong>BlogEngage</strong> | 55 | Blog directory | Blog promotion community. | | <strong>BizSugar</strong> | 55 | Business | Small business content sharing. | | <strong>TechPluto</strong> | 50 | Marketing | Tech/marketing blog directory. |</p>
+<h3>Press Release Distribution</h3>
+<p>| Site | DR | Notes | |---|---|---| | <strong>PRLog</strong> | 80 | Free press release distribution. Good reach. | | <strong>PR.com</strong> | 77 | Free + paid press releases. Business directory too. | | <strong>OpenPR</strong> | 72 | Free international press release distribution. | | <strong>1888 Press Release</strong> | 69 | Free press release site. | | <strong>NewswireToday</strong> | 65 | Free press release distribution. | | <strong>Online PR News</strong> | 62 | Free press release distribution. | | <strong>PR Free</strong> | 62 | Free press release site. |</p>
+<h3>Marketing &amp; General Directories</h3>
+<p>| Site | DR | Notes | |---|---|---| | <strong>SubmissionWebDirectory</strong> | 61 | General web directory. | | <strong>Site Promotion Directory</strong> | 46 | Marketing-focused directory. | | <strong>Semfirms</strong> | 45 | Marketing services directory. | | <strong>CabinetM</strong> | 45 | Marketing technology directory. | | <strong>Cold Email Kit</strong> | 44 | Email marketing directory. | | <strong>Directory LDM Studio</strong> | 40 | General directory. | | <strong>Quality Internet Directory</strong> | 39 | General web directory. | | <strong>ProofStories</strong> | 32 | Marketing stories/case studies. |</p>
+<hr>
+<h2>Tier 12 — Social Bookmarking &amp; Curation</h2>
+<p>Bookmark or curate content with dofollow links. Lower effort than publishing full articles. Most useful for building diverse backlink profile.</p>
+<p>| Platform | DR | Notes | |---|---|---| | <strong>Scoop.it</strong> | 91 | Content curation platform. Create topic pages with links. | | <strong>Diigo</strong> | 85 | Social bookmarking + annotation. Profile + bookmark links. | | <strong>Pearltrees</strong> | 84 | Visual content curation. Organize links into collections. | | <strong>BibSonomy</strong> | 70 | Academic bookmarking. Best for research/data products. | | <strong>Folkd</strong> | 64 | Social bookmarking. Tag and share links. |</p>
+<hr>
+<h2>Tier 13 — Niche Vertical Directories</h2>
+<p>Industry-specific directories. Only submit if your product genuinely fits the vertical — forced listings get rejected and waste time.</p>
+<h3>Legal</h3>
+<p>| Directory | DR | Notes | |---|---|---| | <strong>Justia</strong> | 85 | Legal services directory. | | <strong>Lawyers.com</strong> | 82 | Legal directory. | | <strong>HG.org</strong> | 75 | Legal resources directory. |</p>
+<h3>Home &amp; Construction</h3>
+<p>| Directory | DR | Notes | |---|---|---| | <strong>Porch</strong> | 80 | Home services marketplace. | | <strong>BuildZoom</strong> | 73 | Construction/contractor directory. | | <strong>Tradify (FreeIndex)</strong> | 55 | UK trades directory. | | <strong>iBuildNew</strong> | 45 | Australian home building directory. |</p>
+<h3>Hospitality &amp; Food</h3>
+<p>| Directory | DR | Notes | |---|---|---| | <strong>AllMenus</strong> | 76 | Restaurant directory. |</p>
+<h3>Design &amp; Creative</h3>
+<p>| Directory | DR | Notes | |---|---|---| | <strong>LandBook</strong> | 72 | Web design inspiration gallery. Submit landing pages. | | <strong>Curated.design</strong> | 52 | Design inspiration directory. | | <strong>Webdesign Inspiration</strong> | 45 | Website design showcase. |</p>
+<h3>Health &amp; Fitness</h3>
+<p>| Directory | DR | Notes | |---|---|---| | <strong>Wellness.com</strong> | 60 | Health &amp; wellness directory. | | <strong>YogaTrail</strong> | 55 | Yoga/wellness directory. | | <strong>MassageTherapy (AMBP)</strong> | 45 | Massage therapy directory. | | <strong>Athlinks</strong> | 72 | Fitness/race results. Profile with links. | | <strong>Fit Pro Directory</strong> | 40 | Fitness professional directory. |</p>
+<h3>Real Estate</h3>
+<p>| Directory | DR | Notes | |---|---|---| | <strong>Placester</strong> | 60 | Real estate marketing directory. |</p>
+<h3>B2B &amp; International</h3>
+<p>| Directory | DR | Notes | |---|---|---| | <strong>Sulekha</strong> | 73 | Indian business directory. | | <strong>EU-Business</strong> | 46 | European business directory. |</p>
+<h3>Events</h3>
+<p>| Directory | DR | Notes | |---|---|---| | <strong>Evensi Events</strong> | 62 | Event discovery platform. |</p>
+<h3>Education</h3>
+<p>| Directory | DR | Notes | |---|---|---| | <em>(TeachersPayTeachers listed in Tier 8 — Profile Platforms)</em> | | |</p>
+<hr>
+<h2>Verification</h2>
+<p>After any submission goes live, verify the backlink exists and is dofollow. You can:</p>
+<ol><li><strong>Manual:</strong> Open the listing, right-click your product link, &quot;Inspect&quot; → check for <code>rel=&quot;nofollow&quot;</code> or <code>rel=&quot;ugc&quot;</code>. If absent, the link is dofollow.</li><li><strong>curl:</strong> <code>curl -sIL https://directory.com/your-listing | grep -i link</code></li><li><strong>SEO tools:</strong> Ahrefs Site Explorer → Backlinks → filter by this directory&#x27;s domain.</li></ol>
+<p><strong>Re-verify quarterly.</strong> Directories sometimes change all outbound links to nofollow without warning — if DR stops moving, check whether your biggest inbound links have silently flipped.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/directory-list.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

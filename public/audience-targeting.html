@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>audience-targeting</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/audience-targeting.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/audience-targeting">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/audience-targeting.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>audience-targeting</h1><p class="lede">Detailed targeting strategies for each major ad platform.</p><h1>Audience Targeting Reference</h1>
+<p>Detailed targeting strategies for each major ad platform.</p>
+<h2>Contents</h2>
+<ul><li>Google Ads Audiences (Search Campaign Targeting, Display/YouTube Targeting)</li><li>Meta Audiences (Core Audiences, Custom Audiences, Lookalike Audiences)</li><li>LinkedIn Audiences (Job-Based Targeting, Company-Based Targeting, High-Performing Combinations)</li><li>Twitter/X Audiences</li><li>TikTok Audiences</li><li>Audience Size Guidelines</li><li>Exclusion Strategy</li></ul>
+<h2>Google Ads Audiences</h2>
+<h3>Search Campaign Targeting</h3>
+<p><strong>Keywords:</strong></p>
+<ul><li>Exact match: [keyword] — most precise, lower volume</li><li>Phrase match: &quot;keyword&quot; — moderate precision and volume</li><li>Broad match: keyword — highest volume, use with smart bidding</li></ul>
+<p><strong>Audience layering:</strong></p>
+<ul><li>Add audiences in &quot;observation&quot; mode first</li><li>Analyze performance by audience</li><li>Switch to &quot;targeting&quot; mode for high performers</li></ul>
+<p><strong>RLSA (Remarketing Lists for Search Ads):</strong></p>
+<ul><li>Bid higher on past visitors searching your terms</li><li>Show different ads to returning searchers</li><li>Exclude converters from prospecting campaigns</li></ul>
+<h3>Display/YouTube Targeting</h3>
+<p><strong>Custom intent audiences:</strong></p>
+<ul><li>Based on recent search behavior</li><li>Create from your converting keywords</li><li>High intent, good for prospecting</li></ul>
+<p><strong>In-market audiences:</strong></p>
+<ul><li>People actively researching solutions</li><li>Pre-built by Google</li><li>Layer with demographics for precision</li></ul>
+<p><strong>Affinity audiences:</strong></p>
+<ul><li>Based on interests and habits</li><li>Better for awareness</li><li>Broad but can exclude irrelevant</li></ul>
+<p><strong>Customer match:</strong></p>
+<ul><li>Upload email lists</li><li>Retarget existing customers</li><li>Create lookalikes from best customers</li></ul>
+<p><strong>Similar/lookalike audiences:</strong></p>
+<ul><li>Based on your customer match lists</li><li>Expand reach while maintaining relevance</li><li>Best when source list is high-quality customers</li></ul>
+<hr>
+<h2>Meta Audiences</h2>
+<h3>Core Audiences (Interest/Demographic)</h3>
+<p><strong>Interest targeting tips:</strong></p>
+<ul><li>Layer interests with AND logic for precision</li><li>Use Audience Insights to research interests</li><li>Start broad, let algorithm optimize</li><li>Exclude existing customers always</li></ul>
+<p><strong>Demographic targeting:</strong></p>
+<ul><li>Age and gender (if product-specific)</li><li>Location (down to zip/postal code)</li><li>Language</li><li>Education and work (limited data now)</li></ul>
+<p><strong>Behavior targeting:</strong></p>
+<ul><li>Purchase behavior</li><li>Device usage</li><li>Travel patterns</li><li>Life events</li></ul>
+<h3>Custom Audiences</h3>
+<p><strong>Website visitors:</strong></p>
+<ul><li>All visitors (last 180 days max)</li><li>Specific page visitors</li><li>Time on site thresholds</li><li>Frequency (visited X times)</li></ul>
+<p><strong>Customer list:</strong></p>
+<ul><li>Upload emails/phone numbers</li><li>Match rate typically 30-70%</li><li>Refresh regularly for accuracy</li></ul>
+<p><strong>Engagement audiences:</strong></p>
+<ul><li>Video viewers (25%, 50%, 75%, 95%)</li><li>Page/profile engagers</li><li>Form openers</li><li>Instagram engagers</li></ul>
+<p><strong>App activity:</strong></p>
+<ul><li>App installers</li><li>In-app events</li><li>Purchase events</li></ul>
+<h3>Lookalike Audiences</h3>
+<p><strong>Source audience quality matters:</strong></p>
+<ul><li>Use high-LTV customers, not all customers</li><li>Purchasers &gt; leads &gt; all visitors</li><li>Minimum 100 source users, ideally 1,000+</li></ul>
+<p><strong>Size recommendations:</strong></p>
+<ul><li>1% — most similar, smallest reach</li><li>1-3% — good balance for most</li><li>3-5% — broader, good for scale</li><li>5-10% — very broad, awareness only</li></ul>
+<p><strong>Layering strategies:</strong></p>
+<ul><li>Lookalike + interest = more precision early</li><li>Test lookalike-only as you scale</li><li>Exclude the source audience</li></ul>
+<hr>
+<h2>LinkedIn Audiences</h2>
+<h3>Job-Based Targeting</h3>
+<p><strong>Job titles:</strong></p>
+<ul><li>Be specific (CMO vs. &quot;Marketing&quot;)</li><li>LinkedIn normalizes titles, but verify</li><li>Stack related titles</li><li>Exclude irrelevant titles</li></ul>
+<p><strong>Job functions:</strong></p>
+<ul><li>Broader than titles</li><li>Combine with seniority level</li><li>Good for awareness campaigns</li></ul>
+<p><strong>Seniority levels:</strong></p>
+<ul><li>Entry, Senior, Manager, Director, VP, CXO, Partner</li><li>Layer with function for precision</li></ul>
+<p><strong>Skills:</strong></p>
+<ul><li>Self-reported, less reliable</li><li>Good for technical roles</li><li>Use as expansion layer</li></ul>
+<h3>Company-Based Targeting</h3>
+<p><strong>Company size:</strong></p>
+<ul><li>1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5000+</li><li>Key filter for B2B</li></ul>
+<p><strong>Industry:</strong></p>
+<ul><li>Based on company classification</li><li>Can be broad, layer with other criteria</li></ul>
+<p><strong>Company names (ABM):</strong></p>
+<ul><li>Upload target account list</li><li>Minimum 300 companies recommended</li><li>Match rate varies</li></ul>
+<p><strong>Company growth rate:</strong></p>
+<ul><li>Hiring rapidly = budget available</li><li>Good signal for timing</li></ul>
+<h3>High-Performing Combinations</h3>
+<p>| Use Case | Targeting Combination | |----------|----------------------| | Enterprise sales | Company size 1000+ + VP/CXO + Industry | | SMB sales | Company size 11-200 + Manager/Director + Function | | Developer tools | Skills + Job function + Company type | | ABM campaigns | Company list + Decision-maker titles | | Broad awareness | Industry + Seniority + Geography |</p>
+<hr>
+<h2>Twitter/X Audiences</h2>
+<h3>Targeting options:</h3>
+<ul><li>Follower lookalikes (accounts similar to followers of X)</li><li>Interest categories</li><li>Keywords (in tweets)</li><li>Conversation topics</li><li>Events</li><li>Tailored audiences (your lists)</li></ul>
+<h3>Best practices:</h3>
+<ul><li>Follower lookalikes of relevant accounts work well</li><li>Keyword targeting catches active conversations</li><li>Lower CPMs than LinkedIn/Meta</li><li>Less precise, better for awareness</li></ul>
+<hr>
+<h2>TikTok Audiences</h2>
+<h3>Targeting options:</h3>
+<ul><li>Demographics (age, gender, location)</li><li>Interests (TikTok&#x27;s categories)</li><li>Behaviors (video interactions)</li><li>Device (iOS/Android, connection type)</li><li>Custom audiences (pixel, customer file)</li><li>Lookalike audiences</li></ul>
+<h3>Best practices:</h3>
+<ul><li>Younger skew (18-34 primarily)</li><li>Interest targeting is broad</li><li>Creative matters more than targeting</li><li>Let algorithm optimize with broad targeting</li></ul>
+<hr>
+<h2>Audience Size Guidelines</h2>
+<p>| Platform | Minimum Recommended | Ideal Range | |----------|-------------------|-------------| | Google Search | 1,000+ searches/mo | 5,000-50,000 | | Google Display | 100,000+ | 500K-5M | | Meta | 100,000+ | 500K-10M | | LinkedIn | 50,000+ | 100K-500K | | Twitter/X | 50,000+ | 100K-1M | | TikTok | 100,000+ | 1M+ |</p>
+<p>Too narrow = expensive, slow learning Too broad = wasted spend, poor relevance</p>
+<hr>
+<h2>Exclusion Strategy</h2>
+<p>Always exclude:</p>
+<ul><li>Existing customers (unless upsell)</li><li>Recent converters (7-14 days)</li><li>Bounced visitors (&lt;10 sec)</li><li>Employees (by company or email list)</li><li>Irrelevant page visitors (careers, support)</li><li>Competitors (if identifiable)</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/audience-targeting.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

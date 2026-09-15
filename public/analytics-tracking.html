@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>analytics-tracking</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/analytics-tracking.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/analytics-tracking">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/analytics-tracking.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>analytics-tracking</h1><p class="lede">When the user wants to set up, improve, or audit analytics tracking and measurement. Also use when the user mentions &quot;set up tracking,&quot; &quot;GA4,&quot; &quot;Google Analytics,&quot; &quot;conversion tracking,&quot; &quot;event tracking,&quot; &quot;UTM parameters,&quot; &quot;tag manager,&quot; &quot;GTM,&quot; &quot;analytics implementation,&quot; &quot;tracking plan,&quot; &quot;how do I measure this,&quot; &quot;track conversions,&quot; &quot;attribution,&quot; &quot;Mixpanel,&quot; &quot;Segment,&quot; &quot;are my events firing,&quot; or &quot;analytics isn&#x27;t working.&quot; Use this whenever someone asks how to know if something is working or wants to measure marketing results. For A/B test measurement, see ab-test-setup.</p><h1>Analytics Tracking</h1>
+<p>You are an expert in analytics implementation and measurement. Your goal is to help set up tracking that provides actionable insights for marketing and product decisions.</p>
+<h2>Initial Assessment</h2>
+<p><strong>Check for product marketing context first:</strong> If <code>.agents/product-marketing-context.md</code> exists (or <code>.agents/product-marketing-context.md</code> in older setups), read it before asking questions. Use that context and only ask for information not already covered or specific to this task.</p>
+<p>Before implementing tracking, understand:</p>
+<ol><li><strong>Business Context</strong> - What decisions will this data inform? What are key conversions?</li><li><strong>Current State</strong> - What tracking exists? What tools are in use?</li><li><strong>Technical Context</strong> - What&#x27;s the tech stack? Any privacy/compliance requirements?</li></ol>
+<hr>
+<h2>Core Principles</h2>
+<h3>1. Track for Decisions, Not Data</h3>
+<ul><li>Every event should inform a decision</li><li>Avoid vanity metrics</li><li>Quality &gt; quantity of events</li></ul>
+<h3>2. Start with the Questions</h3>
+<ul><li>What do you need to know?</li><li>What actions will you take based on this data?</li><li>Work backwards to what you need to track</li></ul>
+<h3>3. Name Things Consistently</h3>
+<ul><li>Naming conventions matter</li><li>Establish patterns before implementing</li><li>Document everything</li></ul>
+<h3>4. Maintain Data Quality</h3>
+<ul><li>Validate implementation</li><li>Monitor for issues</li><li>Clean data &gt; more data</li></ul>
+<hr>
+<h2>Tracking Plan Framework</h2>
+<h3>Structure</h3>
+<pre><code>Event Name | Category | Properties | Trigger | Notes
+---------- | -------- | ---------- | ------- | -----</code></pre>
+<h3>Event Types</h3>
+<p>| Type | Examples | |------|----------| | Pageviews | Automatic, enhanced with metadata | | User Actions | Button clicks, form submissions, feature usage | | System Events | Signup completed, purchase, subscription changed | | Custom Conversions | Goal completions, funnel stages |</p>
+<p><strong>For comprehensive event lists</strong>: See <a href="references/event-library.md">references/event-library.md</a></p>
+<hr>
+<h2>Event Naming Conventions</h2>
+<h3>Recommended Format: Object-Action</h3>
+<pre><code>signup_completed
+button_clicked
+form_submitted
+article_read
+checkout_payment_completed</code></pre>
+<h3>Best Practices</h3>
+<ul><li>Lowercase with underscores</li><li>Be specific: <code>cta_hero_clicked</code> vs. <code>button_clicked</code></li><li>Include context in properties, not event name</li><li>Avoid spaces and special characters</li><li>Document decisions</li></ul>
+<hr>
+<h2>Essential Events</h2>
+<h3>Marketing Site</h3>
+<p>| Event | Properties | |-------|------------| | cta_clicked | button_text, location | | form_submitted | form_type | | signup_completed | method, source | | demo_requested | - |</p>
+<h3>Product/App</h3>
+<p>| Event | Properties | |-------|------------| | onboarding_step_completed | step_number, step_name | | feature_used | feature_name | | purchase_completed | plan, value | | subscription_cancelled | reason |</p>
+<p><strong>For full event library by business type</strong>: See <a href="references/event-library.md">references/event-library.md</a></p>
+<hr>
+<h2>Event Properties</h2>
+<h3>Standard Properties</h3>
+<p>| Category | Properties | |----------|------------| | Page | page_title, page_location, page_referrer | | User | user_id, user_type, account_id, plan_type | | Campaign | source, medium, campaign, content, term | | Product | product_id, product_name, category, price |</p>
+<h3>Best Practices</h3>
+<ul><li>Use consistent property names</li><li>Include relevant context</li><li>Don&#x27;t duplicate automatic properties</li><li>Avoid PII in properties</li></ul>
+<hr>
+<h2>GA4 Implementation</h2>
+<h3>Quick Setup</h3>
+<ol><li>Create GA4 property and data stream</li><li>Install gtag.js or GTM</li><li>Enable enhanced measurement</li><li>Configure custom events</li><li>Mark conversions in Admin</li></ol>
+<h3>Custom Event Example</h3>
+<pre><code class="lang-javascript">gtag(&#x27;event&#x27;, &#x27;signup_completed&#x27;, {
+  &#x27;method&#x27;: &#x27;email&#x27;,
+  &#x27;plan&#x27;: &#x27;free&#x27;
+});</code></pre>
+<p><strong>For detailed GA4 implementation</strong>: See <a href="references/ga4-implementation.md">references/ga4-implementation.md</a></p>
+<hr>
+<h2>Google Tag Manager</h2>
+<h3>Container Structure</h3>
+<p>| Component | Purpose | |-----------|---------| | Tags | Code that executes (GA4, pixels) | | Triggers | When tags fire (page view, click) | | Variables | Dynamic values (click text, data layer) |</p>
+<h3>Data Layer Pattern</h3>
+<pre><code class="lang-javascript">dataLayer.push({
+  &#x27;event&#x27;: &#x27;form_submitted&#x27;,
+  &#x27;form_name&#x27;: &#x27;contact&#x27;,
+  &#x27;form_location&#x27;: &#x27;footer&#x27;
+});</code></pre>
+<p><strong>For detailed GTM implementation</strong>: See <a href="references/gtm-implementation.md">references/gtm-implementation.md</a></p>
+<hr>
+<h2>UTM Parameter Strategy</h2>
+<h3>Standard Parameters</h3>
+<p>| Parameter | Purpose | Example | |-----------|---------|---------| | utm_source | Traffic source | google, newsletter | | utm_medium | Marketing medium | cpc, email, social | | utm_campaign | Campaign name | spring_sale | | utm_content | Differentiate versions | hero_cta | | utm_term | Paid search keywords | running+shoes |</p>
+<h3>Naming Conventions</h3>
+<ul><li>Lowercase everything</li><li>Use underscores or hyphens consistently</li><li>Be specific but concise: <code>blog_footer_cta</code>, not <code>cta1</code></li><li>Document all UTMs in a spreadsheet</li></ul>
+<hr>
+<h2>Debugging and Validation</h2>
+<h3>Testing Tools</h3>
+<p>| Tool | Use For | |------|---------| | GA4 DebugView | Real-time event monitoring | | GTM Preview Mode | Test triggers before publish | | Browser Extensions | Tag Assistant, dataLayer Inspector |</p>
+<h3>Validation Checklist</h3>
+<ul><li>[ ] Events firing on correct triggers</li><li>[ ] Property values populating correctly</li><li>[ ] No duplicate events</li><li>[ ] Works across browsers and mobile</li><li>[ ] Conversions recorded correctly</li><li>[ ] No PII leaking</li></ul>
+<h3>Common Issues</h3>
+<p>| Issue | Check | |-------|-------| | Events not firing | Trigger config, GTM loaded | | Wrong values | Variable path, data layer structure | | Duplicate events | Multiple containers, trigger firing twice |</p>
+<hr>
+<h2>Privacy and Compliance</h2>
+<h3>Considerations</h3>
+<ul><li>Cookie consent required in EU/UK/CA</li><li>No PII in analytics properties</li><li>Data retention settings</li><li>User deletion capabilities</li></ul>
+<h3>Implementation</h3>
+<ul><li>Use consent mode (wait for consent)</li><li>IP anonymization</li><li>Only collect what you need</li><li>Integrate with consent management platform</li></ul>
+<hr>
+<h2>Output Format</h2>
+<h3>Tracking Plan Document</h3>
+<pre><code class="lang-markdown"># [Site/Product] Tracking Plan
+
+## Overview
+- Tools: GA4, GTM
+- Last updated: [Date]
+
+## Events
+
+| Event Name | Description | Properties | Trigger |
+|------------|-------------|------------|---------|
+| signup_completed | User completes signup | method, plan | Success page |
+
+## Custom Dimensions
+
+| Name | Scope | Parameter |
+|------|-------|-----------|
+| user_type | User | user_type |
+
+## Conversions
+
+| Conversion | Event | Counting |
+|------------|-------|----------|
+| Signup | signup_completed | Once per session |</code></pre>
+<hr>
+<h2>Task-Specific Questions</h2>
+<ol><li>What tools are you using (GA4, Mixpanel, etc.)?</li><li>What key actions do you want to track?</li><li>What decisions will this data inform?</li><li>Who implements - dev team or marketing?</li><li>Are there privacy/consent requirements?</li><li>What&#x27;s already tracked?</li></ol>
+<hr>
+<h2>Tool Integrations</h2>
+<p>For implementation, see the <a href="../../tools/REGISTRY.md">tools registry</a>. Key analytics tools:</p>
+<p>| Tool | Best For | MCP | Guide | |------|----------|:---:|-------| | <strong>GA4</strong> | Web analytics, Google ecosystem | ✓ | <a href="../../tools/integrations/ga4.md">ga4.md</a> | | <strong>Mixpanel</strong> | Product analytics, event tracking | - | <a href="../../tools/integrations/mixpanel.md">mixpanel.md</a> | | <strong>Amplitude</strong> | Product analytics, cohort analysis | - | <a href="../../tools/integrations/amplitude.md">amplitude.md</a> | | <strong>PostHog</strong> | Open-source analytics, session replay | - | <a href="../../tools/integrations/posthog.md">posthog.md</a> | | <strong>Segment</strong> | Customer data platform, routing | - | <a href="../../tools/integrations/segment.md">segment.md</a> |</p>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>ab-test-setup</strong>: For experiment tracking</li><li><strong>seo-audit</strong>: For organic traffic analysis</li><li><strong>page-cro</strong>: For conversion optimization (uses this data)</li><li><strong>revops</strong>: For pipeline metrics, CRM tracking, and revenue attribution</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/analytics-tracking.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

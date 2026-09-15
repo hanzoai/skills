@@ -7,7 +7,7 @@
 
 Hanzo Bot (`@hanzo/bot`) is a **TypeScript ESM multi-channel AI messaging gateway** connecting AI agents to 50+ messaging platforms through a plugin/extension architecture. First-class integrations for Discord, Telegram, Slack, WhatsApp, Signal, iMessage, Line, MS Teams, IRC, Matrix, and more. Includes TUI, web UI, native apps (iOS/Android/macOS), and an Agent Client Protocol (ACP) gateway.
 
-Fork of OpenClaw/ClawdBot, fully rebranded. Package: `@hanzo/bot`, binary: `hanzo-bot`.
+Fork of the agent/ClawdBot, fully rebranded. Package: `@hanzo/bot`, binary: `hanzo-bot`.
 
 ## When to use
 

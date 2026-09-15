@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>bonus-stacking</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/bonus-stacking.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/bonus-stacking">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/bonus-stacking.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>bonus-stacking</h1><p class="lede">How to add bonuses that raise perceived value without devaluing the core offer.</p><h1>Bonus Stacking</h1>
+<p>How to add bonuses that raise perceived value without devaluing the core offer.</p>
+<h2>What bonuses actually do</h2>
+<p>Three jobs at once:</p>
+<ol><li><strong>Raise perceived value</strong> of the total offer</li><li><strong>Lower perceived risk</strong> — even if the core underdelivers, &quot;I still got X for free&quot;</li><li><strong>Close specific buying objections</strong> — each bonus can target one objection</li></ol>
+<p>The third job is the underrated one. Most weak bonus stacks throw four generic &quot;extras&quot; at the buyer. Strong bonus stacks read the buyer&#x27;s specific hesitations and close them in order.</p>
+<hr>
+<h2>The core principle: bonuses-as-objection-handlers</h2>
+<p>For each major objection your buyer has, add a bonus that closes it.</p>
+<h3>Common objections → matching bonus</h3>
+<p>| Objection | Targeted bonus | |-----------|---------------| | &quot;I don&#x27;t have time to implement this&quot; | Done-for-you setup, week 1 | | &quot;I don&#x27;t know which tools to use&quot; | Pre-vetted tool stack with discount codes | | &quot;What if I get stuck?&quot; | 30-day async Slack support | | &quot;I&#x27;m not sure my team will buy in&quot; | Stakeholder pitch deck | | &quot;I&#x27;ve tried something like this before and it didn&#x27;t work&quot; | Case study from someone in your exact situation | | &quot;What about [edge case in my industry]?&quot; | Industry-specific bonus reference doc | | &quot;Will I have to learn a bunch of new tools?&quot; | Pre-built templates for the tools we recommend | | &quot;What if I don&#x27;t finish it?&quot; | 1:1 accountability check-in at day 30 | | &quot;My situation is more complex than the average buyer&quot; | 1:1 onboarding call to customize the plan | | &quot;Will this work in [region/language]?&quot; | Localized version or addendum |</p>
+<p>A 4-bonus stack that closes 4 specific objections converts massively better than a 4-bonus stack of generic &quot;extras.&quot;</p>
+<h3>How to find your buyer&#x27;s actual objections</h3>
+<ol><li>Read every refund-request email and sales-call transcript from the last 6 months</li><li>Read your own sales page out loud and write down every doubt that surfaces</li><li>Ask 3 recent buyers: &quot;What almost made you not buy?&quot;</li></ol>
+<p>The answers cluster around 3–6 objections. Build a bonus for each.</p>
+<hr>
+<h2>The math of bonus value</h2>
+<p>Each bonus has a stated value (what it would cost if you bought it separately). Bonuses should:</p>
+<ol><li><strong>Have a stated value the buyer can verify.</strong> Compare to a comparable product or service. &quot;$497 value — that&#x27;s what the standalone template pack costs&quot; beats &quot;$5,000 value.&quot; (Standalone? Compared to what?)</li></ol>
+<ol><li><strong>Total to less than 2x the price</strong> of the core offer. A $1K offer can comfortably have $1.5K in bonuses. A $1K offer with &quot;$25K in bonuses&quot; reads as a scam.</li></ol>
+<ol><li><strong>Be things you&#x27;d actually sell separately.</strong> If you&#x27;d never sell the bonus as a standalone product, the stated value isn&#x27;t real. Sophisticated buyers can tell.</li></ol>
+<ol><li><strong>Each have a specific named outcome.</strong> &quot;Bonus: marketing toolkit&quot; is weak. &quot;Bonus: 12 pre-built Notion templates for your first 90 days, valued at $297 because that&#x27;s what the standalone template pack sells for at [link]&quot; is strong.</li></ol>
+<hr>
+<h2>The 4-bonus pattern that works</h2>
+<p>Most strong offers stack exactly 3–5 bonuses. More starts to feel like padding; fewer leaves objections un-closed.</p>
+<p>A common structure:</p>
+<p>| # | Type | Purpose | Typical value | |---|------|---------|---------------| | 1 | <strong>Speed bonus</strong> | Removes time-delay objection | Templates, swipes, accelerators | | 2 | <strong>Trust bonus</strong> | Removes likelihood-of-failure objection | Case study, methodology doc, examples library | | 3 | <strong>Stuck bonus</strong> | Removes &quot;what if I get stuck&quot; objection | Office hours, Slack, on-demand support | | 4 | <strong>Decision bonus</strong> | Removes &quot;I have to choose between X and Y&quot; objection | Tool stack with discount codes, pre-vetted recommendations | | 5 (optional) | <strong>Bigger-than-you-asked bonus</strong> | Adds dream-outcome surface area | Adjacent deliverable, related framework, partner offer |</p>
+<p>Example for a $2K B2B copywriting course:</p>
+<p>| # | Bonus | Closes | |---|-------|--------| | 1 | &quot;30 winning sales page templates (last updated 2026-Q2)&quot; — $297 value | &quot;I don&#x27;t have time to write from scratch&quot; | | 2 | &quot;9 case studies from agencies that hit $250K MRR using these frameworks&quot; — $0 (proof, not a saleable asset) | &quot;Does this actually work for my situation?&quot; | | 3 | &quot;60-day Slack access with weekly office hours&quot; — $497 value | &quot;What if I get stuck on a specific project?&quot; | | 4 | &quot;The tool stack: 5 tools we use + discount codes (saves ~$1,200/yr)&quot; — $1,200 value | &quot;I don&#x27;t know what to use&quot; | | 5 | &quot;Bonus session: How to charge $5K+ per project&quot; — $297 value | Pricing confidence (adjacent dream outcome) |</p>
+<p>Total stated value: ~$2,300 in bonuses on a $2K core. Math checks out (under 2x). Each bonus closes a real objection.</p>
+<hr>
+<h2>When bonuses backfire</h2>
+<h3>Inflated values</h3>
+<p>&quot;$50,000 in bonuses included today only!&quot; on a $497 product. The asymmetry is the tell — every sophisticated buyer&#x27;s bullshit detector fires.</p>
+<p>Stated values must be defensible. If you can&#x27;t point to a comparable price, don&#x27;t quote the value.</p>
+<h3>Bonuses that devalue the core</h3>
+<p>If your core offer is &quot;I&#x27;ll write your sales page for $5K&quot; and your bonus is &quot;PLUS — bonus sales page edits for free for life!&quot; — the bonus implies the core is incomplete. Now the buyer wonders why they should buy <em>without</em> the bonus.</p>
+<p>Bonuses should be <em>additive</em> to a complete core, not patches on an incomplete one.</p>
+<h3>Bonus-stack-as-substitute-for-core</h3>
+<p>A weak core surrounded by amazing bonuses converts at the moment of sale but produces angry refund requests. The buyer bought the bonuses, got the core, felt cheated.</p>
+<p>Order: strong core <em>first</em>, then bonuses to address specific objections.</p>
+<h3>Stacked too high</h3>
+<p>5+ bonuses with high stated values starts to read as a course-bro funnel. Premium buyers ignore the bonus list entirely; mid-market buyers feel they&#x27;re being upsold; new buyers get confused.</p>
+<p>3–5 bonuses, each with a specific purpose. Cap it.</p>
+<h3>Same-as-everyone-else bonuses</h3>
+<p>&quot;BONUS! Private community access!&quot; on every course in your category isn&#x27;t a bonus, it&#x27;s table stakes. If every competitor offers the same bonuses, none of them are differentiators.</p>
+<p>Find bonuses that are specific to your buyer&#x27;s situation. A SaaS bonus for a SaaS-focused buyer beats a generic &quot;private community&quot; every time.</p>
+<hr>
+<h2>Bonus delivery: timing matters</h2>
+<p>A bonus delivered on day 1 closes &quot;what if I never use it?&quot; risk. A bonus delivered at week 4 maintains momentum. A bonus delivered at completion rewards finishing.</p>
+<p>Mix the timing intentionally:</p>
+<ul><li>Day 1: speed bonuses (templates, swipes, toolkit)</li><li>Week 2–4: support bonuses (Slack, office hours, check-ins)</li><li>Completion: identity bonuses (certificate, alumni access)</li></ul>
+<p>A buyer who gets all bonuses up-front is more likely to abandon (they got what they wanted, lost incentive to finish). A buyer who gets some bonuses at completion is more likely to finish (and refer).</p>
+<hr>
+<h2>The audit</h2>
+<p>For each existing bonus on a current offer, ask:</p>
+<ol><li><strong>What specific buying objection does this close?</strong> If you can&#x27;t name one, it&#x27;s filler.</li><li><strong>What&#x27;s its defensible stated value?</strong> If you can&#x27;t point to a comparable price, drop the dollar amount.</li><li><strong>Does the buyer get it on day 1, or at a meaningful point in their journey?</strong> Timing should support the customer outcome, not just the conversion event.</li><li><strong>Is this bonus specific to my buyer, or could any competitor offer the same thing?</strong> If it&#x27;s generic, replace it.</li><li><strong>Is the bonus strong enough that the offer would still convert without the core?</strong> If yes, the core is weak. Fix the core, don&#x27;t lean on the bonus.</li></ol>
+<p>Most stuck offers have either zero bonuses or too many generic ones. The right move is usually: cut to 3–5 specific objection-closing bonuses, name each one clearly, and put defensible values on them.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/bonus-stacking.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

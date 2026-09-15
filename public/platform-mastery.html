@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>platform-mastery</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/platform-mastery.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/platform-mastery">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/platform-mastery.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>platform-mastery</h1><p class="lede">Platform-by-platform algorithm knowledge, best practices, and content adaptation rules for YouTube, LinkedIn, Twitter/X, Reddit, Instagram, GitHub, Threads, and StackOverflow. Use when optimizing content for a specific platform or adapting cross-platform content.</p><h1>Platform Mastery Skill</h1>
+<p>Deep algorithm knowledge and content optimization rules for each social platform. Ensures content is native to each platform rather than cross-posted generically.</p>
+<h2>Platform Quick Reference</h2>
+<p>| Platform | Algorithm Priority | Content Sweet Spot | Tone | |----------|-------------------|-------------------|------| | YouTube | Watch time + CTR | 8-15 min long-form | Educational, personality-driven | | LinkedIn | Comments &gt; reactions | 1200-1500 chars + image | Professional, insight-driven | | Twitter/X | Engagement rate | 200-280 chars + media | Concise, opinionated | | Reddit | Upvote ratio + authenticity | Text posts, genuine value | Authentic, humble, no marketing | | Instagram | Saves + shares | Carousel (10 slides) | Visual-first, aspirational | | GitHub | Stars + community engagement | README quality + releases | Technical, precise | | Threads | Conversation + reposts | 300-500 chars | Conversational, casual | | StackOverflow | Answer quality score | Canonical answers | Technical, helpful, factual |</p>
+<hr>
+<h2>YouTube</h2>
+<h3>Algorithm Signals (Priority Order)</h3>
+<ol><li><strong>Click-through rate (CTR)</strong>: Thumbnail + title combination. Target &gt;5% CTR.</li><li><strong>Average view duration</strong>: Percentage of video watched. Target &gt;50%.</li><li><strong>Session time</strong>: Does your video lead to more YouTube watching? Playlists help.</li><li><strong>Engagement rate</strong>: Likes, comments, shares — comments weighted highest.</li><li><strong>Upload consistency</strong>: Regular schedule signals reliability to algorithm.</li></ol>
+<h3>Content Rules</h3>
+<ul><li><strong>Hook in first 5 seconds</strong> — no intros, logos, or &quot;hey guys welcome back&quot;</li><li><strong>Retention triggers</strong> every 60-90 seconds (pattern interrupts, open loops)</li><li><strong>Chapters</strong> (3+ timestamps starting at 0:00) — improves search + UX</li><li><strong>End screens</strong> in last 20 seconds — link to related content</li><li><strong>Thumbnail</strong>: 3-5 words max, readable at 100px width, face + emotion</li><li><strong>Title</strong>: &lt;60 chars, front-load keyword, curiosity gap</li></ul>
+<h3>Optimal Format</h3>
+<pre><code class="lang-yaml">youtube:
+  length: 8-15 minutes (sweet spot for ad revenue + algorithm)
+  title_length: &quot;&lt;60 chars&quot;
+  description: &quot;first 150 chars critical (shown in search)&quot;
+  tags: 10-15
+  thumbnail: &quot;1280x720, high contrast, face + text&quot;
+  chapters: &quot;minimum 3, start at 0:00&quot;
+  end_screen: &quot;last 20s, 1-2 elements&quot;
+  posting_time: &quot;weekdays 2-4 PM viewer timezone&quot;</code></pre>
+<h3>Anti-Patterns</h3>
+<ul><li>Asking to &quot;smash that like button&quot; before delivering value</li><li>Thumbnails with &gt;5 words of text</li><li>First 30 seconds of logos, channel intros, sponsor reads</li><li>Generic tags (&quot;tutorial&quot;, &quot;how to&quot;)</li></ul>
+<hr>
+<h2>LinkedIn</h2>
+<h3>Algorithm Signals (Priority Order)</h3>
+<ol><li><strong>Comments</strong> (especially long comments): Highest weight signal</li><li><strong>Dwell time</strong>: Time spent reading your post</li><li><strong>Reactions</strong>: Likes and other reactions (comments &gt; reactions)</li><li><strong>Shares/reposts</strong>: Signal virality to algorithm</li><li><strong>Profile authority</strong>: SSI score, connection relevance</li></ol>
+<h3>Content Rules</h3>
+<ul><li><strong>First 3 lines</strong> are everything — hook before &quot;...see more&quot; truncation</li><li><strong>Line breaks</strong> after every 1-2 sentences (mobile readability)</li><li><strong>End with a question</strong> — drives comments (algorithm&#x27;s top signal)</li><li><strong>Personal stories</strong> outperform corporate content 3-5x</li><li><strong>Images</strong> increase engagement 2x (single image &gt; carousel on LinkedIn)</li><li><strong>Native documents</strong> (PDF carousels) get high dwell time</li><li><strong>No external links in post body</strong> — put links in first comment</li></ul>
+<h3>Post Format</h3>
+<pre><code class="lang-markdown">[Hook line — bold claim, counterintuitive take, or personal story opener]
+
+[blank line — critical for mobile]
+
+[2-3 short paragraphs, each 1-2 sentences]
+
+[Key insight or framework — optionally use bullet points]
+
+• Point 1
+• Point 2
+• Point 3
+
+[Personal reflection or lesson learned]
+
+[Question to drive comments]
+
+#[hashtag1] #[hashtag2] #[hashtag3]</code></pre>
+<h3>Optimal Format</h3>
+<pre><code class="lang-yaml">linkedin:
+  length: 1200-1500 chars (sweet spot)
+  hashtags: 3-5 (more looks spammy)
+  images: 1 (native upload, not link preview)
+  links: &quot;in first comment, never in post body&quot;
+  posting_time: &quot;Tue-Thu 8-10 AM viewer timezone&quot;
+  format: &quot;short paragraphs, line breaks between&quot;
+  hook: &quot;first 210 chars (before ...see more)&quot;</code></pre>
+<h3>Anti-Patterns</h3>
+<ul><li>Starting with &quot;I&#x27;m excited to announce...&quot;</li><li>Wall of text without line breaks</li><li>External links in post body (kills reach)</li><li>Hashtag stuffing (&gt;5 hashtags)</li><li>Corporate jargon (&quot;synergy&quot;, &quot;leverage&quot;, &quot;disrupt&quot;)</li></ul>
+<hr>
+<h2>Twitter/X</h2>
+<h3>Algorithm Signals (Priority Order)</h3>
+<ol><li><strong>Engagement rate</strong>: Replies + retweets + likes relative to impressions</li><li><strong>Media attachments</strong>: Images/video boost distribution</li><li><strong>Recency</strong>: Tweets decay fast — timing matters</li><li><strong>Thread completion</strong>: Full thread reads signal quality</li><li><strong>Profile engagement history</strong>: Algorithm favors accounts you interact with</li></ol>
+<h3>Content Rules</h3>
+<ul><li><strong>One idea per tweet</strong> — don&#x27;t cram multiple concepts</li><li><strong>Strong opening</strong> — first 7 words determine if people read</li><li><strong>Threads</strong> for long-form: Tweet 1 is the hook, each tweet is self-contained</li><li><strong>Media boosts reach</strong>: Image, screenshot, or short video</li><li><strong>Quote tweets</strong> with commentary outperform plain retweets</li><li><strong>Reply to your own tweet</strong> with additional context or links</li></ul>
+<h3>Tweet Formats</h3>
+<pre><code class="lang-markdown"># Single tweet (high-impact)
+[Bold statement or hot take]
+
+[Supporting evidence or example in 1 sentence]
+
+[Optional: image/screenshot]
+
+# Thread format
+🧵 [Hook — why should I read this thread?]
+
+1/ [First point — must stand alone as a tweet]
+
+2/ [Second point — builds on first]
+
+[...]
+
+n/ [Conclusion + CTA — follow, bookmark, retweet]</code></pre>
+<h3>Optimal Format</h3>
+<pre><code class="lang-yaml">twitter:
+  tweet_length: 200-280 chars (near limit performs well)
+  thread_length: 5-12 tweets
+  media: &quot;1 image or 1 short video per tweet&quot;
+  hashtags: 0-2 (hashtags less important than on other platforms)
+  posting_time: &quot;weekdays 9-11 AM or 1-3 PM&quot;
+  reply_strategy: &quot;reply to own tweet with link, add context&quot;
+  quote_tweet: &quot;add 1-2 sentences of commentary&quot;</code></pre>
+<h3>Anti-Patterns</h3>
+<ul><li>Hashtag stuffing (Twitter isn&#x27;t Instagram)</li><li>Threads that could be a single tweet</li><li>Starting tweets with &quot;1/&quot; without a hook</li><li>Posting only links without commentary</li><li>Engagement bait (&quot;Like if you agree&quot;)</li></ul>
+<hr>
+<h2>Reddit</h2>
+<h3>Algorithm Signals (Priority Order)</h3>
+<ol><li><strong>Upvote-to-downvote ratio</strong> in first hour: Critical window</li><li><strong>Comment volume and quality</strong>: Active discussion signals value</li><li><strong>Community fit</strong>: Content matching subreddit culture</li><li><strong>Account karma + age</strong>: Spam filtering mechanism</li><li><strong>Report ratio</strong>: Low reports = trusted content</li></ol>
+<h3>Content Rules (CRITICAL: Reddit is Anti-Marketing)</h3>
+<ul><li><strong>NO marketing speak</strong> — Reddit users detect and punish self-promotion</li><li><strong>Value-first, brand-never</strong>: Share knowledge, not products</li><li><strong>Read subreddit rules</strong> before posting — each sub has specific requirements</li><li><strong>Authentic tone</strong>: Write like a human, not a brand</li><li><strong>Text posts</strong> outperform links in most subreddits</li><li><strong>Respond to every comment</strong> on your posts (signals engagement)</li><li><strong>The 10:1 rule</strong>: 10 genuine community interactions per 1 self-promotional post</li></ul>
+<h3>Post Format</h3>
+<pre><code class="lang-markdown"># Title: [Specific, descriptive, no clickbait — subreddit convention]
+
+[Context: Why you&#x27;re sharing this. Personal experience preferred.]
+
+[The actual value: step-by-step, findings, data, analysis]
+
+[What you learned or what surprised you]
+
+[Open question: &quot;Has anyone else experienced this?&quot; or &quot;What would you do differently?&quot;]</code></pre>
+<h3>Optimal Format</h3>
+<pre><code class="lang-yaml">reddit:
+  title: &quot;descriptive, follows subreddit conventions&quot;
+  length: &quot;varies by subreddit — check top posts for norm&quot;
+  tone: &quot;authentic, casual, humble&quot;
+  self_promotion: &quot;max 10% of activity&quot;
+  posting_time: &quot;Sun-Mon morning (US timezones)&quot;
+  images: &quot;imgur links for image posts (subreddit dependent)&quot;
+  flair: &quot;always use if subreddit requires it&quot;
+  crosspost: &quot;use native crosspost, not duplicate posts&quot;</code></pre>
+<h3>Anti-Patterns</h3>
+<ul><li>Sounding like a press release</li><li>Using marketing buzzwords (&quot;game-changer&quot;, &quot;revolutionary&quot;)</li><li>Posting the same content to multiple subreddits without adaptation</li><li>Not reading subreddit rules before posting</li><li>Ignoring comments on your posts</li><li>New account with only self-promotional posts</li></ul>
+<hr>
+<h2>Instagram</h2>
+<h3>Algorithm Signals (Priority Order)</h3>
+<ol><li><strong>Saves</strong>: Strongest signal — content worth returning to</li><li><strong>Shares</strong> (DMs): Content worth sharing privately</li><li><strong>Comments</strong>: Engagement depth</li><li><strong>Reach to non-followers</strong>: Explore page potential</li><li><strong>Reel completion rate</strong>: For video content</li></ol>
+<h3>Content Rules</h3>
+<ul><li><strong>Visual-first</strong> — text is secondary to visual impact</li><li><strong>Carousels</strong> get highest engagement (10 slides, save-worthy)</li><li><strong>Reels</strong> for reach, carousels for engagement, Stories for community</li><li><strong>Caption structure</strong>: Hook line → value → CTA → hashtags</li><li><strong>Hashtag strategy</strong>: 5-15 relevant hashtags, mix of sizes</li><li><strong>Stories</strong>: 3-7 per day, use polls/questions for engagement</li><li><strong>Alt text</strong>: Always add for accessibility + SEO</li></ul>
+<h3>Optimal Format</h3>
+<pre><code class="lang-yaml">instagram:
+  post_types:
+    carousel: &quot;highest engagement, 10 slides, educational&quot;
+    reel: &quot;highest reach, 15-30s, trending audio&quot;
+    story: &quot;community building, 3-7/day, interactive stickers&quot;
+    static: &quot;brand aesthetic, quotes, announcements&quot;
+  caption_length: &quot;150-300 chars (before ...more)&quot;
+  hashtags: 5-15 in caption or first comment
+  image_ratio: &quot;1:1 (feed), 9:16 (reels/stories), 4:5 (portrait)&quot;
+  posting_time: &quot;weekdays 11 AM-1 PM or 7-9 PM&quot;
+  alt_text: &quot;always include, descriptive&quot;</code></pre>
+<h3>Anti-Patterns</h3>
+<ul><li>Text-heavy images (Instagram is visual-first)</li><li>Using all 30 hashtags (looks spammy)</li><li>Ignoring Stories and Reels (feed-only strategy is dead)</li><li>Cross-posting Twitter screenshots</li><li>No alt text on images</li></ul>
+<hr>
+<h2>GitHub</h2>
+<h3>Algorithm Signals (Visibility)</h3>
+<ol><li><strong>Stars</strong>: Primary popularity metric</li><li><strong>Forks</strong>: Community adoption signal</li><li><strong>Contributor count</strong>: Active community</li><li><strong>README quality</strong>: First impression, determines stars</li><li><strong>Release frequency</strong>: Active maintenance signal</li><li><strong>Issue response time</strong>: Community health</li></ol>
+<h3>Content Rules</h3>
+<ul><li><strong>README is your landing page</strong> — treat it like a conversion page</li><li><strong>Structured README</strong>: Badge bar → hero → install → quickstart → docs link</li><li><strong>Release notes</strong>: Detailed, categorized (Added, Changed, Fixed, Removed)</li><li><strong>Discussions</strong>: Use for community engagement, not just Issues</li><li><strong>Contributing guide</strong>: Lower barrier to contribution</li><li><strong>Issue templates</strong>: Structured bug reports and feature requests</li></ul>
+<h3>README Format</h3>
+<pre><code class="lang-markdown"># Project Name
+
+[One-line description]
+
+[Badges: CI status, version, license, downloads]
+
+## Quick Start
+
+[3-5 lines to get running — must be copy-pasteable]
+
+## Features
+
+[Bullet list of key features]
+
+## Installation
+
+[Step-by-step, multiple methods if applicable]
+
+## Documentation
+
+[Link to full docs]
+
+## Contributing
+
+[Link to CONTRIBUTING.md]
+
+## License
+
+[License type]</code></pre>
+<h3>Optimal Format</h3>
+<pre><code class="lang-yaml">github:
+  readme: &quot;hero + badges + quickstart + features + install&quot;
+  releases: &quot;semantic versioning, categorized changelog&quot;
+  issues: &quot;templates for bug reports, feature requests&quot;
+  discussions: &quot;enabled, categories for Q&amp;A and ideas&quot;
+  topics: &quot;5-10 relevant topics/tags&quot;
+  social_preview: &quot;1280x640 image&quot;
+  license: &quot;always include&quot;</code></pre>
+<hr>
+<h2>Threads</h2>
+<h3>Algorithm Signals</h3>
+<ol><li><strong>Reposts</strong>: Highest distribution signal</li><li><strong>Replies</strong>: Conversation depth</li><li><strong>Likes</strong>: Engagement signal</li><li><strong>Cross-posted from Instagram</strong>: Slight boost for connected accounts</li><li><strong>Recency</strong>: Fast-moving feed</li></ol>
+<h3>Content Rules</h3>
+<ul><li><strong>Conversational tone</strong> — Threads is casual, not professional</li><li><strong>Shorter than Twitter</strong> — 300-500 chars sweet spot</li><li><strong>No hashtags</strong> (minimal hashtag culture)</li><li><strong>Cross-post from Instagram</strong> for connected reach</li><li><strong>Early-adopter advantage</strong> — algorithm still favoring content</li></ul>
+<h3>Optimal Format</h3>
+<pre><code class="lang-yaml">threads:
+  length: 300-500 chars
+  tone: &quot;casual, conversational, authentic&quot;
+  hashtags: 0-2 (platform culture is minimal hashtags)
+  images: &quot;optional, less visual than Instagram&quot;
+  posting_time: &quot;mirrors Instagram timing&quot;
+  cross_post: &quot;from Instagram for additional reach&quot;</code></pre>
+<hr>
+<h2>StackOverflow</h2>
+<h3>Algorithm Signals</h3>
+<ol><li><strong>Answer score</strong>: Upvotes - downvotes on answers</li><li><strong>Accepted answer</strong>: Marked by question asker</li><li><strong>Answer age + activity</strong>: Canonical answers that stay updated</li><li><strong>User reputation</strong>: Higher rep = more privileges + trust</li></ol>
+<h3>Content Rules</h3>
+<ul><li><strong>Answer the question directly first</strong> — explanation after</li><li><strong>Code examples</strong> are mandatory for programming questions</li><li><strong>Cite documentation</strong> — link to official sources</li><li><strong>Edit and improve</strong> — update answers as languages/frameworks evolve</li><li><strong>No opinions</strong> — factual, documented, reproducible answers</li><li><strong>Formatting matters</strong> — code blocks, headers, lists</li></ul>
+<h3>Optimal Format</h3>
+<pre><code class="lang-yaml">stackoverflow:
+  answer_structure: &quot;direct answer → code → explanation → docs link&quot;
+  tone: &quot;technical, factual, helpful, no opinions&quot;
+  code: &quot;always include, tested, minimal reproduction&quot;
+  links: &quot;official docs preferred&quot;
+  edits: &quot;keep answers current as APIs change&quot;
+  questions: &quot;include version, error message, minimal reproduction&quot;</code></pre>
+<h3>Anti-Patterns</h3>
+<ul><li>Opinion-based answers without documentation backing</li><li>Link-only answers</li><li>&quot;Did you try googling?&quot; responses</li><li>Answering without code examples</li><li>Not including version numbers</li></ul>
+<hr>
+<h2>Cross-Platform Adaptation Framework</h2>
+<p>When adapting content across platforms, transform — don&#x27;t copy-paste:</p>
+<pre><code class="lang-yaml">adaptation:
+  source_platform: &quot;[original platform]&quot;
+  target_platform: &quot;[target platform]&quot;
+  transformations:
+    tone: &quot;[adjust formality level]&quot;
+    length: &quot;[compress or expand]&quot;
+    format: &quot;[restructure for platform norms]&quot;
+    visuals: &quot;[add/remove visual elements]&quot;
+    cta: &quot;[platform-appropriate action]&quot;
+    hashtags: &quot;[platform-specific strategy]&quot;</code></pre>
+<h3>Cross-Platform Content Matrix</h3>
+<p>| Source | → LinkedIn | → Twitter/X | → Reddit | → Instagram | |--------|-----------|-------------|----------|-------------| | Blog post | Extract key insight + personal angle | Thread or key quote tweet | Summarize findings, ask for discussion | Carousel with key points | | Video | Key takeaway + behind-scenes | Clip + hook | Text summary of findings | Reel (15-30s clip) | | Data/research | Professional analysis post | Data point tweet + image | Deep analysis post | Infographic carousel | | Product update | Feature benefit story | Quick announcement + screenshot | &quot;We built X because Y&quot; story | Before/after carousel |</p>
+<h2>Platform Algorithm Updates</h2>
+<p>Algorithm knowledge requires periodic updates. When referencing algorithm behavior:</p>
+<ul><li>State the <strong>general principle</strong> (durable) separately from <strong>specific weights</strong> (temporal)</li><li>Note that exact algorithm weights change frequently</li><li>Focus on <strong>user behavior signals</strong> — these are more stable than algorithm internals</li><li>Test assumptions with data rather than relying on hearsay</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/platform-mastery.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

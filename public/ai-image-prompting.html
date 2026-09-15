@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ai-image-prompting</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/ai-image-prompting.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/ai-image-prompting">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ai-image-prompting.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ai-image-prompting</h1><p class="lede">How to write effective prompts for AI image generation models (Gemini/Nano Banana, Flux, Ideogram, DALL-E, Midjourney).</p><h1>AI Image Prompting Guide</h1>
+<p>How to write effective prompts for AI image generation models (Gemini/Nano Banana, Flux, Ideogram, DALL-E, Midjourney).</p>
+<hr>
+<h2>Prompt Structure</h2>
+<p>A strong image prompt follows this formula:</p>
+<pre><code>[Subject] + [Setting/context] + [Visual style] + [Lighting] + [Composition] + [Technical specs]</code></pre>
+<h3>Example Prompts by Use Case</h3>
+<p><strong>Blog hero — SaaS product:</strong></p>
+<pre><code>A clean workspace with a laptop displaying a colorful analytics dashboard,
+minimalist desk with a coffee cup and notebook,
+bright natural window lighting from the right,
+shallow depth of field, commercial photography style,
+1200x630, high resolution</code></pre>
+<p><strong>Social media graphic — announcement:</strong></p>
+<pre><code>Abstract flowing gradient in deep purple and electric blue,
+geometric shapes forming a network pattern,
+dramatic rim lighting on edges,
+modern tech aesthetic, clean and minimal,
+1080x1080, vibrant colors</code></pre>
+<p><strong>Product lifestyle shot:</strong></p>
+<pre><code>A person in a modern office smiling while looking at a tablet,
+showing a project management interface on screen,
+warm candid photography, natural lighting,
+medium shot, shallow depth of field, editorial style</code></pre>
+<p><strong>Profile banner — professional:</strong></p>
+<pre><code>Wide panoramic abstract background in navy blue and teal,
+subtle geometric grid pattern with soft gradient,
+clean corporate aesthetic, muted lighting,
+1584x396, no text, space for logo overlay on left third</code></pre>
+<p><strong>Directory listing — Product Hunt:</strong></p>
+<pre><code>Product screenshot on a clean gradient background,
+soft shadow underneath, slight 3D perspective tilt,
+modern SaaS product presentation style,
+1270x760, bright and professional</code></pre>
+<hr>
+<h2>Style Keywords</h2>
+<h3>Photorealistic</h3>
+<ul><li>&quot;commercial photography&quot;</li><li>&quot;shot on Canon EOS R5&quot;</li><li>&quot;editorial style&quot;</li><li>&quot;natural lighting&quot;</li><li>&quot;shallow depth of field&quot;</li></ul>
+<h3>Clean/Corporate</h3>
+<ul><li>&quot;clean modern aesthetic&quot;</li><li>&quot;minimal design&quot;</li><li>&quot;professional corporate style&quot;</li><li>&quot;bright and airy&quot;</li><li>&quot;white background&quot;</li></ul>
+<h3>Illustrative</h3>
+<ul><li>&quot;flat vector illustration&quot;</li><li>&quot;isometric 3D render&quot;</li><li>&quot;hand-drawn sketch style&quot;</li><li>&quot;watercolor illustration&quot;</li><li>&quot;line art&quot;</li></ul>
+<h3>Abstract/Brand</h3>
+<ul><li>&quot;flowing gradient&quot;</li><li>&quot;geometric pattern&quot;</li><li>&quot;abstract data visualization&quot;</li><li>&quot;particle effects&quot;</li><li>&quot;holographic iridescent&quot;</li></ul>
+<h3>Tech/SaaS</h3>
+<ul><li>&quot;dark mode UI aesthetic&quot;</li><li>&quot;neon accent lighting&quot;</li><li>&quot;glassmorphism&quot;</li><li>&quot;futuristic minimal&quot;</li><li>&quot;developer-focused&quot;</li></ul>
+<hr>
+<h2>Lighting Keywords</h2>
+<p>| Term | Effect | Best For | |------|--------|----------| | <strong>Natural light</strong> | Warm, organic feel | Lifestyle, editorial | | <strong>Studio lighting</strong> | Even, controlled | Product shots | | <strong>Rim lighting</strong> | Edge highlights, dramatic | Hero images, abstract | | <strong>Soft directional</strong> | Gentle shadows, dimensional | Blog headers | | <strong>Volumetric</strong> | Light rays, atmospheric | Dramatic, cinematic | | <strong>Flat/even</strong> | No shadows, clean | Icons, diagrams | | <strong>Golden hour</strong> | Warm orange tones | Lifestyle, outdoor | | <strong>High key</strong> | Bright, minimal shadows | Clean, corporate |</p>
+<hr>
+<h2>Composition Keywords</h2>
+<p>| Term | Effect | Best For | |------|--------|----------| | <strong>Rule of thirds</strong> | Subject off-center | Editorial, lifestyle | | <strong>Centered</strong> | Subject in middle | Product shots, icons | | <strong>Wide/panoramic</strong> | Expansive view | Banners, headers | | <strong>Close-up/macro</strong> | Detail focus | Texture, product detail | | <strong>Bird&#x27;s eye/overhead</strong> | Top-down view | Desk setups, flat lays | | <strong>Negative space</strong> | Room for text overlay | Blog headers, banners | | <strong>Symmetrical</strong> | Balanced, formal | Corporate, luxury |</p>
+<hr>
+<h2>Model-Specific Tips</h2>
+<h3>Gemini Image (Google)</h3>
+<ul><li>Best all-around for marketing images — good quality, reasonable cost</li><li>Supports <strong>image editing</strong> — upload an existing image and describe changes</li><li>Decent text rendering — can handle short headlines</li><li>Specify &quot;high resolution&quot; for best output</li><li>Works well with detailed, descriptive prompts</li><li>Same API as text generation — easy to integrate</li></ul>
+<h3>Flux (Black Forest Labs)</h3>
+<ul><li><strong>Multi-image reference</strong> is the killer feature — upload product screenshots, brand assets, or style references</li><li>Best for <strong>brand consistency</strong> across a set of images</li><li>Use Flux Pro for final assets, Flux Dev for rapid iteration</li><li>Flux Klein for high-volume batch generation (cheapest)</li><li>Style transfer via reference images &gt; style keywords in prompt</li><li>Prompts can be shorter than other models — the references do heavy lifting</li></ul>
+<h3>Ideogram</h3>
+<ul><li><strong>Best text rendering</strong> of any model (industry-leading accuracy)</li><li>Use when you need headlines, taglines, or brand names in the image</li><li>Style reference system (up to 3 images) for brand consistency</li><li>Supports &quot;Magic Prompt&quot; auto-enhancement</li><li>Keep text requests simple — 3-5 words max for reliability</li><li>Best for social graphics and banners that need text baked in</li></ul>
+<h3>GPT Image (OpenAI)</h3>
+<ul><li>Current models: <code>gpt-image-1</code> and variants (DALL-E 3 is deprecated)</li><li>Integrated with ChatGPT — conversational image generation</li><li>Good at following detailed prompts</li><li>Decent text rendering (behind Ideogram, comparable to Gemini)</li><li>Automatic prompt rewriting — may deviate from exact request</li><li>Best for quick one-offs through ChatGPT interface</li><li>API gives more control than ChatGPT interface</li></ul>
+<h3>Midjourney</h3>
+<ul><li>Highest aesthetic quality for artistic/editorial images</li><li>No official API — Discord-based or web interface</li><li><strong>Not agent-friendly</strong> — use for manual creative exploration only</li><li>Style flags: <code>--style raw</code> for less stylized, <code>--ar 16:9</code> for aspect ratio</li><li>Best for hero images where pure visual quality matters most</li><li>V6+ has improved text rendering but still unreliable</li></ul>
+<hr>
+<h2>Common Prompt Mistakes</h2>
+<p>| Mistake | Why It Fails | Fix | |---------|-------------|-----| | &quot;A professional image&quot; | No visual detail | Describe subject, setting, style, lighting | | Long paragraph of text in image | Models can&#x27;t render paragraphs | 3-5 words max; add text in post | | &quot;Make it look good&quot; | Not actionable | Specify style: &quot;commercial photography, bright&quot; | | 200+ word prompts | Models lose focus | 40-80 words, specific over comprehensive | | No aspect ratio | Random output size | Always specify dimensions or ratio | | &quot;Logo in bottom right&quot; | Unreliable placement | Add logos in post-processing | | &quot;Make it viral&quot; | Not a visual instruction | Describe the aesthetic you want | | Requesting UI screenshots | AI hallucinates interfaces | Capture real screenshots instead |</p>
+<hr>
+<h2>Batch Generation Workflow</h2>
+<p>When you need multiple images with consistent style (e.g., a blog series or social campaign):</p>
+<ol><li><strong>Generate 3-4 test images</strong> with different style prompts</li><li><strong>Pick the winning style</strong> based on brand fit</li><li><strong>Save the exact prompt</strong> as your template</li><li><strong>Use Flux multi-reference</strong> — upload the winning image as a style reference</li><li><strong>Batch generate</strong> variations with the same style, different subjects</li><li><strong>Post-process</strong> — add text overlays, logos, crop to platform sizes</li></ol>
+<hr>
+<h2>Aspect Ratios Quick Reference</h2>
+<p>| Use Case | Ratio | Pixels | Notes | |----------|-------|--------|-------| | Blog hero / OG image | 1.91:1 | 1200x630 | Universal web standard | | Full-width hero | 16:9 | 1920x1080 | Website headers | | Instagram Feed | 1:1 | 1080x1080 | Square | | Instagram Feed (tall) | 4:5 | 1080x1350 | More screen real estate | | Stories / Reels | 9:16 | 1080x1920 | Vertical full screen | | LinkedIn cover | 4:1 | 1584x396 | Personal profile | | Twitter/X header | 3:1 | 1500x500 | Profile banner | | Product Hunt gallery | 5:3 | 1270x760 | Launch page | | GitHub social preview | 2:1 | 1280x640 | Repo link card |</p>
+<hr>
+<h2>Cost Optimization</h2>
+<ul><li><strong>Iterate at low quality first</strong> — use Flux Dev or Gemini Flash for drafts, upgrade for finals</li><li><strong>Use references over long prompts</strong> — Flux multi-reference produces more consistent results with fewer retries</li><li><strong>Batch similar requests</strong> — generate all blog headers in one session with the same style</li><li><strong>Cache and reuse</strong> — abstract backgrounds, patterns, and textures can be reused across multiple images</li><li><strong>Post-process instead of re-generate</strong> — crop, overlay text, and adjust color in code rather than generating new images</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ai-image-prompting.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

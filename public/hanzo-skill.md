@@ -5,12 +5,12 @@
 
 ## Overview
 
-Hanzo Skill (`@hanzo/skill`) is a **TypeScript CLI tool** for installing, managing, and distributing AI agent skills. It clones skill repositories to `~/.hanzo/skills/` as the canonical source of truth, then symlinks them into every supported agent directory (Claude Code, Cursor, Codex, Openclaw, Hanzo Bot). Zero dependencies beyond Node.js standard library.
+Hanzo Skill (`@hanzo/skill`) is a **TypeScript CLI tool** for installing, managing, and distributing AI agent skills. It clones skill repositories to `~/.hanzo/skills/` as the canonical source of truth, then symlinks them into every supported agent directory (Claude Code, Cursor, Codex, , Hanzo Bot). Zero dependencies beyond Node.js standard library.
 
 ### Why Hanzo Skill?
 
 - **Single source of truth**: `~/.hanzo/skills/` holds all skill repos; agents see symlinks
-- **Multi-agent sync**: One `add` command makes skills available to Claude, Cursor, Codex, Openclaw, and Hanzo Bot simultaneously
+- **Multi-agent sync**: One `add` command makes skills available to Claude, Cursor, Codex, , and Hanzo Bot simultaneously
 - **Git-native**: Skills are Git repos -- `add` clones, re-run pulls latest
 - **Zero config**: No auth, no server, just `npx @hanzo/skill add org/repo`
 - **Tiny**: 3 source files, zero runtime dependencies
@@ -46,7 +46,7 @@ Hanzo Skill (`@hanzo/skill`) is a **TypeScript CLI tool** for installing, managi
 | Directory | Agent |
 |-----------|-------|
 | `~/.claude/skills/` | Claude Code |
-| `~/.agents/skills/` | Codex, Openclaw |
+| `~/.agents/skills/` | Codex,  |
 | `~/.cursor/skills/` | Cursor |
 | `~/.hanzo/bot/skills/` | Hanzo Bot |
 

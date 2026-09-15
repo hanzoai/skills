@@ -108,7 +108,7 @@ Draft -> Review -> Last Call (14-day final review) -> Final (or Withdrawn/Supers
 - **Status**: Draft
 - **Category**: Interface
 - `~/.hanzo/skills/` as canonical source of truth for all AI agent skills
-- Automatic symlink distribution to Claude Code, Cursor, Codex, Openclaw, Hanzo Bot directories
+- Automatic symlink distribution to Claude Code, Cursor, Codex, , Hanzo Bot directories
 - Follows open Agent Skills specification (agentskills.io)
 - Install: `npx @hanzo/bot skills add org/repo`
 - Multi-brand support: Bootnode, Hanzo Web3, Lux Cloud, Zoo Labs, Pars Cloud

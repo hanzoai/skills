@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>idea-cross-reference</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/idea-cross-reference.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/idea-cross-reference">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/idea-cross-reference.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>idea-cross-reference</h1><p class="lede">The marketing-ideas skill catalogs 139 proven marketing tactics.</p><h1>Idea Cross-Reference — 139 Marketing Ideas Mapped to AARRR</h1>
+<p>The <code>marketing-ideas</code> skill catalogs 139 proven marketing tactics. This doc is the source-of-truth mapping: every idea assigned to a primary AARRR stage, with notes for when it&#x27;s typically active and what category constraints apply.</p>
+<p>The plan&#x27;s Section 12 (&quot;Tactical idea bank&quot;) uses this mapping as the base, then layers client-specific filters: brand voice rules might skip some ideas; funding stage might shift Q-status; client category might rule out others.</p>
+<h2>How to read this doc</h2>
+<ul><li><strong>139 unique ideas, 144 entries.</strong> Five ideas cross-cut multiple AARRR stages and appear under each stage they serve (#79 Early-Access Referrals, #86 Lifetime Deals, #91 In-App Upsells, #114 Moneyball Marketing, #117 Product Competitions). Each duplicate row carries a cross-cut note.</li><li><strong>&quot;Entries&quot; counts rows; idea IDs are unique.</strong> Section header counts reflect rows in this doc, not unique ideas from <code>marketing-ideas</code>.</li><li><strong>Numbers correspond exactly to the <code>marketing-ideas</code> skill ordering.</strong> If <code>marketing-ideas</code> reorders or expands, update this doc.</li></ul>
+<h2>AARRR assignment for all 139 ideas</h2>
+<h3>Acquisition (116 entries)</h3>
+<p>These ideas primarily serve top-of-funnel awareness, traffic, and lead generation.</p>
+<p>| # | Idea | Category | Typical stage available | |---|---|---|---| | 1 | Easy Keyword Ranking | Content &amp; SEO | Now (any stage) | | 2 | SEO Audit | Content &amp; SEO | Now | | 3 | Glossary Marketing | Content &amp; SEO | Q2+ | | 4 | Programmatic SEO | Content &amp; SEO | Q3+ (needs data + template system) | | 5 | Content Repurposing | Content &amp; SEO | Now (immediate leverage) | | 6 | Proprietary Data Content | Content &amp; SEO | Now (if data exists) | | 7 | Internal Linking | Content &amp; SEO | Now | | 8 | Content Refreshing | Content &amp; SEO | Q2+ (after content base exists) | | 9 | Knowledge Base SEO | Content &amp; SEO | Q3+ (after help docs exist) | | 10 | Parasite SEO | Content &amp; SEO | Now | | 11 | Competitor Comparison Pages | Competitor | Q2+ | | 12 | Marketing Jiu-Jitsu | Competitor | Now | | 13 | Competitive Ad Research | Competitor | Pre-paid | | 14 | Side Projects | Free Tools | Q3+ | | 15 | Engineering as Marketing | Free Tools | Q3+ | | 16 | Importers as Marketing | Free Tools | SaaS-specific | | 17 | Quiz Marketing | Free Tools | Q2+ | | 18 | Calculator Marketing | Free Tools | Q3+ | | 19 | Chrome Extensions | Free Tools | Browser-relevant only | | 20 | Microsites | Free Tools | Q3+ | | 21 | Scanners | Free Tools | Specific products only | | 22 | Public APIs | Free Tools | Developer/dev tool products | | 23 | Podcast Advertising | Paid Ads | Post-budget | | 24 | Pre-targeting Ads | Paid Ads | Post-budget | | 25 | Facebook Ads | Paid Ads | Post-budget | | 26 | Instagram Ads | Paid Ads | Post-budget | | 27 | Twitter Ads | Paid Ads | Post-budget | | 28 | LinkedIn Ads | Paid Ads | Post-budget (B2B-strong) | | 29 | Reddit Ads | Paid Ads | Post-budget | | 30 | Quora Ads | Paid Ads | Post-budget | | 31 | Google Ads | Paid Ads | Post-budget | | 32 | YouTube Ads | Paid Ads | Post-budget | | 33 | Cross-Platform Retargeting | Paid Ads | Post-paid-firing | | 34 | Click-to-Messenger Ads | Paid Ads | Niche use cases | | 35 | Community Marketing | Social &amp; Community | Q3+ | | 36 | Quora Marketing | Social &amp; Community | Now | | 37 | Reddit Keyword Research | Social &amp; Community | Now | | 38 | Reddit Marketing | Social &amp; Community | Q2+ | | 39 | LinkedIn Audience | Social &amp; Community | Now (B2B + founders) | | 40 | Instagram Audience | Social &amp; Community | Q2+ | | 41 | X Audience | Social &amp; Community | Depends on founder bandwidth | | 42 | Short Form Video | Social &amp; Community | Q3+ | | 43 | Engagement Pods | Social &amp; Community | Generally off-brand | | 44 | Comment Marketing | Social &amp; Community | Q2+ | | 49 | Monthly Newsletters | Email | Q2+ (Acquisition use: subscriber capture) | | 54 | Affiliate Discovery via Backlinks | Partnerships | Q2+ | | 55 | Influencer Whitelisting | Partnerships | Post-paid-budget | | 56 | Reseller Programs | Partnerships | Q4+ | | 57 | Expert Networks | Partnerships | Q3+ | | 58 | Newsletter Swaps | Partnerships | Q2+ | | 59 | Article Quotes (HARO) | Partnerships | Now | | 60 | Pixel Sharing | Partnerships | Post-paid | | 61 | Shared Slack Channels | Partnerships | Q3+ | | 63 | Integration Marketing | Partnerships | Q3+ | | 64 | Community Sponsorship | Partnerships | Q2+ | | 65 | Live Webinars | Events | Q2+ | | 66 | Virtual Summits | Events | Q3+ | | 67 | Roadshows | Events | Q4+ | | 68 | Local Meetups | Events | Q3+ | | 69 | Meetup Sponsorship | Events | Q3+ | | 70 | Conference Speaking | Events | Now (if founder is speakable) | | 71 | Conferences (own-hosted) | Events | Q4+ | | 72 | Conference Sponsorship | Events | Q3+ | | 73 | Media Acquisitions | PR &amp; Media | Series A+ | | 74 | Press Coverage | PR &amp; Media | Now (if newsworthy) | | 75 | Fundraising PR | PR &amp; Media | When fund closes | | 76 | Documentaries | PR &amp; Media | Q4+ | | 77 | Black Friday Promotions | Launches | Q4 (seasonal) | | 78 | Product Hunt Launch | Launches | At GA or major feature | | 79 | Early-Access Referrals | Launches | Pre-launch or GA | | 80 | New Year Promotions | Launches | Q1 (seasonal) | | 81 | Early Access Pricing | Launches | GA | | 82 | Product Hunt Alternatives | Launches | Same as PH | | 83 | Twitter Giveaways | Launches | Generally off-brand | | 84 | Giveaways | Launches | Q3+ | | 85 | Vacation Giveaways | Launches | Q4+ (seasonal) | | 86 | Lifetime Deals | Launches | Generally off-brand (damages LTV math) | | 87 | Powered By Marketing | Product-Led | Q4+ | | 88 | Free Migrations | Product-Led | SaaS-specific | | 89 | Contract Buyouts | Product-Led | B2B SaaS only | | 97 | Playlists as Marketing | Content Formats | Q3+ | | 98 | Template Marketing | Content Formats | Q3+ | | 99 | Graphic Novel Marketing | Content Formats | Generally off-brand | | 100 | Promo Videos | Content Formats | Q3+ | | 101 | Industry Interviews | Content Formats | Q2+ | | 102 | Social Screenshots | Content Formats | Q2+ | | 103 | Online Courses | Content Formats | Q3+ | | 104 | Book Marketing | Content Formats | Q4+ | | 105 | Annual Reports | Content Formats | Q4+ | | 106 | End of Year Wraps | Content Formats | Q4 (seasonal) | | 107 | Podcasts (own-hosted) | Content Formats | Q3+ | | 108 | Changelogs | Content Formats | Q2+ | | 109 | Public Demos | Content Formats | Now | | 110 | Awards as Marketing | Unconventional | Q4+ | | 111 | Challenges as Marketing | Unconventional | Q3+ | | 112 | Reality TV Marketing | Unconventional | Generally off-brand | | 113 | Controversy as Marketing | Unconventional | Brand-dependent | | 114 | Moneyball Marketing | Unconventional | Ongoing methodology | | 115 | Curation as Marketing | Unconventional | Q2+ | | 116 | Grants as Marketing | Unconventional | Q4+ | | 117 | Product Competitions | Unconventional | Developer-specific | | 118 | Cameo Marketing | Unconventional | Generally off-brand | | 119 | OOH Advertising | Unconventional | Series A+ | | 120 | Marketing Stunts | Unconventional | Brand-dependent | | 121 | Guerrilla Marketing | Unconventional | Brand-dependent | | 122 | Humor Marketing | Unconventional | Brand-dependent | | 123 | Open Source as Marketing | Platforms | Developer products | | 125 | App Marketplaces | Platforms | Platform-specific | | 126 | YouTube Reviews | Platforms | Q3+ | | 127 | YouTube Channel | Platforms | Q3+ | | 128 | Source Platforms | Platforms | B2B SaaS only | | 129 | Review Sites | Platforms | Now | | 130 | Live Audio | Platforms | Q3+ | | 131 | International Expansion | International | Q4+ | | 133 | Investor Marketing | Developer/etc | Now (when raising) | | 138 | Podcast Tours | Audience-Specific | Q2+ |</p>
+<h3>Activation (8 entries)</h3>
+<p>| # | Idea | Category | Typical stage available | |---|---|---|---| | 47 | Founder Welcome Email | Email | Q2+ (Activation use) | | 48 | Dynamic Email Capture | Email | Q2+ | | 51 | Onboarding Emails | Email | When UI is stable | | 90 | One-Click Registration | Product-Led | Now | | 91 | In-App Upsells | Product-Led | Q2+ (cross-cuts Revenue) | | 95 | Concierge Setup | Product-Led | Q3+ (high-value users) | | 96 | Onboarding Optimization | Product-Led | Now | | 124 | App Store Optimization | Platforms | Now (App Store products) |</p>
+<h3>Retention (8 entries)</h3>
+<p>| # | Idea | Category | Typical stage available | |---|---|---|---| | 45 | Mistake Email Marketing | Email | Opportunistic | | 46 | Reactivation Emails | Email | Now | | 50 | Inbox Placement | Email | Now (technical setup) | | 52 | Win-back Emails | Email | Q1+ | | 53 | Trial Reactivation | Email | Q2+ (when paywall is firing) | | 94 | Offboarding Flows | Product-Led | Q2+ | | 135 | Support as Marketing | Developer/etc | Q2+ | | 134 | Certifications | Developer/etc | Q3+ (cross-cuts Referral) |</p>
+<h3>Referral (5 entries)</h3>
+<p>| # | Idea | Category | Typical stage available | |---|---|---|---| | 62 | Affiliate Program | Partnerships | Now (when inbound exists) | | 79 | Early-Access Referrals | Launches | Pre-launch / GA | | 92 | Newsletter Referrals | Product-Led | Q3+ (if newsletter exists) | | 93 | Viral Loops | Product-Led | Q3+ | | 137 | Two-Sided Referrals | Audience-Specific | Q2+ |</p>
+<h3>Revenue (2 entries — most monetization is strategy not tactic)</h3>
+<p>| # | Idea | Category | Typical stage available | |---|---|---|---| | 91 | In-App Upsells | Product-Led | Q2+ (cross-cuts Activation) | | 132 | Price Localization | International | Q4+ |</p>
+<blockquote><p><strong>Skipped from Revenue:</strong> #86 Lifetime Deals appears under Launches (Acquisition section) only. It&#x27;s generally off-brand for subscription products because it damages LTV math; recommend in Section 12&#x27;s Skip list with rationale, not in stage totals.</p></blockquote>
+<h3>Cross-cutting / brand foundation (2 entries)</h3>
+<p>| # | Idea | Category | Typical stage available | |---|---|---|---| | 114 | Moneyball Marketing | Unconventional | Ongoing methodology | | 139 | Customer Language | Audience-Specific | Now (foundational) |</p>
+<h3>Developer-specific / dev tool products (2 entries)</h3>
+<p>| # | Idea | Category | Use when | |---|---|---|---| | 117 | Product Competitions | Unconventional | Developer tool products | | 136 | Developer Relations | Developer/etc | Developer tool products |</p>
+<h2>How to apply this to a specific client</h2>
+<p>For Section 12 of the plan:</p>
+<h3>Step 1 — Filter for category fit</h3>
+<p>For each idea, ask:</p>
+<ul><li>Does this idea apply to the client&#x27;s category? (e.g., #16 Importers only for SaaS; #19 Chrome Extensions only for browser-relevant; #136 DevRel only for dev tools)</li><li>Skip ideas that don&#x27;t apply, with a note</li></ul>
+<h3>Step 2 — Filter for brand voice</h3>
+<p>For each idea, ask:</p>
+<ul><li>Does this idea conflict with the client&#x27;s brand voice?</li><li>Common conflicts:</li><li><strong>Lifetime Deals (#86)</strong> — conflicts with premium positioning</li><li><strong>Twitter Giveaways (#83)</strong> — often off-brand for serious / clinical / luxury voices</li><li><strong>Humor Marketing (#122)</strong> — off-brand for serious / clinical voices</li><li><strong>Cameo Marketing (#118)</strong> — off-brand for most voices</li><li><strong>Reality TV Marketing (#112)</strong> — off-brand for most voices</li></ul>
+<p>If conflict, place in Skip list with explicit rationale.</p>
+<h3>Step 3 — Set timing status</h3>
+<p>For ideas that pass filters, set status:</p>
+<ul><li><strong>Now (Q1)</strong> — already in 90-day plan OR can run alongside without new capacity</li><li><strong>Q2</strong> — post-bedrock-fix, post-foundation; second-quarter layer-in</li><li><strong>Q3+</strong> — post-seed-close, post-GA; expansion moves</li><li><strong>Q4+</strong> — long-game / large-investment</li></ul>
+<p>Use the &quot;Typical stage available&quot; column as the default. Shift earlier if client has unusual capability (e.g., a celebrity founder shifts Conference Speaking #70 from &quot;Now&quot; to &quot;Now and high-leverage&quot;).</p>
+<h3>Step 4 — Write the client-specific note</h3>
+<p>Every &quot;Now / Q2 / Q3+&quot; idea gets a one-line client-specific note. Examples:</p>
+<ul><li>For idea #11 Competitor Comparison Pages: &quot;Quietude vs. Calm / Headspace / Brain.fm / Endel / Wavepaths — high-intent SERPs&quot;</li><li>For idea #133 Investor Marketing: &quot;Alex&#x27;s seed raise — leverage angel backchannel for PR + intros&quot;</li><li>For idea #15 Engineering as Marketing: &quot;HRV interpretation guide; nervous system self-assessment; sound bath finder directory&quot;</li></ul>
+<h3>Step 5 — Sum the bank</h3>
+<p>After all five AARRR tables + skip list:</p>
+<pre><code class="lang-markdown">### Idea-bank summary
+
+- {Acquisition count} ideas applicable to Acquisition (the dominant stage at {client}&#x27;s current stage)
+- {Activation count} to Activation, {Retention count} to Retention
+- {Referral count} to Referral
+- {Revenue count} to Revenue
+- {cross-cutting count} cross-cutting
+- {skipped count} ideas skipped for brand / business-model fit
+
+**What this proves:** the plan is roughly X% of the available tactical surface area, not 100%. {appropriate or not for the stage} — as capacity unlocks across Q2 → Q3 → Series A, the cross-reference becomes the inventory to scale activity without losing strategic coherence.</code></pre>
+<h2>How to maintain this doc</h2>
+<p>If <code>marketing-ideas</code> adds new ideas (it&#x27;s a living skill — the 139 may become 145 or 160 over time):</p>
+<ol><li>Read <code>skills/marketing-ideas/references/ideas-by-category.md</code> in the <code>marketingskills</code> repo</li><li>Assign each new idea to a primary AARRR stage using the rules above</li><li>Add to this doc&#x27;s tables</li><li>Update SKILL.md&#x27;s idea-count reference</li></ol>
+<h2>Sources</h2>
+<ul><li><code>skills/marketing-ideas/SKILL.md</code> (in the <code>marketingskills</code> repo)</li><li><code>skills/marketing-ideas/references/ideas-by-category.md</code> (in the <code>marketingskills</code> repo)</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/idea-cross-reference.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

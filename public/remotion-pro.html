@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>remotion-pro</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/remotion-pro.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/remotion-pro">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/remotion-pro.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>remotion-pro</h1><p class="lede">Main Remotion Pro orchestrator for — handles first-run onboarding wizard (video-profile.yaml), displays the 8-showcase catalog, routes to the correct showcase skill (product-demo, tech-terminal, before-after, data-story, course-trailer, social-proof, feature-highlight, walkthrough), manages Remotion environment discovery, applies config precedence (briefing &gt; video-profile.yaml &gt; brand-voice.yaml &gt; defaults), and coordinates professional video production output bundles.</p><h1>Remotion Pro — Orchestrator Skill</h1>
+<p>Central dispatcher for all  video production powered by Remotion. Handles onboarding, showcase selection, environment discovery, and output coordination.</p>
+<hr>
+<h2>Trigger Conditions</h2>
+<p>Activate this skill when the user:</p>
+<ul><li>Runs <code>/grow video</code> with or without a showcase name</li><li>Mentions &quot;remotion pro&quot;, &quot;video showcase&quot;, &quot;criar video&quot;, &quot;make a video&quot;</li><li>References any of the 8 showcase types by keyword</li><li>Asks for the video catalog or wants to browse showcases</li></ul>
+<hr>
+<h2>Step 1 — Onboarding Gate</h2>
+<p>Before doing anything else, check whether <code>video-profile.yaml</code> exists in the root directory (<code>video-profile.yaml</code>).</p>
+<pre><code>CHECK: does video-profile.yaml exist?
+  YES → Skip wizard, load profile, proceed to Step 3
+  NO  → Run the 6-step onboarding wizard (Step 2)</code></pre>
+<hr>
+<h2>Step 2 — Onboarding Wizard (First-Run Only)</h2>
+<p>Run this interactive wizard only when <code>video-profile.yaml</code> is missing. Present each step clearly, collect input, then generate the YAML file.</p>
+<h3>Wizard Header</h3>
+<pre><code>╔══════════════════════════════════════════════════════╗
+║         REMOTION PRO — FIRST-RUN SETUP               ║
+║   Let&#x27;s configure your video production profile.     ║
+╚══════════════════════════════════════════════════════╝
+
+This takes about 2 minutes. You can edit video-profile.yaml
+anytime to update these settings.</code></pre>
+<hr>
+<h3>Step 2.1 — Assets</h3>
+<pre><code>📁 STEP 1/6 — ASSETS
+─────────────────────────────────────────────
+Where are your brand assets located?
+
+  Logo path (PNG/SVG):
+  &gt; [e.g. assets/logo.png or leave blank to skip]
+
+  Screenshots directory:
+  &gt; [e.g. assets/screenshots/ — folder with product screenshots]
+
+  App icon path (optional):
+  &gt; [e.g. assets/icon.png]</code></pre>
+<p>Collect: <code>logo_path</code>, <code>screenshots_dir</code>, <code>icon_path</code></p>
+<hr>
+<h3>Step 2.2 — Design Tokens</h3>
+<pre><code>🎨 STEP 2/6 — DESIGN TOKENS
+─────────────────────────────────────────────
+Auto-detecting from brand-voice.yaml...</code></pre>
+<p>Attempt to read <code>reference/brand-voice.yaml</code>. Extract:</p>
+<ul><li><code>brand.colors.primary</code> → <code>primary_color</code></li><li><code>brand.colors.secondary</code> → <code>secondary_color</code>  </li><li><code>brand.colors.accent</code> → <code>accent_color</code></li><li><code>brand.typography.heading_font</code> → <code>heading_font</code></li><li><code>brand.typography.body_font</code> → <code>body_font</code></li><li><code>brand.design.border_radius</code> → <code>border_radius</code></li></ul>
+<p>If auto-detected, display the values and ask for confirmation:</p>
+<pre><code>  Detected from brand-voice.yaml:
+    Primary color:   #[value]   ← confirm or override
+    Secondary color: #[value]
+    Accent color:    #[value]
+    Heading font:    [value]
+    Body font:       [value]
+    Border radius:   [value]
+
+  Press Enter to confirm or type new values:
+  Primary color:   &gt; 
+  Secondary color: &gt; 
+  Accent color:    &gt; 
+  Heading font:    &gt; 
+  Body font:       &gt; 
+  Border radius:   &gt; </code></pre>
+<p>If not auto-detected, ask for each value with defaults:</p>
+<ul><li><code>primary_color</code>: <code>#7C3AED</code></li><li><code>secondary_color</code>: <code>#1E1E2E</code></li><li><code>accent_color</code>: <code>#F59E0B</code></li><li><code>heading_font</code>: <code>Inter</code></li><li><code>body_font</code>: <code>Inter</code></li><li><code>border_radius</code>: <code>12px</code></li></ul>
+<hr>
+<h3>Step 2.3 — Device Frames</h3>
+<pre><code>🖥️  STEP 3/6 — DEVICE FRAMES
+─────────────────────────────────────────────
+Which device frames will you use in videos?
+(Select all that apply — comma-separated numbers)
+
+  1. Browser frame (Chrome/Safari)
+  2. Mobile frame (iPhone)
+  3. Desktop frame (MacBook)
+  4. Terminal frame
+
+  Selection: &gt; [e.g. 1,2 or &quot;all&quot; or &quot;none&quot;]</code></pre>
+<p>Map selection to: <code>device_frames: [browser, mobile, desktop, terminal]</code></p>
+<hr>
+<h3>Step 2.4 — User Journeys</h3>
+<pre><code>🗺️  STEP 4/6 — USER JOURNEYS
+─────────────────────────────────────────────
+Define named flows for your product walkthroughs.
+These are sequences of screens used in demo and walkthrough videos.
+
+  How many journeys do you want to define now?
+  (You can add more later in video-profile.yaml)
+  &gt; [number, or 0 to skip]</code></pre>
+<p>For each journey, collect:</p>
+<pre><code>  Journey [N] name: &gt; [e.g. &quot;Onboarding Flow&quot;]
+  
+  Screens in this journey (one per line, blank to finish):
+    Screen name:       &gt; [e.g. &quot;Landing Page&quot;]
+    Screenshot path:   &gt; [e.g. screenshots/landing.png]
+    Actions (comma-separated): &gt; [e.g. &quot;click Sign Up, fill email, submit&quot;]
+    
+    Add another screen? [y/n]</code></pre>
+<p>Structure collected as:</p>
+<pre><code class="lang-yaml">journeys:
+  - name: &quot;Onboarding Flow&quot;
+    screens:
+      - name: &quot;Landing Page&quot;
+        screenshot: &quot;screenshots/landing.png&quot;
+        actions: [&quot;click Sign Up&quot;, &quot;fill email&quot;, &quot;submit&quot;]</code></pre>
+<hr>
+<h3>Step 2.5 — Maestri Connection</h3>
+<pre><code>🔗 STEP 5/6 — MAESTRI CONNECTION
+─────────────────────────────────────────────
+Maestri is &#x27;s AI orchestration layer.
+Connect it to enable automated video triggers.
+
+  Enable Maestri integration? [y/n]
+  &gt; 
+
+  [If y:]
+  Source project path:
+  &gt; [path to your Maestri project, or leave blank for auto-detect]
+
+  Protocol: [http/grpc/stdio] (default: stdio)
+  &gt; </code></pre>
+<p>Collect: <code>maestri.enabled</code>, <code>maestri.source_project</code>, <code>maestri.protocol</code></p>
+<hr>
+<h3>Step 2.6 — Style Preferences</h3>
+<pre><code>✨ STEP 6/6 — STYLE PREFERENCES
+─────────────────────────────────────────────
+Final style settings for your videos.
+
+  Theme:
+    1. Dark (recommended for tech/SaaS)
+    2. Light
+    3. Auto (follows brand-voice.yaml)
+  &gt; 
+
+  Pacing:
+    1. Fast  (punchy, social-first)
+    2. Medium (balanced)
+    3. Slow  (detailed, educational)
+  &gt; 
+
+  Background music: [y/n] (default: n)
+  &gt; 
+
+  Output extras:
+    1. Generate thumbnail
+    2. Generate caption file (.srt)
+    3. Multi-platform renders (9:16, 16:9, 4:5)
+    4. All of the above
+    5. None
+  &gt; </code></pre>
+<p>Collect: <code>style.theme</code>, <code>style.pacing</code>, <code>style.music</code>, <code>style.output_extras</code></p>
+<hr>
+<h3>Wizard Complete — Generate video-profile.yaml</h3>
+<p>After collecting all inputs, write <code>video-profile.yaml</code>:</p>
+<pre><code class="lang-yaml">#  Video Profile
+# Generated by Remotion Pro onboarding wizard
+# Edit anytime to update settings
+
+version: &quot;1.0&quot;
+generated_at: &quot;[ISO timestamp]&quot;
+
+assets:
+  logo_path: &quot;[collected value]&quot;
+  screenshots_dir: &quot;[collected value]&quot;
+  icon_path: &quot;[collected value]&quot;
+
+design_tokens:
+  primary_color: &quot;[collected value]&quot;
+  secondary_color: &quot;[collected value]&quot;
+  accent_color: &quot;[collected value]&quot;
+  heading_font: &quot;[collected value]&quot;
+  body_font: &quot;[collected value]&quot;
+  border_radius: &quot;[collected value]&quot;
+
+device_frames:
+  - browser
+  - mobile
+  # (only selected frames)
+
+journeys:
+  # (collected journey data)
+
+maestri:
+  enabled: false
+  source_project: &quot;&quot;
+  protocol: &quot;stdio&quot;
+
+style:
+  theme: &quot;dark&quot;
+  pacing: &quot;medium&quot;
+  music: false
+  output_extras:
+    thumbnail: false
+    captions: false
+    multi_platform: false</code></pre>
+<p>Display confirmation:</p>
+<pre><code>✅ video-profile.yaml created at video-profile.yaml
+   Run /grow video anytime to produce a new video.</code></pre>
+<p>Then continue to Step 3.</p>
+<hr>
+<h2>Step 3 — Remotion Environment Discovery</h2>
+<p>Before producing any video, locate and validate the Remotion installation.</p>
+<h3>Discovery Protocol</h3>
+<pre><code>1. Find brand-voice.yaml
+   → Read reference/brand-voice.yaml (or reference/brand-voice.example.yaml as fallback)
+   → Extract project path hint if present under remotion.project_path
+
+2. Locate Remotion project
+   Priority order:
+     a. remotion/          (default  location)
+     b. value from brand-voice.yaml remotion.project_path
+     c. Search upward from cwd for package.json containing &quot;@remotion/core&quot;
+
+3. Determine entry point
+   Look for in this order:
+     a. src/index.ts
+     b. src/Root.tsx
+     c. remotion/index.ts
+     d. Value of &quot;remotion&quot; key in package.json scripts
+
+4. Discover CLI
+   Try in order:
+     a. npx remotion --version
+     b. ./node_modules/.bin/remotion --version
+     c. bunx remotion --version
+
+5. Validate
+   If CLI responds → proceed
+   If not → display install instructions:
+   
+     Remotion not found. Install with:
+       npm install @remotion/cli @remotion/core
+     Then re-run your video command.</code></pre>
+<p>Store discovered values:</p>
+<pre><code>remotion_root: [path]
+entry_point:   [file]
+cli_command:   [npx remotion | ./node_modules/.bin/remotion]</code></pre>
+<hr>
+<h2>Step 4 — Showcase Catalog</h2>
+<p>When the user runs <code>/grow video</code> without specifying a showcase, display the full catalog:</p>
+<pre><code>╔══════════════════════════════════════════════════════╗
+║              REMOTION PRO — VIDEO CATALOG            ║
+╚══════════════════════════════════════════════════════╝
+
+Choose a showcase to create your video:
+
+  🖥️  1. Product Demo        — Full product walkthrough with device frames
+  ⌨️  2. Tech Terminal       — Animated CLI/terminal output for devs
+  ⚡  3. Before/After UI     — Split-screen comparison reveal
+  📊  4. Data Story          — Animated charts and metric counters
+  🎓  5. Course Trailer      — Module previews and learning journey
+  ⭐  6. Social Proof        — Testimonials, toasts, and counters
+  ✨  7. Feature Highlight   — Zoom-in spotlight on one key feature
+  👆  8. App Walkthrough     — Step-by-step guided app tour
+
+  Type a number, name, or keyword to select:
+  &gt; </code></pre>
+<hr>
+<h2>Step 5 — Showcase Routing</h2>
+<p>Match user input to the correct showcase skill. Use keyword matching (case-insensitive, handles Portuguese and English):</p>
+<p>| Input Keywords | Showcase Skill | |---|---| | <code>product-demo</code>, <code>demo</code>, <code>produto</code>, <code>product</code>, <code>1</code> | <code>showcase-product-demo</code> | | <code>terminal</code>, <code>cli</code>, <code>tech</code>, <code>código</code>, <code>code</code>, <code>2</code> | <code>showcase-tech-terminal</code> | | <code>before-after</code>, <code>antes-depois</code>, <code>comparação</code>, <code>comparison</code>, <code>before</code>, <code>after</code>, <code>3</code> | <code>showcase-before-after</code> | | <code>data</code>, <code>dados</code>, <code>métricas</code>, <code>metrics</code>, <code>números</code>, <code>numbers</code>, <code>chart</code>, <code>4</code> | <code>showcase-data-story</code> | | <code>course</code>, <code>curso</code>, <code>aula</code>, <code>módulo</code>, <code>module</code>, <code>trailer</code>, <code>5</code> | <code>showcase-course-trailer</code> | | <code>proof</code>, <code>depoimento</code>, <code>testimonial</code>, <code>social proof</code>, <code>review</code>, <code>6</code> | <code>showcase-social-proof</code> | | <code>feature</code>, <code>funcionalidade</code>, <code>destaque</code>, <code>highlight</code>, <code>spotlight</code>, <code>7</code> | <code>showcase-feature-highlight</code> | | <code>walkthrough</code>, <code>tutorial</code>, <code>passo-a-passo</code>, <code>step-by-step</code>, <code>tour</code>, <code>8</code> | <code>showcase-walkthrough</code> |</p>
+<p>When a match is found, activate the corresponding showcase skill and pass the following context:</p>
+<pre><code class="lang-yaml">context:
+  video_profile: [loaded video-profile.yaml data]
+  brand_voice: [loaded brand-voice.yaml data]
+  remotion:
+    root: [remotion_root]
+    entry_point: [entry_point]
+    cli: [cli_command]
+  briefing: [any user-provided description or requirements]</code></pre>
+<hr>
+<h2>Step 6 — Config Precedence</h2>
+<p>When populating showcase parameters, apply values in this priority order (highest to lowest):</p>
+<pre><code>1. BRIEFING        — Explicit values provided by the user in this session
+2. video-profile.yaml — Saved user preferences from onboarding/edits
+3. brand-voice.yaml   — Global brand settings (colors, fonts, tone)
+4. DEFAULTS        — Showcase-specific hardcoded fallbacks</code></pre>
+<p>Example resolution for <code>primary_color</code>:</p>
+<pre><code>briefing[&quot;primary_color&quot;]  → use if present
+video-profile.yaml[&quot;design_tokens&quot;][&quot;primary_color&quot;] → use if present
+brand-voice.yaml[&quot;brand&quot;][&quot;colors&quot;][&quot;primary&quot;] → use if present
+&quot;#7C3AED&quot;  → default fallback</code></pre>
+<hr>
+<h2>Step 7 — Output Bundle</h2>
+<p>After the showcase skill produces the composition, assemble the output bundle based on the autonomy level from <code>brand-voice.yaml</code>:</p>
+<h3>Read autonomy level:</h3>
+<pre><code class="lang-yaml"># From brand-voice.yaml
+automation:
+  autonomy: manual | semi | auto</code></pre>
+<h3>Bundle by autonomy level:</h3>
+<p>| Level | Outputs | |---|---| | <code>manual</code> | MP4 render + storyboard.md + Remotion composition file | | <code>semi</code> | Everything in manual + thumbnail PNG + caption file (.srt) | | <code>auto</code> | Everything in semi + multi-platform renders (9:16, 16:9, 4:5) |</p>
+<h3>Output directory:</h3>
+<pre><code>out/videos/[showcase-name]-[YYYYMMDD-HHmm]/
+  ├── video.mp4                  (always)
+  ├── storyboard.md              (always)
+  ├── composition.tsx            (always)
+  ├── thumbnail.png              (semi + auto)
+  ├── captions.srt               (semi + auto)
+  ├── video-9x16.mp4             (auto only)
+  ├── video-16x9.mp4             (auto only)
+  └── video-4x5.mp4              (auto only)</code></pre>
+<h3>Render command:</h3>
+<pre><code class="lang-bash">[cli_command] render [entry_point] [CompositionId] out/videos/[folder]/video.mp4 \
+  --props=&#x27;[JSON props]&#x27; \
+  --fps=30</code></pre>
+<p>For multi-platform (auto mode), run three renders with width/height overrides.</p>
+<hr>
+<h2>Error Handling</h2>
+<p>| Error | Response | |---|---| | <code>video-profile.yaml</code> write fails | Show values, ask user to create manually | | Remotion CLI not found | Show install instructions, do not proceed | | brand-voice.yaml not found | Use all defaults, warn user | | Showcase skill not found | Display catalog, ask user to select again | | Render fails | Show Remotion error output, suggest fixes | | Screenshot path not found | Warn and use placeholder, list missing paths |</p>
+<hr>
+<h2>Quick Reference — Command Examples</h2>
+<pre><code class="lang-bash">/grow video                          # Show catalog
+/grow video demo                     # Product Demo showcase
+/grow video terminal                 # Tech Terminal showcase
+/grow video before-after             # Before/After UI showcase
+/grow video data                     # Data Story showcase
+/grow video curso                    # Course Trailer (Portuguese)
+/grow video depoimento               # Social Proof (Portuguese)
+/grow video feature                  # Feature Highlight showcase
+/grow video walkthrough              # App Walkthrough showcase</code></pre>
+<hr>
+<h2>Notes for Showcase Skills</h2>
+<p>Each showcase skill (<code>showcase-*</code>) receives the full context object from this orchestrator. They are responsible for:</p>
+<ol><li>Collecting showcase-specific briefing from the user</li><li>Building the Remotion props object</li><li>Writing the composition file (or instructing code generation)</li><li>Returning the composition ID and props to this orchestrator for rendering</li><li>Generating the storyboard.md</li></ol>
+<p>This orchestrator handles rendering and output bundling after the showcase skill completes.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/remotion-pro.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

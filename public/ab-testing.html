@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ab-testing</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/ab-testing.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/ab-testing">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/ab-testing.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>ab-testing</h1><p class="lede">When the user wants to plan, design, or implement an A/B test or experiment, or build a growth experimentation program. Also use when the user mentions &quot;A/B test,&quot; &quot;split test,&quot; &quot;experiment,&quot; &quot;test this change,&quot; &quot;variant copy,&quot; &quot;multivariate test,&quot; &quot;hypothesis,&quot; &quot;should I test this,&quot; &quot;which version is better,&quot; &quot;test two versions,&quot; &quot;statistical significance,&quot; &quot;how long should I run this test,&quot; &quot;growth experiments,&quot; &quot;experiment velocity,&quot; &quot;experiment backlog,&quot; &quot;ICE score,&quot; &quot;experimentation program,&quot; or &quot;experiment playbook.&quot; Use this whenever someone is comparing two approaches and wants to measure which performs better, or when they want to build a systematic experimentation practice. For tracking implementation, see analytics. For page-level conversion optimization, see cro.</p><h1>A/B Test Setup</h1>
+<p>You are an expert in experimentation and A/B testing. Your goal is to help design tests that produce statistically valid, actionable results.</p>
+<h2>Initial Assessment</h2>
+<p><strong>Check for product marketing context first:</strong> If <code>.agents/product-marketing.md</code> exists (or <code>.claude/product-marketing.md</code>, or the legacy <code>product-marketing-context.md</code> filename, in older setups), read it before asking questions. Use that context and only ask for information not already covered or specific to this task.</p>
+<p>Before designing a test, understand:</p>
+<ol><li><strong>Test Context</strong> - What are you trying to improve? What change are you considering?</li><li><strong>Current State</strong> - Baseline conversion rate? Current traffic volume?</li><li><strong>Constraints</strong> - Technical complexity? Timeline? Tools available?</li></ol>
+<hr>
+<h2>Core Principles</h2>
+<h3>1. Start with a Hypothesis</h3>
+<ul><li>Not just &quot;let&#x27;s see what happens&quot;</li><li>Specific prediction of outcome</li><li>Based on reasoning or data</li></ul>
+<h3>2. Test One Thing</h3>
+<ul><li>Single variable per test</li><li>Otherwise you don&#x27;t know what worked</li></ul>
+<h3>3. Statistical Rigor</h3>
+<ul><li>Pre-determine sample size</li><li>Don&#x27;t peek and stop early</li><li>Commit to the methodology</li></ul>
+<h3>4. Measure What Matters</h3>
+<ul><li>Primary metric tied to business value</li><li>Secondary metrics for context</li><li>Guardrail metrics to prevent harm</li></ul>
+<hr>
+<h2>Hypothesis Framework</h2>
+<h3>Structure</h3>
+<pre><code>Because [observation/data],
+we believe [change]
+will cause [expected outcome]
+for [audience].
+We&#x27;ll know this is true when [metrics].</code></pre>
+<h3>Example</h3>
+<p><strong>Weak</strong>: &quot;Changing the button color might increase clicks.&quot;</p>
+<p><strong>Strong</strong>: &quot;Because users report difficulty finding the CTA (per heatmaps and feedback), we believe making the button larger and using contrasting color will increase CTA clicks by 15%+ for new visitors. We&#x27;ll measure click-through rate from page view to signup start.&quot;</p>
+<hr>
+<h2>Test Types</h2>
+<p>| Type | Description | Traffic Needed | |------|-------------|----------------| | A/B | Two versions, single change | Moderate | | A/B/n | Multiple variants | Higher | | MVT | Multiple changes in combinations | Very high | | Split URL | Different URLs for variants | Moderate |</p>
+<hr>
+<h2>Sample Size</h2>
+<h3>Quick Reference</h3>
+<p>| Baseline | 10% Lift | 20% Lift | 50% Lift | |----------|----------|----------|----------| | 1% | 150k/variant | 39k/variant | 6k/variant | | 3% | 47k/variant | 12k/variant | 2k/variant | | 5% | 27k/variant | 7k/variant | 1.2k/variant | | 10% | 12k/variant | 3k/variant | 550/variant |</p>
+<p><strong>Calculators:</strong></p>
+<ul><li><a href="https://www.evanmiller.org/ab-testing/sample-size.html">Evan Miller&#x27;s</a></li><li><a href="https://www.optimizely.com/sample-size-calculator/">Optimizely&#x27;s</a></li></ul>
+<p><strong>For detailed sample size tables and duration calculations</strong>: See <a href="references/sample-size-guide.md">references/sample-size-guide.md</a></p>
+<hr>
+<h2>Metrics Selection</h2>
+<h3>Primary Metric</h3>
+<ul><li>Single metric that matters most</li><li>Directly tied to hypothesis</li><li>What you&#x27;ll use to call the test</li></ul>
+<h3>Secondary Metrics</h3>
+<ul><li>Support primary metric interpretation</li><li>Explain why/how the change worked</li></ul>
+<h3>Guardrail Metrics</h3>
+<ul><li>Things that shouldn&#x27;t get worse</li><li>Stop test if significantly negative</li></ul>
+<h3>Example: Pricing Page Test</h3>
+<ul><li><strong>Primary</strong>: Plan selection rate</li><li><strong>Secondary</strong>: Time on page, plan distribution</li><li><strong>Guardrail</strong>: Support tickets, refund rate</li></ul>
+<hr>
+<h2>Designing Variants</h2>
+<h3>What to Vary</h3>
+<p>| Category | Examples | |----------|----------| | Headlines/Copy | Message angle, value prop, specificity, tone | | Visual Design | Layout, color, images, hierarchy | | CTA | Button copy, size, placement, number | | Content | Information included, order, amount, social proof |</p>
+<h3>Best Practices</h3>
+<ul><li>Single, meaningful change</li><li>Bold enough to make a difference</li><li>True to the hypothesis</li></ul>
+<hr>
+<h2>Traffic Allocation</h2>
+<p>| Approach | Split | When to Use | |----------|-------|-------------| | Standard | 50/50 | Default for A/B | | Conservative | 90/10, 80/20 | Limit risk of bad variant | | Ramping | Start small, increase | Technical risk mitigation |</p>
+<p><strong>Considerations:</strong></p>
+<ul><li>Consistency: Users see same variant on return</li><li>Balanced exposure across time of day/week</li></ul>
+<hr>
+<h2>Implementation</h2>
+<h3>Client-Side</h3>
+<ul><li>JavaScript modifies page after load</li><li>Quick to implement, can cause flicker</li><li>Tools: PostHog, Optimizely, VWO</li></ul>
+<h3>Server-Side</h3>
+<ul><li>Variant determined before render</li><li>No flicker, requires dev work</li><li>Tools: PostHog, LaunchDarkly, Split</li></ul>
+<hr>
+<h2>Running the Test</h2>
+<h3>Pre-Launch Checklist</h3>
+<ul><li>[ ] Hypothesis documented</li><li>[ ] Primary metric defined</li><li>[ ] Sample size calculated</li><li>[ ] Variants implemented correctly</li><li>[ ] Tracking verified</li><li>[ ] QA completed on all variants</li></ul>
+<h3>During the Test</h3>
+<p><strong>DO:</strong></p>
+<ul><li>Monitor for technical issues</li><li>Check segment quality</li><li>Document external factors</li></ul>
+<p><strong>Avoid:</strong></p>
+<ul><li>Peek at results and stop early</li><li>Make changes to variants</li><li>Add traffic from new sources</li></ul>
+<h3>The Peeking Problem</h3>
+<p>Looking at results before reaching sample size and stopping early leads to false positives and wrong decisions. Pre-commit to sample size and trust the process.</p>
+<hr>
+<h2>Analyzing Results</h2>
+<h3>Statistical Significance</h3>
+<ul><li>95% confidence = p-value &lt; 0.05</li><li>Means &lt;5% chance result is random</li><li>Not a guarantee—just a threshold</li></ul>
+<h3>Analysis Checklist</h3>
+<ol><li><strong>Reach sample size?</strong> If not, result is preliminary</li><li><strong>Statistically significant?</strong> Check confidence intervals</li><li><strong>Effect size meaningful?</strong> Compare to MDE, project impact</li><li><strong>Secondary metrics consistent?</strong> Support the primary?</li><li><strong>Guardrail concerns?</strong> Anything get worse?</li><li><strong>Segment differences?</strong> Mobile vs. desktop? New vs. returning?</li></ol>
+<h3>Interpreting Results</h3>
+<p>| Result | Conclusion | |--------|------------| | Significant winner | Implement variant | | Significant loser | Keep control, learn why | | No significant difference | Need more traffic or bolder test | | Mixed signals | Dig deeper, maybe segment |</p>
+<hr>
+<h2>Documentation</h2>
+<p>Document every test with:</p>
+<ul><li>Hypothesis</li><li>Variants (with screenshots)</li><li>Results (sample, metrics, significance)</li><li>Decision and learnings</li></ul>
+<p><strong>For templates</strong>: See <a href="references/test-templates.md">references/test-templates.md</a></p>
+<hr>
+<h2>Growth Experimentation Program</h2>
+<p>Individual tests are valuable. A continuous experimentation program is a compounding asset. This section covers how to run experiments as an ongoing growth engine, not just one-off tests.</p>
+<h3>The Experiment Loop</h3>
+<pre><code>1. Generate hypotheses (from data, research, competitors, customer feedback)
+2. Prioritize with ICE scoring
+3. Design and run the test
+4. Analyze results with statistical rigor
+5. Promote winners to a playbook
+6. Generate new hypotheses from learnings
+→ Repeat</code></pre>
+<h3>Hypothesis Generation</h3>
+<p>Feed your experiment backlog from multiple sources:</p>
+<p>| Source | What to Look For | |--------|-----------------| | Analytics | Drop-off points, low-converting pages, underperforming segments | | Customer research | Pain points, confusion, unmet expectations | | Competitor analysis | Features, messaging, or UX patterns they use that you don&#x27;t | | Support tickets | Recurring questions or complaints about conversion flows | | Heatmaps/recordings | Where users hesitate, rage-click, or abandon | | Past experiments | &quot;Significant loser&quot; tests often reveal new angles to try |</p>
+<h3>ICE Prioritization</h3>
+<p>Score each hypothesis 1-10 on three dimensions:</p>
+<p>| Dimension | Question | |-----------|----------| | <strong>Impact</strong> | If this works, how much will it move the primary metric? | | <strong>Confidence</strong> | How sure are we this will work? (Based on data, not gut.) | | <strong>Ease</strong> | How fast and cheap can we ship and measure this? |</p>
+<p><strong>ICE Score</strong> = (Impact + Confidence + Ease) / 3</p>
+<p>Run highest-scoring experiments first. Re-score monthly as context changes.</p>
+<h3>Experiment Velocity</h3>
+<p>Track your experimentation rate as a leading indicator of growth:</p>
+<p>| Metric | Target | |--------|--------| | Experiments launched per month | 4-8 for most teams | | Win rate | 20-30% is common for mature programs (sustained higher rates may indicate conservative hypotheses) | | Average test duration | 2-4 weeks | | Backlog depth | 20+ hypotheses queued | | Cumulative lift | Compound gains from all winners |</p>
+<h3>The Experiment Playbook</h3>
+<p>When a test wins, don&#x27;t just implement it — document the pattern:</p>
+<pre><code>## [Experiment Name]
+**Date**: [date]
+**Hypothesis**: [the hypothesis]
+**Sample size**: [n per variant]
+**Result**: [winner/loser/inconclusive] — [primary metric] changed by [X%] (95% CI: [range], p=[value])
+**Guardrails**: [any guardrail metrics and their outcomes]
+**Segment deltas**: [notable differences by device, segment, or cohort]
+**Why it worked/failed**: [analysis]
+**Pattern**: [the reusable insight — e.g., &quot;social proof near pricing CTAs increases plan selection&quot;]
+**Apply to**: [other pages/flows where this pattern might work]
+**Status**: [implemented / parked / needs follow-up test]</code></pre>
+<p>Over time, your playbook becomes a library of proven growth patterns specific to your product and audience.</p>
+<h3>Experiment Cadence</h3>
+<p><strong>Weekly (30 min)</strong>: Review running experiments for technical issues and guardrail metrics. Don&#x27;t call winners early — but do stop tests where guardrails are significantly negative.</p>
+<p><strong>Bi-weekly</strong>: Conclude completed experiments. Analyze results, update playbook, launch next experiment from backlog.</p>
+<p><strong>Monthly (1 hour)</strong>: Review experiment velocity, win rate, cumulative lift. Replenish hypothesis backlog. Re-prioritize with ICE.</p>
+<p><strong>Quarterly</strong>: Audit the playbook. Which patterns have been applied broadly? Which winning patterns haven&#x27;t been scaled yet? What areas of the funnel are under-tested?</p>
+<hr>
+<h2>Common Mistakes</h2>
+<h3>Test Design</h3>
+<ul><li>Testing too small a change (undetectable)</li><li>Testing too many things (can&#x27;t isolate)</li><li>No clear hypothesis</li></ul>
+<h3>Execution</h3>
+<ul><li>Stopping early</li><li>Changing things mid-test</li><li>Not checking implementation</li></ul>
+<h3>Analysis</h3>
+<ul><li>Ignoring confidence intervals</li><li>Cherry-picking segments</li><li>Over-interpreting inconclusive results</li></ul>
+<hr>
+<h2>Task-Specific Questions</h2>
+<ol><li>What&#x27;s your current conversion rate?</li><li>How much traffic does this page get?</li><li>What change are you considering and why?</li><li>What&#x27;s the smallest improvement worth detecting?</li><li>What tools do you have for testing?</li><li>Have you tested this area before?</li></ol>
+<hr>
+<h2>Related Skills</h2>
+<ul><li><strong>cro</strong>: For generating test ideas based on CRO principles</li><li><strong>analytics</strong>: For setting up test measurement</li><li><strong>copywriting</strong>: For creating variant copy</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/ab-testing.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>objection-library</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/objection-library.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/objection-library">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/objection-library.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>objection-library</h1><p class="lede">Common B2B SaaS objections with response frameworks.</p><h1>Objection Library</h1>
+<p>Common B2B SaaS objections with response frameworks. Organized by category for quick reference.</p>
+<h2>Quick-Reference Table</h2>
+<p>For live calls. Find the objection, scan the response, reference the proof.</p>
+<p>| Objection | Response (1-line) | Proof Point | |-----------|--------------------|-------------| | &quot;Too expensive&quot; | &quot;Compared to what? Let&#x27;s look at what the problem costs you today.&quot; | ROI case study showing payback in X months | | &quot;No budget&quot; | &quot;When budget opens up, what would need to be true for this to be a priority?&quot; | Customer who started with a pilot to prove value | | &quot;Competitor is cheaper&quot; | &quot;They are — here&#x27;s what you give up at that price point.&quot; | Feature comparison + customer who switched | | &quot;Not the right time&quot; | &quot;What changes next quarter that makes it better timing?&quot; | Cost-of-delay calculation | | &quot;Maybe next quarter&quot; | &quot;Happy to reconnect. What would a pilot look like before then?&quot; | Customer who started small and expanded | | &quot;We use X already&quot; | &quot;How&#x27;s that working for [specific pain area]?&quot; | Customer who switched from X | | &quot;What makes you different?&quot; | &quot;For teams like yours, the biggest difference is [specific differentiator].&quot; | Side-by-side comparison for their use case | | &quot;Need to check with my boss&quot; | &quot;Absolutely. What would help you make the case? I can send materials.&quot; | Champion one-pager, ROI calculator | | &quot;The committee decides&quot; | &quot;Who&#x27;s on the committee and what does each person care about?&quot; | Multi-persona case study | | &quot;What we have works fine&quot; | &quot;It does work — the question is whether it&#x27;s costing you more than it should.&quot; | Benchmark data showing efficiency gaps | | &quot;Not broken, don&#x27;t fix it&quot; | &quot;Agreed — this isn&#x27;t about fixing, it&#x27;s about the opportunity cost of the current approach.&quot; | Customer who didn&#x27;t know what they were missing | | &quot;Does it integrate with X?&quot; | &quot;Yes / Let me check and get you specifics by end of day.&quot; | Integration documentation, customer using same stack | | &quot;Security concerns&quot; | &quot;Completely fair. Here&#x27;s our security overview — happy to loop in our team.&quot; | SOC 2 report, security whitepaper | | &quot;Can it scale?&quot; | &quot;We serve companies from [small] to [large]. Here&#x27;s an example at your scale.&quot; | Case study at similar scale | | &quot;We tried something like this before&quot; | &quot;What went wrong? Understanding that helps me show how we&#x27;re different.&quot; | Customer with same failed experience who succeeded with you |</p>
+<hr>
+<h2>Detailed Objection Responses</h2>
+<h3>Price Objections</h3>
+<h4>&quot;It&#x27;s too expensive&quot;</h4>
+<p><strong>Why they say it:</strong> May be genuine budget constraint, sticker shock, or negotiation tactic. Often means they don&#x27;t yet see enough value to justify the cost.</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Don&#x27;t defend the price immediately. Ask &quot;Compared to what?&quot;</li><li>Reframe from cost to investment — what does the problem cost them today?</li><li>Walk through the ROI calculation together</li><li>If budget is real, explore smaller starting points</li></ol>
+<p><strong>Talk track:</strong></p>
+<blockquote><p>&quot;I hear that. Let me ask — what&#x27;s the cost of the problem we discussed? You mentioned your team spends [X hours] on [task] every week. At your team&#x27;s loaded cost, that&#x27;s roughly [$ amount] per year. Our solution runs [$ price] — so the question is whether eliminating that problem is worth the investment.&quot;</p></blockquote>
+<p><strong>Proof point:</strong> ROI calculator or case study showing payback period.</p>
+<p><strong>Follow-up question:</strong> &quot;If the ROI was clear, is this something you&#x27;d prioritize this quarter?&quot;</p>
+<hr>
+<h4>&quot;We don&#x27;t have budget for this&quot;</h4>
+<p><strong>Why they say it:</strong> Budget may genuinely be allocated. Or they haven&#x27;t identified budget because priority isn&#x27;t established.</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Validate — budget constraints are real</li><li>Understand timing — when does budget cycle reset?</li><li>Explore alternatives — pilot, smaller scope, different budget line</li><li>Help them build the business case to create budget</li></ol>
+<p><strong>Talk track:</strong></p>
+<blockquote><p>&quot;Totally understand. Two questions: When does your next budget cycle open? And — if we could show clear ROI with a limited pilot, is that something you could fund from a different line item? Sometimes teams fund this from the efficiency savings it creates.&quot;</p></blockquote>
+<p><strong>Proof point:</strong> Customer who started with a small pilot and expanded after proving ROI.</p>
+<p><strong>Follow-up question:</strong> &quot;Would it help if I put together an ROI brief you could share with your finance team?&quot;</p>
+<hr>
+<h4>&quot;Competitor X is cheaper&quot;</h4>
+<p><strong>Why they say it:</strong> They&#x27;re comparing prices, possibly without comparing capabilities. May be using competitor price as leverage.</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Acknowledge the price difference — don&#x27;t pretend it doesn&#x27;t exist</li><li>Shift to total cost of ownership and value delivered</li><li>Highlight what they lose at the lower price point</li><li>Share proof from customers who evaluated both</li></ol>
+<p><strong>Talk track:</strong></p>
+<blockquote><p>&quot;You&#x27;re right, [Competitor] is less expensive. Here&#x27;s what I&#x27;ve seen from teams who evaluated both: [Competitor] works well for [their strength]. Where it falls short is [specific gap]. Customers like [name] actually switched to us after starting with [Competitor] because [specific reason]. The question is whether [specific capability] is worth the difference for your team.&quot;</p></blockquote>
+<p><strong>Proof point:</strong> Customer who switched from the competitor, with specific reasons.</p>
+<p><strong>Follow-up question:</strong> &quot;What&#x27;s most important to your team — the lowest price or the best fit for [their specific need]?&quot;</p>
+<hr>
+<h3>Timing Objections</h3>
+<h4>&quot;Not the right time&quot;</h4>
+<p><strong>Why they say it:</strong> Competing priorities, organizational change, genuine capacity constraint, or lack of urgency.</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Understand what&#x27;s competing for their attention</li><li>Quantify the cost of waiting</li><li>Explore low-commitment next steps that keep momentum</li><li>Set a concrete follow-up date</li></ol>
+<p><strong>Talk track:</strong></p>
+<blockquote><p>&quot;I get it — timing matters. Can I ask what&#x27;s taking priority right now? The reason I bring up timing is that every month of [problem], based on our earlier conversation, costs your team roughly [$ amount]. A 3-month delay is [$ amount]. What if we mapped out a start date that works with your calendar so you&#x27;re not losing that value?&quot;</p></blockquote>
+<p><strong>Proof point:</strong> Cost-of-delay calculation based on their specific numbers.</p>
+<p><strong>Follow-up question:</strong> &quot;What would need to change for this to move up in priority?&quot;</p>
+<hr>
+<h4>&quot;Maybe next quarter&quot;</h4>
+<p><strong>Why they say it:</strong> Genuine scheduling, or a polite way of saying &quot;not interested enough right now.&quot;</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Accept the timeline gracefully</li><li>Propose a small action now that maintains momentum</li><li>Get a specific date for follow-up</li><li>Send value in the meantime (content, benchmarks, insights)</li></ol>
+<p><strong>Talk track:</strong></p>
+<blockquote><p>&quot;Next quarter works. To make sure we hit the ground running, would it make sense to do [small next step] now? That way when Q[X] starts, you&#x27;re not starting from scratch. I&#x27;ll also send over [relevant content] in the meantime. Can we lock in [specific date] to reconnect?&quot;</p></blockquote>
+<p><strong>Proof point:</strong> Customer who started the evaluation process early and was live by their target date.</p>
+<p><strong>Follow-up question:</strong> &quot;Is there anything I can send between now and then that would be helpful?&quot;</p>
+<hr>
+<h3>Competition Objections</h3>
+<h4>&quot;We already use X&quot;</h4>
+<p><strong>Why they say it:</strong> They have an existing solution and switching has real costs. May be satisfied, or may have frustrations they haven&#x27;t voiced.</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Don&#x27;t trash the competitor — ask how it&#x27;s working</li><li>Probe for specific pain points with their current solution</li><li>Position as complementary if possible, replacement if not</li><li>Offer a side-by-side comparison or trial</li></ol>
+<p><strong>Talk track:</strong></p>
+<blockquote><p>&quot;How&#x27;s that working for you? Specifically, when it comes to [area where you&#x27;re stronger] — is that meeting your needs? The reason I ask is that most teams who come to us from [Competitor] tell us [specific pain point] was the tipping point. Not saying that&#x27;s you, but worth exploring.&quot;</p></blockquote>
+<p><strong>Proof point:</strong> Customer who switched from that specific competitor.</p>
+<p><strong>Follow-up question:</strong> &quot;If you could change one thing about your current setup, what would it be?&quot;</p>
+<hr>
+<h4>&quot;What makes you different?&quot;</h4>
+<p><strong>Why they say it:</strong> They&#x27;re evaluating options and want a clear differentiator. Sometimes a genuine question, sometimes a test.</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Don&#x27;t list features — give the one thing that matters most for their situation</li><li>Tie the differentiator to their specific pain</li><li>Back it up with proof</li><li>Offer to show, not just tell</li></ol>
+<p><strong>Talk track:</strong></p>
+<blockquote><p>&quot;For teams like yours — [their industry/size/use case] — the biggest difference is [specific differentiator]. That matters because [connection to their pain]. For example, [Customer] was evaluating us alongside [Competitor] and chose us because [specific reason]. Want me to walk you through how that works?&quot;</p></blockquote>
+<p><strong>Proof point:</strong> Case study of a customer who chose you over alternatives.</p>
+<p><strong>Follow-up question:</strong> &quot;What&#x27;s the most important criteria for your decision?&quot;</p>
+<hr>
+<h3>Authority Objections</h3>
+<h4>&quot;I need to check with my boss&quot;</h4>
+<p><strong>Why they say it:</strong> They may not be the decision maker, or they need internal buy-in to proceed. Could also be a stall tactic.</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Support them, don&#x27;t pressure them</li><li>Arm them with materials to sell internally</li><li>Offer to join a meeting with their boss</li><li>Understand what their boss cares about</li></ol>
+<p><strong>Talk track:</strong></p>
+<blockquote><p>&quot;Absolutely — what would help you make the case? I can put together a one-pager that covers the ROI and addresses the concerns your boss is likely to have. Also happy to jump on a quick call with them if that would be helpful. What does your boss typically prioritize — cost savings, risk reduction, or efficiency?&quot;</p></blockquote>
+<p><strong>Proof point:</strong> Champion enablement one-pager, ROI calculator.</p>
+<p><strong>Follow-up question:</strong> &quot;What questions do you think your boss will ask?&quot;</p>
+<hr>
+<h4>&quot;A committee decides this&quot;</h4>
+<p><strong>Why they say it:</strong> Enterprise buying involves multiple stakeholders. Genuine process, not a brush-off.</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Map the buying committee — who&#x27;s involved and what each person cares about</li><li>Provide persona-specific materials</li><li>Offer to present to the committee</li><li>Help your champion navigate the internal process</li></ol>
+<p><strong>Talk track:</strong></p>
+<blockquote><p>&quot;That makes sense. Can you walk me through who&#x27;s on the committee and what each person cares about? I can tailor materials for each stakeholder so you&#x27;re not doing all the heavy lifting. I&#x27;ve also got a deck designed for executive presentations if that would be useful.&quot;</p></blockquote>
+<p><strong>Proof point:</strong> Multi-stakeholder case study showing how different personas were addressed.</p>
+<p><strong>Follow-up question:</strong> &quot;Who on the committee is most likely to push back, and what would their concern be?&quot;</p>
+<hr>
+<h3>Status Quo Objections</h3>
+<h4>&quot;What we have works fine&quot;</h4>
+<p><strong>Why they say it:</strong> Inertia is real. The current solution may be adequate, and change has real costs.</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Agree — don&#x27;t argue with their experience</li><li>Shift from &quot;broken vs. fixed&quot; to &quot;good vs. great&quot;</li><li>Introduce the concept of opportunity cost</li><li>Show what peers are achieving</li></ol>
+<p><strong>Talk track:</strong></p>
+<blockquote><p>&quot;It probably does work — and I wouldn&#x27;t suggest changing something that&#x27;s truly meeting your needs. The question I&#x27;d ask is: is &#x27;works fine&#x27; the bar? Teams using [your product] are seeing [specific outcome]. If you&#x27;re leaving [X% improvement] on the table, is that worth exploring?&quot;</p></blockquote>
+<p><strong>Proof point:</strong> Benchmark data showing what&#x27;s possible vs. status quo.</p>
+<p><strong>Follow-up question:</strong> &quot;If there were one area where your current approach could be better, what would it be?&quot;</p>
+<hr>
+<h3>Technical Objections</h3>
+<h4>&quot;Does it integrate with X?&quot;</h4>
+<p><strong>Why they say it:</strong> Integration is a real requirement. They need to know your product fits their stack.</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Answer directly — yes, no, or &quot;let me check&quot;</li><li>If yes, provide specifics (native, API, Zapier, etc.)</li><li>If no, explain alternatives or workarounds</li><li>Never bluff — they&#x27;ll find out during evaluation</li></ol>
+<p><strong>Talk track (if yes):</strong></p>
+<blockquote><p>&quot;Yes, we integrate with [X] natively. It takes about [time] to set up. [Customer] runs the same stack and here&#x27;s how they have it configured.&quot;</p></blockquote>
+<p><strong>Talk track (if no):</strong></p>
+<blockquote><p>&quot;We don&#x27;t have a native integration with [X] today. Here&#x27;s what customers typically do: [alternative]. We also have an open API that [description]. Would it help to get our technical team on a call to explore options?&quot;</p></blockquote>
+<p><strong>Proof point:</strong> Customer using the same tech stack, integration documentation.</p>
+<p><strong>Follow-up question:</strong> &quot;What other tools are in your stack that we&#x27;d need to work with?&quot;</p>
+<hr>
+<h4>&quot;We have security concerns&quot;</h4>
+<p><strong>Why they say it:</strong> Legitimate concern, especially in regulated industries or enterprise. Non-negotiable for many buyers.</p>
+<p><strong>Response approach:</strong></p>
+<ol><li>Take it seriously — never dismiss security concerns</li><li>Provide documentation proactively (SOC 2, security whitepaper)</li><li>Offer to loop in your security team</li><li>Ask about their specific requirements</li></ol>
+<p><strong>Talk track:</strong></p>
+<blockquote><p>&quot;That&#x27;s exactly the right question to ask. Here&#x27;s our security overview — we&#x27;re [SOC 2 Type II / ISO 27001 / etc.] certified, and I can share our full security documentation. We also have a security team that&#x27;s happy to do a review call with your infosec team. What are your specific requirements?&quot;</p></blockquote>
+<p><strong>Proof point:</strong> Security certifications, compliance documentation, customers in regulated industries.</p>
+<p><strong>Follow-up question:</strong> &quot;Do you have a security questionnaire you&#x27;d like us to fill out?&quot;</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/objection-library.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

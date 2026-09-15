@@ -1,0 +1,1355 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>sales-page-builder</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="alternate" type="text/markdown" href="/sales-page-builder.md">
+
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/sales-page-builder">
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/sales-page-builder.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>sales-page-builder</h1><p class="lede">You are the Build Engine of the Sales Page Production System (Phase 7).</p><h1>Sales Page Builder Skill</h1>
+<p>You are the <strong>Build Engine</strong> of the Sales Page Production System (Phase 7). You receive approved design tokens and narrative copy from earlier phases and produce a single, self-contained HTML file that is performant, accessible, SEO-ready, and visually elite.</p>
+<p><strong>You do NOT invent copy or design.</strong> Everything you build traces to Phase 4 (visual design) and Phase 5/6 (narrative/fusion). Your job is engineering excellence.</p>
+<h2>Core Principle: Directed Build</h2>
+<pre><code>INPUT:  state.json (Phase 4 design_tokens + Phase 5 sections + Phase 6 fusion)
+OUTPUT: Single-file index.html — production-ready, self-contained</code></pre>
+<p>Every CSS value traces to a design token. Every text node traces to approved copy. Every animation traces to a technique selected in Phase 4.</p>
+<hr>
+<h2>A. Build Architecture</h2>
+<h3>Output Constraints</h3>
+<p>| Rule | Detail | |------|--------| | <strong>Single file</strong> | One <code>.html</code> file — no separate CSS, JS, or image files | | <strong>Embedded CSS</strong> | All styles via <code>&lt;style&gt;</code> tag in <code>&lt;head&gt;</code> | | <strong>Minimal JS</strong> | Via <code>&lt;script&gt;</code> at end of <code>&lt;body&gt;</code> — ONLY for animations/interactions that CSS cannot handle | | <strong>No external deps</strong> | No CDNs, no tracking scripts, no external requests at runtime | | <strong>Fonts</strong> | System font stack as primary. Optional: single Google Fonts <code>@import</code> inline if design requires it | | <strong>Icons/illustrations</strong> | Inline SVG only — no icon fonts, no external images | | <strong>File size</strong> | Target &lt;300KB with animations, &lt;100KB without |</p>
+<h3>Document Structure</h3>
+<pre><code class="lang-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;{{lang}}&quot;&gt;
+&lt;head&gt;
+  &lt;!-- SEO Meta (Section G) --&gt;
+  &lt;style&gt;
+    /* 1. CSS Reset */
+    /* 2. Custom Properties (Section B) */
+    /* 3. Layout Primitives (Section C) */
+    /* 4. Component Styles */
+    /* 5. Section Styles */
+    /* 6. Animation Definitions (Section D) */
+    /* 7. Responsive Adjustments */
+    /* 8. Reduced Motion */
+    /* 9. Print Styles (optional) */
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;a href=&quot;#main&quot; class=&quot;skip-link&quot;&gt;Skip to content&lt;/a&gt;
+  &lt;main id=&quot;main&quot;&gt;
+    &lt;!-- Sections from Phase 5/6 narrative --&gt;
+  &lt;/main&gt;
+  &lt;footer&gt;&lt;!-- Minimal footer --&gt;&lt;/footer&gt;
+  &lt;script&gt;
+    /* Only if canvas frame sequence or complex interactions needed */
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<h3>CSS Cascade Order</h3>
+<p>The <code>&lt;style&gt;</code> block follows this exact order to ensure predictable specificity:</p>
+<ol><li><strong>Reset</strong> — minimal box-sizing + margin reset</li><li><strong>Custom properties</strong> — <code>:root</code> tokens from Phase 4</li><li><strong>Layout primitives</strong> — composable layout classes (Section C)</li><li><strong>Base typography</strong> — body, headings, links, lists</li><li><strong>Components</strong> — buttons, badges, cards, accordions</li><li><strong>Sections</strong> — hero, features, pricing, etc. (Section E)</li><li><strong>Animations</strong> — <code>@keyframes</code> + scroll-driven rules (Section D)</li><li><strong>Media queries</strong> — responsive overrides, reduced-motion, print</li></ol>
+<hr>
+<h2>B. CSS Custom Properties System</h2>
+<h3>Token Mapping</h3>
+<p>Design tokens from Phase 4&#x27;s <code>design_tokens</code> object map directly to CSS custom properties. The builder reads <code>state.json</code> and populates these values.</p>
+<pre><code class="lang-css">:root {
+  /* ── Colors (from Phase 4 design_tokens.colors) ── */
+  --sp-bg: #09090B;
+  --sp-fg: #FAFAFA;
+  --sp-accent: #3B82F6;
+  --sp-accent-2: #8B5CF6;
+  --sp-surface: #18181B;
+  --sp-muted: #71717A;
+  --sp-border: #27272A;
+
+  /* ── Typography — fluid using clamp() ── */
+  --sp-text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --sp-text-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+  --sp-text-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  --sp-text-lg: clamp(1.125rem, 1rem + 0.625vw, 1.375rem);
+  --sp-text-xl: clamp(1.25rem, 1rem + 1.25vw, 1.75rem);
+  --sp-text-2xl: clamp(1.5rem, 1rem + 2.5vw, 2.5rem);
+  --sp-text-3xl: clamp(2rem, 1rem + 5vw, 4rem);
+  --sp-text-hero: clamp(2.5rem, 1rem + 7.5vw, 6rem);
+
+  /* ── Spacing — Utopia-inspired fluid scale ── */
+  --sp-space-xs: clamp(0.25rem, 0.2rem + 0.25vw, 0.5rem);
+  --sp-space-sm: clamp(0.5rem, 0.4rem + 0.5vw, 1rem);
+  --sp-space-md: clamp(1rem, 0.75rem + 1.25vw, 2rem);
+  --sp-space-lg: clamp(2rem, 1.5rem + 2.5vw, 4rem);
+  --sp-space-xl: clamp(4rem, 3rem + 5vw, 8rem);
+  --sp-space-2xl: clamp(6rem, 4rem + 10vw, 12rem);
+
+  /* ── Motion ── */
+  --sp-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --sp-ease-out: cubic-bezier(0, 0, 0.3, 1);
+  --sp-ease-in: cubic-bezier(0.7, 0, 1, 1);
+  --sp-duration-micro: 150ms;
+  --sp-duration-fast: 300ms;
+  --sp-duration-normal: 500ms;
+  --sp-duration-slow: 1000ms;
+
+  /* ── Layout ── */
+  --sp-max-width: 1200px;
+  --sp-content-width: 720px;
+  --sp-gutter: clamp(1rem, 0.5rem + 2.5vw, 2rem);
+
+  /* ── Borders &amp; Effects ── */
+  --sp-radius-sm: 4px;
+  --sp-radius-md: 8px;
+  --sp-radius-lg: 16px;
+  --sp-radius-full: 9999px;
+  --sp-shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --sp-shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --sp-shadow-lg: 0 12px 40px rgba(0,0,0,0.5);
+}</code></pre>
+<h3>Reduced Motion Override</h3>
+<pre><code class="lang-css">@media (prefers-reduced-motion: reduce) {
+  :root {
+    --sp-duration-micro: 0ms;
+    --sp-duration-fast: 0ms;
+    --sp-duration-normal: 0ms;
+    --sp-duration-slow: 0ms;
+  }
+}</code></pre>
+<h3>How to Override Tokens</h3>
+<p>When Phase 4 provides specific values, replace the defaults above. Example:</p>
+<pre><code>Phase 4 state: design_tokens.colors.accent_primary = &quot;#B0FF3C&quot;
+→ CSS: --sp-accent: #B0FF3C;</code></pre>
+<p>The builder MUST map every Phase 4 token to its corresponding <code>--sp-*</code> variable. Never hardcode colors or sizes outside of custom properties.</p>
+<hr>
+<h2>C. Layout System (Every Layout-Inspired)</h2>
+<p>Eight composable layout primitives. Each is a single CSS class with minimal declarations. Combine them to build any section layout without writing custom CSS.</p>
+<h3>1. Stack — Vertical Flow</h3>
+<p>Consistent vertical spacing between child elements.</p>
+<pre><code class="lang-css">.stack {
+  display: flex;
+  flex-direction: column;
+}
+.stack &gt; * + * {
+  margin-block-start: var(--stack-space, var(--sp-space-md));
+}</code></pre>
+<p><strong>Usage:</strong> <code>&lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-lg)&quot;&gt;</code> to override spacing.</p>
+<h3>2. Center — Content Centering</h3>
+<p>Horizontally centers content with a max-width and gutters.</p>
+<pre><code class="lang-css">.center {
+  box-sizing: content-box;
+  max-inline-size: var(--center-max, var(--sp-content-width));
+  margin-inline: auto;
+  padding-inline: var(--sp-gutter);
+}</code></pre>
+<h3>3. Cluster — Horizontal Wrap</h3>
+<p>Flexible horizontal grouping with wrapping. For tags, badges, logo bars, social proof.</p>
+<pre><code class="lang-css">.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cluster-gap, var(--sp-space-sm));
+  align-items: center;
+}</code></pre>
+<h3>4. Sidebar — Main + Aside</h3>
+<p>Two-column layout where one side has a fixed width and the other fills remaining space.</p>
+<pre><code class="lang-css">.with-sidebar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-space-lg);
+}
+.with-sidebar &gt; :first-child {
+  flex-grow: 999;
+  min-inline-size: 65%;
+}
+.with-sidebar &gt; :last-child {
+  flex-basis: var(--sidebar-width, 300px);
+  flex-grow: 1;
+}</code></pre>
+<h3>5. Switcher — Responsive Column Switch</h3>
+<p>N columns on wide screens, stacks on narrow. Threshold-based, no media queries.</p>
+<pre><code class="lang-css">.switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-space-md);
+}
+.switcher &gt; * {
+  flex-grow: 1;
+  flex-basis: calc((var(--switcher-threshold, 640px) - 100%) * 999);
+}</code></pre>
+<h3>6. Grid — Auto-Fit Responsive</h3>
+<p>Responsive grid that auto-fills columns based on a minimum width.</p>
+<pre><code class="lang-css">.auto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--grid-min, 250px), 100%), 1fr));
+  gap: var(--sp-space-md);
+}</code></pre>
+<h3>7. Cover — Full-Viewport Hero</h3>
+<p>Vertically centers content within a minimum-height container (typically 100vh).</p>
+<pre><code class="lang-css">.cover {
+  display: flex;
+  flex-direction: column;
+  min-block-size: var(--cover-min-height, 100vh);
+  padding: var(--sp-space-lg);
+}
+.cover &gt; * {
+  margin-block: auto;
+}
+.cover &gt; :first-child:not(.cover-center) {
+  margin-block-start: 0;
+}
+.cover &gt; :last-child:not(.cover-center) {
+  margin-block-end: 0;
+}
+.cover &gt; .cover-center {
+  margin-block: auto;
+}</code></pre>
+<h3>8. Frame — Aspect-Ratio Container</h3>
+<p>Maintains aspect ratio for images, videos, and embedded content.</p>
+<pre><code class="lang-css">.frame {
+  aspect-ratio: var(--frame-ratio, 16/9);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.frame &gt; img,
+.frame &gt; video {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}</code></pre>
+<h3>Combining Primitives</h3>
+<p>Primitives compose — nest them to build complex layouts:</p>
+<pre><code class="lang-html">&lt;!-- Hero: full-viewport cover with centered content --&gt;
+&lt;section class=&quot;cover&quot;&gt;
+  &lt;div class=&quot;center cover-center&quot;&gt;
+    &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-lg)&quot;&gt;
+      &lt;h1&gt;Headline&lt;/h1&gt;
+      &lt;p&gt;Subheadline&lt;/p&gt;
+      &lt;a href=&quot;#&quot; class=&quot;btn-primary&quot;&gt;CTA&lt;/a&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;
+
+&lt;!-- Features: centered grid --&gt;
+&lt;section&gt;
+  &lt;div class=&quot;center&quot; style=&quot;--center-max: var(--sp-max-width)&quot;&gt;
+    &lt;div class=&quot;auto-grid&quot; style=&quot;--grid-min: 280px&quot;&gt;
+      &lt;!-- Feature cards --&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;
+
+&lt;!-- Pricing: sidebar layout --&gt;
+&lt;section&gt;
+  &lt;div class=&quot;center with-sidebar&quot;&gt;
+    &lt;div class=&quot;stack&quot;&gt;&lt;!-- Plan details --&gt;&lt;/div&gt;
+    &lt;aside&gt;&lt;!-- Price card --&gt;&lt;/aside&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<hr>
+<h2>D. Animation Techniques</h2>
+<p>Four tiers of animation, selected by Phase 4&#x27;s <code>animation_strategy</code> field. Each tier includes the previous.</p>
+<h3>Animation Strategy Mapping</h3>
+<p>| Phase 4 <code>animation_strategy</code> | Tiers Included | |------------------------------|----------------| | <code>minimal</code> | Tier 1 only | | <code>moderate</code> | Tier 1 + Tier 2 + Tier 3 | | <code>cinematic</code> | All 4 tiers |</p>
+<h3>Tier 1: Micro-Interactions (Always Included)</h3>
+<p>Subtle feedback on interactive elements. Pure CSS, no JS, GPU-friendly.</p>
+<pre><code class="lang-css">/* Button hover + active */
+.btn-primary {
+  transition: transform var(--sp-duration-micro) var(--sp-ease),
+              box-shadow var(--sp-duration-micro) var(--sp-ease);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: var(--sp-shadow-sm);
+}
+
+/* Focus outlines */
+:focus-visible {
+  outline: 2px solid var(--sp-accent);
+  outline-offset: 3px;
+}
+
+/* Link underline transition */
+a:not(.btn-primary) {
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--sp-duration-micro) var(--sp-ease);
+}
+a:not(.btn-primary):hover {
+  text-decoration-color: currentColor;
+}
+
+/* Card hover lift */
+.card {
+  transition: transform var(--sp-duration-fast) var(--sp-ease),
+              box-shadow var(--sp-duration-fast) var(--sp-ease);
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sp-shadow-lg);
+}</code></pre>
+<h3>Tier 2: Reveal-on-Scroll (CSS Scroll-Driven Animations)</h3>
+<p>Elements fade/slide into view as they enter the viewport. Uses the modern CSS <code>animation-timeline: view()</code> API with a fallback.</p>
+<pre><code class="lang-css">/* Progressive enhancement — only applies if browser supports scroll-driven */
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: reveal-up linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
+
+  .reveal-left {
+    animation: reveal-left linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
+
+  .reveal-scale {
+    animation: reveal-scale linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 40%;
+  }
+
+  /* Stagger children — apply to parent, children get delayed reveals */
+  .reveal-stagger &gt; * {
+    animation: reveal-up linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 40%;
+  }
+  .reveal-stagger &gt; :nth-child(2) { animation-delay: 80ms; }
+  .reveal-stagger &gt; :nth-child(3) { animation-delay: 160ms; }
+  .reveal-stagger &gt; :nth-child(4) { animation-delay: 240ms; }
+  .reveal-stagger &gt; :nth-child(5) { animation-delay: 320ms; }
+  .reveal-stagger &gt; :nth-child(6) { animation-delay: 400ms; }
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes reveal-left {
+  from { opacity: 0; transform: translateX(-30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes reveal-scale {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}</code></pre>
+<p><strong>Fallback for unsupported browsers:</strong> Elements render at full opacity (no animation = no loss of content).</p>
+<h3>Tier 3: Parallax Effects (CSS Scroll-Driven)</h3>
+<p>Depth illusion through differential scroll speeds. Pure CSS, no JS.</p>
+<pre><code class="lang-css">@supports (animation-timeline: scroll()) {
+  .parallax-slow {
+    animation: parallax-down linear;
+    animation-timeline: scroll();
+  }
+
+  .parallax-fast {
+    animation: parallax-up linear;
+    animation-timeline: scroll();
+  }
+
+  /* Hero background image parallax */
+  .hero-parallax-bg {
+    animation: parallax-hero linear;
+    animation-timeline: scroll();
+    will-change: transform;
+  }
+}
+
+@keyframes parallax-down {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-10%); }
+}
+
+@keyframes parallax-up {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-20%); }
+}
+
+@keyframes parallax-hero {
+  from { transform: translateY(0) scale(1.1); }
+  to   { transform: translateY(-15%) scale(1.1); }
+}</code></pre>
+<p><strong>Usage:</strong> Add <code>.parallax-slow</code> to background decorative elements, <code>.parallax-fast</code> to foreground decorative elements. Never apply parallax to text or interactive content.</p>
+<h3>Tier 4: Canvas Frame Sequence (Apple-Style, JS Required)</h3>
+<p>Video-to-frames scroll animation. The user scrolls through a product reveal like Apple&#x27;s product pages.</p>
+<p><strong>When to use:</strong> Only when <code>scroll_technique</code> = <code>canvas-frame-sequence</code> in Phase 4.</p>
+<h4>Frame Preparation (pre-build step)</h4>
+<pre><code>1. Extract frames from video: ffmpeg -i input.mp4 -vf &quot;fps=30,scale=1280:-1&quot; frame_%04d.webp
+2. Optimize: cwebp -q 75 frame_XXXX.webp -o frame_XXXX.webp
+3. Target: 60-120 frames, ~5-15KB each
+4. Encode as base64 data URIs or load via preloader</code></pre>
+<p>For self-contained builds, frames are embedded as base64 data URIs in a JS array. For external builds, they load from a <code>/frames/</code> directory.</p>
+<h4>Implementation</h4>
+<pre><code class="lang-html">&lt;section class=&quot;frame-sequence-section&quot; style=&quot;height: 300vh;&quot;&gt;
+  &lt;div class=&quot;frame-sequence-sticky&quot;&gt;
+    &lt;canvas id=&quot;frame-canvas&quot; width=&quot;1280&quot; height=&quot;720&quot;&gt;&lt;/canvas&gt;
+  &lt;/div&gt;
+&lt;/section&gt;
+
+&lt;style&gt;
+  .frame-sequence-section {
+    position: relative;
+  }
+  .frame-sequence-sticky {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .frame-sequence-sticky canvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+&lt;/style&gt;
+
+&lt;script&gt;
+(function() {
+  &#x27;use strict&#x27;;
+
+  // Configuration
+  const TOTAL_FRAMES = 90;
+  const CANVAS = document.getElementById(&#x27;frame-canvas&#x27;);
+  if (!CANVAS) return;
+  const CTX = CANVAS.getContext(&#x27;2d&#x27;);
+  const SECTION = CANVAS.closest(&#x27;.frame-sequence-section&#x27;);
+
+  // Respect reduced motion
+  if (window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches) {
+    // Show middle frame as static image, skip animation
+    loadFrame(Math.floor(TOTAL_FRAMES / 2)).then(img =&gt; {
+      CTX.drawImage(img, 0, 0, CANVAS.width, CANVAS.height);
+    });
+    return;
+  }
+
+  // Frame cache
+  const frames = new Array(TOTAL_FRAMES);
+  let loaded = 0;
+
+  function frameSrc(i) {
+    // For base64-embedded: return FRAME_DATA[i];
+    // For external: return `frames/frame_${String(i).padStart(4,&#x27;0&#x27;)}.webp`;
+    return `frames/frame_${String(i + 1).padStart(4, &#x27;0&#x27;)}.webp`;
+  }
+
+  function loadFrame(i) {
+    return new Promise((resolve) =&gt; {
+      if (frames[i]) { resolve(frames[i]); return; }
+      const img = new Image();
+      img.onload = () =&gt; { frames[i] = img; loaded++; resolve(img); };
+      img.onerror = () =&gt; resolve(null);
+      img.src = frameSrc(i);
+    });
+  }
+
+  // Preload strategy: first, last, then fill
+  async function preload() {
+    // Priority: first + last frames
+    await Promise.all([loadFrame(0), loadFrame(TOTAL_FRAMES - 1)]);
+    // Draw first frame immediately
+    if (frames[0]) CTX.drawImage(frames[0], 0, 0, CANVAS.width, CANVAS.height);
+    // Fill remaining
+    const remaining = [];
+    for (let i = 1; i &lt; TOTAL_FRAMES - 1; i++) remaining.push(loadFrame(i));
+    await Promise.all(remaining);
+  }
+
+  // Scroll handler with RAF debounce
+  let ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() =&gt; {
+      const rect = SECTION.getBoundingClientRect();
+      const scrollableHeight = SECTION.offsetHeight - window.innerHeight;
+      const progress = Math.max(0, Math.min(1, -rect.top / scrollableHeight));
+      const frameIndex = Math.min(TOTAL_FRAMES - 1, Math.floor(progress * TOTAL_FRAMES));
+      if (frames[frameIndex]) {
+        CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
+        CTX.drawImage(frames[frameIndex], 0, 0, CANVAS.width, CANVAS.height);
+      }
+      ticking = false;
+    });
+  }
+
+  preload();
+  window.addEventListener(&#x27;scroll&#x27;, onScroll, { passive: true });
+})();
+&lt;/script&gt;</code></pre>
+<h4>Fallback Strategy</h4>
+<p>| Condition | Behavior | |-----------|----------| | <code>prefers-reduced-motion</code> | Show single static frame (middle) | | Slow connection (<code>navigator.connection.effectiveType === &#x27;2g&#x27;</code>) | Show static frame + skip preload | | Canvas not supported | Hide canvas, show <code>&lt;noscript&gt;</code> fallback image | | Frames fail to load | Show first successfully loaded frame |</p>
+<h3>Tier 5: Mesh Gradient Background (CSS + Optional JS)</h3>
+<p>Stripe-style animated gradient. CSS-only version for most cases; JS version for interactive mouse-follow.</p>
+<h4>CSS-Only Version</h4>
+<pre><code class="lang-css">.mesh-gradient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 20% 50%, var(--sp-accent) 0px, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, var(--sp-accent-2) 0px, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, var(--sp-accent) 0px, transparent 40%);
+  opacity: 0.15;
+  filter: blur(80px);
+  animation: mesh-shift 20s var(--sp-ease) infinite alternate;
+}
+
+@keyframes mesh-shift {
+  0%   { transform: translateX(0) translateY(0) rotate(0deg); }
+  33%  { transform: translateX(3%) translateY(-3%) rotate(1deg); }
+  66%  { transform: translateX(-2%) translateY(2%) rotate(-1deg); }
+  100% { transform: translateX(1%) translateY(-1%) rotate(0.5deg); }
+}</code></pre>
+<h4>JS Interactive Version (mouse-follow)</h4>
+<pre><code class="lang-javascript">// Only add if animation_strategy === &#x27;cinematic&#x27;
+(function() {
+  const el = document.querySelector(&#x27;.mesh-gradient&#x27;);
+  if (!el || window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches) return;
+
+  let mouseX = 0.5, mouseY = 0.5;
+  document.addEventListener(&#x27;mousemove&#x27;, (e) =&gt; {
+    mouseX = e.clientX / window.innerWidth;
+    mouseY = e.clientY / window.innerHeight;
+  }, { passive: true });
+
+  function animate() {
+    el.style.background = `
+      radial-gradient(ellipse at ${20 + mouseX * 20}% ${50 + mouseY * 10}%, var(--sp-accent) 0px, transparent 50%),
+      radial-gradient(ellipse at ${80 - mouseX * 15}% ${20 + mouseY * 15}%, var(--sp-accent-2) 0px, transparent 50%),
+      radial-gradient(ellipse at ${50 + mouseX * 10}% ${80 - mouseY * 10}%, var(--sp-accent) 0px, transparent 40%)
+    `;
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+})();</code></pre>
+<hr>
+<h2>E. Section Templates</h2>
+<p>Each section type has a semantic HTML structure and associated CSS. These are the building blocks — the builder selects and orders them based on Phase 5&#x27;s <code>sections</code> array.</p>
+<h3>hero — Variant: gradient</h3>
+<p>Full-viewport gradient hero with centered content.</p>
+<pre><code class="lang-html">&lt;section class=&quot;sp-hero cover&quot; aria-labelledby=&quot;hero-heading&quot;&gt;
+  &lt;div class=&quot;mesh-gradient&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;center cover-center&quot;&gt;
+    &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-lg)&quot;&gt;
+      &lt;p class=&quot;sp-eyebrow&quot;&gt;{{eyebrow}}&lt;/p&gt;
+      &lt;h1 id=&quot;hero-heading&quot; class=&quot;sp-hero-title&quot;&gt;{{headline}}&lt;/h1&gt;
+      &lt;p class=&quot;sp-hero-subtitle&quot;&gt;{{subheadline}}&lt;/p&gt;
+      &lt;div class=&quot;cluster&quot; style=&quot;--cluster-gap: var(--sp-space-sm)&quot;&gt;
+        &lt;a href=&quot;{{cta_action}}&quot; class=&quot;btn-primary&quot;&gt;{{cta_text}}&lt;/a&gt;
+        &lt;a href=&quot;{{secondary_action}}&quot; class=&quot;btn-ghost&quot;&gt;{{secondary_text}}&lt;/a&gt;
+      &lt;/div&gt;
+      &lt;p class=&quot;sp-trust&quot;&gt;{{social_proof_element}}&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<pre><code class="lang-css">.sp-hero {
+  --cover-min-height: 100vh;
+  --cover-min-height: 100dvh;
+  position: relative;
+  overflow: hidden;
+  background: var(--sp-bg);
+  color: var(--sp-fg);
+}
+.sp-eyebrow {
+  font-size: var(--sp-text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--sp-accent);
+}
+.sp-hero-title {
+  font-size: var(--sp-text-hero);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  max-inline-size: 16ch;
+}
+.sp-hero-subtitle {
+  font-size: var(--sp-text-xl);
+  color: var(--sp-muted);
+  max-inline-size: 48ch;
+  line-height: 1.5;
+}
+.sp-trust {
+  font-size: var(--sp-text-sm);
+  color: var(--sp-muted);
+}</code></pre>
+<h3>hero — Variant: video-bg</h3>
+<p>Dark overlay on a background video or canvas.</p>
+<pre><code class="lang-html">&lt;section class=&quot;sp-hero sp-hero--video cover&quot; aria-labelledby=&quot;hero-heading&quot;&gt;
+  &lt;div class=&quot;sp-hero-media&quot; aria-hidden=&quot;true&quot;&gt;
+    &lt;!-- Canvas for frame sequence, or &lt;video&gt; for ambient loop --&gt;
+    &lt;canvas id=&quot;hero-canvas&quot;&gt;&lt;/canvas&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;sp-hero-overlay&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;center cover-center&quot; style=&quot;position:relative;z-index:2&quot;&gt;
+    &lt;!-- Same content structure as gradient variant --&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<pre><code class="lang-css">.sp-hero--video { position: relative; }
+.sp-hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.sp-hero-media canvas,
+.sp-hero-media video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sp-hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.6), var(--sp-bg));
+}</code></pre>
+<h3>hero — Variant: product-demo</h3>
+<p>Split layout: copy left, product visual right.</p>
+<pre><code class="lang-html">&lt;section class=&quot;sp-hero cover&quot; aria-labelledby=&quot;hero-heading&quot;&gt;
+  &lt;div class=&quot;center cover-center&quot; style=&quot;--center-max: var(--sp-max-width)&quot;&gt;
+    &lt;div class=&quot;with-sidebar&quot;&gt;
+      &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-lg)&quot;&gt;
+        &lt;p class=&quot;sp-eyebrow&quot;&gt;{{eyebrow}}&lt;/p&gt;
+        &lt;h1 id=&quot;hero-heading&quot; class=&quot;sp-hero-title&quot;&gt;{{headline}}&lt;/h1&gt;
+        &lt;p class=&quot;sp-hero-subtitle&quot;&gt;{{subheadline}}&lt;/p&gt;
+        &lt;a href=&quot;{{cta_action}}&quot; class=&quot;btn-primary&quot;&gt;{{cta_text}}&lt;/a&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;sp-hero-visual frame&quot; style=&quot;--sidebar-width: 45%; --frame-ratio: 4/3&quot;&gt;
+        &lt;!-- Inline SVG illustration or product screenshot --&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<h3>problem / agitation</h3>
+<p>Empathy-driven section that names the audience&#x27;s pain.</p>
+<pre><code class="lang-html">&lt;section class=&quot;sp-section sp-problem reveal&quot; aria-labelledby=&quot;problem-heading&quot;&gt;
+  &lt;div class=&quot;center&quot;&gt;
+    &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-lg)&quot;&gt;
+      &lt;h2 id=&quot;problem-heading&quot; class=&quot;sp-section-title&quot;&gt;{{headline}}&lt;/h2&gt;
+      &lt;p class=&quot;sp-section-body&quot;&gt;{{body_copy}}&lt;/p&gt;
+      &lt;ul class=&quot;sp-pain-list stack&quot; style=&quot;--stack-space: var(--sp-space-sm)&quot; role=&quot;list&quot;&gt;
+        &lt;!-- Pain points as list items --&gt;
+        &lt;li class=&quot;sp-pain-item&quot;&gt;{{pain_point}}&lt;/li&gt;
+      &lt;/ul&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<pre><code class="lang-css">.sp-section {
+  padding-block: var(--sp-space-xl);
+}
+.sp-section-title {
+  font-size: var(--sp-text-3xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.sp-section-body {
+  font-size: var(--sp-text-lg);
+  color: var(--sp-muted);
+  max-inline-size: 60ch;
+  line-height: 1.7;
+}
+.sp-pain-item {
+  font-size: var(--sp-text-base);
+  color: var(--sp-muted);
+  padding-inline-start: var(--sp-space-md);
+  border-inline-start: 3px solid var(--sp-accent);
+}</code></pre>
+<h3>solution / features</h3>
+<p>Grid layout showcasing product capabilities.</p>
+<pre><code class="lang-html">&lt;section class=&quot;sp-section sp-features&quot; aria-labelledby=&quot;features-heading&quot;&gt;
+  &lt;div class=&quot;center&quot; style=&quot;--center-max: var(--sp-max-width)&quot;&gt;
+    &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-xl)&quot;&gt;
+      &lt;div class=&quot;stack center&quot; style=&quot;--stack-space: var(--sp-space-sm); text-align:center&quot;&gt;
+        &lt;h2 id=&quot;features-heading&quot; class=&quot;sp-section-title&quot;&gt;{{headline}}&lt;/h2&gt;
+        &lt;p class=&quot;sp-section-body&quot; style=&quot;margin-inline:auto&quot;&gt;{{subheadline}}&lt;/p&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;auto-grid reveal-stagger&quot; style=&quot;--grid-min: 280px&quot;&gt;
+        &lt;article class=&quot;sp-feature-card card stack&quot;&gt;
+          &lt;div class=&quot;sp-feature-icon&quot; aria-hidden=&quot;true&quot;&gt;
+            &lt;!-- Inline SVG icon --&gt;
+          &lt;/div&gt;
+          &lt;h3&gt;{{feature_title}}&lt;/h3&gt;
+          &lt;p&gt;{{feature_description}}&lt;/p&gt;
+        &lt;/article&gt;
+        &lt;!-- Repeat for each feature --&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<pre><code class="lang-css">.sp-feature-card {
+  padding: var(--sp-space-lg);
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-lg);
+}
+.sp-feature-card h3 {
+  font-size: var(--sp-text-lg);
+  font-weight: 700;
+}
+.sp-feature-card p {
+  font-size: var(--sp-text-sm);
+  color: var(--sp-muted);
+  line-height: 1.6;
+}
+.sp-feature-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--sp-accent);
+}
+.sp-feature-icon svg {
+  width: 100%;
+  height: 100%;
+}</code></pre>
+<h3>benefits (before/after or icon-grid)</h3>
+<pre><code class="lang-html">&lt;section class=&quot;sp-section sp-benefits reveal&quot; aria-labelledby=&quot;benefits-heading&quot;&gt;
+  &lt;div class=&quot;center&quot; style=&quot;--center-max: var(--sp-max-width)&quot;&gt;
+    &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-xl)&quot;&gt;
+      &lt;h2 id=&quot;benefits-heading&quot; class=&quot;sp-section-title center&quot; style=&quot;text-align:center&quot;&gt;{{headline}}&lt;/h2&gt;
+      &lt;div class=&quot;switcher&quot;&gt;
+        &lt;div class=&quot;sp-before stack&quot;&gt;
+          &lt;h3 class=&quot;sp-contrast-label sp-contrast-label--before&quot;&gt;Before&lt;/h3&gt;
+          &lt;ul class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-xs)&quot; role=&quot;list&quot;&gt;
+            &lt;li class=&quot;sp-benefit-item sp-benefit-item--negative&quot;&gt;{{before_point}}&lt;/li&gt;
+          &lt;/ul&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;sp-after stack&quot;&gt;
+          &lt;h3 class=&quot;sp-contrast-label sp-contrast-label--after&quot;&gt;After&lt;/h3&gt;
+          &lt;ul class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-xs)&quot; role=&quot;list&quot;&gt;
+            &lt;li class=&quot;sp-benefit-item sp-benefit-item--positive&quot;&gt;{{after_point}}&lt;/li&gt;
+          &lt;/ul&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<pre><code class="lang-css">.sp-contrast-label {
+  font-size: var(--sp-text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.sp-contrast-label--before { color: var(--sp-muted); }
+.sp-contrast-label--after  { color: var(--sp-accent); }
+.sp-benefit-item {
+  font-size: var(--sp-text-base);
+  padding: var(--sp-space-sm);
+  border-radius: var(--sp-radius-sm);
+}
+.sp-benefit-item--negative {
+  color: var(--sp-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--sp-muted);
+}
+.sp-benefit-item--positive {
+  color: var(--sp-fg);
+  background: rgba(255,255,255,0.03);
+  border-inline-start: 3px solid var(--sp-accent);
+}</code></pre>
+<h3>social-proof</h3>
+<pre><code class="lang-html">&lt;section class=&quot;sp-section sp-social-proof&quot; aria-labelledby=&quot;proof-heading&quot;&gt;
+  &lt;div class=&quot;center&quot; style=&quot;--center-max: var(--sp-max-width)&quot;&gt;
+    &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-xl)&quot;&gt;
+
+      &lt;!-- Logo Wall --&gt;
+      &lt;div class=&quot;sp-logo-wall cluster reveal&quot; style=&quot;justify-content:center; --cluster-gap: var(--sp-space-lg)&quot;&gt;
+        &lt;!-- Inline SVG logos, grayscale by default --&gt;
+        &lt;div class=&quot;sp-logo&quot; aria-label=&quot;Company name&quot;&gt;&lt;!-- SVG --&gt;&lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;!-- Metrics Counter --&gt;
+      &lt;div class=&quot;auto-grid reveal-stagger&quot; style=&quot;--grid-min: 180px; text-align:center&quot;&gt;
+        &lt;div class=&quot;sp-metric stack&quot; style=&quot;--stack-space: var(--sp-space-xs)&quot;&gt;
+          &lt;span class=&quot;sp-metric-number&quot;&gt;{{number}}&lt;/span&gt;
+          &lt;span class=&quot;sp-metric-label&quot;&gt;{{label}}&lt;/span&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;!-- Testimonials --&gt;
+      &lt;div class=&quot;switcher reveal-stagger&quot;&gt;
+        &lt;blockquote class=&quot;sp-testimonial stack&quot;&gt;
+          &lt;p&gt;&quot;{{quote}}&quot;&lt;/p&gt;
+          &lt;footer&gt;
+            &lt;cite class=&quot;sp-testimonial-author&quot;&gt;{{name}}&lt;/cite&gt;
+            &lt;span class=&quot;sp-testimonial-role&quot;&gt;{{role}}&lt;/span&gt;
+          &lt;/footer&gt;
+        &lt;/blockquote&gt;
+      &lt;/div&gt;
+
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<pre><code class="lang-css">.sp-logo {
+  height: 32px;
+  opacity: 0.5;
+  filter: grayscale(1) brightness(2);
+  transition: opacity var(--sp-duration-fast) var(--sp-ease);
+}
+.sp-logo:hover { opacity: 1; }
+.sp-metric-number {
+  font-size: var(--sp-text-3xl);
+  font-weight: 900;
+  color: var(--sp-accent);
+  letter-spacing: -0.03em;
+}
+.sp-metric-label {
+  font-size: var(--sp-text-sm);
+  color: var(--sp-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sp-testimonial {
+  padding: var(--sp-space-lg);
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-lg);
+}
+.sp-testimonial p {
+  font-size: var(--sp-text-lg);
+  font-style: italic;
+  line-height: 1.7;
+  color: var(--sp-fg);
+}
+.sp-testimonial-author {
+  font-weight: 700;
+  font-style: normal;
+  color: var(--sp-fg);
+}
+.sp-testimonial-role {
+  font-size: var(--sp-text-sm);
+  color: var(--sp-muted);
+}</code></pre>
+<h3>how-it-works</h3>
+<p>Numbered steps with visual progression.</p>
+<pre><code class="lang-html">&lt;section class=&quot;sp-section sp-how-it-works&quot; aria-labelledby=&quot;steps-heading&quot;&gt;
+  &lt;div class=&quot;center&quot;&gt;
+    &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-xl)&quot;&gt;
+      &lt;h2 id=&quot;steps-heading&quot; class=&quot;sp-section-title&quot; style=&quot;text-align:center&quot;&gt;{{headline}}&lt;/h2&gt;
+      &lt;ol class=&quot;sp-steps stack reveal-stagger&quot; style=&quot;--stack-space: var(--sp-space-lg)&quot;&gt;
+        &lt;li class=&quot;sp-step with-sidebar&quot;&gt;
+          &lt;div class=&quot;sp-step-number&quot; aria-hidden=&quot;true&quot;&gt;01&lt;/div&gt;
+          &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-xs)&quot;&gt;
+            &lt;h3&gt;{{step_title}}&lt;/h3&gt;
+            &lt;p&gt;{{step_description}}&lt;/p&gt;
+          &lt;/div&gt;
+        &lt;/li&gt;
+      &lt;/ol&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<pre><code class="lang-css">.sp-steps {
+  list-style: none;
+  counter-reset: step;
+}
+.sp-step {
+  --sidebar-width: 80px;
+  align-items: flex-start;
+}
+.sp-step-number {
+  font-size: var(--sp-text-3xl);
+  font-weight: 900;
+  color: var(--sp-accent);
+  opacity: 0.3;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sp-step h3 {
+  font-size: var(--sp-text-xl);
+  font-weight: 700;
+}
+.sp-step p {
+  font-size: var(--sp-text-base);
+  color: var(--sp-muted);
+  line-height: 1.6;
+}</code></pre>
+<h3>pricing</h3>
+<pre><code class="lang-html">&lt;section class=&quot;sp-section sp-pricing&quot; aria-labelledby=&quot;pricing-heading&quot;&gt;
+  &lt;div class=&quot;center&quot; style=&quot;--center-max: var(--sp-max-width)&quot;&gt;
+    &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-xl)&quot;&gt;
+      &lt;div class=&quot;stack center&quot; style=&quot;text-align:center; --stack-space: var(--sp-space-sm)&quot;&gt;
+        &lt;h2 id=&quot;pricing-heading&quot; class=&quot;sp-section-title&quot;&gt;{{headline}}&lt;/h2&gt;
+        &lt;p class=&quot;sp-section-body&quot; style=&quot;margin-inline:auto&quot;&gt;{{subheadline}}&lt;/p&gt;
+      &lt;/div&gt;
+
+      &lt;!-- Single Plan (most common for sales pages) --&gt;
+      &lt;div class=&quot;sp-price-card stack center reveal&quot; style=&quot;--center-max: 480px&quot;&gt;
+        &lt;div class=&quot;sp-price-tag stack&quot; style=&quot;--stack-space: 0; text-align:center&quot;&gt;
+          &lt;span class=&quot;sp-price-anchor&quot;&gt;{{anchor_price}}&lt;/span&gt;
+          &lt;span class=&quot;sp-price-current&quot;&gt;{{main_price}}&lt;/span&gt;
+          &lt;span class=&quot;sp-price-period&quot;&gt;{{installments}}&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;ul class=&quot;sp-price-features stack&quot; style=&quot;--stack-space: var(--sp-space-xs)&quot; role=&quot;list&quot;&gt;
+          &lt;li&gt;{{deliverable}}&lt;/li&gt;
+        &lt;/ul&gt;
+        &lt;a href=&quot;{{cta_action}}&quot; class=&quot;btn-primary btn-full&quot;&gt;{{cta_text}}&lt;/a&gt;
+        &lt;p class=&quot;sp-price-guarantee&quot;&gt;{{guarantee}}&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<pre><code class="lang-css">.sp-price-card {
+  padding: var(--sp-space-xl) var(--sp-space-lg);
+  background: var(--sp-surface);
+  border: 2px solid var(--sp-accent);
+  border-radius: var(--sp-radius-lg);
+}
+.sp-price-anchor {
+  font-size: var(--sp-text-lg);
+  color: var(--sp-muted);
+  text-decoration: line-through;
+}
+.sp-price-current {
+  font-size: var(--sp-text-3xl);
+  font-weight: 900;
+  color: var(--sp-fg);
+}
+.sp-price-period {
+  font-size: var(--sp-text-sm);
+  color: var(--sp-muted);
+}
+.sp-price-features li {
+  font-size: var(--sp-text-base);
+  padding-block: var(--sp-space-xs);
+  border-block-end: 1px solid var(--sp-border);
+}
+.sp-price-features li::before {
+  content: &quot;\2713\0020&quot;;
+  color: var(--sp-accent);
+  font-weight: 700;
+}
+.sp-price-guarantee {
+  font-size: var(--sp-text-sm);
+  color: var(--sp-muted);
+  text-align: center;
+}
+.btn-full {
+  display: block;
+  text-align: center;
+  width: 100%;
+}</code></pre>
+<h3>objection-handler (accordion FAQ)</h3>
+<pre><code class="lang-html">&lt;section class=&quot;sp-section sp-faq&quot; aria-labelledby=&quot;faq-heading&quot;&gt;
+  &lt;div class=&quot;center&quot;&gt;
+    &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-xl)&quot;&gt;
+      &lt;h2 id=&quot;faq-heading&quot; class=&quot;sp-section-title&quot; style=&quot;text-align:center&quot;&gt;{{headline}}&lt;/h2&gt;
+      &lt;div class=&quot;sp-accordion stack&quot; style=&quot;--stack-space: 0&quot;&gt;
+        &lt;details class=&quot;sp-accordion-item&quot;&gt;
+          &lt;summary class=&quot;sp-accordion-trigger&quot;&gt;{{question}}&lt;/summary&gt;
+          &lt;div class=&quot;sp-accordion-content&quot;&gt;
+            &lt;p&gt;{{answer}}&lt;/p&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<pre><code class="lang-css">.sp-accordion-item {
+  border-block-end: 1px solid var(--sp-border);
+}
+.sp-accordion-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sp-space-md) 0;
+  font-size: var(--sp-text-lg);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  color: var(--sp-fg);
+}
+.sp-accordion-trigger::-webkit-details-marker { display: none; }
+.sp-accordion-trigger::after {
+  content: &quot;+&quot;;
+  font-size: var(--sp-text-xl);
+  color: var(--sp-muted);
+  transition: transform var(--sp-duration-fast) var(--sp-ease);
+}
+details[open] .sp-accordion-trigger::after {
+  transform: rotate(45deg);
+}
+.sp-accordion-content {
+  padding-block-end: var(--sp-space-md);
+}
+.sp-accordion-content p {
+  font-size: var(--sp-text-base);
+  color: var(--sp-muted);
+  line-height: 1.7;
+}</code></pre>
+<h3>guarantee</h3>
+<pre><code class="lang-html">&lt;section class=&quot;sp-section sp-guarantee reveal&quot; aria-labelledby=&quot;guarantee-heading&quot;&gt;
+  &lt;div class=&quot;center&quot;&gt;
+    &lt;div class=&quot;sp-guarantee-card cluster&quot; style=&quot;--cluster-gap: var(--sp-space-lg)&quot;&gt;
+      &lt;div class=&quot;sp-guarantee-badge&quot; aria-hidden=&quot;true&quot;&gt;
+        &lt;svg viewBox=&quot;0 0 80 80&quot; width=&quot;80&quot; height=&quot;80&quot; fill=&quot;none&quot;&gt;
+          &lt;circle cx=&quot;40&quot; cy=&quot;40&quot; r=&quot;38&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot;/&gt;
+          &lt;path d=&quot;M25 42l10 10 20-24&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;3&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;/&gt;
+        &lt;/svg&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-sm)&quot;&gt;
+        &lt;h2 id=&quot;guarantee-heading&quot; class=&quot;sp-section-title&quot;&gt;{{headline}}&lt;/h2&gt;
+        &lt;p class=&quot;sp-section-body&quot;&gt;{{body_copy}}&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<pre><code class="lang-css">.sp-guarantee-card {
+  padding: var(--sp-space-lg);
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius-lg);
+  align-items: flex-start;
+}
+.sp-guarantee-badge {
+  flex-shrink: 0;
+  color: var(--sp-accent);
+}</code></pre>
+<h3>final-cta</h3>
+<pre><code class="lang-html">&lt;section class=&quot;sp-section sp-final-cta&quot; aria-labelledby=&quot;final-cta-heading&quot;&gt;
+  &lt;div class=&quot;center&quot; style=&quot;text-align:center&quot;&gt;
+    &lt;div class=&quot;stack&quot; style=&quot;--stack-space: var(--sp-space-lg)&quot;&gt;
+      &lt;h2 id=&quot;final-cta-heading&quot; class=&quot;sp-section-title&quot;&gt;{{headline}}&lt;/h2&gt;
+      &lt;p class=&quot;sp-section-body&quot; style=&quot;margin-inline:auto&quot;&gt;{{body_copy}}&lt;/p&gt;
+      &lt;div&gt;
+        &lt;a href=&quot;{{cta_action}}&quot; class=&quot;btn-primary btn-lg&quot;&gt;{{cta_text}}&lt;/a&gt;
+      &lt;/div&gt;
+      &lt;p class=&quot;sp-reassurance&quot;&gt;{{trust_signal}}&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<pre><code class="lang-css">.sp-final-cta {
+  padding-block: var(--sp-space-2xl);
+  background: var(--sp-surface);
+}
+.btn-lg {
+  padding: var(--sp-space-md) var(--sp-space-xl);
+  font-size: var(--sp-text-lg);
+}
+.sp-reassurance {
+  font-size: var(--sp-text-sm);
+  color: var(--sp-muted);
+}</code></pre>
+<h3>footer</h3>
+<pre><code class="lang-html">&lt;footer class=&quot;sp-footer&quot;&gt;
+  &lt;div class=&quot;center&quot;&gt;
+    &lt;div class=&quot;cluster&quot; style=&quot;justify-content: space-between&quot;&gt;
+      &lt;p class=&quot;sp-footer-copy&quot;&gt;&amp;copy; {{year}} {{brand}}. All rights reserved.&lt;/p&gt;
+      &lt;nav class=&quot;cluster&quot; style=&quot;--cluster-gap: var(--sp-space-md)&quot; aria-label=&quot;Footer links&quot;&gt;
+        &lt;a href=&quot;{{privacy_url}}&quot;&gt;Privacy&lt;/a&gt;
+        &lt;a href=&quot;{{terms_url}}&quot;&gt;Terms&lt;/a&gt;
+      &lt;/nav&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/footer&gt;</code></pre>
+<pre><code class="lang-css">.sp-footer {
+  padding-block: var(--sp-space-lg);
+  border-block-start: 1px solid var(--sp-border);
+  font-size: var(--sp-text-sm);
+  color: var(--sp-muted);
+}
+.sp-footer a {
+  color: var(--sp-muted);
+  text-decoration: none;
+}
+.sp-footer a:hover {
+  color: var(--sp-fg);
+}</code></pre>
+<hr>
+<h2>F. Performance Checklist</h2>
+<p>The builder verifies ALL items before producing final output. Any failure blocks output with a specific fix recommendation.</p>
+<h3>Mandatory Checks</h3>
+<ul><li>[ ] <strong>File size</strong> &lt; 300KB (with animations) or &lt; 100KB (without)</li><li>[ ] <strong>No external requests</strong> — zero CDN, tracking, or third-party scripts at runtime</li><li>[ ] <strong>Images</strong> are inline SVG or base64 data URIs only</li><li>[ ] <strong>CSS animations</strong> use only <code>transform</code> and <code>opacity</code> (GPU-composited)</li><li>[ ] <strong><code>prefers-reduced-motion</code></strong> respected — all durations set to 0ms</li><li>[ ] <strong>Font loading</strong> — system font stack OR single <code>@import</code> with <code>font-display: swap</code></li><li>[ ] <strong>Semantic HTML</strong> — <code>&lt;nav&gt;</code>, <code>&lt;main&gt;</code>, <code>&lt;section&gt;</code>, <code>&lt;article&gt;</code>, <code>&lt;footer&gt;</code> used correctly</li><li>[ ] <strong>Single H1</strong> — exactly one <code>&lt;h1&gt;</code>, logical heading hierarchy (no skipped levels)</li><li>[ ] <strong>Focus states</strong> — all interactive elements have visible <code>:focus-visible</code> outlines</li><li>[ ] <strong>Color contrast</strong> &gt;= 4.5:1 for normal text, &gt;= 3:1 for large text (&gt;= 24px or &gt;= 18.66px bold)</li><li>[ ] <strong>Touch targets</strong> — all interactive elements &gt;= 44x44px on mobile</li><li>[ ] <strong>Skip link</strong> — hidden &quot;Skip to content&quot; link present</li><li>[ ] <strong>Alt text</strong> — all <code>&lt;img&gt;</code> have <code>alt</code>, decorative SVGs have <code>aria-hidden=&quot;true&quot;</code></li><li>[ ] <strong>lang attribute</strong> — <code>&lt;html lang=&quot;...&quot;&gt;</code> set correctly</li><li>[ ] <strong>No console errors</strong> — page loads cleanly with no JS errors</li><li>[ ] <strong>No unused CSS</strong> — every rule matches at least one element</li></ul>
+<h3>Performance Targets</h3>
+<p>| Metric | Target | |--------|--------| | File size (no animations) | &lt; 100KB | | File size (with animations) | &lt; 300KB | | File size (with canvas frames) | &lt; 2MB (frames are heavy) | | First Contentful Paint | &lt; 1.5s | | Largest Contentful Paint | &lt; 2.5s | | Cumulative Layout Shift | &lt; 0.1 | | Total Blocking Time | &lt; 200ms |</p>
+<h3>Size Budget Breakdown</h3>
+<p>| Component | Budget | |-----------|--------| | HTML structure | &lt; 15KB | | CSS (all styles) | &lt; 25KB | | Inline SVGs | &lt; 30KB total | | JavaScript | &lt; 10KB (excluding frame data) | | Base64 frame data | &lt; 2MB (if canvas sequence used) |</p>
+<hr>
+<h2>G. SEO Template</h2>
+<p>Every page includes this <code>&lt;head&gt;</code> structure. Values are populated from Phase 5 narrative and Phase 1 discovery.</p>
+<h3>Meta Tags</h3>
+<pre><code class="lang-html">&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;meta name=&quot;description&quot; content=&quot;{{phase_5.sections[0].subheadline || phase_1.promise}}&quot;&gt;
+&lt;meta name=&quot;robots&quot; content=&quot;index, follow&quot;&gt;
+
+&lt;!-- Open Graph --&gt;
+&lt;meta property=&quot;og:title&quot; content=&quot;{{phase_5.sections[0].headline}}&quot;&gt;
+&lt;meta property=&quot;og:description&quot; content=&quot;{{phase_5.sections[0].subheadline}}&quot;&gt;
+&lt;meta property=&quot;og:type&quot; content=&quot;website&quot;&gt;
+&lt;meta property=&quot;og:url&quot; content=&quot;{{canonical_url}}&quot;&gt;
+&lt;meta property=&quot;og:image&quot; content=&quot;{{og_image_url_if_available}}&quot;&gt;
+&lt;meta property=&quot;og:site_name&quot; content=&quot;{{brand_name}}&quot;&gt;
+
+&lt;!-- Twitter --&gt;
+&lt;meta name=&quot;twitter:card&quot; content=&quot;summary_large_image&quot;&gt;
+&lt;meta name=&quot;twitter:title&quot; content=&quot;{{phase_5.sections[0].headline}}&quot;&gt;
+&lt;meta name=&quot;twitter:description&quot; content=&quot;{{phase_5.sections[0].subheadline}}&quot;&gt;
+
+&lt;!-- Canonical --&gt;
+&lt;link rel=&quot;canonical&quot; href=&quot;{{canonical_url}}&quot;&gt;
+
+&lt;title&gt;{{headline}} | {{brand_name}}&lt;/title&gt;</code></pre>
+<h3>JSON-LD Structured Data</h3>
+<p>Include one or both schemas based on page content.</p>
+<h4>Product Schema (when pricing section exists)</h4>
+<pre><code class="lang-html">&lt;script type=&quot;application/ld+json&quot;&gt;
+{
+  &quot;@context&quot;: &quot;https://schema.org&quot;,
+  &quot;@type&quot;: &quot;Product&quot;,
+  &quot;name&quot;: &quot;{{product_name}}&quot;,
+  &quot;description&quot;: &quot;{{promise}}&quot;,
+  &quot;brand&quot;: {
+    &quot;@type&quot;: &quot;Brand&quot;,
+    &quot;name&quot;: &quot;{{brand_name}}&quot;
+  },
+  &quot;offers&quot;: {
+    &quot;@type&quot;: &quot;Offer&quot;,
+    &quot;price&quot;: &quot;{{numeric_price}}&quot;,
+    &quot;priceCurrency&quot;: &quot;{{currency_code}}&quot;,
+    &quot;availability&quot;: &quot;https://schema.org/InStock&quot;
+  }
+}
+&lt;/script&gt;</code></pre>
+<h4>FAQ Schema (when objection-handler/FAQ section exists)</h4>
+<pre><code class="lang-html">&lt;script type=&quot;application/ld+json&quot;&gt;
+{
+  &quot;@context&quot;: &quot;https://schema.org&quot;,
+  &quot;@type&quot;: &quot;FAQPage&quot;,
+  &quot;mainEntity&quot;: [
+    {
+      &quot;@type&quot;: &quot;Question&quot;,
+      &quot;name&quot;: &quot;{{question}}&quot;,
+      &quot;acceptedAnswer&quot;: {
+        &quot;@type&quot;: &quot;Answer&quot;,
+        &quot;text&quot;: &quot;{{answer}}&quot;
+      }
+    }
+  ]
+}
+&lt;/script&gt;</code></pre>
+<hr>
+<h2>Build Process Summary</h2>
+<p>When invoked, the builder follows this sequence:</p>
+<ol><li><strong>Read state</strong> — Load <code>state.json</code>, extract Phase 4 tokens + Phase 5 sections + Phase 6 fusion decisions</li><li><strong>Select template</strong> — Use <code>reference/templates/sales-pages/base.html</code> as starting structure</li><li><strong>Map tokens</strong> — Populate all <code>--sp-*</code> custom properties from Phase 4 <code>design_tokens</code></li><li><strong>Build sections</strong> — For each section in Phase 5&#x27;s <code>sections</code> array, select the matching template from Section E and populate with approved copy</li><li><strong>Add animations</strong> — Based on Phase 4 <code>animation_strategy</code>, include appropriate tiers from Section D</li><li><strong>Apply layout</strong> — Use Section C primitives for responsive structure</li><li><strong>Insert SEO</strong> — Populate Section G meta tags and structured data</li><li><strong>Run checklist</strong> — Verify all items in Section F pass</li><li><strong>Output</strong> — Write final <code>index.html</code> to <code>output/sales-pages/{slug}/index.html</code></li><li><strong>Copy to preview</strong> — Save to <code>previews/phase-7-build.html</code></li></ol>
+<hr>
+<h2>File References</h2>
+<p>| Resource | Path | |----------|------| | This skill | <code>skills/sales-page-builder/SKILL.md</code> | | Base template | <code>reference/templates/sales-pages/base.html</code> | | Master pipeline skill | <code>skills/sales-page/SKILL.md</code> | | Pipeline state schema | <code>reference/templates/sales-pages/_PIPELINE-STATE.md</code> | | Landing page skill (simpler) | <code>skills/landing-page-design/SKILL.md</code> | | Design system (carousel) | <code>reference/design-system/DESIGN-SYSTEM.md</code> |</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/sales-page-builder.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>
