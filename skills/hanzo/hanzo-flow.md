@@ -3,8 +3,7 @@
 Visual workflow builder for AI applications. Fork of Langflow.
 
 ## URLs
-- **Landing**: flow.hanzo.ai
-- **App**: app.flow.hanzo.ai
+- **App**: flow.hanzo.ai (the one host; marketing lives at hanzo.ai/flow)
 - **IAM Client ID**: hanzo-flow
 - **Docker Image**: ghcr.io/hanzoai/flow:main
 
@@ -35,7 +34,7 @@ python -m flow run --host 0.0.0.0 --port 7860 --backend-only
 - Docker build uses `--extra postgresql` (psycopg driver required for production PG)
 - K8s: deployment/flow, service/flow, port 7860
 - Health check: `GET /health` on port 7860
-- Both flow.hanzo.ai and app.flow.hanzo.ai route to the flow service
+- flow.hanzo.ai routes to the flow service
 
 ## Package Rename Status (2026-03-27)
 - Internal package renamed from `langflow` → `flow` (979 files)
