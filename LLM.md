@@ -31,6 +31,11 @@ plugin cache holds only its SKILL.md. The `hanzo-skills` plugin (`"source": "./"
 does not install there: `.claude-plugin/plugin.json` gives `author` as a string where Claude Code requires
 an object, and `claude plugin validate .` fails on it.
 
+github.com/hanzoai/skills is private, so both paths above need GitHub access to it. Without that (no git
+credentials, `gh` login or SSH key) the clone fails with `Authentication failed`. The site needs no access:
+`npx skills add https://hanzoskills.com/<name>.md` installs the published markdown, verified anonymously
+against the live `cloud-host.md` and against `kai.md` served from a local build.
+
 ## The Architecture (current truth)
 
 Hanzo runs as ONE Go binary: `hanzoai/cloud` embeds IAM, KMS, o11y, tasks,
@@ -153,6 +158,10 @@ tests/site.mjs   browser checks — mark, menu, bar, computed border-radius, Zen
   `hanzoai/ci/.github/actions/site@v1`, which is `bin/site`: enqueue → upload the
   objects straight to S3 → complete. The bytes never pass through the API. Do not
   publish by hand, and do not transcribe those three calls here.
+- GitHub Actions is off for hanzoai/skills: `gh api repos/hanzoai/skills/actions/permissions`
+  answers `{"enabled": false}`, and the last runs, CI and deploy for ef27aaf on 2026-09-09, were
+  cancelled. Until a repo admin turns it back on, a push to main runs neither workflow and
+  publishes nothing.
 - ONE credential, `KMS_CLIENT_ID`/`KMS_CLIENT_SECRET` (org-level on git.hanzo.ai),
   which the action trades at `kms.hanzo.ai` for the deploy key.
 - Controls are pills (`--r: 999px`) and surfaces are `--r-soft: 14px`, matching

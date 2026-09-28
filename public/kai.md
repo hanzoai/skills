@@ -40,17 +40,17 @@ The docs outrank this skill: read the pages a task needs before writing code. [l
 
 ## Asking
 
-- **State**: what the judgment depends on and nothing more: the text, plus the facts that change the answer (plan, locale, history, the rule in force) as separate JSON keys. Each question reads at most 1,024 tokens of instructions and state, and the state's tail is what gets dropped, so lead with what decides the answer. Leave secrets and data you may not share out of it.
-- **Instructions**: required on every question; a question without them is a 400. Write the whole question there, not in the question's name.
-- **choice**: exactly one of several options. `criteria` maps each label to a description of what sets it apart; keep the options mutually exclusive. Add an `other` or `none` label for cases yours do not cover; without one, Kai must choose among them.
-- **score**: a level on an ordered scale. `criteria` lists the levels lowest first, every one described, none null. `score` is the expected level; the most probable level is the largest entry of `probabilities`.
+- **State**: what the judgment depends on and nothing more: the text, plus the facts that change the answer (plan, locale, history, the rule in force) as separate JSON keys. The state and any one question must fit in what the checkpoint reads; a request that does not is refused with 422 `state_too_long`, naming the tokens needed and the limit, and nothing is cut silently. Leave secrets and data you may not share out of it.
+- **Instructions**: optional, and worth writing on every question: they are the question Kai answers. Kai never sees the question's name, so the whole question goes in `instructions`.
+- **choice**: exactly one of 2 to 255 options. `criteria` maps each label to a description of what sets it apart; keep the options mutually exclusive. Add an `other` or `none` label for cases yours do not cover; without one, Kai must choose among them.
+- **score**: a level on an ordered scale of 1 to 10 levels. `criteria` lists them lowest first, every one described, none null. `score` is the expected level; the most probable level is the largest entry of `probabilities`.
 - **noul**: the probability that a statement holds. Write it as a statement and describe both sides in `criteria` (`true` and `false`), or ask it as a `choice` between described `yes` and `no`. The current checkpoint answers some plain yes/no questions badly, so measure whichever form you pick.
 - **Multi-label**: when several labels can be true together, give each its own noul.
-- **Fan out**: put every question about the same state in one request, up to 64. Kai answers each against the state alone, never against another answer, so a question that needs an earlier answer waits for a second call (fetch the evidence it names, then ask). More questions, more input tokens.
+- **Fan out**: put every question about the same state in one request, up to 100. Kai answers each against the state alone, never against another answer, so a question that needs an earlier answer waits for a second call (fetch the evidence it names, then ask). The bill counts the state once and each question once, so an added question costs only its own tokens.
 
 ## Acting on answers
 
-- `confidence` on a choice or score is (n·p_max − 1)/(n − 1): 0 when every option is equally likely, 1 when one holds all the mass, so one threshold means the same over 3 options or 30. A noul is P(true); read 0.5 as a coin flip.
+- `confidence` on a choice or score is (n·p_max − 1)/(n − 1): 0 when every option is equally likely, 1 when one holds all the mass, so one threshold means the same over 3 options or 30. A noul's `noul` is P(true) and its `confidence` is |2p − 1|; read 0.5 as a coin flip.
 - Set thresholds on the user's own labeled cases: take the one that gives the accuracy the action needs, and count how many cases it sends elsewhere. Act above it; below it, escalate to a human reviewer or a Zen model.
 - Policy stays in code. Permissions, amounts, compliance and hard limits are deterministic checks. A Kai answer may tighten an outcome (ask, deny); it never loosens what policy forbids.
 - Before shipping, run representative cases: real states, real wording, the awkward ones. Print what Kai answered and change the question or the state, never the numbers. Accuracy differs by question kind; the limits page has the measurements.
@@ -74,7 +74,7 @@ curl https://api.hanzo.ai/v1/decisions \
                       "other": "anything else"}}}}'
 ```
 
-Read `answers.team.choice`, its `confidence`, and `probabilities` over every label. Errors: 400 malformed request, 401 bad key, 402 no plan or balance, 403 publishable key, 422 options over the window, 429 too fast (wait `Retry-After`).
+Read `answers.team.choice`, its `confidence`, and `probabilities` over every label. Errors: 400 malformed JSON or unknown model, 401 bad key, 402 no plan or balance, 403 publishable key, 422 a malformed question or a state too long, 429 and 529 (wait `Retry-After`, then retry).
 
 The SDKs and MCP tools are new. If a package or tool is not published where you are, use HTTP. Both SDKs read `HANZO_API_KEY`.
 
@@ -103,13 +103,12 @@ MCP: the Hanzo MCP tools `kai_decide`, `kai_choice`, `kai_score` and `kai_noul`.
 
 ## From Jev
 
-Kai serves the Decisions wire that Jev is called through: `state`, `questions`, the three types and their answers keep their shape. To move a Jev integration:
+A Jev integration keeps its `state`, its questions and the shape of its answers, and moves one of two ways:
 
-1. Send it to `POST https://api.hanzo.ai/v1/decisions` with a Hanzo `sk-` key and `"model": "kai"`.
-2. Give every question `instructions` and every score level a description; Hanzo refuses either missing.
-3. List models with `GET /v1/models`, an OpenAI-style `data[]` whose `kai` entry has `"outputs": ["decision"]`.
-4. Replace a TypeSafe SDK client: it posts to `/v1/systemone`, which Hanzo does not serve yet. Use HTTP or the Kai SDKs.
-5. Re-run the labeled cases on Kai and set thresholds again; Jev's do not carry over.
+1. On TypeSafe's own SDK, change two settings, `TYPESAFE_BASE_URL=https://api.hanzo.ai` and `TYPESAFE_DEFAULT_MODEL=kai`, with a Hanzo `sk-` key in `TYPESAFE_API_KEY`. Name `kai`: no Jev model id becomes Kai.
+2. Or switch to `hanzo-kai` or `@hanzo/kai`, or call `POST https://api.hanzo.ai/v1/decisions` with `"model": "kai"`.
+
+Either way, describe every score level (a null level is refused), then re-run the labeled cases on Kai and set thresholds again; Jev's do not carry over.
 
 Price: 50% lower input-token list price ($0.021 vs $0.042 per 1M). On the frozen harness Kai a7 is more accurate than Jev on 11 of 12 suites, and Jev leads jailbreak 0.940 to 0.920 ([results](https://github.com/hanzoai/benchmarks/tree/c61361fedc5882b0d83b2f5d5a6a35c56ffeb3c3/decision/results/kai-a7)). The [Jev guide](https://docs.hanzo.ai/docs/guides/migrate/jev) has the field-by-field differences.
 
