@@ -42,9 +42,9 @@ The docs outrank this skill: read the pages a task needs before writing code. [l
 
 - **State**: what the judgment depends on and nothing more: the text, plus the facts that change the answer (plan, locale, history, the rule in force) as separate JSON keys. The state and any one question must fit in what the checkpoint reads; a request that does not is refused with 422 `state_too_long`, naming the tokens needed and the limit, and nothing is cut silently. Leave secrets and data you may not share out of it.
 - **Instructions**: optional, and worth writing on every question: they are the question Kai answers. Kai never sees the question's name, so the whole question goes in `instructions`.
-- **choice**: exactly one of 2 to 255 options. `criteria` maps each label to a description of what sets it apart; keep the options mutually exclusive. Add an `other` or `none` label for cases yours do not cover; without one, Kai must choose among them.
-- **score**: a level on an ordered scale of 1 to 10 levels. `criteria` lists them lowest first, every one described, none null. `score` is the expected level; the most probable level is the largest entry of `probabilities`.
-- **noul**: the probability that a statement holds. Write it as a statement and describe both sides in `criteria` (`true` and `false`), or ask it as a `choice` between described `yes` and `no`. The current checkpoint answers some plain yes/no questions badly, so measure whichever form you pick.
+- **choice**: exactly one of two or more options. `criteria` maps each label to a description of what sets it apart; keep the options mutually exclusive. `/v1/decisions` sets no label cap: a wide choice is narrowed by retrieval over every option, then scored. Each option is read whole up to 512 tokens; a longer one is a 422. Add an `other` or `none` label for cases yours do not cover; without one, Kai must choose among them.
+- **score**: a level on an ordered scale. `criteria` lists the levels lowest first, every one described, none null. `score` is the expected level; the most probable level is the largest entry of `probabilities`.
+- **noul**: the probability that a statement holds. Write it as a statement and describe both sides in `criteria` (`true` and `false`), or better, ask a `choice` whose labels name the outcomes (`refund`, `other`), never `yes` and `no`. The current checkpoint answers some plain yes/no questions badly, so measure the form you pick.
 - **Multi-label**: when several labels can be true together, give each its own noul.
 - **Fan out**: put every question about the same state in one request, up to 100. Kai answers each against the state alone, never against another answer, so a question that needs an earlier answer waits for a second call (fetch the evidence it names, then ask). The bill counts the state once and each question once, so an added question costs only its own tokens.
 
@@ -115,7 +115,7 @@ Price: 50% lower input-token list price ($0.021 vs $0.042 per 1M). On the frozen
 ## Install
 
 ```bash
-npx skills add hanzoai/skills --skill kai
+npx skills add https://hanzoskills.com/kai.md
 ```
 
-In Claude Code, as a plugin: `claude plugin marketplace add hanzoai/skills`, then `claude plugin install kai@hanzoai-skills`.
+With GitHub access to hanzoai/skills: `npx skills add hanzoai/skills --skill kai`, or in Claude Code `claude plugin marketplace add hanzoai/skills`, then `claude plugin install kai@hanzoai-skills`.

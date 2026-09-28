@@ -6,16 +6,18 @@ A skill is a directory: {name}/SKILL.md says what it covers and names the files 
 
 ## Install
 
-One skill, into any agent, with the skills.sh CLI; it clones this repository and copies `skills/<name>/`:
+One skill, into any agent, with the skills.sh CLI. The first form fetches the page the site publishes and
+needs no GitHub access; the second clones this repository and copies `skills/<name>/`:
 
 ```
-npx skills add hanzoai/skills --skill kai                     # asks for agents and scope
+npx skills add https://hanzoskills.com/kai.md                 # asks for agents and scope
 npx skills add hanzoai/skills --skill kai -a claude-code -y    # Claude Code, this project, no prompts
 ```
 
-`-g` installs for the user instead of the project; `--list` shows every skill it can install. Verified
-with skills 1.7.0 against github main: 224 skills found, `kai` written to `.claude/skills/kai/SKILL.md`,
-byte for byte the file in `skills/kai/`.
+`-g` installs for the user instead of the project; `--list` shows every skill the clone can install.
+Verified with skills 1.7.0: the URL form anonymously against the live `cloud-host.md` and against `kai.md`
+served from a local build; the clone against github main, 224 skills found, `kai` written to
+`.claude/skills/kai/SKILL.md`, byte for byte the file in `skills/kai/`.
 
 Claude Code also takes `kai` as a plugin of its own. `.claude-plugin/marketplace.json` lists it with
 `"source": "./skills/kai"`, `"strict": false` and `"skills": ["./"]`, so the plugin is that one directory
@@ -31,10 +33,9 @@ plugin cache holds only its SKILL.md. The `hanzo-skills` plugin (`"source": "./"
 does not install there: `.claude-plugin/plugin.json` gives `author` as a string where Claude Code requires
 an object, and `claude plugin validate .` fails on it.
 
-github.com/hanzoai/skills is private, so both paths above need GitHub access to it. Without that (no git
-credentials, `gh` login or SSH key) the clone fails with `Authentication failed`. The site needs no access:
-`npx skills add https://hanzoskills.com/<name>.md` installs the published markdown, verified anonymously
-against the live `cloud-host.md` and against `kai.md` served from a local build.
+github.com/hanzoai/skills is private, so the clone and the plugin need GitHub access to it. Without that (no
+git credentials, `gh` login or SSH key) the clone fails with `Authentication failed`. The URL form takes any
+page the site publishes, `https://hanzoskills.com/<name>.md`; `kai.md` is served once the site deploys.
 
 ## The Architecture (current truth)
 
