@@ -125,6 +125,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hanzo-sql`](hanzo-sql.md) — Hanzo SQL is a PostgreSQL fork with pre-built extensions for AI workloads: pgvector (vector similarity), pgcron (scheduled jobs), pgdocumentdb (MongoDB wire protocol), and PostGIS (geospatial).
 - [`hanzo-stack`](hanzo-stack.md) — Hanzo Stack provides the complete integrated development environment for running all Hanzo services locally.
 - [`hanzo-static`](hanzo-static.md) — Hanzo Static is a Traefik plugin that serves static files (SPAs, assets) directly from the ingress controller.
+- [`hanzo-static-sites-cd`](hanzo-static-sites-cd.md) — This skill provides the unified, authoritative standard for building, configuring, deploying, and managing all static sites and web applications across the Hanzo ecosystem.
 - [`hanzo-storage`](hanzo-storage.md) — Hanzo Storage is a high-performance, S3-compatible object storage server for AI workloads.
 - [`hanzo-store`](hanzo-store.md) — Hanzo Store is a flatfile-based marketplace for discovering and installing AI agent tools and MCP servers.
 - [`hanzo-stream`](hanzo-stream.md) — Hanzo Stream is a stateless Kafka wire protocol gateway that translates standard Kafka client requests into NATS JetStream operations against Hanzo PubSub.
@@ -393,7 +394,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`batches`](batches.md) — The Batches API (POST /v1/messages/batches) processes Messages API requests asynchronously at 50% of standard prices.
 - [`claude-platform-on-aws`](claude-platform-on-aws.md) — Anthropic-operated access to the Claude Developer Platform through AWS infrastructure — SigV4 authentication, AWS IAM access control, and AWS Marketplace billing.
 - [`error-codes`](error-codes.md) — This file documents HTTP error codes returned by the Claude API, their common causes, and how to handle them.
-- [`files-api`](files-api.md) — Under client.Beta.Files.
+- [`files-api`](files-api.md) — The Files API uploads files for use in Messages API requests.
 - [`live-sources`](live-sources.md) — This file contains WebFetch URLs for fetching current information from platform.claude.com and Agent SDK repositories.
 - [`managed-agents`](managed-agents.md) — Use these examples when the user needs raw HTTP requests or is working without an SDK.
 - [`managed-agents-api-reference`](managed-agents-api-reference.md) — All endpoints require x-api-key and anthropic-version: 2023-06-01 headers.
@@ -416,7 +417,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`prompt-audit`](prompt-audit.md) — Prompts, skills, and tool descriptions accumulate instructions tuned to older models: emphasis added because an old model under-triggered, step-by-step scripts added because an old model planned poorly, format scaffolds written before the A
 - [`prompt-caching`](prompt-caching.md) — This file covers how to design prompt-building code for effective caching.
 - [`sdk-upgrade`](sdk-upgrade.md) — anthropic 1.x is deliberately a small step from the last 0.x release: no method was restructured and no new pattern is required.
-- [`streaming`](streaming.md) — for stream.Next() { event := stream.Current() switch eventVariant := event.AsAny().(type) { case anthropic.ContentBlockDeltaEvent: switch deltaVariant := eventVariant.Delta.AsAny().(type) { case anthropic.TextDelta: fmt.Print(deltaVariant.T
+- [`streaming`](streaming.md) — for await (const event of stream) { if ( event.type === "contentblockdelta" && event.delta.type === "textdelta" ) { process.stdout.write(event.delta.text); } }
 - [`token-counting`](token-counting.md) — Use the counttokens endpoint (POST /v1/messages/counttokens) for accurate token counts against Claude models.
 - [`tool-use`](tool-use.md) — For conceptual overview (tool definitions, tool choice, tips), see shared/tool-use-concepts.md(../../shared/tool-use-concepts.md).
 - [`tool-use-concepts`](tool-use-concepts.md) — This file covers the conceptual foundations of tool use with the Claude API.
@@ -557,21 +558,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`cloud-gcp-serverless`](cloud-gcp-serverless.md) — Google Cloud serverless services including Cloud Functions, Cloud Run, and App Engine
 - [`cloud-gcp-storage`](cloud-gcp-storage.md) — Google Cloud storage services including Cloud Storage, Persistent Disk, and Filestore
 
-### database
-- [`apache-iceberg`](apache-iceberg.md) — Building data lakes with ACID transaction support and schema evolution
-- [`database-database-connection-pooling`](database-database-connection-pooling.md) — Configuring database connections for applications
-- [`database-database-selection`](database-database-selection.md) — Starting new projects and choosing database technology
-- [`database-elasticsearch-search`](database-elasticsearch-search.md) — Full-text search and relevance optimization with Elasticsearch
-- [`database-mongodb-document-design`](database-mongodb-document-design.md) — Designing MongoDB schemas
-- [`database-orm-patterns`](database-orm-patterns.md) — Working with ORMs (SQLAlchemy, Prisma, GORM, Diesel)
-- [`database-postgres-migrations`](database-postgres-migrations.md) — Creating database migrations for schema changes
-- [`database-postgres-query-optimization`](database-postgres-query-optimization.md) — Debugging slow queries in PostgreSQL
-- [`database-postgres-schema-design`](database-postgres-schema-design.md) — Designing new database schemas
-- [`database-redis-data-structures`](database-redis-data-structures.md) — Implementing caching layers
-- [`duckdb-analytics`](duckdb-analytics.md) — Skill: duckdb-analytics Category: Data/Analytics Related: Python, SQL, Parquet, data pipelines
-- [`redpanda-streaming`](redpanda-streaming.md) — **Redpanda deployments**: Setting up Kafka-compatible streaming infrastructure
-- [`reference`](reference.md) — Scope: Comprehensive guide to database migrations, schema versioning, zero-downtime deployments, and migration tooling Lines: ~1800 Last Updated: 2025-10-27
-
 ### elegant-design
 - [`anti-patterns`](anti-patterns.md) — ❌ Building custom components when design systems have them - Always check shadcn/ui, daisyUI, HeroUI first - Don't reinvent the wheel
 - [`chat-and-messaging`](chat-and-messaging.md) — Chat is a conversation, not a document.
@@ -616,6 +602,20 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`typed-holes-interaction`](typed-holes-interaction.md) — IDE integration with typed holes - goal-directed programming, hole refinement, case splitting, proof search, tactics, elaborator reflection (Agda, Idris, Lean models)
 - [`typed-holes-llm`](typed-holes-llm.md) — LLM integration with typed holes (OOPSLA 2024) - static context for code synthesis, type-driven prompting, validation, ranking, combining language servers with LLMs
 - [`typed-holes-semantics`](typed-holes-semantics.md) — Advanced typed holes semantics - hole closures, pattern matching with holes, type error localization, polymorphism, gradual guarantees, blame tracking
+
+### database
+- [`apache-iceberg`](apache-iceberg.md) — Building data lakes with ACID transaction support and schema evolution
+- [`database-database-connection-pooling`](database-database-connection-pooling.md) — Configuring database connections for applications
+- [`database-database-selection`](database-database-selection.md) — Starting new projects and choosing database technology
+- [`database-elasticsearch-search`](database-elasticsearch-search.md) — Full-text search and relevance optimization with Elasticsearch
+- [`database-mongodb-document-design`](database-mongodb-document-design.md) — Designing MongoDB schemas
+- [`database-orm-patterns`](database-orm-patterns.md) — Working with ORMs (SQLAlchemy, Prisma, GORM, Diesel)
+- [`database-postgres-migrations`](database-postgres-migrations.md) — Creating database migrations for schema changes
+- [`database-postgres-query-optimization`](database-postgres-query-optimization.md) — Debugging slow queries in PostgreSQL
+- [`database-postgres-schema-design`](database-postgres-schema-design.md) — Designing new database schemas
+- [`database-redis-data-structures`](database-redis-data-structures.md) — Implementing caching layers
+- [`duckdb-analytics`](duckdb-analytics.md) — Skill: duckdb-analytics Category: Data/Analytics Related: Python, SQL, Parquet, data pipelines
+- [`redpanda-streaming`](redpanda-streaming.md) — **Redpanda deployments**: Setting up Kafka-compatible streaming infrastructure
 
 ### cryptography
 - [`07_emergency_rotation_runbook`](07_emergency_rotation_runbook.md) — Purpose: Emergency rotation procedure for compromised secrets SLA: Complete rotation within 1 hour of detection Scope: All production secrets (databases, API keys, certificates, tokens)
@@ -826,6 +826,14 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`infrastructure-kubernetes-basics`](infrastructure-kubernetes-basics.md) — Deploying containerized applications at scale
 - [`infrastructure-terraform-patterns`](infrastructure-terraform-patterns.md) — Provisioning cloud infrastructure (AWS, GCP, Azure, Cloudflare)
 
+### social
+- [`listening`](listening.md) — How to surface the right posts to engage with each day — instead of randomly scrolling.
+- [`listening-sources-template`](listening-sources-template.md) — Copy this file to .agents/listening-sources.md in your project (or .claude/listening-sources.md) and fill in the brackets.
+- [`platform-limits`](platform-limits.md) — Quick reference for hashtag limits, character counts, and visible text thresholds on each major social platform.
+- [`post-templates`](post-templates.md) — Ready-to-use templates for different platforms and content types.
+- [`reverse-engineering`](reverse-engineering.md) — Instead of guessing what works, systematically analyze top-performing content in your niche and extract proven patterns.
+- [`short-form-video`](short-form-video.md) — Detailed reference for creating short-form video content on TikTok, Instagram Reels, and YouTube Shorts.
+
 ### testing
 - [`testing-e2e-testing`](testing-e2e-testing.md) — Test complete user workflows from UI to backend
 - [`testing-integration-testing`](testing-integration-testing.md) — Test interactions between multiple components or services
@@ -870,6 +878,13 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`nat-traversal`](nat-traversal.md) — Building peer-to-peer applications
 - [`network-resilience-patterns`](network-resilience-patterns.md) — Building robust network applications
 - [`tailscale-vpn`](tailscale-vpn.md) — Creating secure private networks (mesh VPN)
+
+### realtime
+- [`realtime-pubsub-patterns`](realtime-pubsub-patterns.md) — Scope: Publish/subscribe architecture, Redis Pub/Sub, message queues, and fan-out patterns Lines: 372 Last Updated: 2025-10-18
+- [`realtime-realtime-sync`](realtime-realtime-sync.md) — Scope: Conflict resolution, CRDTs, operational transformation, and eventual consistency patterns Lines: 398 Last Updated: 2025-10-18
+- [`realtime-server-sent-events`](realtime-server-sent-events.md) — Scope: SSE protocol, event streams, automatic reconnection, and fallback strategies Lines: 343 Last Updated: 2025-10-18
+- [`realtime-websocket-implementation`](realtime-websocket-implementation.md) — Scope: WebSocket protocol, connection management, reconnection strategies, and heartbeat patterns Lines: 387 Last Updated: 2025-10-18
+- [`reference`](reference.md) — 1. Protocol Fundamentals(#protocol-fundamentals) 2.
 
 ### tui
 - [`bubbletea-architecture`](bubbletea-architecture.md) — Building terminal UIs in Go
@@ -951,12 +966,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`newsjacking`](newsjacking.md) — Injecting your POV into a story that's already trending.
 - [`press-platforms`](press-platforms.md) — Journalists posting "I need a source for X" — you respond, sometimes you get quoted, sometimes you don't.
 
-### realtime
-- [`realtime-pubsub-patterns`](realtime-pubsub-patterns.md) — Scope: Publish/subscribe architecture, Redis Pub/Sub, message queues, and fan-out patterns Lines: 372 Last Updated: 2025-10-18
-- [`realtime-realtime-sync`](realtime-realtime-sync.md) — Scope: Conflict resolution, CRDTs, operational transformation, and eventual consistency patterns Lines: 398 Last Updated: 2025-10-18
-- [`realtime-server-sent-events`](realtime-server-sent-events.md) — Scope: SSE protocol, event streams, automatic reconnection, and fallback strategies Lines: 343 Last Updated: 2025-10-18
-- [`realtime-websocket-implementation`](realtime-websocket-implementation.md) — Scope: WebSocket protocol, connection management, reconnection strategies, and heartbeat patterns Lines: 387 Last Updated: 2025-10-18
-
 ### revops
 - [`automation-playbooks`](automation-playbooks.md) — Platform-specific workflow recipes for HubSpot, Salesforce, scheduling tools, and cross-tool automation.
 - [`lifecycle-definitions`](lifecycle-definitions.md) — Complete templates for lead lifecycle stages, MQL criteria by business type, SLAs, and rejection/recycling workflows.
@@ -975,12 +984,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`grader`](grader.md) — Evaluate expectations against an execution transcript and outputs.
 - [`schemas`](schemas.md) — This document defines the JSON schemas used by skill-creator.
 
-### social
-- [`listening`](listening.md) — How to surface the right posts to engage with each day — instead of randomly scrolling.
-- [`listening-sources-template`](listening-sources-template.md) — Copy this file to .agents/listening-sources.md in your project (or .claude/listening-sources.md) and fill in the brackets.
-- [`platform-limits`](platform-limits.md) — Quick reference for hashtag limits, character counts, and visible text thresholds on each major social platform.
-- [`short-form-video`](short-form-video.md) — Detailed reference for creating short-form video content on TikTok, Instagram Reels, and YouTube Shorts.
-
 ### typed-holes-refactor
 - [`constraint-rules`](constraint-rules.md) — Reference guide for constraint propagation rules in typed holes refactoring including dependency tracking and solution space narrowing. Use as reference when propagating constraints between resolved holes.
 - [`hole-types`](hole-types.md) — Reference taxonomy of refactoring hole types including current state holes, architecture holes, and implementation holes. Use as reference during typed holes refactoring for identifying and categorizing unknowns.
@@ -993,7 +996,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`wasm-rust-toolchain`](wasm-rust-toolchain.md) — Rust to WebAssembly compilation using wasm-pack, wasm-bindgen, optimization, and JavaScript interop
 - [`wasm-server-side`](wasm-server-side.md) — Server-side WebAssembly execution with Wasmtime, WASI support, edge computing, and plugin systems
 
-### analytics-tracking
+### analytics
 - [`event-library`](event-library.md) — Comprehensive list of events to track by business type and context.
 - [`ga4-implementation`](ga4-implementation.md) — Detailed implementation guide for Google Analytics 4.
 - [`gtm-implementation`](gtm-implementation.md) — Detailed guide for implementing tracking via Google Tag Manager.
@@ -1028,7 +1031,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`deltasoup`](deltasoup.md) — DeltaSoup enables community-driven model improvement through Byzantine-robust aggregation of personalized model deltas.
 - [`training-free-grpo`](training-free-grpo.md) — Training-Free GRPO (Group Relative Policy Optimization) is Zoo Gym's default RLHF method that eliminates value networks entirely, achieving 40-60% memory reduction and 2× speedup compared to PPO.
 
-### ab-testing
+### ab-test-setup
 - [`sample-size-guide`](sample-size-guide.md) — Reference for calculating sample sizes and test duration.
 - [`test-templates`](test-templates.md) — Templates for planning, documenting, and analyzing experiments.
 
@@ -1052,11 +1055,11 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`copy-guidelines`](copy-guidelines.md) — 1. Hook: First line grabs attention 2.
 - [`email-types`](email-types.md) — A comprehensive guide to lifecycle and campaign emails.
 
-### pricing-strategy
+### pricing
 - [`research-methods`](research-methods.md) — The Van Westendorp survey identifies the acceptable price range for your product.
 - [`tier-structure`](tier-structure.md) — 2 tiers: Simple, clear choice - Works for: Clear SMB vs.
 
-### referrals
+### referral-program
 - [`affiliate-programs`](affiliate-programs.md) — Detailed guidance for building and managing affiliate programs.
 - [`program-examples`](program-examples.md) — Real-world examples of successful referral programs.
 
@@ -1064,11 +1067,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`ai-writing-detection`](ai-writing-detection.md) — Words, phrases, and punctuation patterns commonly associated with AI-generated text.
 - [`international-seo`](international-seo.md) — Detailed evidence backing the International SEO & Localization section of the SEO Audit skill.
 
-### social-content
-- [`post-templates`](post-templates.md) — Ready-to-use templates for different platforms and content types.
-- [`reverse-engineering`](reverse-engineering.md) — Instead of guessing what works, systematically analyze top-performing content in your niche and extract proven patterns.
-
-### competitor-alternatives
+### competitors
 - [`content-architecture`](content-architecture.md) — How to structure and maintain competitor data for scalable comparison pages.
 
 ### content-strategy
@@ -1092,13 +1091,13 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 ### marketing-ideas
 - [`ideas-by-category`](ideas-by-category.md) — Complete list of proven marketing approaches organized by category.
 
-### paywalls
-- [`experiments`](experiments.md) — Comprehensive list of A/B tests and experiments for paywall optimization.
+### page-cro
+- [`experiments`](experiments.md) — Comprehensive list of A/B tests and experiments organized by page type.
 
 ### programmatic-seo
 - [`playbooks`](playbooks.md) — Beyond mixing and matching data point permutations, these are the proven playbooks for programmatic SEO.
 
-### schema
+### schema-markup
 - [`schema-examples`](schema-examples.md) — Complete JSON-LD examples for common schema types.
 
 ### video
@@ -1108,36 +1107,37 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-0000`](hip-0000.md) — HIP-0: Hanzo AI Architecture & Framework. Status Living. Hanzo architectural specification.
 - [`hip-0001`](hip-0001.md) — HIP-1: AI Token - Hanzo's Native Currency. Status Final. Hanzo architectural specification.
 - [`hip-0002`](hip-0002.md) — HIP-2: Hamiltonian Large Language Models (HLLMs) Specification. Status Final. Hanzo architectural specification.
-- [`hip-0003`](hip-0003.md) — HIP-3: Jin Multimodal AI Architecture. Status Draft. Hanzo architectural specification.
-- [`hip-0006`](hip-0006.md) — HIP-6: Personalized Model Tuning Architecture. Status Final. Hanzo architectural specification.
+- [`hip-0003`](hip-0003.md) — HIP-3: Jin — A Multimodal Model That Was Not Built. Status Draft. Hanzo architectural specification.
+- [`hip-0006`](hip-0006.md) — HIP-6: Per-User Fine-Tuning Architecture for Personalized AI. Status Final. Hanzo architectural specification.
 - [`hip-0007`](hip-0007.md) — HIP-7: Active Inference Integration for Hamiltonian LLMs. Status Final. Hanzo architectural specification.
 - [`hip-0008`](hip-0008.md) — HIP-8: HMM (Hanzo Market Maker) - Native DEX for AI Compute Resources. Status Final. Hanzo architectural specification.
-- [`hip-0009`](hip-0009.md) — HIP-9: Agent SDK — Multiagent Orchestration Framework. Status Final. Hanzo architectural specification.
+- [`hip-0009`](hip-0009.md) — HIP-9: Agent SDK - Multi-Agent Orchestration Framework. Status Final. Hanzo architectural specification.
 - [`hip-0019`](hip-0019.md) — HIP-19: Tensor Operations Standard. Status Final. Hanzo architectural specification.
 - [`hip-0020`](hip-0020.md) — HIP-20: Blockchain Node Standard. Status Final. Hanzo architectural specification.
 - [`hip-0024`](hip-0024.md) — HIP-24: Hanzo Sovereign L1 Chain Architecture. Status Final. Hanzo architectural specification.
 - [`hip-0025`](hip-0025.md) — HIP-25: Bot Agent Wallet & RPC Billing Protocol. Status Final. Hanzo architectural specification.
-- [`hip-0039`](hip-0039.md) — HIP-39: Zen Model Architecture. Status Final. Hanzo architectural specification.
+- [`hip-0039`](hip-0039.md) — HIP-39: Zen — The Open-Weight Generative Family. Status Final. Hanzo architectural specification.
 - [`hip-0043`](hip-0043.md) — HIP-43: Hanzo Engine — LLM Inference Engine Standard. Status Final. Hanzo architectural specification.
 - [`hip-0095`](hip-0095.md) — HIP-95: QoS Challenge System. Status Draft. Hanzo architectural specification.
 - [`hip-0096`](hip-0096.md) — HIP-96: AI Compute Contribution Rewards. Status Final. Hanzo architectural specification.
 - [`hip-0097`](hip-0097.md) — HIP-97: Node Identity and the did:hanzo: DID Method. Status Final. Hanzo architectural specification.
 - [`hip-0113`](hip-0113.md) — HIP-113: Cognitive Sidecar & Hanzo Engine Provider Runtime for Thinking Chains. Status Final. Hanzo architectural specification.
-- [`hip-0114`](hip-0114.md) — HIP-114: ZAP — Cognitive Transport for Thinking Chains. Status Draft. Hanzo architectural specification.
-- [`hip-0120`](hip-0120.md) — HIP-120: ZAP Native Transport and gRPC Elimination. Status Final. Hanzo architectural specification.
+- [`hip-0114`](hip-0114.md) — HIP-114: ZAP — Inter-VM Cognitive Transport for Thinking Chains. Status Draft. Hanzo architectural specification.
+- [`hip-0120`](hip-0120.md) — HIP-120: ZAP-Native Transport & gRPC Elimination. Status Final. Hanzo architectural specification.
 - [`hip-0121`](hip-0121.md) — HIP-121: BYO Compute Fleet & Metered Billing. Status Final. Hanzo architectural specification.
 - [`hip-0127`](hip-0127.md) — HIP-127: V8 · Open Edition — Architecture, Distribution & the Language Seam. Status Final. Hanzo architectural specification.
 - [`hip-0128`](hip-0128.md) — HIP-128: Resource Surface Standard — Generated REST over ZAP. Status Final. Hanzo architectural specification.
-- [`hip-0130`](hip-0130.md) — HIP-130: Open Core Split — Tenancy Line and Composition Root. Status Final. Hanzo architectural specification.
+- [`hip-0130`](hip-0130.md) — HIP-130: Open-Core Split — the Tenancy Line, the Composition Root, and Lazy Subsystems. Status Final. Hanzo architectural specification.
 - [`hip-0133`](hip-0133.md) — HIP-133: Entity Groups — Placement, Durability, Splitting and Promotion. Status Final. Hanzo architectural specification.
 - [`hip-0134`](hip-0134.md) — HIP-134: One Process, One Socket, One Identity. Status Final. Hanzo architectural specification.
 - [`hip-0135`](hip-0135.md) — HIP-135: What Is Public. Status Living. Hanzo architectural specification.
 - [`hip-0137`](hip-0137.md) — HIP-137: One License. Status Living. Hanzo architectural specification.
 - [`hip-0140`](hip-0140.md) — HIP-140: Proposing a Capability. Status Living. Hanzo architectural specification.
 - [`hip-0141`](hip-0141.md) — HIP-141: Substitution. Status Final. Hanzo architectural specification.
-- [`hip-0301`](hip-0301.md) — HIP-301: Agent Runtime Protocols and Cross Platform Parity. Status Final. Hanzo architectural specification.
+- [`hip-0301`](hip-0301.md) — HIP-301: Agent Runtime Protocols & Cross-Platform Parity. Status Final. Hanzo architectural specification.
 - [`hip-0303`](hip-0303.md) — HIP-303: Hanzo adopts LP-0010: Brand Sovereignty and Federation Discovery. Status Living. Hanzo architectural specification.
-- [`hip-0510`](hip-0510.md) — HIP-510: Enso — Learned Model Routing and Flywheel. Status Final. Hanzo architectural specification.
+- [`hip-0510`](hip-0510.md) — HIP-510: Enso — The Router Family, Learned Per-Request Routing and the Router–Model Flywheel. Status Final. Hanzo architectural specification.
+- [`hip-0511`](hip-0511.md) — HIP-511: Model Families — Zen Generates, Enso Routes, Kai Decides. Status Living. Hanzo architectural specification.
 - [`hip-0516`](hip-0516.md) — HIP-516: Translate — One Endpoint, Two Tiers, Permissive Weights. Status Final. Hanzo architectural specification.
 - [`hip-0517`](hip-0517.md) — HIP-517: Branch Naming — main is the Trunk, Everywhere. Status Living. Hanzo architectural specification.
 - [`hip-0522`](hip-0522.md) — HIP-522: The Context Graph — Edges, Decisions and Derivation as One Noun. Status Final. Hanzo architectural specification.
@@ -1145,9 +1145,10 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-0524`](hip-0524.md) — HIP-524: The Personal Agent — What It May Send Without You. Status Final. Hanzo architectural specification.
 - [`hip-0525`](hip-0525.md) — HIP-525: Rendezvous — When Every Participant Is a Machine. Status Draft. Hanzo architectural specification.
 - [`hip-0526`](hip-0526.md) — HIP-526: Semantic Memory — The Substrate Under the Graph. Status Draft. Hanzo architectural specification.
-- [`hip-0901`](hip-0901.md) — HIP-901: Proof of AI — Native Execution Proofs and Governance. Status Draft. Hanzo architectural specification.
+- [`hip-0901`](hip-0901.md) — HIP-901: Proof of AI (PoAI) — Native Execution Proofs, Canonical Contract & Operator-LLM Governance. Status Draft. Hanzo architectural specification.
 - [`hip-0902`](hip-0902.md) — HIP-902: Proof of Code — Consensus over Git Refs. Status Final. Hanzo architectural specification.
 - [`hip-0903`](hip-0903.md) — HIP-903: The Agentic Company — Autonomous Firms on Hanzo. Status Final. Hanzo architectural specification.
+- [`hip-0904`](hip-0904.md) — HIP-904: Zen6 — Dense, Coder and Ternary Checkpoints. Status Final. Hanzo architectural specification.
 - [`hip-1126`](hip-1126.md) — HIP-1126: Framework — The DocType Engine. Status Final. Hanzo architectural specification.
 - [`hip-1161`](hip-1161.md) — HIP-1161: Wallet — Custody of Key Material. Status Final. Hanzo architectural specification.
 - [`hip-1163`](hip-1163.md) — HIP-1163: x402 — Pay Per Request. Status Final. Hanzo architectural specification.
@@ -1158,8 +1159,8 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-1181`](hip-1181.md) — HIP-1181: Plan — The Tier Catalog. Status Final. Hanzo architectural specification.
 - [`hip-1189`](hip-1189.md) — HIP-1189: Web3 — Chain Access. Status Final. Hanzo architectural specification.
 - [`hip-1190`](hip-1190.md) — HIP-1190: Event — The Product Analytics Plane. Status Final. Hanzo architectural specification.
-- [`hip-1195`](hip-1195.md) — HIP-1195: Market — Rate Oracles and Exchange Pools. Status Final. Hanzo architectural specification.
 - [`hip-1327`](hip-1327.md) — HIP-1327: Public Channels — Finding a Room in Another Org. Status Draft. Hanzo architectural specification.
+- [`hip-1332`](hip-1332.md) — HIP-1332: Kai — The Decision Model and the Decision Plane. Status Draft. Hanzo architectural specification.
 
 ### Standards: Cloud & Native Infrastructure
 - [`hip-0014`](hip-0014.md) — HIP-14: Application Deployment Standard. Status Final. Hanzo architectural specification.
@@ -1171,26 +1172,26 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-0060`](hip-0060.md) — HIP-60: Serverless Functions (FaaS) Standard. Status Final. Hanzo architectural specification.
 - [`hip-0065`](hip-0065.md) — HIP-65: Backup & Disaster Recovery Standard. Status Final. Hanzo architectural specification.
 - [`hip-0068`](hip-0068.md) — HIP-68: Ingress Standard. Status Final. Hanzo architectural specification.
-- [`hip-0069`](hip-0069.md) — HIP-69: Service Discovery and Automated Bridge. Status Final. Hanzo architectural specification.
+- [`hip-0069`](hip-0069.md) — HIP-69: Service Discovery & Auto-Bridge. Status Final. Hanzo architectural specification.
 - [`hip-0074`](hip-0074.md) — HIP-74: Software Bill of Materials & Git Stamp Standard. Status Final. Hanzo architectural specification.
 - [`hip-0077`](hip-0077.md) — HIP-77: Mesh Identity, Gossip & Payments (PQ). Status Final. Hanzo architectural specification.
-- [`hip-0078`](hip-0078.md) — HIP-78: Z-Chain — Post Quantum Identity and Attestation Rollup. Status Draft. Hanzo architectural specification.
+- [`hip-0078`](hip-0078.md) — HIP-78: Z-Chain — Post-Quantum Identity & Attestation Rollup. Status Draft. Hanzo architectural specification.
 - [`hip-0079`](hip-0079.md) — HIP-79: Q-Chain — Quasar Finality Block Standard. Status Final. Hanzo architectural specification.
-- [`hip-0101`](hip-0101.md) — HIP-101: Hanzo Lux Bridge Protocol Integration. Status Final. Hanzo architectural specification.
+- [`hip-0101`](hip-0101.md) — HIP-101: Hanzo-Lux Bridge Protocol Integration. Status Final. Hanzo architectural specification.
 - [`hip-0102`](hip-0102.md) — HIP-102: Omnichain Bridge Integration. Status Draft. Hanzo architectural specification.
-- [`hip-0103`](hip-0103.md) — HIP-103: Bridge Post Quantum Profile. Status Final. Hanzo architectural specification.
+- [`hip-0103`](hip-0103.md) — HIP-103: Bridge PQ-Only Profile. Status Final. Hanzo architectural specification.
 - [`hip-0104`](hip-0104.md) — HIP-104: Contract Auth via Z-Chain Proof. Status Final. Hanzo architectural specification.
-- [`hip-0105`](hip-0105.md) — HIP-105: In Process Extension Runtime Standard. Status Final. Hanzo architectural specification.
+- [`hip-0105`](hip-0105.md) — HIP-105: In-Process Extension Runtime Standard. Status Final. Hanzo architectural specification.
 - [`hip-0106`](hip-0106.md) — HIP-106: The Hanzo Plugin Contract. Status Final. Hanzo architectural specification.
 - [`hip-0107`](hip-0107.md) — HIP-107: Streaming Replication over VFS. Status Final. Hanzo architectural specification.
-- [`hip-0108`](hip-0108.md) — HIP-108: On Demand Subsystem Supervisor and Warm Pool. Status Final. Hanzo architectural specification.
+- [`hip-0108`](hip-0108.md) — HIP-108: On-Demand Subsystem Supervisor + Warm Pool. Status Final. Hanzo architectural specification.
 - [`hip-0109`](hip-0109.md) — HIP-109: Hanzo ML Cloud Toolkit. Status Final. Hanzo architectural specification.
 - [`hip-0115`](hip-0115.md) — HIP-115: Hanzo Frontend Delivery. Status Draft. Hanzo architectural specification.
-- [`hip-0117`](hip-0117.md) — HIP-117: Cloud in a Box — One Binary Three Modes. Status Final. Hanzo architectural specification.
+- [`hip-0117`](hip-0117.md) — HIP-117: Cloud-in-a-Box — One Binary, Three Modes. Status Final. Hanzo architectural specification.
 - [`hip-0119`](hip-0119.md) — HIP-119: Hanzo Service Conventions. Status Final. Hanzo architectural specification.
-- [`hip-0122`](hip-0122.md) — HIP-122: zip — The ZAP Native Application Server Core. Status Final. Hanzo architectural specification.
+- [`hip-0122`](hip-0122.md) — HIP-122: zip — The ZAP-Native Application Server Core. Status Final. Hanzo architectural specification.
 - [`hip-0123`](hip-0123.md) — HIP-123: Visor — Fleet & Fabric Autoscaling Across Any Provider. Status Final. Hanzo architectural specification.
-- [`hip-0125`](hip-0125.md) — HIP-125: Consensus Plugin Placement Platform. Status Final. Hanzo architectural specification.
+- [`hip-0125`](hip-0125.md) — HIP-125: Consensus-Backed Plugin-Placement Platform. Status Final. Hanzo architectural specification.
 - [`hip-0129`](hip-0129.md) — HIP-129: Eval — A Score Over Model Output. Status Final. Hanzo architectural specification.
 - [`hip-0132`](hip-0132.md) — HIP-132: One Telemetry Plane — One Endpoint, One Schema, Many Lenses. Status Final. Hanzo architectural specification.
 - [`hip-0136`](hip-0136.md) — HIP-136: One Secret, One Path. Status Final. Hanzo architectural specification.
@@ -1208,7 +1209,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-0260`](hip-0260.md) — HIP-260: Efficient Model Practices. Status Living. Hanzo architectural specification.
 - [`hip-0270`](hip-0270.md) — HIP-270: AI Supply Chain Responsibility. Status Living. Hanzo architectural specification.
 - [`hip-0302`](hip-0302.md) — HIP-302: Hanzo Replicate: Encrypted SQLite Durability for Base Services. Status Final. Hanzo architectural specification.
-- [`hip-0305`](hip-0305.md) — HIP-305: esign — Shared Database Tenancy. Status Final. Hanzo architectural specification.
+- [`hip-0305`](hip-0305.md) — HIP-305: esign: shared-DB tenancy via team-where, not file-per-tenant. Status Final. Hanzo architectural specification.
 - [`hip-0306`](hip-0306.md) — HIP-306: AML Transaction Monitoring, Screening and Case Management. Status Final. Hanzo architectural specification.
 - [`hip-0512`](hip-0512.md) — HIP-512: Experiment — The Evidence Plane. Status Final. Hanzo architectural specification.
 - [`hip-0519`](hip-0519.md) — HIP-519: One Identity Boundary. Status Final. Hanzo architectural specification.
@@ -1216,43 +1217,41 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-1049`](hip-1049.md) — HIP-1049: Validator — A Token Redeemed for a Node. Status Final. Hanzo architectural specification.
 - [`hip-1060`](hip-1060.md) — HIP-1060: Pubsub — The Tenant Endpoint on the Bus. Status Final. Hanzo architectural specification.
 - [`hip-1061`](hip-1061.md) — HIP-1061: MQ — Queues and Streams. Status Final. Hanzo architectural specification.
-- [`hip-1062`](hip-1062.md) — HIP-1062: Tasks — The Durable Run. Status Final. Hanzo architectural specification.
+- [`hip-1062`](hip-1062.md) — HIP-1062: Workflow — The Durable Run. Status Final. Hanzo architectural specification.
 - [`hip-1100`](hip-1100.md) — HIP-1100: Ad — Paid Placement Under a Campaign. Status Final. Hanzo architectural specification.
 - [`hip-1101`](hip-1101.md) — HIP-1101: Allowance — The Free Lane's Ceiling. Status Final. Hanzo architectural specification.
-- [`hip-1103`](hip-1103.md) — HIP-1103: Audit — Tamper Evident Trail. Status Final. Hanzo architectural specification.
+- [`hip-1103`](hip-1103.md) — HIP-1103: Audit — The Tamper-Evident Trail. Status Final. Hanzo architectural specification.
 - [`hip-1104`](hip-1104.md) — HIP-1104: Base — The Hosted Backend. Status Final. Hanzo architectural specification.
 - [`hip-1105`](hip-1105.md) — HIP-1105: Benchmark — The Measurement Arena. Status Final. Hanzo architectural specification.
 - [`hip-1107`](hip-1107.md) — HIP-1107: Bot — A Run on a Surface. Status Final. Hanzo architectural specification.
-- [`hip-1113`](hip-1113.md) — HIP-1113: Cloudflare — Edge Network Integration. Status Final. Hanzo architectural specification.
+- [`hip-1113`](hip-1113.md) — HIP-1113: Cloudflare — The Per-Org Asset Plane. Status Final. Hanzo architectural specification.
 - [`hip-1114`](hip-1114.md) — HIP-1114: Code — Search and Symbols. Status Final. Hanzo architectural specification.
 - [`hip-1117`](hip-1117.md) — HIP-1117: Crawl — A Page as Markdown. Status Final. Hanzo architectural specification.
 - [`hip-1122`](hip-1122.md) — HIP-1122: Deploy — The GitOps Plane. Status Final. Hanzo architectural specification.
 - [`hip-1123`](hip-1123.md) — HIP-1123: Domain — Name Registration. Status Final. Hanzo architectural specification.
 - [`hip-1124`](hip-1124.md) — HIP-1124: Engine — The Serving Runtime Lens. Status Final. Hanzo architectural specification.
 - [`hip-1127`](hip-1127.md) — HIP-1127: Gateway — Live Edge Policy. Status Final. Hanzo architectural specification.
-- [`hip-1132`](hip-1132.md) — HIP-1132: Index — Full Text Search. Status Final. Hanzo architectural specification.
+- [`hip-1132`](hip-1132.md) — HIP-1132: Index — Full-Text Search. Status Final. Hanzo architectural specification.
 - [`hip-1133`](hip-1133.md) — HIP-1133: Ingress — The Embedded Edge. Status Final. Hanzo architectural specification.
 - [`hip-1134`](hip-1134.md) — HIP-1134: KMS — Secret Custody. Status Final. Hanzo architectural specification.
 - [`hip-1140`](hip-1140.md) — HIP-1140: ML — Model Serving. Status Final. Hanzo architectural specification.
 - [`hip-1144`](hip-1144.md) — HIP-1144: Registry — The Artifact Control Plane. Status Final. Hanzo architectural specification.
 - [`hip-1145`](hip-1145.md) — HIP-1145: Research — The Experiment Record. Status Final. Hanzo architectural specification.
 - [`hip-1146`](hip-1146.md) — HIP-1146: Sandbox — A Lease on Isolated Compute. Status Final. Hanzo architectural specification.
-- [`hip-1151`](hip-1151.md) — HIP-1151: Settings — Product Configuration. Status Final. Hanzo architectural specification.
+- [`hip-1151`](hip-1151.md) — HIP-1151: Settings — Per-Product Org Configuration. Status Final. Hanzo architectural specification.
 - [`hip-1152`](hip-1152.md) — HIP-1152: Share — A Public URL for a Local Service. Status Final. Hanzo architectural specification.
 - [`hip-1154`](hip-1154.md) — HIP-1154: Sync — Two Endpoints Kept in Step. Status Final. Hanzo architectural specification.
-- [`hip-1172`](hip-1172.md) — HIP-1172: Compute — Rented Virtual Hardware. Status Final. Hanzo architectural specification.
-- [`hip-1173`](hip-1173.md) — HIP-1173: Network — Zero Trust Network Overlay. Status Final. Hanzo architectural specification.
-- [`hip-1191`](hip-1191.md) — HIP-1191: Billing — Invoicing and Metered Usage. Status Final. Hanzo architectural specification.
-- [`hip-1192`](hip-1192.md) — HIP-1192: Space — Drives Folders and File Storage. Status Final. Hanzo architectural specification.
+- [`hip-1172`](hip-1172.md) — HIP-1172: visor — Compute You Rent. Status Final. Hanzo architectural specification.
+- [`hip-1173`](hip-1173.md) — HIP-1173: Network — An Org-Scoped Overlay. Status Final. Hanzo architectural specification.
 - [`hip-1198`](hip-1198.md) — HIP-1198: Graph — The Assertion Plane. Status Final. Hanzo architectural specification.
 - [`hip-1211`](hip-1211.md) — HIP-1211: AI — The Model API. Status Final. Hanzo architectural specification.
 - [`hip-1212`](hip-1212.md) — HIP-1212: Exec — The Code Interpreter. Status Final. Hanzo architectural specification.
-- [`hip-1213`](hip-1213.md) — HIP-1213: Tool — Tool Execution Plane. Status Final. Hanzo architectural specification.
+- [`hip-1213`](hip-1213.md) — HIP-1213: Tools — The Tool Plane. Status Final. Hanzo architectural specification.
 - [`hip-1230`](hip-1230.md) — HIP-1230: Platform — The Container Plane. Status Final. Hanzo architectural specification.
 - [`hip-1232`](hip-1232.md) — HIP-1232: Git — Repository Hosting. Status Final. Hanzo architectural specification.
 - [`hip-1240`](hip-1240.md) — HIP-1240: O11y — The Observability Plane. Status Final. Hanzo architectural specification.
 - [`hip-1241`](hip-1241.md) — HIP-1241: Metrics — One Native Store, Three Signals. Status Final. Hanzo architectural specification.
-- [`hip-1250`](hip-1250.md) — HIP-1250: Integration — Connection Registry. Status Final. Hanzo architectural specification.
+- [`hip-1250`](hip-1250.md) — HIP-1250: Integrations — The Connection Registry. Status Final. Hanzo architectural specification.
 - [`hip-1251`](hip-1251.md) — HIP-1251: Websearch — The Live Web. Status Final. Hanzo architectural specification.
 - [`hip-1252`](hip-1252.md) — HIP-1252: Meet — The Join Decision. Status Final. Hanzo architectural specification.
 - [`hip-1253`](hip-1253.md) — HIP-1253: Explorer — Chain Data. Status Final. Hanzo architectural specification.
@@ -1265,7 +1264,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-1325`](hip-1325.md) — HIP-1325: Node — A Machine an Org Owns. Status Final. Hanzo architectural specification.
 - [`hip-1326`](hip-1326.md) — HIP-1326: AMQP — Exchanges, Queues and Bindings Onto the One Bus. Status Final. Hanzo architectural specification.
 - [`hip-1328`](hip-1328.md) — HIP-1328: Forge — The Meta Code Host. Status Draft. Hanzo architectural specification.
-- [`hip-1329`](hip-1329.md) — HIP-1329: Plugins — Dynamic Process and Host Control. Status Final. Hanzo architectural specification.
+- [`hip-1330`](hip-1330.md) — HIP-1330: Dev — The Agent Loop. Status Draft. Hanzo architectural specification.
 
 ### Standards: Interfaces & Realtime Protocols
 - [`hip-0004`](hip-0004.md) — HIP-4: LLM Gateway - Unified AI Provider Interface. Status Final. Hanzo architectural specification.
@@ -1273,7 +1272,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-0015`](hip-0015.md) — HIP-15: Computer Control Standard. Status Final. Hanzo architectural specification.
 - [`hip-0018`](hip-0018.md) — HIP-18: Payment Processing Standard. Status Draft. Hanzo architectural specification.
 - [`hip-0038`](hip-0038.md) — HIP-38: Admin Console Standard. Status Draft. Hanzo architectural specification.
-- [`hip-0040`](hip-0040.md) — HIP-40: Multilanguage SDK Standard. Status Final. Hanzo architectural specification.
+- [`hip-0040`](hip-0040.md) — HIP-40: Multi-Language SDK Standard. Status Final. Hanzo architectural specification.
 - [`hip-0041`](hip-0041.md) — HIP-41: The Hanzo CLI — a Projection of the Served API. Status Final. Hanzo architectural specification.
 - [`hip-0044`](hip-0044.md) — HIP-44: Answer — Budget, Policy, Audit, Search, KB and Graph in Three SDKs. Status Draft. Hanzo architectural specification.
 - [`hip-0045`](hip-0045.md) — HIP-45: Documentation Framework Standard. Status Final. Hanzo architectural specification.
@@ -1281,10 +1280,10 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-0063`](hip-0063.md) — HIP-63: Feature Flags Standard. Status Final. Hanzo architectural specification.
 - [`hip-0126`](hip-0126.md) — HIP-126: Integrations, Connectors & the Extension Runtime — One Registry, One Way. Status Final. Hanzo architectural specification.
 - [`hip-0300`](hip-0300.md) — HIP-300: Unified MCP — one endpoint, and local servers that forward to it. Status Final. Hanzo architectural specification.
-- [`hip-0504`](hip-0504.md) — HIP-504: Unified Cross Platform Design System. Status Final. Hanzo architectural specification.
+- [`hip-0504`](hip-0504.md) — HIP-504: Unified Cross-Platform Design System. Status Final. Hanzo architectural specification.
 - [`hip-0518`](hip-0518.md) — HIP-518: AML — The Obligation Plane. Status Final. Hanzo architectural specification.
 - [`hip-1020`](hip-1020.md) — HIP-1020: Chain Registry. Status Final. Hanzo architectural specification.
-- [`hip-1021`](hip-1021.md) — HIP-1021: Chain RPC Endpoint. Status Final. Hanzo architectural specification.
+- [`hip-1021`](hip-1021.md) — HIP-1021: Chain JSON-RPC Endpoint. Status Final. Hanzo architectural specification.
 - [`hip-1022`](hip-1022.md) — HIP-1022: Native Balance Reads. Status Final. Hanzo architectural specification.
 - [`hip-1030`](hip-1030.md) — HIP-1030: OpenAPI — The Served Contract. Status Final. Hanzo architectural specification.
 - [`hip-1032`](hip-1032.md) — HIP-1032: Errors — The Fault Lens. Status Final. Hanzo architectural specification.
@@ -1292,14 +1291,14 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-1042`](hip-1042.md) — HIP-1042: Avatar. Status Final. Hanzo architectural specification.
 - [`hip-1063`](hip-1063.md) — HIP-1063: Auto — Flows That Run Themselves. Status Final. Hanzo architectural specification.
 - [`hip-1064`](hip-1064.md) — HIP-1064: Flow — The Canvas Plane. Status Final. Hanzo architectural specification.
-- [`hip-1066`](hip-1066.md) — HIP-1066: Channel — Unified Inbox. Status Final. Hanzo architectural specification.
+- [`hip-1066`](hip-1066.md) — HIP-1066: Channels — One Inbox. Status Final. Hanzo architectural specification.
 - [`hip-1067`](hip-1067.md) — HIP-1067: Destination — An Event Translated to a Sink. Status Final. Hanzo architectural specification.
 - [`hip-1069`](hip-1069.md) — HIP-1069: Tel — Numbers, Calls and Messages. Status Final. Hanzo architectural specification.
 - [`hip-1102`](hip-1102.md) — HIP-1102: Ask — The Grounded Answer. Status Final. Hanzo architectural specification.
 - [`hip-1106`](hip-1106.md) — HIP-1106: Blueprint — The Priced Stack. Status Final. Hanzo architectural specification.
 - [`hip-1110`](hip-1110.md) — HIP-1110: Campaign — One Push Across Channels. Status Final. Hanzo architectural specification.
 - [`hip-1111`](hip-1111.md) — HIP-1111: Captable — Who Owns What. Status Final. Hanzo architectural specification.
-- [`hip-1112`](hip-1112.md) — HIP-1112: Catalog — Service Discovery. Status Final. Hanzo architectural specification.
+- [`hip-1112`](hip-1112.md) — HIP-1112: Catalog — Cross-Org Discovery. Status Final. Hanzo architectural specification.
 - [`hip-1115`](hip-1115.md) — HIP-1115: Compliance — Verification of Record. Status Final. Hanzo architectural specification.
 - [`hip-1116`](hip-1116.md) — HIP-1116: Content — The Marketing Loop. Status Final. Hanzo architectural specification.
 - [`hip-1120`](hip-1120.md) — HIP-1120: CRM — The Sales Pipeline. Status Final. Hanzo architectural specification.
@@ -1322,7 +1321,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-1322`](hip-1322.md) — HIP-1322: Skills — The Discovery Catalogue. Status Final. Hanzo architectural specification.
 
 ### Standards: Security, IAM & Cryptography
-- [`hip-0005`](hip-0005.md) — HIP-5: Post Quantum Security for AI Infrastructure. Status Final. Hanzo architectural specification.
+- [`hip-0005`](hip-0005.md) — HIP-5: Post-Quantum Security for AI Infrastructure. Status Final. Hanzo architectural specification.
 - [`hip-0026`](hip-0026.md) — HIP-26: Identity & Access Management Standard. Status Draft. Hanzo architectural specification.
 - [`hip-0027`](hip-0027.md) — HIP-27: Secrets Management Standard. Status Draft. Hanzo architectural specification.
 - [`hip-0054`](hip-0054.md) — HIP-54: Zero Trust Architecture Standard. Status Draft. Hanzo architectural specification.
@@ -1344,10 +1343,9 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-1045`](hip-1045.md) — HIP-1045: Orgs. Status Final. Hanzo architectural specification.
 - [`hip-1047`](hip-1047.md) — HIP-1047: Security Scanning. Status Final. Hanzo architectural specification.
 - [`hip-1065`](hip-1065.md) — HIP-1065: Connectors — A User's Own Credentials. Status Final. Hanzo architectural specification.
-- [`hip-1194`](hip-1194.md) — HIP-1194: Trust — Trust Center and Evidence Controls. Status Final. Hanzo architectural specification.
 
 ### Standards: Platform & Applications
-- [`hip-0124`](hip-0124.md) — HIP-124: Bring Your Own Provider and AI — Unified Usage. Status Final. Hanzo architectural specification.
+- [`hip-0124`](hip-0124.md) — HIP-124: Bring-Your-Own Provider & AI — Unified Dashboard and Usage. Status Final. Hanzo architectural specification.
 - [`hip-0400`](hip-0400.md) — HIP-400: Service CRD. Status Final. Hanzo architectural specification.
 - [`hip-0401`](hip-0401.md) — HIP-401: Datastore CRD. Status Final. Hanzo architectural specification.
 - [`hip-0402`](hip-0402.md) — HIP-402: SQL CRD. Status Final. Hanzo architectural specification.
@@ -1365,27 +1363,27 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-0414`](hip-0414.md) — HIP-414: Network CRD. Status Final. Hanzo architectural specification.
 - [`hip-0418`](hip-0418.md) — HIP-418: Indexer CRD. Status Final. Hanzo architectural specification.
 - [`hip-0419`](hip-0419.md) — HIP-419: Explorer CRD. Status Final. Hanzo architectural specification.
-- [`hip-0449`](hip-0449.md) — HIP-449: Hanzo Login. Status Final. Hanzo architectural specification.
-- [`hip-0506`](hip-0506.md) — HIP-506: Hanzo Studio — Agentic Multimodal Creative Runtime. Status Final. Hanzo architectural specification.
+- [`hip-0449`](hip-0449.md) — HIP-449: hanzo-login. Status Final. Hanzo architectural specification.
+- [`hip-0506`](hip-0506.md) — HIP-506: Hanzo Studio — Agentic Multi-Modal Creative Runtime. Status Final. Hanzo architectural specification.
 - [`hip-1000`](hip-1000.md) — HIP-1000: Author — A Royalty Bound to a Repository. Status Final. Hanzo architectural specification.
-- [`hip-1001`](hip-1001.md) — HIP-1001: Books — Double Entry Ledger. Status Final. Hanzo architectural specification.
+- [`hip-1001`](hip-1001.md) — HIP-1001: Books — The Double-Entry Ledger. Status Final. Hanzo architectural specification.
 - [`hip-1046`](hip-1046.md) — HIP-1046: Risk. Status Final. Hanzo architectural specification.
 - [`hip-1048`](hip-1048.md) — HIP-1048: Team. Status Final. Hanzo architectural specification.
-- [`hip-1160`](hip-1160.md) — HIP-1160: Todo — The Work Item Board. Status Final. Hanzo architectural specification.
+- [`hip-1160`](hip-1160.md) — HIP-1160: Task — The Work Item Board. Status Final. Hanzo architectural specification.
 - [`hip-1162`](hip-1162.md) — HIP-1162: World — The News Feed. Status Final. Hanzo architectural specification.
-- [`hip-1193`](hip-1193.md) — HIP-1193: Standing — Entity Upkeep and Annual Filings. Status Final. Hanzo architectural specification.
 - [`hip-1200`](hip-1200.md) — HIP-1200: Account — The Caller's Own Surface. Status Final. Hanzo architectural specification.
 - [`hip-1201`](hip-1201.md) — HIP-1201: Admission — Launch Control. Status Final. Hanzo architectural specification.
 - [`hip-1202`](hip-1202.md) — HIP-1202: Entitlement — What an Org May Run. Status Final. Hanzo architectural specification.
 - [`hip-1203`](hip-1203.md) — HIP-1203: Affiliate — Commission on Referred Spend. Status Final. Hanzo architectural specification.
-- [`hip-1210`](hip-1210.md) — HIP-1210: Agent — Define and Run Agents. Status Final. Hanzo architectural specification.
+- [`hip-1210`](hip-1210.md) — HIP-1210: Agents — Define, Run, Keep the Run. Status Final. Hanzo architectural specification.
 - [`hip-1214`](hip-1214.md) — HIP-1214: LSP — Live Code Intelligence. Status Final. Hanzo architectural specification.
 - [`hip-1220`](hip-1220.md) — HIP-1220: Commerce — The Merchant Half. Status Final. Hanzo architectural specification.
 - [`hip-1221`](hip-1221.md) — HIP-1221: Treasury — The Reserve Fund. Status Final. Hanzo architectural specification.
 - [`hip-1222`](hip-1222.md) — HIP-1222: Pricing — The Price List and Who May See It. Status Final. Hanzo architectural specification.
-- [`hip-1231`](hip-1231.md) — HIP-1231: Project — Static Site Store. Status Final. Hanzo architectural specification.
+- [`hip-1231`](hip-1231.md) — HIP-1231: Projects — The Site Store. Status Final. Hanzo architectural specification.
 - [`hip-1242`](hip-1242.md) — HIP-1242: Leaderboard — Who Uses AI Most. Status Final. Hanzo architectural specification.
 - [`hip-1260`](hip-1260.md) — HIP-1260: Knowledge — Wiki and Agent Memory. Status Final. Hanzo architectural specification.
 - [`hip-1261`](hip-1261.md) — HIP-1261: Label — Ground Truth. Status Final. Hanzo architectural specification.
 - [`hip-1262`](hip-1262.md) — HIP-1262: Reference — Lookup Sets. Status Final. Hanzo architectural specification.
 - [`hip-1312`](hip-1312.md) — HIP-1312: Company — The Formation Machine. Status Final. Hanzo architectural specification.
+- [`hip-1331`](hip-1331.md) — HIP-1331: Patrol — Standing Watch Over an Estate. Status Final. Hanzo architectural specification.

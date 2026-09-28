@@ -26776,7 +26776,7 @@ For the full, always-current reference (including per-endpoint flags), WebFetch 
 
 <!-- batches -->
 
-# Message Batches API — Python
+# Message Batches API — TypeScript
 
 The Batches API (`POST /v1/messages/batches`) processes Messages API requests asynchronously at 50% of standard prices.
 
@@ -26792,187 +26792,95 @@ The Batches API (`POST /v1/messages/batches`) processes Messages API requests as
 
 ## Create a Batch
 
-```python
-import anthropic
-from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
-from anthropic.types.messages.batch_create_params import Request
+```typescript
+import Anthropic from "@anthropic-ai/sdk";
 
-client = anthropic.Anthropic()
+const client = new Anthropic();
 
-message_batch = client.messages.batches.create(
-    requests=[
-        Request(
-            custom_id="request-1",
-            params=MessageCreateParamsNonStreaming(
-                model="claude-opus-5",
-                max_tokens=16000,
-                messages=[{"role": "user", "content": "Summarize climate change impacts"}]
-            )
-        ),
-        Request(
-            custom_id="request-2",
-            params=MessageCreateParamsNonStreaming(
-                model="claude-opus-5",
-                max_tokens=16000,
-                messages=[{"role": "user", "content": "Explain quantum computing basics"}]
-            )
-        ),
-    ]
-)
+const messageBatch = await client.messages.batches.create({
+  requests: [
+    {
+      custom_id: "request-1",
+      params: {
+        model: "claude-opus-5",
+        max_tokens: 16000,
+        messages: [
+          { role: "user", content: "Summarize climate change impacts" },
+        ],
+      },
+    },
+    {
+      custom_id: "request-2",
+      params: {
+        model: "claude-opus-5",
+        max_tokens: 16000,
+        messages: [
+          { role: "user", content: "Explain quantum computing basics" },
+        ],
+      },
+    },
+  ],
+});
 
-print(f"Batch ID: {message_batch.id}")
-print(f"Status: {message_batch.processing_status}")
+console.log(`Batch ID: ${messageBatch.id}`);
+console.log(`Status: ${messageBatch.processing_status}`);
 ```
 
 ---
 
 ## Poll for Completion
 
-```python
-import time
+```typescript
+let batch;
+while (true) {
+  batch = await client.messages.batches.retrieve(messageBatch.id);
+  if (batch.processing_status === "ended") break;
+  console.log(
+    `Status: ${batch.processing_status}, processing: ${batch.request_counts.processing}`,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 60_000));
+}
 
-while True:
-    batch = client.messages.batches.retrieve(message_batch.id)
-    if batch.processing_status == "ended":
-        break
-    print(f"Status: {batch.processing_status}, processing: {batch.request_counts.processing}")
-    time.sleep(60)
-
-print("Batch complete!")
-print(f"Succeeded: {batch.request_counts.succeeded}")
-print(f"Errored: {batch.request_counts.errored}")
+console.log("Batch complete!");
+console.log(`Succeeded: ${batch.request_counts.succeeded}`);
+console.log(`Errored: ${batch.request_counts.errored}`);
 ```
 
 ---
 
 ## Retrieve Results
 
-> **Note:** Examples below use `match/case` syntax, requiring Python 3.10+. For earlier versions, use `if/elif` chains instead.
-
-```python
-for result in client.messages.batches.results(message_batch.id):
-    match result.result.type:
-        case "succeeded":
-            msg = result.result.message
-            text = next((b.text for b in msg.content if b.type == "text"), "")
-            print(f"[{result.custom_id}] {text[:100]}")
-        case "errored":
-            if result.result.error.type == "invalid_request":
-                print(f"[{result.custom_id}] Validation error - fix request and retry")
-            else:
-                print(f"[{result.custom_id}] Server error - safe to retry")
-        case "canceled":
-            print(f"[{result.custom_id}] Canceled")
-        case "expired":
-            print(f"[{result.custom_id}] Expired - resubmit")
+```typescript
+for await (const result of await client.messages.batches.results(
+  messageBatch.id,
+)) {
+  switch (result.result.type) {
+    case "succeeded":
+      console.log(
+        `[${result.custom_id}] ${result.result.message.content[0].text.slice(0, 100)}`,
+      );
+      break;
+    case "errored":
+      if (result.result.error.type === "invalid_request") {
+        console.log(`[${result.custom_id}] Validation error - fix and retry`);
+      } else {
+        console.log(`[${result.custom_id}] Server error - safe to retry`);
+      }
+      break;
+    case "expired":
+      console.log(`[${result.custom_id}] Expired - resubmit`);
+      break;
+  }
+}
 ```
 
 ---
 
 ## Cancel a Batch
 
-```python
-cancelled = client.messages.batches.cancel(message_batch.id)
-print(f"Status: {cancelled.processing_status}")  # "canceling"
-```
-
----
-
-## List Batches (auto-pagination)
-
-Iterating the return value of any `list()` call auto-paginates across all pages — do not index into `.data` if you want the full set:
-
-```python
-for batch in client.messages.batches.list(limit=20):
-    print(batch.id, batch.processing_status)
-```
-
-For manual control, use `first_page.has_next_page()` / `first_page.get_next_page()` / `first_page.next_page_info()`; `first_page.data` holds the current page's items and `first_page.last_id` is the cursor.
-
----
-
-## Batch with Prompt Caching
-
-```python
-shared_system = [
-    {"type": "text", "text": "You are a literary analyst."},
-    {
-        "type": "text",
-        "text": large_document_text,  # Shared across all requests
-        "cache_control": {"type": "ephemeral"}
-    }
-]
-
-message_batch = client.messages.batches.create(
-    requests=[
-        Request(
-            custom_id=f"analysis-{i}",
-            params=MessageCreateParamsNonStreaming(
-                model="claude-opus-5",
-                max_tokens=16000,
-                system=shared_system,
-                messages=[{"role": "user", "content": question}]
-            )
-        )
-        for i, question in enumerate(questions)
-    ]
-)
-```
-
----
-
-## Full End-to-End Example
-
-```python
-import anthropic
-import time
-from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
-from anthropic.types.messages.batch_create_params import Request
-
-client = anthropic.Anthropic()
-
-# 1. Prepare requests
-items_to_classify = [
-    "The product quality is excellent!",
-    "Terrible customer service, never again.",
-    "It's okay, nothing special.",
-]
-
-requests = [
-    Request(
-        custom_id=f"classify-{i}",
-        params=MessageCreateParamsNonStreaming(
-            model="claude-haiku-4-5",
-            max_tokens=50,
-            messages=[{
-                "role": "user",
-                "content": f"Classify as positive/negative/neutral (one word): {text}"
-            }]
-        )
-    )
-    for i, text in enumerate(items_to_classify)
-]
-
-# 2. Create batch
-batch = client.messages.batches.create(requests=requests)
-print(f"Created batch: {batch.id}")
-
-# 3. Wait for completion
-while True:
-    batch = client.messages.batches.retrieve(batch.id)
-    if batch.processing_status == "ended":
-        break
-    time.sleep(10)
-
-# 4. Collect results
-results = {}
-for result in client.messages.batches.results(batch.id):
-    if result.result.type == "succeeded":
-        msg = result.result.message
-        results[result.custom_id] = next((b.text for b in msg.content if b.type == "text"), "")
-
-for custom_id, classification in sorted(results.items()):
-    print(f"{custom_id}: {classification}")
+```typescript
+const cancelled = await client.messages.batches.cancel(messageBatch.id);
+console.log(`Status: ${cancelled.processing_status}`); // "canceling"
 ```
 
 
@@ -27308,27 +27216,104 @@ except anthropic.APIStatusError as e:
 
 <!-- files-api -->
 
-# Files API — Go
+# Files API — TypeScript
 
-## Files API (Beta)
+The Files API uploads files for use in Messages API requests. Reference files via `file_id` in content blocks, avoiding re-uploads across multiple API calls.
 
-Under `client.Beta.Files`. Method is **`Upload`** (NOT `New`/`Create`), params struct is `BetaFileUploadParams`. The `File` field takes an `io.Reader`; use `anthropic.File()` to attach a filename + content-type for the multipart encoding.
+**Beta:** Pass `betas: ["files-api-2025-04-14"]` in your API calls (the SDK sets the required header automatically).
 
-```go
-f, _ := os.Open("./upload_me.txt")
-defer f.Close()
+## Key Facts
 
-meta, err := client.Beta.Files.Upload(ctx, anthropic.BetaFileUploadParams{
-    File:  anthropic.File(f, "upload_me.txt", "text/plain"),
-    Betas: []anthropic.AnthropicBeta{anthropic.AnthropicBetaFilesAPI2025_04_14},
-})
-// meta.ID is the file_id to reference in subsequent message requests
-```
-
-Other `Beta.Files` methods: `List`, `Delete`, `Download`, `GetMetadata`.
+- Maximum file size: 500 MB
+- Total storage: 100 GB per organization
+- Files persist until deleted
+- File operations (upload, list, delete) are free; content used in messages is billed as input tokens
+- Not available on Amazon Bedrock or Google Vertex AI
 
 ---
 
+## Upload a File
+
+```typescript
+import Anthropic, { toFile } from "@anthropic-ai/sdk";
+import fs from "fs";
+
+const client = new Anthropic();
+
+const uploaded = await client.beta.files.upload({
+  file: await toFile(fs.createReadStream("report.pdf"), undefined, {
+    type: "application/pdf",
+  }),
+  betas: ["files-api-2025-04-14"],
+});
+
+console.log(`File ID: ${uploaded.id}`);
+console.log(`Size: ${uploaded.size_bytes} bytes`);
+```
+
+---
+
+## Use a File in Messages
+
+### PDF / Text Document
+
+```typescript
+const response = await client.beta.messages.create({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  messages: [
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "Summarize the key findings in this report." },
+        {
+          type: "document",
+          source: { type: "file", file_id: uploaded.id },
+          title: "Q4 Report",
+          citations: { enabled: true },
+        },
+      ],
+    },
+  ],
+  betas: ["files-api-2025-04-14"],
+});
+
+console.log(response.content[0].text);
+```
+
+---
+
+## Manage Files
+
+### List Files
+
+```typescript
+const files = await client.beta.files.list({
+  betas: ["files-api-2025-04-14"],
+});
+for (const f of files.data) {
+  console.log(`${f.id}: ${f.filename} (${f.size_bytes} bytes)`);
+}
+```
+
+### Delete a File
+
+```typescript
+await client.beta.files.delete("file_011CNha8iCJcU1wXNR6q4V8w", {
+  betas: ["files-api-2025-04-14"],
+});
+```
+
+### Download a File
+
+```typescript
+const response = await client.beta.files.download(
+  "file_011CNha8iCJcU1wXNR6q4V8w",
+  { betas: ["files-api-2025-04-14"] },
+);
+const content = Buffer.from(await response.arrayBuffer());
+await fs.promises.writeFile("output.txt", content);
+```
 
 
 ---
@@ -33630,49 +33615,184 @@ Lead with the outcome, then:
 
 <!-- streaming -->
 
-# Streaming — Go
+# Streaming — TypeScript
 
-## Streaming
+## Quick Start
 
-```go
-stream := client.Messages.NewStreaming(context.Background(), anthropic.MessageNewParams{
-    Model:     anthropic.ModelClaudeOpus4_8,
-    MaxTokens: 64000,
-    Messages: []anthropic.MessageParam{
-        anthropic.NewUserMessage(anthropic.NewTextBlock("Write a haiku")),
-    },
-})
+```typescript
+const stream = client.messages.stream({
+  model: "claude-opus-5",
+  max_tokens: 64000,
+  messages: [{ role: "user", content: "Write a story" }],
+});
 
-for stream.Next() {
-    event := stream.Current()
-    switch eventVariant := event.AsAny().(type) {
-    case anthropic.ContentBlockDeltaEvent:
-        switch deltaVariant := eventVariant.Delta.AsAny().(type) {
-        case anthropic.TextDelta:
-            fmt.Print(deltaVariant.Text)
-        }
-    }
-}
-if err := stream.Err(); err != nil {
-    log.Fatal(err)
+for await (const event of stream) {
+  if (
+    event.type === "content_block_delta" &&
+    event.delta.type === "text_delta"
+  ) {
+    process.stdout.write(event.delta.text);
+  }
 }
 ```
-
-**Accumulating the final message** (there is no `GetFinalMessage()` on the stream):
-
-```go
-stream := client.Messages.NewStreaming(ctx, params)
-message := anthropic.Message{}
-for stream.Next() {
-    message.Accumulate(stream.Current())
-}
-if err := stream.Err(); err != nil { log.Fatal(err) }
-// message.Content now has the complete response
-```
-
 
 ---
 
+## Handling Different Content Types
+
+> **Fable 5 / Claude Opus 5 / Opus 4.8 / Opus 4.7 / Opus 4.6:** Use `thinking: {type: "adaptive"}`. On Claude Opus 5 adaptive is also what you get by omitting `thinking` entirely. On older models, use `thinking: {type: "enabled", budget_tokens: N}` instead.
+
+```typescript
+const stream = client.messages.stream({
+  model: "claude-opus-5",
+  max_tokens: 64000,
+  thinking: { type: "adaptive", display: "summarized" }, // display opt-in: default is omitted (empty thinking text) on Fable 5 / Mythos 5 / Claude Opus 5 / Opus 4.8 / 4.7
+  messages: [{ role: "user", content: "Analyze this problem" }],
+});
+
+for await (const event of stream) {
+  switch (event.type) {
+    case "content_block_start":
+      switch (event.content_block.type) {
+        case "thinking":
+          console.log("\n[Thinking...]");
+          break;
+        case "text":
+          console.log("\n[Response:]");
+          break;
+      }
+      break;
+    case "content_block_delta":
+      switch (event.delta.type) {
+        case "thinking_delta":
+          process.stdout.write(event.delta.thinking);
+          break;
+        case "text_delta":
+          process.stdout.write(event.delta.text);
+          break;
+      }
+      break;
+  }
+}
+```
+
+---
+
+## Streaming with Tool Use (Tool Runner)
+
+Use the tool runner with `stream: true`. The outer loop iterates over tool runner iterations (messages), the inner loop processes stream events:
+
+```typescript
+import Anthropic from "@anthropic-ai/sdk";
+import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { z } from "zod";
+
+const client = new Anthropic();
+
+const getWeather = betaZodTool({
+  name: "get_weather",
+  description: "Get current weather for a location",
+  inputSchema: z.object({
+    location: z.string().describe("City and state, e.g., San Francisco, CA"),
+  }),
+  run: async ({ location }) => `72°F and sunny in ${location}`,
+});
+
+const runner = client.beta.messages.toolRunner({
+  model: "claude-opus-5",
+  max_tokens: 64000,
+  tools: [getWeather],
+  messages: [
+    { role: "user", content: "What's the weather in Paris and London?" },
+  ],
+  stream: true,
+});
+
+// Outer loop: each tool runner iteration
+for await (const messageStream of runner) {
+  // Inner loop: stream events for this iteration
+  for await (const event of messageStream) {
+    switch (event.type) {
+      case "content_block_delta":
+        switch (event.delta.type) {
+          case "text_delta":
+            process.stdout.write(event.delta.text);
+            break;
+          case "input_json_delta":
+            // Tool input being streamed
+            break;
+        }
+        break;
+    }
+  }
+}
+```
+
+---
+
+## Getting the Final Message
+
+```typescript
+const stream = client.messages.stream({
+  model: "claude-opus-5",
+  max_tokens: 64000,
+  messages: [{ role: "user", content: "Hello" }],
+});
+
+for await (const event of stream) {
+  // Process events...
+}
+
+const finalMessage = await stream.finalMessage();
+console.log(`Tokens used: ${finalMessage.usage.output_tokens}`);
+```
+
+---
+
+## Stream Event Types
+
+| Event Type            | Description                 | When it fires                     |
+| --------------------- | --------------------------- | --------------------------------- |
+| `message_start`       | Contains message metadata   | Once at the beginning             |
+| `content_block_start` | New content block beginning | When a text/tool_use block starts |
+| `content_block_delta` | Incremental content update  | For each token/chunk              |
+| `content_block_stop`  | Content block complete      | When a block finishes             |
+| `message_delta`       | Message-level updates       | Contains `stop_reason`, usage     |
+| `message_stop`        | Message complete            | Once at the end                   |
+
+## Best Practices
+
+1. **Always flush output** — Use `process.stdout.write()` for immediate display
+2. **Handle partial responses** — If the stream is interrupted, you may have incomplete content
+3. **Track token usage** — The `message_delta` event contains usage information
+4. **Use `finalMessage()`** — Get the complete `Anthropic.Message` object even when streaming. Don't wrap `.on()` events in `new Promise()` — `finalMessage()` handles all completion/error/abort states internally
+5. **Buffer for web UIs** — Consider buffering a few tokens before rendering to avoid excessive DOM updates
+6. **Use `stream.on("text", ...)` for deltas** — The `text` event provides just the delta string, simpler than manually filtering `content_block_delta` events
+7. **For agentic loops with streaming** — See the [Streaming Manual Loop](./tool-use.md#streaming-manual-loop) section in tool-use.md for combining `stream()` + `finalMessage()` with a tool-use loop
+
+## Raw SSE Format
+
+If using raw HTTP (not SDKs), the stream returns Server-Sent Events:
+
+```
+event: message_start
+data: {"type":"message_start","message":{"id":"msg_...","type":"message",...}}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0}
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":12}}
+
+event: message_stop
+data: {"type":"message_stop"}
+```
 
 
 ---
@@ -33741,226 +33861,595 @@ Full docs: see the Token Counting entry in `shared/live-sources.md`.
 
 <!-- tool-use -->
 
-# Tool Use — Go
+# Tool Use — TypeScript
 
 For conceptual overview (tool definitions, tool choice, tips), see [shared/tool-use-concepts.md](../../shared/tool-use-concepts.md).
 
-## Tool Use
+## Tool Runner (Recommended)
 
-### Tool Runner (Beta — Recommended)
+**Beta:** The tool runner is in beta in the TypeScript SDK.
 
-**Beta:** The Go SDK provides `BetaToolRunner` for automatic tool use loops via the `toolrunner` package.
+Use `betaZodTool` with Zod schemas to define tools with a `run` function, then pass them to `client.beta.messages.toolRunner()`:
 
-```go
-import (
-    "context"
-    "fmt"
-    "log"
+```typescript
+import Anthropic from "@anthropic-ai/sdk";
+import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { z } from "zod";
 
-    "github.com/anthropics/anthropic-sdk-go"
-    "github.com/anthropics/anthropic-sdk-go/toolrunner"
-)
+const client = new Anthropic();
 
-// Define tool input with jsonschema tags for automatic schema generation
-type GetWeatherInput struct {
-    City string `json:"city" jsonschema:"required,description=The city name"`
+const getWeather = betaZodTool({
+  name: "get_weather",
+  description: "Get current weather for a location",
+  inputSchema: z.object({
+    location: z.string().describe("City and state, e.g., San Francisco, CA"),
+    unit: z.enum(["celsius", "fahrenheit"]).optional(),
+  }),
+  run: async (input) => {
+    // Your implementation here
+    return `72°F and sunny in ${input.location}`;
+  },
+});
+
+// The tool runner handles the agentic loop and returns the final message
+const finalMessage = await client.beta.messages.toolRunner({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  tools: [getWeather],
+  messages: [{ role: "user", content: "What's the weather in Paris?" }],
+});
+
+console.log(finalMessage.content);
+```
+
+Zod is optional — `betaTool()` from `@anthropic-ai/sdk/helpers/beta/json-schema` accepts a raw JSON Schema `inputSchema` plus a `run` function if you don't want a Zod dependency.
+
+**Key benefits of the tool runner:**
+
+- No manual loop — the SDK handles calling tools and feeding results back
+- Type-safe tool inputs via Zod schemas (or raw JSON Schema via `betaTool()`)
+- Tool schemas are generated automatically from Zod definitions
+- Iteration stops automatically when Claude has no more tool calls
+
+### Server tools with the tool runner
+
+The runner's `tools` array accepts raw server-tool definitions (`web_search_20260209`, `web_fetch_20260209`, code execution) alongside runnable tools — pass the literal tool object; server tools run on Anthropic's servers, so there is no `run` function.
+
+**Caution — the runner does not auto-resume `pause_turn` (as of `@anthropic-ai/sdk` 0.110.0).** A long-running server-tool turn can stop with `stop_reason: "pause_turn"`. The runner only continues after a client tool produces a result, so a paused turn ends the loop and is returned as the final message — no error, no warning, just a silently truncated answer. If you mix server tools into the runner, check `stop_reason` on every iteration and resume by pushing the paused assistant turn back:
+
+```typescript
+const params = {
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  tools: [getWeather, { type: "web_search_20260209", name: "web_search", max_uses: 5 }],
+  messages: [{ role: "user", content: "Compare this week's forecasts for Paris across two sources" }],
+};
+
+const runner = client.beta.messages.toolRunner(params);
+
+// Non-streaming: each iteration yields a complete message
+for await (const message of runner) {
+  if (message.stop_reason === "pause_turn") {
+    runner.pushMessages({ role: "assistant", content: message.content });
+  }
 }
 
-// Create a tool with automatic schema generation from struct tags
-weatherTool, err := toolrunner.NewBetaToolFromJSONSchema(
-    "get_weather",
-    "Get current weather for a city",
-    func(ctx context.Context, input GetWeatherInput) (anthropic.BetaToolResultBlockParamContentUnion, error) {
-        return anthropic.BetaToolResultBlockParamContentUnion{
-            OfText: &anthropic.BetaTextBlockParam{
-                Text: fmt.Sprintf("The weather in %s is sunny, 72°F", input.City),
-            },
-        }, nil
-    },
-)
-if err != nil {
-    log.Fatal(err)
-}
-
-// Create a tool runner that handles the conversation loop automatically
-runner := client.Beta.Messages.NewToolRunner(
-    []anthropic.BetaTool{weatherTool},
-    anthropic.BetaToolRunnerParams{
-        BetaMessageNewParams: anthropic.BetaMessageNewParams{
-            Model:     anthropic.ModelClaudeOpus4_8,
-            MaxTokens: 16000,
-            Messages: []anthropic.BetaMessageParam{
-                anthropic.NewBetaUserMessage(anthropic.NewBetaTextBlock("What's the weather in Paris?")),
-            },
-        },
-        MaxIterations: 5,
-    },
-)
-
-// Run until Claude produces a final response
-message, err := runner.RunToCompletion(context.Background())
-if err != nil {
-    log.Fatal(err)
-}
-
-// RunToCompletion returns *BetaMessage; content is []BetaContentBlockUnion.
-// Narrow via AsAny() switch — note the Beta-namespace types (BetaTextBlock,
-// not TextBlock):
-for _, block := range message.Content {
-    switch block := block.AsAny().(type) {
-    case anthropic.BetaTextBlock:
-        fmt.Println(block.Text)
-    }
+// Streaming alternative — construct the runner with `stream: true` (same
+// params as above). Each iteration then yields a stream, not a message — a
+// bare `message.stop_reason` check never fires. Resolve the stream first:
+const streamingRunner = client.beta.messages.toolRunner({ ...params, stream: true });
+for await (const stream of streamingRunner) {
+  const message = await stream.finalMessage();
+  if (message.stop_reason === "pause_turn") {
+    streamingRunner.pushMessages({ role: "assistant", content: message.content });
+  }
 }
 ```
 
-**Key features of the Go tool runner:**
+Each pause–resume consumes a `max_iterations` tick, so a capped run can still end paused — check the final message's `stop_reason` before trusting the result (after the loop, call `.done()` on the runner you iterated to get the final message). Alternatively, use the manual loop below, which handles `pause_turn` explicitly.
 
-- Automatic schema generation from Go structs via `jsonschema` tags
-- `RunToCompletion()` for simple one-shot usage
-- `All()` iterator for processing each message in the conversation
-- `NextMessage()` for step-by-step iteration
-- Streaming variant via `NewToolRunnerStreaming()` with `AllStreaming()`
+---
 
-### Manual Loop
+## Manual Agentic Loop
 
-Prefer the tool runner above. For interception, validation, logging, or human-in-the-loop approval, gate inside the tool's run function or step the runner with `NextMessage()`/`All()` and inspect each message (the runner's public `Params` field lets you adjust the next request) — a manual loop is not required. Drop to a manual loop only when you need control the runner does not expose: define tools with `ToolParam`, check `StopReason`, execute tools yourself, and feed `tool_result` blocks back.
+Prefer the tool runner above. Drop to a manual loop only when you need control the runner does not expose (e.g., a custom transport, request shapes the SDK cannot build, or avoiding a beta dependency — the runner is beta, and it supports per-token streaming via `stream: true`). Human-in-the-loop approval does *not* require a manual loop — gate inside the tool's `run()` function (return a "user declined" result) or inspect pending `tool_use` blocks and call `setMessagesParams()` between iterations.
 
-Derived from `anthropic-sdk-go/examples/tools/main.go`.
+If you do need a manual loop:
 
-```go
-package main
+```typescript
+import Anthropic from "@anthropic-ai/sdk";
 
-import (
-    "context"
-    "encoding/json"
-    "fmt"
-    "log"
+const client = new Anthropic();
+const tools: Anthropic.Tool[] = [...]; // Your tool definitions
+let messages: Anthropic.MessageParam[] = [{ role: "user", content: userInput }];
 
-    "github.com/anthropics/anthropic-sdk-go"
-)
+while (true) {
+  const response = await client.messages.create({
+    model: "claude-opus-5",
+    max_tokens: 16000,
+    tools: tools,
+    messages: messages,
+  });
 
-func main() {
-    client := anthropic.NewClient()
+  if (response.stop_reason === "end_turn") break;
 
-    // 1. Define tools. ToolParam.InputSchema uses a map, no struct tags needed.
-    addTool := anthropic.ToolParam{
-        Name:        "add",
-        Description: anthropic.String("Add two integers"),
-        InputSchema: anthropic.ToolInputSchemaParam{
-            Properties: map[string]any{
-                "a": map[string]any{"type": "integer"},
-                "b": map[string]any{"type": "integer"},
-            },
-        },
-    }
-    // ToolParam must be wrapped in ToolUnionParam for the Tools slice
-    tools := []anthropic.ToolUnionParam{{OfTool: &addTool}}
+  // Server-side tool hit iteration limit; append assistant turn and re-send to continue
+  if (response.stop_reason === "pause_turn") {
+    messages.push({ role: "assistant", content: response.content });
+    continue;
+  }
 
-    messages := []anthropic.MessageParam{
-        anthropic.NewUserMessage(anthropic.NewTextBlock("What is 2 + 3?")),
-    }
+  const toolUseBlocks = response.content.filter(
+    (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
+  );
 
-    for {
-        resp, err := client.Messages.New(context.Background(), anthropic.MessageNewParams{
-            Model:     anthropic.ModelClaudeSonnet4_6,
-            MaxTokens: 16000,
-            Messages:  messages,
-            Tools:     tools,
-        })
-        if err != nil {
-            log.Fatal(err)
-        }
+  messages.push({ role: "assistant", content: response.content });
 
-        // 2. Append the assistant response to history BEFORE processing tool calls.
-        //    resp.ToParam() converts Message → MessageParam in one call.
-        messages = append(messages, resp.ToParam())
+  const toolResults: Anthropic.ToolResultBlockParam[] = [];
+  for (const tool of toolUseBlocks) {
+    const result = await executeTool(tool.name, tool.input);
+    toolResults.push({
+      type: "tool_result",
+      tool_use_id: tool.id,
+      content: result,
+    });
+  }
 
-        // 3. Walk content blocks. ContentBlockUnion is a flattened struct;
-        //    use block.AsAny().(type) to switch on the actual variant.
-        toolResults := []anthropic.ContentBlockParamUnion{}
-        for _, block := range resp.Content {
-            switch variant := block.AsAny().(type) {
-            case anthropic.TextBlock:
-                fmt.Println(variant.Text)
-            case anthropic.ToolUseBlock:
-                // 4. Parse the tool input. Use variant.JSON.Input.Raw() to get the
-                //    raw JSON — block.Input is json.RawMessage, not the parsed value.
-                var in struct {
-                    A int `json:"a"`
-                    B int `json:"b"`
-                }
-                if err := json.Unmarshal([]byte(variant.JSON.Input.Raw()), &in); err != nil {
-                    log.Fatal(err)
-                }
-                result := fmt.Sprintf("%d", in.A+in.B)
-                // 5. NewToolResultBlock(toolUseID, content, isError) builds the
-                //    ContentBlockParamUnion for you. block.ID is the tool_use_id.
-                toolResults = append(toolResults,
-                    anthropic.NewToolResultBlock(block.ID, result, false))
-            }
-        }
-
-        // 6. Exit when Claude stops asking for tools
-        if resp.StopReason != anthropic.StopReasonToolUse {
-            break
-        }
-
-        // 7. Tool results go in a user message (variadic: all results in one turn)
-        messages = append(messages, anthropic.NewUserMessage(toolResults...))
-    }
+  messages.push({ role: "user", content: toolResults });
 }
 ```
 
-**Key API surface:**
+### Streaming Manual Loop
 
-| Symbol | Purpose |
-|---|---|
-| `resp.ToParam()` | Convert `Message` response → `MessageParam` for history |
-| `block.AsAny().(type)` | Type-switch on `ContentBlockUnion` variants |
-| `variant.JSON.Input.Raw()` | Raw JSON string of tool input (for `json.Unmarshal`) |
-| `anthropic.NewToolResultBlock(id, content, isError)` | Build `tool_result` block |
-| `anthropic.NewUserMessage(blocks...)` | Wrap tool results as a user turn |
-| `anthropic.StopReasonToolUse` | `StopReason` constant to check loop termination |
-| `anthropic.ToolUnionParam{OfTool: &t}` | Wrap `ToolParam` in the union for `Tools:` |
+Use `client.messages.stream()` + `finalMessage()` instead of `.create()` when you need streaming within a manual loop. Text deltas are streamed on each iteration; `finalMessage()` collects the complete `Message` so you can inspect `stop_reason` and extract tool-use blocks:
+
+```typescript
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic();
+const tools: Anthropic.Tool[] = [...];
+let messages: Anthropic.MessageParam[] = [{ role: "user", content: userInput }];
+
+while (true) {
+  const stream = client.messages.stream({
+    model: "claude-opus-5",
+    max_tokens: 64000,
+    tools,
+    messages,
+  });
+
+  // Stream text deltas on each iteration
+  stream.on("text", (delta) => {
+    process.stdout.write(delta);
+  });
+
+  // finalMessage() resolves with the complete Message — no need to
+  // manually wire up .on("message") / .on("error") / .on("abort")
+  const message = await stream.finalMessage();
+
+  if (message.stop_reason === "end_turn") break;
+
+  // Server-side tool hit iteration limit; append assistant turn and re-send to continue
+  if (message.stop_reason === "pause_turn") {
+    messages.push({ role: "assistant", content: message.content });
+    continue;
+  }
+
+  const toolUseBlocks = message.content.filter(
+    (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
+  );
+
+  messages.push({ role: "assistant", content: message.content });
+
+  const toolResults: Anthropic.ToolResultBlockParam[] = [];
+  for (const tool of toolUseBlocks) {
+    const result = await executeTool(tool.name, tool.input);
+    toolResults.push({
+      type: "tool_result",
+      tool_use_id: tool.id,
+      content: result,
+    });
+  }
+
+  messages.push({ role: "user", content: toolResults });
+}
+```
+
+> **Important:** Don't wrap `.on()` events in `new Promise()` to collect the final message — use `stream.finalMessage()` instead. The SDK handles all error/abort/completion states internally.
+
+> **Error handling in the loop:** Use the SDK's typed exceptions (e.g., `Anthropic.RateLimitError`, `Anthropic.APIError`) — see [Error Handling](./README.md#error-handling) for examples. Don't check error messages with string matching.
+
+> **SDK types:** Use `Anthropic.MessageParam`, `Anthropic.Tool`, `Anthropic.ToolUseBlock`, `Anthropic.ToolResultBlockParam`, `Anthropic.Message`, etc. for all API-related data structures. Don't redefine equivalent interfaces.
+
+---
+
+## Handling Tool Results
+
+```typescript
+const response = await client.messages.create({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  tools: tools,
+  messages: [{ role: "user", content: "What's the weather in Paris?" }],
+});
+
+for (const block of response.content) {
+  if (block.type === "tool_use") {
+    const result = await executeTool(block.name, block.input);
+
+    const followup = await client.messages.create({
+      model: "claude-opus-5",
+      max_tokens: 16000,
+      tools: tools,
+      messages: [
+        { role: "user", content: "What's the weather in Paris?" },
+        { role: "assistant", content: response.content },
+        {
+          role: "user",
+          content: [
+            { type: "tool_result", tool_use_id: block.id, content: result },
+          ],
+        },
+      ],
+    });
+  }
+}
+```
+
+---
+
+## Tool Choice
+
+```typescript
+const response = await client.messages.create({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  tools: tools,
+  tool_choice: { type: "tool", name: "get_weather" },
+  messages: [{ role: "user", content: "What's the weather in Paris?" }],
+});
+```
 
 ---
 
 ## Anthropic-Defined Tools
 
-Version-suffixed struct names with `Param` suffix. `Name`/`Type` are `constant.*` types — zero value marshals correctly, so `{}` works. Wrap in `ToolUnionParam` with the matching `Of*` field. Web search and code execution are server-executed; bash and text editor are client-executed (you handle the `tool_use` locally — see `shared/tool-use-concepts.md`).
+Version-suffixed `type` literals; `name` is fixed per interface. Web search and code execution are server-executed; bash and text editor are client-executed (you handle the `tool_use` locally — see `shared/tool-use-concepts.md`). Pass plain object literals — the `ToolUnion` type is satisfied structurally. **The `name`/`type` pair must match the interface**: mixing `str_replace_based_edit_tool` (20250728 name) with `text_editor_20250124` (which expects `str_replace_editor`) is a TS2322.
 
-```go
-Tools: []anthropic.ToolUnionParam{
-    {OfWebSearchTool20260209: &anthropic.WebSearchTool20260209Param{}},
-    {OfBashTool20250124: &anthropic.ToolBash20250124Param{}},
-    {OfTextEditor20250728: &anthropic.ToolTextEditor20250728Param{}},
-    {OfCodeExecutionTool20260120: &anthropic.CodeExecutionTool20260120Param{}},
-},
+**Don't type-annotate as `Tool[]`** — `Tool` is just the custom-tool variant. Let structural typing infer from the `tools` param, or annotate as `Anthropic.Messages.ToolUnion[]` if you must:
+
+```typescript
+// ✓ let inference work — no annotation
+const response = await client.messages.create({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  tools: [
+    { type: "text_editor_20250728", name: "str_replace_based_edit_tool" },
+    { type: "bash_20250124", name: "bash" },
+    { type: "web_search_20260209", name: "web_search" },
+    { type: "code_execution_20260120", name: "code_execution" },
+  ],
+  messages: [{ role: "user", content: "..." }],
+});
+
+// ✗ this is a TS2352 — Tool is the CUSTOM tool variant only
+// const tools: Anthropic.Tool[] = [{ type: "text_editor_20250728", ... }]
 ```
 
-Also available: `WebFetchTool20260209Param`, `ToolSearchToolBm25_20251119Param`, `ToolSearchToolRegex20251119Param`. For the advisor and memory tools, use `BetaAdvisorTool20260301Param` / `BetaMemoryTool20250818Param` in the beta namespace on `client.Beta.Messages.New`.
+| Interface | `name` | `type` |
+|---|---|---|
+| `ToolTextEditor20250124` | `str_replace_editor` | `text_editor_20250124` |
+| `ToolTextEditor20250429` | `str_replace_based_edit_tool` | `text_editor_20250429` |
+| `ToolTextEditor20250728` | `str_replace_based_edit_tool` | `text_editor_20250728` |
+| `ToolBash20250124` | `bash` | `bash_20250124` |
+| `WebSearchTool20260209` | `web_search` | `web_search_20260209` |
+| `WebFetchTool20260209` | `web_fetch` | `web_fetch_20260209` |
+| `CodeExecutionTool20260120` | `code_execution` | `code_execution_20260120` |
 
-### Advisor tool (beta)
+**Don't mix beta and non-beta types**: if you call `client.beta.messages.create()`, the response `content` is `BetaContentBlock[]` — you cannot pass that to a non-beta `ContentBlockParam[]` without narrowing each element.
 
-Server-side — no tool_result round-trip. The advisor model must be ≥ the executor (top-level) model; invalid pairs return 400.
+---
 
-```go
-response, err := client.Beta.Messages.New(ctx, anthropic.BetaMessageNewParams{
-    Model:     anthropic.ModelClaudeSonnet4_6,
-    MaxTokens: 4096,
-    Tools: []anthropic.BetaToolUnionParam{
-        {OfAdvisorTool20260301: &anthropic.BetaAdvisorTool20260301Param{
-            Model: anthropic.ModelClaudeOpus4_8,
-        }},
+
+## Code Execution
+
+### Basic Usage
+
+```typescript
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic();
+
+const response = await client.messages.create({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  messages: [
+    {
+      role: "user",
+      content:
+        "Calculate the mean and standard deviation of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",
     },
-    Messages: []anthropic.BetaMessageParam{ /* ... */ },
-    Betas:    []anthropic.AnthropicBeta{anthropic.AnthropicBetaAdvisorTool2026_03_01},
-})
+  ],
+  tools: [{ type: "code_execution_20260120", name: "code_execution" }],
+});
+```
+
+### Reading Local Files (ESM note)
+
+`__dirname` doesn't exist in ES modules. For script-relative paths use `import.meta.url`:
+
+```typescript
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pdfBytes = readFileSync(join(__dirname, "sample.pdf"));
+```
+
+Or use a CWD-relative path if the script runs from a known directory: `readFileSync("./sample.pdf")`.
+
+### Upload Files for Analysis
+
+```typescript
+import Anthropic, { toFile } from "@anthropic-ai/sdk";
+import { createReadStream } from "fs";
+
+const client = new Anthropic();
+
+// 1. Upload a file
+const uploaded = await client.beta.files.upload({
+  file: await toFile(createReadStream("sales_data.csv"), undefined, {
+    type: "text/csv",
+  }),
+  betas: ["files-api-2025-04-14"],
+});
+
+// 2. Pass to code execution
+// Code execution is GA; Files API is still beta (pass via RequestOptions)
+const response = await client.messages.create(
+  {
+    model: "claude-opus-5",
+    max_tokens: 16000,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Analyze this sales data. Show trends and create a visualization.",
+          },
+          { type: "container_upload", file_id: uploaded.id },
+        ],
+      },
+    ],
+    tools: [{ type: "code_execution_20260120", name: "code_execution" }],
+  },
+  { headers: { "anthropic-beta": "files-api-2025-04-14" } },
+);
+```
+
+### Retrieve Generated Files
+
+```typescript
+import path from "path";
+import fs from "fs";
+
+const OUTPUT_DIR = "./claude_outputs";
+await fs.promises.mkdir(OUTPUT_DIR, { recursive: true });
+
+for (const block of response.content) {
+  if (block.type === "bash_code_execution_tool_result") {
+    const result = block.content;
+    if (result.type === "bash_code_execution_result" && result.content) {
+      for (const fileRef of result.content) {
+        if (fileRef.type === "bash_code_execution_output") {
+          const metadata = await client.beta.files.retrieveMetadata(
+            fileRef.file_id,
+          );
+          const downloadResponse = await client.beta.files.download(fileRef.file_id);
+          const fileBytes = Buffer.from(await downloadResponse.arrayBuffer());
+          const safeName = path.basename(metadata.filename);
+          if (!safeName || safeName === "." || safeName === "..") {
+            console.warn(`Skipping invalid filename: ${metadata.filename}`);
+            continue;
+          }
+          const outputPath = path.join(OUTPUT_DIR, safeName);
+          await fs.promises.writeFile(outputPath, fileBytes);
+          console.log(`Saved: ${outputPath}`);
+        }
+      }
+    }
+  }
+}
+```
+
+### Container Reuse
+
+```typescript
+// First request: set up environment
+const response1 = await client.messages.create({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  messages: [
+    {
+      role: "user",
+      content: "Install tabulate and create data.json with sample user data",
+    },
+  ],
+  tools: [{ type: "code_execution_20260120", name: "code_execution" }],
+});
+
+// Reuse container
+// container is nullable — set only when using server-side code execution
+const containerId = response1.container!.id;
+
+const response2 = await client.messages.create({
+  container: containerId,
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  messages: [
+    {
+      role: "user",
+      content: "Read data.json and display as a formatted table",
+    },
+  ],
+  tools: [{ type: "code_execution_20260120", name: "code_execution" }],
+});
 ```
 
 ---
 
+## Memory Tool
+
+### Basic Usage
+
+```typescript
+const response = await client.messages.create({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  messages: [
+    {
+      role: "user",
+      content: "Remember that my preferred language is TypeScript.",
+    },
+  ],
+  tools: [{ type: "memory_20250818", name: "memory" }],
+});
+```
+
+### SDK Memory Helper
+
+Use `betaMemoryTool` with a `MemoryToolHandlers` implementation:
+
+```typescript
+import {
+  betaMemoryTool,
+  type MemoryToolHandlers,
+} from "@anthropic-ai/sdk/helpers/beta/memory";
+
+const handlers: MemoryToolHandlers = {
+  async view(command) { ... },
+  async create(command) { ... },
+  async str_replace(command) { ... },
+  async insert(command) { ... },
+  async delete(command) { ... },
+  async rename(command) { ... },
+};
+
+const memory = betaMemoryTool(handlers);
+
+const runner = client.beta.messages.toolRunner({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  tools: [memory],
+  messages: [{ role: "user", content: "Remember my preferences" }],
+});
+
+for await (const message of runner) {
+  console.log(message);
+}
+```
+
+For full implementation examples, use WebFetch:
+
+- `https://github.com/anthropics/anthropic-sdk-typescript/blob/main/examples/tools-helpers-memory.ts`
+
+---
+
+## Structured Outputs
+
+### JSON Outputs (Zod — Recommended)
+
+```typescript
+import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+
+const ContactInfoSchema = z.object({
+  name: z.string(),
+  email: z.string(),
+  plan: z.string(),
+  interests: z.array(z.string()),
+  demo_requested: z.boolean(),
+});
+
+const client = new Anthropic();
+
+const response = await client.messages.parse({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  messages: [
+    {
+      role: "user",
+      content:
+        "Extract: Jane Doe (jane@co.com) wants Enterprise, interested in API and SDKs, wants a demo.",
+    },
+  ],
+  output_config: {
+    format: zodOutputFormat(ContactInfoSchema),
+  },
+});
+
+// parsed_output is null if parsing failed — assert or guard
+console.log(response.parsed_output!.name); // "Jane Doe"
+```
+
+### Strict Tool Use
+
+```typescript
+const response = await client.messages.create({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  messages: [
+    {
+      role: "user",
+      content: "Book a flight to Tokyo for 2 passengers on March 15",
+    },
+  ],
+  tools: [
+    {
+      name: "book_flight",
+      description: "Book a flight to a destination",
+      strict: true,
+      input_schema: {
+        type: "object",
+        properties: {
+          destination: { type: "string" },
+          date: { type: "string", format: "date" },
+          passengers: {
+            type: "integer",
+            enum: [1, 2, 3, 4, 5, 6, 7, 8],
+          },
+        },
+        required: ["destination", "date", "passengers"],
+        additionalProperties: false,
+      },
+    },
+  ],
+});
+```
+
+---
+
+## Agent Skills
+
+Enable an Anthropic-managed skill (e.g., `pptx`) via `container.skills` + the `code_execution` tool on the beta path. Both beta headers are required. Outputs land as files in the response content — download by file ID via the Files API.
+
+```typescript
+const response = await client.beta.messages.create({
+  model: "claude-opus-5",
+  max_tokens: 16000,
+  container: {
+    skills: [{ type: "anthropic", skill_id: "pptx", version: "latest" }],
+  },
+  tools: [{ type: "code_execution_20260521", name: "code_execution" }],
+  betas: ["code-execution-2025-08-25", "skills-2025-10-02"],
+  messages: [{ role: "user", content: "Create a 3-slide deck about X." }],
+});
+// Find the file_id in response.content, then:
+// await client.beta.files.download(fileId)
+```
 
 
 ---
@@ -47579,283 +48068,6 @@ updates:
 
 ---
 
-<!-- content-architecture -->
-
-# Content Architecture for Competitor Pages
-
-How to structure and maintain competitor data for scalable comparison pages.
-
-## Contents
-- Centralized Competitor Data
-- Competitor Data Template
-- Your Product Data
-- Page Generation
-- Index Page Structure (alternatives index, vs comparisons index, index page best practices)
-- Footer Navigation
-
-## Centralized Competitor Data
-
-Create a single source of truth for each competitor:
-
-```
-competitor_data/
-├── notion.md
-├── airtable.md
-├── monday.md
-└── ...
-```
-
----
-
-## Competitor Data Template
-
-Per competitor, document:
-
-```yaml
-name: Notion
-website: notion.so
-tagline: "The all-in-one workspace"
-founded: 2016
-headquarters: San Francisco
-
-# Positioning
-primary_use_case: "docs + light databases"
-target_audience: "teams wanting flexible workspace"
-market_position: "premium, feature-rich"
-
-# Pricing
-pricing_model: per-seat
-free_tier: true
-free_tier_limits: "limited blocks, 1 user"
-starter_price: $8/user/month
-business_price: $15/user/month
-enterprise: custom
-
-# Features (rate 1-5 or describe)
-features:
-  documents: 5
-  databases: 4
-  project_management: 3
-  collaboration: 4
-  integrations: 3
-  mobile_app: 3
-  offline_mode: 2
-  api: 4
-
-# Strengths (be honest)
-strengths:
-  - Extremely flexible and customizable
-  - Beautiful, modern interface
-  - Strong template ecosystem
-  - Active community
-
-# Weaknesses (be fair)
-weaknesses:
-  - Can be slow with large databases
-  - Learning curve for advanced features
-  - Limited automations compared to dedicated tools
-  - Offline mode is limited
-
-# Best for
-best_for:
-  - Teams wanting all-in-one workspace
-  - Content-heavy workflows
-  - Documentation-first teams
-  - Startups and small teams
-
-# Not ideal for
-not_ideal_for:
-  - Complex project management needs
-  - Large databases (1000s of rows)
-  - Teams needing robust offline
-  - Enterprise with strict compliance
-
-# Common complaints (from reviews)
-common_complaints:
-  - "Gets slow with lots of content"
-  - "Hard to find things as workspace grows"
-  - "Mobile app is clunky"
-
-# Migration notes
-migration_from:
-  difficulty: medium
-  data_export: "Markdown, CSV, HTML"
-  what_transfers: "Pages, databases"
-  what_doesnt: "Automations, integrations setup"
-  time_estimate: "1-3 days for small team"
-```
-
----
-
-## Your Product Data
-
-Same structure for yourself—be honest:
-
-```yaml
-name: [Your Product]
-# ... same fields
-
-strengths:
-  - [Your real strengths]
-
-weaknesses:
-  - [Your honest weaknesses]
-
-best_for:
-  - [Your ideal customers]
-
-not_ideal_for:
-  - [Who should use something else]
-```
-
----
-
-## Page Generation
-
-Each page pulls from centralized data:
-
-- **[Competitor] Alternative page**: Pulls competitor data + your data
-- **[Competitor] Alternatives page**: Pulls competitor data + your data + other alternatives
-- **You vs [Competitor] page**: Pulls your data + competitor data
-- **[A] vs [B] page**: Pulls both competitor data + your data
-
-**Benefits**:
-- Update competitor pricing once, updates everywhere
-- Add new feature comparison once, appears on all pages
-- Consistent accuracy across pages
-- Easier to maintain at scale
-
----
-
-## Index Page Structure
-
-### Alternatives Index
-
-**URL**: `/alternatives` or `/alternatives/index`
-
-**Purpose**: Lists all "[Competitor] Alternative" pages
-
-**Page structure**:
-1. Headline: "[Your Product] as an Alternative"
-2. Brief intro on why people switch to you
-3. List of all alternative pages with:
-   - Competitor name/logo
-   - One-line summary of key differentiator vs. that competitor
-   - Link to full comparison
-4. Common reasons people switch (aggregated)
-5. CTA
-
-**Example**:
-```markdown
-## Explore [Your Product] as an Alternative
-
-Looking to switch? See how [Your Product] compares to the tools you're evaluating:
-
-- **[Notion Alternative](/alternatives/notion)** — Better for teams who need [X]
-- **[Airtable Alternative](/alternatives/airtable)** — Better for teams who need [Y]
-- **[Monday Alternative](/alternatives/monday)** — Better for teams who need [Z]
-```
-
----
-
-### Vs Comparisons Index
-
-**URL**: `/vs` or `/compare`
-
-**Purpose**: Lists all "You vs [Competitor]" and "[A] vs [B]" pages
-
-**Page structure**:
-1. Headline: "Compare [Your Product]"
-2. Section: "[Your Product] vs Competitors" — list of direct comparisons
-3. Section: "Head-to-Head Comparisons" — list of [A] vs [B] pages
-4. Brief methodology note
-5. CTA
-
----
-
-### Index Page Best Practices
-
-**Keep them updated**: When you add a new comparison page, add it to the relevant index.
-
-**Internal linking**:
-- Link from index → individual pages
-- Link from individual pages → back to index
-- Cross-link between related comparisons
-
-**SEO value**:
-- Index pages can rank for broad terms like "project management tool comparisons"
-- Pass link equity to individual comparison pages
-- Help search engines discover all comparison content
-
-**Sorting options**:
-- By popularity (search volume)
-- Alphabetically
-- By category/use case
-- By date added (show freshness)
-
-**Include on index pages**:
-- Last updated date for credibility
-- Number of pages/comparisons available
-- Quick filters if you have many comparisons
-
----
-
-## Footer Navigation
-
-The site footer appears on all marketing pages, making it a powerful internal linking opportunity for competitor pages.
-
-### Option 1: Link to Index Pages (Minimum)
-
-At minimum, add links to your comparison index pages in the footer:
-
-```
-Footer
-├── Compare
-│   ├── Alternatives →  /alternatives
-│   └── Comparisons →  /vs
-```
-
-This ensures every marketing page passes link equity to your comparison content hub.
-
-### Option 2: Footer Columns by Format (Recommended for SEO)
-
-For stronger internal linking, create dedicated footer columns for each format you've built, linking directly to your top competitors:
-
-```
-Footer
-├── [Product] vs               ├── Alternatives to            ├── Compare
-│   ├── vs Notion              │   ├── Notion Alternative     │   ├── Notion vs Airtable
-│   ├── vs Airtable            │   ├── Airtable Alternative   │   ├── Monday vs Asana
-│   ├── vs Monday              │   ├── Monday Alternative     │   ├── Notion vs Monday
-│   ├── vs Asana               │   ├── Asana Alternative      │   ├── ...
-│   ├── vs Clickup             │   ├── Clickup Alternative    │   └── View all →
-│   ├── ...                    │   ├── ...                    │
-│   └── View all →             │   └── View all →             │
-```
-
-**Guidelines**:
-- Include up to 8 links per column (top competitors by search volume)
-- Add "View all" link to the full index page
-- Only create columns for formats you've actually built pages for
-- Prioritize competitors with highest search volume
-
-### Why Footer Links Matter
-
-1. **Sitewide distribution**: Footer links appear on every marketing page, passing link equity from your entire site to comparison content
-2. **Crawl efficiency**: Search engines discover all comparison pages quickly
-3. **User discovery**: Visitors evaluating your product can easily find comparisons
-4. **Competitive positioning**: Signals to search engines that you're a key player in the space
-
-### Implementation Notes
-
-- Update footer when adding new high-priority comparison pages
-- Keep footer clean—don't list every comparison, just the top ones
-- Match column headers to your URL structure (e.g., "vs" column → `/vs/` URLs)
-- Consider mobile: columns may stack, so order by priority
-
-
----
-
 <!-- templates -->
 
 # Profile Templates
@@ -48210,6 +48422,283 @@ Quick reference for the Firecrawl and DataForSEO MCP tools used in competitor pr
 | DataForSEO returns no data for domain | Domain may be too new or too small — note "insufficient data" in profile |
 | Rate limits hit | Space out requests; prioritize highest-value data first |
 | Review page scraping blocked | Use `firecrawl_search` to find cached or alternative review sources |
+
+
+---
+
+<!-- content-architecture -->
+
+# Content Architecture for Competitor Pages
+
+How to structure and maintain competitor data for scalable comparison pages.
+
+## Contents
+- Centralized Competitor Data
+- Competitor Data Template
+- Your Product Data
+- Page Generation
+- Index Page Structure (alternatives index, vs comparisons index, index page best practices)
+- Footer Navigation
+
+## Centralized Competitor Data
+
+Create a single source of truth for each competitor:
+
+```
+competitor_data/
+├── notion.md
+├── airtable.md
+├── monday.md
+└── ...
+```
+
+---
+
+## Competitor Data Template
+
+Per competitor, document:
+
+```yaml
+name: Notion
+website: notion.so
+tagline: "The all-in-one workspace"
+founded: 2016
+headquarters: San Francisco
+
+# Positioning
+primary_use_case: "docs + light databases"
+target_audience: "teams wanting flexible workspace"
+market_position: "premium, feature-rich"
+
+# Pricing
+pricing_model: per-seat
+free_tier: true
+free_tier_limits: "limited blocks, 1 user"
+starter_price: $8/user/month
+business_price: $15/user/month
+enterprise: custom
+
+# Features (rate 1-5 or describe)
+features:
+  documents: 5
+  databases: 4
+  project_management: 3
+  collaboration: 4
+  integrations: 3
+  mobile_app: 3
+  offline_mode: 2
+  api: 4
+
+# Strengths (be honest)
+strengths:
+  - Extremely flexible and customizable
+  - Beautiful, modern interface
+  - Strong template ecosystem
+  - Active community
+
+# Weaknesses (be fair)
+weaknesses:
+  - Can be slow with large databases
+  - Learning curve for advanced features
+  - Limited automations compared to dedicated tools
+  - Offline mode is limited
+
+# Best for
+best_for:
+  - Teams wanting all-in-one workspace
+  - Content-heavy workflows
+  - Documentation-first teams
+  - Startups and small teams
+
+# Not ideal for
+not_ideal_for:
+  - Complex project management needs
+  - Large databases (1000s of rows)
+  - Teams needing robust offline
+  - Enterprise with strict compliance
+
+# Common complaints (from reviews)
+common_complaints:
+  - "Gets slow with lots of content"
+  - "Hard to find things as workspace grows"
+  - "Mobile app is clunky"
+
+# Migration notes
+migration_from:
+  difficulty: medium
+  data_export: "Markdown, CSV, HTML"
+  what_transfers: "Pages, databases"
+  what_doesnt: "Automations, integrations setup"
+  time_estimate: "1-3 days for small team"
+```
+
+---
+
+## Your Product Data
+
+Same structure for yourself—be honest:
+
+```yaml
+name: [Your Product]
+# ... same fields
+
+strengths:
+  - [Your real strengths]
+
+weaknesses:
+  - [Your honest weaknesses]
+
+best_for:
+  - [Your ideal customers]
+
+not_ideal_for:
+  - [Who should use something else]
+```
+
+---
+
+## Page Generation
+
+Each page pulls from centralized data:
+
+- **[Competitor] Alternative page**: Pulls competitor data + your data
+- **[Competitor] Alternatives page**: Pulls competitor data + your data + other alternatives
+- **You vs [Competitor] page**: Pulls your data + competitor data
+- **[A] vs [B] page**: Pulls both competitor data + your data
+
+**Benefits**:
+- Update competitor pricing once, updates everywhere
+- Add new feature comparison once, appears on all pages
+- Consistent accuracy across pages
+- Easier to maintain at scale
+
+---
+
+## Index Page Structure
+
+### Alternatives Index
+
+**URL**: `/alternatives` or `/alternatives/index`
+
+**Purpose**: Lists all "[Competitor] Alternative" pages
+
+**Page structure**:
+1. Headline: "[Your Product] as an Alternative"
+2. Brief intro on why people switch to you
+3. List of all alternative pages with:
+   - Competitor name/logo
+   - One-line summary of key differentiator vs. that competitor
+   - Link to full comparison
+4. Common reasons people switch (aggregated)
+5. CTA
+
+**Example**:
+```markdown
+## Explore [Your Product] as an Alternative
+
+Looking to switch? See how [Your Product] compares to the tools you're evaluating:
+
+- **[Notion Alternative](/alternatives/notion)** — Better for teams who need [X]
+- **[Airtable Alternative](/alternatives/airtable)** — Better for teams who need [Y]
+- **[Monday Alternative](/alternatives/monday)** — Better for teams who need [Z]
+```
+
+---
+
+### Vs Comparisons Index
+
+**URL**: `/vs` or `/compare`
+
+**Purpose**: Lists all "You vs [Competitor]" and "[A] vs [B]" pages
+
+**Page structure**:
+1. Headline: "Compare [Your Product]"
+2. Section: "[Your Product] vs Competitors" — list of direct comparisons
+3. Section: "Head-to-Head Comparisons" — list of [A] vs [B] pages
+4. Brief methodology note
+5. CTA
+
+---
+
+### Index Page Best Practices
+
+**Keep them updated**: When you add a new comparison page, add it to the relevant index.
+
+**Internal linking**:
+- Link from index → individual pages
+- Link from individual pages → back to index
+- Cross-link between related comparisons
+
+**SEO value**:
+- Index pages can rank for broad terms like "project management tool comparisons"
+- Pass link equity to individual comparison pages
+- Help search engines discover all comparison content
+
+**Sorting options**:
+- By popularity (search volume)
+- Alphabetically
+- By category/use case
+- By date added (show freshness)
+
+**Include on index pages**:
+- Last updated date for credibility
+- Number of pages/comparisons available
+- Quick filters if you have many comparisons
+
+---
+
+## Footer Navigation
+
+The site footer appears on all marketing pages, making it a powerful internal linking opportunity for competitor pages.
+
+### Option 1: Link to Index Pages (Minimum)
+
+At minimum, add links to your comparison index pages in the footer:
+
+```
+Footer
+├── Compare
+│   ├── Alternatives →  /alternatives
+│   └── Comparisons →  /vs
+```
+
+This ensures every marketing page passes link equity to your comparison content hub.
+
+### Option 2: Footer Columns by Format (Recommended for SEO)
+
+For stronger internal linking, create dedicated footer columns for each format you've built, linking directly to your top competitors:
+
+```
+Footer
+├── [Product] vs               ├── Alternatives to            ├── Compare
+│   ├── vs Notion              │   ├── Notion Alternative     │   ├── Notion vs Airtable
+│   ├── vs Airtable            │   ├── Airtable Alternative   │   ├── Monday vs Asana
+│   ├── vs Monday              │   ├── Monday Alternative     │   ├── Notion vs Monday
+│   ├── vs Asana               │   ├── Asana Alternative      │   ├── ...
+│   ├── vs Clickup             │   ├── Clickup Alternative    │   └── View all →
+│   ├── ...                    │   ├── ...                    │
+│   └── View all →             │   └── View all →             │
+```
+
+**Guidelines**:
+- Include up to 8 links per column (top competitors by search volume)
+- Add "View all" link to the full index page
+- Only create columns for formats you've actually built pages for
+- Prioritize competitors with highest search volume
+
+### Why Footer Links Matter
+
+1. **Sitewide distribution**: Footer links appear on every marketing page, passing link equity from your entire site to comparison content
+2. **Crawl efficiency**: Search engines discover all comparison pages quickly
+3. **User discovery**: Visitors evaluating your product can easily find comparisons
+4. **Competitive positioning**: Signals to search engines that you're a key player in the space
+
+### Implementation Notes
+
+- Update footer when adding new high-priority comparison pages
+- Keep footer clean—don't list every comparison, just the top ones
+- Match column headers to your URL structure (e.g., "vs" column → `/vs/` URLs)
+- Consider mobile: columns may stack, so order by priority
 
 
 ---
@@ -128718,1936 +129207,6 @@ services:
       - "8081:8081"
       - "8082:8082"
 ```
-
-
----
-
-<!-- reference -->
-
-# PostgreSQL Migrations Reference
-
-**Scope**: Comprehensive guide to database migrations, schema versioning, zero-downtime deployments, and migration tooling
-**Lines**: ~1800
-**Last Updated**: 2025-10-27
-
-## Table of Contents
-
-1. [Migration Fundamentals](#migration-fundamentals)
-2. [Schema Versioning Strategies](#schema-versioning-strategies)
-3. [Migration Tools Deep Dive](#migration-tools-deep-dive)
-4. [Writing Safe Migrations](#writing-safe-migrations)
-5. [Zero-Downtime Patterns](#zero-downtime-patterns)
-6. [PostgreSQL Lock Behavior](#postgresql-lock-behavior)
-7. [Data Migrations](#data-migrations)
-8. [Testing Migrations](#testing-migrations)
-9. [Rollback Strategies](#rollback-strategies)
-10. [Common Pitfalls](#common-pitfalls)
-11. [Advanced Topics](#advanced-topics)
-
----
-
-## Migration Fundamentals
-
-### What Are Migrations?
-
-Migrations are **versioned, ordered scripts** that evolve database schema over time.
-
-**Core Properties**:
-- **Versioned**: Each migration has a unique identifier (timestamp, sequence number, hash)
-- **Ordered**: Applied sequentially to maintain consistency
-- **Tracked**: Database maintains record of applied migrations
-- **Reversible**: Can roll back changes (ideally)
-- **Idempotent**: Safe to run multiple times (ideally)
-- **Atomic**: Changes succeed or fail as a unit (when possible)
-
-### Why Migrations Matter
-
-**Without migrations**:
-```sql
--- Developer A: Creates table manually
-CREATE TABLE users (id INT, email VARCHAR(255));
-
--- Developer B: Different schema!
-CREATE TABLE users (id SERIAL, email TEXT, created_at TIMESTAMP);
-
--- Production: Who knows what's deployed?
-```
-
-**With migrations**:
-```sql
--- V1: Everyone runs same migration
--- Version controlled, tested, reproducible
--- Production schema matches development
-```
-
-### Migration Lifecycle
-
-```
-Development → Testing → Staging → Production
-     ↓           ↓         ↓          ↓
-  V1, V2      V1, V2    V1, V2     V1, V2
-```
-
-**Key principle**: Same migrations run in all environments.
-
-### Migration Tracking
-
-Most tools create a metadata table:
-
-```sql
--- Example: Flyway's schema_version table
-CREATE TABLE flyway_schema_history (
-    installed_rank INT NOT NULL,
-    version VARCHAR(50),
-    description VARCHAR(200) NOT NULL,
-    type VARCHAR(20) NOT NULL,
-    script VARCHAR(1000) NOT NULL,
-    checksum INT,
-    installed_by VARCHAR(100) NOT NULL,
-    installed_on TIMESTAMP NOT NULL DEFAULT NOW(),
-    execution_time INT NOT NULL,
-    success BOOLEAN NOT NULL
-);
-```
-
-**Query applied migrations**:
-```sql
-SELECT version, description, installed_on, success
-FROM flyway_schema_history
-ORDER BY installed_rank;
-```
-
----
-
-## Schema Versioning Strategies
-
-### Strategy 1: Forward-Only Migrations
-
-**Approach**: Only write "up" migrations, never roll back.
-
-```
-V1 → V2 → V3 → V4
- ↓    ↓    ↓    ↓
-```
-
-**Pros**:
-- Simplest approach
-- No data loss from rollbacks
-- Production always moves forward
-
-**Cons**:
-- Can't easily undo mistakes
-- Failed migrations require fix-forward
-
-**Best for**: Production systems where rollback is rare.
-
-**Example**:
-```sql
--- V1__initial_schema.sql
-CREATE TABLE users (id SERIAL PRIMARY KEY, email VARCHAR(255));
-
--- V2__add_username.sql
-ALTER TABLE users ADD COLUMN username VARCHAR(100);
-
--- V3__add_index.sql
-CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
-
--- V4 (fix for V3 if it failed)
--- V4__retry_index.sql
-DROP INDEX CONCURRENTLY IF EXISTS idx_users_email;
-CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
-```
-
-### Strategy 2: Bidirectional Migrations (Up/Down)
-
-**Approach**: Every migration has "up" and "down" version.
-
-```
-V1 ⇄ V2 ⇄ V3 ⇄ V4
-```
-
-**Pros**:
-- Can roll back bad deployments
-- Easier to develop locally (apply/revert)
-- Better for testing
-
-**Cons**:
-- Down migrations can lose data
-- More code to maintain
-- Rollback may not be safe in production
-
-**Best for**: Development, staging, new projects.
-
-**Example**:
-```sql
--- 001_add_users.up.sql
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL
-);
-
--- 001_add_users.down.sql
--- Example of rollback migration - destructive operation for reverting schema
-DROP TABLE users;
-
--- 002_add_username.up.sql
-ALTER TABLE users ADD COLUMN username VARCHAR(100);
-
--- 002_add_username.down.sql
-ALTER TABLE users DROP COLUMN username;
-```
-
-### Strategy 3: Immutable Migrations
-
-**Approach**: Once applied, migrations NEVER change. Fixes go in new migrations.
-
-**Rule**: Migration files are immutable after merge to main.
-
-```
-V1 (bug!) → V2 (fix) → V3
-```
-
-**Pros**:
-- History preserved
-- No checksum conflicts
-- Clear audit trail
-
-**Cons**:
-- Can't fix typos in old migrations
-- Must create new migration for fixes
-
-**Best practice**: Use checksums to detect unauthorized changes.
-
-**Example**:
-```sql
--- V1__create_users.sql (has bug: wrong column type)
-CREATE TABLE users (id INT, email VARCHAR(50)); -- Bug: email too short!
-
--- V2__fix_email_length.sql (fix in new migration)
-ALTER TABLE users ALTER COLUMN email TYPE VARCHAR(255);
-```
-
-### Strategy 4: State-Based Migrations
-
-**Approach**: Define desired state, tool generates migrations.
-
-**Tools**: Atlas, Prisma Migrate, TypeORM with synchronize.
-
-```
-Schema Definition (code) → Tool → Generated Migrations
-```
-
-**Pros**:
-- Less manual SQL
-- Auto-detects schema drift
-- Type-safe (if using ORM)
-
-**Cons**:
-- Less control over migration details
-- Can generate suboptimal SQL
-- Tool lock-in
-
-**Example (Atlas)**:
-```hcl
-// schema.hcl
-table "users" {
-  column "id" { type = serial }
-  column "email" { type = varchar(255) }
-  primary_key { columns = [column.id] }
-}
-```
-
-```bash
-atlas migrate diff --env local
-# Generates: 20231027_initial.sql
-```
-
----
-
-## Migration Tools Deep Dive
-
-### Flyway
-
-**Language**: Java/SQL
-**Philosophy**: SQL-first, version-based
-**Best for**: Enterprise Java applications
-
-**Features**:
-- Simple SQL-based migrations
-- Commercial support available
-- Callbacks for custom logic
-- Out-of-order migrations (advanced)
-
-**Configuration**:
-```properties
-# flyway.conf
-flyway.url=jdbc:postgresql://localhost:5432/mydb
-flyway.user=postgres
-flyway.password=secret
-flyway.locations=filesystem:./migrations
-flyway.baselineVersion=1
-flyway.baselineOnMigrate=true
-```
-
-**Naming Convention**:
-```
-V{version}__{description}.sql
-V1__initial_schema.sql
-V2__add_users_table.sql
-V2.1__add_users_email_index.sql  # Dot notation for sub-versions
-```
-
-**Commands**:
-```bash
-flyway migrate     # Apply pending migrations
-flyway info        # Show migration status
-flyway validate    # Validate applied migrations
-flyway baseline    # Baseline existing database
-flyway repair      # Fix metadata (use with caution)
-flyway clean       # Drop all objects (DANGEROUS!)
-```
-
-**Callbacks**:
-```sql
--- beforeMigrate.sql: Runs before any migration
-SET statement_timeout = '30s';
-
--- afterMigrate.sql: Runs after all migrations
-ANALYZE;
-```
-
-**Pros**:
-- Battle-tested
-- Great documentation
-- Commercial support
-
-**Cons**:
-- Java dependency (JVM required)
-- Pro features require license
-- No native down migrations
-
----
-
-### golang-migrate
-
-**Language**: Go/SQL
-**Philosophy**: Simple, CLI-focused, up/down pattern
-**Best for**: Go microservices
-
-**Features**:
-- Native Go binary (no JVM)
-- Up/down migrations
-- Multiple database support
-- Programmatic API
-
-**Installation**:
-```bash
-go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-```
-
-**Naming Convention**:
-```
-{version}_{description}.up.sql
-{version}_{description}.down.sql
-
-000001_initial_schema.up.sql
-000001_initial_schema.down.sql
-000002_add_users_table.up.sql
-000002_add_users_table.down.sql
-```
-
-**Commands**:
-```bash
-# Create migration
-migrate create -ext sql -dir migrations -seq add_users_table
-
-# Apply all up migrations
-migrate -database "postgres://localhost:5432/db?sslmode=disable" -path migrations up
-
-# Apply one up migration
-migrate -database "$DB_URL" -path migrations up 1
-
-# Rollback one migration
-migrate -database "$DB_URL" -path migrations down 1
-
-# Force version (recovery from dirty state)
-migrate -database "$DB_URL" -path migrations force 5
-
-# Show current version
-migrate -database "$DB_URL" -path migrations version
-```
-
-**Programmatic Usage**:
-```go
-import (
-    "github.com/golang-migrate/migrate/v4"
-    _ "github.com/golang-migrate/migrate/v4/database/postgres"
-    _ "github.com/golang-migrate/migrate/v4/source/file"
-)
-
-m, err := migrate.New(
-    "file://migrations",
-    "postgres://localhost:5432/db?sslmode=disable")
-
-m.Up() // Apply all migrations
-m.Steps(2) // Apply 2 migrations
-m.Down() // Rollback all (DANGEROUS!)
-```
-
-**Pros**:
-- Lightweight, single binary
-- Native Go integration
-- Simple up/down pattern
-
-**Cons**:
-- Manual version numbering
-- No automatic rollback on failure
-- Limited advanced features
-
----
-
-### Alembic
-
-**Language**: Python/SQL
-**Philosophy**: SQLAlchemy integration, auto-generate
-**Best for**: Python applications (Flask, FastAPI, Django alternatives)
-
-**Features**:
-- Auto-generate from SQLAlchemy models
-- Branching/merging migrations
-- Offline SQL generation
-- Revision history
-
-**Installation**:
-```bash
-uv add alembic psycopg2-binary
-alembic init alembic
-```
-
-**Configuration**:
-```python
-# alembic.ini
-[alembic]
-script_location = alembic
-sqlalchemy.url = postgresql://localhost:5432/mydb
-
-# alembic/env.py
-from myapp.models import Base
-target_metadata = Base.metadata
-```
-
-**Creating Migrations**:
-```bash
-# Manual migration
-alembic revision -m "add users table"
-
-# Auto-generate from models
-alembic revision --autogenerate -m "add users table"
-```
-
-**Migration File**:
-```python
-# alembic/versions/abc123_add_users_table.py
-from alembic import op
-import sqlalchemy as sa
-
-revision = 'abc123'
-down_revision = 'def456'  # Previous migration
-branch_labels = None
-depends_on = None
-
-def upgrade():
-    op.create_table(
-        'users',
-        sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('email', sa.String(255), unique=True, nullable=False),
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now())
-    )
-    op.create_index('idx_users_email', 'users', ['email'])
-
-def downgrade():
-    op.drop_index('idx_users_email', 'users')
-    op.drop_table('users')
-```
-
-**Commands**:
-```bash
-alembic upgrade head        # Apply all migrations
-alembic upgrade +1          # Apply one migration
-alembic downgrade -1        # Rollback one migration
-alembic current             # Show current version
-alembic history             # Show migration history
-alembic stamp head          # Mark as current without running
-alembic revision --sql ...  # Generate SQL without applying
-```
-
-**Branching**:
-```bash
-# Create branch
-alembic revision -m "feature A" --head=base --branch-label=feature_a
-alembic revision -m "feature B" --head=base --branch-label=feature_b
-
-# Merge branches
-alembic merge -m "merge features" feature_a feature_b
-```
-
-**Pros**:
-- Tight SQLAlchemy integration
-- Auto-generate migrations
-- Advanced branching/merging
-
-**Cons**:
-- Python-only
-- Auto-generate not always accurate
-- Complex for simple projects
-
----
-
-### Liquibase
-
-**Language**: Java/XML/YAML/SQL
-**Philosophy**: Database-agnostic, change sets
-**Best for**: Enterprise multi-database environments
-
-**Features**:
-- Database-agnostic (Postgres, MySQL, Oracle, etc.)
-- XML/YAML/SQL/JSON formats
-- Preconditions and contexts
-- Rollback tags
-
-**Example (YAML)**:
-```yaml
-# changelog.yml
-databaseChangeLog:
-  - changeSet:
-      id: 1
-      author: developer
-      changes:
-        - createTable:
-            tableName: users
-            columns:
-              - column:
-                  name: id
-                  type: SERIAL
-                  constraints:
-                    primaryKey: true
-              - column:
-                  name: email
-                  type: VARCHAR(255)
-                  constraints:
-                    unique: true
-                    nullable: false
-      rollback:
-        - dropTable:
-            tableName: users
-```
-
-**Pros**:
-- Database-agnostic
-- Rich feature set
-- Enterprise support
-
-**Cons**:
-- Complex XML/YAML syntax
-- Java dependency
-- Steeper learning curve
-
----
-
-### dbmate
-
-**Language**: Any/SQL
-**Philosophy**: Simple, language-agnostic, minimal
-**Best for**: Polyglot projects, simple setups
-
-**Features**:
-- Single binary
-- Simple up/down SQL
-- No dependencies
-- URL-based configuration
-
-**Installation**:
-```bash
-# macOS
-brew install dbmate
-
-# Or download binary
-curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
-chmod +x /usr/local/bin/dbmate
-```
-
-**Usage**:
-```bash
-# Set database URL
-export DATABASE_URL="postgres://localhost:5432/mydb?sslmode=disable"
-
-# Create migration
-dbmate new add_users_table
-
-# Apply migrations
-dbmate up
-
-# Rollback
-dbmate down
-
-# Status
-dbmate status
-```
-
-**Migration File**:
-```sql
--- migrations/20231027120000_add_users_table.sql
--- migrate:up
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL
-);
-
--- migrate:down
--- Example of rollback migration - destructive operation for reverting schema
-DROP TABLE users;
-```
-
-**Pros**:
-- Dead simple
-- Language-agnostic
-- Lightweight
-
-**Cons**:
-- Limited features
-- No auto-generate
-- No branching
-
----
-
-### Atlas
-
-**Language**: Go/HCL
-**Philosophy**: Modern, declarative, schema-as-code
-**Best for**: Modern Go applications, GitOps workflows
-
-**Features**:
-- Declarative schema definition
-- Automatic migration generation
-- Schema diffing
-- Policy-as-code (Pro)
-- Cloud integration (Pro)
-
-**Schema Definition**:
-```hcl
-// schema.hcl
-table "users" {
-  schema = schema.public
-  column "id" {
-    type = serial
-  }
-  column "email" {
-    type = varchar(255)
-  }
-  primary_key {
-    columns = [column.id]
-  }
-  index "idx_email" {
-    unique  = true
-    columns = [column.email]
-  }
-}
-```
-
-**Commands**:
-```bash
-# Inspect current schema
-atlas schema inspect -u "postgres://localhost:5432/db" > schema.hcl
-
-# Generate migration
-atlas migrate diff add_users --env local
-
-# Apply migrations
-atlas migrate apply --env local
-
-# Validate
-atlas migrate validate --env local
-```
-
-**Pros**:
-- Modern, declarative approach
-- Type-safe schema definitions
-- Great CI/CD integration
-
-**Cons**:
-- Newer tool (less mature)
-- Pro features require license
-- Go-centric
-
----
-
-## Writing Safe Migrations
-
-### Safety Principles
-
-1. **Idempotency**: Safe to run multiple times
-2. **Atomicity**: All-or-nothing changes
-3. **Reversibility**: Can undo changes
-4. **Non-blocking**: Don't lock tables
-5. **Backward compatible**: Old code still works
-6. **Testable**: Can verify locally
-
-### Idempotent Migrations
-
-**Problem**: Migration fails halfway, retried, errors on existing objects.
-
-**Solution**: Use `IF NOT EXISTS` / `IF EXISTS`.
-
-```sql
--- ✅ GOOD: Idempotent
-CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255)
-);
-
-ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
-
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-
-ALTER TABLE users ADD CONSTRAINT IF NOT EXISTS users_email_unique UNIQUE (email);
-
--- ✅ GOOD: Idempotent drop (safe cleanup operation)
-DROP TABLE IF EXISTS old_temp_table;
-
-DROP INDEX IF EXISTS idx_old_index;
-```
-
-**PostgreSQL version check**:
-```sql
--- IF NOT EXISTS added in:
--- CREATE TABLE IF NOT EXISTS: 9.1+
--- ALTER TABLE ADD COLUMN IF NOT EXISTS: 9.6+
--- CREATE INDEX IF NOT EXISTS: 9.5+
-```
-
-### Transaction Wrapping
-
-**Use transactions when possible**:
-```sql
-BEGIN;
-
-CREATE TABLE orders (
-    id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL REFERENCES users(id),
-    total DECIMAL(10,2) NOT NULL
-);
-
-CREATE INDEX idx_orders_user_id ON orders(user_id);
-
-COMMIT;
-```
-
-**When NOT to use transactions**:
-```sql
--- ❌ Cannot run in transaction block
-CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
-DROP INDEX CONCURRENTLY idx_old_index;
-VACUUM;
-REINDEX CONCURRENTLY;
-```
-
-**Solution**: Split into separate migration files.
-
-```sql
--- V1__add_orders_table.sql (transactional)
-BEGIN;
-CREATE TABLE orders (...);
-COMMIT;
-
--- V2__add_orders_index.sql (non-transactional)
-CREATE INDEX CONCURRENTLY idx_orders_user_id ON orders(user_id);
-```
-
-### Checking Constraints Without Locking
-
-**Problem**: `ALTER TABLE ADD CONSTRAINT` locks table for validation.
-
-**Solution**: Add constraint as `NOT VALID`, then validate separately.
-
-```sql
--- Step 1: Add constraint without validation (fast, allows writes)
-ALTER TABLE users
-ADD CONSTRAINT check_age_positive
-CHECK (age > 0) NOT VALID;
-
--- Step 2: Validate constraint (slow, but doesn't block writes)
-ALTER TABLE users VALIDATE CONSTRAINT check_age_positive;
-```
-
-**Locking behavior**:
-- `ADD CONSTRAINT ... NOT VALID`: ShareUpdateExclusiveLock (allows SELECT, INSERT, UPDATE, DELETE)
-- `VALIDATE CONSTRAINT`: ShareUpdateExclusiveLock (allows SELECT, INSERT, UPDATE, DELETE)
-
-### Creating Indexes Without Locking
-
-**Problem**: `CREATE INDEX` takes AccessExclusiveLock, blocks all queries.
-
-**Solution**: `CREATE INDEX CONCURRENTLY`
-
-```sql
--- ❌ BAD: Locks table
-CREATE INDEX idx_users_email ON users(email);
-
--- ✅ GOOD: No lock
-CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
-```
-
-**Trade-offs**:
-- Takes 2-3x longer than regular CREATE INDEX
-- Cannot run in transaction
-- Can fail and leave invalid index
-
-**Check for invalid indexes**:
-```sql
-SELECT
-    schemaname,
-    tablename,
-    indexname,
-    indexdef
-FROM pg_indexes
-WHERE indexname NOT IN (
-    SELECT indexrelid::regclass::text
-    FROM pg_index
-    WHERE indisvalid
-);
-
--- Or simpler:
-SELECT indexrelid::regclass AS index_name
-FROM pg_index
-WHERE NOT indisvalid;
-```
-
-**Clean up invalid index**:
-```sql
-DROP INDEX CONCURRENTLY idx_users_email;
--- Then retry creation
-CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
-```
-
-### Adding NOT NULL Columns
-
-**Problem**: Adding NOT NULL column to non-empty table fails.
-
-**Solution**: Multi-step approach.
-
-```sql
--- ❌ FAILS on existing rows
-ALTER TABLE users ADD COLUMN phone VARCHAR(20) NOT NULL;
--- ERROR: column "phone" contains null values
-
--- ✅ GOOD: Multi-step
--- Step 1: Add nullable column
-ALTER TABLE users ADD COLUMN phone VARCHAR(20);
-
--- Step 2: Backfill (in batches, see Data Migrations section)
-UPDATE users SET phone = 'unknown' WHERE phone IS NULL;
-
--- Step 3: Add NOT NULL constraint (fast, already validated)
-ALTER TABLE users ALTER COLUMN phone SET NOT NULL;
-```
-
-**Alternative with default**:
-```sql
--- ✅ GOOD: Use default value
-ALTER TABLE users ADD COLUMN phone VARCHAR(20) NOT NULL DEFAULT 'unknown';
-
--- Optionally remove default after
-ALTER TABLE users ALTER COLUMN phone DROP DEFAULT;
-```
-
-**Note**: Adding column with DEFAULT rewrites entire table in PG < 11. In PG 11+, it's fast (default stored in metadata).
-
----
-
-## Zero-Downtime Patterns
-
-### Pattern 1: Adding Nullable Column
-
-**Scenario**: Add new optional column.
-
-**Strategy**: Single-step, backward compatible.
-
-```sql
--- Migration: Add nullable column
-ALTER TABLE users ADD COLUMN phone VARCHAR(20);
-```
-
-**Deployment**:
-1. Apply migration
-2. Deploy new code (can read/write phone)
-
-**Compatibility**:
-- Old code: Ignores new column
-- New code: Reads/writes new column
-- Zero downtime
-
----
-
-### Pattern 2: Adding NOT NULL Column
-
-**Scenario**: Add required column.
-
-**Strategy**: Multi-phase deployment.
-
-**Phase 1 Migration**:
-```sql
--- Add nullable column with default
-ALTER TABLE users ADD COLUMN status VARCHAR(20) DEFAULT 'active';
-```
-
-**Phase 1 Deployment**:
-- Deploy code that writes to status
-- Old code ignores column, new code writes it
-
-**Phase 2 Migration** (after all instances updated):
-```sql
--- Backfill any NULLs (shouldn't be any if Phase 1 worked)
-UPDATE users SET status = 'active' WHERE status IS NULL;
-
--- Add NOT NULL constraint
-ALTER TABLE users ALTER COLUMN status SET NOT NULL;
-
--- Optionally drop default
-ALTER TABLE users ALTER COLUMN status DROP DEFAULT;
-```
-
-**Timeline**:
-- Day 1: Phase 1 migration + deployment
-- Day 7: Verify all rows have status set
-- Day 7: Phase 2 migration
-
----
-
-### Pattern 3: Removing Column (Expand-Contract)
-
-**Scenario**: Remove unused column.
-
-**Strategy**: Three-phase deployment.
-
-**Phase 1**: Stop writing (code change only, no migration)
-- Deploy code that stops writing to old column
-- Old code may still read column
-
-**Phase 2**: Stop reading (code change only, no migration)
-- Deploy code that doesn't reference column at all
-- Wait for all instances to update
-
-**Phase 3**: Remove column (migration)
-```sql
-ALTER TABLE users DROP COLUMN old_field;
-```
-
-**Timeline**:
-- Week 1: Phase 1 - stop writing
-- Week 2: Phase 2 - stop reading
-- Week 3: Verify no references in logs
-- Week 3: Phase 3 - drop column
-
----
-
-### Pattern 4: Renaming Column (Dual-Write)
-
-**Scenario**: Rename column (email → email_address).
-
-**Strategy**: Four-phase deployment with dual-write.
-
-**Phase 1 Migration**:
-```sql
--- Add new column
-ALTER TABLE users ADD COLUMN email_address VARCHAR(255);
-
--- Create trigger for dual-write
-CREATE OR REPLACE FUNCTION sync_email_columns()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.email_address := NEW.email;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER sync_email_to_email_address
-BEFORE INSERT OR UPDATE ON users
-FOR EACH ROW
-EXECUTE FUNCTION sync_email_columns();
-```
-
-**Phase 1 Deployment**:
-- Application writes to email (trigger copies to email_address)
-
-**Phase 2 Migration**:
-```sql
--- Backfill existing rows
-UPDATE users SET email_address = email WHERE email_address IS NULL;
-```
-
-**Phase 3 Deployment**:
-- Application reads from email_address, writes to both
-
-**Phase 4 Migration**:
-```sql
--- Drop trigger
-DROP TRIGGER sync_email_to_email_address ON users;
-DROP FUNCTION sync_email_columns();
-
--- Drop old column
-ALTER TABLE users DROP COLUMN email;
-
--- Optionally rename (fast metadata change)
--- Or keep email_address as final name
-```
-
-**Timeline**:
-- Week 1: Phase 1 - add column, trigger
-- Week 2: Phase 2 - backfill
-- Week 3: Phase 3 - app reads new column
-- Week 4: Verify, Phase 4 - drop old column
-
----
-
-### Pattern 5: Changing Column Type
-
-**Scenario**: Change column type (age INT → age BIGINT).
-
-**Strategy**: Add new column, dual-write, swap.
-
-**Phase 1 Migration**:
-```sql
--- Add new column with new type
-ALTER TABLE users ADD COLUMN age_new BIGINT;
-```
-
-**Phase 1 Deployment**:
-- Application writes to both age and age_new
-
-**Phase 2 Migration**:
-```sql
--- Backfill
-UPDATE users SET age_new = age WHERE age_new IS NULL;
-```
-
-**Phase 3 Deployment**:
-- Application reads from age_new
-
-**Phase 4 Migration**:
-```sql
--- Drop old, rename new
-ALTER TABLE users DROP COLUMN age;
-ALTER TABLE users RENAME COLUMN age_new TO age;
-```
-
-**Shortcut for compatible types**:
-```sql
--- Some type changes don't require table rewrite
-ALTER TABLE users ALTER COLUMN email TYPE TEXT;  -- VARCHAR → TEXT (fast)
-ALTER TABLE users ALTER COLUMN age TYPE BIGINT USING age::BIGINT;  -- May rewrite table
-```
-
-**Fast type changes (PG 12+)**:
-- VARCHAR(N) → VARCHAR(M) where M > N
-- VARCHAR → TEXT
-- NUMERIC(a,b) → NUMERIC(c,d) where c >= a and d = b
-
----
-
-### Pattern 6: Adding Index (CONCURRENTLY)
-
-**Scenario**: Add index without blocking writes.
-
-**Strategy**: CREATE INDEX CONCURRENTLY.
-
-```sql
--- ❌ BAD: Locks table
-CREATE INDEX idx_users_email ON users(email);
-
--- ✅ GOOD: No lock
-CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
-```
-
-**Migration file**:
-```sql
--- V5__add_users_email_index.sql
--- NOTE: Cannot run in transaction
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email ON users(email);
-```
-
-**Handling failures**:
-```sql
--- Check for invalid indexes
-SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid;
-
--- Drop and retry
-DROP INDEX CONCURRENTLY idx_users_email;
-CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
-```
-
----
-
-### Pattern 7: Adding Foreign Key
-
-**Scenario**: Add foreign key constraint.
-
-**Strategy**: Add NOT VALID, then validate.
-
-```sql
--- Step 1: Add constraint without validation
-ALTER TABLE orders
-ADD CONSTRAINT fk_orders_user_id
-FOREIGN KEY (user_id) REFERENCES users(id)
-NOT VALID;
-
--- Step 2: Validate (allows concurrent reads/writes)
-ALTER TABLE orders VALIDATE CONSTRAINT fk_orders_user_id;
-```
-
-**Locking**:
-- Step 1: ShareRowExclusiveLock (allows SELECT, INSERT, UPDATE, DELETE)
-- Step 2: ShareUpdateExclusiveLock (allows SELECT, INSERT, UPDATE, DELETE)
-
----
-
-## PostgreSQL Lock Behavior
-
-### Lock Modes Reference
-
-| Lock Mode | SELECT | INSERT | UPDATE | DELETE | DDL |
-|-----------|--------|--------|--------|--------|-----|
-| AccessShareLock | ✓ | ✓ | ✓ | ✓ | ✗ |
-| RowShareLock | ✓ | ✓ | ✓ | ✓ | ✗ |
-| RowExclusiveLock | ✓ | ✓ | ✓ | ✓ | ✗ |
-| ShareUpdateExclusiveLock | ✓ | ✓ | ✓ | ✓ | ✗ |
-| ShareLock | ✓ | ✗ | ✗ | ✗ | ✗ |
-| ShareRowExclusiveLock | ✓ | ✗ | ✗ | ✗ | ✗ |
-| ExclusiveLock | ✓ | ✗ | ✗ | ✗ | ✗ |
-| AccessExclusiveLock | ✗ | ✗ | ✗ | ✗ | ✗ |
-
-### Common DDL Operations and Locks
-
-| Operation | Lock Mode | Blocks Reads? | Blocks Writes? |
-|-----------|-----------|---------------|----------------|
-| CREATE TABLE | AccessExclusiveLock | ✗ (new table) | ✗ (new table) |
-| DROP TABLE | AccessExclusiveLock | ✓ | ✓ |  <!-- Example of operation impact -->
-| ALTER TABLE ADD COLUMN | AccessExclusiveLock | ✓ | ✓ |
-| ALTER TABLE ADD COLUMN (with DEFAULT, PG 11+) | AccessExclusiveLock (brief) | ✗ (metadata only) | ✗ (metadata only) |
-| CREATE INDEX | ShareLock | ✗ | ✓ |
-| CREATE INDEX CONCURRENTLY | ShareUpdateExclusiveLock | ✗ | ✗ |
-| DROP INDEX | AccessExclusiveLock | ✓ | ✓ |
-| DROP INDEX CONCURRENTLY | ShareUpdateExclusiveLock | ✗ | ✗ |
-| ADD CONSTRAINT (validated) | AccessExclusiveLock | ✓ | ✓ |
-| ADD CONSTRAINT NOT VALID | ShareUpdateExclusiveLock | ✗ | ✗ |
-| VALIDATE CONSTRAINT | ShareUpdateExclusiveLock | ✗ | ✗ |
-
-### Monitoring Locks
-
-**View current locks**:
-```sql
-SELECT
-    locktype,
-    relation::regclass,
-    mode,
-    granted,
-    pid,
-    usename,
-    query
-FROM pg_locks
-JOIN pg_stat_activity USING (pid)
-WHERE NOT granted
-ORDER BY relation;
-```
-
-**View blocking queries**:
-```sql
-SELECT
-    blocked_locks.pid AS blocked_pid,
-    blocked_activity.usename AS blocked_user,
-    blocking_locks.pid AS blocking_pid,
-    blocking_activity.usename AS blocking_user,
-    blocked_activity.query AS blocked_query,
-    blocking_activity.query AS blocking_query
-FROM pg_catalog.pg_locks blocked_locks
-JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
-JOIN pg_catalog.pg_locks blocking_locks
-    ON blocking_locks.locktype = blocked_locks.locktype
-    AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
-    AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
-    AND blocking_locks.page IS NOT DISTINCT FROM blocked_locks.page
-    AND blocking_locks.tuple IS NOT DISTINCT FROM blocked_locks.tuple
-    AND blocking_locks.virtualxid IS NOT DISTINCT FROM blocked_locks.virtualxid
-    AND blocking_locks.transactionid IS NOT DISTINCT FROM blocked_locks.transactionid
-    AND blocking_locks.classid IS NOT DISTINCT FROM blocked_locks.classid
-    AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
-    AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
-    AND blocking_locks.pid != blocked_locks.pid
-JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
-WHERE NOT blocked_locks.granted;
-```
-
-**Set statement timeout for migrations**:
-```sql
--- Prevent migration from locking too long
-SET statement_timeout = '30s';
-
--- Then run migration
-ALTER TABLE users ADD COLUMN phone VARCHAR(20);
-```
-
----
-
-## Data Migrations
-
-### Batching Large Updates
-
-**Problem**: `UPDATE users SET status = 'active'` locks rows and can time out.
-
-**Solution**: Batch updates with pg_sleep.
-
-```sql
--- ❌ BAD: Locks entire table
-UPDATE users SET status = 'active' WHERE status IS NULL;
-
--- ✅ GOOD: Batch updates
-DO $$
-DECLARE
-    batch_size INT := 1000;
-    rows_updated INT;
-    total_updated INT := 0;
-BEGIN
-    LOOP
-        UPDATE users
-        SET status = 'active'
-        WHERE id IN (
-            SELECT id
-            FROM users
-            WHERE status IS NULL
-            LIMIT batch_size
-        );
-
-        GET DIAGNOSTICS rows_updated = ROW_COUNT;
-        total_updated := total_updated + rows_updated;
-
-        RAISE NOTICE 'Updated % rows (total: %)', rows_updated, total_updated;
-
-        EXIT WHEN rows_updated = 0;
-
-        COMMIT; -- Release locks
-        PERFORM pg_sleep(0.1); -- Avoid overwhelming database
-    END LOOP;
-END $$;
-```
-
-**Alternative with external script**:
-```python
-# batch_update.py
-import psycopg2
-import time
-
-conn = psycopg2.connect("dbname=mydb")
-cursor = conn.cursor()
-
-batch_size = 1000
-total_updated = 0
-
-while True:
-    cursor.execute("""
-        UPDATE users SET status = 'active'
-        WHERE id IN (
-            SELECT id FROM users WHERE status IS NULL LIMIT %s
-        )
-    """, (batch_size,))
-
-    rows = cursor.rowcount
-    total_updated += rows
-    conn.commit()
-
-    print(f"Updated {rows} rows (total: {total_updated})")
-
-    if rows == 0:
-        break
-
-    time.sleep(0.1)
-
-cursor.close()
-conn.close()
-```
-
-### Backfilling Data
-
-**Scenario**: New column needs data from existing columns.
-
-```sql
--- Add column
-ALTER TABLE users ADD COLUMN full_name VARCHAR(255);
-
--- Backfill in batches
-DO $$
-DECLARE
-    batch_size INT := 1000;
-    rows_updated INT;
-BEGIN
-    LOOP
-        UPDATE users
-        SET full_name = first_name || ' ' || last_name
-        WHERE id IN (
-            SELECT id
-            FROM users
-            WHERE full_name IS NULL
-            LIMIT batch_size
-        );
-
-        GET DIAGNOSTICS rows_updated = ROW_COUNT;
-        EXIT WHEN rows_updated = 0;
-
-        COMMIT;
-        PERFORM pg_sleep(0.1);
-    END LOOP;
-END $$;
-```
-
-### Complex Data Transformations
-
-**Scenario**: Normalize data (e.g., extract JSON to columns).
-
-```sql
--- Existing: user_data JSONB column
--- New: email, phone columns
-
-ALTER TABLE users ADD COLUMN email VARCHAR(255);
-ALTER TABLE users ADD COLUMN phone VARCHAR(20);
-
--- Backfill
-UPDATE users
-SET
-    email = user_data->>'email',
-    phone = user_data->>'phone'
-WHERE email IS NULL;
-```
-
-**With batching**:
-```python
-import psycopg2
-import time
-
-conn = psycopg2.connect("dbname=mydb")
-cursor = conn.cursor()
-
-batch_size = 1000
-offset = 0
-
-while True:
-    cursor.execute("""
-        WITH batch AS (
-            SELECT id, user_data
-            FROM users
-            WHERE email IS NULL
-            LIMIT %s OFFSET %s
-        )
-        UPDATE users
-        SET
-            email = batch.user_data->>'email',
-            phone = batch.user_data->>'phone'
-        FROM batch
-        WHERE users.id = batch.id
-    """, (batch_size, offset))
-
-    rows = cursor.rowcount
-    conn.commit()
-
-    if rows == 0:
-        break
-
-    offset += batch_size
-    time.sleep(0.1)
-
-cursor.close()
-conn.close()
-```
-
----
-
-## Testing Migrations
-
-### Local Testing
-
-**1. Test on production-like data**:
-```bash
-# Dump production schema + sample data
-pg_dump -Fc --schema-only production > schema.dump
-pg_dump -Fc --data-only --table=users --limit=10000 production > data.dump
-
-# Restore to local
-createdb local_test
-pg_restore -d local_test schema.dump
-pg_restore -d local_test data.dump
-
-# Apply migration
-migrate -database "postgres://localhost:5432/local_test" up
-
-# Verify schema
-psql local_test -c "\d users"
-```
-
-**2. Test rollback**:
-```bash
-# Apply migration
-migrate up
-
-# Test rollback
-migrate down
-
-# Re-apply
-migrate up
-
-# Verify data integrity
-psql local_test -c "SELECT COUNT(*) FROM users"
-```
-
-**3. Test application against new schema**:
-```bash
-# Point application to migrated database
-export DATABASE_URL="postgres://localhost:5432/local_test"
-
-# Run tests
-pytest tests/
-npm test
-go test ./...
-```
-
-### Staging Testing
-
-**1. Mirror production**:
-```bash
-# Refresh staging from production
-pg_dump -Fc production | pg_restore -d staging
-
-# Apply migration
-migrate -database "$STAGING_DB" up
-```
-
-**2. Run smoke tests**:
-```bash
-# API smoke tests
-curl https://staging.example.com/api/users
-curl https://staging.example.com/api/health
-
-# Load test (optional)
-ab -n 1000 -c 10 https://staging.example.com/api/users
-```
-
-**3. Monitor**:
-```sql
--- Check for slow queries
-SELECT query, mean_exec_time, calls
-FROM pg_stat_statements
-ORDER BY mean_exec_time DESC
-LIMIT 10;
-
--- Check for locks
-SELECT * FROM pg_locks WHERE NOT granted;
-```
-
-### CI/CD Testing
-
-**GitHub Actions example**:
-```yaml
-name: Test Migrations
-
-on: [push, pull_request]
-
-jobs:
-  test-migrations:
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_DB: testdb
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Apply migrations
-        run: |
-          migrate -database "postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable" up
-
-      - name: Verify schema
-        run: |
-          psql postgres://postgres:postgres@localhost:5432/testdb -c "\d users"
-
-      - name: Test rollback
-        run: |
-          migrate -database "postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable" down
-          migrate -database "postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable" up
-
-      - name: Run application tests
-        run: |
-          export DATABASE_URL="postgres://postgres:postgres@localhost:5432/testdb"
-          pytest tests/
-```
-
----
-
-## Rollback Strategies
-
-### Strategy 1: Down Migrations
-
-**Approach**: Write explicit rollback in down migration.
-
-**Pros**:
-- Fast rollback
-- Built into migration tool
-- Easy to test
-
-**Cons**:
-- Data loss if columns dropped
-- Not all changes reversible
-
-**Example**:
-```sql
--- 001_add_users.up.sql
-CREATE TABLE users (id SERIAL PRIMARY KEY, email VARCHAR(255));
-
--- 001_add_users.down.sql
--- Example of dangerous rollback - loses data! Use data preservation strategies instead.
-DROP TABLE users; -- ⚠️  Loses data!
-```
-
-**Safe rollback with data preservation**:
-```sql
--- 002_add_phone.up.sql
-ALTER TABLE users ADD COLUMN phone VARCHAR(20);
-
--- 002_add_phone.down.sql
--- Instead of DROP, could archive to another table
-CREATE TABLE IF NOT EXISTS users_phone_archive AS
-SELECT id, phone FROM users WHERE phone IS NOT NULL;
-
-ALTER TABLE users DROP COLUMN phone;
-```
-
-### Strategy 2: Database Backups
-
-**Approach**: Backup before migration, restore if needed.
-
-```bash
-# Before migration
-pg_dump -Fc production > backup_$(date +%Y%m%d_%H%M%S).dump
-
-# Apply migration
-migrate up
-
-# If rollback needed
-pg_restore -d production backup_20231027_120000.dump
-```
-
-**Pros**:
-- Complete rollback
-- Restores data
-
-**Cons**:
-- Slow for large databases
-- Downtime during restore
-- Loses data written after migration
-
-### Strategy 3: Point-in-Time Recovery (PITR)
-
-**Approach**: Use WAL archiving to recover to specific point in time.
-
-**Setup**:
-```sql
--- postgresql.conf
-wal_level = replica
-archive_mode = on
-archive_command = 'cp %p /mnt/archive/%f'
-```
-
-**Recovery**:
-```bash
-# Stop database
-pg_ctl stop
-
-# ⚠️ WARNING: This permanently deletes all database data
-# Always verify backups before running
-# Restore base backup
-rm -rf $PGDATA/*
-tar -xzf base_backup.tar.gz -C $PGDATA
-
-# Create recovery.conf (PG < 12) or recovery.signal (PG 12+)
-cat > $PGDATA/recovery.signal <<EOF
-restore_command = 'cp /mnt/archive/%f %p'
-recovery_target_time = '2023-10-27 12:00:00'
-EOF
-
-# Start database
-pg_ctl start
-```
-
-**Pros**:
-- Precise rollback
-- No data loss (up to target time)
-
-**Cons**:
-- Requires WAL archiving setup
-- Complex recovery process
-- Downtime
-
-### Strategy 4: Blue-Green Deployment
-
-**Approach**: Run two databases, switch traffic.
-
-```
-Blue (current) ←─── Traffic
-Green (with migrations)
-```
-
-**Process**:
-1. Clone Blue → Green
-2. Apply migrations to Green
-3. Switch traffic Blue → Green
-4. If issues, switch back to Blue
-
-**Pros**:
-- Instant rollback
-- Zero downtime
-- Test migrations in production environment
-
-**Cons**:
-- Requires load balancer/proxy
-- Data sync complexity
-- Expensive (two databases)
-
-### Strategy 5: Forward-Fix
-
-**Approach**: Don't roll back, fix forward with new migration.
-
-**Example**:
-```sql
--- V5__add_age_column.sql (has bug: wrong type)
-ALTER TABLE users ADD COLUMN age INT; -- Should be SMALLINT!
-
--- Don't rollback, instead:
--- V6__fix_age_column_type.sql
-ALTER TABLE users ALTER COLUMN age TYPE SMALLINT;
-```
-
-**Pros**:
-- No data loss
-- Simple
-- Maintains migration history
-
-**Cons**:
-- Requires quick fix
-- Can't undo schema changes immediately
-
-**Best for**: Production systems with continuous deployment.
-
----
-
-## Common Pitfalls
-
-### Pitfall 1: Adding NOT NULL Without Default
-
-**Problem**:
-```sql
--- ❌ Fails on existing rows
-ALTER TABLE users ADD COLUMN phone VARCHAR(20) NOT NULL;
--- ERROR: column "phone" contains null values
-```
-
-**Fix**:
-```sql
--- ✅ Add with default, or add nullable then backfill
-ALTER TABLE users ADD COLUMN phone VARCHAR(20) NOT NULL DEFAULT 'unknown';
-
--- Or multi-step:
-ALTER TABLE users ADD COLUMN phone VARCHAR(20);
-UPDATE users SET phone = 'unknown' WHERE phone IS NULL;
-ALTER TABLE users ALTER COLUMN phone SET NOT NULL;
-```
-
----
-
-### Pitfall 2: Renaming Columns Directly
-
-**Problem**:
-```sql
--- ❌ Breaks old code immediately
-ALTER TABLE users RENAME COLUMN email TO email_address;
-```
-
-**Fix**: Use expand-contract pattern (see Zero-Downtime Patterns).
-
----
-
-### Pitfall 3: Creating Indexes Without CONCURRENTLY
-
-**Problem**:
-```sql
--- ❌ Locks table, blocks writes
-CREATE INDEX idx_users_email ON users(email);
-```
-
-**Fix**:
-```sql
--- ✅ No lock
-CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
-```
-
----
-
-### Pitfall 4: Large UPDATEs in One Transaction
-
-**Problem**:
-```sql
--- ❌ Locks millions of rows, can timeout
-UPDATE users SET status = 'active'; -- 10M rows
-```
-
-**Fix**: Batch with LIMIT and pg_sleep (see Data Migrations).
-
----
-
-### Pitfall 5: Changing Column Type Without Care
-
-**Problem**:
-```sql
--- ❌ Rewrites entire table, locks
-ALTER TABLE users ALTER COLUMN email TYPE TEXT;
-```
-
-**Fix**: Check if rewrite needed, or use add/drop pattern.
-
-```sql
--- Fast (no rewrite) in PostgreSQL
-ALTER TABLE users ALTER COLUMN email TYPE TEXT;
--- VARCHAR → TEXT is safe, no rewrite
-
--- Slow (rewrites table)
-ALTER TABLE users ALTER COLUMN age TYPE BIGINT USING age::BIGINT;
-```
-
----
-
-### Pitfall 6: Not Testing Rollback
-
-**Problem**: Migration applied, can't be reversed, data lost.
-
-**Fix**: Always test down migration locally.
-
-```bash
-migrate up
-migrate down  # Test rollback
-migrate up    # Re-apply
-```
-
----
-
-### Pitfall 7: Mixing Schema and Data Changes
-
-**Problem**: Hard to debug, slow migrations.
-
-```sql
--- ❌ Mixing concerns
-ALTER TABLE users ADD COLUMN status VARCHAR(20);
-UPDATE users SET status = 'active' WHERE status IS NULL;
-ALTER TABLE users ALTER COLUMN status SET NOT NULL;
-```
-
-**Fix**: Separate migrations.
-
-```sql
--- V1__add_status_column.sql (schema)
-ALTER TABLE users ADD COLUMN status VARCHAR(20);
-
--- V2__backfill_status.sql (data)
-UPDATE users SET status = 'active' WHERE status IS NULL;
-
--- V3__make_status_not_null.sql (schema)
-ALTER TABLE users ALTER COLUMN status SET NOT NULL;
-```
-
----
-
-## Advanced Topics
-
-### Handling Schema Drift
-
-**Problem**: Production schema differs from migration history.
-
-**Detection**:
-```bash
-# Dump production schema
-pg_dump --schema-only production > production_schema.sql
-
-# Apply migrations to clean database
-migrate -database "postgres://localhost/test" up
-pg_dump --schema-only test > migrated_schema.sql
-
-# Compare
-diff production_schema.sql migrated_schema.sql
-```
-
-**Fix**:
-```bash
-# Option 1: Baseline (for tools supporting it)
-flyway baseline -baselineVersion=10
-
-# Option 2: Force version
-migrate force 10
-
-# Option 3: Manually add/remove from metadata table
-INSERT INTO schema_migrations (version) VALUES ('20231027120000');
-```
-
----
-
-### Multi-Tenancy Migrations
-
-**Strategy 1: Shared schema**:
-```sql
--- All tenants share same schema
--- Tenant ID in each table
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    tenant_id INT NOT NULL,
-    email VARCHAR(255)
-);
-
--- Migration applies to all tenants
-ALTER TABLE users ADD COLUMN phone VARCHAR(20);
-```
-
-**Strategy 2: Schema-per-tenant**:
-```sql
--- Each tenant has own schema
-CREATE SCHEMA tenant_123;
-CREATE TABLE tenant_123.users (...);
-
-CREATE SCHEMA tenant_456;
-CREATE TABLE tenant_456.users (...);
-
--- Migration must run for each schema
-DO $$
-DECLARE
-    schema_name TEXT;
-BEGIN
-    FOR schema_name IN
-        SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant_%'
-    LOOP
-        EXECUTE format('ALTER TABLE %I.users ADD COLUMN phone VARCHAR(20)', schema_name);
-    END LOOP;
-END $$;
-```
-
----
-
-### Handling Enum Changes
-
-**Problem**: Can't modify enum values in place.
-
-```sql
--- Existing enum
-CREATE TYPE status_enum AS ENUM ('pending', 'active');
-
--- ❌ Can't add value to enum in one step in transaction
-ALTER TYPE status_enum ADD VALUE 'inactive'; -- Works, but not in transaction
-```
-
-**Safe approach**:
-```sql
--- Step 1: Create new enum
-CREATE TYPE status_enum_new AS ENUM ('pending', 'active', 'inactive');
-
--- Step 2: Add new column with new enum
-ALTER TABLE users ADD COLUMN status_new status_enum_new;
-
--- Step 3: Migrate data
-UPDATE users SET status_new = status::TEXT::status_enum_new;
-
--- Step 4: Drop old column, rename new
-ALTER TABLE users DROP COLUMN status;
-ALTER TABLE users RENAME COLUMN status_new TO status;
-
--- Step 5: Drop old enum
-DROP TYPE status_enum;
-
--- Step 6: Rename new enum (optional)
-ALTER TYPE status_enum_new RENAME TO status_enum;
-```
-
----
-
-### Partitioned Tables
-
-**Adding partitions**:
-```sql
--- Existing partitioned table
-CREATE TABLE events (
-    id BIGSERIAL,
-    event_date DATE,
-    data JSONB
-) PARTITION BY RANGE (event_date);
-
--- Add new partition (safe, no lock on parent)
-CREATE TABLE events_2023_11 PARTITION OF events
-FOR VALUES FROM ('2023-11-01') TO ('2023-12-01');
-```
-
-**Detaching partitions**:
-```sql
--- Detach old partition (for archiving)
-ALTER TABLE events DETACH PARTITION events_2023_01;
-
--- Archive
-\copy events_2023_01 TO '/archive/events_2023_01.csv' CSV
-
--- Drop partition after archiving (safe cleanup operation)
-DROP TABLE events_2023_01;
-```
-
----
-
-### Managing Long-Running Migrations
-
-**Problem**: Migration takes hours, blocks deployments.
-
-**Solution**: Run migrations outside deployment.
-
-**Workflow**:
-1. Run migration manually during low-traffic window
-2. Mark as applied in migration metadata
-3. Deploy application (skips already-applied migration)
-
-**Example**:
-```bash
-# Manually apply slow migration
-psql production < migrations/V5__add_large_index.sql
-
-# Mark as applied
-INSERT INTO schema_migrations (version, description, success)
-VALUES ('V5', 'add_large_index', TRUE);
-
-# Deploy application
-# Migration tool sees V5 already applied, skips it
-```
-
----
-
-**End of Reference**
-
-This reference covers PostgreSQL migrations comprehensively. For practical scripts and examples, see the `scripts/` and `examples/` directories.
 
 
 ---
@@ -224369,6 +222928,218 @@ Referrer-Policy: strict-origin-when-cross-origin
 
 ---
 
+<!-- hanzo-static-sites-cd -->
+
+# Hanzo Static Sites, CI/CD & Commerce Deployment Guide
+
+**Category**: Hanzo Ecosystem
+**Related Skills**: `hanzo/hanzo-deploy.md`, `hanzo/hanzo-website.md`, `hanzo/hanzo-static.md`, `hanzo/hanzo-commerce.md`, `hanzo/hanzo-iam.md`
+
+## Overview
+
+This skill provides the unified, authoritative standard for building, configuring, deploying, and managing all static sites and web applications across the Hanzo ecosystem. It covers:
+1. **Deterministic Project Configuration** via `hanzo.yml` (or `hanzo.config.toml`, `~/.hanzo/settings.json`, `hanzo.config.ts`).
+2. **Dual-Workflow CI/CD Synchronization** (`.github/workflows` and `.hanzo/workflows` on push to forge `git.hanzo.ai`).
+3. **Sites Plane & Native Deployment** via `bin/site <slug> <dir>`, Docker container images (`ghcr.io/hanzoai/static:0.5.15`), and native `/v1/projects/sites/deploy`.
+4. **Commerce & Checkout Integration**: **STRICT NO-STRIPE POLICY**. All payments must route through Hanzo Commerce (`https://api.hanzo.ai/v1/commerce` and `https://pay.hanzo.ai`) backed by Square (Sandbox & Production), Crypto, and Wire.
+
+---
+
+## 1. Hard Requirements & Principles
+
+1. **NO STRIPE**: Stripe is completely prohibited and deprecated across the Hanzo estate. All billing and card processing goes exclusively through Hanzo Commerce (`api.hanzo.ai/v1/commerce` / `pay.hanzo.ai`) using Square, Crypto, or Wire.
+2. **Deterministic Configuration**: Every repo defines its site metadata, framework, build target, domains, commerce, and IAM settings in `hanzo.yml` (or `hanzo.config.ts` / `hanzo.config.toml`).
+3. **Dual Workflow Plane**:
+   - `git.hanzo.ai` (the forge) reads `.hanzo/workflows` and `.github/workflows`.
+   - Public mirrors (GitHub) read `.github/workflows`.
+   - Always keep `.hanzo/workflows` synchronized with `.github/workflows` (e.g. symlinked via `ln -s ../.github/workflows .hanzo/workflows`) so pushes to both remotes trigger identical CI/CD.
+4. **Single Identity System**: Authentication and account/order management is powered by Hanzo ID (`https://hanzo.id`) via OIDC PKCE, and billing is managed at `https://billing.hanzo.ai`.
+5. **Standard Checkout Contract**: Pricing CTAs must link to:
+   ```
+   https://pay.hanzo.ai/?plan=<planId>&return=<returnUrl>
+   ```
+
+---
+
+## 2. Deterministic Configuration Schema (`hanzo.yml`)
+
+Place `hanzo.yml` in the root of any site or application repo:
+
+```yaml
+name: agency
+slug: agency
+version: 0.1.6
+type: site # site | app | service
+
+framework:
+  name: vite # vite | next | astro | static | react
+  preset: react
+  buildCommand: pnpm build
+  outputDir: dist # dist | out | build | public
+  singlePageApp: true # true for BrowserRouter / SPA routing fallback
+
+routing:
+  domain: hanzo.agency
+  aliases:
+    - www.hanzo.agency
+    - agency.hanzo.ai
+
+deploy:
+  plane: sites # sites (S3/SeaweedFS static plane) | k8s (container image)
+  publishScript: https://git.hanzo.ai/hanzoai/ci/.github/actions/site@v1
+  image: ghcr.io/hanzoai/agency # when built as container
+  kubernetes:
+    namespace: hanzo
+    service: agency
+    port: 3000
+
+commerce:
+  org: hanzo
+  checkoutUrl: https://pay.hanzo.ai
+  commerceApi: https://api.hanzo.ai/v1/commerce
+  providers:
+    - square # Square Sandbox/Production Web Payments SDK
+    - crypto # BTC, ETH, USDC
+    - wire   # Bank wire (ACH / SWIFT)
+  disallowed:
+    - stripe # STRICT RULE: No Stripe
+
+iam:
+  issuer: https://hanzo.id
+  clientId: hanzo-agency
+  billingPortal: https://billing.hanzo.ai
+
+calendar:
+  bookingUrl: https://calendar.app.google/z1YsZQrqR4s6jQqD8
+
+analytics:
+  googleAnalyticsId: G-BCXWVKFL1K
+  insightsUrl: https://api.hanzo.ai/v1/event
+```
+
+### TypeScript Alternative (`hanzo.config.ts`)
+For TypeScript packages using `@hanzo/ai` or `hanzo`:
+```typescript
+import { defineConfig } from '@hanzo/config';
+
+export default defineConfig({
+  name: 'agency',
+  slug: 'agency',
+  type: 'site',
+  framework: 'vite',
+  build: {
+    command: 'pnpm build',
+    output: 'dist',
+    spa: true,
+  },
+  commerce: {
+    org: 'hanzo',
+    checkoutUrl: 'https://pay.hanzo.ai',
+    providers: ['square', 'crypto', 'wire'],
+  },
+  iam: {
+    issuer: 'https://hanzo.id',
+    clientId: 'hanzo-agency',
+  },
+});
+```
+
+---
+
+## 3. Deployment Modes
+
+### Mode A: The Sites Plane (`bin/site` via CI Action)
+The static export plane sends zero runtime compute to Kubernetes; files are served directly from S3/SeaweedFS edge cache:
+1. **Self-provision**: `POST https://api.hanzo.ai/v1/projects` (creates or confirms project slug).
+2. **Enqueue**: `POST https://api.hanzo.ai/v1/projects/<slug>/deployments` -> returns `{id, bucket, prefix, upload: {url, fields}}`.
+3. **Upload**: Direct multipart POST to S3 presigned URL in parallel (assets first, then HTML documents as the activation switch).
+4. **Complete**: `POST https://api.hanzo.ai/v1/projects/<slug>/deployments/<id>/complete` with the key manifest.
+
+### Mode B: Containerized Static Server (`ghcr.io/hanzoai/static:0.5.15`)
+For deployments requiring a Kubernetes Service and Ingress:
+```dockerfile
+# Dockerfile
+FROM node:22 AS build
+WORKDIR /src
+RUN npm i -g pnpm@9
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build
+
+FROM ghcr.io/hanzoai/static:0.5.15
+COPY --from=build /src/dist /public
+ENTRYPOINT ["/static", "-spa"]
+```
+
+### Mode C: Native Agent Deployment (`/v1/projects/sites/deploy`)
+Agents and tools can programmatically publish a static site in one API call:
+```bash
+curl -X POST "https://api.hanzo.ai/v1/projects/sites/deploy" \
+  -H "Authorization: Bearer $HANZO_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "slug": "my-site",
+    "name": "My Site",
+    "files": [
+      {"path": "index.html", "content": "<!DOCTYPE html><html>...</html>"},
+      {"path": "style.css", "content": "body { background: #000; color: #fff; }"}
+    ]
+  }'
+```
+
+---
+
+## 4. Checkout & Payment Flow (No Stripe)
+
+### Architecture
+```
+User clicks "Get Started" / Plan CTA
+  │
+  ├──> https://pay.hanzo.ai/?plan=agency&return=https://hanzo.agency/payment-success
+  │       │
+  │       ├── Square Web Payments SDK (Sandbox or Production)
+  │       ├── Crypto Rails (BTC, ETH, USDC)
+  │       └── Bank Wire Instructions
+  │
+  └──> POST https://api.hanzo.ai/v1/billing/topup/token
+          │
+          └── Hanzo Commerce Engine (authorizes & captures via Square)
+```
+
+### In Code (`src/lib/commerce.ts`)
+```typescript
+const PAY = 'https://pay.hanzo.ai';
+const COMMERCE = 'https://api.hanzo.ai/v1/commerce';
+const ORG = 'hanzo';
+
+export function checkoutUrl(planId?: string, returnPath = '/payment-success'): string {
+  if (!planId) return PAY;
+  const back = new URL(returnPath, window.location.origin).toString();
+  return `${PAY}/?plan=${encodeURIComponent(planId)}&return=${encodeURIComponent(back)}`;
+}
+```
+
+### Account & Order Management
+- Users view orders, subscriptions, and payment history at `https://billing.hanzo.ai` or `https://hanzo.id`.
+- Single Sign-On and session management route through `https://hanzo.id` (`/v1/iam/oauth/authorize`).
+
+---
+
+## 5. Verification Checklist for Any Site
+
+- [ ] `hanzo.yml` exists and defines `slug`, `framework`, `routing`, `commerce`, and `iam`.
+- [ ] `.github/workflows` and `.hanzo/workflows` are synchronized.
+- [ ] No Stripe packages (`@stripe/*`), scripts (`js.stripe.com`), or keys exist in codebase.
+- [ ] All pricing buttons point to `checkoutUrl(planId)` resolving to `pay.hanzo.ai`.
+- [ ] Square sandbox credentials and environment match `GET /v1/commerce/org?org=hanzo`.
+- [ ] Google Analytics (`G-BCXWVKFL1K` or repo tag) tracks both initial load and SPA route changes.
+- [ ] Auth / Login buttons link to `https://hanzo.id` or use Hanzo IAM OIDC.
+- [ ] Calendar booking link points to official Google Calendar (`https://calendar.app.google/z1YsZQrqR4s6jQqD8`).
+
+
+---
+
 <!-- hanzo-storage -->
 
 # Hanzo Storage - S3-Compatible Object Storage
@@ -300724,170 +299495,254 @@ If they're asking either of those questions, you have a value equation problem, 
 
 <!-- experiments -->
 
-# Paywall Experiment Ideas
+# Page CRO Experiment Ideas
 
-Comprehensive list of A/B tests and experiments for paywall optimization.
+Comprehensive list of A/B tests and experiments organized by page type.
 
 ## Contents
-- Trigger & Timing Experiments (When to Show, Trigger Type)
-- Paywall Design Experiments (Layout & Format, Value Presentation, Visual Elements)
-- Pricing Presentation Experiments (Price Display, Plan Options, Discounts & Offers)
-- Copy & Messaging Experiments (Headlines, CTAs, Objection Handling)
-- Trial & Conversion Experiments (Trial Structure, Trial Expiration, Upgrade Path)
-- Personalization Experiments (Usage-Based, Segment-Specific)
-- Frequency & UX Experiments (Frequency Capping, Dismiss Behavior)
+- Homepage Experiments (Hero Section, Trust & Social Proof, Features & Content, Navigation & UX)
+- Pricing Page Experiments (Price Presentation, Pricing UX, Objection Handling, Trust Signals)
+- Demo Request Page Experiments (Form Optimization, Page Content, CTA & Routing)
+- Resource/Blog Page Experiments (Content CTAs, Resource Section)
+- Landing Page Experiments (Message Match, Conversion Focus, Page Length)
+- Feature Page Experiments (Feature Presentation, Conversion Path)
+- Cross-Page Experiments (Site-Wide Tests, Navigation Tests)
 
-## Trigger & Timing Experiments
+## Homepage Experiments
 
-### When to Show
-- Test trigger timing: after aha moment vs. at feature attempt
-- Early trial reminder (7 days) vs. late reminder (1 day before)
-- Show after X actions completed vs. after X days
-- Test soft prompts at different engagement thresholds
-- Trigger based on usage patterns vs. time-based only
+### Hero Section
 
-### Trigger Type
-- Hard gate (can't proceed) vs. soft gate (preview + prompt)
-- Feature lock vs. usage limit as primary trigger
-- In-context modal vs. dedicated upgrade page
-- Banner reminder vs. modal prompt
-- Exit-intent on free plan pages
+| Test | Hypothesis |
+|------|------------|
+| Headline variations | Specific vs. abstract messaging |
+| Subheadline clarity | Add/refine to support headline |
+| CTA above fold | Include or exclude prominent CTA |
+| Hero visual format | Screenshot vs. GIF vs. illustration vs. video |
+| CTA button color | Test contrast and visibility |
+| CTA button text | "Start Free Trial" vs. "Get Started" vs. "See Demo" |
+| Interactive demo | Engage visitors immediately with product |
 
----
+### Trust & Social Proof
 
-## Paywall Design Experiments
+| Test | Hypothesis |
+|------|------------|
+| Logo placement | Hero section vs. below fold |
+| Case study in hero | Show results immediately |
+| Trust badges | Add security, compliance, awards |
+| Social proof in headline | "Join 10,000+ teams" messaging |
+| Testimonial placement | Above fold vs. dedicated section |
+| Video testimonials | More engaging than text quotes |
 
-### Layout & Format
-- Full-screen paywall vs. modal overlay
-- Minimal paywall (CTA-focused) vs. feature-rich paywall
-- Single plan display vs. plan comparison
-- Image/preview included vs. text-only
-- Vertical layout vs. horizontal layout on desktop
+### Features & Content
 
-### Value Presentation
-- Feature list vs. benefit statements
-- Show what they'll lose (loss aversion) vs. what they'll gain
-- Personalized value summary based on usage
-- Before/after demonstration
-- ROI calculator or value quantification
+| Test | Hypothesis |
+|------|------------|
+| Feature presentation | Icons + descriptions vs. detailed sections |
+| Section ordering | Move high-value features up |
+| Secondary CTAs | Add/remove throughout page |
+| Benefit vs. feature focus | Lead with outcomes |
+| Comparison section | Show vs. competitors or status quo |
 
-### Visual Elements
-- Add product screenshots or previews
-- Include short demo video or GIF
-- Test illustration vs. product imagery
-- Animated vs. static paywall
-- Progress visualization (what they've accomplished)
+### Navigation & UX
 
----
-
-## Pricing Presentation Experiments
-
-### Price Display
-- Show monthly vs. annual vs. both with toggle
-- Highlight savings for annual ($ amount vs. % off)
-- Price per day framing ("Less than a coffee")
-- Show price after trial vs. emphasize "Start Free"
-- Display price prominently vs. de-emphasize until click
-
-### Plan Options
-- Single recommended plan vs. multiple tiers
-- Add "Most Popular" badge to target plan
-- Test number of visible plans (2 vs. 3)
-- Show enterprise/custom tier vs. hide it
-- Include one-time purchase option alongside subscription
-
-### Discounts & Offers
-- First month/year discount for conversion
-- Limited-time upgrade offer with countdown
-- Loyalty discount based on free usage duration
-- Bundle discount for annual commitment
-- Referral discount for social proof
+| Test | Hypothesis |
+|------|------------|
+| Sticky navigation | Persistent nav with CTA |
+| Nav menu order | High-priority items at edges |
+| Nav CTA button | Add prominent button in nav |
+| Support widget | Live chat vs. AI chatbot |
+| Footer optimization | Clearer secondary conversions |
+| Exit intent popup | Capture abandoning visitors |
 
 ---
 
-## Copy & Messaging Experiments
+## Pricing Page Experiments
 
-### Headlines
-- Benefit-focused ("Unlock unlimited projects") vs. feature-focused ("Get Pro features")
-- Question format ("Ready to do more?") vs. statement format
-- Urgency-based ("Don't lose your work") vs. value-based
-- Personalized headline with user's name or usage data
-- Social proof headline ("Join 10,000+ Pro users")
+### Price Presentation
 
-### CTAs
-- "Start Free Trial" vs. "Upgrade Now" vs. "Continue with Pro"
-- First person ("Start My Trial") vs. second person ("Start Your Trial")
-- Value-specific ("Unlock Unlimited") vs. generic ("Upgrade")
-- Add urgency ("Upgrade Today") vs. no pressure
-- Include price in CTA vs. separate price display
+| Test | Hypothesis |
+|------|------------|
+| Annual vs. monthly display | Highlight savings or simplify |
+| Price points | $99 vs. $100 vs. $97 psychology |
+| "Most Popular" badge | Highlight target plan |
+| Number of tiers | 3 vs. 4 vs. 2 visible options |
+| Price anchoring | Order plans to anchor expectations |
+| Custom enterprise tier | Show vs. "Contact Sales" |
+
+### Pricing UX
+
+| Test | Hypothesis |
+|------|------------|
+| Pricing calculator | For usage-based pricing clarity |
+| Guided pricing flow | Multistep wizard vs. comparison table |
+| Feature comparison format | Table vs. expandable sections |
+| Monthly/annual toggle | With savings highlighted |
+| Plan recommendation quiz | Help visitors choose |
+| Checkout flow length | Steps required after plan selection |
 
 ### Objection Handling
-- Add money-back guarantee messaging
-- Show "Cancel anytime" prominently
-- Include FAQ on paywall
-- Address specific objections based on feature gated
-- Add chat/support option on paywall
+
+| Test | Hypothesis |
+|------|------------|
+| FAQ section | Address pricing objections |
+| ROI calculator | Demonstrate value vs. cost |
+| Money-back guarantee | Prominent placement |
+| Per-user breakdowns | Clarity for team plans |
+| Feature inclusion clarity | What's in each tier |
+| Competitor comparison | Side-by-side value comparison |
+
+### Trust Signals
+
+| Test | Hypothesis |
+|------|------------|
+| Value testimonials | Quotes about ROI specifically |
+| Customer logos | Near pricing section |
+| Review scores | G2/Capterra ratings |
+| Case study snippet | Specific pricing/value results |
 
 ---
 
-## Trial & Conversion Experiments
+## Demo Request Page Experiments
 
-### Trial Structure
-- 7-day vs. 14-day vs. 30-day trial length
-- Credit card required vs. not required for trial
-- Full-access trial vs. limited feature trial
-- Trial extension offer for engaged users
-- Second trial offer for expired/churned users
+### Form Optimization
 
-### Trial Expiration
-- Countdown timer visibility (always vs. near end)
-- Email reminders: frequency and timing
-- Grace period after expiration vs. immediate downgrade
-- "Last chance" offer with discount
-- Pause option vs. immediate cancellation
+| Test | Hypothesis |
+|------|------------|
+| Field count | Fewer fields, higher completion |
+| Multi-step vs. single | Progress bar encouragement |
+| Form placement | Above fold vs. after content |
+| Phone field | Include vs. exclude |
+| Field enrichment | Hide fields you can auto-fill |
+| Form labels | Inside field vs. above |
 
-### Upgrade Path
-- One-click upgrade from paywall vs. separate checkout
-- Pre-filled payment info for returning users
-- Multiple payment methods offered
-- Quarterly plan option alongside monthly/annual
-- Team invite flow for solo-to-team conversion
+### Page Content
 
----
+| Test | Hypothesis |
+|------|------------|
+| Benefits above form | Reinforce value before ask |
+| Demo preview | Video/GIF showing demo experience |
+| "What You'll Learn" | Set expectations clearly |
+| Testimonials near form | Reduce friction at decision point |
+| FAQ below form | Address common objections |
+| Video vs. text | Format for explaining value |
 
-## Personalization Experiments
+### CTA & Routing
 
-### Usage-Based
-- Personalize paywall copy based on features used
-- Highlight most-used premium features
-- Show usage stats ("You've created 50 projects")
-- Recommend plan based on behavior patterns
-- Dynamic feature emphasis based on user segment
-
-### Segment-Specific
-- Different paywall for power users vs. casual users
-- B2B vs. B2C messaging variations
-- Industry-specific value propositions
-- Role-based feature highlighting
-- Traffic source-based messaging
+| Test | Hypothesis |
+|------|------------|
+| CTA text | "Book Your Demo" vs. "Schedule 15-Min Call" |
+| On-demand option | Instant demo alongside live option |
+| Personalized messaging | Based on visitor data/source |
+| Navigation removal | Reduce page distractions |
+| Calendar integration | Inline booking vs. external link |
+| Qualification routing | Self-serve for some, sales for others |
 
 ---
 
-## Frequency & UX Experiments
+## Resource/Blog Page Experiments
 
-### Frequency Capping
-- Test number of prompts per session
-- Cool-down period after dismiss (hours vs. days)
-- Escalating urgency over time vs. consistent messaging
-- Once per feature vs. consolidated prompts
-- Re-show rules after major engagement
+### Content CTAs
 
-### Dismiss Behavior
-- "Maybe later" vs. "No thanks" vs. "Remind me tomorrow"
-- Ask reason for declining
-- Offer alternative (lower tier, annual discount)
-- Exit survey on dismiss
-- Friendly vs. neutral decline copy
+| Test | Hypothesis |
+|------|------------|
+| Floating CTAs | Sticky CTA on blog posts |
+| CTA placement | Inline vs. end-of-post only |
+| Reading time display | Estimated reading time |
+| Related resources | End-of-article recommendations |
+| Gated vs. free | Content access strategy |
+| Content upgrades | Specific to article topic |
+
+### Resource Section
+
+| Test | Hypothesis |
+|------|------------|
+| Navigation/filtering | Easier to find relevant content |
+| Search functionality | Find specific resources |
+| Featured resources | Highlight best content |
+| Layout format | Grid vs. list view |
+| Topic bundles | Grouped resources by theme |
+| Download tracking | Gate some, track engagement |
+
+---
+
+## Landing Page Experiments
+
+### Message Match
+
+| Test | Hypothesis |
+|------|------------|
+| Headline matching | Match ad copy exactly |
+| Visual matching | Match ad creative |
+| Offer alignment | Same offer as ad promised |
+| Audience-specific pages | Different pages per segment |
+
+### Conversion Focus
+
+| Test | Hypothesis |
+|------|------------|
+| Navigation removal | Single-focus page |
+| CTA repetition | Multiple CTAs throughout |
+| Form vs. button | Direct capture vs. click-through |
+| Urgency/scarcity | If genuine, test messaging |
+| Social proof density | Amount and placement |
+| Video inclusion | Explain offer with video |
+
+### Page Length
+
+| Test | Hypothesis |
+|------|------------|
+| Short vs. long | Quick conversion vs. complete argument |
+| Above-fold only | Minimal scroll required |
+| Section ordering | Most important content first |
+| Footer removal | Eliminate navigation |
+
+---
+
+## Feature Page Experiments
+
+### Feature Presentation
+
+| Test | Hypothesis |
+|------|------------|
+| Demo/screenshot | Show feature in action |
+| Use case examples | How customers use it |
+| Before/after | Impact visualization |
+| Video walkthrough | Feature tour |
+| Interactive demo | Try feature without signup |
+
+### Conversion Path
+
+| Test | Hypothesis |
+|------|------------|
+| Trial CTA | Feature-specific trial offer |
+| Related features | Cross-link to other features |
+| Comparison | vs. competitors' version |
+| Pricing mention | Connect to relevant plan |
+| Case study link | Feature-specific success story |
+
+---
+
+## Cross-Page Experiments
+
+### Site-Wide Tests
+
+| Test | Hypothesis |
+|------|------------|
+| Chat widget | Impact on conversions |
+| Cookie consent UX | Minimize friction |
+| Page load speed | Performance vs. features |
+| Mobile experience | Responsive optimization |
+| Accessibility | Impact on conversion |
+| Personalization | Dynamic content by segment |
+
+### Navigation Tests
+
+| Test | Hypothesis |
+|------|------------|
+| Menu structure | Information architecture |
+| Search placement | Help visitors find content |
+| CTA in nav | Always-visible conversion path |
+| Breadcrumbs | Navigation clarity |
 
 
 ---
@@ -326894,6 +325749,3200 @@ docker-compose scale websocket=3  # Scale to 3 instances
 
 ---
 
+<!-- reference -->
+
+# WebSocket Protocol - Comprehensive Reference
+
+## Table of Contents
+
+1. [Protocol Fundamentals](#protocol-fundamentals)
+2. [Connection Lifecycle](#connection-lifecycle)
+3. [Frame Structure](#frame-structure)
+4. [Message Types](#message-types)
+5. [Security](#security)
+6. [Scaling Patterns](#scaling-patterns)
+7. [Reconnection Strategies](#reconnection-strategies)
+8. [Server Implementations](#server-implementations)
+9. [Client Implementations](#client-implementations)
+10. [Testing Strategies](#testing-strategies)
+11. [Common Patterns](#common-patterns)
+12. [Comparison with Alternatives](#comparison-with-alternatives)
+13. [Production Best Practices](#production-best-practices)
+14. [Troubleshooting](#troubleshooting)
+15. [Performance Optimization](#performance-optimization)
+
+---
+
+## Protocol Fundamentals
+
+### RFC 6455 Overview
+
+WebSocket is a computer communications protocol providing full-duplex communication channels over a single TCP connection. Standardized by RFC 6455 in 2011, it enables real-time, bidirectional data exchange between client and server with lower overhead than HTTP polling.
+
+**Key Characteristics**:
+- Full-duplex bidirectional communication
+- Single TCP connection
+- Low overhead (2-14 bytes per frame vs HTTP headers)
+- Works over HTTP ports (80/443)
+- Upgrades from HTTP via handshake
+- UTF-8 text or binary data
+- Built-in ping/pong for keepalive
+
+**Protocol URI Schemes**:
+```
+ws://  - Unencrypted WebSocket (like HTTP)
+wss:// - Encrypted WebSocket over TLS (like HTTPS)
+```
+
+### WebSocket vs HTTP
+
+**HTTP Request/Response**:
+```
+Client -> Server: GET /data HTTP/1.1
+Server -> Client: 200 OK + data
+[Connection closes or kept alive]
+Client -> Server: New request needed for new data
+```
+
+**WebSocket Persistent Connection**:
+```
+Client -> Server: Upgrade to WebSocket
+Server -> Client: 101 Switching Protocols
+[Connection remains open]
+Client <-> Server: Bidirectional messages anytime
+```
+
+**Overhead Comparison**:
+```
+HTTP Request Headers:  ~200-800 bytes per request
+HTTP Response Headers: ~200-500 bytes per response
+Total per exchange:    ~400-1300 bytes
+
+WebSocket Frame:       2-14 bytes per message
+```
+
+For 1000 messages:
+- HTTP: 400KB - 1.3MB overhead
+- WebSocket: 2KB - 14KB overhead
+
+### Protocol Layers
+
+```
+┌─────────────────────────────────┐
+│   Application Layer             │
+│   (Your application logic)      │
+├─────────────────────────────────┤
+│   WebSocket Protocol            │
+│   (RFC 6455 - Framing/Messages) │
+├─────────────────────────────────┤
+│   TLS (for wss://)              │
+│   (Optional encryption)         │
+├─────────────────────────────────┤
+│   TCP                           │
+│   (Reliable transport)          │
+├─────────────────────────────────┤
+│   IP                            │
+│   (Network routing)             │
+└─────────────────────────────────┘
+```
+
+### Use Cases
+
+**Ideal for**:
+- Real-time chat applications
+- Live sports/stock tickers
+- Multiplayer games
+- Collaborative editing (Google Docs-style)
+- Live dashboards/monitoring
+- IoT device communication
+- Live video streaming metadata
+- Trading platforms
+- Real-time notifications
+
+**Not ideal for**:
+- One-way server push (use SSE)
+- Infrequent updates (use HTTP polling)
+- REST API calls (use HTTP)
+- File uploads (use HTTP multipart)
+- Heavy proxy/firewall environments
+
+---
+
+## Connection Lifecycle
+
+### Phase 1: HTTP Upgrade Handshake
+
+The WebSocket connection begins as an HTTP request that "upgrades" to the WebSocket protocol.
+
+**Client Handshake Request**:
+```http
+GET /chat HTTP/1.1
+Host: example.com
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+Sec-WebSocket-Version: 13
+Origin: http://example.com
+Sec-WebSocket-Protocol: chat, superchat
+Sec-WebSocket-Extensions: permessage-deflate
+```
+
+**Header Breakdown**:
+- `Upgrade: websocket` - Request protocol upgrade
+- `Connection: Upgrade` - Indicate connection will be upgraded
+- `Sec-WebSocket-Key` - Random base64-encoded 16-byte value (security)
+- `Sec-WebSocket-Version` - WebSocket protocol version (13 is current)
+- `Origin` - Browser security (prevent CSRF)
+- `Sec-WebSocket-Protocol` - Subprotocols (optional)
+- `Sec-WebSocket-Extensions` - Extensions like compression (optional)
+
+**Server Handshake Response**:
+```http
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+Sec-WebSocket-Protocol: chat
+Sec-WebSocket-Extensions: permessage-deflate
+```
+
+**Header Breakdown**:
+- `101 Switching Protocols` - Upgrade accepted
+- `Sec-WebSocket-Accept` - Computed from client's key (see below)
+- `Sec-WebSocket-Protocol` - Selected subprotocol (if any)
+- `Sec-WebSocket-Extensions` - Accepted extensions
+
+**Sec-WebSocket-Accept Calculation**:
+```javascript
+// Server computes this from client's Sec-WebSocket-Key
+const crypto = require('crypto');
+
+function generateAcceptKey(clientKey) {
+  const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'; // RFC 6455 magic string
+  const hash = crypto
+    .createHash('sha1')
+    .update(clientKey + GUID)
+    .digest('base64');
+  return hash;
+}
+
+// Example:
+const clientKey = 'dGhlIHNhbXBsZSBub25jZQ==';
+const acceptKey = generateAcceptKey(clientKey);
+// Returns: 's3pPLMBiTxaQ9kYGzzhZRbK+xOo='
+```
+
+This prevents accidental WebSocket connections and ensures both sides understand the protocol.
+
+### Phase 2: Data Transfer
+
+Once upgraded, the connection switches to WebSocket framing. Both client and server can send messages at any time.
+
+**Message Flow**:
+```
+Client                          Server
+  |                               |
+  |-- Text Message -------------->|
+  |                               |
+  |<-- Text Message --------------|
+  |                               |
+  |-- Binary Message ------------>|
+  |                               |
+  |<-- Ping -----------------------|
+  |-- Pong ---------------------->|
+  |                               |
+```
+
+**Multiplexing**: A single WebSocket connection can carry multiple logical channels/topics by using message prefixes or JSON envelopes:
+
+```javascript
+// Topic-based routing
+ws.send(JSON.stringify({
+  topic: 'chat',
+  data: { user: 'Alice', message: 'Hello' }
+}));
+
+ws.send(JSON.stringify({
+  topic: 'notifications',
+  data: { type: 'friend_request', from: 'Bob' }
+}));
+```
+
+### Phase 3: Connection Close
+
+Either side can initiate a close. The closing handshake ensures graceful shutdown.
+
+**Close Handshake**:
+```
+Client                          Server
+  |                               |
+  |-- Close Frame (code 1000) --->|
+  |                               |
+  |<-- Close Frame (code 1000) ---|
+  |                               |
+  [TCP connection closes]
+```
+
+**Close Codes** (from RFC 6455):
+```
+1000 - Normal Closure
+1001 - Going Away (server shutdown, browser navigation)
+1002 - Protocol Error
+1003 - Unsupported Data (e.g., text-only but received binary)
+1006 - Abnormal Closure (no close frame, connection lost)
+1007 - Invalid Payload Data (malformed UTF-8 in text)
+1008 - Policy Violation (generic)
+1009 - Message Too Big
+1010 - Mandatory Extension (client expected extension)
+1011 - Internal Server Error
+1015 - TLS Handshake Failure
+```
+
+**Application-Defined Codes**: 3000-4999 range for custom close reasons.
+
+**Close Sequence**:
+```javascript
+// Client initiates close
+ws.close(1000, 'User logged out');
+
+// Server receives close event
+ws.on('close', (code, reason) => {
+  console.log(`Closed: ${code} - ${reason}`);
+  // Cleanup resources
+});
+
+// Server responds with close frame
+// TCP connection terminates
+```
+
+### State Transitions
+
+```
+CONNECTING (0)
+    ↓
+    [Handshake completes]
+    ↓
+OPEN (1)
+    ↓
+    [Close initiated]
+    ↓
+CLOSING (2)
+    ↓
+    [Close handshake completes]
+    ↓
+CLOSED (3)
+```
+
+**Browser WebSocket API States**:
+```javascript
+WebSocket.CONNECTING  // 0
+WebSocket.OPEN        // 1
+WebSocket.CLOSING     // 2
+WebSocket.CLOSED      // 3
+
+// Check state
+if (ws.readyState === WebSocket.OPEN) {
+  ws.send('message');
+}
+```
+
+### Connection Errors
+
+**Common Failure Modes**:
+1. **Handshake Rejection**: Server returns non-101 status
+2. **Network Interruption**: Connection drops without close frame
+3. **Timeout**: No data received for extended period
+4. **Protocol Violation**: Invalid frame received
+5. **TLS Failure**: Certificate issues on wss://
+
+**Error Handling**:
+```javascript
+ws.on('error', (error) => {
+  console.error('WebSocket error:', error);
+  // Attempt reconnection if appropriate
+});
+
+ws.on('close', (code, reason) => {
+  if (code !== 1000) {
+    console.error(`Abnormal close: ${code} - ${reason}`);
+    // Trigger reconnection logic
+  }
+});
+```
+
+---
+
+## Frame Structure
+
+WebSocket uses a binary framing protocol. Each message is split into one or more frames.
+
+### Frame Format
+
+```
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-------+-+-------------+-------------------------------+
+|F|R|R|R| opcode|M| Payload len |    Extended payload length    |
+|I|S|S|S|  (4)  |A|     (7)     |             (16/64)           |
+|N|V|V|V|       |S|             |   (if payload len==126/127)   |
+| |1|2|3|       |K|             |                               |
++-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
+|     Extended payload length continued, if payload len == 127  |
++ - - - - - - - - - - - - - - - +-------------------------------+
+|                               |Masking-key, if MASK set to 1  |
++-------------------------------+-------------------------------+
+| Masking-key (continued)       |          Payload Data         |
++-------------------------------- - - - - - - - - - - - - - - - +
+:                     Payload Data continued ...                :
++ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+|                     Payload Data continued ...                |
++---------------------------------------------------------------+
+```
+
+### Field Descriptions
+
+**FIN (1 bit)**:
+- `1` = Final fragment in message
+- `0` = More fragments follow
+- Allows message fragmentation
+
+**RSV1, RSV2, RSV3 (1 bit each)**:
+- Reserved for extensions
+- Must be 0 unless extension defines usage
+- Example: RSV1 = 1 for permessage-deflate compression
+
+**Opcode (4 bits)**:
+```
+0x0 - Continuation frame
+0x1 - Text frame (UTF-8)
+0x2 - Binary frame
+0x8 - Connection close
+0x9 - Ping
+0xA - Pong
+0x3-0x7 - Reserved for future data frames
+0xB-0xF - Reserved for future control frames
+```
+
+**MASK (1 bit)**:
+- `1` = Payload is masked (MUST be 1 for client->server)
+- `0` = Payload is not masked (server->client)
+- Prevents cache poisoning attacks
+
+**Payload Length (7 bits, 7+16 bits, or 7+64 bits)**:
+```
+0-125:  Actual payload length
+126:    Next 2 bytes are 16-bit length
+127:    Next 8 bytes are 64-bit length
+```
+
+**Masking Key (0 or 4 bytes)**:
+- Present if MASK bit is set
+- Random 32-bit value
+- Used to XOR payload data
+
+**Payload Data**:
+- Extension data (if negotiated) + Application data
+- Masked if from client
+
+### Masking Algorithm
+
+Client-to-server frames MUST be masked to prevent cache poisoning:
+
+```javascript
+function maskPayload(payload, maskingKey) {
+  const masked = Buffer.alloc(payload.length);
+  for (let i = 0; i < payload.length; i++) {
+    masked[i] = payload[i] ^ maskingKey[i % 4];
+  }
+  return masked;
+}
+
+// Example
+const payload = Buffer.from('Hello');
+const maskingKey = Buffer.from([0x12, 0x34, 0x56, 0x78]);
+const masked = maskPayload(payload, maskingKey);
+
+// Unmask (server-side)
+const unmasked = maskPayload(masked, maskingKey); // XOR is reversible
+// unmasked equals original payload
+```
+
+### Frame Examples
+
+**Simple Text Message** (client->server):
+```
+"Hi" (2 bytes payload)
+
+0x81 0x82 [mask] [masked payload]
+
+Breakdown:
+0x81 = 10000001
+  - FIN=1 (final fragment)
+  - RSV=000
+  - Opcode=0001 (text)
+
+0x82 = 10000010
+  - MASK=1
+  - Length=2
+
+[4 bytes masking key]
+[2 bytes masked payload]
+
+Total: 8 bytes
+```
+
+**Ping Frame** (server->client):
+```
+0x89 0x00
+
+Breakdown:
+0x89 = 10001001
+  - FIN=1
+  - RSV=000
+  - Opcode=1001 (ping)
+
+0x00 = 00000000
+  - MASK=0
+  - Length=0
+
+Total: 2 bytes
+```
+
+**Large Binary Message** (server->client, 65KB):
+```
+0x82 0x7E [2-byte length] [payload]
+
+Breakdown:
+0x82 = 10000010
+  - FIN=1
+  - Opcode=0010 (binary)
+
+0x7E = 01111110
+  - MASK=0
+  - Length=126 (indicates next 2 bytes are length)
+
+[2 bytes: 0xFF 0xFF = 65535]
+[65535 bytes payload]
+
+Total: 4 + 65535 = 65539 bytes
+```
+
+### Fragmentation
+
+Large messages can be split into multiple frames:
+
+```
+Frame 1: FIN=0, Opcode=0x1 (text), Payload="Hello "
+Frame 2: FIN=0, Opcode=0x0 (continuation), Payload="World"
+Frame 3: FIN=1, Opcode=0x0 (continuation), Payload="!"
+
+Reassembled: "Hello World!"
+```
+
+**Fragmentation Rules**:
+- First frame has message opcode (text/binary)
+- Subsequent frames have opcode 0x0 (continuation)
+- Control frames (ping/pong/close) can be interleaved
+- Control frames MUST NOT be fragmented
+
+**Example with Interleaved Ping**:
+```
+Frame 1: FIN=0, Opcode=0x1 (text), Payload="Start"
+Frame 2: FIN=1, Opcode=0x9 (ping), Payload=""
+Frame 3: FIN=1, Opcode=0xA (pong), Payload=""
+Frame 4: FIN=1, Opcode=0x0 (continuation), Payload="End"
+
+Text message: "StartEnd"
+Ping/Pong: Handled separately
+```
+
+### Control Frames
+
+**Characteristics**:
+- Opcode >= 0x8
+- MUST NOT be fragmented
+- Payload <= 125 bytes
+- Can be injected mid-message
+
+**Close Frame Payload**:
+```
+[2-byte status code] [UTF-8 reason]
+
+Example:
+0x03 0xE8 "Going away"
+  = 1000 "Going away"
+```
+
+**Ping/Pong Application Data**:
+```
+Ping: 0x89 0x05 "12345"
+Pong: 0x8A 0x05 "12345"  (echoes ping data)
+```
+
+---
+
+## Message Types
+
+### Text Messages
+
+**Characteristics**:
+- Opcode: 0x1
+- Payload MUST be valid UTF-8
+- Server MUST close connection on invalid UTF-8 (code 1007)
+
+**Sending**:
+```javascript
+// Browser
+ws.send('Hello World');
+ws.send(JSON.stringify({ type: 'chat', msg: 'Hi' }));
+
+// Node.js (ws library)
+ws.send('Hello World', { binary: false });
+```
+
+**Receiving**:
+```javascript
+ws.onmessage = (event) => {
+  if (typeof event.data === 'string') {
+    console.log('Text:', event.data);
+    const obj = JSON.parse(event.data);
+  }
+};
+```
+
+**UTF-8 Validation**:
+```javascript
+// Server must validate
+function isValidUTF8(buffer) {
+  try {
+    buffer.toString('utf8');
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+ws.on('message', (data, isBinary) => {
+  if (!isBinary && !isValidUTF8(data)) {
+    ws.close(1007, 'Invalid UTF-8');
+  }
+});
+```
+
+**Common JSON Envelope Pattern**:
+```javascript
+// Structured message format
+const message = {
+  type: 'event_type',
+  id: 'unique_id',
+  timestamp: Date.now(),
+  data: { /* payload */ }
+};
+
+ws.send(JSON.stringify(message));
+```
+
+### Binary Messages
+
+**Characteristics**:
+- Opcode: 0x2
+- Raw binary data
+- No encoding constraints
+
+**Sending**:
+```javascript
+// Browser - ArrayBuffer
+const buffer = new ArrayBuffer(8);
+const view = new DataView(buffer);
+view.setUint32(0, 12345678);
+ws.send(buffer);
+
+// Browser - Blob
+const blob = new Blob(['binary data'], { type: 'application/octet-stream' });
+ws.send(blob);
+
+// Node.js - Buffer
+const buf = Buffer.from([0x01, 0x02, 0x03]);
+ws.send(buf, { binary: true });
+```
+
+**Receiving**:
+```javascript
+// Browser
+ws.binaryType = 'arraybuffer'; // or 'blob'
+
+ws.onmessage = (event) => {
+  if (event.data instanceof ArrayBuffer) {
+    const view = new DataView(event.data);
+    const value = view.getUint32(0);
+  }
+};
+
+// Node.js
+ws.on('message', (data, isBinary) => {
+  if (isBinary) {
+    console.log('Binary:', data); // Buffer
+  }
+});
+```
+
+**Use Cases**:
+- Image/video streaming
+- Audio data
+- Protocol buffers / MessagePack
+- Game state (packed binary formats)
+- Sensor data
+
+### Ping/Pong Frames
+
+**Purpose**:
+- Keep connection alive
+- Detect broken connections
+- Measure latency
+
+**Ping Frame**:
+- Opcode: 0x9
+- Optional payload (max 125 bytes)
+- Recipient MUST respond with Pong
+
+**Pong Frame**:
+- Opcode: 0xA
+- MUST echo Ping payload
+- Can be sent unsolicited (heartbeat)
+
+**Browser Limitation**: JavaScript WebSocket API doesn't expose ping/pong directly (browser handles automatically).
+
+**Server-Side Ping** (Node.js ws):
+```javascript
+const ws = new WebSocket.Server({ port: 8080 });
+
+ws.on('connection', (socket) => {
+  const interval = setInterval(() => {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.ping();
+    }
+  }, 30000); // Every 30 seconds
+
+  socket.on('pong', () => {
+    console.log('Pong received');
+  });
+
+  socket.on('close', () => {
+    clearInterval(interval);
+  });
+});
+```
+
+**Client-Side Pong** (automatic in most libraries):
+```javascript
+// Most libraries auto-respond to ping
+// Manual pong (if needed):
+ws.on('ping', (data) => {
+  ws.pong(data);
+});
+```
+
+**Latency Measurement**:
+```javascript
+let pingStart;
+
+const interval = setInterval(() => {
+  pingStart = Date.now();
+  ws.ping();
+}, 5000);
+
+ws.on('pong', () => {
+  const latency = Date.now() - pingStart;
+  console.log(`Latency: ${latency}ms`);
+});
+```
+
+**Timeout Detection**:
+```javascript
+const PING_INTERVAL = 30000;
+const PONG_TIMEOUT = 5000;
+
+let pingTimeout;
+
+function heartbeat() {
+  clearTimeout(pingTimeout);
+  pingTimeout = setTimeout(() => {
+    console.log('Connection timed out');
+    ws.terminate(); // Force close
+  }, PONG_TIMEOUT);
+}
+
+const interval = setInterval(() => {
+  ws.ping();
+  heartbeat();
+}, PING_INTERVAL);
+
+ws.on('pong', () => {
+  heartbeat();
+});
+
+ws.on('close', () => {
+  clearInterval(interval);
+  clearTimeout(pingTimeout);
+});
+```
+
+### Close Frames
+
+**Close Frame Structure**:
+```
+[2-byte status code] [optional UTF-8 reason]
+```
+
+**Common Patterns**:
+```javascript
+// Normal closure
+ws.close(1000, 'Goodbye');
+
+// Application error
+ws.close(4000, 'Authentication failed');
+
+// Policy violation
+ws.close(1008, 'Rate limit exceeded');
+
+// Going away
+ws.close(1001, 'Server shutting down');
+```
+
+**Graceful Shutdown**:
+```javascript
+// Server shutdown
+process.on('SIGTERM', () => {
+  wss.clients.forEach((ws) => {
+    ws.close(1001, 'Server shutting down');
+  });
+
+  setTimeout(() => {
+    process.exit(0);
+  }, 5000);
+});
+```
+
+**Close Handshake Timeout**:
+```javascript
+ws.on('close', (code, reason) => {
+  console.log(`Closed: ${code} - ${reason}`);
+});
+
+// Force close if handshake takes too long
+const closeTimeout = setTimeout(() => {
+  ws.terminate(); // Forceful close
+}, 3000);
+
+ws.on('close', () => {
+  clearTimeout(closeTimeout);
+});
+```
+
+---
+
+## Security
+
+### Origin Validation
+
+The `Origin` header (sent by browsers) must be validated to prevent CSRF attacks.
+
+**Attack Scenario**:
+```
+1. User logged into trusted.com (has WebSocket connection)
+2. User visits evil.com
+3. evil.com JavaScript tries: new WebSocket('wss://trusted.com/ws')
+4. Without origin check, connection succeeds with user's cookies
+```
+
+**Server-Side Validation**:
+```javascript
+const ALLOWED_ORIGINS = [
+  'https://trusted.com',
+  'https://app.trusted.com'
+];
+
+wss.on('connection', (ws, req) => {
+  const origin = req.headers.origin;
+
+  if (!ALLOWED_ORIGINS.includes(origin)) {
+    ws.close(1008, 'Origin not allowed');
+    return;
+  }
+
+  // Continue with connection
+});
+```
+
+**Development vs Production**:
+```javascript
+const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production'
+  ? ['https://app.example.com']
+  : ['http://localhost:3000', 'http://localhost:5173'];
+```
+
+### Authentication
+
+WebSocket doesn't have built-in authentication. Common patterns:
+
+**1. Token in Query String**:
+```javascript
+// Client
+const token = await getAuthToken();
+const ws = new WebSocket(`wss://api.example.com/ws?token=${token}`);
+
+// Server
+wss.on('connection', (ws, req) => {
+  const url = new URL(req.url, 'wss://api.example.com');
+  const token = url.searchParams.get('token');
+
+  if (!verifyToken(token)) {
+    ws.close(1008, 'Invalid token');
+    return;
+  }
+
+  ws.userId = extractUserId(token);
+});
+```
+
+**Caution**: Tokens in URLs may be logged. Use wss:// to encrypt.
+
+**2. Token in Subprotocol**:
+```javascript
+// Client
+const ws = new WebSocket('wss://api.example.com/ws', ['access_token', token]);
+
+// Server
+wss.on('connection', (ws, req) => {
+  const protocol = req.headers['sec-websocket-protocol'];
+  const [_, token] = protocol.split(', ');
+
+  if (!verifyToken(token)) {
+    ws.close(1008, 'Invalid token');
+    return;
+  }
+});
+```
+
+**3. Cookie-Based** (if same-origin):
+```javascript
+// Cookies sent automatically in handshake
+wss.on('connection', (ws, req) => {
+  const cookies = parseCookies(req.headers.cookie);
+  const sessionId = cookies['session_id'];
+
+  if (!validateSession(sessionId)) {
+    ws.close(1008, 'Invalid session');
+    return;
+  }
+});
+```
+
+**4. Post-Connection Authentication**:
+```javascript
+// Client
+const ws = new WebSocket('wss://api.example.com/ws');
+
+ws.onopen = () => {
+  ws.send(JSON.stringify({
+    type: 'auth',
+    token: authToken
+  }));
+};
+
+// Server
+const pendingAuth = new WeakMap();
+
+wss.on('connection', (ws) => {
+  pendingAuth.set(ws, setTimeout(() => {
+    ws.close(1008, 'Authentication timeout');
+  }, 5000));
+
+  ws.on('message', (data) => {
+    const msg = JSON.parse(data);
+
+    if (msg.type === 'auth' && pendingAuth.has(ws)) {
+      clearTimeout(pendingAuth.get(ws));
+      pendingAuth.delete(ws);
+
+      if (verifyToken(msg.token)) {
+        ws.authenticated = true;
+        ws.userId = extractUserId(msg.token);
+      } else {
+        ws.close(1008, 'Invalid credentials');
+      }
+    } else if (!ws.authenticated) {
+      ws.close(1008, 'Not authenticated');
+    }
+  });
+});
+```
+
+### TLS/SSL (wss://)
+
+**Always use wss:// in production**:
+- Encrypts all data
+- Prevents eavesdropping
+- Prevents man-in-the-middle attacks
+- Required for browser security features
+
+**Certificate Setup**:
+```javascript
+const https = require('https');
+const WebSocket = require('ws');
+const fs = require('fs');
+
+const server = https.createServer({
+  cert: fs.readFileSync('/path/to/cert.pem'),
+  key: fs.readFileSync('/path/to/key.pem')
+});
+
+const wss = new WebSocket.Server({ server });
+
+server.listen(8080);
+```
+
+**Let's Encrypt with Certbot**:
+```bash
+certbot certonly --standalone -d api.example.com
+# Certificates in /etc/letsencrypt/live/api.example.com/
+```
+
+### Rate Limiting
+
+Prevent abuse by limiting message frequency:
+
+```javascript
+const MESSAGE_LIMIT = 10;
+const WINDOW_MS = 1000;
+
+const rateLimits = new WeakMap();
+
+wss.on('connection', (ws) => {
+  rateLimits.set(ws, {
+    count: 0,
+    resetTime: Date.now() + WINDOW_MS
+  });
+
+  ws.on('message', (data) => {
+    const limit = rateLimits.get(ws);
+
+    if (Date.now() > limit.resetTime) {
+      limit.count = 0;
+      limit.resetTime = Date.now() + WINDOW_MS;
+    }
+
+    limit.count++;
+
+    if (limit.count > MESSAGE_LIMIT) {
+      ws.close(1008, 'Rate limit exceeded');
+      return;
+    }
+
+    // Process message
+  });
+});
+```
+
+**Token Bucket Algorithm**:
+```javascript
+class TokenBucket {
+  constructor(capacity, refillRate) {
+    this.capacity = capacity;
+    this.tokens = capacity;
+    this.refillRate = refillRate; // tokens per second
+    this.lastRefill = Date.now();
+  }
+
+  consume(tokens = 1) {
+    this.refill();
+
+    if (this.tokens >= tokens) {
+      this.tokens -= tokens;
+      return true;
+    }
+    return false;
+  }
+
+  refill() {
+    const now = Date.now();
+    const elapsed = (now - this.lastRefill) / 1000;
+    const tokensToAdd = elapsed * this.refillRate;
+
+    this.tokens = Math.min(this.capacity, this.tokens + tokensToAdd);
+    this.lastRefill = now;
+  }
+}
+
+const buckets = new WeakMap();
+
+wss.on('connection', (ws) => {
+  buckets.set(ws, new TokenBucket(100, 10)); // 100 capacity, 10/sec refill
+
+  ws.on('message', (data) => {
+    const bucket = buckets.get(ws);
+
+    if (!bucket.consume()) {
+      ws.send(JSON.stringify({ error: 'Rate limit exceeded' }));
+      return;
+    }
+
+    // Process message
+  });
+});
+```
+
+### Input Validation
+
+Always validate and sanitize incoming messages:
+
+```javascript
+ws.on('message', (data, isBinary) => {
+  // Size limit
+  if (data.length > 1024 * 1024) { // 1MB
+    ws.close(1009, 'Message too large');
+    return;
+  }
+
+  // Type validation
+  if (isBinary && !expectBinary) {
+    ws.close(1003, 'Unexpected binary data');
+    return;
+  }
+
+  // JSON parsing
+  let msg;
+  try {
+    msg = JSON.parse(data);
+  } catch (e) {
+    ws.send(JSON.stringify({ error: 'Invalid JSON' }));
+    return;
+  }
+
+  // Schema validation
+  if (!isValidSchema(msg)) {
+    ws.send(JSON.stringify({ error: 'Invalid message format' }));
+    return;
+  }
+
+  // Sanitize strings (prevent XSS if echoed to browser)
+  if (msg.text) {
+    msg.text = sanitizeHtml(msg.text);
+  }
+
+  // Process validated message
+});
+```
+
+### DoS Protection
+
+**Connection Limits**:
+```javascript
+const MAX_CONNECTIONS_PER_IP = 10;
+const connections = new Map();
+
+wss.on('connection', (ws, req) => {
+  const ip = req.socket.remoteAddress;
+  const count = connections.get(ip) || 0;
+
+  if (count >= MAX_CONNECTIONS_PER_IP) {
+    ws.close(1008, 'Too many connections');
+    return;
+  }
+
+  connections.set(ip, count + 1);
+
+  ws.on('close', () => {
+    connections.set(ip, connections.get(ip) - 1);
+  });
+});
+```
+
+**Message Size Limits**:
+```javascript
+const wss = new WebSocket.Server({
+  port: 8080,
+  maxPayload: 100 * 1024 // 100KB max message size
+});
+```
+
+**Compression Bomb Protection**:
+```javascript
+const wss = new WebSocket.Server({
+  perMessageDeflate: {
+    zlibDeflateOptions: {
+      level: 6 // Balanced compression
+    },
+    zlibInflateOptions: {
+      chunkSize: 10 * 1024 // Limit decompressed chunks
+    },
+    threshold: 1024 // Only compress messages > 1KB
+  }
+});
+```
+
+---
+
+## Scaling Patterns
+
+### Horizontal Scaling Challenges
+
+WebSocket connections are stateful and long-lived, creating scaling challenges:
+
+**Problem**: Client connected to Server A cannot receive messages from Server B.
+
+```
+Client 1 ─┬─> Server A ─┐
+Client 2 ─┘             │
+                        ├─> Load Balancer
+Client 3 ─┬─> Server B ─┘
+Client 4 ─┘
+
+If Client 1 sends to Client 3, message stuck in Server A.
+```
+
+### Sticky Sessions
+
+Route all requests from a client to the same server.
+
+**Load Balancer Configuration** (Nginx):
+```nginx
+upstream websocket_backend {
+  ip_hash; # Route by client IP
+  server 10.0.0.1:8080;
+  server 10.0.0.2:8080;
+  server 10.0.0.3:8080;
+}
+
+server {
+  listen 80;
+
+  location /ws {
+    proxy_pass http://websocket_backend;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+  }
+}
+```
+
+**HAProxy Configuration**:
+```
+frontend websocket_front
+  bind *:80
+  default_backend websocket_back
+
+backend websocket_back
+  balance source # IP-based sticky sessions
+  server ws1 10.0.0.1:8080 check
+  server ws2 10.0.0.2:8080 check
+  server ws3 10.0.0.3:8080 check
+```
+
+**Limitations**:
+- Uneven distribution if clients behind NAT
+- Can't rebalance without dropping connections
+- Server failure drops all its clients
+
+### Pub/Sub with Redis
+
+Enable cross-server messaging using Redis as a message broker.
+
+**Architecture**:
+```
+Client 1 ──> Server A ──┐
+                        ├──> Redis Pub/Sub ──┬──> Server B ──> Client 3
+Client 2 ──> Server B ──┘                    └──> Server C ──> Client 4
+```
+
+**Implementation** (Node.js):
+```javascript
+const Redis = require('ioredis');
+const WebSocket = require('ws');
+
+// Create Redis clients (pub and sub must be separate)
+const publisher = new Redis();
+const subscriber = new Redis();
+
+const wss = new WebSocket.Server({ port: 8080 });
+
+// Subscribe to Redis channel
+subscriber.subscribe('chat');
+
+subscriber.on('message', (channel, message) => {
+  const msg = JSON.parse(message);
+
+  // Broadcast to all local WebSocket clients
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      // Optional: filter by room/topic
+      if (client.room === msg.room) {
+        client.send(JSON.stringify(msg));
+      }
+    }
+  });
+});
+
+// Handle WebSocket messages
+wss.on('connection', (ws) => {
+  ws.on('message', (data) => {
+    const msg = JSON.parse(data);
+
+    // Publish to Redis (reaches all servers)
+    publisher.publish('chat', JSON.stringify(msg));
+  });
+});
+```
+
+**Room-Based Routing**:
+```javascript
+// Client joins room
+ws.on('message', (data) => {
+  const msg = JSON.parse(data);
+
+  if (msg.type === 'join') {
+    ws.room = msg.room;
+    subscriber.subscribe(`chat:${msg.room}`);
+  } else if (msg.type === 'message') {
+    publisher.publish(`chat:${ws.room}`, JSON.stringify(msg));
+  }
+});
+
+// Targeted broadcast
+subscriber.on('message', (channel, message) => {
+  const room = channel.split(':')[1];
+
+  wss.clients.forEach((client) => {
+    if (client.room === room && client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+});
+```
+
+**Presence Tracking**:
+```javascript
+const PRESENCE_KEY = 'websocket:presence';
+
+wss.on('connection', (ws, req) => {
+  const userId = getUserId(req);
+  const serverId = process.env.SERVER_ID;
+
+  // Add to presence set
+  publisher.sadd(PRESENCE_KEY, JSON.stringify({
+    userId,
+    serverId,
+    connectedAt: Date.now()
+  }));
+
+  ws.on('close', () => {
+    // Remove from presence set
+    publisher.srem(PRESENCE_KEY, JSON.stringify({ userId, serverId }));
+  });
+});
+
+// Get online users
+async function getOnlineUsers() {
+  const members = await publisher.smembers(PRESENCE_KEY);
+  return members.map(JSON.parse);
+}
+```
+
+### Redis Streams (Alternative)
+
+More robust than Pub/Sub with message persistence and consumer groups:
+
+```javascript
+const Redis = require('ioredis');
+const redis = new Redis();
+
+// Producer (WebSocket server receives message)
+async function publishMessage(room, message) {
+  await redis.xadd(
+    `stream:${room}`,
+    '*', // Auto-generate ID
+    'data', JSON.stringify(message)
+  );
+}
+
+// Consumer (read messages)
+async function consumeMessages(room) {
+  let lastId = '0-0';
+
+  while (true) {
+    const results = await redis.xread(
+      'BLOCK', 1000,
+      'STREAMS', `stream:${room}`, lastId
+    );
+
+    if (results) {
+      const [stream, messages] = results[0];
+
+      messages.forEach(([id, fields]) => {
+        const data = fields[1];
+        const msg = JSON.parse(data);
+
+        // Broadcast to WebSocket clients
+        broadcastToRoom(room, msg);
+
+        lastId = id;
+      });
+    }
+  }
+}
+```
+
+### Message Queue (RabbitMQ)
+
+For complex routing and guaranteed delivery:
+
+```javascript
+const amqp = require('amqplib');
+
+async function setupRabbitMQ() {
+  const connection = await amqp.connect('amqp://localhost');
+  const channel = await connection.createChannel();
+
+  // Fanout exchange (broadcast to all)
+  await channel.assertExchange('websocket', 'fanout', { durable: false });
+
+  // Create queue for this server
+  const { queue } = await channel.assertQueue('', { exclusive: true });
+  await channel.bindQueue(queue, 'websocket', '');
+
+  // Consume messages
+  channel.consume(queue, (msg) => {
+    const data = JSON.parse(msg.content.toString());
+
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(data));
+      }
+    });
+  }, { noAck: true });
+
+  // Publish messages
+  wss.on('connection', (ws) => {
+    ws.on('message', (data) => {
+      channel.publish('websocket', '', Buffer.from(data));
+    });
+  });
+}
+```
+
+### Database for Persistence
+
+Store messages for offline users:
+
+```javascript
+const { Pool } = require('pg');
+const pool = new Pool();
+
+// Store message
+async function storeMessage(roomId, userId, message) {
+  await pool.query(
+    'INSERT INTO messages (room_id, user_id, content, created_at) VALUES ($1, $2, $3, NOW())',
+    [roomId, userId, message]
+  );
+}
+
+// Get missed messages
+async function getMissedMessages(roomId, since) {
+  const result = await pool.query(
+    'SELECT * FROM messages WHERE room_id = $1 AND created_at > $2 ORDER BY created_at',
+    [roomId, since]
+  );
+  return result.rows;
+}
+
+// On reconnection
+ws.on('message', async (data) => {
+  const msg = JSON.parse(data);
+
+  if (msg.type === 'join') {
+    const missed = await getMissedMessages(msg.room, msg.lastSeen);
+    missed.forEach((m) => {
+      ws.send(JSON.stringify(m));
+    });
+  }
+});
+```
+
+### Serverless WebSocket
+
+**AWS API Gateway WebSockets**:
+```javascript
+// Lambda handler for connect
+exports.connect = async (event) => {
+  const connectionId = event.requestContext.connectionId;
+
+  // Store connection in DynamoDB
+  await dynamodb.put({
+    TableName: 'WebSocketConnections',
+    Item: { connectionId, timestamp: Date.now() }
+  }).promise();
+
+  return { statusCode: 200 };
+};
+
+// Lambda handler for message
+exports.message = async (event) => {
+  const { connectionId } = event.requestContext;
+  const message = JSON.parse(event.body);
+
+  // Get all connections
+  const connections = await dynamodb.scan({
+    TableName: 'WebSocketConnections'
+  }).promise();
+
+  // Send to all
+  const apiGateway = new AWS.ApiGatewayManagementApi({
+    endpoint: event.requestContext.domainName + '/' + event.requestContext.stage
+  });
+
+  await Promise.all(connections.Items.map(async ({ connectionId: targetId }) => {
+    try {
+      await apiGateway.postToConnection({
+        ConnectionId: targetId,
+        Data: JSON.stringify(message)
+      }).promise();
+    } catch (e) {
+      if (e.statusCode === 410) {
+        // Clean up stale connection
+        await dynamodb.delete({
+          TableName: 'WebSocketConnections',
+          Key: { connectionId: targetId }
+        }).promise();
+      }
+    }
+  }));
+
+  return { statusCode: 200 };
+};
+```
+
+---
+
+## Reconnection Strategies
+
+Network interruptions require robust reconnection logic.
+
+### Exponential Backoff
+
+Avoid overwhelming the server with reconnection attempts:
+
+```javascript
+class WebSocketClient {
+  constructor(url) {
+    this.url = url;
+    this.ws = null;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 10;
+    this.reconnectInterval = 1000; // Start at 1 second
+    this.maxReconnectInterval = 30000; // Cap at 30 seconds
+  }
+
+  connect() {
+    this.ws = new WebSocket(this.url);
+
+    this.ws.onopen = () => {
+      console.log('Connected');
+      this.reconnectAttempts = 0; // Reset on success
+    };
+
+    this.ws.onclose = (event) => {
+      console.log('Disconnected:', event.code, event.reason);
+      this.reconnect();
+    };
+
+    this.ws.onerror = (error) => {
+      console.error('Error:', error);
+    };
+  }
+
+  reconnect() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('Max reconnection attempts reached');
+      return;
+    }
+
+    this.reconnectAttempts++;
+
+    // Exponential backoff with jitter
+    const delay = Math.min(
+      this.reconnectInterval * Math.pow(2, this.reconnectAttempts),
+      this.maxReconnectInterval
+    );
+
+    const jitter = delay * 0.1 * Math.random(); // +/- 10% jitter
+    const actualDelay = delay + jitter;
+
+    console.log(`Reconnecting in ${actualDelay}ms (attempt ${this.reconnectAttempts})`);
+
+    setTimeout(() => {
+      this.connect();
+    }, actualDelay);
+  }
+
+  send(data) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(data);
+    } else {
+      console.warn('Cannot send, not connected');
+      // Queue message or handle error
+    }
+  }
+}
+
+const client = new WebSocketClient('wss://api.example.com/ws');
+client.connect();
+```
+
+### Message Queueing
+
+Buffer messages while disconnected:
+
+```javascript
+class RobustWebSocket {
+  constructor(url) {
+    this.url = url;
+    this.ws = null;
+    this.messageQueue = [];
+    this.maxQueueSize = 100;
+    this.connect();
+  }
+
+  connect() {
+    this.ws = new WebSocket(this.url);
+
+    this.ws.onopen = () => {
+      console.log('Connected, flushing queue');
+      this.flushQueue();
+    };
+
+    this.ws.onclose = () => {
+      this.reconnect();
+    };
+  }
+
+  send(data) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(data);
+    } else {
+      // Queue message
+      if (this.messageQueue.length < this.maxQueueSize) {
+        this.messageQueue.push(data);
+      } else {
+        console.warn('Message queue full, dropping oldest');
+        this.messageQueue.shift();
+        this.messageQueue.push(data);
+      }
+    }
+  }
+
+  flushQueue() {
+    while (this.messageQueue.length > 0 && this.ws.readyState === WebSocket.OPEN) {
+      const message = this.messageQueue.shift();
+      this.ws.send(message);
+    }
+  }
+
+  reconnect() {
+    // Exponential backoff logic from previous example
+  }
+}
+```
+
+### State Synchronization
+
+Resync state after reconnection:
+
+```javascript
+class StatefulWebSocket {
+  constructor(url) {
+    this.url = url;
+    this.ws = null;
+    this.lastMessageId = 0;
+    this.connect();
+  }
+
+  connect() {
+    this.ws = new WebSocket(this.url);
+
+    this.ws.onopen = () => {
+      // Request missed messages
+      this.ws.send(JSON.stringify({
+        type: 'sync',
+        lastMessageId: this.lastMessageId
+      }));
+    };
+
+    this.ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+
+      if (msg.id > this.lastMessageId) {
+        this.lastMessageId = msg.id;
+        this.handleMessage(msg);
+      } else {
+        // Duplicate or old message, ignore
+      }
+    };
+  }
+
+  handleMessage(msg) {
+    // Process message
+    console.log('Message:', msg);
+  }
+}
+```
+
+### Heartbeat Detection
+
+Detect connection death faster than TCP keepalive:
+
+```javascript
+class HeartbeatWebSocket {
+  constructor(url) {
+    this.url = url;
+    this.ws = null;
+    this.heartbeatInterval = null;
+    this.heartbeatTimeout = null;
+    this.HEARTBEAT_INTERVAL = 30000; // 30 seconds
+    this.HEARTBEAT_TIMEOUT = 5000; // 5 seconds
+    this.connect();
+  }
+
+  connect() {
+    this.ws = new WebSocket(this.url);
+
+    this.ws.onopen = () => {
+      this.startHeartbeat();
+    };
+
+    this.ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === 'pong') {
+        this.resetHeartbeat();
+      } else {
+        this.handleMessage(msg);
+      }
+    };
+
+    this.ws.onclose = () => {
+      this.stopHeartbeat();
+      this.reconnect();
+    };
+  }
+
+  startHeartbeat() {
+    this.heartbeatInterval = setInterval(() => {
+      this.ping();
+    }, this.HEARTBEAT_INTERVAL);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    if (this.heartbeatTimeout) {
+      clearTimeout(this.heartbeatTimeout);
+      this.heartbeatTimeout = null;
+    }
+  }
+
+  ping() {
+    this.ws.send(JSON.stringify({ type: 'ping' }));
+
+    // Expect pong within timeout
+    this.heartbeatTimeout = setTimeout(() => {
+      console.warn('Heartbeat timeout, reconnecting');
+      this.ws.close();
+    }, this.HEARTBEAT_TIMEOUT);
+  }
+
+  resetHeartbeat() {
+    if (this.heartbeatTimeout) {
+      clearTimeout(this.heartbeatTimeout);
+      this.heartbeatTimeout = null;
+    }
+  }
+
+  reconnect() {
+    // Exponential backoff logic
+  }
+}
+```
+
+### Connection State Machine
+
+Robust state management:
+
+```javascript
+const States = {
+  DISCONNECTED: 'disconnected',
+  CONNECTING: 'connecting',
+  CONNECTED: 'connected',
+  RECONNECTING: 'reconnecting'
+};
+
+class StateMachineWebSocket {
+  constructor(url) {
+    this.url = url;
+    this.ws = null;
+    this.state = States.DISCONNECTED;
+    this.listeners = {};
+  }
+
+  connect() {
+    if (this.state !== States.DISCONNECTED) {
+      console.warn('Already connecting or connected');
+      return;
+    }
+
+    this.setState(States.CONNECTING);
+    this.ws = new WebSocket(this.url);
+
+    this.ws.onopen = () => {
+      this.setState(States.CONNECTED);
+    };
+
+    this.ws.onclose = () => {
+      if (this.state === States.CONNECTED) {
+        this.setState(States.RECONNECTING);
+        this.reconnect();
+      } else {
+        this.setState(States.DISCONNECTED);
+      }
+    };
+
+    this.ws.onerror = (error) => {
+      this.emit('error', error);
+    };
+  }
+
+  setState(newState) {
+    const oldState = this.state;
+    this.state = newState;
+    this.emit('stateChange', { from: oldState, to: newState });
+  }
+
+  on(event, callback) {
+    if (!this.listeners[event]) {
+      this.listeners[event] = [];
+    }
+    this.listeners[event].push(callback);
+  }
+
+  emit(event, data) {
+    if (this.listeners[event]) {
+      this.listeners[event].forEach(cb => cb(data));
+    }
+  }
+
+  reconnect() {
+    // Exponential backoff
+    setTimeout(() => {
+      this.state = States.DISCONNECTED;
+      this.connect();
+    }, 1000);
+  }
+}
+
+// Usage
+const ws = new StateMachineWebSocket('wss://api.example.com/ws');
+
+ws.on('stateChange', ({ from, to }) => {
+  console.log(`State: ${from} -> ${to}`);
+
+  if (to === States.CONNECTED) {
+    // Update UI to show connected
+  } else if (to === States.RECONNECTING) {
+    // Show reconnecting indicator
+  }
+});
+
+ws.connect();
+```
+
+---
+
+## Server Implementations
+
+### Node.js (ws library)
+
+**Installation**:
+```bash
+npm install ws
+```
+
+**Basic Server**:
+```javascript
+const WebSocket = require('ws');
+
+const wss = new WebSocket.Server({ port: 8080 });
+
+wss.on('connection', (ws, req) => {
+  console.log('Client connected:', req.socket.remoteAddress);
+
+  ws.on('message', (data, isBinary) => {
+    console.log('Received:', data.toString());
+
+    // Echo back
+    ws.send(data, { binary: isBinary });
+  });
+
+  ws.on('close', (code, reason) => {
+    console.log('Client disconnected:', code, reason.toString());
+  });
+
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
+
+  ws.send('Welcome!');
+});
+
+console.log('WebSocket server running on ws://localhost:8080');
+```
+
+**Broadcast to All Clients**:
+```javascript
+function broadcast(data) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(data);
+    }
+  });
+}
+
+wss.on('connection', (ws) => {
+  ws.on('message', (data) => {
+    broadcast(data); // Send to all connected clients
+  });
+});
+```
+
+**Room-Based Broadcasting**:
+```javascript
+const rooms = new Map();
+
+wss.on('connection', (ws) => {
+  ws.on('message', (data) => {
+    const msg = JSON.parse(data);
+
+    if (msg.type === 'join') {
+      if (!rooms.has(msg.room)) {
+        rooms.set(msg.room, new Set());
+      }
+      rooms.get(msg.room).add(ws);
+      ws.room = msg.room;
+    } else if (msg.type === 'message') {
+      const room = rooms.get(ws.room);
+      if (room) {
+        room.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(msg));
+          }
+        });
+      }
+    }
+  });
+
+  ws.on('close', () => {
+    if (ws.room && rooms.has(ws.room)) {
+      rooms.get(ws.room).delete(ws);
+    }
+  });
+});
+```
+
+**With Express**:
+```javascript
+const express = require('express');
+const { createServer } = require('http');
+const WebSocket = require('ws');
+
+const app = express();
+const server = createServer(app);
+const wss = new WebSocket.Server({ server });
+
+app.get('/', (req, res) => {
+  res.send('WebSocket server running');
+});
+
+wss.on('connection', (ws) => {
+  ws.send('Connected to WebSocket server');
+});
+
+server.listen(8080, () => {
+  console.log('Server running on http://localhost:8080');
+});
+```
+
+**Compression (permessage-deflate)**:
+```javascript
+const wss = new WebSocket.Server({
+  port: 8080,
+  perMessageDeflate: {
+    zlibDeflateOptions: {
+      chunkSize: 1024,
+      memLevel: 7,
+      level: 3
+    },
+    zlibInflateOptions: {
+      chunkSize: 10 * 1024
+    },
+    clientNoContextTakeover: true,
+    serverNoContextTakeover: true,
+    serverMaxWindowBits: 10,
+    concurrencyLimit: 10,
+    threshold: 1024 // Only compress messages > 1KB
+  }
+});
+```
+
+### Python (websockets library)
+
+**Installation**:
+```bash
+pip install websockets
+```
+
+**Basic Server** (async):
+```python
+import asyncio
+import websockets
+
+async def handler(websocket, path):
+    print(f"Client connected: {websocket.remote_address}")
+
+    try:
+        async for message in websocket:
+            print(f"Received: {message}")
+
+            # Echo back
+            await websocket.send(message)
+    except websockets.exceptions.ConnectionClosed:
+        print("Client disconnected")
+
+async def main():
+    async with websockets.serve(handler, "localhost", 8080):
+        print("WebSocket server running on ws://localhost:8080")
+        await asyncio.Future()  # Run forever
+
+asyncio.run(main())
+```
+
+**Broadcast to All Clients**:
+```python
+import asyncio
+import websockets
+
+connected = set()
+
+async def handler(websocket, path):
+    connected.add(websocket)
+    try:
+        async for message in websocket:
+            # Broadcast to all clients
+            websockets.broadcast(connected, message)
+    finally:
+        connected.remove(websocket)
+
+async def main():
+    async with websockets.serve(handler, "localhost", 8080):
+        await asyncio.Future()
+
+asyncio.run(main())
+```
+
+**JSON Messages**:
+```python
+import asyncio
+import websockets
+import json
+
+async def handler(websocket, path):
+    async for message in websocket:
+        data = json.loads(message)
+
+        # Process
+        response = {
+            "type": "response",
+            "echo": data
+        }
+
+        await websocket.send(json.dumps(response))
+
+async def main():
+    async with websockets.serve(handler, "localhost", 8080):
+        await asyncio.Future()
+
+asyncio.run(main())
+```
+
+**With Authentication**:
+```python
+import asyncio
+import websockets
+import jwt
+
+async def handler(websocket, path):
+    # Read first message as auth token
+    try:
+        token = await asyncio.wait_for(websocket.recv(), timeout=5.0)
+        payload = jwt.decode(token, "secret", algorithms=["HS256"])
+        user_id = payload["user_id"]
+    except (asyncio.TimeoutError, jwt.InvalidTokenError):
+        await websocket.close(1008, "Authentication failed")
+        return
+
+    print(f"User {user_id} authenticated")
+
+    # Continue with authenticated connection
+    async for message in websocket:
+        await websocket.send(f"User {user_id}: {message}")
+
+async def main():
+    async with websockets.serve(handler, "localhost", 8080):
+        await asyncio.Future()
+
+asyncio.run(main())
+```
+
+### Go (gorilla/websocket)
+
+**Installation**:
+```bash
+go get github.com/gorilla/websocket
+```
+
+**Basic Server**:
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+    "net/http"
+
+    "github.com/gorilla/websocket"
+)
+
+var upgrader = websocket.Upgrader{
+    CheckOrigin: func(r *http.Request) bool {
+        return true // Allow all origins (configure for production)
+    },
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    conn, err := upgrader.Upgrade(w, r, nil)
+    if err != nil {
+        log.Println("Upgrade error:", err)
+        return
+    }
+    defer conn.Close()
+
+    fmt.Println("Client connected:", conn.RemoteAddr())
+
+    for {
+        messageType, message, err := conn.ReadMessage()
+        if err != nil {
+            log.Println("Read error:", err)
+            break
+        }
+
+        fmt.Printf("Received: %s\n", message)
+
+        // Echo back
+        err = conn.WriteMessage(messageType, message)
+        if err != nil {
+            log.Println("Write error:", err)
+            break
+        }
+    }
+}
+
+func main() {
+    http.HandleFunc("/ws", handler)
+
+    fmt.Println("WebSocket server running on :8080")
+    log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+
+**Broadcast Hub**:
+```go
+package main
+
+import (
+    "github.com/gorilla/websocket"
+)
+
+type Hub struct {
+    clients    map[*websocket.Conn]bool
+    broadcast  chan []byte
+    register   chan *websocket.Conn
+    unregister chan *websocket.Conn
+}
+
+func newHub() *Hub {
+    return &Hub{
+        clients:    make(map[*websocket.Conn]bool),
+        broadcast:  make(chan []byte),
+        register:   make(chan *websocket.Conn),
+        unregister: make(chan *websocket.Conn),
+    }
+}
+
+func (h *Hub) run() {
+    for {
+        select {
+        case conn := <-h.register:
+            h.clients[conn] = true
+        case conn := <-h.unregister:
+            if _, ok := h.clients[conn]; ok {
+                delete(h.clients, conn)
+                conn.Close()
+            }
+        case message := <-h.broadcast:
+            for conn := range h.clients {
+                err := conn.WriteMessage(websocket.TextMessage, message)
+                if err != nil {
+                    h.unregister <- conn
+                }
+            }
+        }
+    }
+}
+
+var hub = newHub()
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    conn, _ := upgrader.Upgrade(w, r, nil)
+    hub.register <- conn
+
+    defer func() {
+        hub.unregister <- conn
+    }()
+
+    for {
+        _, message, err := conn.ReadMessage()
+        if err != nil {
+            break
+        }
+        hub.broadcast <- message
+    }
+}
+
+func main() {
+    go hub.run()
+
+    http.HandleFunc("/ws", handler)
+    http.ListenAndServe(":8080", nil)
+}
+```
+
+---
+
+## Client Implementations
+
+### Browser (Native WebSocket API)
+
+**Basic Connection**:
+```javascript
+const ws = new WebSocket('wss://api.example.com/ws');
+
+ws.onopen = (event) => {
+  console.log('Connected');
+  ws.send('Hello Server');
+};
+
+ws.onmessage = (event) => {
+  console.log('Received:', event.data);
+
+  // Parse JSON if needed
+  const data = JSON.parse(event.data);
+};
+
+ws.onerror = (error) => {
+  console.error('WebSocket error:', error);
+};
+
+ws.onclose = (event) => {
+  console.log('Disconnected:', event.code, event.reason);
+};
+```
+
+**Send Binary Data**:
+```javascript
+// ArrayBuffer
+const buffer = new ArrayBuffer(4);
+const view = new DataView(buffer);
+view.setUint32(0, 42);
+ws.send(buffer);
+
+// Blob
+const blob = new Blob(['binary data']);
+ws.send(blob);
+```
+
+**Receive Binary Data**:
+```javascript
+ws.binaryType = 'arraybuffer'; // or 'blob'
+
+ws.onmessage = (event) => {
+  if (event.data instanceof ArrayBuffer) {
+    const view = new DataView(event.data);
+    const value = view.getUint32(0);
+    console.log('Binary:', value);
+  } else {
+    console.log('Text:', event.data);
+  }
+};
+```
+
+### Node.js Client (ws library)
+
+```javascript
+const WebSocket = require('ws');
+
+const ws = new WebSocket('wss://api.example.com/ws');
+
+ws.on('open', () => {
+  console.log('Connected');
+  ws.send('Hello');
+});
+
+ws.on('message', (data, isBinary) => {
+  console.log('Received:', data.toString());
+});
+
+ws.on('close', (code, reason) => {
+  console.log('Closed:', code, reason.toString());
+});
+
+ws.on('error', (error) => {
+  console.error('Error:', error);
+});
+```
+
+### Python Client (websockets)
+
+```python
+import asyncio
+import websockets
+
+async def client():
+    async with websockets.connect('wss://api.example.com/ws') as ws:
+        await ws.send('Hello')
+
+        async for message in ws:
+            print(f"Received: {message}")
+
+asyncio.run(client())
+```
+
+### React Hook (useWebSocket)
+
+```typescript
+import { useEffect, useRef, useState } from 'react';
+
+function useWebSocket(url: string) {
+  const [isConnected, setIsConnected] = useState(false);
+  const [lastMessage, setLastMessage] = useState<string | null>(null);
+  const ws = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    ws.current = new WebSocket(url);
+
+    ws.current.onopen = () => {
+      setIsConnected(true);
+    };
+
+    ws.current.onmessage = (event) => {
+      setLastMessage(event.data);
+    };
+
+    ws.current.onclose = () => {
+      setIsConnected(false);
+    };
+
+    return () => {
+      ws.current?.close();
+    };
+  }, [url]);
+
+  const send = (data: string) => {
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(data);
+    }
+  };
+
+  return { isConnected, lastMessage, send };
+}
+
+// Usage
+function App() {
+  const { isConnected, lastMessage, send } = useWebSocket('wss://api.example.com/ws');
+
+  return (
+    <div>
+      <p>Status: {isConnected ? 'Connected' : 'Disconnected'}</p>
+      <p>Last message: {lastMessage}</p>
+      <button onClick={() => send('Hello')}>Send</button>
+    </div>
+  );
+}
+```
+
+---
+
+## Testing Strategies
+
+### Unit Testing
+
+**Test Message Handling**:
+```javascript
+const WebSocket = require('ws');
+
+describe('WebSocket Handler', () => {
+  let wss, ws;
+
+  beforeAll((done) => {
+    wss = new WebSocket.Server({ port: 8080 });
+    wss.on('connection', (socket) => {
+      socket.on('message', (data) => {
+        const msg = JSON.parse(data);
+        socket.send(JSON.stringify({ echo: msg }));
+      });
+    });
+    done();
+  });
+
+  afterAll(() => {
+    wss.close();
+  });
+
+  test('echoes message', (done) => {
+    ws = new WebSocket('ws://localhost:8080');
+
+    ws.on('open', () => {
+      ws.send(JSON.stringify({ test: 'data' }));
+    });
+
+    ws.on('message', (data) => {
+      const msg = JSON.parse(data);
+      expect(msg.echo.test).toBe('data');
+      ws.close();
+      done();
+    });
+  });
+});
+```
+
+### Integration Testing
+
+**Test Full Flow**:
+```javascript
+describe('Chat Integration', () => {
+  let server, client1, client2;
+
+  beforeAll(async () => {
+    server = new WebSocket.Server({ port: 8080 });
+    // Setup broadcast logic
+
+    client1 = new WebSocket('ws://localhost:8080');
+    client2 = new WebSocket('ws://localhost:8080');
+
+    await Promise.all([
+      new Promise((resolve) => client1.on('open', resolve)),
+      new Promise((resolve) => client2.on('open', resolve))
+    ]);
+  });
+
+  test('broadcasts message to all clients', (done) => {
+    client2.on('message', (data) => {
+      expect(data.toString()).toBe('Hello');
+      done();
+    });
+
+    client1.send('Hello');
+  });
+
+  afterAll(() => {
+    client1.close();
+    client2.close();
+    server.close();
+  });
+});
+```
+
+### Load Testing
+
+**Artillery**:
+```yaml
+# artillery.yml
+config:
+  target: "wss://api.example.com"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 50
+      name: "Sustained load"
+  engines:
+    ws:
+      timeout: 60
+
+scenarios:
+  - engine: ws
+    flow:
+      - connect:
+          target: "/ws"
+      - send: '{"type": "join", "room": "test"}'
+      - think: 1
+      - loop:
+          - send: '{"type": "message", "text": "Hello"}'
+          - think: 2
+        count: 10
+```
+
+```bash
+artillery run artillery.yml
+```
+
+**k6**:
+```javascript
+import ws from 'k6/ws';
+import { check } from 'k6';
+
+export let options = {
+  vus: 100,
+  duration: '30s',
+};
+
+export default function () {
+  const url = 'wss://api.example.com/ws';
+
+  const res = ws.connect(url, {}, function (socket) {
+    socket.on('open', () => socket.send('Hello'));
+
+    socket.on('message', (data) => {
+      console.log('Received:', data);
+    });
+
+    socket.setTimeout(() => {
+      socket.close();
+    }, 10000);
+  });
+
+  check(res, { 'status is 101': (r) => r && r.status === 101 });
+}
+```
+
+---
+
+## Common Patterns
+
+### Chat Application
+
+**Server** (Node.js):
+```javascript
+const rooms = new Map();
+
+wss.on('connection', (ws) => {
+  ws.on('message', (data) => {
+    const msg = JSON.parse(data);
+
+    switch (msg.type) {
+      case 'join':
+        if (!rooms.has(msg.room)) {
+          rooms.set(msg.room, new Set());
+        }
+        rooms.get(msg.room).add(ws);
+        ws.room = msg.room;
+        ws.username = msg.username;
+        break;
+
+      case 'message':
+        const room = rooms.get(ws.room);
+        if (room) {
+          const payload = JSON.stringify({
+            type: 'message',
+            username: ws.username,
+            text: msg.text,
+            timestamp: Date.now()
+          });
+
+          room.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(payload);
+            }
+          });
+        }
+        break;
+    }
+  });
+
+  ws.on('close', () => {
+    if (ws.room && rooms.has(ws.room)) {
+      rooms.get(ws.room).delete(ws);
+    }
+  });
+});
+```
+
+**Client** (React):
+```typescript
+function Chat() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const ws = useRef<WebSocket>();
+
+  useEffect(() => {
+    ws.current = new WebSocket('wss://api.example.com/ws');
+
+    ws.current.onopen = () => {
+      ws.current.send(JSON.stringify({
+        type: 'join',
+        room: 'general',
+        username: 'Alice'
+      }));
+    };
+
+    ws.current.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      setMessages((prev) => [...prev, msg]);
+    };
+
+    return () => ws.current?.close();
+  }, []);
+
+  const sendMessage = () => {
+    ws.current?.send(JSON.stringify({
+      type: 'message',
+      text: input
+    }));
+    setInput('');
+  };
+
+  return (
+    <div>
+      {messages.map((msg, i) => (
+        <div key={i}>{msg.username}: {msg.text}</div>
+      ))}
+      <input value={input} onChange={(e) => setInput(e.target.value)} />
+      <button onClick={sendMessage}>Send</button>
+    </div>
+  );
+}
+```
+
+### Real-Time Dashboard
+
+**Server** (push updates):
+```javascript
+const clients = new Set();
+
+wss.on('connection', (ws) => {
+  clients.add(ws);
+
+  ws.on('close', () => {
+    clients.remove(ws);
+  });
+});
+
+// Push data updates
+setInterval(() => {
+  const data = {
+    type: 'metrics',
+    cpu: Math.random() * 100,
+    memory: Math.random() * 100,
+    timestamp: Date.now()
+  };
+
+  clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(data));
+    }
+  });
+}, 1000);
+```
+
+**Client** (React with Chart):
+```typescript
+function Dashboard() {
+  const [metrics, setMetrics] = useState([]);
+
+  useEffect(() => {
+    const ws = new WebSocket('wss://api.example.com/ws');
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setMetrics((prev) => [...prev.slice(-60), data]); // Keep last 60
+    };
+
+    return () => ws.close();
+  }, []);
+
+  return (
+    <LineChart data={metrics}>
+      <Line dataKey="cpu" stroke="#8884d8" />
+      <Line dataKey="memory" stroke="#82ca9d" />
+    </LineChart>
+  );
+}
+```
+
+### Multiplayer Game (State Sync)
+
+**Server**:
+```javascript
+const gameState = {
+  players: new Map()
+};
+
+wss.on('connection', (ws) => {
+  const playerId = generateId();
+
+  gameState.players.set(playerId, {
+    id: playerId,
+    x: 0,
+    y: 0
+  });
+
+  // Send full state to new player
+  ws.send(JSON.stringify({
+    type: 'init',
+    playerId,
+    state: Array.from(gameState.players.values())
+  }));
+
+  // Broadcast new player to others
+  broadcast({
+    type: 'player_joined',
+    player: gameState.players.get(playerId)
+  });
+
+  ws.on('message', (data) => {
+    const msg = JSON.parse(data);
+
+    if (msg.type === 'move') {
+      const player = gameState.players.get(playerId);
+      player.x = msg.x;
+      player.y = msg.y;
+
+      // Broadcast position update
+      broadcast({
+        type: 'player_moved',
+        playerId,
+        x: msg.x,
+        y: msg.y
+      });
+    }
+  });
+
+  ws.on('close', () => {
+    gameState.players.delete(playerId);
+    broadcast({
+      type: 'player_left',
+      playerId
+    });
+  });
+});
+```
+
+---
+
+## Comparison with Alternatives
+
+### Server-Sent Events (SSE)
+
+**SSE Characteristics**:
+- Unidirectional (server → client only)
+- HTTP-based (simpler than WebSocket)
+- Automatic reconnection
+- Text-only (no binary)
+- EventSource API in browsers
+
+**When to Use SSE**:
+- One-way server push (notifications, live feeds)
+- Simpler infrastructure requirements
+- No binary data needed
+- Want automatic reconnection
+
+**When to Use WebSocket**:
+- Bidirectional communication needed
+- Low latency critical
+- Binary data
+- Custom protocols
+
+**SSE Example**:
+```javascript
+// Server (Express)
+app.get('/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const interval = setInterval(() => {
+    res.write(`data: ${JSON.stringify({ time: Date.now() })}\n\n`);
+  }, 1000);
+
+  req.on('close', () => {
+    clearInterval(interval);
+  });
+});
+
+// Client
+const eventSource = new EventSource('/events');
+
+eventSource.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log(data);
+};
+```
+
+### Long Polling
+
+**Characteristics**:
+- Client repeatedly requests updates
+- Server holds request until data available
+- High overhead (new request each time)
+
+**When to Use Long Polling**:
+- Legacy browser support
+- Restrictive firewall/proxy
+- Very infrequent updates
+
+**When to Use WebSocket**:
+- Frequent updates
+- Modern browsers
+- Real-time requirements
+
+### HTTP/2 Server Push
+
+**Characteristics**:
+- Server can push resources proactively
+- Still request/response model
+- Limited browser support
+
+**WebSocket Advantages**:
+- True bidirectional
+- Lower overhead
+- Better browser support
+- Persistent connection
+
+---
+
+## Production Best Practices
+
+### Monitoring
+
+**Key Metrics**:
+- Active connections count
+- Message throughput (messages/sec)
+- Message latency (time from send to receive)
+- Connection duration
+- Reconnection rate
+- Error rate
+- Memory usage per connection
+
+**Prometheus Metrics**:
+```javascript
+const prometheus = require('prom-client');
+
+const activeConnections = new prometheus.Gauge({
+  name: 'websocket_connections_active',
+  help: 'Number of active WebSocket connections'
+});
+
+const messagesTotal = new prometheus.Counter({
+  name: 'websocket_messages_total',
+  help: 'Total number of WebSocket messages',
+  labelNames: ['direction', 'type']
+});
+
+const messageLatency = new prometheus.Histogram({
+  name: 'websocket_message_latency_seconds',
+  help: 'WebSocket message latency',
+  buckets: [0.001, 0.01, 0.1, 0.5, 1]
+});
+
+wss.on('connection', (ws) => {
+  activeConnections.inc();
+
+  ws.on('message', (data) => {
+    messagesTotal.inc({ direction: 'inbound', type: 'text' });
+
+    const start = Date.now();
+    // Process message
+    const duration = (Date.now() - start) / 1000;
+    messageLatency.observe(duration);
+  });
+
+  ws.on('close', () => {
+    activeConnections.dec();
+  });
+});
+```
+
+### Logging
+
+**Structured Logging**:
+```javascript
+const winston = require('winston');
+
+const logger = winston.createLogger({
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.File({ filename: 'websocket.log' })
+  ]
+});
+
+wss.on('connection', (ws, req) => {
+  const connId = generateId();
+
+  logger.info('connection', {
+    connId,
+    ip: req.socket.remoteAddress,
+    origin: req.headers.origin
+  });
+
+  ws.on('message', (data) => {
+    logger.debug('message', {
+      connId,
+      size: data.length,
+      type: typeof data
+    });
+  });
+
+  ws.on('close', (code, reason) => {
+    logger.info('disconnect', {
+      connId,
+      code,
+      reason: reason.toString()
+    });
+  });
+
+  ws.on('error', (error) => {
+    logger.error('error', {
+      connId,
+      error: error.message,
+      stack: error.stack
+    });
+  });
+});
+```
+
+### Resource Limits
+
+**Per-Connection Limits**:
+```javascript
+const MAX_MESSAGE_SIZE = 100 * 1024; // 100KB
+const MAX_MESSAGES_PER_MINUTE = 60;
+
+const wss = new WebSocket.Server({
+  port: 8080,
+  maxPayload: MAX_MESSAGE_SIZE
+});
+
+const rateLimits = new WeakMap();
+
+wss.on('connection', (ws) => {
+  rateLimits.set(ws, {
+    count: 0,
+    resetAt: Date.now() + 60000
+  });
+
+  ws.on('message', (data) => {
+    const limit = rateLimits.get(ws);
+
+    if (Date.now() > limit.resetAt) {
+      limit.count = 0;
+      limit.resetAt = Date.now() + 60000;
+    }
+
+    if (++limit.count > MAX_MESSAGES_PER_MINUTE) {
+      ws.close(1008, 'Rate limit exceeded');
+      return;
+    }
+  });
+});
+```
+
+### Graceful Shutdown
+
+```javascript
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, closing connections');
+
+  wss.clients.forEach((ws) => {
+    ws.close(1001, 'Server shutting down');
+  });
+
+  const timeout = setTimeout(() => {
+    console.log('Force closing remaining connections');
+    wss.close(() => {
+      process.exit(0);
+    });
+  }, 30000);
+
+  wss.close(() => {
+    clearTimeout(timeout);
+    process.exit(0);
+  });
+});
+```
+
+---
+
+## Troubleshooting
+
+### Connection Fails
+
+**Check**:
+1. Correct URL scheme (ws:// vs wss://)
+2. Server is running and accessible
+3. Firewall allows WebSocket connections
+4. Load balancer configured for WebSocket upgrade
+5. Certificate valid (for wss://)
+
+**Debug**:
+```javascript
+ws.onerror = (error) => {
+  console.error('Connection error:', error);
+  // Check: incorrect URL, network issues, server down
+};
+
+ws.onclose = (event) => {
+  console.log('Close code:', event.code);
+  console.log('Close reason:', event.reason);
+  // 1006 = abnormal closure (network issue)
+  // 1011 = server error
+};
+```
+
+### Messages Not Received
+
+**Check**:
+1. Connection state (OPEN)
+2. Message size within limits
+3. Proper masking (client→server)
+4. Valid UTF-8 (text messages)
+5. Server is broadcasting correctly
+
+**Debug**:
+```javascript
+console.log('WebSocket state:', ws.readyState);
+// 0 = CONNECTING, 1 = OPEN, 2 = CLOSING, 3 = CLOSED
+
+if (ws.readyState === WebSocket.OPEN) {
+  ws.send('test');
+} else {
+  console.warn('Cannot send, connection not open');
+}
+```
+
+### High Latency
+
+**Causes**:
+- Network congestion
+- Server overload
+- Message queue backlog
+- Slow message processing
+
+**Solutions**:
+```javascript
+// Measure latency
+ws.send(JSON.stringify({ type: 'ping', sent: Date.now() }));
+
+ws.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  if (msg.type === 'pong') {
+    const latency = Date.now() - msg.sent;
+    console.log('Latency:', latency, 'ms');
+  }
+};
+
+// Server-side processing time
+const start = Date.now();
+// ... process message ...
+const duration = Date.now() - start;
+if (duration > 100) {
+  console.warn('Slow processing:', duration, 'ms');
+}
+```
+
+### Memory Leaks
+
+**Common Causes**:
+- Not removing event listeners
+- Storing references to closed connections
+- Unbounded message buffers
+
+**Prevention**:
+```javascript
+const clients = new Set();
+
+wss.on('connection', (ws) => {
+  clients.add(ws);
+
+  ws.on('close', () => {
+    clients.delete(ws); // Clean up reference
+  });
+});
+
+// Use WeakMap for connection metadata
+const metadata = new WeakMap();
+
+wss.on('connection', (ws) => {
+  metadata.set(ws, { /* data */ }); // Auto-cleaned when ws GC'd
+});
+```
+
+---
+
+## Performance Optimization
+
+### Compression
+
+Enable permessage-deflate for text messages:
+
+```javascript
+const wss = new WebSocket.Server({
+  perMessageDeflate: {
+    threshold: 1024 // Only compress > 1KB
+  }
+});
+```
+
+**Trade-offs**:
+- CPU usage vs bandwidth
+- Latency increase (compression time)
+- Memory usage (compression contexts)
+
+### Binary Protocols
+
+Use binary formats for structured data:
+
+**MessagePack**:
+```javascript
+const msgpack = require('msgpack-lite');
+
+// Send
+const data = { user: 'Alice', count: 42 };
+const encoded = msgpack.encode(data);
+ws.send(encoded, { binary: true });
+
+// Receive
+ws.on('message', (data, isBinary) => {
+  if (isBinary) {
+    const decoded = msgpack.decode(data);
+  }
+});
+```
+
+**Protocol Buffers**:
+```protobuf
+message ChatMessage {
+  string username = 1;
+  string text = 2;
+  int64 timestamp = 3;
+}
+```
+
+```javascript
+const protobuf = require('protobufjs');
+
+const root = protobuf.loadSync('chat.proto');
+const ChatMessage = root.lookupType('ChatMessage');
+
+// Send
+const message = ChatMessage.create({
+  username: 'Alice',
+  text: 'Hello',
+  timestamp: Date.now()
+});
+const buffer = ChatMessage.encode(message).finish();
+ws.send(buffer, { binary: true });
+```
+
+### Batching
+
+Reduce overhead by batching multiple messages:
+
+```javascript
+const batch = [];
+const BATCH_SIZE = 10;
+const BATCH_INTERVAL = 100; // ms
+
+function queueMessage(msg) {
+  batch.push(msg);
+
+  if (batch.length >= BATCH_SIZE) {
+    flushBatch();
+  }
+}
+
+function flushBatch() {
+  if (batch.length === 0) return;
+
+  ws.send(JSON.stringify(batch));
+  batch.length = 0;
+}
+
+setInterval(flushBatch, BATCH_INTERVAL);
+```
+
+### Connection Pooling (Client)
+
+Reuse connections for multiple logical channels:
+
+```javascript
+class WebSocketPool {
+  constructor(url, size) {
+    this.connections = [];
+    for (let i = 0; i < size; i++) {
+      this.connections.push(new WebSocket(url));
+    }
+    this.index = 0;
+  }
+
+  getConnection() {
+    const conn = this.connections[this.index];
+    this.index = (this.index + 1) % this.connections.length;
+    return conn;
+  }
+
+  send(data) {
+    const conn = this.getConnection();
+    if (conn.readyState === WebSocket.OPEN) {
+      conn.send(data);
+    }
+  }
+}
+
+const pool = new WebSocketPool('wss://api.example.com/ws', 5);
+pool.send('message 1');
+pool.send('message 2');
+```
+
+---
+
+**End of WebSocket Reference**
+
+This comprehensive reference covers the WebSocket protocol from fundamentals to production deployment. For hands-on examples, see the `examples/` directory. For testing and analysis tools, see the `scripts/` directory.
+
+
+---
+
 <!-- affiliate-programs -->
 
 # Affiliate Program Design
@@ -327015,9 +329064,6 @@ Provide affiliates with:
 - PartnerStack — SaaS focused
 - Tapfiliate — Simple SaaS affiliate tracking
 - FirstPromoter — SaaS affiliate management
-
-**Partner Relationship Management (PRM):**
-- Introw — Full PRM with deal registration, commissions, tiers, QBRs, and partner engagement tracking ([integration guide](../../../tools/integrations/introw.md))
 
 **Self-hosted:**
 - Rewardful — Stripe-integrated affiliates
@@ -343195,249 +345241,6 @@ Quick reference for hashtag limits, character counts, and visible text threshold
 
 ---
 
-<!-- short-form-video -->
-
-# Short-Form Video: Hooks, Scripts & Strategy
-
-Detailed reference for creating short-form video content on TikTok, Instagram Reels, and YouTube Shorts.
-
----
-
-## Video Hook Library
-
-### Curiosity Hooks (Best for engagement)
-
-**The "Secret" Formula:**
-- "The secret to [outcome] that nobody talks about"
-- "I found the hidden feature in [product/platform] that changes everything"
-- "I can't believe this actually works..."
-
-**The Unexpected Discovery:**
-- "I tried [thing] for 30 days and I was NOT expecting this"
-- "This completely changed how I think about [topic]"
-- "Nobody talks about this, but..."
-
-**The Question:**
-- "Why does nobody talk about this?"
-- "Am I the only one who didn't know this?"
-- "The reason [common thing] doesn't work is..."
-
-### Value Hooks (Best for saves)
-
-**The Promise:**
-- "How to [achieve outcome] in [specific timeframe]"
-- "[Number] [things] that will [benefit]"
-- "Everything you need to know about [topic] in 60 seconds"
-
-**The Hack/Shortcut:**
-- "[Outcome] hack that actually works"
-- "The [adjective] way to [outcome]"
-- "If you're struggling with [problem], watch this"
-
-**The Warning:**
-- "Stop doing [common practice] — here's why"
-- "[Number] mistakes that are killing your [results]"
-- "Why [thing you think is good] is actually hurting you"
-
-### Story Hooks (Best for watch time)
-
-**The Transformation:**
-- "3 months ago, I [bad state]. Today, I [good state]."
-- "Here's how I went from [before] to [after]"
-- "I used to think [old belief]. Then [event] changed everything."
-
-**The Failure:**
-- "I made a huge mistake with [topic]"
-- "Here's why I stopped [common practice]"
-- "I lost [something significant] because of this mistake"
-
-**The Journey:**
-- "So this just happened..."
-- "This changed everything for me"
-- "Let me tell you about the time I [interesting situation]"
-
-### Controversial Hooks (Best for comments)
-
-- "Unpopular opinion: [bold statement]"
-- "[Common advice] is actually wrong"
-- "I'm going to get hate for this, but..."
-- "Most [audience] get this completely wrong"
-
----
-
-## Scripting Template
-
-```markdown
-## Video: [Working Title]
-
-**Platform:** TikTok / Reels / Shorts
-**Length:** XX seconds
-**Format:** [Talking head / Slideshow / Demo / Screen recording]
-
-### Hook (0-3 sec)
-- Visual: [What viewer sees]
-- Audio: [What they hear]
-- Text overlay: [On-screen text]
-
-### Body (3-X sec)
-- [Timestamp] - [What happens/what you say]
-- [Timestamp] - [Next beat]
-- [Continue...]
-
-### CTA (final 3-5 sec)
-- Verbal: [What you say]
-- Text: [On-screen text]
-- Action: [Follow, comment, link in bio, etc.]
-
-### Production Notes
-- Music/sound: [Trending sound or music choice]
-- B-roll needed: [List any clips needed]
-- Graphics: [Any text animations or overlays]
-```
-
----
-
-## Additional Video Structures
-
-### The Story Arc (45-60 sec)
-
-```
-[0-3s]  Hook: Tease the outcome
-[3-15s] Setup: Context and stakes
-[15-45s] Journey: What happened
-[45-55s] Resolution: The result
-[55-60s] Lesson/CTA
-```
-
-Best for: Personal stories, case studies, testimonials
-
-### The POV/Skit (15-30 sec)
-
-```
-[0-3s]  Setup: Text overlay sets the scene
-[3-25s] Performance: Act out the relatable scenario
-[25-30s] Punchline or twist
-```
-
-Best for: Relatable content, humor, niche communities
-
----
-
-## Visual Patterns
-
-### Talking Head
-- Good lighting (ring light or window light)
-- Eye contact with camera
-- Hand gestures for emphasis
-- Interesting background (bookshelf, plants, studio setup)
-
-### Slideshow/Carousel Video
-- Strong visual on each slide (2-4 seconds per slide)
-- Text overlays with key points
-- Consistent style/branding
-- Voiceover or trending sound
-
-### Screen Recording
-- Zoom in on important areas
-- Add cursor highlight or click animations
-- Keep movements smooth and intentional
-- Overlay your face in corner (optional but boosts engagement)
-
-### B-Roll Heavy
-- Show don't tell
-- Quick cuts (1-3 seconds per shot)
-- Match cuts to voiceover beats
-- Mix wide, medium, and close-up shots
-
----
-
-## Audio Strategy
-
-### When to Use Trending Sounds
-- Entertainment/lifestyle content where the sound fits your message
-- When the trend is still rising (check platform trending pages)
-- Don't use when it distracts from your message or is already declining
-
-### When to Use Original Audio
-- Educational content where you're speaking
-- Storytimes and personal narratives
-- Product demos and tutorials
-- Building a recognizable brand voice
-
-### Voiceover Tips
-- Speak slightly faster than normal conversation
-- Vary your tone — avoid monotone delivery
-- Pause for emphasis on key points
-- Record in a quiet space, use noise removal
-- AI voices work for faceless content (ElevenLabs, etc.)
-
-### Music Selection
-- Match energy to content (upbeat for tips, emotional for stories)
-- Avoid copyrighted music on Reels/Shorts
-- Use platform music libraries for safety
-- Lower music volume under voiceover (ducking)
-
----
-
-## Posting Strategy
-
-### Optimal Posting Times (test your audience)
-
-| Platform | Best Times (local) |
-|----------|-------------------|
-| TikTok | 7-9 AM, 12-3 PM, 7-11 PM |
-| Reels | 9 AM, 12 PM, 7-9 PM |
-| Shorts | 12-3 PM, 7-9 PM |
-
-### Frequency Recommendations
-
-| Goal | Minimum | Optimal |
-|------|---------|---------|
-| Growing | 1/day | 2-4/day |
-| Maintaining | 3/week | 1/day |
-| Testing | 2/week | 5/week |
-
-### Batch Creation Workflow
-
-1. **Ideate** (30 min): Generate 10-20 concepts
-2. **Script** (1 hour): Write scripts for 5-10 videos
-3. **Batch film** (2 hours): Record all talking head content
-4. **Edit** (2-3 hours): Edit and add captions
-5. **Schedule** (30 min): Queue for optimal times
-
----
-
-## Analytics & Iteration
-
-### Metrics That Matter
-
-| Metric | What It Tells You |
-|--------|-------------------|
-| Watch time % | Is content engaging throughout? |
-| Completion rate | Did hook + content deliver? |
-| Saves | Is content valuable enough to revisit? |
-| Shares | Is content worth spreading? |
-| Comments | Did content spark conversation? |
-| Follows | Did viewer want more from you? |
-
-### What to Test
-
-1. **Hooks**: Same content, different opening
-2. **Length**: 15 sec vs 30 sec vs 60 sec
-3. **Format**: Talking head vs slideshow vs demo
-4. **Time**: Morning vs afternoon vs evening
-5. **CTA**: Different calls to action
-
-### When to Pivot
-
-- 5+ videos with <1% completion rate → change hooks
-- High views but low follows → check CTA and content-audience fit
-- High saves but low shares → content is valuable but not social
-- Lots of comments but negative → lean into controversy or adjust tone
-
-
----
-
 <!-- post-templates -->
 
 # Post Format Templates
@@ -343822,11 +345625,254 @@ Bridge from engagement to business results:
 
 ---
 
+<!-- short-form-video -->
+
+# Short-Form Video: Hooks, Scripts & Strategy
+
+Detailed reference for creating short-form video content on TikTok, Instagram Reels, and YouTube Shorts.
+
+---
+
+## Video Hook Library
+
+### Curiosity Hooks (Best for engagement)
+
+**The "Secret" Formula:**
+- "The secret to [outcome] that nobody talks about"
+- "I found the hidden feature in [product/platform] that changes everything"
+- "I can't believe this actually works..."
+
+**The Unexpected Discovery:**
+- "I tried [thing] for 30 days and I was NOT expecting this"
+- "This completely changed how I think about [topic]"
+- "Nobody talks about this, but..."
+
+**The Question:**
+- "Why does nobody talk about this?"
+- "Am I the only one who didn't know this?"
+- "The reason [common thing] doesn't work is..."
+
+### Value Hooks (Best for saves)
+
+**The Promise:**
+- "How to [achieve outcome] in [specific timeframe]"
+- "[Number] [things] that will [benefit]"
+- "Everything you need to know about [topic] in 60 seconds"
+
+**The Hack/Shortcut:**
+- "[Outcome] hack that actually works"
+- "The [adjective] way to [outcome]"
+- "If you're struggling with [problem], watch this"
+
+**The Warning:**
+- "Stop doing [common practice] — here's why"
+- "[Number] mistakes that are killing your [results]"
+- "Why [thing you think is good] is actually hurting you"
+
+### Story Hooks (Best for watch time)
+
+**The Transformation:**
+- "3 months ago, I [bad state]. Today, I [good state]."
+- "Here's how I went from [before] to [after]"
+- "I used to think [old belief]. Then [event] changed everything."
+
+**The Failure:**
+- "I made a huge mistake with [topic]"
+- "Here's why I stopped [common practice]"
+- "I lost [something significant] because of this mistake"
+
+**The Journey:**
+- "So this just happened..."
+- "This changed everything for me"
+- "Let me tell you about the time I [interesting situation]"
+
+### Controversial Hooks (Best for comments)
+
+- "Unpopular opinion: [bold statement]"
+- "[Common advice] is actually wrong"
+- "I'm going to get hate for this, but..."
+- "Most [audience] get this completely wrong"
+
+---
+
+## Scripting Template
+
+```markdown
+## Video: [Working Title]
+
+**Platform:** TikTok / Reels / Shorts
+**Length:** XX seconds
+**Format:** [Talking head / Slideshow / Demo / Screen recording]
+
+### Hook (0-3 sec)
+- Visual: [What viewer sees]
+- Audio: [What they hear]
+- Text overlay: [On-screen text]
+
+### Body (3-X sec)
+- [Timestamp] - [What happens/what you say]
+- [Timestamp] - [Next beat]
+- [Continue...]
+
+### CTA (final 3-5 sec)
+- Verbal: [What you say]
+- Text: [On-screen text]
+- Action: [Follow, comment, link in bio, etc.]
+
+### Production Notes
+- Music/sound: [Trending sound or music choice]
+- B-roll needed: [List any clips needed]
+- Graphics: [Any text animations or overlays]
+```
+
+---
+
+## Additional Video Structures
+
+### The Story Arc (45-60 sec)
+
+```
+[0-3s]  Hook: Tease the outcome
+[3-15s] Setup: Context and stakes
+[15-45s] Journey: What happened
+[45-55s] Resolution: The result
+[55-60s] Lesson/CTA
+```
+
+Best for: Personal stories, case studies, testimonials
+
+### The POV/Skit (15-30 sec)
+
+```
+[0-3s]  Setup: Text overlay sets the scene
+[3-25s] Performance: Act out the relatable scenario
+[25-30s] Punchline or twist
+```
+
+Best for: Relatable content, humor, niche communities
+
+---
+
+## Visual Patterns
+
+### Talking Head
+- Good lighting (ring light or window light)
+- Eye contact with camera
+- Hand gestures for emphasis
+- Interesting background (bookshelf, plants, studio setup)
+
+### Slideshow/Carousel Video
+- Strong visual on each slide (2-4 seconds per slide)
+- Text overlays with key points
+- Consistent style/branding
+- Voiceover or trending sound
+
+### Screen Recording
+- Zoom in on important areas
+- Add cursor highlight or click animations
+- Keep movements smooth and intentional
+- Overlay your face in corner (optional but boosts engagement)
+
+### B-Roll Heavy
+- Show don't tell
+- Quick cuts (1-3 seconds per shot)
+- Match cuts to voiceover beats
+- Mix wide, medium, and close-up shots
+
+---
+
+## Audio Strategy
+
+### When to Use Trending Sounds
+- Entertainment/lifestyle content where the sound fits your message
+- When the trend is still rising (check platform trending pages)
+- Don't use when it distracts from your message or is already declining
+
+### When to Use Original Audio
+- Educational content where you're speaking
+- Storytimes and personal narratives
+- Product demos and tutorials
+- Building a recognizable brand voice
+
+### Voiceover Tips
+- Speak slightly faster than normal conversation
+- Vary your tone — avoid monotone delivery
+- Pause for emphasis on key points
+- Record in a quiet space, use noise removal
+- AI voices work for faceless content (ElevenLabs, etc.)
+
+### Music Selection
+- Match energy to content (upbeat for tips, emotional for stories)
+- Avoid copyrighted music on Reels/Shorts
+- Use platform music libraries for safety
+- Lower music volume under voiceover (ducking)
+
+---
+
+## Posting Strategy
+
+### Optimal Posting Times (test your audience)
+
+| Platform | Best Times (local) |
+|----------|-------------------|
+| TikTok | 7-9 AM, 12-3 PM, 7-11 PM |
+| Reels | 9 AM, 12 PM, 7-9 PM |
+| Shorts | 12-3 PM, 7-9 PM |
+
+### Frequency Recommendations
+
+| Goal | Minimum | Optimal |
+|------|---------|---------|
+| Growing | 1/day | 2-4/day |
+| Maintaining | 3/week | 1/day |
+| Testing | 2/week | 5/week |
+
+### Batch Creation Workflow
+
+1. **Ideate** (30 min): Generate 10-20 concepts
+2. **Script** (1 hour): Write scripts for 5-10 videos
+3. **Batch film** (2 hours): Record all talking head content
+4. **Edit** (2-3 hours): Edit and add captions
+5. **Schedule** (30 min): Queue for optimal times
+
+---
+
+## Analytics & Iteration
+
+### Metrics That Matter
+
+| Metric | What It Tells You |
+|--------|-------------------|
+| Watch time % | Is content engaging throughout? |
+| Completion rate | Did hook + content deliver? |
+| Saves | Is content valuable enough to revisit? |
+| Shares | Is content worth spreading? |
+| Comments | Did content spark conversation? |
+| Follows | Did viewer want more from you? |
+
+### What to Test
+
+1. **Hooks**: Same content, different opening
+2. **Length**: 15 sec vs 30 sec vs 60 sec
+3. **Format**: Talking head vs slideshow vs demo
+4. **Time**: Morning vs afternoon vs evening
+5. **CTA**: Different calls to action
+
+### When to Pivot
+
+- 5+ videos with <1% completion rate → change hooks
+- High views but low follows → check CTA and content-audience fit
+- High saves but low shares → content is valuable but not social
+- Lots of comments but negative → lean into controversy or adjust tone
+
+
+---
+
 <!-- hip-0124 -->
 
 ---
 hip: "0124"
-title: Bring Your Own Provider and AI — Unified Usage
+title: Bring-Your-Own Provider & AI — Unified Dashboard and Usage
 author: Hanzo AI Team
 type: Standards Track
 category: Platform
@@ -343837,7 +345883,7 @@ requires: HIP-0004, HIP-0018, HIP-0121, HIP-0123
 ---
 
 
-# HIP-0124: Bring Your Own Provider and AI — Unified Usage
+# HIP-0124: Bring-Your-Own Provider & AI — Unified Dashboard and Usage
 
 ## Abstract
 
@@ -345433,7 +347479,7 @@ Implemented in `hanzoai/operator` v0.3.0+. Primarily deployed on `lux-k8s`.
 
 ---
 hip: 0449
-title: Hanzo Login
+title: hanzo-login
 author: Hanzo Platform Team
 type: Informational
 category: Application
@@ -345441,7 +347487,7 @@ status: Final
 created: 2026-05-19
 ---
 
-# HIP-0449: Hanzo Login
+# HIP-0449: hanzo-login
 
 ## Abstract
 
@@ -345485,7 +347531,7 @@ Active in cluster `do-sfo3-hanzo-k8s` at replicas=2 as of 2026-05-18 snapshot.
 
 ---
 hip: "0506"
-title: Hanzo Studio — Agentic Multimodal Creative Runtime
+title: Hanzo Studio — Agentic Multi-Modal Creative Runtime
 author: Hanzo AI Team
 type: Standards Track
 category: Application
@@ -345495,7 +347541,7 @@ requires: HIP-0106, HIP-0504
 ---
 
 
-# HIP-0506: Hanzo Studio — Agentic Multimodal Creative Runtime
+# HIP-0506: Hanzo Studio — Agentic Multi-Modal Creative Runtime
 
 ## Abstract
 
@@ -345863,7 +347909,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1001
-title: Books — Double Entry Ledger
+title: Books — The Double-Entry Ledger
 author: Hanzo AI
 type: Standards Track
 category: Application
@@ -345874,7 +347920,7 @@ requires: HIP-0139
 capability: books
 ---
 
-# HIP-1001: Books — Double Entry Ledger
+# HIP-1001: Books — The Double-Entry Ledger
 
 ## Abstract
 
@@ -346518,33 +348564,39 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1160
-title: Todo — The Work Item Board
+title: Task — The Work Item Board
 author: Hanzo AI
 type: Standards Track
 category: Application
-capability: todo
+capability: task
 status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
 ---
 
-# HIP-1160: Todo — The Work Item Board
+# HIP-1160: Task — The Work Item Board
 
 ## Abstract
 
-`/v1/todo` is the one work-item surface: boards, the issues on them, and the
+`/v1/task` is the one work-item surface: boards, the issues on them, and the
 filters that make a board. Its defining fact is that the forge is the store —
 a board is a repository on the deployment's forge and an issue is that
 repository's issue — so every read is a read of the forge and nothing mirrors
-it. The implementation is `hanzoai/cloud` `apps/todo`.
+it. The implementation is `hanzoai/cloud` `apps/task`.
+
+A row here IS a task, so the address is that word, singular like `/v1/tool` and
+`/v1/team`. It answered at `/v1/todo`, beside a `/v1/tasks` that was the durable
+engine — one concept under two words and one word over two planes. The engine is
+`/v1/workflow` now (HIP-1062); the SPA's host and image keep the old spelling and
+are not cloud's to move.
 
 ## Motivation
 
 Hanzo has three planes for state that changes over time, and the boundary
-between them is law (`apps/todo/contract.go`): the todo Issue is the one
+between them is law (`apps/task/contract.go`): the task Issue is the one
 work-item primitive, `framework.DocType` holds schema-defined domain records,
-and `hanzoai/tasks` runs async execution. Every work-item surface — a board, a
+and the durable engine behind `/v1/workflow` runs async execution. Every work-item surface — a board, a
 repo's Issues tab, an agent's queue — is a filter over the one Issue, never a
 parallel store. Without that rule each tool grows its own issues table, and two
 tables are two answers to what the state of the work is.
@@ -346557,33 +348609,33 @@ as in RFC 2119.
 ### §1 The forge is the store
 
 The forge (Forgejo, `git.hanzo.ai`) is the single source of truth for boards
-and issues: a todo project is a repository, an issue is its issue, a board
+and issues: a task project is a repository, an issue is its issue, a board
 column is a label from the closed status set, a deadline is a milestone's due
-date (`apps/todo/source.go`). Nothing here MAY mirror, cache-as-table, or
+date (`apps/task/source.go`). Nothing here MAY mirror, cache-as-table, or
 write through: a second copy would drift the first time anyone touched the
 forge directly, which is every day.
 
 What the capability owns locally is only what the forge cannot answer: a
 per-(org, project) SQLite index opened through `cloud.OrgStore`
-(`apps/todo/todo.go:109`), holding the org-wide index every external source
+(`apps/task/store.go`), holding the org-wide index every external source
 lands in — which is what makes "is anyone tracking X" a question with an
-answer. The store's on-disk name stays `tracker` (`apps/todo/todo.go:137`)
+answer. The store's on-disk name stays `tracker` (`apps/task/task.go:137`)
 because the name is a key binding: cek derives each file's encryption key from
 it, so renaming it re-keys every tenant's database and opens a blank board
 beside the old rows. The rows keep the spelling they were written under.
 
 ### §2 The address
 
-Every route is under `/v1/todo` (`manifest/apps.go:177`). Twelve operations;
-nine are typed. The three that are not — POST, PATCH and DELETE on
-`/v1/todo/projects[/{key}]` — answer a bare 405 with prose declared beside the
-route (`apps/todo/todo.go`): project lifecycle is named at the forge, and an
+Every route is under `/v1/task` (`manifest/apps.go:266`). Thirteen operations;
+ten are typed. The three that are not — POST, PATCH and DELETE on
+`/v1/task/projects[/{key}]` — answer a bare 405 with prose declared beside the
+route (`apps/task/task.go`): project lifecycle is named at the forge, and an
 operation whose only answer is a refusal has no shape to type.
 
 Two more endpoints carry the same upsert across process boundaries, on the
 internal plane rather than `/v1`: the `cloud.IssueSink` a co-resident feeder
-calls, and the plane op `/todo/upsert` for the integrations process that holds
-the GitHub App webhook (`apps/todo/upsert_plane.go`). Both are idempotent by
+calls, and the plane op `/task/upsert` for the integrations process that holds
+the GitHub App webhook (`apps/task/upsert_plane.go`). Both are idempotent by
 `ExtRef`, so a webhook redelivery updates the row it created rather than
 duplicating it.
 
@@ -346595,8 +348647,8 @@ control one. Control two is the forge's own ACL: every forge call drops
 privilege to the requesting user (`forge.Client.As`), so the deployment's
 machine token cannot read an org the user could not read anyway, and a defect
 in control one cannot leak a private repository on its own
-(`apps/todo/source.go:30`). On the plane upsert the tenant is the caller's
-plane identity — `plane.IssueIn` deliberately has no org field.
+(`apps/task/source.go:30`). On the plane upsert the tenant is the caller's
+plane identity — `client.IssueIn` deliberately has no org field.
 
 The claim operation's holder is the caller, never an argument: "assign to
 someone else" is a different act with different authority and already exists
@@ -346604,17 +348656,17 @@ as PATCH. A claim on an issue someone else holds is refused, not silently won.
 
 ### §4 Money
 
-The surface declares `cloud.Metered` (`plugin/todo/main.go`) and is listed in
-the standing gate (`spend.go:318`, "per-project/issue fee"), so a write
+The surface declares `cloud.Metered` (`plugin/task/main.go`) and is listed in
+the standing gate (`spend.go:341`, "per-project/issue fee"), so a write
 requires standing before it runs; reads are never billable. The fee itself
 defaults to zero — charging per issue is the wrong product — and an operator
-prices it per deployment via `CLOUD_TODO_FEE_CENTS`, debited through the
-shared per-org resource meter (`apps/todo/todo.go:100-107`).
+prices it per deployment via `CLOUD_TASK_FEE_CENTS[_PROJECT|_ISSUE]`, debited through the
+shared per-org resource meter (`apps/task/task.go:100-108`).
 
 ### §5 Events and telemetry
 
 It publishes nothing on the bus, so a customer's webhooks receive no
-`todo.*` events. Beyond the request span every route gets, it emits only its
+`task.*` events. Beyond the request span every route gets, it emits only its
 own log lines; no additional spans or metrics.
 
 ### §6 Upstream
@@ -346627,7 +348679,7 @@ rides `github.com/hanzoai/sqlite` (MIT / Apache-2.0 dual).
 ### §7 Stage
 
 `beta`: a vertical application (a project board), not part of the self-service
-agentic-OS core. The manifest row (`manifest/apps.go:177`) does not yet
+agentic-OS core. The manifest row (`manifest/apps.go:266`) does not yet
 declare it, so today the operations serve as `ga` does; the row's
 `Stage: Beta` is the one edit that closes the drift (HIP-0139 §8).
 
@@ -346655,6 +348707,7 @@ let anyone hand work to anyone by naming them.
 - HIP-0026 — Identity and Access Management
 - HIP-0106 — Hanzo Plugin Contract
 - HIP-0139 — Capability
+- HIP-1062 — Workflow: the durable engine that held this word
 
 ## Copyright
 
@@ -346797,78 +348850,6 @@ never-caller-supplied org.
 ## Copyright
 
 Released under CC0 1.0 Universal Public Domain Dedication.
-
-
----
-
-<!-- hip-1193 -->
-
----
-hip: 1193
-title: Standing — Entity Upkeep and Annual Filings
-author: Hanzo AI
-type: Standards Track
-category: Application
-capability: standing
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
----
-
-# HIP-1193: Standing — Entity Upkeep and Annual Filings
-
-## Abstract
-
-`/v1/standing` is the canonical capability for standing within the Hanzo Cloud platform.
-Package standing prices and tracks what it costs to KEEP a company, as distinct from what it cost to form one.
-The implementation is `hanzoai/cloud` `apps/standing` and `plugin/standing` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
-
-## Motivation
-
-Before this specification, standing operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
-
-## Specification
-
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
-
-### §1 Addresses and Operations
-
-The `standing` capability answers exclusively under its assigned route prefixes:
-
-| Method | Path | Summary |
-|---|---|---|
-| `POST` | `/v1/standing/upkeep` | Reports what keeping this entity costs every year, itemised. |
-
-### §2 Storage and Physical Isolation
-
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/standing.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
-
-### §3 Authentication and Principal
-
-Every request reaching `/v1/standing` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
-
-## Security Considerations
-
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
-
-## References
-
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
 
 
 ---
@@ -347439,7 +349420,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1210
-title: Agent — Define and Run Agents
+title: Agents — Define, Run, Keep the Run
 author: Hanzo AI
 type: Standards Track
 category: Application
@@ -347447,10 +349428,10 @@ status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0139, HIP-0026, HIP-0106
-capability: agent
+capability: agents
 ---
 
-# HIP-1210: Agent — Define and Run Agents
+# HIP-1210: Agents — Define, Run, Keep the Run
 
 ## Abstract
 
@@ -348200,7 +350181,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1231
-title: Project — Static Site Store
+title: Projects — The Site Store
 author: Hanzo AI
 type: Standards Track
 category: Application
@@ -348208,10 +350189,10 @@ status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
-capability: project
+capability: projects
 ---
 
-# HIP-1231: Project — Static Site Store
+# HIP-1231: Projects — The Site Store
 
 ## Abstract
 
@@ -349123,6 +351104,313 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 
+<!-- hip-1331 -->
+
+---
+hip: 1331
+title: Patrol — Standing Watch Over an Estate
+author: Hanzo AI
+type: Standards Track
+category: Application
+capability: patrol
+status: Final
+implementation-go: shipped
+created: 2026-09-18
+requires: HIP-0026, HIP-0106, HIP-0139, HIP-1126
+---
+
+# HIP-1331: Patrol — Standing Watch Over an Estate
+
+## Abstract
+
+`/v1/patrol` is a guarding operation's own surface: the sites it watches, the
+units on the ground, the tours they walk, the keys they hold, the cameras they
+open, and the incidents that interrupt all of it. The records are documents on
+the engine (HIP-1126) in module `patrol`, so editing a site or registering a
+camera needs no code of its own. This prefix serves the four things that generic
+surface cannot: the reads shaped for one screen, the incident state machine,
+alarm intake, and the live feed. It is implemented in `hanzoai/cloud` at
+`apps/patrol`, and it opens no store.
+
+Twenty-nine operations, twenty-seven of them typed.
+
+## Motivation
+
+A control room is a screen that has to be right. A controller watching an
+activation arrive needs the site, its tier, the nearest unit, the keys for that
+premises and the last hour of events in one read, at the moment the alarm lands —
+and then has to move the incident through nine states with an audit trail nobody
+can edit afterwards. None of that is CRUD, and all of it is what the job is.
+
+The generic document surface is where the same operation's *records* belong, and
+it already serves them: eighteen DocTypes, per-org isolation, role-gated reads and
+writes, one renderer. Building a second CRUD plane here would have bought a second
+copy of every one of those properties. So the question this HIP answers is not
+whether an estate needs documents — it has them — but what a prefix of its own is
+for, and the answer is narrow enough to list.
+
+Two facts make the narrow answer necessary rather than a convenience.
+
+An incident's order is the record. `verified` before `dispatched`, `onsite`
+before `checked`, a filed report before a close: if any surface can write the
+state field directly then the trail is a suggestion, and a guarding company's
+trail is the thing a client, an insurer and a court read. A document write cannot
+hold that rule; a transition table can.
+
+An activation is never dropped. A panel fires, a receiving centre posts it, and
+whatever the payload says, something has to be recorded — because the failure
+mode of alarm intake is silence, and silence is indistinguishable from a quiet
+night.
+
+## Specification
+
+The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted
+as in RFC 2119.
+
+### §1 The store is the engine's
+
+patrol opens no store. Eighteen DocTypes carry the module tag `patrol` — tenant,
+client, zone, hazard, unit, site, fix, tour, point, key, movement, camera,
+incident, alarm, step, event, note, report — and the engine holds them: one
+SQLite file per org, every call taking the org as an argument. There is no tenant
+column, because the tenant boundary is the storage boundary.
+
+Every read and write on this prefix goes through the engine's in-process API. A
+second store here would be a second answer to where a unit is, and the whole
+product is that there is one.
+
+Geography is plain: latitude and longitude are floats and distance is a
+haversine. The engine holds no geo index and answers no range query, so
+nearest-unit is a linear scan — correct for an estate of hundreds of sites and
+dozens of units, and the reason every list route is bounded rather than paged.
+
+### §2 The addresses
+
+Twenty-nine operations under `/v1/patrol`, composed from the module name so the
+prefix and the tag cannot disagree.
+
+Twenty-seven are typed ops, each one registry entry carrying its route, its
+schema, its MCP tool, its CLI command and its generated SDK method. Two are not,
+and the ledger of exemptions is closed with the wire fact for each:
+
+- `GET /v1/patrol/feed` is an open Server-Sent Events response written by a loop
+  that outlives the handler. A typed op answers one marshalled value, and a feed
+  has no such value.
+- `GET /v1/patrol/report/{name}` is bytes under a filename — a PDF, or plain text
+  when the caller asks for it. No input and output pair describes either.
+
+The shape of the surface:
+
+    /tenant/:org                the public face of one operation
+    /snapshot                   the whole screen, in one read
+    /site  /site/:name          the estate, and one premises
+    /unit  /unit/near           who is out, and who is closest
+    /unit/:name/fix             a position report
+    /unit/:name/state           on shift, on break, off
+    /tour  /point/:name/confirm the walk, and a point confirmed on it
+    /key   /key/:name/move      the key register, and custody moving
+    /camera                     what can be opened
+    /camera/:name/stream        mint an address for one camera
+    /incident  /incident/:name  the interruptions, and one of them
+    /incident/:name/step        an act against the state machine
+    /event  /note               the trail, and what someone wrote on it
+    /alarm                      intake
+    /report                     file one
+
+`GET /tenant/:org` is the one anonymous route, so the group carries no blanket
+scope and admission is asked per route. The org on it is a name a stranger
+supplied, and resolving a store creates one — so the read checks that the
+deployment already holds that tenant before it opens anything, and answers
+absence otherwise. Without that check a caller naming a fresh org per request
+would leave a database per name they invented.
+
+### §3 The incident state machine
+
+Nine states, forward only:
+
+    received → verified → dispatched → enroute → onsite → checked → secured → filed → closed
+
+Nine acts move between them — VERIFY, DISPATCH, ROLL, ARRIVE, CHECK, SECURE,
+FILE, CLOSE, ESCALATE — and one table decides all of it: the states an act
+leaves, the state it lands in, the timestamp it stamps, and the roles admitted to
+it. Nothing else MAY decide what an incident does next.
+
+- An act from a state it does not leave is refused with 409 naming the state the
+  incident is in. Not 400: the request was well formed and the answer is about
+  the record.
+- ESCALATE stamps without moving, which is why the table carries the landing
+  state rather than inferring it from the act.
+- CLOSE leaves `secured` or `filed`, and only the supervisor and above hold it.
+- Every act appends one step. An incident and its first step are written
+  together, because an incident whose trail does not say it was opened is not a
+  record — a failed step takes the incident with it.
+
+One act holds an incident under a short lease. The lease is the crash net and
+nothing more: an act is a handful of writes, so a holder that has not finished
+within its life is gone, and a caller that has waited its turn is told the
+incident is busy.
+
+### §4 Alarm intake
+
+One intake, `POST /v1/patrol/alarm`, and two callers: the receiving centre's own
+machine credential, and a controller keying an activation in by hand. A DC-09
+receiver, where there is one, normalizes into this same body and calls this same
+path.
+
+An activation is never dropped, and the two answers say which happened. A body
+that matches a site opens an incident in `received` carrying that site's tier and
+SLA, and answers 201. A body that matches no site is still recorded, raises an
+amber event, and answers 202 — so an unmatched panel is visible in the trail
+instead of absent from it.
+
+The body is capped: a reference, a zone, a trigger phrase and the panel's own
+payload, each bounded, because anything longer is noise and the caller is a panel.
+
+### §5 The feed
+
+A write publishes one frame on the org's own bus subject. `GET /v1/patrol/feed`
+subscribes to that subject and nothing else, and writes each frame as a
+Server-Sent Events record.
+
+The bus rather than a map of subscribers in this process, because a control room
+runs behind more than one replica: an officer's position posted to one pod has to
+reach a controller watching from another. Delivery is best effort — the GET
+routes are the truth, and a dropped frame costs one refresh.
+
+A stream costs a goroutine, a subscription and a socket for as long as it is
+held, so it is counted twice. A reader is bounded by what that reader holds, and
+the tenant's ceiling sits above it. One bound would be paid by the wrong caller:
+counted against the org alone, a customer opening tabs in their portal closes the
+control room's wall, and the count has no term that could tell them apart.
+
+### §6 Roles
+
+Seven roles, each an IAM role in the tenant's own org: owner, manager,
+supervisor, controller, officer, client, and centre. The last is the receiving
+centre's machine credential — a third party whose whole business with the
+operation is one POST, and which reads nothing.
+
+Admission is asked in one place, and it asks two questions: is there a validated
+principal with an org, and does it hold one of the roles this route admits. The
+org is the identity boundary's (HIP-0026) and MUST NOT come from a path, query or
+body. A principal holding a set of orgs that does not include the resolved one is
+refused. The engine's System Manager passes every route, which is how an owner
+configures the operation before any role is assigned.
+
+The role sets are named for what they do rather than listed per route — everyone,
+staff, control, crew, shift, intake, audience — and the same values build the
+document permissions, so who may do a thing is answered once.
+
+The role read is bounded. A slower answer than its deadline denies, because that
+is the direction to fail.
+
+### §7 Camera streams
+
+A camera's credential is not a field on the camera. It is a path in KMS, and the
+stream address is minted rather than stored: `GET /camera/:name/stream` answers an
+address carrying a ticket, and `GET /camera/:name/stream/:ticket` is what the
+player opens.
+
+The ticket names the tenant it was minted in and carries a tag over that tenant,
+that camera and one expiry, signed under a key kept in the org's own KMS
+namespace and minted the first time that org mints a ticket. So a ticket verifies
+in exactly one org, for one camera, for a few minutes, and a made-up one verifies
+nowhere.
+
+A deployment with no KMS serves no stream, and says so. It does not serve one
+without a credential.
+
+### §8 Money, events, telemetry
+
+Free, said in those words: the plugin declares `Price: cloud.Free`. No meter runs
+behind any route.
+
+It publishes no events on the platform bus, so a customer's webhooks (HIP-1310)
+receive no `patrol.*` event. The `event` in §2 is a document in this module's own
+trail, read through this prefix, and the frames in §5 are the org's bus subject
+for screens — neither is an outbound platform event.
+
+Notifications leave through `notify` (HIP-0061): a filed report tells the
+controllers, and an amber intake raises against the trail. Beyond the request
+span every route gets, it emits nothing to observability.
+
+### §9 Stage
+
+`ga`. The manifest row declares no stage, and absent is `ga` (HIP-0139 §8).
+
+### §10 Upstream
+
+It forks nothing. The PDF renderer is `pdfcpu` (Apache 2.0), used to set a filed
+report's stored body; the body is composed at file time and the PDF produced on
+read, so a report reads the same a month later as it did the minute it was filed.
+Three kinds — shift, incident, client — through one renderer.
+
+## Rationale
+
+**Why a prefix at all, when `crm` gets none.** The test is whether the capability
+has behaviour the generic document surface cannot express. crm has records and a
+lifecycle field, so it is a module and nothing more (HIP-1120). patrol has a
+transition table, an anonymous intake with two answers, a minted stream
+credential and an open feed. Those are four things a DocType cannot hold, and
+they are exactly what this prefix serves — the records stayed where they were.
+
+**Why the state machine is a table and not a set of routes.** One route per
+transition would put the order in the router, where it is read by no one and
+enforced nine times. The single `step` operation takes the act and the table
+answers whether it is legal, so adding a state is one row and the audit trail is
+uniform by construction.
+
+**Why nearest-unit is a scan.** The engine has no geo index. An estate is
+hundreds of sites; the scan is bounded and measured, and a spatial index here
+would be a second store with a second answer about where a unit is. If an estate
+ever outgrows the scan, the index belongs in the engine, once, for every module.
+
+**Why intake answers 202 rather than 404.** A panel is not a caller that can be
+told to try again. An unmatched activation is a real event with an unknown
+subject, and the useful record is the activation plus an amber flag a controller
+will see — not a refusal at the door and nothing written down.
+
+## Security Considerations
+
+The wrong implementation opens another company's premises. Three things stand in
+the way, and each is a construction rather than a check.
+
+The store is per-org and the org is the identity boundary's verdict, so there is
+no query a caller can shape that reaches another tenant's estate. Admission asks
+for a role as well as an org, so a client reading their own sites cannot read the
+key register. And the stream ticket is bound to one org, one camera and one
+expiry under a key that lives in that org's own KMS namespace, so a leaked
+address ages out and a forged one verifies nowhere.
+
+The anonymous route is the deliberate hole, and it is one document: the public
+face an operation chooses to publish — brand, company, the terminology its
+screens use. It answers only for a tenant the deployment already holds, and
+absence for everything else, so it is not an oracle for which orgs exist beyond
+those that published a face on purpose.
+
+The remaining exposure is the receiving centre's credential. It is a machine
+identity in the tenant's org holding one role that may post an activation and
+read nothing, so a compromised centre can raise false alarms — which a controller
+verifies before dispatching, and which the trail records either way — and cannot
+read a site, a key or a camera.
+
+## References
+
+- HIP-0026 — Identity and Access Management
+- HIP-0061 — Notification and Messaging
+- HIP-0106 — The Hanzo Plugin Contract
+- HIP-0139 — Capability
+- HIP-1120 — CRM: a module that needs no prefix
+- HIP-1126 — Framework: the document engine behind the records
+- HIP-1310 — Webhooks: outbound delivery
+
+## Copyright
+
+Released under CC0 1.0 Universal Public Domain Dedication.
+
+
+---
+
 <!-- hip-0000 -->
 
 ---
@@ -349877,293 +352165,131 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0003"
-title: Jin Multimodal AI Architecture
-author: Hanzo AI Team
+title: Jin — A Multimodal Model That Was Not Built
+author: Hanzo AI
 type: Standards Track
 category: Core
 status: Draft
 created: 2025-01-09
-requires: HIP-0001, HIP-0002
+requires: HIP-0039
 ---
 
-
-# HIP-0003: Jin Multimodal AI Architecture
+# HIP-0003: Jin — A Multimodal Model That Was Not Built
 
 ## Abstract
 
-This proposal defines the Jin architecture, Hanzo's unified multimodal AI framework supporting text, vision, audio, and 3D modalities through joint embedding spaces. Jin represents our next-generation foundational model with variants from nano (1B) to ultra (1T+) parameters, featuring diffusion transformer MoE architectures and cross-modal understanding.
+On 2025-01-09 this HIP specified Jin: Hanzo's multimodal model, putting text, vision, audio and
+3D into one joint embedding space with a diffusion-transformer mixture of experts from 1B to
+over 1T parameters.
 
-**Repository**: [github.com/hanzoai/jin](https://github.com/hanzoai/jin)
+It was never built.
+
+- `hanzoai/jin` was archived with that finding on 2026-05-12 (`ARCHIVED.md`, commit
+  `9f3d7d0e`).
+- What the repository holds is a copy of `LumenPallidium/jepa` (MIT, 2023): I-JEPA and
+  Saccade-JEPA experiments. No Hanzo commit touches that code.
+- No Jin weights exist.
+
+This revision removes the unbuilt specification, records what exists, and states what a Jin
+release must carry before this HIP can move to Final. Until then it stays Draft.
+
+## Motivation
+
+**The 2025 text.** It specified five model sizes, training runs, deployment latencies and a
+benchmark table against named products. Nothing backed any of it: no code, no weights, no log.
+
+**The papers.** `hanzoai/papers` holds two papers on the same architecture, `hanzo-jin` and
+`hanzo-jin-architecture`. They report results, including 82.1% zero-shot ImageNet accuracy, with
+no checkpoint or harness behind them.
+
+**The site.** `hanzo.ai/jin` links to the private repository and to `docs.hanzo.ai/docs/jin`,
+which answers 404.
+
+A reader could take all of this as a model they can use. This HIP says there is none.
 
 ## Specification
 
-### Model Architecture
+The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as in RFC 2119.
 
-```python
-class JinArchitecture:
-    """
-    Jin: Unified multimodal AI with joint embedding spaces
-    """
-    # Core Configuration
-    embedding_dim = 8192  # Unified embedding dimension
-    num_experts = 128     # MoE experts
-    experts_per_token = 8 # Active experts
-    
-    # Modality Encoders
-    text_encoder = "RoPE Transformer"
-    vision_encoder = "DiT (Diffusion Transformer)"
-    audio_encoder = "Conformer"
-    mesh_encoder = "Point Transformer v3"
-    
-    # Joint Embedding
-    joint_space = "Hyperbolic manifold"
-    alignment = "Contrastive + Diffusion"
-```
+### §1 What exists
 
-### Model Variants
+Measured on 2026-09-25:
 
-| Model | Parameters | Experts | Context | Modalities | Use Case |
-|-------|------------|---------|---------|------------|----------|
-| Jin-nano | 1B | 8 | 8K | Text, Vision | Edge devices, mobile |
-| Jin-mini | 7B | 16 | 32K | Text, Vision, Audio | Personal assistants |
-| Jin-base | 32B | 32 | 64K | All | Standard deployment |
-| Jin-large | 175B | 64 | 128K | All + Video | Enterprise AI |
-| Jin-ultra | 1T+ | 128 | 256K | All + Specialized | Research, AGI |
+| Artifact | Where | Status |
+|:--|:--|:--|
+| JEPA experiments: I-JEPA (ViT and energy-transformer variants), Saccade-JEPA (ConvNeXt teacher and student, MLP predictor; prediction, cycle-consistency and VICReg losses), MAE with self-distillation | `hanzoai/jin`, private, archived 2026-05-12. `zenlm/jin`, private, holds the same history. | Research code copied from `LumenPallidium/jepa` (MIT, © 2023 LumenPallidium; its last commit, dated 2024-01-05, is `hanzoai/jin`'s `895a5a17`). Hanzo's commits add docs, CI, `.gitignore` and `papers/`, and touch nothing under `jepa/`. No tests, no package metadata. |
+| Weights | Hugging Face `hanzoai/jin` and `zenlm/jin` | none; both answer 404 to an authenticated request |
+| Papers | `hanzoai/papers` `hanzo-jin/`, `hanzo-jin-architecture/` | describe the unbuilt architecture; their numbers carry no receipt |
 
-### Joint Embedding Space
+`zenlm/vjepa2` is a public fork of `facebookresearch/vjepa2`. No repository calls it Jin, and this
+HIP does not.
 
-```yaml
-Embedding Structure:
-  Dimension: 8192
-  Geometry: Hyperbolic (Poincaré ball)
-  Radius: 1.0
-  
-Modality Projections:
-  Text → Embedding:
-    - Byte-level tokenization
-    - RoPE position encoding
-    - Layer normalization
-    
-  Vision → Embedding:
-    - Patch-based encoding (16x16)
-    - 2D RoPE for positions
-    - Multi-scale features
-    
-  Audio → Embedding:
-    - Mel-spectrogram input
-    - Conformer blocks
-    - Temporal pooling
-    
-  3D → Embedding:
-    - Point cloud sampling (2048 points)
-    - KNN graph construction
-    - Geometric features
-```
+### §2 The name
 
-### Mixture of Experts (MoE)
+Jin names a joint-embedding multimodal model line. Until §3 is met, no surface MAY list Jin as a
+model that can be called or downloaded: not hanzo.ai, not docs.hanzo.ai, not `/v1/models`
+(HIP-0039 §2.2), and not a catalog.
 
-```python
-class JinMoE:
-    def forward(self, x, modality):
-        # Router network
-        router_logits = self.router(x)
-        expert_weights = torch.topk(router_logits, k=8)
-        
-        # Expert execution
-        expert_outputs = []
-        for idx, weight in expert_weights:
-            expert = self.experts[idx]
-            output = expert(x, modality)
-            expert_outputs.append(weight * output)
-        
-        # Combine expert outputs
-        return sum(expert_outputs)
-```
+### §3 Release contract
 
-### Training Pipeline
+This HIP moves to Final only when all of the following hold:
 
-#### Phase 1: Unimodal Pretraining
-```yaml
-Text Pretraining:
-  Data: 15T tokens (web, books, code, papers)
-  Objective: Next token prediction
-  Duration: 4 weeks on 1024 H100s
+1. **Weights.** Jin weights are public on Hugging Face under `zenlm` or `hanzoai`. The card meets
+   HIP-0039 §3 items 1, 2, 4, 5 and 6. Item 3, the Qwen3 base, is a Zen rule and does not bind
+   Jin.
+2. **Code.** Public code loads those weights and reproduces one stated evaluation, with the
+   command, revision, hardware and date. Per HIP-0135, code a release depends on is public.
+3. **Rewrite.** This HIP is rewritten to the modalities, size and objective the released config
+   and code actually have. No figure in the 2025 text or in the papers carries over without its
+   own receipt.
+4. **Safe format.** The weights are safetensors. A pickled checkpoint runs code when it is
+   loaded.
 
-Vision Pretraining:
-  Data: 10B images
-  Objective: DINO v3 + MAE
-  Duration: 2 weeks on 512 H100s
+### §4 Removed
 
-Audio Pretraining:
-  Data: 1M hours
-  Objective: Wav2vec 2.0
-  Duration: 1 week on 256 H100s
+The 2025 text specified all of the following:
 
-3D Pretraining:
-  Data: 100M 3D objects
-  Objective: Point-BERT
-  Duration: 1 week on 256 H100s
-```
+- Jin-nano through Jin-ultra: 1B to over 1T parameters, 8 to 128 experts;
+- an 8,192-dimension joint space on a Poincaré ball;
+- a three-phase training plan on up to 1,024 H100s;
+- latency targets for edge, cloud and enterprise;
+- a `hanzoai.Jin` Python API;
+- benchmark rows against named products;
+- an integration with HLLM (HIP-0002).
 
-#### Phase 2: Joint Alignment
-```yaml
-Alignment Training:
-  Pairs:
-    - Text-Image: 5B pairs
-    - Text-Audio: 100M pairs
-    - Text-3D: 10M pairs
-    - Image-Audio: 50M pairs
-  
-  Objectives:
-    - Contrastive learning (CLIP-style)
-    - Diffusion alignment
-    - Cycle consistency
-  
-  Duration: 2 weeks on 1024 H100s
-```
+None of it was built, so all of it is removed. Git history keeps it.
 
-#### Phase 3: Instruction Tuning
-```yaml
-Instruction Data:
-  - Text instructions: 10M examples
-  - Multimodal tasks: 5M examples
-  - Tool use: 1M examples
-  - Reasoning: 1M examples
+## Rationale
 
-Fine-tuning:
-  Method: LoRA + QLoRA
-  Rank: 256
-  Alpha: 512
-  Duration: 1 week on 512 H100s
-```
+- **Why keep the HIP and not delete it.** HIP-0019 requires HIP-0003, and HIP-0511 and hanzo.ai
+  cite Jin. Deleting this HIP would free no number, since numbers are never reused, and would
+  leave those references pointing at nothing. A Draft that says "not built" is the accurate
+  target for them.
+- **Why Draft and not Final.** Final means the thing exists in code. It does not.
+- **Why not re-specify Jin as the JEPA research.** That code is a copy of a third party's MIT
+  repository. It is archived and private, and `ARCHIVED.md` says no successor continues it.
+  Specifying it as Jin would claim someone else's work and describe work nobody is doing.
 
-### Inference Optimization
+## Security Considerations
 
-```python
-class JinInference:
-    """
-    Optimized inference with caching and batching
-    """
-    def __init__(self):
-        self.kv_cache = {}
-        self.expert_cache = {}
-        
-    def generate(self, inputs, max_tokens=2048):
-        # Modality routing
-        modalities = self.detect_modalities(inputs)
-        
-        # Parallel encoding
-        embeddings = self.parallel_encode(inputs, modalities)
-        
-        # Cached decoding
-        outputs = []
-        for i in range(max_tokens):
-            logits = self.decode_step(embeddings, self.kv_cache)
-            token = self.sample(logits)
-            outputs.append(token)
-            
-            if token == self.eos_token:
-                break
-                
-        return outputs
-```
+- **Numbers with no model behind them.** No Jin model exists, so there is no model to attack. The
+  risk is the claims: someone who relies on published numbers for a model that does not exist is
+  relying on nothing. §2 is the control, and it is checkable by fetching the surfaces it names.
+- **Attribution.** The copied JEPA code is MIT-licensed, and its `LICENSE` names the upstream
+  author. Commit `cf327634`, "Remove upstream references", changed `README.md`. Any release built
+  from that code MUST keep the upstream copyright notice, as the MIT licence requires.
 
-### Deployment Configurations
+## References
 
-#### Edge Deployment (Jin-nano)
-```yaml
-Quantization: INT4
-Memory: <4GB
-Latency: <50ms first token
-Throughput: >100 tokens/sec
-Devices: iPhone 15+, Pixel 8+
-```
+- HIP-0002 HLLM; HIP-0019 tensor operations, which requires this HIP; HIP-0039 Zen; HIP-0135
+  what is public; HIP-0511 model families.
+- `hanzoai/jin` `ARCHIVED.md` at `9f3d7d0e`.
+- Upstream code: https://github.com/LumenPallidium/jepa (MIT).
+- I-JEPA: https://arxiv.org/abs/2301.08243
 
-#### Cloud Deployment (Jin-base)
-```yaml
-Quantization: FP16/BF16
-Memory: 64GB (2x A100)
-Latency: <20ms first token
-Throughput: >1000 tokens/sec
-Scaling: Horizontal via ray.io
-```
+## Copyright
 
-#### Enterprise Deployment (Jin-large)
-```yaml
-Quantization: FP16
-Memory: 350GB (8x A100)
-Latency: <30ms first token
-Throughput: >500 tokens/sec
-Features: Multi-tenancy, audit logs
-```
-
-### API Specification
-
-```python
-# Python SDK
-from hanzoai import Jin
-
-model = Jin("jin-base")
-
-# Text generation
-response = model.generate("Explain quantum computing")
-
-# Multimodal generation
-response = model.generate([
-    {"type": "text", "content": "Describe this image"},
-    {"type": "image", "content": image_bytes}
-])
-
-# Cross-modal generation
-response = model.generate(
-    prompt="Generate an image of a sunset",
-    modality_out="image"
-)
-
-# 3D generation
-response = model.generate(
-    prompt="Create a 3D model of a chair",
-    modality_out="mesh"
-)
-```
-
-### Performance Benchmarks
-
-| Benchmark | Jin-nano | Jin-base | Jin-large | GPT-4V | Gemini Ultra |
-|-----------|----------|----------|-----------|--------|--------------|
-| MMLU | 72.3 | 86.4 | 91.2 | 86.4 | 90.0 |
-| HumanEval | 65.2 | 78.9 | 85.6 | 67.0 | 74.4 |
-| VQA v2 | 78.5 | 84.2 | 88.7 | 77.2 | 82.3 |
-| AudioCaps | 71.3 | 82.6 | 87.4 | N/A | 79.1 |
-| ShapeNet | 68.9 | 79.4 | 84.1 | N/A | N/A |
-
-### Integration with HLLMs
-
-Jin models can be deployed as base models for HLLMs (HIP-2):
-
-```python
-class HLLM_Jin(HLLM):
-    """
-    HLLM with Jin as base model
-    """
-    def __init__(self):
-        self.base_model = Jin("jin-base")
-        self.hamiltonian = HamiltonianDynamics()
-        self.active_inference = ActiveInference()
-        
-    def forward(self, x):
-        # Jin embedding
-        embeddings = self.base_model.encode(x)
-        
-        # Hamiltonian evolution
-        h_state = self.hamiltonian(embeddings)
-        
-        # Active inference planning
-        actions = self.active_inference.plan(h_state)
-        
-        return self.base_model.decode(actions)
-```
-
+Copyright and related rights waived via [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
 
 
 ---
@@ -350172,7 +352298,7 @@ class HLLM_Jin(HLLM):
 
 ---
 hip: "0006"
-title: Personalized Model Tuning Architecture
+title: Per-User Fine-Tuning Architecture for Personalized AI
 author: Hanzo AI Team
 type: Standards Track
 category: Core
@@ -350182,7 +352308,7 @@ requires: HIP-0001, LP-102
 ---
 
 
-# HIP-0006: Personalized Model Tuning Architecture
+# HIP-0006: Per-User Fine-Tuning Architecture for Personalized AI
 
 ## Abstract
 
@@ -351267,7 +353393,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0009"
-title: Agent SDK — Multiagent Orchestration Framework
+title: Agent SDK - Multi-Agent Orchestration Framework
 author: Hanzo AI Team
 type: Standards Track
 category: Core
@@ -351278,7 +353404,7 @@ requires: HIP-0001, HIP-0002, HIP-0004
 ---
 
 
-# HIP-0009: Agent SDK — Multiagent Orchestration Framework
+# HIP-0009: Agent SDK - Multi-Agent Orchestration Framework
 
 ## Abstract
 
@@ -354300,418 +356426,230 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0039"
-title: Zen Model Architecture
-author: Hanzo AI Team
+title: Zen — The Open-Weight Generative Family
+author: Hanzo AI
 type: Standards Track
 category: Core
 status: Final
 created: 2025-01-15
-requires: HIP-0002, HIP-0004
-capability: zen
+requires: HIP-1211
 ---
 
-
-# HIP-0039: Zen Model Architecture
+# HIP-0039: Zen — The Open-Weight Generative Family
 
 ## Abstract
 
-This proposal defines the Zen model family, [Zoo Labs Foundation's](https://zoo.industries) frontier large language models, and how Hanzo serves them. Zen models use a **Mixture of Diverse Experts (MoDE)** architecture spanning nine sizes from 600M to 480B parameters. The family provides a single, consistent architecture across scales -- from edge devices to datacenter clusters -- with multimodal capabilities (text, vision, audio, code) in the larger variants.
+Zen is Hanzo's generative model family: models that write text and code and make images,
+speech, music, video and 3D, plus the embedding, rerank and guard models published beside them.
+It ships two ways: open weights in the `zenlm` organization on
+Hugging Face, and served SKUs on `api.hanzo.ai` (HIP-1211). This HIP says what a Zen name means,
+what an open-weight release must carry, and what exists, as measured on 2026-09-25.
 
-Zen models are served via the LLM Gateway (HIP-0004) and the dedicated Zen Gateway, which handles model-specific routing, quantization selection, and KV cache management. Model weights are hosted on Hugging Face (zenlm org) and Hanzo Object Storage (HIP-0405).
+```text
+Zen     generates   open weights, served SKUs      this HIP; Zen6 in HIP-0904
+Enso    routes      model=auto, the Enso SKUs      HIP-0510
+Kai     decides     typed decisions                HIP-1332
+Policy  governs     deterministic authority        HIP-1332 §10
+```
 
-**Gateway Configuration**: [github.com/hanzoai/zen-gateway](https://github.com/hanzoai/zen-gateway)
-**Model Weights**: [huggingface.co/zenlm](https://huggingface.co/zenlm)
-**Documentation**: [zenlm.org](https://zenlm.org)
+HIP-0511 maps every family to its HIP, API and host.
+
+The current generation is Zen6, published 2026-09-21 (HIP-0904). Zen7 is upcoming and
+unspecified. Satori is being retired; Zen7 succeeds it.
+
+This revision replaces the 2025 text. That text specified zen-600m to zen-480b checkpoints with a
+"Mixture of Diverse Experts" design, a zen-gateway, benchmark and throughput tables, and prices.
+None of those models exists on Hugging Face, in the catalog or on `/v1/models`, so the text is
+removed rather than corrected. It is still in git history.
+
+## Motivation
+
+Four places described the family, and no two of them agreed:
+
+- this HIP listed models that were never built;
+- `@zenlm/models` 1.0.4 lists the zen5 lineup and has no zen5.8 and no zen6;
+- `/v1/models` serves zen5, zen5.8 and zen6;
+- Hugging Face holds 85 `zenlm` repositories, 81 of them public.
+
+So a reader could not tell which Zen models exist, which are open, or what a served id runs. A
+family name that means something different in each place is not a contract.
 
 ## Specification
 
-```yaml
-Core Architecture:
-  Type: Transformer with Mixture of Diverse Experts (MoDE)
-  Attention: Grouped Query Attention (GQA)
-  Position Encoding: Rotary Position Embeddings (RoPE)
-  Activation: SwiGLU
-  Normalization: RMSNorm (pre-norm)
-  Tokenizer: Byte-level BPE (shared across all sizes)
-  Vocabulary: 152,064 tokens
+The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as in RFC 2119.
 
-MoDE Configuration (zen-72b example):
-  Total Experts: 64
-  Active Experts per Token: 8
-  Router: Top-k softmax with load balancing loss
-  Expert FFN Hidden Dim: 4096
-  Shared Attention Layers: 80
-  Expert FFN Layers: 80 (interleaved)
+### §1 Names
 
-Context Window Variants:
-  Standard: 8K / 32K / 128K (per model size)
-  Extended: Up to 1M tokens (zen-480b with YaRN scaling)
-  KV Cache: Paged attention (vLLM) or continuous batching (TGI)
-```
-```yaml
-Vision Encoder:
-  Architecture: ViT-L/14 (shared across all multimodal sizes)
-  Resolution: 448x448 (dynamic resolution for larger images)
-  Patch Size: 14x14
-  Output: Projected to model hidden dimension
+1. A generation id is `zen<N>[-<role>]`. The generations so far are `zen3`, `zen4`, `zen5`,
+   `zen5.8` and `zen6`, and `zen7` is next. `N` orders releases. It says nothing about
+   architecture, size or modality.
+2. An unversioned line is `zen-<role>`, for example `zen-embedding`, `zen-guard` or `zen-vl`.
+3. The same id MAY name both an open-weight repository and a served SKU. They are still two
+   artifacts (§2.3).
+4. `zen-router` names two things: the Hugging Face classifier `zenlm/zen-router`, and HIP-0510's
+   alias for `auto`. Nothing in this HIP assumes one is the other.
 
-Audio Encoder:
-  Architecture: Whisper-style encoder
-  Input: 16kHz mel-spectrogram
-  Window: 30-second chunks with overlap
-  Output: Projected to model hidden dimension
+### §2 Open weights and served SKUs
 
-Code Encoder:
-  Architecture: Shared tokenizer with code-specific tokens
-  Languages: 50+ programming languages
-  Features: AST-aware tokenization for structured understanding
-```
-```yaml
-Formats:
-  FP16:
-    Use: Training, high-accuracy inference
-    Memory: 2 bytes/param
-    Quality: Baseline (100%)
+1. **Open weights** are a public Hugging Face repository under `zenlm`.
+2. **Served SKUs.** A served SKU is an id that `GET https://api.hanzo.ai/v1/models` lists with
+   `owned_by: zenlm`. A SKU is live if and only if that list contains it. A site, doc or catalog
+   MUST NOT call a SKU available when that list does not contain it.
+3. **A shared name is not a shared artifact.**
+   - A served SKU's contract is its id, context window and capabilities, as `/v1/models`
+     reports them. It does not promise the weights of the repository with the same name, and a
+     caller MUST NOT infer either one from the other.
+   - Which model serves a SKU, and at what price, is out of scope here (HIP-0130 §3).
 
-  BF16:
-    Use: Training on Ampere+ GPUs, inference
-    Memory: 2 bytes/param
-    Quality: ~100% (better dynamic range than FP16)
+### §3 Release contract
 
-  INT8 (GPTQ):
-    Use: Production inference
-    Memory: 1 byte/param
-    Quality: ~99.5% of FP16
+Every new open-weight repository in `zenlm` MUST meet all six of the following:
 
-  INT4 (AWQ):
-    Use: Memory-constrained inference, edge deployment
-    Memory: 0.5 bytes/param
-    Quality: ~98% of FP16
+1. **Upstream.** Card front matter carries `license` and `base_model`. `base_model` names the
+   repository or repositories whose bytes were copied, quantized or fine-tuned, not just an
+   ancestor of them.
+2. **Licence files.** The repository contains `LICENSE`, and also `NOTICE` where the upstream
+   has one.
+3. **Base.** The base is Qwen3 or later, reached directly or through a named chain of
+   `base_model` repositories.
+4. **What changed.** The card says what Zen changed relative to the upstream: a re-host, a
+   quantization, a config edit, or a fine-tune together with its recipe. A card MUST NOT call a
+   re-host trained.
+5. **Config wins.** Where the card and `config.json` disagree, `config.json` is the fact and the
+   card is the defect.
+6. **Numbers carry receipts.** A number on a card comes with the harness, its revision, the
+   hardware and the date, or with a receipt file in the repository. zen6's `qualification.json`
+   is the form to follow (HIP-0904 §6).
 
-  GGUF (llama.cpp):
-    Use: CPU inference, Ollama, local deployment
-    Variants: Q4_K_M, Q5_K_M, Q6_K, Q8_0
-    Quality: 96-99% of FP16 depending on variant
+Measured against the 81 public repositories:
 
-Memory Requirements (zen-72b):
-  FP16:  144 GB (2x A100 80GB or 2x H100 80GB)
-  INT8:   72 GB (1x A100 80GB or 1x H100 80GB)
-  INT4:   36 GB (1x A100 40GB or consumer GPU)
-  Q4_K_M: 40 GB (CPU RAM, ~10 tok/s on Apple M3 Max)
-```
-```yaml
-Production (GPU):
-  vLLM:
-    Status: Primary serving backend
-    Features: PagedAttention, continuous batching, tensor parallelism
-    Config: See zen-gateway/configs/vllm/
+- **Base (§3.3):** 66 declare a Qwen3-or-later lineage.
+  - 2 declare Qwen-Image, which carries no generation number: zen3-image and zen-image-edit.
+  - 11 declare another base: zen5-mini-gguf (MiniMax), zen5-pro-gguf and zen5-max-gguf
+    (DeepSeek), zen3-guard (Granite), zen3-image-fast (FLUX), zen3-image-ssd (SSD-1B), zen-world,
+    zen-director and zen-video-i2v (Wan), zen-musician (YuE) and zen-3d (TRELLIS).
+  - 2 declare no base: zen-scribe and zen-translator.
+  - All 15 of these predate this contract.
+- **Licence files (§3.2):** the three zen6 repositories carry no `LICENSE` (HIP-0904 §8).
+- **Upstream (§3.1):** zen5-gguf's card declares `Qwen/Qwen3.6-35B-A3B`. Its prose says the GGUF
+  was quantized from `huihui-ai/Huihui-Qwen3.6-35B-A3B-abliterated`, and its file name agrees
+  with the prose.
 
-  TGI (Text Generation Inference):
-    Status: Supported
-    Features: Flash Attention 2, quantization, watermarking
-    Config: See zen-gateway/configs/tgi/
+### §4 Lineup
 
-Local / Edge:
-  Ollama:
-    Status: Supported (GGUF format)
-    Models: All sizes via ollama.com/library/zen
+This section is a measurement, not a normative list. The lineup changes with every release; the
+definitions in §2 do not. It was taken on 2026-09-25 with:
 
-  Candle (HIP-0019):
-    Status: Experimental
-    Features: Pure Rust inference, WASM support
-    Use: Edge deployment, browser inference (zen-600m, zen-1b)
-
-  llama.cpp:
-    Status: Supported (GGUF format)
-    Features: CPU + Metal + CUDA inference
-```
-```python
-        ]}
-    ]
-)
-
-# Auto-routing via Zen Gateway (selects optimal model size)
-response = client.chat.completions.create(
-    model="zen-auto",
-    messages=[
-        {"role": "user", "content": "Write a quicksort in Python."}
-    ]
-)
+```sh
+curl -s https://api.hanzo.ai/v1/models \
+  | jq -r '.data[] | select(.owned_by=="zenlm") | "\(.id) \(.context_window)"'
+curl -s 'https://huggingface.co/api/models?author=zenlm&limit=500' | jq -r '.[].id'
 ```
 
-```typescript
-// TypeScript SDK
-import OpenAI from 'openai';
+The authenticated listing returns 85 repositories. The four private ones are `zen5-flash-gguf` and
+`zen5-nano-{0.8B,2B,4B}-gguf`.
 
-const client = new OpenAI({
-  baseURL: 'https://llm.hanzo.ai/v1',
-  apiKey: 'sk-hanzo-...'
-});
+#### §4.1 Generations
 
-const response = await client.chat.completions.create({
-  model: 'zen-72b',
-  messages: [{ role: 'user', content: 'Hello' }],
-  stream: true
-});
-```
+| Generation | Status | Served SKUs | Open weights (`zenlm/…`) |
+|:--|:--|:--|:--|
+| zen3 | open weights only; SKUs retired 2026-05-30 | none | zen3-asr, zen3-asr-0.6B, zen3-asr-aligner, zen3-guard, zen3-image, zen3-image-fast, zen3-image-ssd, zen3-nano, zen3-omni, zen3-tts, zen3-tts-0.6B, zen3-tts-custom-voice, zen3-tts-voice-design, zen3-vl |
+| zen4 | retired 2026-05-30 | none | none |
+| zen5 | shipped | zen5, zen5-coder, zen5-flash, zen5-mini, zen5-pro, zen5-spark, zen5-evo | zen5-gguf, zen5-coder-gguf, zen5-mini-gguf, zen5-pro-gguf, zen5-max-gguf, zen5-nano-9B-gguf |
+| zen5.8 | shipped, served only | zen5.8, zen5.8-coder, zen5.8-spark, zen5.8-evo | none |
+| zen6 | shipped 2026-09-21 | zen6, zen6-coder | zen6, zen6-coder, zen6-flash (HIP-0904) |
+| zen7 | upcoming | none | none |
 
-### Zen Gateway Configuration
+Four notes on the table:
 
-```yaml
-# zen-gateway/config.yaml
-gateway:
-  listen: 0.0.0.0:8080
-  upstream: llm-gateway:4000
+- **Satori and Zen7.**
+  - Satori is being retired. Its GitHub repository `zenlm/satori` is a scaffold over Open-Sora
+    with no weights; its README says the model is not yet trained.
+  - Zen7 succeeds Satori. Zen7 has no repository and no weights, and this HIP specifies nothing
+    about its architecture, modality, size or date.
+- **The `zenlm/zen5` repository.** On GitHub it describes a routed "Mixture of Diverse Experts"
+  design. No checkpoint of that design is published. The Zen5 open weights are the
+  single-upstream repositories listed in the table.
+- **Host suffixes.** The `-spark` and `-evo` suffixes name hosts, not models. `evo` is the former
+  name of `halo`.
+- **Served-only.** zen5-max is open weights with no served SKU. zen5.8 is the reverse: served
+  SKUs with no open weights.
 
-models:
-  zen-7b:
-    backend: vllm
-    gpu_memory: 16GB
-    quantization: int8
-    max_batch_size: 64
-    max_context: 32768
+#### §4.2 Unversioned lines
 
-  zen-32b:
-    backend: vllm
-    gpu_memory: 80GB
-    quantization: fp16
-    tensor_parallel: 2
-    max_batch_size: 32
-    max_context: 131072
+| Line | Open weights (`zenlm/…`) | Served SKU |
+|:--|:--|:--|
+| embedding | zen-embedding, zen-embedding-0.6B, zen-embedding-0.6B-GGUF, zen-embedding-4B, zen-embedding-8B, zen-embedding-8B-GGUF | zen-embedding |
+| rerank | zen-reranker, zen-reranker-0.6B, zen-reranker-0.6B-GGUF, zen-reranker-4B, zen-reranker-4B-GGUF, zen-reranker-8B, zen-reranker-8B-GGUF | none |
+| guard | zen-guard, zen-guard-gen, zen-guard-gen-8b, zen-guard-stream, zen-guard-stream-4b | zen-guard |
+| vision-language | zen-vl-4b-instruct, zen-vl-4b-agent, zen-vl-8b-instruct, zen-vl-8b-agent, zen-vl-30b-instruct, zen-vl-30b-agent | zen-vl |
+| omni | zen-omni, zen-omni-30b-instruct, zen-omni-30b-thinking | none |
+| small | zen-nano, zen-nano-0.6b, zen-eco, zen-eco-instruct, zen-eco-4b-instruct, zen-eco-4b-thinking, zen-eco-4b-agent-gguf, zen-eco-4b-agent-mlx, zen-agent-4b | none |
+| domain | zen-pro, zen-family, zen-blog, zen-finance, zen-legal, zen-medical, zen-multilingual, zen-sql, zen-translate | none |
+| design | zen-designer-235b-a22b-instruct, zen-designer-235b-a22b-thinking, zen-designer-gguf | none |
+| image, video, 3D | zen3-image family above, zen-image-edit, zen-world, zen-director, zen-video-i2v, zen-3d | none |
+| speech, music | zen3-tts and zen3-asr families above, zen-dub-live, zen-scribe, zen-translator, zen-musician | none |
+| router | zen-router | none |
+| free lane | none | zen-free |
 
-  zen-72b:
-    backend: vllm
-    gpu_memory: 160GB
-    quantization: fp16
-    tensor_parallel: 4
-    max_batch_size: 16
-    max_context: 131072
+**Media SKUs.** zen-image, zen-voice, zen-music, zen-foley, zen-video and zen-rerank are not
+served SKUs, because `/v1/models` does not list them (§2.2).
 
-  zen-480b:
-    backend: vllm
-    gpu_memory: 640GB
-    quantization: fp16
-    tensor_parallel: 8
-    pipeline_parallel: 2
-    max_batch_size: 8
-    max_context: 1048576
+#### §4.3 Served context windows
 
-routing:
-  auto:
-    strategy: task_complexity
-    rules:
-      - pattern: "classify|label|yes_no"
-        model: zen-7b
-      - pattern: "summarize|translate|explain"
-        model: zen-32b
-      - pattern: "code|debug|refactor"
-        model: zen-72b
-      - pattern: "research|agent|multi_step"
-        model: zen-235b
-    fallback: zen-32b
+| Context (tokens) | SKUs |
+|:--|:--|
+| 1,000,000 | zen5, zen5-coder, zen5-flash, zen5-pro, zen5-spark, zen5.8, zen5.8-coder, zen5.8-spark, zen6, zen6-coder, zen-vl, zen-free |
+| 262,144 | zen5-evo, zen5.8-evo |
+| 131,072 | zen5-mini |
+| 128,000 | zen-guard |
+| 32,768 | zen-embedding |
 
-  kv_cache:
-    shared_prefixes: true
-    max_prefix_length: 4096
-    eviction: lru
+#### §4.4 Catalog
 
-  failover:
-    enabled: true
-    cascade: [zen-480b, zen-235b, zen-72b, zen-32b]
-    quality_warning: true
-```
+`@zenlm/models` 1.0.4 (`github.com/zenlm/models` at `b3fe63c`) calls itself the single source of
+truth for Zen model definitions. It covers the zen3 and zen5 generations and the unversioned
+lines. It has no zen5.8 and no zen6, so it is behind §4.1.
 
-### Performance Benchmarks
+## Rationale
 
-| Benchmark | zen-7b | zen-14b | zen-32b | zen-72b | zen-235b | zen-480b |
-|-----------|--------|---------|---------|---------|----------|----------|
-| MMLU (5-shot) | 74.2 | 79.8 | 83.1 | 86.4 | 89.2 | 91.7 |
-| HumanEval (pass@1) | 62.8 | 71.3 | 76.2 | 82.9 | 86.1 | 89.4 |
-| MATH (4-shot) | 51.6 | 62.4 | 71.8 | 78.3 | 83.7 | 87.2 |
-| GPQA (0-shot) | 31.2 | 38.7 | 44.1 | 49.8 | 55.6 | 61.3 |
-| MT-Bench | 7.8 | 8.3 | 8.7 | 9.0 | 9.2 | 9.4 |
-| IFEval (strict) | 68.4 | 74.1 | 79.6 | 83.2 | 86.8 | 89.1 |
-| MBPP+ (pass@1) | 58.3 | 66.7 | 72.4 | 78.6 | 82.3 | 85.9 |
-
-**Inference throughput** (vLLM, FP16, A100 80GB):
-
-| Model | Time to First Token | Tokens/sec (single) | Tokens/sec (batch=32) |
-|-------|--------------------|--------------------|----------------------|
-| zen-7b | 18ms | 92 | 2,400 |
-| zen-14b | 24ms | 71 | 1,800 |
-| zen-32b | 35ms | 48 | 1,200 |
-| zen-72b | 52ms | 31 | 780 |
-| zen-235b | 85ms | 18 | 420 |
-| zen-480b | 140ms | 11 | 260 |
-
-## Implementation
-
-### Production Deployment
-
-Zen models are served via vLLM on GPU clusters managed through Kubernetes:
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: zen-72b-vllm
-  namespace: zen
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: zen-72b
-  template:
-    metadata:
-      labels:
-        app: zen-72b
-    spec:
-      containers:
-      - name: vllm
-        image: hanzoai/vllm-zen:latest
-        args:
-          - --model=zenlm/zen-72b
-          - --tensor-parallel-size=4
-          - --max-model-len=131072
-          - --enable-prefix-caching
-          - --gpu-memory-utilization=0.92
-        resources:
-          limits:
-            nvidia.com/gpu: 4
-        ports:
-        - containerPort: 8000
-```
-
-### Chat Integration (HIP-1211)
-
-Hanzo Chat exposes 14 Zen model variants to end users:
-
-```yaml
-Chat Model Selector:
-  Small (Fast):
-    - zen-3b       # Quick answers, autocomplete
-    - zen-7b       # General chat, light coding
-  Medium (Balanced):
-    - zen-14b      # Standard conversation
-    - zen-32b      # Document analysis, detailed answers
-  Large (Powerful):
-    - zen-72b      # Complex reasoning, long code generation
-    - zen-235b     # Research, multi-step problem solving
-  Frontier:
-    - zen-480b     # Maximum capability
-  Specialized:
-    - zen-7b-code  # Code-optimized variant
-    - zen-14b-code # Code-optimized variant
-    - zen-32b-math # Math/reasoning-optimized variant
-    - zen-72b-long # 1M context variant
-    - zen-7b-vision  # Vision-focused variant
-    - zen-32b-vision # Vision-focused variant
-    - zen-72b-vision # Vision-focused variant
-```
-
-### Model Weight Distribution
-
-```yaml
-Hugging Face (zenlm org):
-  Repository Pattern: zenlm/zen-{size}[-variant]
-  Formats: SafeTensors (primary), GGUF (Ollama/llama.cpp)
-  License: Apache 2.0
-
-Object Storage (HIP-0405):
-  Bucket: models.hanzo.ai/zen/
-  Layout: /zen/{size}/{version}/{format}/
-  CDN: Cloudflare R2 with regional caching
-
-Ollama Registry:
-  Names: zen:7b, zen:14b, zen:32b, zen:72b
-  Pull: ollama pull zen:72b
-```
-
-### Fine-Tuning Pipeline
-
-```yaml
-Supported Methods:
-  LoRA:
-    Rank: 8-256 (default 64)
-    Alpha: 2x rank
-    Target Modules: q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj
-    Memory: ~10% of full model
-
-  QLoRA:
-    Base Quantization: INT4 (NF4)
-    LoRA on top: FP16
-    Memory: ~5% of full model
-    Use: Fine-tuning zen-72b on a single A100
-
-  Full Fine-Tune:
-    Available: zen-600m through zen-7b
-    Method: DeepSpeed ZeRO Stage 3
-    Use: When task diverges significantly from base distribution
-
-API:
-  Endpoint: https://api.hanzo.ai/v1/fine-tuning/jobs
-  Compatibility: OpenAI fine-tuning API format
-```
+- **Why the lineup is a measurement.** Written as a normative list, it would be wrong at the next
+  release. The durable rule is §2.2: live means listed by `/v1/models`. That rule is what
+  exposes a stale site, doc or catalog.
+- **Why SKUs and weights are separate artifacts.** Zen publishes weights for local use and sells
+  a served contract. Binding the two by name would promise callers something the serving path
+  is not bound to keep, and would make every serving change a breaking change to a model card.
+- **Why one base lineage.** It leaves one upstream to track for runtime support in
+  `hanzoai/engine` (HIP-0043) and one provenance chain to audit per release. The 15 exceptions in
+  §3 are listed rather than hidden, so each can be retired or re-based on purpose.
+- **Why the 2025 text was deleted rather than marked historical.** It specified models, prices
+  and benchmark numbers that never existed. Kept in place, it would keep being read as the spec.
 
 ## Security Considerations
 
-### Model Access Control
+- **Refusal training.** zen5-gguf is quantized from an abliterated variant: refusal training has
+  been removed, and its card says so. Open weights carry no refusal guarantee. A deployer that
+  needs content safety MUST put a classifier in front, such as the zen-guard line. A served SKU is
+  governed by whatever serves it (§2.3), not by these weights.
+- **Re-hosts.** A re-host is as trustworthy as its upstream. The zen6 files are byte-identical to
+  their named upstreams, checked by LFS SHA-256 (HIP-0904 §5). A loader SHOULD pin a commit
+  rather than `main`, which can change under it.
+- **Remote code.** zen-guard-stream and zen-guard-stream-4b carry the `custom_code` tag, so
+  loading them runs Python from the repository. Pin the revision and read that code first. No
+  other `zenlm` repository carries the tag.
+- **Missing licence files.** A release without `LICENSE` does not give recipients a copy of the
+  license, which Apache-2.0 §4(a) requires. §3.2 closes this for new releases. The zen6 gap is
+  recorded in HIP-0904 §8.
+- **What an audit covers.** Auditing an open-weight repository does not audit the served SKU of
+  the same name (§2.3).
 
-```yaml
-Authentication:
-  Method: API key (sk-hanzo-...) via LLM Gateway
-  Scopes: Per-model access grants
-  Integration: IAM (HIP-0026) for user identity
+## References
 
-Rate Limiting:
-  Per-Key:
-    zen-7b: 1000 RPM
-    zen-32b: 500 RPM
-    zen-72b: 200 RPM
-    zen-480b: 50 RPM
-  Per-Organization: Configurable quotas
-  Burst: 2x sustained rate for 10 seconds
-```
-
-### Content Safety
-
-```yaml
-Input Filtering:
-  - Prompt injection detection
-  - PII detection and masking (opt-in)
-  - Harmful content classification
-
-Output Filtering:
-  - Toxicity scoring (threshold configurable)
-  - Code safety analysis (zen-*-code variants)
-  - Factuality guardrails (experimental, zen-72b+)
-
-Watermarking:
-  Method: Statistical watermark in token sampling
-  Detection: Watermark detection API endpoint
-  Purpose: Distinguish AI-generated from human text
-```
-
-### Usage Tracking and Billing
-
-```yaml
-Metering:
-  Granularity: Per-request, per-token
-  Fields: model, input_tokens, output_tokens, latency_ms, user_id
-  Storage: Analytics pipeline (HIP-1190)
-
-Billing Integration:
-  Credits: IAM user balance (HIP-0026)
-  Pricing: Per-1K tokens, varies by model size
-  Tiers:
-    zen-7b:   $0.0003 / 1K input,  $0.0006 / 1K output
-    zen-32b:  $0.0015 / 1K input,  $0.003  / 1K output
-    zen-72b:  $0.004  / 1K input,  $0.008  / 1K output
-    zen-480b: $0.015  / 1K input,  $0.03   / 1K output
-```
-
-12. [vLLM: Efficient Memory Management for LLM Serving](https://arxiv.org/abs/2309.06180)
-13. [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864)
+- HIP-0003 Jin; HIP-0043 inference engine; HIP-0130 open-core split, §3; HIP-0135 what is public.
+- HIP-0510 Enso router; HIP-0511 model families; HIP-0904 Zen6; HIP-1211 model API; HIP-1332 Kai.
+- Weights: https://huggingface.co/zenlm
+- Catalog: https://github.com/zenlm/models (`@zenlm/models` 1.0.4)
+- Satori scaffold: https://github.com/zenlm/satori
 
 ## Copyright
 
@@ -359123,7 +361061,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0114"
-title: ZAP — Cognitive Transport for Thinking Chains
+title: ZAP — Inter-VM Cognitive Transport for Thinking Chains
 author: Hanzo AI
 type: Standards Track
 category: Core
@@ -359135,7 +361073,7 @@ requires: HIP-0113
 ---
 
 
-# HIP-0114: ZAP — Cognitive Transport for Thinking Chains
+# HIP-0114: ZAP — Inter-VM Cognitive Transport for Thinking Chains
 
 ## Abstract
 
@@ -359358,7 +361296,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0120"
-title: ZAP Native Transport and gRPC Elimination
+title: ZAP-Native Transport & gRPC Elimination
 author: Hanzo AI
 type: Standards Track
 category: Core
@@ -359371,7 +361309,7 @@ requires: HIP-0106, HIP-0114
 ---
 
 
-# HIP-0120: ZAP Native Transport and gRPC Elimination
+# HIP-0120: ZAP-Native Transport & gRPC Elimination
 
 ## Abstract
 
@@ -360214,20 +362152,22 @@ subsection exists to end.
 
 | Number | Question it answers | Authority |
 |---|---|---|
-| **191 capabilities** | Which names exist for a reader shown the whole API at once, and which of nine domains each sits under | `capabilities.yaml` in the **`hanzoai/openapi` repository** — `openapi/` is the REPO name, not a directory inside `cloud` |
-| **182 products** | Which capability names the served document actually carries today | the top-level `tags:` of `cloud`'s emitted `openapi.yaml` (2,473 operations across the 123 subsets) |
-| **123 apps** | How many things get built, shipped and started — the deployment unit | `manifest.Apps` in `cloud/manifest/apps.go`, in exact bijection with the 123 `plugin/<app>/openapi.json` subsets, gated by `plugin/gen-app-cmds` |
+| **120 capabilities** | Which names exist for a reader shown the whole API at once, and which of nine domains each sits under | `capabilities.yaml` in the **`hanzoai/openapi` repository** — `openapi/` is the REPO name, not a directory inside `cloud` |
+| **122 products** | Which capability names the served document actually carries today | the operation `tags:` of `cloud`'s emitted `openapi.yaml` (2,335 operations across the 129 subsets) |
+| **129 apps** | How many things get built, shipped and started — the deployment unit | `manifest.Apps` in `cloud/manifest/apps.go`, in exact bijection with the 129 `plugin/<app>/openapi.json` subsets, gated by `plugin/gen-app-cmds` |
 
 The manifest is **curation, not a registry**: it cannot invent a capability,
 because `publish.py` refuses in both directions — a served name nobody has
 grouped fails the publish, and a grouped name nothing serves fails it too. The
-nine domains are `identity` (18) · `intelligence` (51) · `data` (18) ·
-`streams` (16) · `observability` (12) · `commerce` (22) · `platform` (26) ·
-`applications` (25) · `chain` (3).
+nine domains are `identity` (16) · `intelligence` (14) · `data` (14) ·
+`streams` (12) · `observability` (5) · `commerce` (18) · `platform` (14) ·
+`applications` (24) · `chain` (3). Every count here is measured, and every one of
+them moves; read them as a shape, and take the number from the gate.
 
-**Capability ≠ app.** 27 apps serve more than one `/v1` product (`billing` also
-answers `/v1/finance`), and some products are served by the host itself rather
-than by any plugin (`GET /v1/commands`, `GET /v1/openapi.json`) — so a sweep of
+**Capability ≠ app.** Some apps serve more than one `/v1` product — `platform`
+answers `/v1/platform` and `/v1/build`, `git` answers `/v1/git` and `/v1/runner` —
+and some addresses are served by the host itself rather than by any plugin
+(`GET /v1/openapi.json`, `GET /v1/openapi/commands`) — so a sweep of
 `plugin/*/openapi.json` alone under-reports the served set, and reading a
 capability count as a binary count is always wrong.
 
@@ -360236,17 +362176,20 @@ A fourth number exists and is not a capability count: operations carrying the
 wire-compatibility dialect never mints a product name.
 
 #### 1.2 — Declared-but-unserved names are drift, and are named
-At time of writing the manifest declares 13 names `cloud` no longer serves. Each
-is a rename or a consolidation with a commit behind it — `sentry`→`sentinel`,
-`automations`→`auto`, `kv`/`sql`/`docdb`/`datastore` folded into
-`/v1/instances/*`, `balancers`/`vpcs`/`cloud` deleted with their apps, four
-speech names folded into `/v1/audio/*`, and `health`, which was never a product
-(per-app liveness is auto-mounted). Five served names are ungrouped:
-`instances`, `sentinel`, `seo`, `allowance` and `edge`.
+A name in the manifest that `cloud` does not serve is drift, and each one is a
+rename or a consolidation with a commit behind it: `sentry`→`sentinel`, folded
+under `/v1/o11y/sentinel`; `automations`→`auto`; `balancers`/`vpcs`/`cloud`
+deleted with their apps; four speech names folded into `/v1/audio/*`; and
+`health`, which was never a product, because per-app liveness is auto-mounted.
 
-`edge` must NOT be grouped. `GET /v1/edge` names a POSITION, not a product; the
-correction belongs in `cloud` — move the probe under its owner's prefix — and
-until it moves the publish stays blocked, which is the gate working.
+The instructive one was `edge`, and it is closed. `GET /v1/edge` named a POSITION
+rather than a product, and four unrelated things wore the word: the on-device
+inference runtime a customer runs on their own machine, which has no cloud prefix
+and never should; the public catalogue cache; the gateway's policy role; and the
+zero-trust fabric's edge-routers. The correction was the one this section asked
+for — the routers are addressed as what they are, `/v1/network/routers` — so the
+row is gone, `/v1/edge` 404s at every depth, and that is the right answer rather
+than a missing product.
 
 ### 2 — The language seam is the ZAP wire, NEVER FFI
 Go and Rust components compose over **ZAP** (network or local socket), each a
@@ -360772,7 +362715,7 @@ change to a route surface:
 
 ---
 hip: "0130"
-title: Open Core Split — Tenancy Line and Composition Root
+title: "Open-Core Split — the Tenancy Line, the Composition Root, and Lazy Subsystems"
 author: Hanzo AI Team
 type: Standards Track
 category: Core
@@ -360783,7 +362726,7 @@ requires: HIP-0106, HIP-0127
 ---
 
 
-# HIP-0130: Open Core Split — Tenancy Line and Composition Root
+# HIP-0130: Open-Core Split — the Tenancy Line, the Composition Root, and Lazy Subsystems
 
 ## Abstract
 
@@ -363647,7 +365590,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: "0301"
-title: Agent Runtime Protocols and Cross Platform Parity
+title: Agent Runtime Protocols & Cross-Platform Parity
 author: Hanzo AI
 type: Standards Track
 category: Core
@@ -363657,7 +365600,7 @@ requires: HIP-0009, HIP-0010
 ---
 
 
-# HIP-0301: Agent Runtime Protocols and Cross Platform Parity
+# HIP-0301: Agent Runtime Protocols & Cross-Platform Parity
 
 ## Abstract
 
@@ -364386,33 +366329,40 @@ This document records Hanzo-specific adoption details and the commit log; the no
 
 ---
 hip: 0510
-title: Enso — Learned Model Routing and Flywheel
+title: Enso — The Router Family, Learned Per-Request Routing and the Router–Model Flywheel
 author: Hanzo AI Team
 type: Standards Track
 category: Core
 status: Final
+implementation-go: shipped
 implementation-rust: shipped
 created: 2026-07-17
-requires: HIP-0001
+requires: HIP-0001, HIP-1211
 ---
 
-# HIP-0510: Enso — Learned Model Routing and Flywheel
+# HIP-0510: Enso — The Router Family, Learned Per-Request Routing and the Router–Model Flywheel
 
 ## Abstract
 
-This proposal specifies **Enso**, Hanzo's learned router: a layer that selects the
-best model for every request across any enabled provider and any hosted model,
-then improves itself from feedback. Enso makes model choice **per-request** and
-makes **cost a first-class, transparent axis** — it optimizes
-`quality − λ·cost − μ·latency` over the whole pool. The routing decision costs
+**Enso** is Hanzo's router family. Zen generates, Enso routes, Kai decides
+(HIP-0511). This proposal specifies the family's core, the learned router: a
+layer that selects the best model for every request across any enabled provider
+and any hosted model, then improves itself from feedback. Enso makes model
+choice **per-request** and makes **cost a first-class, transparent axis** — it
+optimizes `quality − λ·cost − μ·latency` over the whole pool. The routing decision costs
 **microseconds on a CPU** (measured 300 ns heuristic → 12 µs learned), never a
 GPU. Enso tiers cleanly from a transparent rule router (cold start) to a learned
 policy (`xᵀWp`, closed-form ridge fit + online per-user LinUCB) that takes over
-once eval data exists and falls back to the rules whenever it is unsure. Every
-routed request produces a content-free training tuple that trains both the router
+once eval data exists and falls back to the rules whenever it is unsure. In
+production today the gateway serves overrides, ε-exploration and a prefer table
+rewritten from mean reward (§3); the `xᵀWp` engine is built and not wired (§8).
+Every routed request produces a content-free training tuple that trains both the router
 and — recursively — the next model. This HIP defines the routing contract, the
 per-org and global training loops, the reward sources (in-app feedback + an
-LLM-as-judge quality signal), the metering, and the economics.
+LLM-as-judge quality signal), the metering, and the economics. It also names the
+managed Enso SKUs (§5), the members that share the name without routing, Enso
+Diffusion and the Enso Browser (§8), and where Kai takes Enso's bounded decisions
+(§9, HIP-1332 §13).
 
 ## Motivation
 
@@ -364456,11 +366406,16 @@ gateway sets `X-Routed-Model` on the response for transparency; the response
   SKUs additionally require an explicit grant.
 - **SLO.** Optional per-request ceilings (`X-Max-Cost` per 1k tokens,
   `X-Max-Latency-Ms`) gate the choice; a policy cost ceiling fills an unset budget.
+- **Order.** The org's task overrides; then the engine, only when
+  `router.endpoint` is set; then ε-exploration (`ROUTER_EXPLORE_EPSILON`); then
+  the preference walk (`hanzoai/ai` `router/routing_policy.go`).
 
 The learned policy replaces the ordered preference with a bilinear utility
 `xᵀW p_m` over a feature vector `x` (task one-hot, hashed n-grams, length, media)
 and a per-model profile `p_m`, argmax subject to the SLO and access gates. It
-falls back to the rule policy when confidence is low or `W` is unfit.
+falls back to the rule policy when confidence is low or `W` is unfit. It runs in
+the engine's `POST /route` (`hanzoai/engine` `hanzo-server-core/src/route.rs`):
+`hanzo-router` rules by default, the `xᵀWp` head when `ROUTER_HEADS` mounts one.
 
 ### 2. Reward sources
 
@@ -364470,7 +366425,10 @@ latency — never prompt text). A reward in `[0,1]` is attached, keyed by the
 response/usage request id, from either:
 
 - **In-app feedback** — an explicit signal a product surfaces (thumbs, accept,
-  regenerate) posted to `POST /v1/add-routing-reward`.
+  regenerate) posted to `POST /v1/ai/feedback` (HIP-1211) as
+  `{request_id, reward|rating}`. The write is org-scoped (a request id from
+  another org answers 404, like an unknown one), idempotent, and carries no prompt
+  text. The earlier `/v1/add-routing-reward` is retired and answers 404.
 - **LLM-as-judge** — an automatic quality score: a judge model rates the served
   response against a task rubric; only the numeric score is stored.
 
@@ -364488,8 +366446,11 @@ Enso trains **both** a shared base and every org's own policy from one ledger re
 
 Each cycle is **fit → gate → deploy → publish**:
 
-1. **Fit.** Per-(task, model) empirical statistics over the rewarded ledger
-   (offline closed-form ridge for `W`; online LinUCB per user for adaptation).
+1. **Fit.** The gateway trainer (`hanzoai/ai` `controllers/router_trainer.go`)
+   takes the per-(task, model) mean reward over the rewarded ledger and picks each
+   task's best arm. In the engine, `hanzo-router-retrain` fits `W` by closed-form
+   ridge and `enso` adapts per user by LinUCB; both serve only through
+   `router.endpoint` (§8).
 2. **Gate.** A candidate is deployed **only** if it beats the incumbent by a margin
    on a held-out reward measure (or a benchmark eval). Otherwise the incumbent is
    kept and training continues on more data — **promote-or-keep**.
@@ -364497,6 +366458,9 @@ Each cycle is **fit → gate → deploy → publish**:
    prefers it on the next request with no reload (a sub-microsecond swap).
 4. **Publish.** The retrain verdict (version, event count, gate pass/value/base) is
    recorded and surfaced for observability.
+
+The policy, defaults, ledger, rewards, artifact metadata and stats are served
+under `/v1/ai/router` (HIP-1211).
 
 ### 4. The recursive router–model flywheel
 
@@ -364511,11 +366475,30 @@ not.
 
 ### 5. Serving family
 
-For callers who prefer not to manage a pool, Enso is also offered as a managed
-family (`enso`, `enso-flash`, `enso-ultra`) over the same OpenAI-compatible API.
-`enso-ultra` is an **adaptive fan-out**: it probes one task-appropriate arm and
-escalates to a small panel with verify-then-select **only** when the probe is
-low-confidence, so a confident request bills one arm, not the panel.
+For callers who prefer not to manage a pool, Enso is also a managed family over
+the same OpenAI-compatible API (`/v1/chat/completions`, `/v1/responses`). The ids
+served on 2026-09-25 (`curl -s https://api.hanzo.ai/v1/models`) are `enso`,
+`enso-auto`, `enso-flash`, `enso-free`, `enso-pro` and `enso-ultra`.
+
+- `enso-auto` is the family's free entry and the default model of `hanzoai/dev`
+  (`crates/hanzo-config`, `DEFAULT_MODEL`). When the caller funds it, the gateway
+  lifts it by reasoning depth onto a priced SKU through the `router.depth` table
+  (`hanzoai/ai` `controllers/depth_route.go`). The lift runs only from a free SKU
+  to a priced SKU that needs no grant, never the reverse.
+- Fan-out is a catalog capability (`hanzoai/zen` `catalog.go`, `escalate.go`,
+  `ultra.go`). A SKU with `arms` fans out and picks by verify-then-select; an
+  `escalate` stanza in `adaptive` mode first probes one task-ranked arm and widens
+  to the panel **only** when the probe is low-confidence, so a confident request
+  bills one arm. The embedded catalog and `hanzoai/enso` give `enso-ultra` arms and
+  `escalate`; the deployed catalog (`hanzoai/universe`
+  `charts/app/files/enso/catalog.yaml`) gives it one route and neither, so today
+  `enso-ultra` serves one model.
+
+The family is data, served by the Zen serving engine with `ZEN_FAMILY=enso`.
+`hanzoai/enso` holds the identity prompts and a catalog; the catalog that answers
+a request is the deployment's, mounted over the copy baked into the image
+(`hanzoai/enso` `LLM.md`). Prices are what `GET /v1/models` returns; this HIP
+fixes none.
 
 ### 6. Metering and pricing
 
@@ -364536,6 +366519,8 @@ auditable number (not a model-card estimate). Two models:
 - **Self-service.** An org enables Enso Router, selects the providers and models in
   its pool, sets a cost ceiling, and sends `model=auto` over `api.hanzo.ai/v1` —
   usable from any OpenAI-compatible client (CLIs, IDE assistants, agent harnesses).
+  The switch is the org's settings row (`/v1/ai/org/settings`); the reserved `*`
+  row sets the platform default, and an org's own row overrides it.
 - **Provider control.** An org may opt specific providers or models out of its pool
   for data, privacy, compliance, or organizational reasons.
 - **Data ownership.** The ledger is content-free; an org can export or delete its own
@@ -364543,6 +366528,37 @@ auditable number (not a model-card estimate). Two models:
 - **Feature gating.** Any capability not yet generally available is gated behind the
   native flag engine (`/v1/flags`), org-scoped, so the surface ships dark and enables
   per-org without a release.
+
+### 8. The Enso family
+
+The name covers the members below. This HIP specifies the router (§1–§4, §6–§7)
+and the SKUs (§5); the rest are listed so the name resolves, each with what its
+repository shows on 2026-09-25.
+
+| Member | What it is | Repository | Status |
+|---|---|---|---|
+| Router | the per-request policy (§1) and its mechanism | `hanzoai/ai` (live policy); `hanzoai/engine` (`enso`, `hanzo-router`) | shipped: overrides, ε = 0.1 exploration, the prefer table the reward-mean trainer rewrites every 15m; the `xᵀWp` engine is built, not wired (`router.endpoint` is empty in `hanzoai/universe` `charts/app/values/hanzo/cloud.yaml`) |
+| SKUs | the managed family (§5) | `hanzoai/enso` | shipped |
+| Replay router | a fingerprint-keyed table: an exact recurring question goes to the cheapest model observed answering it correctly, else a domain fallback, else the strongest servable model | `hanzoai/enso` `router/` | code and tests; not linked by `hanzoai/ai` |
+| Router model | `zen-router`, 0.6B: one pass emits a task, a route distribution and a feature embedding | `zenlm/zen-router`, open weights on Hugging Face | experimental (model card); on no serving path: `router.endpoint` reaches the engine's `/route`, which never loads it, and `enso` refuses its 256-dimension feature head (`policy::D` is 16; `enso/tests/seam.rs`) |
+| Enso Diffusion | a sparse mixture-of-experts diffusion transformer with rectified-flow training and sampling, forked from DiT-MoE (arXiv:2407.11633); class-conditional image generation | `zenlm/enso` (Apache-2.0) | research code; Hanzo's commits touch only licence, docs, CI and ignore rules; no Hanzo-trained weights (no `zenlm/enso` on Hugging Face) |
+| Enso Browser | a desktop browser forked from `zen-browser/desktop` on Firefox 147.0.3 | `hanzoai/enso-browser` (private, MPL-2.0) | unreleased; upstream name and branding unchanged; no Hanzo feature in the tree |
+
+Enso Diffusion and the Enso Browser each get their own HIP when there is
+something of ours to specify: trained weights, or a Hanzo change to the fork.
+
+### 9. Decisions before generation
+
+Choosing a model is a bounded decision: the answer space is known. HIP-1332 §13
+makes Kai native to Enso. A bounded decision (model and provider, context depth,
+tools and skills, reasoning budget, stop, retry, escalation) goes to Kai, in
+process where co-resident and at `POST /v1/decisions` otherwise. Generation, and
+any decision Kai defers, goes to a generative model. Each decision program runs in
+`shadow` first (HIP-1332 §13.1), so the policy of §1 keeps serving until a program
+is promoted.
+
+This HIP adds no requirement; HIP-1332 carries it. On 2026-09-25 no repository
+implements `enso.decide`, and `POST https://api.hanzo.ai/v1/decisions` answers 404.
 
 ## Rationale
 
@@ -364574,15 +366590,210 @@ only narrow to models it can serve, never escalate to another tenant's.
 
 ## Reference Implementation
 
-- Router mechanism and learned policy: `hanzoai/engine` (`hanzo-router`, `enso`).
-- Gateway routing, per-org/global training, reward ledger, metering: `hanzoai/ai`.
-- Managed family (catalog + identity): `hanzoai/enso`.
-- Evaluation harness: `hanzoai/enso-bench`.
+- Router mechanism and learned policy: `hanzoai/engine` (`hanzo-router`, `enso`,
+  `hanzo-router-retrain`); built, not wired in production.
+- Gateway routing, depth lift, per-org/global training, reward ledger, metering:
+  `hanzoai/ai` (`controllers/auto_route.go`, `controllers/depth_route.go`,
+  `controllers/router_trainer.go`).
+- Managed family (identity prompts + catalog) and the replay router: `hanzoai/enso`.
+- Router model: `zenlm/zen-router` (open weights; on no serving path).
+- Evaluation harness: `hanzoai/enso-bench` (private: the specification does not
+  depend on it; it produces the eval rows §3 fits on).
 - Measurements and economics: the Enso paper (`hanzoai/papers/enso`).
+- Model families: HIP-0511. Decisions: HIP-1332. Model API: HIP-1211.
 
 ## Copyright
 
 This document is placed in the public domain.
+
+
+---
+
+<!-- hip-0511 -->
+
+---
+hip: 0511
+title: Model Families — Zen Generates, Enso Routes, Kai Decides
+author: Hanzo AI
+type: Informational
+category: Core
+status: Living
+created: 2026-09-25
+requires: HIP-0039, HIP-0510, HIP-1211, HIP-1332
+---
+
+# HIP-0511: Model Families — Zen Generates, Enso Routes, Kai Decides
+
+## Abstract
+
+Hanzo's models fall into families by the job each does. **Zen** generates: the
+open-weight generative family. **Enso** routes: the router family that picks what
+serves each request. **Kai** decides: the typed decision model. **Policy**
+governs: deterministic authority, not a model. This HIP maps every family and
+model line to its HIP, its API and where it runs, and states the order of one
+request: Enso asks Kai before it asks Zen.
+
+It is Living: amended when a model ships, moves or retires.
+
+## Motivation
+
+One name was carrying several things. "Enso" is a router, a SKU family, a
+diffusion fork and a browser fork. The public `hanzoai/kai-1` repositories hold
+baseline weights, not Kai. Zen6 shipped open weights and a live API with no HIP
+naming it. HIP-0003 described a Jin model that was never built. A reader who
+wants to call a model, run one or cite one needs one table that says what a name
+is, where its spec is, and whether it exists.
+
+## Specification
+
+This HIP requires nothing; it describes. Status words: **shipped** (served, or
+downloadable, now), **in progress** (code exists, nothing served), **upcoming**
+(named, not built), **retiring**, **baseline** (not ours; used for comparison).
+Every fact is as of 2026-09-25:
+
+```sh
+curl -s https://api.hanzo.ai/v1/models                           # Hanzo Cloud: what serves
+curl -s 'https://huggingface.co/api/models?author=zenlm&limit=500' # open weights (public)
+curl -s 'https://huggingface.co/api/models?author=hanzoai'
+```
+
+`zenlm` holds 85 repositories, 4 of them private; `hanzoai` holds 3.
+
+### 1. Families
+
+| Family | Job | Output | HIP | API (HIP-1211) |
+|---|---|---|---|---|
+| Zen | generates | text, code, embeddings, images, audio, video | HIP-0039 | `/v1/chat/completions`, `/v1/responses`, `/v1/messages`, `/v1/embeddings`, `/v1/rerank`, `/v1/images/*`, `/v1/audio/*`, `/v1/videos/*` |
+| Enso | routes | a model per request | HIP-0510 | `model=auto` and the `enso*` ids on the wire above; `/v1/ai/router`, `/v1/ai/feedback` |
+| Kai | decides | typed state: choice, score, predicate, defer | HIP-1332 | `POST /v1/decisions` |
+| Policy | governs | allow, ask, deny | HIP-1332 §10 | none of its own |
+
+### 2. Zen
+
+Open weights live under `zenlm/` on Hugging Face, licence and base per model
+card. Hanzo Cloud serves the ids in the third column.
+
+| Line | Open weights | Hanzo Cloud | Status |
+|---|---|---|---|
+| Zen6 | `zenlm/zen6`, `zenlm/zen6-coder`, `zenlm/zen6-flash` (2026-09-21) | `zen6`, `zen6-coder` | shipped; HIP-0904 |
+| Zen5.8 | none | `zen5.8`, `zen5.8-coder`, `zen5.8-spark`, `zen5.8-evo` | shipped, cloud only |
+| Zen5 | GGUF: `zenlm/zen5-gguf`, `zen5-coder-gguf`, `zen5-mini-gguf`, `zen5-pro-gguf`, `zen5-max-gguf`, `zen5-nano-9B-gguf`; `zen5-flash-gguf` and three `zen5-nano` sizes private | `zen5`, `zen5-mini`, `zen5-flash`, `zen5-coder`, `zen5-pro`, `zen5-spark`, `zen5-evo` | shipped |
+| Zen7 | none | none | upcoming; the successor to Satori; no repository, weights or spec yet |
+| Satori | none (`zenlm/satori` is a video-generation scaffold on Open-Sora, never trained) | none | retiring; replaced by Zen7 |
+| Vision-language | `zenlm/zen-vl-{4b,8b,30b}-{instruct,agent}`, `zenlm/zen3-vl` | `zen-vl` | shipped |
+| Embedding | `zenlm/zen-embedding`, `zen-embedding-{0.6B,4B,8B}`, GGUF for 0.6B and 8B | `zen-embedding` | shipped |
+| Guard | `zenlm/zen-guard`, `zen-guard-gen`, `zen-guard-gen-8b`, `zen-guard-stream`, `zen-guard-stream-4b`, `zen3-guard` | `zen-guard` | shipped |
+| Reranker | `zenlm/zen-reranker`, `zen-reranker-{0.6B,4B,8B}` and their GGUF | not listed | open weights only |
+| Speech | `zenlm/zen3-asr`, `zen3-asr-0.6B`, `zen3-asr-aligner`, `zen3-tts`, `zen3-tts-0.6B`, `zen3-tts-custom-voice`, `zen3-tts-voice-design`, `zen-dub-live` | not listed | open weights only |
+| Image | `zenlm/zen3-image`, `zen3-image-fast`, `zen3-image-ssd`, `zen-image-edit` | not listed | open weights only |
+| Video | `zenlm/zen-director`, `zen-world`, `zen-video-i2v` | not listed | open weights only |
+| 3D, music | `zenlm/zen-3d`, `zen-musician` | not listed | open weights only |
+| Earlier lines | `zenlm/zen-nano*`, `zen-eco*`, `zen-omni*`, `zen-pro`, `zen-agent-4b`, `zen-designer*`, `zen3-nano`, `zen3-omni`, `zen-finance`, `zen-legal`, `zen-medical`, `zen-sql`, `zen-multilingual`, `zen-translate`, `zen-translator`, `zen-blog`, `zen-scribe`, `zen-family` | not listed | open weights; not served |
+
+Hanzo Cloud also lists `zen-free`.
+
+### 3. Enso
+
+| Member | HIP | API | Runs | Status |
+|---|---|---|---|---|
+| Router | HIP-0510 §1–§4 | `model=auto` (alias `zen-router`); the response header `X-Routed-Model` names what served | Hanzo Cloud (`hanzoai/ai`); the `xᵀWp` engine (`hanzoai/engine`) is built, not wired | shipped |
+| SKUs | HIP-0510 §5 | `enso`, `enso-auto`, `enso-flash`, `enso-free`, `enso-pro`, `enso-ultra` | Hanzo Cloud only | shipped |
+| Router model | HIP-0510 §8 | none | open weights (`zenlm/zen-router`); on no serving path | experimental |
+| Enso Diffusion | HIP-0510 §8 | none | code only (`zenlm/enso`) | research code; no weights |
+| Enso Browser | HIP-0510 §8 | none | none | unreleased private fork |
+
+### 4. Kai
+
+| Item | HIP | API | Runs | Status |
+|---|---|---|---|---|
+| Kai, one line (`hanzoai/kai`) | HIP-1332 | `POST /v1/decisions` (§17); `enso.decide` in process (§13) | self-hosted or Hanzo Cloud (§20) | in progress: code in `hanzoai/decision` (private); no checkpoint published; `/v1/decisions` answers 404 on api.hanzo.ai |
+| `hanzoai/kai-1`, `kai-1-multilingual`, `kai-1-agent` | HIP-1332 §18 | none | open weights on Hugging Face | baseline: Laya weights, byte-identical to upstream; the cards are titled Laya; not a Kai version |
+| Laya, Jev | HIP-1332 §18 | none | upstream | baseline; not ours |
+
+### 5. Other names
+
+| Name | HIP | Status |
+|---|---|---|
+| Jin | HIP-0003 | not built: `hanzoai/jin` was archived 2026-05-12 and holds a copy of `LumenPallidium/jepa` (MIT), not Hanzo model code; no weights |
+| HLLM | HIP-0002 | a specification; no model or weights exist |
+
+### 6. One request, in order
+
+HIP-1332 §13 makes Kai native to Enso. Enso splits every operation into a bounded
+decision or generation:
+
+```text
+request ─▶ Enso
+            ├─ bounded decision: model, context depth, tools, reasoning budget,
+            │  stop, retry, escalate
+            │     └─▶ Kai ─▶ typed answer ─▶ Policy (allow < ask < deny) ─▶ act
+            │            └─ defer ─▶ Zen
+            └─ generation ─▶ Zen, on the model Enso chose
+```
+
+A Decision Program (HIP-1332 §5) is the graph form of the same split. Its nodes are
+deterministic, Kai, Zen, solver, simulation or human, and only the Zen nodes
+generate, so an agent workflow spends generative compute only where generation is
+the work.
+
+Today the routing decision is the router's own policy (HIP-0510 §1): per-org
+overrides, ε = 0.1 exploration, then the prefer table that the reward-mean trainer
+rewrites every 15m. The `xᵀWp` engine is built (`hanzoai/engine`) but not wired
+(`router.endpoint` is empty). Kai takes a decision over one program at a time, `shadow`, then
+`advisory`, then `enforced` (HIP-1332 §13.1). On 2026-09-25 no program has made
+that move: no repository implements `enso.decide`.
+
+### 7. Calling each family
+
+```sh
+# Enso picks the model; X-Routed-Model says which one served.
+curl https://api.hanzo.ai/v1/chat/completions \
+  -H "Authorization: Bearer $HANZO_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Summarize this diff."}]}'
+
+# A Zen model by name.
+curl https://api.hanzo.ai/v1/responses \
+  -H "Authorization: Bearer $HANZO_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"model":"zen6","input":"Write a failing test for this bug."}'
+
+# Tell the router how it did (HIP-0510 §2).
+curl https://api.hanzo.ai/v1/ai/feedback \
+  -H "Authorization: Bearer $HANZO_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"request_id":"<id from the response>","reward":1}'
+
+# Kai (HIP-1332 §17). Specified; not served yet.
+curl https://api.hanzo.ai/v1/decisions \
+  -H "Authorization: Bearer $HANZO_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"model":"kai","program":"agent.preflight@4","evidence":[],"state":{}}'
+```
+
+### 8. Names that collide
+
+- `zen-router` is both the gateway's alias for `auto` (HIP-0510 §1) and the router
+  model `zenlm/zen-router`. The alias never calls the model.
+- The Enso Browser tree still carries its upstream's name, "Zen Browser", which is
+  also the generative family's name.
+- `hanzoai/kai-1*` carry the Kai name and Laya weights.
+- Enso names both the router family and Enso Diffusion, which does not route.
+
+## Rationale
+
+Families are split by job, not by architecture or vendor, because the job decides
+the API and the cost. A generation spends tokens; a decision has a known answer
+space and generates none. Putting routing and decisions in their own families is what
+lets a request reach a generative model only when generation is the work.
+
+## References
+
+- HIP-0039 — Zen, the open-weight generative family; HIP-0904 — Zen6
+- HIP-0510 — Enso, the router family
+- HIP-1211 — AI, the model API
+- HIP-1332 — Kai, the decision model and the decision plane
+- HIP-0002 — HLLM; HIP-0003 — Jin
+
+## Copyright
+
+Released under CC0 1.0 Universal Public Domain Dedication.
 
 
 ---
@@ -367183,7 +369394,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: "0901"
-title: Proof of AI — Native Execution Proofs and Governance
+title: Proof of AI (PoAI) — Native Execution Proofs, Canonical Contract & Operator-LLM Governance
 author: Hanzo AI Team
 type: Standards Track
 category: Core
@@ -367196,7 +369407,7 @@ requires: HIP-0001, HIP-0005
 ---
 
 
-# HIP-0901: Proof of AI — Native Execution Proofs and Governance
+# HIP-0901: Proof of AI (PoAI) — Native Execution Proofs, Canonical Contract & Operator-LLM Governance
 
 ## Abstract
 
@@ -368232,14 +370443,14 @@ What an autonomous firm actually requires, and where it lives:
 | Organ | What it must do | Hanzo |
 |---|---|---|
 | **Formation** | Exist in law | `/v1/company` |
-| **Identity** | Prove who acts | `/v1/iam`, `/v1/idv` |
+| **Identity** | Prove who acts | `/v1/iam`, `/v1/compliance/verifications` |
 | **Legal** | Hold and sign agreements | `/v1/legal` |
 | **Ownership** | Record who owns what | `/v1/captable` |
 | **Capital** | Raise | `/v1/company/fundraise` |
-| **Money** | Hold, move, settle | `/v1/finance`, `/v1/x402`, `/v1/wallet` |
+| **Money** | Hold, move, settle | `/v1/treasury`, `/v1/books`, `/v1/x402`, `/v1/wallet` |
 | **Commerce** | Charge for things | `/v1/commerce`, `/v1/billing`, `/v1/pricing` |
-| **Product** | Build and run software | `/v1/git`, `/v1/deploy`, `/v1/paas`, `/v1/functions` |
-| **Demand** | Find and keep customers | `/v1/guide`, `/v1/crm`, `/v1/campaign` |
+| **Product** | Build and run software | `/v1/git`, `/v1/build`, `/v1/deploy`, `/v1/platform`, `/v1/function` |
+| **Demand** | Find and keep customers | `/v1/guide`, `/v1/campaign`, `/v1/marketing` |
 | **Observation** | Know its own state | `/v1/o11y`, `/v1/event`, `/v1/usage` |
 | **Compliance** | Stay legal | `/v1/compliance`, `/v1/audit`, `/v1/sbom` |
 | **Custody** | Hold secrets | `/v1/kms` |
@@ -368464,10 +370675,10 @@ automating it.
 
 ## 7. Money, commerce, product
 
-**Money.** `/v1/finance/accounts`, `/v1/finance/treasury`, with admin sweep,
-policy, and anchoring under `/v1/admin/treasury`. Ledger discipline through
-`apps/treasury/ledger`. On-chain settlement via `/v1/wallet` and
-`/v1/smart-wallets`. And `/v1/x402` — HTTP-native payment, where a request
+**Money.** `/v1/treasury` and `/v1/treasury/accounts`, with admin sweep,
+policy, and anchoring under `/v1/admin/treasury`. Double-entry discipline through
+`/v1/books` and `apps/treasury/ledger`. On-chain settlement via `/v1/wallet`,
+smart-account custody included — there is no separate wallet prefix. And `/v1/x402` — HTTP-native payment, where a request
 carrying insufficient funds gets `402` and a settlement path rather than a
 rejection. That matters more than it sounds: **x402 is how one agent pays
 another without either holding a card.** It is the payment rail that does not
@@ -368476,19 +370687,20 @@ assume a human at the checkout.
 The payer is one value in one place — `hanzoai/account.Payer` — because the
 alternative was four copies disagreeing and `402`-ing funded customers.
 
-**Commerce.** `/v1/commerce`, `/v1/billing`, `/v1/pricing`, `/v1/plans`,
+**Commerce.** `/v1/commerce`, `/v1/billing`, `/v1/pricing`, `/v1/plan`,
 `/v1/entitlement`, `/v1/marketplace`, `/v1/referral`, `/v1/affiliate`. Price,
 meter, invoice, collect, gate on entitlement, pay partners.
 
-**Product.** `/v1/git` (native, no forge dependency), `/v1/builds`, `/v1/deploy`,
-`/v1/paas`, `/v1/sites`, `/v1/functions`, `/v1/clusters`, `/v1/machines`. Code
-enters at `/v1/git` and leaves as something serving traffic, with no vendor in
-the path.
+**Product.** `/v1/git` (native, no forge dependency), `/v1/build`, `/v1/deploy`,
+`/v1/platform`, `/v1/project/sites`, `/v1/function`, `/v1/compute/clusters`,
+`/v1/compute/machines`. Code enters at `/v1/git` and leaves as something serving
+traffic, with no vendor in the path.
 
-**Demand.** `/v1/guide` — the GTM autopilot — plus `/v1/crm`, `/v1/campaign`,
-`/v1/marketing`, `/v1/ad`, `/v1/social`, `/v1/content`.
+**Demand.** `/v1/guide` — the GTM autopilot — plus `/v1/campaign`,
+`/v1/marketing`, `/v1/ad`, `/v1/social`, `/v1/content`. The sales pipeline is
+`/v1/framework` module `crm` (HIP-1120), a document set rather than a prefix.
 
-**Observation.** `/v1/o11y`, `/v1/event`, `/v1/usage`, `/v1/costs`. A firm that cannot read its own state cannot govern itself, and
+**Observation.** `/v1/o11y`, `/v1/event`, `/v1/usage`, `/v1/metrics`. A firm that cannot read its own state cannot govern itself, and
 autonomy without self-observation is just an unattended process.
 
 ## 8. What still requires a human, and why
@@ -368617,6 +370829,303 @@ mechanical fraction should run without people, so the human fraction is judgment
 - `apps/company/genesis.go` — equity genesis anchor, Hanzo L1 `36963`
 - `apps/captable`, `apps/legal`, `apps/treasury`, `apps/x402`
 - `hanzoai/account.Payer` — one payer, one place
+
+
+---
+
+<!-- hip-0904 -->
+
+---
+hip: 0904
+title: Zen6 — Dense, Coder and Ternary Checkpoints
+author: Hanzo AI
+type: Standards Track
+category: Core
+status: Final
+created: 2026-09-25
+requires: HIP-0039
+---
+
+# HIP-0904: Zen6 — Dense, Coder and Ternary Checkpoints
+
+## Abstract
+
+Zen6 is the current Zen generation (HIP-0039). It was published on 2026-09-21 as three
+open-weight Hugging Face repositories:
+
+- **`zenlm/zen6`.** A 64-layer hybrid-attention model in mixed NVFP4 and FP8, with a DFlash 2
+  drafter bundled beside it and YaRN scaling to 1,048,576 positions.
+- **`zenlm/zen6-coder`.** A 512-expert mixture as GGUF IQ4_XS, with a one-layer MTP drafter.
+- **`zenlm/zen6-flash`.** A 64-layer model in ternary GGUF, with a vision projector and a
+  DFlash 2 drafter.
+
+**All three are re-hosts.**
+
+- Every weight file is byte-identical to a named upstream file.
+- Only zen6 changes a model file: three rope fields in its `config.json`.
+- The only measured number in any of the three repositories is the upstream's GSM8K
+  qualification of zen6.
+
+`zen6` and `zen6-coder` are also served SKU ids on `/v1/models`. Under HIP-0039 §2.3 they do not
+promise these weights.
+
+This HIP records the layout of each repository, where each file came from, what has been measured
+and what is only claimed, and the defects found on 2026-09-25.
+
+## Motivation
+
+Zen6 was published on Hugging Face on 2026-09-21 and is served on `/v1/models`. Until
+2026-09-25, no HIP, catalog, site or doc named it.
+
+Its cards also disagree with the files beside them. The zen6 card's architecture table gives a
+different head count, vocabulary and attention type from its `config.json`. The zen6-coder card
+describes a file format that is not in its repository.
+
+A reader choosing between the three needs the artifacts, not the cards: what each file is, where
+it came from, what runs it, and which numbers carry a receipt.
+
+## Specification
+
+The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as in RFC 2119.
+
+Every fact below was read on 2026-09-25 from the Hugging Face API
+(`https://huggingface.co/api/models/<id>?blobs=true`) and from the files at the revision given.
+GGUF metadata was read from the file headers with HTTP range requests.
+
+### §1 Repositories
+
+| Checkpoint | Hugging Face @ revision | Bytes | Licence | Served SKU |
+|:--|:--|--:|:--|:--|
+| zen6 | `zenlm/zen6` @ `574c3066` | 25,794,104,008 | apache-2.0 | `zen6` |
+| zen6-coder | `zenlm/zen6-coder` @ `3f803c67` | 97,820,026,179 | other: qwen-community-1.0 | `zen6-coder` |
+| zen6-flash | `zenlm/zen6-flash` @ `b5e7a43c` | 16,769,698,285 | apache-2.0 | none |
+
+GitHub has `zenlm/zen6`, `zenlm/zen6-coder` and `zenlm/zen6-flash`. They hold the card, plus a
+`training/` recipe for zen6 and zen6-coder, and no weights.
+
+### §2 zen6
+
+The target model is a `Qwen3_5ForConditionalGeneration` (`model_type: qwen3_5`):
+
+| Field | Value (`config.json`) |
+|:--|:--|
+| layers | 64: 48 `linear_attention` (Gated DeltaNet) and 16 `full_attention`, one full every 4 |
+| hidden, intermediate | 5,120 and 17,408 |
+| full attention | 24 query heads, 4 key/value heads, head dim 256, output gate |
+| linear attention | 16 key heads and 48 value heads, head dim 128, conv kernel 4 |
+| vocabulary | 248,320 |
+| MTP | 1 layer |
+| vision | 27-layer vision tower, hidden 1,152; image and video tokens; `language_model_only: false` |
+| positions | 262,144 native; `rope_type: yarn`, `factor: 4.0` → 1,048,576; `rope_theta` 10,000,000; `partial_rotary_factor` 0.25; interleaved mRoPE |
+
+Quantization is NVIDIA ModelOpt 0.47.0.dev0 `MIXED_PRECISION`:
+
+- **NVFP4** (4-bit float weights and activations, group size 16) on 193 modules: every
+  `gate_proj`, `up_proj` and `down_proj`, plus `lm_head`.
+- **FP8** (8-bit float weights and activations) on 208 modules: every attention projection,
+  linear and full.
+- **KV cache:** FP8.
+- **Unquantized:** MTP.
+
+The weights are three safetensors shards holding 2,194 tensors and 21,921,428,072 bytes: 1,842
+language-model tensors, 333 vision, 15 MTP and 4 `lm_head`.
+
+The drafter is `dflash2/`: `DFlash2DraftModel` in bfloat16, 3,848,817,896 bytes.
+
+| Field | Value (`dflash2/config.json`) |
+|:--|:--|
+| layers | 5, `sliding_attention`, window 2,048 |
+| hidden | 5,120; 32 query heads, 8 key/value heads |
+| `block_size` | 8 |
+| `target_layer_ids` | 5, 19, 33, 47, 61 |
+| positions | 262,144, `rope_type: default` |
+
+### §3 zen6-coder
+
+The zen6-coder GGUF headers give:
+
+| Field | Value (GGUF header) |
+|:--|:--|
+| `general.architecture` | `qwen4exp`; `general.name` "Qwen3.8 Flash Next" |
+| blocks | 48, one full-attention block every 4 |
+| embedding | 2,560 |
+| attention | 24 heads, 2 key/value heads, key and value length 256; an indexer of 4 heads, key length 128, top-k 2,048 |
+| experts | 512, 10 used, expert FFN 640, shared-expert FFN 640 |
+| linear blocks | SSM conv kernel 4, state 128, 16 groups, inner 6,144 |
+| hyper-connections | 4, low rank 320 |
+| per-layer n-gram embedding | n-gram size 3; 16 hashed heads of about 20,000,000 entries each; `embedding_length_per_layer_input` 160 |
+| context | 262,144 |
+| quantization | Unsloth imatrix, file type IQ4_XS, 1,224 tensors across 3 splits |
+
+The repository holds five files:
+
+- `UD-IQ4_XS/Qwen3.8-Flash-Next-UD-IQ4_XS-0000{1,2,3}-of-00003.gguf`, 93,682,584,224 bytes in
+  total.
+- `MTP/mtp-Qwen3.8-Flash-Next-Q8_0.gguf`, 4,137,429,120 bytes. It is the same architecture with
+  49 blocks and `nextn_predict_layers: 1`.
+- `MTP/README.md`.
+
+The card states 180B total parameters, 125B in the base model and 6B active per token. The
+headers are consistent with that but do not prove it, and this HIP does not assert it.
+
+### §4 zen6-flash
+
+The PQ2_0 GGUF header gives:
+
+| Field | Value (PQ2_0 GGUF header) |
+|:--|:--|
+| `general.architecture` | `qwen35` |
+| blocks | 64, one full-attention block every 4 |
+| embedding, FFN | 5,120 and 17,408 |
+| attention | 24 heads, 4 key/value heads, key and value length 256 |
+| context | 262,144 |
+| tensors | 851: 402 of GGML type 142, 96 of BF16, 353 of F32 |
+| transform | a Walsh–Hadamard pre-rotation over 401 weights, block 1,024, recorded under `prism.hadamard.*` |
+
+A loader MUST implement GGML type 142 and apply the recorded Hadamard transform before these
+weights mean anything.
+
+| File | Bytes |
+|:--|--:|
+| `Ternary-Bonsai-2-27B-PQ2_0.gguf` | 7,206,168,928 |
+| `Ternary-Bonsai-2-27B-PTQ1_0.gguf` | 5,946,648,928 |
+| `Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf` | 629,246,976 |
+| `Ternary-Bonsai-2-27B-mmproj-BF16.gguf` | 931,145,856 |
+| `Bonsai-2-27B-DFlash2-Q8_0.gguf` | 2,056,415,104 |
+| `SHA256SUMS` | 65,916 |
+
+### §5 Provenance
+
+Files match their upstream when the LFS SHA-256 or git blob id is equal. The comparison was run
+against each upstream's file listing from the same API.
+
+| Checkpoint | Upstream | What matches | What differs |
+|:--|:--|:--|:--|
+| zen6 | `RadixArk/Qwen3.8-27B-NVFP4` (base `Qwen/Qwen3.8-27B` @ `e13a4f0e`) | 19 files: all shards, the index, the tokenizer files, the chat template, and the conversion, audit and qualification receipts | `config.json`, in three fields (below); the README; no `LICENSE`, which the upstream ships |
+| zen6 | `incoai/Qwen3.8-27B-DFlash2` | `config.json` and `model.safetensors`, placed under `dflash2/` | none |
+| zen6-coder | `unsloth/Qwen3.8-Flash-Next-GGUF` (base `Qwen/Qwen3.8-Flash-Next`) | all five files | the README |
+| zen6-flash | `prism-ml/Ternary-Bonsai-2-27B-gguf` (base `Qwen/Qwen3.8-27B`) | the four model and projector files | the README |
+| zen6-flash | `ProCreations/Ternary-Bonsai-2-27B-DFlash2` | the drafter and `SHA256SUMS` | none |
+
+The three fields that differ in zen6's `config.json`, all under `text_config.rope_parameters`:
+
+- `rope_type`: `default` → `yarn`
+- `factor`: absent → `4.0`
+- `original_max_position_embeddings`: absent → `262144`
+
+All three checkpoints descend from Qwen3.8, so they meet HIP-0039 §3.3.
+
+### §6 Measured
+
+The only receipt in any Zen6 repository is zen6's `qualification.json` with its
+`qualification-criteria.json`. Both are byte-identical to the upstream's.
+
+| Field | Value |
+|:--|:--|
+| task | GSM8K, 1,283 correct of 1,319 = 0.9727, against a gate of 0.965 |
+| failures | 0 empty generations, 0 truncations, 0 request errors |
+| harness | `sgl-eval` @ `6690895` |
+| server | SGLang @ `2948168` |
+| hardware | 4 × NVIDIA GB300, tensor parallel 4 |
+| KV cache | FP8 E4M3; scales not calibrated, so they default to 1.0 |
+| speculation | NEXTN on the MTP head, resolved as EAGLE; final acceptance length 2.775 |
+| sampling | thinking on, temperature 1.0, top-p 0.95, top-k 20 |
+
+**What the receipt covers.** It measures the upstream checkpoint with its upstream config. No
+receipt covers the YaRN edit, any context above 262,144, or the DFlash 2 drafter.
+
+**Unmeasured claims.** The cards' throughput tables, DFlash 2 speedups, retention percentages and
+benchmark comparisons carry no receipt. This HIP relies on none of them.
+
+**Serving.** The live SKUs `zen6` and `zen6-coder` report a 1,000,000-token window on
+`/v1/models`. Under HIP-0039 §2.3, that window is the SKU's contract and says nothing about these
+files.
+
+### §7 Runtimes
+
+The upstream receipt names only one runtime for these weights: SGLang @ `2948168` running zen6
+(§6).
+
+`hanzoai/engine` @ `d25f18e` contains:
+
+- a `qwen4exp` model (`hanzo-engine/src/models/qwen4exp.rs` and `quantized_qwen4exp.rs`);
+- a `--dflash <dir>` draft option;
+- an `--mtp-model` option.
+
+Whether it loads any of these three checkpoints has not been measured.
+
+### §8 Defects
+
+As of 2026-09-25. A card fix is a new revision of that repository, and the repository revisions
+in §1 move with it.
+
+1. **Licence files.** None of the three repositories carries `LICENSE` or `NOTICE`, which
+   HIP-0039 §3.2 requires.
+2. **zen6 card against `config.json`.** Under HIP-0039 §3.5 the config is the fact.
+
+   | Field | Card says | `config.json` says |
+   |:--|:--|:--|
+   | heads | 32 query, 8 key/value | 24 query, 4 key/value |
+   | vocabulary | 152,064 | 248,320 |
+   | target attention | "Sliding-Window Attention" | full attention; sliding windows are the drafter's |
+   | drafter block | 3–5 tokens | `block_size: 8` |
+   | drafter positions | a 1M position table | 262,144 |
+   | modality | `pipeline_tag: text-generation` | ships a vision tower |
+3. **zen6-coder.** The card describes a "Halogen W4B" format, and no such file is in the
+   repository. The GitHub description says "38B-Class"; the card says 180B.
+4. **zen6-flash.** The card lists the BF16 projector as 1.2 GB. The file is 931,145,856 bytes.
+5. **Commands that cannot run.** The `hanzo-engine serve` commands on the zen6 and zen6-coder
+   cards pass `--context-window`, `--kv-cache-quant` and `--mtp`. The engine at `d25f18e` defines
+   none of them.
+6. **Not HIP-0039 §3.4.** None of the cards says it is a re-host, and none names the files it
+   copied.
+
+## Rationale
+
+- **Why re-host.** It puts a current checkpoint under the Zen name the day upstream publishes
+  one, with no training cost. Its price is that Zen6 open weights are exactly as good as their
+  upstreams, and the cards have to say so (HIP-0039 §3.4). Training a Zen-specific checkpoint
+  would be a later generation with its own receipt.
+- **Why the files are the specification.** `config.json`, the GGUF headers and LFS hashes are
+  what a runtime reads and what a reader can re-check. Card prose is neither.
+- **Why the defects are listed here.** A HIP that repeated the cards would carry their errors.
+  One that silently corrected them would hide that the published cards are wrong. Listing the
+  defects lets each be fixed and struck through.
+
+## Security Considerations
+
+- **Pin revisions.** A loader SHOULD pin the revision in §1, or its successor, and check LFS
+  SHA-256 against the upstream (§5).
+- **zen6-flash `SHA256SUMS`.** It is the drafter repository's, and it lists 481 files. Of the
+  files zen6-flash ships, it covers only the drafter. It does not cover the PQ2_0, PTQ1_0 or
+  projector files, and it names a `LICENSE` and `NOTICE` that zen6-flash does not ship.
+- **YaRN beyond the receipt.** The zen6 YaRN edit takes the model outside its measured regime. A
+  runtime that applies YaRN statically scales every position, including the short prompts the
+  receipt measured. A deployment that relies on either long context or short-prompt accuracy MUST
+  measure its own.
+- **Uncalibrated KV cache.** The FP8 KV cache ran with uncalibrated scales, and the qualification
+  record says so. This affects accuracy, not isolation.
+- **Custom tensor types.** zen6-flash stores weights as GGML type 142 behind a Hadamard
+  transform. Only a runtime that implements that type decodes them; any other loader MUST refuse
+  the file rather than guess.
+- **Licence.** zen6-coder is licensed qwen-community-1.0, not Apache-2.0. Its terms bind anyone
+  who redistributes or serves it.
+- **Remote code.** No Zen6 repository ships Python, and none carries the `custom_code` tag.
+
+## References
+
+- HIP-0039 Zen; HIP-0043 inference engine; HIP-0510 Enso router; HIP-0511 model families.
+- https://huggingface.co/zenlm/zen6 · https://huggingface.co/zenlm/zen6-coder ·
+  https://huggingface.co/zenlm/zen6-flash
+- Upstreams: `RadixArk/Qwen3.8-27B-NVFP4`, `incoai/Qwen3.8-27B-DFlash2`,
+  `unsloth/Qwen3.8-Flash-Next-GGUF`, `prism-ml/Ternary-Bonsai-2-27B-gguf`,
+  `ProCreations/Ternary-Bonsai-2-27B-DFlash2`.
+- https://github.com/zenlm/zen6 · https://github.com/zenlm/zen6-coder ·
+  https://github.com/zenlm/zen6-flash
+
+## Copyright
+
+Copyright and related rights waived via [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
 
 
 ---
@@ -370885,82 +373394,6 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 
-<!-- hip-1195 -->
-
----
-hip: 1195
-title: Market — Rate Oracles and Exchange Pools
-author: Hanzo AI
-type: Standards Track
-category: Core
-capability: market
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
----
-
-# HIP-1195: Market — Rate Oracles and Exchange Pools
-
-## Abstract
-
-`/v1/market` is the canonical capability for market within the Hanzo Cloud platform.
-Package market is what trades on each chain, and how far the read of it got.
-The implementation is `hanzoai/cloud` `apps/market` and `plugin/market` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
-
-## Motivation
-
-Before this specification, market operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
-
-## Specification
-
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
-
-### §1 Addresses and Operations
-
-The `market` capability answers exclusively under its assigned route prefixes:
-
-| Method | Path | Summary |
-|---|---|---|
-| `GET` | `/v1/market/chains` | Answers every chain this deployment can read, what is deployed on each, and what its au... |
-| `GET` | `/v1/market/pools` | Answers the automated market makers on one chain: their two tokens, their fee tier, and... |
-| `GET` | `/v1/market/survey` | Answers which of the four settlement precompiles carry code on one chain. |
-| `GET` | `/v1/market/token` | Answers one token's daily history — open, high, low, close, price and volume per UTC da... |
-| `GET` | `/v1/market/tokens` | Answers the tokens one chain's indexer has seen, with the decimals a caller needs to re... |
-
-### §2 Storage and Physical Isolation
-
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/market.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
-
-### §3 Authentication and Principal
-
-Every request reaching `/v1/market` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
-
-## Security Considerations
-
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
-
-## References
-
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
-
-
----
-
 <!-- hip-1327 -->
 
 ---
@@ -370969,6 +373402,7 @@ title: Public Channels — Finding a Room in Another Org
 author: Hanzo AI
 type: Standards Track
 category: Core
+capability: team
 status: Draft
 created: 2026-09-01
 requires: HIP-0139, HIP-0523, HIP-1048
@@ -371205,6 +373639,489 @@ Released under the same terms as the rest of the HIPs repository.
 
 ---
 
+<!-- hip-1332 -->
+
+---
+hip: 1332
+title: Kai — The Decision Model and the Decision Plane
+author: Hanzo AI
+type: Standards Track
+category: Core
+capability: decisions
+status: Draft
+implementation-rust: partial
+created: 2026-09-25
+requires: HIP-0004, HIP-0010, HIP-0043, HIP-0106, HIP-0113, HIP-0124, HIP-1190, HIP-1220, HIP-1322, HIP-1330
+---
+
+# HIP-1332: Kai — The Decision Model and the Decision Plane
+
+## Abstract
+
+Kai is Hanzo's decision model. It turns heterogeneous evidence into calibrated, typed, mutually
+consistent decisions, many at once. It does not generate text, and it holds no authority:
+deterministic policy, solvers and humans do.
+
+Decision inference is a primitive beside generation, retrieval, forecasting, perception, solving
+and policy:
+
+```text
+Zen     generates: open reasoning, code, language
+Kai     decides: bounded judgment, decision state
+Enso    routes: each operation to Kai or Zen (HIP-0510)
+Embed   retrieves      TS      forecasts     Vision  perceives
+Audio   hears          Graph   structures    Solver  proves
+Policy  governs
+```
+
+Hanzo Decision composes them into versioned Decision Programs, served at `POST /v1/decisions`.
+Kai's native output is Decision Program state, not prose:
+
+```text
+evidence → adapters → shared evidence → program graph → parallel Kai inference
+  → freeze confident nodes, refine the rest → constraints + policy → human → Decision Package
+```
+
+Inside Enso, Kai is the in-process controller for model, context, tools, reasoning budget,
+stopping and escalation.
+
+## Motivation
+
+Generative models are asked two kinds of question. Open ones: reason, write, explain, plan.
+Bounded ones: which model, which tool, which file, is the evidence sufficient, how severe, did
+the last step make progress, which option meets the constraints, does a human approve. The
+second kind has a known answer space. Generating prose for it costs tokens, latency and context,
+needs a parser, and is not reproducible. Hanzo separates decision from generation: Zen stays for
+open work; Kai takes bounded judgment.
+
+## Specification
+
+### §1 Vocabulary
+
+Normative terms. **Hanzo Decision**: the capability and API. **Kai**: the decision model.
+**Zen**: the generative family. **Enso**: the router family (HIP-0510); it routes each operation to Kai or Zen. **Decision Program**:
+a versioned, executable description of a decision. **Decision Package**: the reproducible record
+of one program run. **Evidence**: anything a program may read. **Adapter**: maps one modality into
+evidence. **Policy**: deterministic authority. **Decision Plane**: the runtime subsystem that
+evaluates bounded decisions with Kai. Laya and Jev are baselines, not platform vocabulary.
+
+### §2 One Kai
+
+There is one model line, `hanzoai/kai`. Language, domain, modality or hardware MUST NOT spawn
+separate product families (`kai-english`, `kai-agent`, `kai-sensor`, …). New checkpoints,
+adapters, quantizations and training stages are revisions of the one line; each MUST be
+identified by an immutable revision or digest, and every Decision Package MUST record it.
+
+### §3 Encoder
+
+Kai's text encoder is mmBERT-base, initialized from the Laya multilingual weights: one encoder
+for every language, 8K context, smaller than the ModernBERT-large encoder of the English
+baseline. Whether it keeps that baseline's English accuracy is an empirical question the
+harness (§18) MUST answer.
+
+### §4 Evidence
+
+Everything a decision reads is Evidence:
+
+```rust
+Evidence { id, modality, source, time, payload, provenance, uncertainty, metadata }
+```
+
+Modalities include text, code, document, image, video, audio, waveform, series, telemetry,
+point cloud, radar, thermal, geospatial, table, graph, SysML, simulation, tool output, agent
+trace, human assertion, model output, and `Custom(name)` (e.g. `CAN-J1939`, `MIL-STD-1553`).
+Evidence MUST keep enough metadata to say what was observed and where it came from; modalities
+MAY add unit, sample rate, frame, sensor identity, calibration, quality, error bound, language,
+timing, schema or model revision.
+
+#### §4.1 Adapters
+
+Each modality reaches the shared evidence space through an adapter. A new source SHOULD need a
+new adapter, never a new Decision Program API. Evidence is encoded once per changed evidence
+state.
+
+#### §4.2 Sensors
+
+Numeric sensor data MUST NOT have to be serialized as prose. An observation SHOULD keep value,
+unit, channel, time, rate, sensor, frame, uncertainty, calibration, quality and provenance, so
+43.2 °C, 43.2 psi and 43.2 mm/s differ and an expired calibration weakens the evidence. The
+interface MUST extend to sensors nobody listed.
+
+#### §4.3 Time
+
+Raw series MAY pass through a temporal adapter. Kai SHOULD read temporal state: current value,
+window, trend, derivative, anomaly score, baseline deviation, forecast, quality. Forecasting is
+a separate model's job; its forecasts are evidence.
+
+#### §4.4 Audio and video
+
+Audio MUST carry both speech content and acoustic signal; a transcript alone does not conform
+where sound is evidence (alarms, machinery, vibration). Video SHOULD reach Kai as events from
+frames and clips, retrieved before deciding, never as unbounded frame tokens.
+
+#### §4.5 Engineering models
+
+SysML is evidence. A model SHOULD compile into the engineering knowledge graph or a Decision
+Program, not be flattened to prose, and a decision MUST trace back to the element ids and
+model revision it used.
+
+### §5 Decision Programs
+
+A program MAY hold objectives, options, constraints, assumptions, risks, bias checks, evidence,
+provenance, typed variables, dependency edges, deterministic, Kai, Zen, graph, simulation and
+solver nodes, policy gates, human approvals and refresh rules. The model is part of the program,
+not the program.
+
+### §6 Typed variables
+
+Kai MUST support: **choice** (one of a set; the distribution exposed where practical);
+**score** (ordinal; modeled as ordered, not as unordered classes); **predicate** (a calibrated
+boolean); **defer** (abstain: insufficient evidence, out of distribution, conflict, human
+judgment required). Kai MUST NOT be made to invent certainty.
+
+### §7 Large choice sets
+
+Kai MUST NOT depend on packing every option into one shared prompt. Large sets use candidate
+retrieval, then independent option scoring, then joint refinement where needed; candidate
+representations MAY be compiled and cached per program version. Targets span 10 to 100,000+
+candidates; these are scale targets, not results.
+
+### §8 Joint decoding
+
+Kai SHALL predict many program variables in one execution, from one encoding of the evidence;
+it MUST NOT need one full encoder pass per variable. With variables `Z = {z_1 … z_n}`, each in its
+own domain `D_i`, Kai models `p(Z_M | E, Z_¬M, G)`: the masked subset `M` given evidence `E`, the
+visible variables and the program graph `G`.
+
+### §9 Refinement and dependencies
+
+Parallel does not mean committed independently. Kai SHOULD predict all unresolved variables,
+freeze confident ones, refine uncertain or dependent ones, then project onto constraints.
+Independent branches resolve in the same wave; a node waits only for its parents, so the number
+of waves follows graph depth, not variable count.
+
+### §10 Constraints and policy
+
+Hard requirements (equations, optimization, SAT/SMT, schemas, physical bounds, business rules,
+security restrictions) MUST be enforced outside the model. Kai MAY inform a solver and MUST NOT
+override one. Policy is authoritative: actions join on `ALLOW < ASK < DENY`, so a learned model
+can tighten a verdict and MUST NOT weaken a deterministic denial.
+
+### §11 Conflict
+
+Conflicting evidence is a valid state (telemetry normal, video shows damage; simulation passes,
+test fails; requirement ≤ 500 kg, model 530 kg). Kai MUST be trained and evaluated on cases whose
+correct answer is `evidence_conflict = true`, `decision_ready = false`, `human_review = true`.
+
+### §12 Decision Packages
+
+A material run MAY produce a Decision Package holding the program and version, result and
+alternatives, objectives, constraints, assumptions, risks, bias checks, evidence, provenance,
+source hashes, model and calibration revisions, distributions, solver and policy results,
+overrides, approvals, sensitivity, flip conditions, trace and a reproduction manifest. The
+question a package answers is whether the decision can be inspected, replayed, refreshed and
+reproduced.
+
+#### §12.1 What flips the decision
+
+The runtime SHALL compute sensitivity itself: vary objectives, constraints, assumptions,
+evidence, forecasts, risks, cost, schedule or confidence, and report the boundary where the
+result changes. Zen MAY describe those results and MUST NOT invent them.
+
+#### §12.2 Refresh
+
+When evidence changes, only affected nodes recompute. A refreshed package keeps the previous and
+new result, changed evidence, assumptions and constraints, affected nodes, boundaries crossed and
+new approvals.
+
+### §13 Enso
+
+Kai SHALL be native to Enso: `enso.decide("agent.preflight@4", state)` runs in process, with no
+network hop when co-resident; `/v1/decisions` serves external callers. Kai MAY control model and
+provider, context and retrieval depth, tools and skills (HIP-1322), reasoning budget, decoding
+strategy (autoregressive, speculative, parallel draft, block diffusion, verification depth),
+cache retention, progress, completion, retry, escalation and human approval.
+Enso routes each operation: a bounded decision goes to Kai; generation, or a decision Kai defers,
+goes to Zen.
+
+#### §13.1 Modes
+
+Every program runs `shadow` (Kai decides and logs; behaviour unchanged), `advisory` or
+`enforced`, set per program. Kai MUST start in shadow.
+
+#### §13.2 Minimum sufficient compute
+
+Routing supervision SHOULD target the cheapest model that succeeds, not the largest. A
+cost-aware objective MAY take the form `L = L_failure + λ·C_compute + μ·C_latency` under a quality
+constraint. Context reduction counts only when downstream quality holds.
+
+#### §13.3 Customer programs
+
+Organizations MAY define their own programs (typed questions, options, thresholds) and specialize
+Kai on validated outcomes through adapters, never a full model per tenant. Stable programs SHOULD
+compile to a plan: question and candidate representations, indexes, graph, thresholds,
+calibration and policy bindings, reused per request.
+
+#### §13.4 Learning
+
+Production traffic MUST NOT change weights synchronously. Traces go to a buffer, then offline
+training, benchmark, shadow, and a controlled promotion; every promoted checkpoint has an
+immutable version.
+
+### §14 Personalized decisions
+
+Recommendation, routing, UI, workflow and notification choices are one primitive: state,
+evidence, candidates and policy in, a typed decision out. Kai MAY adapt at global, domain, tenant,
+cohort, session and user scope, layered: base model, domain adapter, tenant adapter, user
+preference state. Per-user adaptation SHOULD be state and lightweight adapters, not a checkpoint
+per user. Preference state is probabilistic and revisable: each value keeps its prior, its
+current estimate and a confidence.
+
+#### §14.1 Commerce
+
+A catalog compiles to a product graph: category, attributes, variants, price, inventory,
+compatibility, merchant, signals. Recommendation is a large choice (§7): eligibility and
+retrieval, Kai ranking, joint refinement. A program such as `commerce.recommend` (intent, price
+sensitivity, novelty, best product, needs clarification) makes each recommendation inspectable,
+and its flip conditions computable (§12.1). Zen explains a ranking; it does not produce one.
+
+#### §14.2 Outcomes and consent
+
+Interactions are graded supervision: a skipped impression is weak, a click or comparison
+medium, a purchase strong, a purchase kept stronger, a return or refund negative. Counterfactual
+replay targets the product that served the user best, not the most popular one. Every trace
+carries source, consent scope, tenant, retention and allowed use, and policy, not model code,
+decides `may_personalize`, `may_train_tenant` and `may_train_global`. Identifiable per-user
+behaviour MUST NOT reach global training without that permission.
+
+#### §14.3 Autopilot
+
+A business runs on bounded decisions followed by generation and execution. Kai decides who, what,
+when, why and through which channel: enrichment (industry, size, role, interest, intent, budget,
+urgency, channel, readiness; each typed, scored, deferrable), lead fit and intent, next action,
+offer, cadence, handoff to a human, stop. Zen writes the message; Enso routes each step; Policy
+decides whether contact is permitted (consent, opt-outs, caps, quiet hours, jurisdiction, age,
+suppression, sensitive attributes), so Kai may prefer SMS and policy may still forbid it. Each
+program (`marketing.*`, `sales.*`, `commerce.*`) owns its outcome metrics (replies, qualified
+meetings, pipeline, purchases, unsubscribes, cost per qualified lead) and is evaluated
+counterfactually, then in shadow and A/B, before it acts. Supervision is the action with the best
+downstream outcome, not the previous model's choice.
+
+Programs, modes, thresholds, adapters and data-use policy are configured in Hanzo Cloud, where decisions mounts as
+an app (HIP-0106), and signals arrive natively from product analytics (HIP-1190), insights and commerce (HIP-1220):
+no export step between the data and the decision.
+
+### §15 Training
+
+Three stages on one checkpoint line:
+
+- **A, decisions**: harness train splits, MASSIVE, CLINC150, XNLI, SST-5, large choice sets with
+  hard negatives, order and label perturbations, agent control, coding decisions (file, symbol,
+  test, failure category, continue, done, commit-ready), tool and skill selection. Outcome labels
+  (tests, CI, diffs, accepted edits) are preferred over preferences.
+- **B, adapters**: the encoder frozen or nearly so; sensors, time series, audio, image, video,
+  graph, SysML, simulation. Public sources (HAR, CWRU, C-MAPSS, MIMII, UCR/UEA, Monash, NASA
+  battery) under their licences.
+- **C, programs**: whole programs with random and structured masks, dependencies, corrupted
+  visible values, contradictions, missing evidence, `defer`, cross-modal cases.
+
+Engineering data MAY be generated: requirements, components, interfaces, parameters, constraints
+and verification cases, then controlled mutations with exact labels and expected decision
+changes, compiled to programs. Multilingual training SHOULD target decision invariance across
+languages (parallel examples, code-switching, low-resource sampling, balanced batches) and MUST
+report per-language results. Training and evaluation data MUST stay separate; a test set is
+never trained on.
+
+Every build is barriered against every evaluation item: an equal content unit, an instance key, a
+near duplicate (5-gram Jaccard ≥ 0.5) or contained spans exclude a training record. A stage MAY
+name a benchmark's official train split in `official`; there only the item itself (equal unit or
+key) is excluded, since a templated benchmark's train and test states are near by construction.
+A result under `official` MUST say so and MUST name the baseline trained on the same split.
+
+A specialist trained on another encoder (for example the English ModernBERT-large of the Laya
+typed-decisions baseline) MAY serve as a teacher for the one line. It is never served (§2).
+
+### §16 Training infrastructure
+
+The trainer SHOULD span Hanzo's heterogeneous fleet (Metal, CUDA, ROCm) and MUST support resume,
+versioned data, model revision tracking and optimizer-state recovery. A run MUST NOT be the only
+copy of its own progress. A full stage-A run SHOULD start only when resume works, the CUDA and
+ROCm builds are validated, and the stage-A mixture is built and versioned; a run on an obsolete
+encoder is not the Kai lineage because compute was spent on it.
+
+The trainer is local SGD with an outer Nesterov step: `train fit --listen` coordinates and trains,
+`train join` adds a machine at any time, and deltas are summed in join order. It has run on Metal
+(M4 Max), CUDA (GB10) and ROCm (Radeon 8060S) together. On a 2% pilot, CUDA and Metal agree on mean
+validation accuracy (0.500 against 0.504 over 48 suites). A unified-memory worker MUST keep its
+micro-batch within the OS memory guard: at half the budget, the ROCm worker was killed by
+`earlyoom` within three rounds, while a quarter held.
+
+### §17 API
+
+`POST /v1/decisions`, with questions:
+
+```json
+{"model": "kai", "state": {}, "questions": {}}
+```
+
+or a program and evidence:
+
+```json
+{"model": "kai", "program": "agent.preflight@4", "evidence": [], "state": {}}
+```
+
+A response carries the decision id, program and version, model revision, typed answers,
+probabilities, calibration revision, usage and trace link. The request is the Decisions shape Jev
+clients already send, so there is no second endpoint.
+
+### §18 Evaluation
+
+Rehosted weights are not an improvement: until Kai's own training lands, its quality is its
+source weights' quality, at runtime parity. Every gain names its source (runtime, architecture,
+training, calibration, retrieval, modality, joint decoding). Baselines: Laya, Jev, Zen used as a
+decision model, static rules, embedding retrieval. Axes are reported apart:
+
+- quality: accuracy, ranking, ordinal error, Brier, log loss, ECE, abstention;
+- generalization: held-out domains, languages, paraphrase, relabelling, reordering;
+- cardinality: small, Banking77, CLINC150, 1K, 10K, 100K+, recall@K apart from reranking;
+- robustness: permutation, irrelevant options, contradiction, missing evidence, OOD;
+- runtime: CPU and GPU latency, throughput, memory, batch scaling, load time;
+- joint decoding: decisions per pass, rounds, program consistency, constraint violations.
+
+Documentation MUST NOT turn a target into a claim.
+
+Measured on the frozen harness (`hanzoai/benchmarks` `decision/`, Laya's own builders, one
+question set scored by one function for every backend). Kai is stage `a5`, one epoch from `a4`
+with typed decisions' official split read whole (`hanzoai/decision` `train/stages/a5.json`),
+results `decision/results/kai-a5` (b07ba42). † marks a suite drawn from rows Laya trained on.
+
+| suite | Kai a5 | Laya | Jev |
+|---|---|---|---|
+| AG News | **0.950** | **0.950** | 0.860 |
+| emotion | **0.925** | 0.595 | 0.603 |
+| Banking77 (77) | **0.907** | 0.425 | 0.835 |
+| support triage | **0.490** | 0.502 † | 0.365 |
+| email spam | 0.995 | **0.998** | 0.978 |
+| phishing | **0.990** | 0.983 † | 0.900 |
+| jailbreak | 0.915 | 0.705 | **0.940** |
+| toxicity | **0.820** | 0.530 | 0.662 |
+| RAG relevance | **0.667** | 0.625 | 0.620 |
+| routing | **1.000** | 0.639 | 0.977 |
+| typed decisions | 0.705 | **0.766** (Laya's typed checkpoint) | 0.736 |
+| MASSIVE, 51 languages | 0.888 | 0.382 | **0.890** |
+| macro, 11 suites | **0.851** | 0.702 | 0.770 |
+
+Kai is best of three in 8 of 12 suites, counting only backends that did not train on a suite's
+rows (Laya 3, Jev 2; AG News a tie).
+
+The two † suites are rebuilt on rows none of the three trained on (`decision/held`, 6273430):
+phishing from a corpus outside Laya's mix, deduplicated exactly, by 5-gram Jaccard and by
+containment; support tickets generated through Hanzo's API over the same ten queues and
+cross-checked by a second model (98.6% agreement). There Laya leads both: phishing 0.922 against
+Kai's 0.900 (Laya read 0.983 on its own training rows), support triage 0.580 against 0.417, where
+Kai answers Billing and Payments for 111 of 400 tickets, 40 of them billing.
+
+#### §18.1 Kai in the loop
+
+Enso SHALL support the study: does Kai remove generative compute at equal task success? Baseline
+B0: Zen does the work and its own control. Also B1 static routing, R1 Zen as its own router, and
+cumulative Kai conditions K1 model routing, K2 + context, K3 + tools and skills, K4 + progress
+and completion, K5 the full plane. Per successful task: GPU-seconds, prompt and generated tokens,
+KV-cache GB-seconds, peak VRAM, latency, model calls, agent steps, energy where measured, cost;
+`C_success = Σ C_task / successful tasks`. Routing regret against the cheapest successful model:
+`R = C_Kai − C_cheapest`.
+
+### §19 Observability
+
+Every material decision SHOULD record decision and trace id, program and version, model revision,
+evidence references, answer, distribution, calibration revision, latency, device, usage, mode,
+override and downstream outcome: the record that debugging, calibration, training, replay and cost
+attribution all read.
+
+### §20 Deployment
+
+Kai SHOULD run self-hosted: Hanzo Cloud, a customer cloud or cluster, a private GPU fleet,
+on-premises, disconnected, or at the edge, as hardware allows. A conforming deployment MUST NOT
+require sending evidence to a third-party model provider.
+
+### §21 Conformance
+
+A conforming system: treats Kai as a decision model, never an authority; types every decision;
+keeps uncertainty; supports `defer`; cannot let Kai weaken policy; keeps provenance sufficient for
+the application; versions programs; records the model revision in every material package; shares
+one encoding across a state's decisions; needs no generative call per bounded decision; serves
+`/v1/decisions`. Multimodal and joint decoding MAY be staged while this HIP is Draft.
+
+### §22 Status
+
+Descriptive, not normative, as of `hanzoai/decision` main `bb819a6`.
+
+- **Landed**:
+  - Decision Programs and Packages, what-flips analysis, SysML v2 import, the engineering
+    knowledge graph, a cited JLTV powertrain trade, and refinement passes;
+  - the Laya baseline served natively (21 states, 108/108 labels at parity);
+  - the heterogeneous resumable trainer (§16);
+  - the stage-A corpus and its barrier, with `official` splits (§15);
+  - trained Kai checkpoints: stage `a5` beside Laya and Jev on the frozen and held-out suites
+    (§18); the shipped programs pin `kai` at a5's calibration `cal_47711d44267fdbdd`;
+  - the structured selector: a program's MAP over each slot's top-K by bucket elimination
+    (`kai::field`), and incremental encoding of a new chunk over cached keys and values.
+- **In progress**:
+  - `POST /v1/decisions` on api.hanzo.ai, served privately from Hanzo's own storage;
+  - stage `a6`: score questions as a choice over their levels with the ranked probability
+    score, a typed-decisions teacher, and support-queue data against the held-out losses;
+  - evidence adapters, the joint decoder, the Enso study.
+- **Not claimed**:
+  - Kai ahead of Laya and Jev on every suite;
+  - multimodal accuracy;
+  - Enso savings;
+  - any end-to-end engineering or acquisition result.
+
+## Rationale
+
+One large model can imitate every role here. It is not therefore the cheapest, most testable,
+most controllable or most auditable way to fill them. Hanzo splits intelligence into perception,
+retrieval, forecasting, decision, generation, mathematics, policy and execution, and composes them
+through Enso and Hanzo Decision, so generative compute is spent where generation is the work.
+
+The program tests four hypotheses, each unproven until measured: **H1** bounded decisions cost
+far less on a typed decision model than through generative routing, at equal task success;
+**H2** retrieval plus independent option scoring removes the cardinality limit of prompt-packed
+decision models; **H3** encoding evidence once and resolving variables jointly lowers cost as
+decisions per state grow; **H4** masked parallel prediction with dependency-aware refinement
+yields consistent program state without serial decision calls.
+
+Observe everything. Encode once. Decide in parallel. Refine uncertainty. Enforce constraints.
+Keep provenance. Escalate when needed. Generate only when generation is the work. Zen generates,
+Enso routes, Kai decides.
+
+## Security Considerations
+
+Kai's output is untrusted probabilistic computation until the surrounding program accepts it.
+Anything security-relevant stays behind deterministic policy (§10), which Kai can tighten and
+never loosen. Evidence keeps its provenance, so a decision shows which sources it rested on and
+an injected or unsigned source can be weighed or refused. A deployment SHOULD be able to restrict
+evidence sources, external providers, data egress, model revisions, programs, action classes and
+tenant scope. Kai MUST NOT replace human acquisition or approval authority, and readiness claims
+MUST rest on demonstrated integrated capability, never on the architecture described here.
+
+## References
+
+- HIP-0004 LLM gateway; HIP-0010 MCP; HIP-0043 inference engine; HIP-0113 engine provider runtime;
+  HIP-0106 the cloud plugin contract; HIP-0124 bring your own provider; HIP-1190 product analytics; HIP-1220 commerce;
+  HIP-1322 skills; HIP-1330 the agent loop.
+- `hanzoai/decision` `LLM.md` at `d419552`: architecture, crates, models, training.
+- Baselines: Laya 0.3.20 (typed decision models and runtime); Jev (typed decision API).
+- Data: mmBERT; MASSIVE; CLINC150; XNLI; SST-5; UCR/UEA; Monash; CWRU; NASA C-MAPSS; MIMII;
+  NASA battery data.
+
+## Copyright
+
+Copyright and related rights waived via [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
+
+
+---
+
 <!-- hip-0014 -->
 
 ---
@@ -371231,7 +374148,7 @@ Every Hanzo service MUST be deployable through Platform. The deployment flow is:
 **Production**: https://platform.hanzo.ai
 **Port**: 3000 (Platform UI), 5173 (legacy admin)
 **Docker**: `ghcr.io/hanzoai/platform:latest`
-**Cluster**: hanzo-k8s (`24.199.76.156`)
+**Cluster**: hanzo-k8s
 
 ## Motivation
 
@@ -372456,7 +375373,6 @@ status: Final
 implementation-go: partial
 created: 2025-01-15
 requires: HIP-0027, HIP-0033, HIP-0142
-capability: ci
 ---
 
 
@@ -373041,10 +375957,10 @@ GET    /v1/zones/{zone}/export            Export zone in RFC 1035 format
 ```json
 {
   "id": "rec_abc123", "zone": "hanzo.ai", "name": "api",
-  "type": "A", "value": "24.199.76.156", "ttl": 300,
+  "type": "A", "value": "192.0.2.10", "ttl": 300,
   "geo": {
     "enabled": true,
-    "regions": { "na": "24.199.76.156", "eu": "138.68.100.42", "ap": "128.199.200.15" }
+    "regions": { "na": "192.0.2.10", "eu": "198.51.100.10", "ap": "203.0.113.10" }
   },
   "metadata": { "managed_by": "platform", "deployment_id": "dep_xyz789" }
 }
@@ -373083,11 +375999,11 @@ For domains served by Hanzo Edge (CDN), the `hanzo_geo` plugin returns different
 // edge.json -- geo-routing configuration
 {
   "api.hanzo.ai": {
-    "default": "24.199.76.156",
+    "default": "192.0.2.10",
     "regions": {
-      "NA": "24.199.76.156",
-      "EU": "138.68.100.42",
-      "AP": "128.199.200.15"
+      "NA": "192.0.2.10",
+      "EU": "198.51.100.10",
+      "AP": "203.0.113.10"
     },
     "healthcheck": {
       "interval": "10s",
@@ -373224,7 +376140,7 @@ hanzo dns zones create lux.network           # Create a zone
 hanzo dns records hanzo.ai                   # List records for hanzo.ai
 hanzo dns records hanzo.ai add               # Interactive record creation
 hanzo dns records hanzo.ai add \
-  --name api --type A --value 24.199.76.156  # Non-interactive
+  --name api --type A --value 192.0.2.10     # Non-interactive
 hanzo dns records hanzo.ai delete rec_abc123 # Delete a record
 
 # Diagnostics
@@ -373567,7 +376483,7 @@ Visor is the presentation and intelligence layer that sits on top of the observa
 **Docker**: `ghcr.io/hanzoai/visor:latest`
 **API Port**: 8053
 **Grafana Port**: 3053
-**Production**: `visor.hanzo.ai` on `hanzo-k8s` cluster (`24.199.76.156`)
+**Production**: `visor.hanzo.ai` on the `hanzo-k8s` cluster
 
 ## Motivation
 
@@ -374458,7 +377374,7 @@ status: Final
 implementation-go: shipped
 created: 2026-02-23
 requires: HIP-1061, HIP-0050, HIP-0139
-capability: function
+capability: functions
 ---
 
 
@@ -376700,7 +379616,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0069"
-title: Service Discovery and Automated Bridge
+title: Service Discovery & Auto-Bridge
 type: Standards Track
 category: Infrastructure
 status: Final
@@ -376711,7 +379627,7 @@ requires: HIP-0007, HIP-0010, HIP-0068
 ---
 
 
-# HIP-0069: Service Discovery and Automated Bridge
+# HIP-0069: Service Discovery & Auto-Bridge
 
 ## Abstract
 
@@ -377881,7 +380797,7 @@ and the HIP both cite from the same authoritative source.
 
 ---
 hip: "0078"
-title: Z-Chain — Post Quantum Identity and Attestation Rollup
+title: Z-Chain — Post-Quantum Identity & Attestation Rollup
 type: Standards Track
 category: Infrastructure
 status: Draft
@@ -377891,7 +380807,7 @@ created: 2026-05-10
 ---
 
 
-# HIP-0078: Z-Chain — Post Quantum Identity and Attestation Rollup
+# HIP-0078: Z-Chain — Post-Quantum Identity & Attestation Rollup
 
 ## Abstract
 
@@ -378392,7 +381308,7 @@ the prior HIP-0077 is retired with the migration to Z-Chain v1
 
 ---
 hip: "0101"
-title: Hanzo Lux Bridge Protocol Integration
+title: Hanzo-Lux Bridge Protocol Integration
 description: Lock-and-mint bridge between Hanzo's AI-optimized L1 and Lux Network's settlement layer
 author: Hanzo AI Team
 type: Standards Track
@@ -378404,7 +381320,7 @@ requires: HIP-0001, HIP-0005, HIP-0008, HIP-0024
 ---
 
 
-# HIP-0101: Hanzo Lux Bridge Protocol Integration
+# HIP-0101: Hanzo-Lux Bridge Protocol Integration
 
 ## Abstract
 
@@ -379590,7 +382506,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0103"
-title: Bridge Post Quantum Profile
+title: Bridge PQ-Only Profile
 type: Standards Track
 category: Infrastructure
 status: Final
@@ -379600,7 +382516,7 @@ requires: HIP-0005, HIP-0077, HIP-0078, HIP-0079, HIP-0084, HIP-0085, HIP-0086, 
 ---
 
 
-# HIP-0103: Bridge Post Quantum Profile
+# HIP-0103: Bridge PQ-Only Profile
 
 ## Abstract
 
@@ -379864,7 +382780,7 @@ CC0.
 
 ---
 hip: "0105"
-title: In Process Extension Runtime Standard
+title: In-Process Extension Runtime Standard
 author: Hanzo AI Team
 type: Standards Track
 category: Infrastructure
@@ -379877,7 +382793,7 @@ requires: HIP-0026
 
 
 
-# HIP-0105: In Process Extension Runtime Standard
+# HIP-0105: In-Process Extension Runtime Standard
 
 ## Abstract
 
@@ -382230,7 +385146,7 @@ follows the phases below.
 
 ---
 hip: "0108"
-title: On Demand Subsystem Supervisor and Warm Pool
+title: On-Demand Subsystem Supervisor + Warm Pool
 author: Hanzo AI Team
 type: Standards Track
 category: Infrastructure
@@ -382241,7 +385157,7 @@ requires: HIP-0105, HIP-0106, HIP-0107, HIP-0302
 ---
 
 
-# HIP-0108: On Demand Subsystem Supervisor and Warm Pool
+# HIP-0108: On-Demand Subsystem Supervisor + Warm Pool
 
 ## Abstract
 
@@ -383281,7 +386197,7 @@ this HIP by reference and MUST NOT restate or fork it.
 
 ---
 hip: "0117"
-title: Cloud in a Box — One Binary Three Modes
+title: Cloud-in-a-Box — One Binary, Three Modes
 author: Hanzo AI Team
 type: Standards Track
 category: Infrastructure
@@ -383293,7 +386209,7 @@ requires: HIP-0036, HIP-0106, HIP-0400
 ---
 
 
-# HIP-0117: Cloud in a Box — One Binary Three Modes
+# HIP-0117: Cloud-in-a-Box — One Binary, Three Modes
 
 ## Abstract
 
@@ -383648,7 +386564,7 @@ listener. iam and gateway follow the same split.
 
 ---
 hip: "0122"
-title: zip — The ZAP Native Application Server Core
+title: zip — The ZAP-Native Application Server Core
 author: Hanzo AI Team
 type: Standards Track
 category: Infrastructure
@@ -383660,7 +386576,7 @@ requires: HIP-0026, HIP-0105, HIP-0114, HIP-0120
 ---
 
 
-# HIP-0122: zip — The ZAP Native Application Server Core
+# HIP-0122: zip — The ZAP-Native Application Server Core
 
 ## Abstract
 
@@ -384106,7 +387022,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0125"
-title: Consensus Plugin Placement Platform
+title: Consensus-Backed Plugin-Placement Platform
 author: Hanzo AI Team
 type: Standards Track
 category: Infrastructure
@@ -384118,7 +387034,7 @@ requires: HIP-0026, HIP-0027, HIP-0105, HIP-0106, HIP-0107, HIP-0114, HIP-0302
 
 
 
-# HIP-0125: Consensus Plugin Placement Platform
+# HIP-0125: Consensus-Backed Plugin-Placement Platform
 
 ## Abstract
 
@@ -390058,7 +392974,7 @@ This standard is adopted by LP-102 (Lux) and ZIP-0803 (Zoo) with ecosystem-speci
 
 ---
 hip: "0305"
-title: esign — Shared Database Tenancy
+title: "esign: shared-DB tenancy via team-where, not file-per-tenant"
 author: Zach Kelling (zach@hanzo.ai)
 type: Standards Track
 category: Infrastructure
@@ -390068,7 +392984,7 @@ requires: HIP-0302
 ---
 
 
-# HIP-0305: esign — Shared Database Tenancy
+# HIP-0305: esign: shared-DB tenancy via team-where, not file-per-tenant
 
 ## Abstract
 
@@ -392240,29 +395156,35 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1062
-title: Tasks — The Durable Run
+title: Workflow — The Durable Run
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
-capability: tasks
+capability: workflow
 status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0119, HIP-0139
 ---
 
-# HIP-1062: Tasks — The Durable Run
+# HIP-1062: Workflow — The Durable Run
 
 ## Abstract
 
 A durable run is work that survives the process that started it. `hanzoai/tasks`
 is the event-sourced engine that provides one — workflows, activities, schedules,
-task queues, workers — and `/v1/tasks` is the cloud's endpoint onto it, together with
+task queues, workers — and `/v1/workflow` is the cloud's endpoint onto it, together with
 the studio the run history is read in.
+
+The address is the engine's own word: a run here is a workflow made of
+activities. It answered at `/v1/tasks`, beside a `/v1/task` that is the work-item
+board (HIP-1160), so one word named two planes and neither name was the thing.
+The Go module keeps its own spelling — `github.com/hanzoai/tasks`, imported by
+dozens of modules — because a module path is not a surface.
 
 This HIP specifies the endpoint: which engine answers, how a request becomes a
 tenant's shard, and why this surface is a relay rather than a typed operation set.
-The implementation is `hanzoai/cloud` `apps/tasks`.
+The implementation is `hanzoai/cloud` `apps/workflow`.
 
 ## Motivation
 
@@ -392286,7 +395208,7 @@ in RFC 2119.
 
 This subsystem MUST NOT create an engine. The cloud binary embeds exactly one
 (`cloud/durable.go`), shared with the durable ingest path, and this endpoint mounts
-that engine's handlers. The Tasks product and the ingest path therefore read the
+that engine's handlers. The Workflow product and the ingest path therefore read the
 same durable state.
 
 The engine is wired after mounting, so the surface resolves it lazily per request
@@ -392297,7 +395219,7 @@ existed would be reporting on itself.
 
 A process that does not own an engine MUST NOT open another process's store. It
 asks: the engine's owner publishes an org-scoped read on the internal plane
-(`apps/tasks/activities_rpc.go:34`) and the writer stays where it is.
+(`apps/workflow/activities_rpc.go:34`) and the writer stays where it is.
 
 The org on that read is the caller's own and cannot be named in the input, so a
 caller can never page another tenant's activities. The namespace is the caller's
@@ -392324,7 +395246,7 @@ A typed operation is one method at one path with one input and one output; it is
 also the single registry entry every projection reads, so anything outside it
 publishes no schema, no tool and no client method. The engine's surface cannot fit
 that shape, and each blocker is measured rather than asserted
-(`apps/tasks/typed_wire_test.go`):
+(`apps/workflow/typed_wire_test.go`):
 
 - The bare noun answers a redirect to its own subtree on every method, decided by
   the engine's router before any handler runs. A typed operation has no vocabulary
@@ -392350,31 +395272,31 @@ free to drift from the one that actually answers.
 ### Schedules are a facet, not a subsystem
 
 Platform cron mounts no routes. It registers durable schedules on this same
-engine, and is folded in here so there is one tasks subsystem rather than two that
+engine, and is folded in here so there is one durable subsystem rather than two that
 must agree.
 
 ### Addresses, and the one that is legacy
 
 The endpoint serves two shapes — the bare noun's redirect and the one wildcard route
 that carries the engine's operation set, on every method — under one prefix,
-`/v1/tasks`. The bare `/tasks` the studio shipped with is gone.
+`/v1/workflow`. The bare `/tasks` the studio shipped with is gone.
 
 The studio is not a cloud address. It is its own image (`ghcr.io/hanzoai/admin-tasks`,
 built from `hanzoai/admin` `apps/tasks` at base `/`) at the root of
-`tasks.hanzo.ai`, like `todo` and `meet` before it. The `/tasks` pair was
+`tasks.hanzo.ai`, like `task` and `meet` before it. The `/tasks` pair was
 ledgered in `openapi/misfiled.txt` and closes by deletion, not by fold.
 
 It is the one of the three that could not simply move, and the reason belongs
 here because it decides the ROUTING rather than the code. The studio reads
-`/v1/tasks` with same-origin credentials and carries no bearer, so the
-arrangement `todo` and `meet` use — a static host and a cross-origin API —
+`/v1/workflow` with same-origin credentials and carries no bearer, so the
+arrangement `task` and `meet` use — a static host and a cross-origin API —
 would send no credential at all. So the host is split at the edge instead: the
-bundle from its own pods, `/v1/tasks` to cloud, which is the shape
+bundle from its own pods, `/v1/workflow` to cloud, which is the shape
 `console.hanzo.ai` already runs. The browser sees one origin, and nothing about
 the requests cloud receives changes.
 
 That split carves ONE prefix, measured against the built bundle rather than
-assumed. The bundle names three — `/v1/tasks`, `/v1/csrf`, `/v1/iam` — and only
+assumed. The bundle names three — `/v1/workflow`, `/v1/csrf`, `/v1/iam` — and only
 the first is same-origin: `/v1/csrf` is fetched through `@hanzogui/admin`'s
 `apiUrl()`, which resolves to the brand's API origin on every `hanzo.ai` host,
 and `/v1/iam` belongs to shared IAM-policy screens this app routes nowhere.
@@ -392387,7 +395309,7 @@ it; a second store here would be the second copy of the engine's model this HIP
 refuses everywhere else.
 
 It is free, in those words: the plugin declares `Price: cloud.Free`
-(plugin/tasks/main.go:25), and no meter runs behind any route.
+(plugin/workflow/main.go:25), and no meter runs behind any route.
 
 It publishes no events on the platform bus, so a customer's webhooks (HIP-1310)
 receive nothing from it. It emits nothing to observability beyond the request
@@ -392399,7 +395321,7 @@ engine's own record, not from exported spans.
 The stage is `ga` — the manifest row declares none, and absent is `ga`
 (HIP-0139 §8).
 
-The engine is `hanzoai/tasks` (pinned v1.52.9 in cloud's go.mod), a fork of
+The engine is `hanzoai/tasks` (pinned v1.53.4 in cloud's go.mod), a fork of
 Temporal (MIT). What survives in HEAD is the event-sourced core — workflows,
 activities, schedules, task queues, workers — embedded in-process
 (`tasksengine.Embed`), with the gRPC surface removed.
@@ -392425,6 +395347,7 @@ org is not an input, so the only shard a caller can address is its own.
 - HIP-0026 — Identity and Access Management
 - HIP-0106 — Hanzo Plugin Contract
 - HIP-0119 — Hanzo Service Conventions
+- HIP-1160 — Task: the work-item board that took the other word
 
 ## Copyright
 
@@ -392682,7 +395605,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1103
-title: Audit — Tamper Evident Trail
+title: Audit — The Tamper-Evident Trail
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -392693,7 +395616,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
 ---
 
-# HIP-1103: Audit — Tamper Evident Trail
+# HIP-1103: Audit — The Tamper-Evident Trail
 
 ## Abstract
 
@@ -393254,7 +396177,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1113
-title: Cloudflare — Edge Network Integration
+title: Cloudflare — The Per-Org Asset Plane
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -393265,7 +396188,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0126, HIP-0139
 ---
 
-# HIP-1113: Cloudflare — Edge Network Integration
+# HIP-1113: Cloudflare — The Per-Org Asset Plane
 
 ## Abstract
 
@@ -394148,7 +397071,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1132
-title: Index — Full Text Search
+title: Index — Full-Text Search
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -394159,7 +397082,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
 ---
 
-# HIP-1132: Index — Full Text Search
+# HIP-1132: Index — Full-Text Search
 
 ## Abstract
 
@@ -395259,7 +398182,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1151
-title: Settings — Product Configuration
+title: Settings — Per-Product Org Configuration
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -395270,7 +398193,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
 ---
 
-# HIP-1151: Settings — Product Configuration
+# HIP-1151: Settings — Per-Product Org Configuration
 
 ## Abstract
 
@@ -395653,18 +398576,18 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1172
-title: Compute — Rented Virtual Hardware
+title: visor — Compute You Rent
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
-capability: compute
+capability: visor
 status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
 ---
 
-# HIP-1172: Compute — Rented Virtual Hardware
+# HIP-1172: visor — Compute You Rent
 
 ## Abstract
 
@@ -395924,7 +398847,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1173
-title: Network — Zero Trust Network Overlay
+title: Network — An Org-Scoped Overlay
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -395935,7 +398858,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0139
 ---
 
-# HIP-1173: Network — Zero Trust Network Overlay
+# HIP-1173: Network — An Org-Scoped Overlay
 
 ## Abstract
 
@@ -396118,206 +399041,6 @@ forever.
 ## Copyright
 
 Released under CC0 1.0 Universal Public Domain Dedication.
-
-
----
-
-<!-- hip-1191 -->
-
----
-hip: 1191
-title: Billing — Invoicing and Metered Usage
-author: Hanzo AI
-type: Standards Track
-category: Infrastructure
-capability: billing
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
----
-
-# HIP-1191: Billing — Invoicing and Metered Usage
-
-## Abstract
-
-`/v1/billing` is the canonical capability for billing within the Hanzo Cloud platform.
-Package billing is your org's balance, what it has spent, and the cards it pays with.
-The implementation is `hanzoai/cloud` `apps/billing` and `plugin/billing` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
-
-## Motivation
-
-Before this specification, billing operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
-
-## Specification
-
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
-
-### §1 Addresses and Operations
-
-The `billing` capability answers exclusively under its assigned route prefixes:
-
-| Method | Path | Summary |
-|---|---|---|
-| `GET` | `/v1/billing/accounts` | Answers the caller's billing accounts: the org itself, its currency, when it was opened... |
-| `GET` | `/v1/billing/accounts/{id}/members` | Answers one billing account's roster. |
-| `GET` | `/v1/billing/alerts` | Lists this org's spend caps: the ceiling, its scope, whether it enforces, and how much ... |
-| `POST` | `/v1/billing/alerts` | Opens a spend cap on the caller's own org. |
-| `GET` | `/v1/billing/alerts/authorize` | Answers whether one proposed spend fits inside this org's caps. |
-| `DELETE` | `/v1/billing/alerts/{id}` | Removes one of the caller's spend caps and answers 204. |
-| `PATCH` | `/v1/billing/alerts/{id}` | Changes one spend cap: raise or lower the ceiling, flip enforcement, retune the rate li... |
-| `GET` | `/v1/billing/balance` | Prepaid credit the caller's org can still spend |
-| `GET` | `/v1/billing/credit-balance` | Answers what the caller can spend right now, one entry per currency. |
-| `GET` | `/v1/billing/credit-balance/breakdown` | Answers that same spendable credit split by grant tag, with the earliest expiry under e... |
-| `GET` | `/v1/billing/credits` | Lists the caller's credit grants — every one of them, spent and lapsed and voided inclu... |
-| `POST` | `/v1/billing/crypto/deposit` | Issues a deposit address the caller can send crypto to, on the asset they ask for. |
-| `GET` | `/v1/billing/crypto/deposit/{id}` | Reads one of the caller's own deposit intents back — pending, confirming, or succeeded. |
-| `GET` | `/v1/billing/crypto/options` | Answers which chains and tokens the crypto rail accepts — what an asset picker renders. |
-| `GET` | `/v1/billing/invoices` | Lists the caller's invoices, newest first, with the count beside them. |
-| `POST` | `/v1/billing/invoices` | Raise a draft invoice against a customer |
-| `GET` | `/v1/billing/invoices/{id}` | Read one invoice |
-| `POST` | `/v1/billing/invoices/{id}/collect` | Collect an issued invoice from credits, balance, then card |
-| `POST` | `/v1/billing/invoices/{id}/issue` | Issue a draft invoice, making it collectible |
-| `GET` | `/v1/billing/invoices/{id}/pdf` | Download one invoice as a PDF |
-| `POST` | `/v1/billing/invoices/{id}/void` | Void a draft or issued invoice |
-| `GET` | `/v1/billing/ledger` | Answers the org's own postings inside `range=`, each as a signed entry: a DEPOSIT CREDI... |
-| `GET` | `/v1/billing/methods` | Cards and accounts on file for the caller |
-| `POST` | `/v1/billing/methods` | Save a card or account for the caller |
-| `DELETE` | `/v1/billing/methods/{id}` | Removes one card or account the caller has saved. |
-| `POST` | `/v1/billing/mode` | Moves this org between sandbox money and real money. |
-| `GET` | `/v1/billing/payouts` | Answers the org's outbound payouts, newest first — amount, destination, status, and the... |
-| `GET` | `/v1/billing/plans` | The plan catalog, priced with whatever offer is in force |
-| `GET` | `/v1/billing/portal/methods` | Cards and accounts on file for the caller |
-| `POST` | `/v1/billing/portal/methods` | Save a card or account for the caller |
-| `DELETE` | `/v1/billing/portal/methods/{id}` | DetachPortalMethod is DetachMethod at the address a hosted checkout addresses it by. |
-| `GET` | `/v1/billing/recharge` | Reads the caller's auto-reload rule: top the balance up by `amountCents` whenever it fa... |
-| `PUT` | `/v1/billing/recharge` | Sets the caller's auto-reload rule, and answers with the rule as stored. |
-| `POST` | `/v1/billing/recharge/run-all` | Sweeps every org's auto-recharge and answers what it did. |
-| `GET` | `/v1/billing/settings` | Answers the PUBLIC half of this org's processor configuration — the ids a browser needs... |
-| `POST` | `/v1/billing/subscribe/card` | Buy a plan with a card |
-| `GET` | `/v1/billing/subscriptions` | Lists the plans the caller holds, with the count beside them. |
-| `POST` | `/v1/billing/subscriptions/{id}/cancel` | End a subscription |
-| `POST` | `/v1/billing/subscriptions/{id}/reactivate` | Put a canceled subscription back on its plan |
-| `GET` | `/v1/billing/tier` | Answers which tier the caller is on, what it allows, and what is left to spend. |
-| `POST` | `/v1/billing/topup` | Charges a card the caller already saved and credits the balance. |
-| `POST` | `/v1/billing/topup/token` | Charges a single-use card token and credits the caller's balance. |
-| `GET` | `/v1/billing/transactions` | Answers one page of the caller's own ledger, newest first: what moved, how much, when, ... |
-| `GET` | `/v1/billing/transactions/{id}` | Reads one ledger entry by its id. |
-| `GET` | `/v1/billing/usage` | Every billed call the caller's org made, attributed to a product |
-| `GET` | `/v1/billing/usage/accounts` | Answers per-account totals for the linked provider accounts the gateway ROUTED this cal... |
-| `GET` | `/v1/billing/usage/rollup` | Answers the caller's month: what their plan includes, what has been consumed against it... |
-| `GET` | `/v1/billing/wire` | Answers where to send a wire top-up: the receiving bank details, with the caller's own ... |
-
-### §2 Storage and Physical Isolation
-
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/billing.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
-
-### §3 Authentication and Principal
-
-Every request reaching `/v1/billing` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
-
-## Security Considerations
-
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
-
-## References
-
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
-
-
----
-
-<!-- hip-1192 -->
-
----
-hip: 1192
-title: Space — Drives Folders and File Storage
-author: Hanzo AI
-type: Standards Track
-category: Infrastructure
-capability: space
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
----
-
-# HIP-1192: Space — Drives Folders and File Storage
-
-## Abstract
-
-`/v1/space` is the canonical capability for space within the Hanzo Cloud platform.
-Package space is where work lives: drives, folders and the files in them.
-The implementation is `hanzoai/cloud` `apps/space` and `plugin/space` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
-
-## Motivation
-
-Before this specification, space operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
-
-## Specification
-
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
-
-### §1 Addresses and Operations
-
-The `space` capability answers exclusively under its assigned route prefixes:
-
-| Method | Path | Summary |
-|---|---|---|
-| `GET` | `/v1/space/health` | Health reports whether this deployment can serve spaces, drives and files. |
-| `GET` | `/v1/space/spaces` | Lists the caller org's own spaces. |
-| `POST` | `/v1/space/spaces` | Makes a new space for the caller's org and answers 201 with it. |
-| `GET` | `/v1/space/{space}/drives` | Lists a space's drives. |
-| `POST` | `/v1/space/{space}/drives` | Makes a new drive in a space and answers 201 with it. |
-| `DELETE` | `/v1/space/{space}/drives/{drive}` | Removes an EMPTY drive and answers 204. |
-| `GET` | `/v1/space/{space}/drives/{drive}/files` | Lists one folder level of a drive. |
-| `GET` | `/v1/space/{space}/drives/{drive}/files/{wildcard1}` | Mints a URL the caller downloads the file from DIRECTLY. |
-| `PUT` | `/v1/space/{space}/drives/{drive}/files/{wildcard1}` | Mints a URL the caller uploads the file to DIRECTLY. |
-| `DELETE` | `/v1/space/{space}/drives/{drive}/files/{wildcard1}` | Removes one file and answers 204. |
-
-### §2 Storage and Physical Isolation
-
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/space.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
-
-### §3 Authentication and Principal
-
-Every request reaching `/v1/space` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
-
-## Security Considerations
-
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
-
-## References
-
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
 
 
 ---
@@ -396706,6 +399429,11 @@ The vendor-compatible wire — `/v1/chat/completions`, `/v1/completions`,
 vendor SDK hard-codes, is exempt by HIP-0139 §3.2, and belongs to `ai` and to no
 other capability. It MUST NOT move.
 
+Which model a request names is HIP-0511's map: Zen ids generate, `auto` and the
+`enso*` ids are resolved by the Enso router (HIP-0510) before provider and
+billing resolution, and decisions go to Kai at `/v1/decisions` (HIP-1332), not to
+this wire.
+
 ### Everything else answers under /v1/ai
 
 Six satellite roots fold under the capability's own name, each an HTTP binding
@@ -396791,6 +399519,9 @@ canonical routes guard.
 - HIP-0026 — Identity and Access Management
 - HIP-0106 — Hanzo Plugin Contract
 - HIP-0139 — Capability
+- HIP-0510 — Enso, the router family
+- HIP-0511 — Model families
+- HIP-1332 — Kai, the decision model
 
 ## Copyright
 
@@ -396950,7 +399681,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1213
-title: Tool — Tool Execution Plane
+title: Tools — The Tool Plane
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
@@ -396958,10 +399689,10 @@ status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0139, HIP-0106, HIP-0300
-capability: tool
+capability: tools
 ---
 
-# HIP-1213: Tool — Tool Execution Plane
+# HIP-1213: Tools — The Tool Plane
 
 ## Abstract
 
@@ -397726,18 +400457,18 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1250
-title: Integration — Connection Registry
+title: Integrations — The Connection Registry
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
-capability: integration
+capability: integrations
 status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0026, HIP-0027, HIP-0106, HIP-0139
 ---
 
-# HIP-1250: Integration — Connection Registry
+# HIP-1250: Integrations — The Connection Registry
 
 ## Abstract
 
@@ -400023,7 +402754,6 @@ title: Forge — The Meta Code Host
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
-capability: forge
 status: Draft
 created: 2026-09-08
 requires: HIP-0106, HIP-0139, HIP-1114, HIP-1122, HIP-1232
@@ -400045,6 +402775,12 @@ The name follows the shape: the current service hosts repositories (HIP-1232);
 the proposed service federates hosts. `/v1/code` (HIP-1114) is the search surface
 this makes cross-platform, and the GitOps plane (HIP-1122) is what runs against
 a repository Forge does not own.
+
+Nothing here is shipped. Cloud serves no `/v1/forge` and holds no `forge` row in
+its manifest — repositories answer at `/v1/git` today (HIP-1232) — so this HIP
+declares no `capability:` in front matter. It claims the name when the prefix is
+served, and not before; a Draft that reserves a capability slot makes the coverage
+gate report a spec for a surface a caller cannot call.
 
 ## Motivation
 
@@ -400167,10 +402903,11 @@ down degrades the result set, never the request.
 
 ### 6. Surface
 
-Forge answers under `/v1/forge`, one capability, one prefix (HIP-0139).
-`/v1/code` remains the search surface and gains the federated corpus. `/v1/git`
-remains what it is for repositories Forge does host — the paid, durable case, and
-our own.
+Forge would answer under `/v1/forge`, one capability, one prefix (HIP-0139), and
+that prefix is unclaimed today — the front matter takes it on the commit that
+serves it. `/v1/code` remains the search surface and gains the federated corpus.
+`/v1/git` remains what it is for repositories Forge does host — the paid, durable
+case, and our own.
 
 ## Assumptions
 
@@ -400222,77 +402959,210 @@ that Forge holds no copy of, the rest of this document is a proposal.
 
 ---
 
-<!-- hip-1329 -->
+<!-- hip-1330 -->
 
 ---
-hip: 1329
-title: Plugins — Dynamic Process and Host Control
+hip: 1330
+title: Dev — The Agent Loop
 author: Hanzo AI
 type: Standards Track
 category: Infrastructure
-capability: plugins
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
+capability: dev
+status: Draft
+implementation-go: partial
+created: 2026-09-18
+requires: HIP-0026, HIP-0106, HIP-0114, HIP-0139, HIP-1146
 ---
 
-# HIP-1329: Plugins — Dynamic Process and Host Control
+# HIP-1330: Dev — The Agent Loop
 
 ## Abstract
 
-`/v1/plugins` is the canonical capability for plugins within the Hanzo Cloud platform.
-Package plugin is what each host is running, and how to change it: enable, disable, reload, or pin a service to a version.
-The implementation is `hanzoai/cloud` `apps/plugins` and `plugin/plugins` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
+`/v1/dev` is the canonical capability for running a coding agent in cloud. It owns
+the loop — session state, model calls, tool choice, plan — and owns no execution.
+Every effect on an operating system is leased from sandbox (HIP-1146), which runs
+it under visor with a kernel of its own. The implementation is `hanzoai/cloud`
+`apps/dev` plus `plugin/dev`, the reasoning core is `hanzoai/dev`, and the two meet
+over one protocol of events and actions encoded in ZAP (HIP-0114).
 
 ## Motivation
 
-Before this specification, plugins operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
+A coding agent is two different programs wearing one name. One of them reasons:
+it holds a conversation, picks tools, plans an edit, and never touches a file. The
+other one runs `cargo test`: real processes, real signals, real pty, arbitrary
+native code. Run both inside the isolation boundary and every model token, every
+context operation and every cloud call pays to cross it. Run both outside and
+there is no boundary.
+
+Split at the actual seam and each half gets the environment it needs. The loop
+runs in-process, at in-process latency. The effects run in a cell that can be
+killed, and a turn enters that cell two or three times rather than living in it.
 
 ## Specification
 
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
+### The boundary
 
-### §1 Addresses and Operations
+    THINK                            DO
 
-The `plugins` capability answers exclusively under its assigned route prefixes:
+    /v1/dev + dev core               sandbox → visor
+    ──────────────────               ───────────────
+    reason                Action     exec
+    ask a model           ─────▶     shell
+    choose tools                     compiler
+    hold context                     git
+    plan edits            ◀─────     pty
+                       Observation   files
 
-| Method | Path | Summary |
-|---|---|---|
-| `GET` | `/v1/admin/plugins` | Reports what each host is actually running: every loaded plugin with its version, pid, ... |
-| `POST` | `/v1/admin/plugins/{name}/disable` | Stops the plugin. |
-| `POST` | `/v1/admin/plugins/{name}/enable` | Brings a stopped or disabled plugin back on the artifact it already has: the zero Plugi... |
-| `POST` | `/v1/admin/plugins/{name}/reload` | Swaps a plugin for another build without dropping a request. |
+- **dev core (`hanzoai/dev`, Rust)** holds conversation and reasoning state, picks
+  tools, plans patches, compacts context, schedules sub-agents. It reads nothing
+  from a disk and opens no socket.
+- **`/v1/dev` (Go)** is identity, model routing, quota, streaming, the session
+  record, the action ledger, and the capability policy that decides which actions
+  are allowed to happen at all.
+- **sandbox (HIP-1146)** is untrusted Linux: processes, signals, pipes, ptys,
+  shells, compilers, package managers, git. It is leased per session and its
+  runtime class is visor.
+- **Workspace** is served to the cell; the cell holds no storage credential, and
+  the bytes live in s3. A compiler takes its files from the host (HIP-0114).
 
-### §2 Storage and Physical Isolation
+### The protocol
 
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/plugins.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
+One protocol, three deployments: `hanzo dev` on a laptop, `/v1/dev` in cloud, and
+a remote session over ZAP all speak it. Events go in, actions come out.
 
-### §3 Authentication and Principal
+    Event                 Action
+    ─────                 ──────
+    Turn                  Model
+    Model                 Read
+    Exec                  Write
+    File                  Patch
+    Git                   Exec
+    Browse                Git
+    Timer                 Browse
+    Cancel                Emit
+                          Save
+                          Done
 
-Every request reaching `/v1/plugins` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
+The payload is a ZAP message, not a C struct and not JSON: the buffer is the
+message, so a turn that ships thousands of file reads pays for no parse and no
+copy. Count the messages before calling serialization cheap.
+
+### Hosting the core
+
+The core is one Rust library with one C ABI — open a session, step it with an
+event, snapshot it, restore it, drop it — and that ABI is the export list of a
+wasm module unchanged (`make wasm` in `hanzoai/dev`). Two hosts, one loop:
+
+    native   `libdev.a` behind the C header, for a host that shares its memory
+    wasm     `dev.wasm` under wazero, for cloud
+
+Cloud takes the wasm build. It needs no cgo and no Rust toolchain in cloud's own
+build, a session is an instance with memory of its own, and a panic in the core
+is a trap the host survives rather than something that must be caught before it
+crosses a C boundary. A host that shares no memory with the module borrows some
+(`dev_alloc`, `dev_release`) to pass an event in and receive the actions out.
+
+**The import list is the proof that the core touches nothing.** The module asks
+its host for `environ_get`, `environ_sizes_get`, `fd_write` and `proc_exit` — and
+for no file, no socket, no clock and no source of randomness. "The core reads
+nothing from a disk and opens no socket" is therefore a property a build can
+check, not one a review has to notice; a change that grows the list has given the
+loop an effect of its own.
+
+Measured from a wazero host: compile 85 ms once per process, instantiate 46 µs,
+a step 86 µs, a snapshot 21 µs, about 1 MiB a session. The loop's cost is the
+model's latency and the cell's; the boundary between host and core is not where
+the time goes.
+
+### Actions carry identity
+
+Every action the core emits carries an id. The ledger records dispatch and
+completion under that id, and an observation names the id it answers.
+
+    Exec{id: 7821, argv: ["cargo", "test"]}
+
+    7821 dispatched
+    7821 completed
+
+If the service dies after `cargo test` ran and before the core saw the result, the
+**result** is replayed; the command is not run twice. The same rule covers
+`git commit`, `rm`, a publish, a write, a browser POST. So: decisions are
+replayable, effects are deduplicated, and at-least-once delivery of an event does
+not mean at-least-once execution of an effect.
+
+### A session is three facts, persisted apart
+
+    state       the core's own snapshot
+    workspace   a content-addressed snapshot id
+    journal     the action ledger, at a sequence number
+
+Suspend is: snapshot the core, checkpoint the workspace, end the lease. Resume is:
+lease a cell, mount the snapshot, restore the core, continue from the sequence
+number. A cell is never the session — a lease can be lost at any moment, and the
+three facts above are always enough to rebuild. Sandbox checkpoints stay an
+optimization for a warm environment, never the record.
+
+Durability is `hanzoai/tasks` and nothing else (HIP-1300 family): a session is a
+workflow, a step is a step, and a pipeline resumes at the step it died on. There
+is no second async system.
+
+### The surface
+
+    POST   /v1/dev              start a session
+    GET    /v1/dev              list sessions
+    GET    /v1/dev/:id          one session: state, lease, sequence
+    POST   /v1/dev/:id          a turn, or an answer to a question
+    DELETE /v1/dev/:id          stop, and release the lease
+    POST   /v1/dev/:id/suspend  snapshot and release
+    POST   /v1/dev/:id/resume   lease, restore, continue
+    GET    /v1/dev/:id/stream   deltas as they happen
+
+CLI, MCP and Slack are projections of this surface, not three implementations of
+it: one typed op becomes REST, the document, a tool and a command.
+
+## Rationale
+
+**Why not put the whole agent in the cell.** Every model token, state transition
+and cloud call would cross an isolation boundary that exists to contain `rm -rf`.
+The boundary's job is the untrusted half.
+
+**Why not wasm for the effect half.** A coding agent's tools are ordinary Linux
+executables. wasm needs each one ported; visor runs the ELF that already exists,
+with process, signal, pipe and filesystem semantics. wasm keeps the lanes it
+already wins — deterministic typecheck and bundle, per-session isolation at
+millisecond latency (`/v1/typecheck`, `/v1/bundle`).
+
+**Why the cell gets a connected socket and not a socket namespace.** A pair is
+created, one end is handed in as a descriptor, and there is no listen, no connect,
+no path in a filesystem and no host namespace exposed. Sequenced packets map onto
+ZAP frames as they are.
+
+**Why the workspace is a mount and not credentials.** The cell issues ordinary
+`openat`, `rename`, `readdir`; the host answers, caches locally, and persists to
+s3. Reads of a hot tree hit local cache, so `git status` does not become thirty
+thousand object gets, and no storage credential is ever inside the boundary.
 
 ## Security Considerations
 
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
+The cell holds no credential: not the storage key, not the model key, not the
+caller's token. Actions are policy-checked in `/v1/dev` before dispatch, so
+"which effects may happen" is answered outside the thing being contained. IAM is
+the only identity (HIP-0026); a machine identity gets the authority of a machine.
+The ledger is the audit record of every effect attempted, with its id, its
+dispatch and its answer.
 
 ## References
 
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
+- HIP-0026 — IAM
+- HIP-0106 — one binary, host and plugins
+- HIP-0114 — ZAP transport
+- HIP-0139 — one capability, one prefix, one plugin
+- HIP-1146 — Sandbox: a lease on isolated compute
+- HIP-1212 — Exec: the code interpreter
+
+## Copyright
+
+Copyright and related rights waived via CC0.
 
 
 ---
@@ -403396,7 +406266,7 @@ Per-organization configuration managed through Console:
 
 ### Production Deployment
 
-Console runs on the **hanzo-k8s** DOKS cluster at `24.199.76.156`:
+Console runs on the **hanzo-k8s** cluster:
 
 ```yaml
 # compose.prod.yaml (simplified)
@@ -403554,8 +406424,8 @@ Production Console supports IP-based access restriction:
 
 ```yaml
 # Per-organization IP allowlist
-CONSOLE_IP_ALLOWLIST_HANZO: "24.199.76.0/24,10.0.0.0/8"
-CONSOLE_IP_ALLOWLIST_LUX: "24.144.69.0/24,10.0.0.0/8"
+CONSOLE_IP_ALLOWLIST_HANZO: "198.51.100.0/24,10.0.0.0/8"
+CONSOLE_IP_ALLOWLIST_LUX: "203.0.113.0/24,10.0.0.0/8"
 ```
 
 Requests from non-allowlisted IPs receive a 403 Forbidden response. This is enforced by Hanzo Ingress middleware (HIP-0068), before the request reaches the Console application.
@@ -403655,7 +406525,7 @@ Copyright and related rights waived via [CC0](https://creativecommons.org/public
 
 ---
 hip: "0040"
-title: Multilanguage SDK Standard
+title: Multi-Language SDK Standard
 author: Hanzo AI Team
 type: Standards Track
 category: Interface
@@ -403668,7 +406538,7 @@ requires: HIP-0004
 ---
 
 
-# HIP-0040: Multilanguage SDK Standard
+# HIP-0040: Multi-Language SDK Standard
 
 ## Abstract
 
@@ -406772,7 +409642,6 @@ category: Interface
 status: Draft
 created: 2026-02-23
 requires: HIP-0026, HIP-0144, HIP-0143, HIP-1061, HIP-1190
-capability: notify
 ---
 
 # HIP-0061: Notification & Messaging Service Standard
@@ -406788,7 +409657,7 @@ The service distinguishes between transactional notifications (auth codes, recei
 **Repository**: [github.com/hanzoai/notify](https://github.com/hanzoai/notify)
 **Port**: 8061
 **Docker**: `ghcr.io/hanzoai/notify:latest`
-**Cluster**: `hanzo-k8s` (`24.199.76.156`)
+**Cluster**: `hanzo-k8s`
 
 ## Motivation
 
@@ -407520,7 +410389,7 @@ status: Final
 implementation-go: shipped
 created: 2026-02-23
 requires: HIP-1190, HIP-0139, HIP-1311
-capability: flag
+capability: flags
 ---
 
 
@@ -408392,7 +411261,7 @@ writes one to disk and never echoes one in a result.
 
 ---
 hip: "0504"
-title: Unified Cross Platform Design System
+title: Unified Cross-Platform Design System
 author: Hanzo AI Team
 type: Standards Track
 category: Interface
@@ -408402,7 +411271,7 @@ requires: HIP-0036
 ---
 
 
-# HIP-0504: Unified Cross Platform Design System
+# HIP-0504: Unified Cross-Platform Design System
 
 ## Abstract
 
@@ -409134,7 +412003,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1021
-title: Chain RPC Endpoint
+title: Chain JSON-RPC Endpoint
 author: Hanzo AI
 type: Standards Track
 category: Interface
@@ -409144,7 +412013,7 @@ created: 2026-08-20
 requires: HIP-1020
 ---
 
-# HIP-1021: Chain RPC Endpoint
+# HIP-1021: Chain JSON-RPC Endpoint
 
 ## Abstract
 
@@ -409431,7 +412300,6 @@ status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0119, HIP-0122, HIP-0128, HIP-0135, HIP-0139
-capability: openapi
 ---
 
 # HIP-1030: OpenAPI — The Served Contract
@@ -409479,6 +412347,13 @@ RFC 2119.
 The canonical address is `/v1/openapi.json` (`openapi/openapi.go:75`). House law
 applies: `/v1/` only, no `/api/` prefix, and never a `v2` — the document's own
 shape is versioned by its `openapi` field, and the API's by `/v1`.
+
+The host serves it, not an app. There is no `openapi` row in cloud's manifest and
+no `plugin/openapi` binary, because the document is a projection of every app's
+router and a projection cannot be one of the things it projects. So this HIP
+declares no `capability:` in front matter: a capability is one `/v1/<name>` the
+fleet serves (HIP-0139), and what is described here is the host's own route. The
+same is true of the command projection in §7.
 
 `/.well-known/openapi.json` MUST be an ALIAS answered from the same render
 (`openapi/openapi.go:101`), never a second document. A client that has never seen
@@ -409576,9 +412451,9 @@ and a floor sized to the smaller document would accept the loss of every product
 the projection already drops. The customer contract is its own ratchet: it is
 small enough to compare WHOLE, so a shrink and a leak are both a diff in it.
 
-### §6 What the capability owns, meters and emits
+### §6 What this owns, meters and emits
 
-This capability **owns no store**. The document is a render of the routers;
+The document **has no store**. It is a render of the routers;
 what is committed — `openapi.yaml`, `private.yaml`, each `plugin/<app>/openapi.json`
 subset, the two ratchet files of §5 — is artifact, not state, regenerated from
 source and verified byte-for-byte. There is nothing to migrate and nothing a
@@ -409589,8 +412464,8 @@ credential and does not vary by caller (§1), so there is no claim to read and
 nothing to refuse but a write — and there are no writes.
 
 Reading the document is **free**, said in those words: the serving code is the
-`openapi` package linked into the host, and no meter sits on the path. The
-capability publishes **no events** on the bus — a regeneration is a commit,
+`openapi` package linked into the host, and no meter sits on the path. It
+publishes **no events** on the bus — a regeneration is a commit,
 not a runtime fact — and emits nothing to observability beyond the request
 span the route already gets.
 
@@ -410627,18 +413502,18 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1066
-title: Channel — Unified Inbox
+title: Channels — One Inbox
 author: Hanzo AI
 type: Standards Track
 category: Interface
-capability: channel
+capability: channels
 status: Final
 implementation-go: shipped
 created: 2026-08-20
 requires: HIP-0026, HIP-0106, HIP-0126, HIP-0139
 ---
 
-# HIP-1066: Channel — Unified Inbox
+# HIP-1066: Channels — One Inbox
 
 ## Abstract
 
@@ -411693,7 +414568,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: 1112
-title: Catalog — Service Discovery
+title: Catalog — Cross-Org Discovery
 author: Hanzo AI
 type: Standards Track
 category: Interface
@@ -411704,7 +414579,7 @@ created: 2026-08-20
 requires: HIP-0026, HIP-0139
 ---
 
-# HIP-1112: Catalog — Service Discovery
+# HIP-1112: Catalog — Cross-Org Discovery
 
 ## Abstract
 
@@ -412068,114 +414943,139 @@ title: CRM — The Sales Pipeline
 author: Hanzo AI
 type: Standards Track
 category: Interface
-capability: crm
 status: Final
-implementation-go: partial
+implementation-go: shipped
 created: 2026-08-20
-requires: HIP-0026, HIP-0106, HIP-0139
+requires: HIP-0026, HIP-0106, HIP-0139, HIP-1126
 ---
 
 # HIP-1120: CRM — The Sales Pipeline
 
 ## Abstract
 
-`/v1/crm` is an org's sales pipeline: companies, contacts and opportunities,
-plus the Startup Program intake that lands as a scored application. It is
-implemented in `hanzoai/cloud` at `apps/crm`. This HIP states the store, the two
-audiences the surface serves — staff behind the identity boundary and an
-anonymous applicant on one public form — and why exactly one route is not typed.
+Sales is companies, contacts and opportunities, plus the programme intake that
+lands as an application. It is not an address of its own: CRM is a module on the
+document engine (HIP-1126), so the records are framework documents in module
+`crm` and the whole surface is `/v1/framework`. It is implemented in
+`hanzoai/cloud` at `apps/crm`, which declares the document set and nothing else.
+
+This HIP declares no capability in front matter, and that is the point: a
+capability is one `/v1/<name>` the cloud serves, and nothing serves `/v1/crm`.
+What this HIP fixes is the record model, the role that reads it, and the
+boundary that keeps a prospect out of the user roster.
 
 ## Motivation
 
 A CRM contact is a prospect the org tracks, not a product user: the org's own
 users live in IAM, and the marketing subsystem resolves audiences from that
-roster, never from this table (`apps/crm/crm.go:9-13`). Without a capability
-that owns the prospect universe, prospect rows leak into user stores and the two
-contact universes join by accident — which is a privacy defect, not a modelling
-choice. This capability is the one place prospects live.
+roster, never from these documents. Without one place that owns the prospect
+universe, prospect rows leak into user stores and the two contact universes join
+by accident — which is a privacy defect, not a modelling choice.
+
+The second question this settles is where sales records belong at all. A sales
+pipeline is exactly what the document engine is for: a closed set of typed
+records with a lifecycle field, per-org isolation, role-gated CRUD and one
+renderer. Building it as its own app bought a second copy of CRUD, a second
+store, a second permission model, and a name in the fleet for a thing the engine
+already served.
 
 ## Specification
 
 The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted
 as in RFC 2119.
 
-### §1 The store
+### §1 The store is the engine's
 
-crm owns one store: a single SQLite file named `crm` in the deployment's data
-directory (`apps/crm/store.go:40`, `sqlpool.Open`). Every org's rows share the
-file; isolation is the `org` column, which leads every uniqueness and lookup
-index so tenancy is a physical property of the index, not only a WHERE clause
-(`apps/crm/store.go:56-59`). The entity model follows Twenty's `company` /
-`person` / `opportunity` standard objects, with the composite fields flattened
-to scalar columns for SQLite (`apps/crm/crm.go:5-8`); no upstream code is
-imported for it.
+crm opens no store. A company, a contact, an opportunity and an application are
+`framework.DocType` documents carrying the module tag `crm`
+(`apps/crm/crm.go`), and the engine holds them: one SQLite file per org, opened
+by the framework, with every call taking the org as an argument — so the tenant
+boundary is the storage boundary and there is no `org` column to forget.
+
+`apps/crm` declares the document set at init and exports nothing else
+(`framework.RegisterModule`). Its own gates check that every DocType is valid,
+every Link resolves to a DocType that exists, every Select is a closed set, and
+that the module is registered (`apps/crm/crm_test.go`).
 
 ### §2 The addresses
 
-Every route is under `/v1/crm` (`manifest/apps.go:273`). The CRUD over
-companies, contacts and opportunities, `GET /v1/crm/summary`, and the staff
-reads of applications are typed operations; each DELETE answers no body and so
-carries no response schema. One route is a raw handler and MUST stay one:
-`POST /v1/crm/applications`, the public Startup Program intake. Its rate limit
-and 64 KiB body cap are HTTP middleware, and the MCP and CLI projections of a
-typed op do not run middleware — typing it would publish an unmetered alias of a
-deliberately limited public endpoint (`apps/crm/crm.go:200-207`). Its prose is
-declared beside the wire fact instead (`apps/crm/applications.go:130`).
+There is no `/v1/crm`, and no manifest row claims one. The surface is the
+engine's generic, role-gated one under `/v1/framework`: list, read, write and
+delete a document by `module.kind`, and the console's CRM screens are that same
+DocType renderer scoped to this module. An org gets the lane by installing it —
+`POST /v1/framework/modules/crm/install` — which ensures the four DocTypes exist
+in that org.
 
-### §3 Tenancy
+A module that needs an operational read no generic surface can serve is what
+earns a prefix of its own; `patrol` is the worked example (HIP-1331). crm needs
+none, so it has none.
 
-Staff routes resolve the org from the validated principal
-(`principal.Acting`, `apps/crm/crm.go:433`), minted by the identity boundary
-(HIP-0026); a request the boundary refuses never reaches the store. The intake
-POST is the one unauthenticated route: it takes no principal and never reads a
-caller org — the application is filed against the deployment's own program org,
-so there is no tenant to name and none to leak. Re-submitting the same
-(email, company) refreshes the existing application rather than filing a second.
+### §3 Tenancy and roles
+
+The org is the validated principal's, resolved once by the engine (HIP-0026);
+`apps/crm` never sees a request. Reads and writes admit two roles: the org's
+System Manager, and `CRM User`, which the owner assigns through
+`/v1/framework/roles`. Both are IAM roles in the tenant's own org, and the same
+values appear in the document permissions, so who may touch a record is answered
+in one place.
+
+An application is the one record that arrives from outside the roster: it holds a
+company name, a contact, a stage from a closed set, and the screen a reviewer
+files against it. On acceptance it is promoted into a company and a contact, and
+the promoted rows are Links back to it, so the trail from intake to customer is
+one read.
 
 ### §4 Money, events, telemetry
 
-crm is free, in those words: its plugin declares `cloud.Free`
-(`plugin/crm/main.go:21`) and crm is not in the metered set (`spend.go:275`).
-The AI screen a filed application receives runs on the deployment's own gateway
-credential, not the applicant's. crm publishes no events on the bus, and emits
-nothing to observability beyond the request span every route gets.
+Free. The documents ride the framework's plugin, which declares `cloud.Free`,
+and no meter runs behind a document write. crm publishes no events of its own,
+and emits nothing to observability beyond the request span every framework route
+gets.
 
 ### §5 Stage
 
-crm is `beta`: a vertical application, not the agentic-OS core. The manifest
-row declares it (`manifest/apps.go:273`, `Stage: Beta`; HIP-0139 §8).
+The engine's. crm is not a fleet app, so it carries no stage of its own; what a
+caller is shown is `/v1/framework`'s (HIP-0139 §8).
 
 ### §6 Upstream
 
-crm derives from no third-party code. The one third-party fact is the schema
-lineage stated in §1: the entity model mirrors Twenty's standard objects so a
-migration is a column mapping, and nothing of Twenty's implementation is in the
-tree.
+crm derives from no third-party code. The one third-party fact is schema
+lineage: the entity model mirrors Twenty's standard objects — company, person,
+opportunity — with composite fields flattened to scalar document fields, so a
+migration is a column mapping. Nothing of Twenty's implementation is in the tree.
 
 ## Rationale
 
-One shared file with a leading `org` index, rather than a file per org, because
-CRM rows are small and the summary read is a cross-table count within one org —
-the per-org-file pattern buys physical isolation at the cost of N file handles,
-and here the leading index gives the same fail-closed property for one handle.
-The intake staying raw, rather than teaching typed ops about middleware, keeps
-the typed registry's promise intact: every typed op is safe to project
-everywhere.
+A module rather than an app, because nothing in a sales pipeline is unusual. The
+records are records, the lifecycle is a field, the permissions are roles, and one
+renderer draws all of it. An app would have bought a second CRUD plane, a second
+store and a name in the fleet, and every one of those is a thing that can drift
+from the engine that already did the work.
+
+The cost is that CRM has no address a caller can guess, and that is the honest
+consequence rather than a defect to paper over: a client reaches these records
+the way it reaches any document, by naming `crm.company` at `/v1/framework`.
 
 ## Security Considerations
 
 The wrong implementation leaks the pipeline: every prospect, every deal and its
-amount, to any tenant that can name another's id. The gate is the org from the
-validated principal, never a client-supplied field, and every query filters on
-it. The intake is the other exposure — an unauthenticated write — and it is
-bounded three ways: IP rate limit, body cap, and upsert-on-resubmit, so an
-attacker can neither flood the store nor amplify a row.
+amount, to any tenant that can name another's id. Here the control is the
+engine's and is structural — one file per org, the org supplied by the identity
+boundary as an argument to every call — so a cross-tenant read is not a query a
+caller can shape.
+
+The second exposure is the roster boundary in §Motivation. A prospect is not a
+user: nothing may resolve a notification audience, a seat or an entitlement from
+these documents, and a join between this module and IAM's roster is a privacy
+defect whichever direction it is written in.
 
 ## References
 
 - HIP-0026 — Identity and Access Management
 - HIP-0106 — Hanzo Plugin Contract
 - HIP-0139 — Capability
+- HIP-1126 — Framework: the document engine that serves this module
+- HIP-1331 — Patrol: a module that did earn a prefix, and why
 
 ## Copyright
 
@@ -414499,7 +417399,7 @@ Released under CC0 1.0 Universal Public Domain Dedication.
 
 ---
 hip: "0005"
-title: Post Quantum Security for AI Infrastructure
+title: Post-Quantum Security for AI Infrastructure
 author: Hanzo AI Team
 type: Standards Track
 category: Security
@@ -414511,7 +417411,7 @@ requires: LP-100
 ---
 
 
-# HIP-0005: Post Quantum Security for AI Infrastructure
+# HIP-0005: Post-Quantum Security for AI Infrastructure
 
 ## Abstract
 
@@ -414638,7 +417538,6 @@ category: Infrastructure
 status: Draft
 created: 2025-01-15
 requires: HIP-0027, HIP-0111, HIP-0144
-capability: iam
 ---
 
 # HIP-0026: Identity & Access Management Standard
@@ -416253,7 +419152,7 @@ The principle: **each service gets minimal network access**. The `chat` service,
 The two production clusters (hanzo-k8s and lux-k8s) connect via a WireGuard mesh. Each cluster runs a WireGuard gateway pod that peers with the other cluster:
 
 ```
-hanzo-k8s (24.199.76.156)         lux-k8s (24.144.69.101)
+hanzo-k8s                         lux-k8s
 ┌─────────────────────┐           ┌─────────────────────┐
 │  ┌───────────────┐  │  WireGuard│  ┌───────────────┐  │
 │  │  wg-gateway   │◄─┼──────────┼──►│  wg-gateway   │  │
@@ -416280,7 +419179,7 @@ ListenPort = 51820
 # lux-k8s gateway
 PublicKey = <lux-k8s-public-key>
 AllowedIPs = 10.10.0.2/32, 10.244.0.0/16
-Endpoint = 24.144.69.101:51820
+Endpoint = <lux-k8s-gateway-address>:51820
 PersistentKeepalive = 25
 ```
 
@@ -419848,94 +422747,6 @@ This capability is credential custody, so the exposures are stated plainly.
 ## Copyright
 
 Released under CC0 1.0 Universal Public Domain Dedication.
-
-
----
-
-<!-- hip-1194 -->
-
----
-hip: 1194
-title: Trust — Trust Center and Evidence Controls
-author: Hanzo AI
-type: Standards Track
-category: Security
-capability: trust
-status: Final
-implementation-go: shipped
-created: 2026-09-10
-requires: HIP-0026, HIP-0106, HIP-0139
----
-
-# HIP-1194: Trust — Trust Center and Evidence Controls
-
-## Abstract
-
-`/v1/trust` is the canonical capability for trust within the Hanzo Cloud platform.
-Package trust is your trust centre: the controls you publish, the coverage they compute to, the documents a reviewer asks for, and who you send data to.
-The implementation is `hanzoai/cloud` `apps/trust` and `plugin/trust` (HIP-0106, HIP-0139).
-All operations are native, composable, and authenticated against Hanzo IAM (HIP-0026).
-
-## Motivation
-
-Before this specification, trust operations lacked a unified canonical surface or were scattered
-across disparate endpoints. Under HIP-0139 (§1), every cloud capability maps 1:1 with exactly
-one plugin binary, one address prefix, one client class, and one authoritative specification.
-This eliminates duplicate implementations and ensures strict physical isolation, predictable billing,
-and orthogonal composability across the estate.
-
-## Specification
-
-The key words MUST, MUST NOT, and SHOULD are to be interpreted as in RFC 2119.
-
-### §1 Addresses and Operations
-
-The `trust` capability answers exclusively under its assigned route prefixes:
-
-| Method | Path | Summary |
-|---|---|---|
-| `GET` | `/v1/trust` | Reads YOUR organization's whole trust centre, including the addresses of your own gated... |
-| `GET` | `/v1/trust/controls` | Lists every control your organization publishes, with the counts. |
-| `GET` | `/v1/trust/controls/{id}` | Reads one control by id. |
-| `GET` | `/v1/trust/coverage` | Reads coverage: per framework, how many clauses have an automated control behind them, ... |
-| `GET` | `/v1/trust/coverage/{framework}` | Reads one framework clause by clause: every clause the standard publishes, what covers ... |
-| `GET` | `/v1/trust/documents` | Lists your organization's documents. |
-| `GET` | `/v1/trust/evidence` | Reads the audit rows that stand behind one control, over a window. |
-| `GET` | `/v1/trust/faq` | Lists your knowledge base — the questions a reviewer asks, answered once. |
-| `GET` | `/v1/trust/frameworks` | Lists the frameworks coverage is computed against, and how many clauses each publishes. |
-| `GET` | `/v1/trust/policies` | Lists your organization's published policies. |
-| `GET` | `/v1/trust/profile` | Reads your organization's trust-centre profile — the name, tagline and summary a visito... |
-| `GET` | `/v1/trust/published/{org}` | Reads a published trust centre — the whole thing in one answer: the organization's prof... |
-| `GET` | `/v1/trust/risk` | Reads your risk profile — the label and value pairs describing what your organization h... |
-| `GET` | `/v1/trust/subprocessors` | Lists the third parties your organization sends data to, each naming what it is for. |
-| `GET` | `/v1/trust/updates` | Lists your trust-centre updates, newest as you ordered them. |
-| `PUT` | `/v1/trust/{kind}/{id}` | Writes one record into a section of YOUR organization's trust centre — profile, control... |
-| `DELETE` | `/v1/trust/{kind}/{id}` | Removes one record from a section of your organization's trust centre. |
-
-### §2 Storage and Physical Isolation
-
-Data is isolated physically per organization using `cloud.OrgDB`:
-`{DataDir}/orgs/{org}/trust.db`. Isolation is strictly enforced at the filesystem and OS level;
-no cross-tenant queries are permitted. Where temporal or timeseries data is captured, postings
-are signed and immutably appended.
-
-### §3 Authentication and Principal
-
-Every request reaching `/v1/trust` MUST present a valid Hanzo IAM bearer token (HIP-0026, HIP-0111).
-Anonymous requests are rejected at the edge gateway before invoking the plugin. The executing
-principal is extracted from the token and bound to the request context.
-
-## Security Considerations
-
-1. **Physical Separation**: Each tenant retains an isolated SQLite database file.
-2. **Replay & Channel Binding**: Direct dials and internal RPCs enforce channel binding over ZAP native transport.
-3. **Audit Trails**: All state-modifying actions emit immutable audit events to the centralized event plane (HIP-1190).
-
-## References
-
-- HIP-0026: Identity & Access Management Standard
-- HIP-0106: Hanzo Plugin Contract
-- HIP-0139: Capability Standard
 
 
 ---

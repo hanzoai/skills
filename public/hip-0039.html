@@ -196,329 +196,103 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0039</h1><p class="lede">HIP-39: Zen Model Architecture. Status Final. Hanzo architectural specification.</p><h1>HIP-0039: Zen Model Architecture</h1>
+<h1>hip-0039</h1><p class="lede">HIP-39: Zen — The Open-Weight Generative Family. Status Final. Hanzo architectural specification.</p><h1>HIP-0039: Zen — The Open-Weight Generative Family</h1>
 <h2>Abstract</h2>
-<p>This proposal defines the Zen model family, <a href="https://zoo.industries">Zoo Labs Foundation&#x27;s</a> frontier large language models, and how Hanzo serves them. Zen models use a <strong>Mixture of Diverse Experts (MoDE)</strong> architecture spanning nine sizes from 600M to 480B parameters. The family provides a single, consistent architecture across scales -- from edge devices to datacenter clusters -- with multimodal capabilities (text, vision, audio, code) in the larger variants.</p>
-<p>Zen models are served via the LLM Gateway (HIP-0004) and the dedicated Zen Gateway, which handles model-specific routing, quantization selection, and KV cache management. Model weights are hosted on Hugging Face (zenlm org) and Hanzo Object Storage (HIP-0405).</p>
-<p><strong>Gateway Configuration</strong>: <a href="https://github.com/hanzoai/zen-gateway">github.com/hanzoai/zen-gateway</a> <strong>Model Weights</strong>: <a href="https://huggingface.co/zenlm">huggingface.co/zenlm</a> <strong>Documentation</strong>: <a href="https://zenlm.org">zenlm.org</a></p>
+<p>Zen is Hanzo&#x27;s generative model family: models that write text and code and make images, speech, music, video and 3D, plus the embedding, rerank and guard models published beside them. It ships two ways: open weights in the <code>zenlm</code> organization on Hugging Face, and served SKUs on <code>api.hanzo.ai</code> (HIP-1211). This HIP says what a Zen name means, what an open-weight release must carry, and what exists, as measured on 2026-09-25.</p>
+<pre><code class="lang-text">Zen     generates   open weights, served SKUs      this HIP; Zen6 in HIP-0904
+Enso    routes      model=auto, the Enso SKUs      HIP-0510
+Kai     decides     typed decisions                HIP-1332
+Policy  governs     deterministic authority        HIP-1332 §10</code></pre>
+<p>HIP-0511 maps every family to its HIP, API and host.</p>
+<p>The current generation is Zen6, published 2026-09-21 (HIP-0904). Zen7 is upcoming and unspecified. Satori is being retired; Zen7 succeeds it.</p>
+<p>This revision replaces the 2025 text. That text specified zen-600m to zen-480b checkpoints with a &quot;Mixture of Diverse Experts&quot; design, a zen-gateway, benchmark and throughput tables, and prices. None of those models exists on Hugging Face, in the catalog or on <code>/v1/models</code>, so the text is removed rather than corrected. It is still in git history.</p>
+<h2>Motivation</h2>
+<p>Four places described the family, and no two of them agreed:</p>
+<ul><li>this HIP listed models that were never built;</li><li><code>@zenlm/models</code> 1.0.4 lists the zen5 lineup and has no zen5.8 and no zen6;</li><li><code>/v1/models</code> serves zen5, zen5.8 and zen6;</li><li>Hugging Face holds 85 <code>zenlm</code> repositories, 81 of them public.</li></ul>
+<p>So a reader could not tell which Zen models exist, which are open, or what a served id runs. A family name that means something different in each place is not a contract.</p>
 <h2>Specification</h2>
-<pre><code class="lang-yaml">Core Architecture:
-  Type: Transformer with Mixture of Diverse Experts (MoDE)
-  Attention: Grouped Query Attention (GQA)
-  Position Encoding: Rotary Position Embeddings (RoPE)
-  Activation: SwiGLU
-  Normalization: RMSNorm (pre-norm)
-  Tokenizer: Byte-level BPE (shared across all sizes)
-  Vocabulary: 152,064 tokens
-
-MoDE Configuration (zen-72b example):
-  Total Experts: 64
-  Active Experts per Token: 8
-  Router: Top-k softmax with load balancing loss
-  Expert FFN Hidden Dim: 4096
-  Shared Attention Layers: 80
-  Expert FFN Layers: 80 (interleaved)
-
-Context Window Variants:
-  Standard: 8K / 32K / 128K (per model size)
-  Extended: Up to 1M tokens (zen-480b with YaRN scaling)
-  KV Cache: Paged attention (vLLM) or continuous batching (TGI)</code></pre>
-<pre><code class="lang-yaml">Vision Encoder:
-  Architecture: ViT-L/14 (shared across all multimodal sizes)
-  Resolution: 448x448 (dynamic resolution for larger images)
-  Patch Size: 14x14
-  Output: Projected to model hidden dimension
-
-Audio Encoder:
-  Architecture: Whisper-style encoder
-  Input: 16kHz mel-spectrogram
-  Window: 30-second chunks with overlap
-  Output: Projected to model hidden dimension
-
-Code Encoder:
-  Architecture: Shared tokenizer with code-specific tokens
-  Languages: 50+ programming languages
-  Features: AST-aware tokenization for structured understanding</code></pre>
-<pre><code class="lang-yaml">Formats:
-  FP16:
-    Use: Training, high-accuracy inference
-    Memory: 2 bytes/param
-    Quality: Baseline (100%)
-
-  BF16:
-    Use: Training on Ampere+ GPUs, inference
-    Memory: 2 bytes/param
-    Quality: ~100% (better dynamic range than FP16)
-
-  INT8 (GPTQ):
-    Use: Production inference
-    Memory: 1 byte/param
-    Quality: ~99.5% of FP16
-
-  INT4 (AWQ):
-    Use: Memory-constrained inference, edge deployment
-    Memory: 0.5 bytes/param
-    Quality: ~98% of FP16
-
-  GGUF (llama.cpp):
-    Use: CPU inference, Ollama, local deployment
-    Variants: Q4_K_M, Q5_K_M, Q6_K, Q8_0
-    Quality: 96-99% of FP16 depending on variant
-
-Memory Requirements (zen-72b):
-  FP16:  144 GB (2x A100 80GB or 2x H100 80GB)
-  INT8:   72 GB (1x A100 80GB or 1x H100 80GB)
-  INT4:   36 GB (1x A100 40GB or consumer GPU)
-  Q4_K_M: 40 GB (CPU RAM, ~10 tok/s on Apple M3 Max)</code></pre>
-<pre><code class="lang-yaml">Production (GPU):
-  vLLM:
-    Status: Primary serving backend
-    Features: PagedAttention, continuous batching, tensor parallelism
-    Config: See zen-gateway/configs/vllm/
-
-  TGI (Text Generation Inference):
-    Status: Supported
-    Features: Flash Attention 2, quantization, watermarking
-    Config: See zen-gateway/configs/tgi/
-
-Local / Edge:
-  Ollama:
-    Status: Supported (GGUF format)
-    Models: All sizes via ollama.com/library/zen
-
-  Candle (HIP-0019):
-    Status: Experimental
-    Features: Pure Rust inference, WASM support
-    Use: Edge deployment, browser inference (zen-600m, zen-1b)
-
-  llama.cpp:
-    Status: Supported (GGUF format)
-    Features: CPU + Metal + CUDA inference</code></pre>
-<pre><code class="lang-python">        ]}
-    ]
-)
-
-# Auto-routing via Zen Gateway (selects optimal model size)
-response = client.chat.completions.create(
-    model=&quot;zen-auto&quot;,
-    messages=[
-        {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Write a quicksort in Python.&quot;}
-    ]
-)</code></pre>
-<pre><code class="lang-typescript">// TypeScript SDK
-import OpenAI from &#x27;openai&#x27;;
-
-const client = new OpenAI({
-  baseURL: &#x27;https://llm.hanzo.ai/v1&#x27;,
-  apiKey: &#x27;sk-hanzo-...&#x27;
-});
-
-const response = await client.chat.completions.create({
-  model: &#x27;zen-72b&#x27;,
-  messages: [{ role: &#x27;user&#x27;, content: &#x27;Hello&#x27; }],
-  stream: true
-});</code></pre>
-<h3>Zen Gateway Configuration</h3>
-<pre><code class="lang-yaml"># zen-gateway/config.yaml
-gateway:
-  listen: 0.0.0.0:8080
-  upstream: llm-gateway:4000
-
-models:
-  zen-7b:
-    backend: vllm
-    gpu_memory: 16GB
-    quantization: int8
-    max_batch_size: 64
-    max_context: 32768
-
-  zen-32b:
-    backend: vllm
-    gpu_memory: 80GB
-    quantization: fp16
-    tensor_parallel: 2
-    max_batch_size: 32
-    max_context: 131072
-
-  zen-72b:
-    backend: vllm
-    gpu_memory: 160GB
-    quantization: fp16
-    tensor_parallel: 4
-    max_batch_size: 16
-    max_context: 131072
-
-  zen-480b:
-    backend: vllm
-    gpu_memory: 640GB
-    quantization: fp16
-    tensor_parallel: 8
-    pipeline_parallel: 2
-    max_batch_size: 8
-    max_context: 1048576
-
-routing:
-  auto:
-    strategy: task_complexity
-    rules:
-      - pattern: &quot;classify|label|yes_no&quot;
-        model: zen-7b
-      - pattern: &quot;summarize|translate|explain&quot;
-        model: zen-32b
-      - pattern: &quot;code|debug|refactor&quot;
-        model: zen-72b
-      - pattern: &quot;research|agent|multi_step&quot;
-        model: zen-235b
-    fallback: zen-32b
-
-  kv_cache:
-    shared_prefixes: true
-    max_prefix_length: 4096
-    eviction: lru
-
-  failover:
-    enabled: true
-    cascade: [zen-480b, zen-235b, zen-72b, zen-32b]
-    quality_warning: true</code></pre>
-<h3>Performance Benchmarks</h3>
-<p>| Benchmark | zen-7b | zen-14b | zen-32b | zen-72b | zen-235b | zen-480b | |-----------|--------|---------|---------|---------|----------|----------| | MMLU (5-shot) | 74.2 | 79.8 | 83.1 | 86.4 | 89.2 | 91.7 | | HumanEval (pass@1) | 62.8 | 71.3 | 76.2 | 82.9 | 86.1 | 89.4 | | MATH (4-shot) | 51.6 | 62.4 | 71.8 | 78.3 | 83.7 | 87.2 | | GPQA (0-shot) | 31.2 | 38.7 | 44.1 | 49.8 | 55.6 | 61.3 | | MT-Bench | 7.8 | 8.3 | 8.7 | 9.0 | 9.2 | 9.4 | | IFEval (strict) | 68.4 | 74.1 | 79.6 | 83.2 | 86.8 | 89.1 | | MBPP+ (pass@1) | 58.3 | 66.7 | 72.4 | 78.6 | 82.3 | 85.9 |</p>
-<p><strong>Inference throughput</strong> (vLLM, FP16, A100 80GB):</p>
-<p>| Model | Time to First Token | Tokens/sec (single) | Tokens/sec (batch=32) | |-------|--------------------|--------------------|----------------------| | zen-7b | 18ms | 92 | 2,400 | | zen-14b | 24ms | 71 | 1,800 | | zen-32b | 35ms | 48 | 1,200 | | zen-72b | 52ms | 31 | 780 | | zen-235b | 85ms | 18 | 420 | | zen-480b | 140ms | 11 | 260 |</p>
-<h2>Implementation</h2>
-<h3>Production Deployment</h3>
-<p>Zen models are served via vLLM on GPU clusters managed through Kubernetes:</p>
-<pre><code class="lang-yaml">apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: zen-72b-vllm
-  namespace: zen
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: zen-72b
-  template:
-    metadata:
-      labels:
-        app: zen-72b
-    spec:
-      containers:
-      - name: vllm
-        image: hanzoai/vllm-zen:latest
-        args:
-          - --model=zenlm/zen-72b
-          - --tensor-parallel-size=4
-          - --max-model-len=131072
-          - --enable-prefix-caching
-          - --gpu-memory-utilization=0.92
-        resources:
-          limits:
-            nvidia.com/gpu: 4
-        ports:
-        - containerPort: 8000</code></pre>
-<h3>Chat Integration (HIP-1211)</h3>
-<p>Hanzo Chat exposes 14 Zen model variants to end users:</p>
-<pre><code class="lang-yaml">Chat Model Selector:
-  Small (Fast):
-    - zen-3b       # Quick answers, autocomplete
-    - zen-7b       # General chat, light coding
-  Medium (Balanced):
-    - zen-14b      # Standard conversation
-    - zen-32b      # Document analysis, detailed answers
-  Large (Powerful):
-    - zen-72b      # Complex reasoning, long code generation
-    - zen-235b     # Research, multi-step problem solving
-  Frontier:
-    - zen-480b     # Maximum capability
-  Specialized:
-    - zen-7b-code  # Code-optimized variant
-    - zen-14b-code # Code-optimized variant
-    - zen-32b-math # Math/reasoning-optimized variant
-    - zen-72b-long # 1M context variant
-    - zen-7b-vision  # Vision-focused variant
-    - zen-32b-vision # Vision-focused variant
-    - zen-72b-vision # Vision-focused variant</code></pre>
-<h3>Model Weight Distribution</h3>
-<pre><code class="lang-yaml">Hugging Face (zenlm org):
-  Repository Pattern: zenlm/zen-{size}[-variant]
-  Formats: SafeTensors (primary), GGUF (Ollama/llama.cpp)
-  License: Apache 2.0
-
-Object Storage (HIP-0405):
-  Bucket: models.hanzo.ai/zen/
-  Layout: /zen/{size}/{version}/{format}/
-  CDN: Cloudflare R2 with regional caching
-
-Ollama Registry:
-  Names: zen:7b, zen:14b, zen:32b, zen:72b
-  Pull: ollama pull zen:72b</code></pre>
-<h3>Fine-Tuning Pipeline</h3>
-<pre><code class="lang-yaml">Supported Methods:
-  LoRA:
-    Rank: 8-256 (default 64)
-    Alpha: 2x rank
-    Target Modules: q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj
-    Memory: ~10% of full model
-
-  QLoRA:
-    Base Quantization: INT4 (NF4)
-    LoRA on top: FP16
-    Memory: ~5% of full model
-    Use: Fine-tuning zen-72b on a single A100
-
-  Full Fine-Tune:
-    Available: zen-600m through zen-7b
-    Method: DeepSpeed ZeRO Stage 3
-    Use: When task diverges significantly from base distribution
-
-API:
-  Endpoint: https://api.hanzo.ai/v1/fine-tuning/jobs
-  Compatibility: OpenAI fine-tuning API format</code></pre>
+<p>The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as in RFC 2119.</p>
+<h3>§1 Names</h3>
+<ol><li>A generation id is <code>zen&lt;N&gt;[-&lt;role&gt;]</code>. The generations so far are <code>zen3</code>, <code>zen4</code>, <code>zen5</code>,</li></ol>
+<p>   <code>zen5.8</code> and <code>zen6</code>, and <code>zen7</code> is next. <code>N</code> orders releases. It says nothing about    architecture, size or modality.</p>
+<ol><li>An unversioned line is <code>zen-&lt;role&gt;</code>, for example <code>zen-embedding</code>, <code>zen-guard</code> or <code>zen-vl</code>.</li><li>The same id MAY name both an open-weight repository and a served SKU. They are still two</li></ol>
+<p>   artifacts (§2.3).</p>
+<ol><li><code>zen-router</code> names two things: the Hugging Face classifier <code>zenlm/zen-router</code>, and HIP-0510&#x27;s</li></ol>
+<p>   alias for <code>auto</code>. Nothing in this HIP assumes one is the other.</p>
+<h3>§2 Open weights and served SKUs</h3>
+<ol><li><strong>Open weights</strong> are a public Hugging Face repository under <code>zenlm</code>.</li><li><strong>Served SKUs.</strong> A served SKU is an id that <code>GET https://api.hanzo.ai/v1/models</code> lists with</li></ol>
+<p>   <code>owned_by: zenlm</code>. A SKU is live if and only if that list contains it. A site, doc or catalog    MUST NOT call a SKU available when that list does not contain it.</p>
+<ol><li><strong>A shared name is not a shared artifact.</strong></li></ol>
+<ul><li>A served SKU&#x27;s contract is its id, context window and capabilities, as <code>/v1/models</code></li></ul>
+<p>     reports them. It does not promise the weights of the repository with the same name, and a      caller MUST NOT infer either one from the other.</p>
+<ul><li>Which model serves a SKU, and at what price, is out of scope here (HIP-0130 §3).</li></ul>
+<h3>§3 Release contract</h3>
+<p>Every new open-weight repository in <code>zenlm</code> MUST meet all six of the following:</p>
+<ol><li><strong>Upstream.</strong> Card front matter carries <code>license</code> and <code>base_model</code>. <code>base_model</code> names the</li></ol>
+<p>   repository or repositories whose bytes were copied, quantized or fine-tuned, not just an    ancestor of them.</p>
+<ol><li><strong>Licence files.</strong> The repository contains <code>LICENSE</code>, and also <code>NOTICE</code> where the upstream</li></ol>
+<p>   has one.</p>
+<ol><li><strong>Base.</strong> The base is Qwen3 or later, reached directly or through a named chain of</li></ol>
+<p>   <code>base_model</code> repositories.</p>
+<ol><li><strong>What changed.</strong> The card says what Zen changed relative to the upstream: a re-host, a</li></ol>
+<p>   quantization, a config edit, or a fine-tune together with its recipe. A card MUST NOT call a    re-host trained.</p>
+<ol><li><strong>Config wins.</strong> Where the card and <code>config.json</code> disagree, <code>config.json</code> is the fact and the</li></ol>
+<p>   card is the defect.</p>
+<ol><li><strong>Numbers carry receipts.</strong> A number on a card comes with the harness, its revision, the</li></ol>
+<p>   hardware and the date, or with a receipt file in the repository. zen6&#x27;s <code>qualification.json</code>    is the form to follow (HIP-0904 §6).</p>
+<p>Measured against the 81 public repositories:</p>
+<ul><li><strong>Base (§3.3):</strong> 66 declare a Qwen3-or-later lineage.</li><li>2 declare Qwen-Image, which carries no generation number: zen3-image and zen-image-edit.</li><li>11 declare another base: zen5-mini-gguf (MiniMax), zen5-pro-gguf and zen5-max-gguf</li></ul>
+<p>    (DeepSeek), zen3-guard (Granite), zen3-image-fast (FLUX), zen3-image-ssd (SSD-1B), zen-world,     zen-director and zen-video-i2v (Wan), zen-musician (YuE) and zen-3d (TRELLIS).</p>
+<ul><li>2 declare no base: zen-scribe and zen-translator.</li><li>All 15 of these predate this contract.</li><li><strong>Licence files (§3.2):</strong> the three zen6 repositories carry no <code>LICENSE</code> (HIP-0904 §8).</li><li><strong>Upstream (§3.1):</strong> zen5-gguf&#x27;s card declares <code>Qwen/Qwen3.6-35B-A3B</code>. Its prose says the GGUF</li></ul>
+<p>  was quantized from <code>huihui-ai/Huihui-Qwen3.6-35B-A3B-abliterated</code>, and its file name agrees   with the prose.</p>
+<h3>§4 Lineup</h3>
+<p>This section is a measurement, not a normative list. The lineup changes with every release; the definitions in §2 do not. It was taken on 2026-09-25 with:</p>
+<pre><code class="lang-sh">curl -s https://api.hanzo.ai/v1/models \
+  | jq -r &#x27;.data[] | select(.owned_by==&quot;zenlm&quot;) | &quot;\(.id) \(.context_window)&quot;&#x27;
+curl -s &#x27;https://huggingface.co/api/models?author=zenlm&amp;limit=500&#x27; | jq -r &#x27;.[].id&#x27;</code></pre>
+<p>The authenticated listing returns 85 repositories. The four private ones are <code>zen5-flash-gguf</code> and <code>zen5-nano-{0.8B,2B,4B}-gguf</code>.</p>
+<h4>§4.1 Generations</h4>
+<p>| Generation | Status | Served SKUs | Open weights (<code>zenlm/…</code>) | |:--|:--|:--|:--| | zen3 | open weights only; SKUs retired 2026-05-30 | none | zen3-asr, zen3-asr-0.6B, zen3-asr-aligner, zen3-guard, zen3-image, zen3-image-fast, zen3-image-ssd, zen3-nano, zen3-omni, zen3-tts, zen3-tts-0.6B, zen3-tts-custom-voice, zen3-tts-voice-design, zen3-vl | | zen4 | retired 2026-05-30 | none | none | | zen5 | shipped | zen5, zen5-coder, zen5-flash, zen5-mini, zen5-pro, zen5-spark, zen5-evo | zen5-gguf, zen5-coder-gguf, zen5-mini-gguf, zen5-pro-gguf, zen5-max-gguf, zen5-nano-9B-gguf | | zen5.8 | shipped, served only | zen5.8, zen5.8-coder, zen5.8-spark, zen5.8-evo | none | | zen6 | shipped 2026-09-21 | zen6, zen6-coder | zen6, zen6-coder, zen6-flash (HIP-0904) | | zen7 | upcoming | none | none |</p>
+<p>Four notes on the table:</p>
+<ul><li><strong>Satori and Zen7.</strong></li><li>Satori is being retired. Its GitHub repository <code>zenlm/satori</code> is a scaffold over Open-Sora</li></ul>
+<p>    with no weights; its README says the model is not yet trained.</p>
+<ul><li>Zen7 succeeds Satori. Zen7 has no repository and no weights, and this HIP specifies nothing</li></ul>
+<p>    about its architecture, modality, size or date.</p>
+<ul><li><strong>The <code>zenlm/zen5</code> repository.</strong> On GitHub it describes a routed &quot;Mixture of Diverse Experts&quot;</li></ul>
+<p>  design. No checkpoint of that design is published. The Zen5 open weights are the   single-upstream repositories listed in the table.</p>
+<ul><li><strong>Host suffixes.</strong> The <code>-spark</code> and <code>-evo</code> suffixes name hosts, not models. <code>evo</code> is the former</li></ul>
+<p>  name of <code>halo</code>.</p>
+<ul><li><strong>Served-only.</strong> zen5-max is open weights with no served SKU. zen5.8 is the reverse: served</li></ul>
+<p>  SKUs with no open weights.</p>
+<h4>§4.2 Unversioned lines</h4>
+<p>| Line | Open weights (<code>zenlm/…</code>) | Served SKU | |:--|:--|:--| | embedding | zen-embedding, zen-embedding-0.6B, zen-embedding-0.6B-GGUF, zen-embedding-4B, zen-embedding-8B, zen-embedding-8B-GGUF | zen-embedding | | rerank | zen-reranker, zen-reranker-0.6B, zen-reranker-0.6B-GGUF, zen-reranker-4B, zen-reranker-4B-GGUF, zen-reranker-8B, zen-reranker-8B-GGUF | none | | guard | zen-guard, zen-guard-gen, zen-guard-gen-8b, zen-guard-stream, zen-guard-stream-4b | zen-guard | | vision-language | zen-vl-4b-instruct, zen-vl-4b-agent, zen-vl-8b-instruct, zen-vl-8b-agent, zen-vl-30b-instruct, zen-vl-30b-agent | zen-vl | | omni | zen-omni, zen-omni-30b-instruct, zen-omni-30b-thinking | none | | small | zen-nano, zen-nano-0.6b, zen-eco, zen-eco-instruct, zen-eco-4b-instruct, zen-eco-4b-thinking, zen-eco-4b-agent-gguf, zen-eco-4b-agent-mlx, zen-agent-4b | none | | domain | zen-pro, zen-family, zen-blog, zen-finance, zen-legal, zen-medical, zen-multilingual, zen-sql, zen-translate | none | | design | zen-designer-235b-a22b-instruct, zen-designer-235b-a22b-thinking, zen-designer-gguf | none | | image, video, 3D | zen3-image family above, zen-image-edit, zen-world, zen-director, zen-video-i2v, zen-3d | none | | speech, music | zen3-tts and zen3-asr families above, zen-dub-live, zen-scribe, zen-translator, zen-musician | none | | router | zen-router | none | | free lane | none | zen-free |</p>
+<p><strong>Media SKUs.</strong> zen-image, zen-voice, zen-music, zen-foley, zen-video and zen-rerank are not served SKUs, because <code>/v1/models</code> does not list them (§2.2).</p>
+<h4>§4.3 Served context windows</h4>
+<p>| Context (tokens) | SKUs | |:--|:--| | 1,000,000 | zen5, zen5-coder, zen5-flash, zen5-pro, zen5-spark, zen5.8, zen5.8-coder, zen5.8-spark, zen6, zen6-coder, zen-vl, zen-free | | 262,144 | zen5-evo, zen5.8-evo | | 131,072 | zen5-mini | | 128,000 | zen-guard | | 32,768 | zen-embedding |</p>
+<h4>§4.4 Catalog</h4>
+<p><code>@zenlm/models</code> 1.0.4 (<code>github.com/zenlm/models</code> at <code>b3fe63c</code>) calls itself the single source of truth for Zen model definitions. It covers the zen3 and zen5 generations and the unversioned lines. It has no zen5.8 and no zen6, so it is behind §4.1.</p>
+<h2>Rationale</h2>
+<ul><li><strong>Why the lineup is a measurement.</strong> Written as a normative list, it would be wrong at the next</li></ul>
+<p>  release. The durable rule is §2.2: live means listed by <code>/v1/models</code>. That rule is what   exposes a stale site, doc or catalog.</p>
+<ul><li><strong>Why SKUs and weights are separate artifacts.</strong> Zen publishes weights for local use and sells</li></ul>
+<p>  a served contract. Binding the two by name would promise callers something the serving path   is not bound to keep, and would make every serving change a breaking change to a model card.</p>
+<ul><li><strong>Why one base lineage.</strong> It leaves one upstream to track for runtime support in</li></ul>
+<p>  <code>hanzoai/engine</code> (HIP-0043) and one provenance chain to audit per release. The 15 exceptions in   §3 are listed rather than hidden, so each can be retired or re-based on purpose.</p>
+<ul><li><strong>Why the 2025 text was deleted rather than marked historical.</strong> It specified models, prices</li></ul>
+<p>  and benchmark numbers that never existed. Kept in place, it would keep being read as the spec.</p>
 <h2>Security Considerations</h2>
-<h3>Model Access Control</h3>
-<pre><code class="lang-yaml">Authentication:
-  Method: API key (sk-hanzo-...) via LLM Gateway
-  Scopes: Per-model access grants
-  Integration: IAM (HIP-0026) for user identity
-
-Rate Limiting:
-  Per-Key:
-    zen-7b: 1000 RPM
-    zen-32b: 500 RPM
-    zen-72b: 200 RPM
-    zen-480b: 50 RPM
-  Per-Organization: Configurable quotas
-  Burst: 2x sustained rate for 10 seconds</code></pre>
-<h3>Content Safety</h3>
-<pre><code class="lang-yaml">Input Filtering:
-  - Prompt injection detection
-  - PII detection and masking (opt-in)
-  - Harmful content classification
-
-Output Filtering:
-  - Toxicity scoring (threshold configurable)
-  - Code safety analysis (zen-*-code variants)
-  - Factuality guardrails (experimental, zen-72b+)
-
-Watermarking:
-  Method: Statistical watermark in token sampling
-  Detection: Watermark detection API endpoint
-  Purpose: Distinguish AI-generated from human text</code></pre>
-<h3>Usage Tracking and Billing</h3>
-<pre><code class="lang-yaml">Metering:
-  Granularity: Per-request, per-token
-  Fields: model, input_tokens, output_tokens, latency_ms, user_id
-  Storage: Analytics pipeline (HIP-1190)
-
-Billing Integration:
-  Credits: IAM user balance (HIP-0026)
-  Pricing: Per-1K tokens, varies by model size
-  Tiers:
-    zen-7b:   $0.0003 / 1K input,  $0.0006 / 1K output
-    zen-32b:  $0.0015 / 1K input,  $0.003  / 1K output
-    zen-72b:  $0.004  / 1K input,  $0.008  / 1K output
-    zen-480b: $0.015  / 1K input,  $0.03   / 1K output</code></pre>
-<ol><li><a href="https://arxiv.org/abs/2309.06180">vLLM: Efficient Memory Management for LLM Serving</a></li><li><a href="https://arxiv.org/abs/2104.09864">RoFormer: Enhanced Transformer with Rotary Position Embedding</a></li></ol>
+<ul><li><strong>Refusal training.</strong> zen5-gguf is quantized from an abliterated variant: refusal training has</li></ul>
+<p>  been removed, and its card says so. Open weights carry no refusal guarantee. A deployer that   needs content safety MUST put a classifier in front, such as the zen-guard line. A served SKU is   governed by whatever serves it (§2.3), not by these weights.</p>
+<ul><li><strong>Re-hosts.</strong> A re-host is as trustworthy as its upstream. The zen6 files are byte-identical to</li></ul>
+<p>  their named upstreams, checked by LFS SHA-256 (HIP-0904 §5). A loader SHOULD pin a commit   rather than <code>main</code>, which can change under it.</p>
+<ul><li><strong>Remote code.</strong> zen-guard-stream and zen-guard-stream-4b carry the <code>custom_code</code> tag, so</li></ul>
+<p>  loading them runs Python from the repository. Pin the revision and read that code first. No   other <code>zenlm</code> repository carries the tag.</p>
+<ul><li><strong>Missing licence files.</strong> A release without <code>LICENSE</code> does not give recipients a copy of the</li></ul>
+<p>  license, which Apache-2.0 §4(a) requires. §3.2 closes this for new releases. The zen6 gap is   recorded in HIP-0904 §8.</p>
+<ul><li><strong>What an audit covers.</strong> Auditing an open-weight repository does not audit the served SKU of</li></ul>
+<p>  the same name (§2.3).</p>
+<h2>References</h2>
+<ul><li>HIP-0003 Jin; HIP-0043 inference engine; HIP-0130 open-core split, §3; HIP-0135 what is public.</li><li>HIP-0510 Enso router; HIP-0511 model families; HIP-0904 Zen6; HIP-1211 model API; HIP-1332 Kai.</li><li>Weights: https://huggingface.co/zenlm</li><li>Catalog: https://github.com/zenlm/models (<code>@zenlm/models</code> 1.0.4)</li><li>Satori scaffold: https://github.com/zenlm/satori</li></ul>
 <h2>Copyright</h2>
 <p>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</p>
 <footer>
