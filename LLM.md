@@ -2,7 +2,34 @@
 
 ## Overview
 
-A skill is a directory: {name}/SKILL.md says what it covers and names the files beside it. 59 skills, 780 markdown files covering the entire Hanzo AI ecosystem. Forty-five are ours; fourteen are Anthropic's, redistributed under Apache-2.0 — see NOTICE and the section below.
+A skill is a directory: {name}/SKILL.md says what it covers and names the files beside it. 224 skills, 1,103 markdown files covering the entire Hanzo AI ecosystem. 210 are ours; fourteen are Anthropic's, redistributed under Apache-2.0 — see NOTICE and the section below.
+
+## Install
+
+One skill, into any agent, with the skills.sh CLI; it clones this repository and copies `skills/<name>/`:
+
+```
+npx skills add hanzoai/skills --skill kai                     # asks for agents and scope
+npx skills add hanzoai/skills --skill kai -a claude-code -y    # Claude Code, this project, no prompts
+```
+
+`-g` installs for the user instead of the project; `--list` shows every skill it can install. Verified
+with skills 1.7.0 against github main: 224 skills found, `kai` written to `.claude/skills/kai/SKILL.md`,
+byte for byte the file in `skills/kai/`.
+
+Claude Code also takes `kai` as a plugin of its own. `.claude-plugin/marketplace.json` lists it with
+`"source": "./skills/kai"`, `"strict": false` and `"skills": ["./"]`, so the plugin is that one directory
+and there is no second copy of SKILL.md:
+
+```
+claude plugin marketplace add hanzoai/skills
+claude plugin install kai@hanzoai-skills
+```
+
+Verified on Claude Code 2.1.284: `claude plugin details kai@hanzoai-skills` lists one skill, `kai`, and the
+plugin cache holds only its SKILL.md. The `hanzo-skills` plugin (`"source": "./"`, the whole repository)
+does not install there: `.claude-plugin/plugin.json` gives `author` as a string where Claude Code requires
+an object, and `claude plugin validate .` fails on it.
 
 ## The Architecture (current truth)
 
@@ -24,12 +51,14 @@ skills/
   skills/
     hanzo-cloud-architecture/  # THE architecture skill (read first)
       SKILL.md
-    hanzo-api/          # 121 product skills — how to CALL api.hanzo.ai
+    kai/                # building with Kai decisions; installs on its own (see Install)
+      SKILL.md
+    hanzo-api/          # product skills — how to CALL api.hanzo.ai; INDEX.md lists 121, ai, kms and sandbox are on disk
       INDEX.md          # every product, grouped into 13 domains
       <product>.md      # one per x-app: families, operations, real curls
                         # GENERATED: scripts/generate_hanzo_api_skills.py
                         # (source: https://api.hanzo.ai/v1/openapi.json)
-    hanzo/              # 131 Hanzo ecosystem skills (flat markdown)
+    hanzo/              # 134 Hanzo ecosystem skills (flat markdown)
       INDEX.md          # Catalog and decision tree
       hanzo-k8s.md      # K8s infrastructure
       hanzo-deploy.md   # Deployment guide
@@ -47,8 +76,8 @@ skills/
       hanzo-mcp.md      # Model Context Protocol
       hanzo-zap.md      # ZAP — THE transport (HIP-0114) + DB bridge
       hanzo-o11y.md     # Observability (embedded o11y subsystem)
-      ... (131 total)
-    # 80+ other skill directories (api, cloud, ml, etc.)
+      ... (134 total)
+    # 220 other skill directories (api, cloud, ml, etc.)
   commands/             # Custom commands
   scripts/              # Helper scripts
   tests/                # Test suite
@@ -91,14 +120,21 @@ and CDN for the zone and nothing else: there is no Pages project, no Worker, and
 no Cloudflare credential anywhere in the lane.
 
 ```
-public/          index.html + 913 <name>.html + <name>.md + all.md, llms.txt, favicon.svg, fonts/
+public/          index.html + 1,244 <name>.html + <name>.md + all.md, llms.txt, favicon.svg, fonts/
 scripts/build.py markdown->html generator: parses skills + core HIPs, formats index & categories
 scripts/site.py  the shared chrome: style, nav, hero, copy-prompt menu, agent bar, Zen fonts
 scripts/marks.py mark geometry, from hanzoai/design assets/{providers,logos}
 tests/site.mjs   browser checks — mark, menu, bar, computed border-radius, Zen fonts
 ```
 
-- `scripts/build.py` compiles `skills/` (including 134 `hanzo/*` skills) and all 270 `HIPS` into `public/`.
+- `scripts/build.py` compiles `skills/` (including 134 `hanzo/*` skills) and all 275 HIPs into `public/`:
+  1,182 pages. It deletes nothing, so the other 62 pages in `public/` are left from earlier builds.
+  The HIPs come from `HIPS_DIR`, whose default is a macOS path; anywhere else point it at a
+  `hanzoai/hips` checkout at origin/main, or the index, llms.txt and all.md drop every HIP.
+  A name several files share (`tool-use`, `streaming`, `batches`, `files-api`, `reference`,
+  `experiments`, `affiliate-programs`) is published once, from whichever file `os.walk` reaches
+  first, and that order differs between filesystems: a Linux build and a macOS build of the same
+  tree pick different files for those pages.
   Standards / HIPs are organized across 5 architectural domains explaining all standards:
   `standards-core` (Core AI & Models), `standards-infra` (Cloud & Native Infrastructure),
   `standards-interface` (Protocols & Realtime SSE), `standards-security` (IAM & Cryptography),
@@ -141,24 +177,15 @@ The robots.txt in `public/` is the one that is served, and that is the point of
 the move — the zone used to answer with a Cloudflare-managed file that named no
 crawler at all, on a site whose whole purpose is being read by agents.
 
-### The plane sends no Content-Type for `.md`
+### Content types
 
-Measured on the live host: `.html`, `.txt`, `.xml` and `.svg` are correct, and
-the 539 markdown twins arrive `200` with the right bytes and **no `Content-Type`
-header at all**. With `nosniff` set, a browser will not render those inline.
+The 1,246 markdown files (the 1,244 page twins, `index.md` and `all.md`) are served
+`text/markdown; charset=utf-8`; `.html`, `.txt`, `.xml` and `.svg` carry their own types.
+Measured on the live host for `index.md`, `hanzo-base.md`, `all.md` and `hip-0004.md`.
 
-It is an ingress defect, not a site one, and not the obvious cause. The
-middleware sets a type only when `mime.TypeByExtension` knows the extension and
-otherwise leaves `http.ServeContent` to sniff — and that path, reproduced
-faithfully, returns `text/plain`. So the mime table alone does not explain it:
-something later in the response chain drops the sniffed value. The stored S3 type
-is not the answer either — `objectInfo` carries no content type, so the serving
-path never reads what `bin/site` stored.
-
-The robust fix is one line, `mime.AddExtensionType(".md", "text/markdown; charset=utf-8")`,
-which makes the middleware `Set` the header explicitly and never reach the sniff.
-It needs an `hanzoai/ingress` release and a roll of the shared fleet ingress,
-so it is not something to slip in beside a site change.
+`scripts/build.py` renders headings, lists, quotes, code and paragraphs. It has no table
+rule: a markdown table on a page arrives as one paragraph of pipes in the HTML, and intact
+in the `.md` twin.
 
 ## Key Skills by Domain
 

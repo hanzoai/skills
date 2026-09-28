@@ -154,6 +154,19 @@ Complete implementation guides loaded only when needed:
 
 ### Installation
 
+**One skill, any agent** ([skills.sh](https://skills.sh) CLI):
+```bash
+npx skills add hanzoai/skills --skill kai
+```
+
+It asks which agents and which scope; `-a claude-code -y` answers for Claude Code in this project, and `-g` installs for the user. `--list` shows every skill `--skill` can name.
+
+**One skill, as a Claude Code plugin** (`kai`):
+```bash
+claude plugin marketplace add hanzoai/skills
+claude plugin install kai@hanzoai-skills
+```
+
 **As Claude Code Plugin (Recommended)**:
 ```bash
 /plugin install https://github.com/hanzoai/skills
