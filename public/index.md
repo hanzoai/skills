@@ -3,6 +3,18 @@
 The native cloud in a single binary. Go, Rust, C++. Zero interpreter bloat.
 Run the open-source parts on your own machine, extend the cloud with /v1/*, and move your backend to Hanzo Base. skill.md gives the command that starts each part and says what needs the hosted cloud.
 
+## Install
+
+    curl -fsSL hanzo.sh | sh   # macOS, Linux, WSL
+
+Then run `hanzo`. It signs you in through the browser, links this machine to Hanzo Tabs, asks once which coding agent is your favourite, adds Hanzo's tools to it, and launches it accelerated. After that, `hanzo` launches your favourite, `hanzo dev --claude|--codex|--cursor|--agy` switches it, and `hanzo -- -c` continues the last conversation.
+
+Or paste this into your agent (Claude Code, Codex, Cursor, Antigravity):
+
+    Set up Hanzo on this machine: follow https://hanzo.sh/setup.md
+
+The skills, over plain https:
+
     curl hanzoskills.com/llms.txt          # the index, for an agent
     curl hanzoskills.com/<skill>.md        # one skill
     curl hanzoskills.com/all.md            # the whole corpus, one file

@@ -429,6 +429,115 @@ m.addEventListener('click',function(e){
 </script>"""
 
 
+# The install command per OS, in tab order; the page opens on the visitor's OS.
+# Windows is one row here, once hanzo.sh/install.ps1 serves a script:
+#   ("win", "Windows", "irm hanzo.sh/install.ps1 | iex"),
+INSTALL = [
+    ("mac", "macOS", "curl -fsSL hanzo.sh | sh"),
+    ("linux", "Linux", "curl -fsSL hanzo.sh | sh"),
+    ("wsl", "WSL", "curl -fsSL hanzo.sh | sh"),
+]
+PASTE = "Set up Hanzo on this machine: follow https://hanzo.sh/setup.md"
+PASTE_TO = "Claude Code, Codex, Cursor, Antigravity"
+NEXT = ("Then run <code>hanzo</code>. It signs you in through the browser, links this machine "
+        "to Hanzo Tabs, asks once which coding agent is your favourite, adds Hanzo's tools to it, "
+        "and launches it accelerated.")
+AFTER = ("After that, <code>hanzo</code> launches your favourite, "
+         "<code>hanzo dev --claude|--codex|--cursor|--agy</code> switches it, and "
+         "<code>hanzo -- -c</code> continues the last conversation.")
+
+GET_CSS = """
+.get{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:1rem;margin:0 0 2.25rem}
+.gbox{background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:1rem 1.1rem;min-width:0}
+.ghead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  gap:.5rem .75rem;margin:0 0 .8rem;min-height:1.9rem}
+.ghead b{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:500;color:var(--soft)}
+.ghead span{font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;color:var(--faint)}
+.tabs{display:inline-flex;gap:.2rem;border:1px solid var(--line);border-radius:var(--r);padding:.18rem}
+.tabs[hidden]{display:none}
+.tab{border:0;background:transparent;color:var(--soft);font-family:var(--mono);font-size:.7rem;
+  letter-spacing:.06em;padding:.32rem .8rem;border-radius:var(--r);cursor:pointer}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--ink);color:#000}
+.tab:focus-visible,.cp:focus-visible{outline:1px solid var(--ink);outline-offset:2px}
+.cmd{display:flex;align-items:center;gap:.75rem;background:var(--ground);border:1px solid var(--line);
+  border-radius:10px;padding:.55rem .55rem .55rem .9rem;margin:0 0 .5rem}
+.cmd[hidden]{display:none}
+.cmd code{flex:1 1 auto;min-width:0;background:none;border:0;padding:0;font-size:.84rem;
+  color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+.os{flex:0 0 3.4rem;font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint)}
+.get.js .os{display:none}
+.cp{display:none;flex:0 0 auto;border:1px solid var(--line-hi);background:transparent;color:var(--ink);
+  font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;
+  padding:.42rem .85rem;border-radius:var(--r);cursor:pointer}
+.get.js .cp{display:inline-flex}
+.cp:hover{background:#141414;border-color:var(--soft)}
+.next{color:var(--soft);font-size:.86rem;line-height:1.6;margin:.7rem 0 0}
+.next code{overflow-wrap:anywhere}
+@media (max-width:860px){.get{grid-template-columns:minmax(0,1fr)}}
+"""
+
+GET_JS = """
+<script id="getjs">
+(function(){
+var g=document.querySelector('.get'),L=g.querySelector('.tabs'),
+    T=[].slice.call(L.querySelectorAll('.tab'));
+g.classList.add('js');
+function pick(os){T.forEach(function(t){var on=t.dataset.os===os;
+  t.setAttribute('aria-selected',on?'true':'false');
+  document.getElementById(t.getAttribute('aria-controls')).hidden=!on;});}
+var u=navigator.userAgentData,p=((u&&u.platform)||navigator.platform||'')+' '+navigator.userAgent,
+    os=/windows|win32|win64/i.test(p)?'win':/mac|iphone|ipad/i.test(p)?'mac':/linux|x11|cros/i.test(p)?'linux':'';
+if(os==='win'&&!L.querySelector('[data-os="win"]'))os='wsl';
+var f=L.querySelector('[data-os="'+os+'"]')||T[0];
+L.insertBefore(f,L.firstChild);L.hidden=false;pick(f.dataset.os);
+L.addEventListener('click',function(e){var t=e.target.closest('.tab');if(t)pick(t.dataset.os);});
+g.addEventListener('click',function(e){var b=e.target.closest('.cp');if(!b)return;
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(function(){
+    b.textContent='Copied';setTimeout(function(){b.textContent='Copy';},1400);});});
+})();
+</script>"""
+
+
+def get():
+    tabs = "".join(
+        '<button class="tab" role="tab" type="button" id="tab-%s" data-os="%s" '
+        'aria-controls="os-%s" aria-selected="false">%s</button>' % (o, o, o, html.escape(n))
+        for o, n, _ in INSTALL)
+    cmds = "".join(
+        '<div class="cmd" id="os-%s" role="tabpanel" aria-labelledby="tab-%s">'
+        '<span class="os">%s</span><code>%s</code>'
+        '<button class="cp" type="button" aria-label="Copy the %s install command">Copy</button></div>'
+        % (o, o, html.escape(n), html.escape(c), html.escape(n))
+        for o, n, c in INSTALL)
+    return (
+        '<section class="get" aria-label="Get started"><style>%s</style>'
+        '<div class="gbox"><div class="ghead"><b>Install</b>'
+        '<div class="tabs" role="tablist" aria-label="Operating system" hidden>%s</div></div>'
+        '%s<p class="next">%s</p><p class="next">%s</p></div>'
+        '<div class="gbox"><div class="ghead"><b>Or paste into your agent</b><span>%s</span></div>'
+        '<div class="cmd"><code>%s</code>'
+        '<button class="cp" type="button" aria-label="Copy the setup line for your agent">Copy</button>'
+        '</div></div>%s</section>'
+        % (GET_CSS, tabs, cmds, NEXT, AFTER, html.escape(PASTE_TO), html.escape(PASTE), GET_JS))
+
+
+def get_md():
+    rows = {}
+    for _, n, c in INSTALL:
+        rows.setdefault(c, []).append(n)
+    width = max(len(c) for c in rows)
+    plain = lambda s: re.sub(r"</?code>", "`", s)
+    return ("## Install\n\n"
+            + "".join("    %s   # %s\n" % (c.ljust(width), ", ".join(ns)) for c, ns in rows.items())
+            + "\n%s %s\n\nOr paste this into your agent (%s):\n\n    %s\n\n"
+              "The skills, over plain https:\n\n"
+            % (plain(NEXT), plain(AFTER), PASTE_TO, PASTE))
+
+
 BEACON = re.compile(r'\s*<script[^>]*cloudflareinsights\.com[^>]*>\s*</script>', re.S)
 
 
@@ -462,7 +571,8 @@ def patch(path):
             'and move your backend to Hanzo Base. <a href="/skill">skill.md</a> gives the command that starts '
             'each part and says what needs the hosted cloud.</p>'
         )
-        out = re.sub(r'<h1>.*?</h1>\s*<p class="lede">.*?</p>', hero_h1_lede, out, count=1, flags=re.S)
+        out = re.sub(r'<h1>.*?(?=<div class="btns">)', lambda _: hero_h1_lede + get(), out,
+                     count=1, flags=re.S)
         out = re.sub(r'<div class="btns">.*?(?=</div></div><div class="strip">)',
                      lambda _: btns(), out, count=1, flags=re.S)
         out = re.sub(r'<div class="strip">.*?(?=\n<div class="wrap">)',
@@ -509,6 +619,12 @@ def main():
     files = sorted(glob.glob(os.path.join(ROOT, "*.html")))
     write(os.path.join(ROOT, "sitemap.xml"), sitemap(files))
     changed = sum(patch(f) for f in files)
+    md = os.path.join(ROOT, "index.md")
+    src = open(md, encoding="utf-8").read()
+    out = re.sub(r"(?:## Install\n.*?)?(?=    curl hanzoskills\.com/llms\.txt)",
+                 lambda _: get_md(), src, count=1, flags=re.S)
+    if out != src:
+        write(md, out)
     print("%d/%d pages rewritten" % (changed, len(files)))
 
 

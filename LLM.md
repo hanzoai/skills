@@ -153,6 +153,11 @@ tests/site.mjs   browser checks — mark, menu, bar, computed border-radius, Zen
 - Typography: Canonical Hanzo `Zen` and `Zen Mono` variable font families (`public/fonts/Zen-Variable.woff2`, `Zen-Italic-Variable.woff2`, `ZenMono-Variable.woff2`, `ZenMono-Italic-Variable.woff2`, `ZenPixel-Square.woff2`) loaded via `@font-face` with `font-display: swap`.
 - `scripts/site.py` is the ONE definition of the chrome and rewrites every page.
   It is idempotent, and CI fails if `public/` does not match it.
+- The home page opens on two boxes, from `INSTALL`, `PASTE`, `NEXT` and `AFTER` in
+  `scripts/site.py`: the install command for the visitor's OS (tabs; every OS
+  without JS) and the line to paste into an agent. `site.py` writes the same
+  block into `public/index.md`. Windows is one `INSTALL` row once
+  `hanzo.sh/install.ps1` serves a script (404 on 2026-10-12).
 - Publishing is `.github/workflows/deploy.yml` on push to main, beside `ci.yml`.
   That is the only workflow directory here: the forge reads the first one that
   exists, and the org's own `linux-amd64` runners serve both planes. It calls
