@@ -67,6 +67,36 @@ app runnable at every step, because the migration that never ships is the one
 that built a parallel implementation for six weeks against an original that
 kept changing.
 
+## Try Hanzo AI in a minute
+
+Measured against production on 2026-10-26.
+
+1. **Install and sign in.** `curl -fsSL https://hanzo.sh | sh`, then `hanzo auth login`
+   (the sign-in page lets you choose which account to continue as; `hanzo auth show`
+   says which identity is active). A key for server code is minted at
+   `https://console.hanzo.ai/api-keys`.
+2. **Make one call.** The API speaks the OpenAI shape and the Anthropic shape:
+
+   ```bash
+   curl -s https://api.hanzo.ai/v1/chat/completions \
+     -H "Authorization: Bearer $HANZO_API_KEY" -H 'content-type: application/json' \
+     -d '{"model":"enso-auto","messages":[{"role":"user","content":"hi"}]}'
+   ```
+
+   `enso-auto` picks the Enso tier that fits the request; name `enso-flash`,
+   `enso-pro` or `enso-ultra` to pin one. `enso-free` and `zen-free` cost nothing.
+3. **An Enso id keeps answering when the balance is zero.** The gateway serves it
+   from `enso-free` instead of refusing it (checked with a zero-balance account).
+   A Zen id such as `zen6` answers while the balance is positive; do not assume it
+   falls back. A model from an upstream vendor is paid only.
+4. **Code with an agent.** `hanzo dev` starts our own coding agent on `enso-auto`.
+   `hanzo dev --claude --metered` runs Claude Code on Hanzo's models and bills your
+   org; plain `hanzo dev --claude` runs it on your own Claude account. The MCP
+   endpoint is `https://api.hanzo.ai/v1/mcp`.
+5. **Find any other API.** `GET https://api.hanzo.ai/v1` lists every capability,
+   `GET https://api.hanzo.ai/v1/openapi.json` is the full spec, and
+   `https://docs.hanzo.ai/llms.txt` indexes the docs.
+
 ## On your own machine
 
 These start from a checkout or a package, with no account.
@@ -210,7 +240,7 @@ prefix anywhere and there is no second version — a surface that grows, grows a
 curl -s https://api.hanzo.ai/v1/models -H "Authorization: Bearer $(hanzo auth token)"
 curl -s https://api.hanzo.ai/v1/chat/completions \
   -H "Authorization: Bearer $(hanzo auth token)" -H 'content-type: application/json' \
-  -d '{"model":"zen","messages":[{"role":"user","content":"hi"}],"stream":true}'
+  -d '{"model":"enso-auto","messages":[{"role":"user","content":"hi"}],"stream":true}'
 ```
 
 The CLI is generated from the same contract the API and the MCP tools serve, so
@@ -219,42 +249,29 @@ groups** — `hanzo <group> --help` is the reliable way to find a verb, not gues
 
 ## What actually answers today — read before you promise
 
-This section is measured against production, not copied from a design doc. It
-will age; re-measure rather than trusting it.
+This section is measured against production (2026-10-26), not copied from a
+design doc. It will age; re-measure rather than trusting it.
 
-**The gateway is up and most of its catalogue is not.** `/v1/models` lists **559**
-models (2026-10-26). On an earlier serial sweep, roughly **25 of them answered** — about five percent.
-Two independent upstream failures, both live:
+**Answering now.** One chat completion each, with a token budget large enough
+for a reasoning model to think: `enso-auto` (a short prompt is served by
+`enso-flash`), `enso-flash`, `enso-pro`, `enso-ultra`, `enso-free`, `zen6` and
+`zen-free`. The Anthropic-shaped `/v1/messages` answers too, streaming or not, so
+an Anthropic-SDK client, or Claude Code, can point at `https://api.hanzo.ai`.
+`/v1/models` lists 559 models; take names from it rather than from memory.
 
-- **OpenRouter — `402`, out of credit.** `Insufficient credits. Add more using
-  https://openrouter.ai/settings/credits`
-- **DigitalOcean — `401`, credential rejected.** `Unable to authenticate you`.
+**Not chat ids.** `kai` is a decision model, called at `/v1/decisions`. `best`,
+`zen6-coder` and `fireworks/gpt-oss-120b` are not in the catalogue and answer
+`400` or `404`. An upstream model such as `anthropic/claude-haiku-4.5` can answer
+`503 temporarily unavailable` when its providers refuse; that one is worth
+retrying shortly.
 
-**Most of those failures arrive as `HTTP 200` with the error in the body.** This
-is the single most important operational fact on this page. A status-code check
-reads a dead gateway as healthy:
+**A `402` means the balance cannot cover a paid model.** An Enso id is served
+from `enso-free` before that happens; other paid ids are refused. Report a `402`
+to the operator instead of retrying it.
 
-```json
-{"status":"error","msg":"model \"claude-haiku-4.5\": every provider refused — tried openrouter (402)…"}
-```
-
-So: **parse the body, not the status.** If `status` is `"error"`, it failed,
-whatever the HTTP code said. Report that to the operator plainly rather than
-retrying — neither `402` nor `401` clears by retrying.
-
-**Known-good right now:** `zen-free` (200 on 2026-10-26, 50 free requests a day),
-`fireworks/gpt-oss-120b` and `fireworks/gpt-oss-20b`
-(uncatalogued passthrough — they work but are absent from `/v1/models`), plus
-the `provider=hanzo` free pool. Prefer one of these when you need a call to
-succeed.
-
-**`best` is not a model.** It is absent from `/v1/models` and answers `400`. If
-a config names it, that config is wrong.
-
-**`/v1/messages` — the Anthropic-shaped endpoint — is mounted but returns `500`**
-(`writer does not implement http.Flusher`), streaming or not. Use
-`/v1/chat/completions`, which works. Do not point an Anthropic-SDK client at
-this host until that is fixed.
+**Keys.** Mint a key at `https://console.hanzo.ai/api-keys`. A key made with
+`POST /v1/account/keys` reads `/v1/models` but is not yet accepted by the model
+API ("does not resolve"); use a console key until that is fixed.
 
 ## The capability set — one name each
 
@@ -412,7 +429,7 @@ curl -s https://api.hanzo.ai/v1/health
 # a call that works today
 curl -s https://api.hanzo.ai/v1/chat/completions \
   -H "Authorization: Bearer $(hanzo auth token)" -H 'content-type: application/json' \
-  -d '{"model":"fireworks/gpt-oss-120b","messages":[{"role":"user","content":"say ok"}],"max_tokens":8}'
+  -d '{"model":"enso-auto","messages":[{"role":"user","content":"say ok"}],"max_tokens":200}'
 ```
 
 Read the body of that last one. If it carries `"status":"error"`, tell the
