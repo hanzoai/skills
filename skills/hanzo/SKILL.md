@@ -313,6 +313,34 @@ Every answer carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLim
 
 **Do this now:** run `headless.mts`, or get a credential another way and run the first call. A 200 with `x-ratelimit-remaining` means you are on.
 
+### 9. Run a coding task
+
+`POST /v1/agent/coding` clones a repository into a sandbox, lets a model edit it, and opens a pull request. It answers 202 with a session id; watch it with `GET /v1/agent/sessions/$SESSION_ID` (its last 50 events) or the stream at `/v1/agent/sessions/stream?root=$SESSION_ID`.
+
+```bash
+curl -X POST https://api.hanzo.ai/v1/agent/coding \
+  -H "Authorization: Bearer $HANZO_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"repo":"github.com/hanzo-inc/cloud","prompt":"Add a test for the task claim handler and open a PR.","model":"enso-pro"}'
+```
+
+Name the repository by its GitHub address, `github.com/<owner>/<name>`. That is always the current code. Other values:
+
+| `repo` | Runs on |
+|---|---|
+| `github.com/hanzo-inc/cloud`, or `cloud` in org hanzo | the private backend, current |
+| `github.com/hanzo-inc/universe`, or `universe` | the deploy specs, current |
+| `github.com/hanzoai/cloud` | the open-source edition, a different codebase |
+| a bare name like `docs` or `mcp` | the org's forge copy; current when it mirrors GitHub |
+| empty | an empty workspace; nothing is cloned or pushed |
+
+`/v1/git` is a separate store. Its clone URLs are not run targets.
+
+- A run that changed nothing in an empty or placeholder repository fails with the reason. So does one whose model stopped without a final answer.
+- If the model repeats the same tool call with the same result, the run tells it so, then hands the turn to the next tier (enso-pro to enso-ultra), then fails naming the call.
+- 429 `coding: at capacity` names the limit. In a platform org it is 2 runs per person and 4 shared, so start when one of yours ends. Do not retry in a loop.
+- Each run takes up to 25 minutes.
+- Spec: `GET /v1/openapi.json?operation=post_agent_coding`. If that answers megabytes, the slice is not deployed yet: use this page, not the whole spec.
+
 ## Path B: you own the agents
 
 ### 1. Account and org
