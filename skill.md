@@ -94,8 +94,10 @@ Measured against production on 2026-10-26.
    org; plain `hanzo dev --claude` runs it on your own Claude account. The MCP
    endpoint is `https://api.hanzo.ai/v1/mcp`.
 5. **Find any other API.** `GET https://api.hanzo.ai/v1` lists every capability,
-   `GET https://api.hanzo.ai/v1/openapi.json` is the full spec, and
-   `https://docs.hanzo.ai/llms.txt` indexes the docs.
+   `GET /v1/<name>` lists one capability's operations, and
+   `GET /v1/openapi.json?capability=<name>` returns just those with their
+   schemas (`&operation=<operationId>` for one). The whole spec is 4.9 MB: do
+   not fetch it. `https://docs.hanzo.ai/llms.txt` indexes the docs.
 6. **Start a fresh org and test it free.** With a signed-in identity, one call
    creates an org and its first key:
 
@@ -306,7 +308,7 @@ Every capability answers at `/v1/<name>`, and that one word is also its OpenAPI 
 **Web3** · `web3` `wallets` `validators` `explorer`
 **Work** · everything an operator runs — `tasks` `todo` `auto` `flow` `crm` `campaign` `content` `notify` `channels` `help` `guide` `company` `esign` `dataroom` `books` and the rest.
 
-Ask the deployment rather than trusting this list: `hanzo --help` for the groups, `hanzo <name> --help` for the verbs, `GET /v1/openapi.json` for the contract.
+Ask the deployment rather than trusting this list: `hanzo --help` for the groups, `hanzo <name> --help` for the verbs, `GET /v1` for the capabilities, `GET /v1/<name>` for one capability's operations, `GET /v1/openapi.json?capability=<name>` for their schemas (add `&operation=<operationId>` for one). The whole spec is 4.9 MB: do not fetch it.
 
 ## Memory — two layers, and they are not the same thing
 

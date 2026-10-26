@@ -71468,7 +71468,7 @@ Evaluate Kai, the decision model, yourself: POST https://api.hanzo.ai/v1/decisio
 
 Pay when you need more: plans from $20 a month at https://hanzo.ai/pricing (card, Apple Pay or Google Pay at https://hanzo.ai/pay), or top up over the API in USDC or USDT with no human: GET /v1/billing/crypto/options, then POST /v1/billing/crypto/deposit {"chain":"base","token":"usdc","amountCents":2000} and send to the address it returns; the balance is credited when the chain confirms. Per-key budgets and per-session caps keep spend bounded.
 
-Read more: https://docs.hanzo.ai/llms.txt (every docs page), https://hanzo.ai/llms.txt, https://api.hanzo.ai/v1/openapi.json (every operation), https://hanzoskills.com/llms.txt (skills). Talk to people at Hanzo: https://cal.com/hanzo, or https://hanzo.ai/contact.
+Read more: https://docs.hanzo.ai/llms.txt (every docs page), https://hanzo.ai/llms.txt, https://api.hanzo.ai/v1 (the capabilities; then /v1/openapi.json?capability=<name> for one capability's schemas, never the whole 4.9 MB spec), https://hanzoskills.com/llms.txt (skills). Talk to people at Hanzo: https://cal.com/hanzo, or https://hanzo.ai/contact.
 ```
 
 ## Why Hanzo
@@ -71812,7 +71812,7 @@ Docs at https://docs.hanzo.ai, contact at https://hanzo.ai/contact, a call at ht
 - `kai`, building on Kai decisions: `npx skills add https://hanzoskills.com/kai.md`
 - `hanzo-api`, how to call each Hanzo product over api.hanzo.ai: https://hanzoskills.com/hanzo-api.md
 - `skill`, the parts that run on your own machine: https://hanzoskills.com/skill.md
-- Every docs page: https://docs.hanzo.ai/llms.txt. Every operation: https://api.hanzo.ai/v1/openapi.json
+- Every docs page: https://docs.hanzo.ai/llms.txt. Every capability: https://api.hanzo.ai/v1, then https://api.hanzo.ai/v1/openapi.json?capability=<name> for just its operations and schemas (the whole spec is 4.9 MB; do not fetch it)
 
 
 ---
