@@ -52,12 +52,26 @@ Not yet provable, and the artifact that would prove it:
 ## The hanzo skill
 
 `skills/hanzo/SKILL.md` (`name: hanzo`, published as `public/hanzo.md`, installed with
-`npx skills add https://hanzoskills.com/hanzo.md`) onboards an agent: the standard prompt verbatim, *Why
-Hanzo* and *Results* (the Company lines above), path A for a builder agent (wallet sign-in with no human,
-as one TypeScript file run end to end on 2026-10-26; other credentials, free tier, first call, MCP for
-Claude Code, Codex, Cursor and Zed, Kai evaluation, a campaign drafted for the owner to launch, rate
-limits), path B for an owner of agents (org, Team plan, bounded keys, per-session caps,
-paying, people), then where the rest is.
+`npx skills add https://hanzoskills.com/hanzo.md`) onboards an agent. It leads with the owner's words,
+verbatim, in the description and the first line: "Sign up free with a wallet. Get an API key free. A small
+free allowance to try it. Top up in USDC or USDT over the API to raise your limits and pay as you go. No
+human required." Then *Start*: the headless path one request a step with its answer (nonce, sign, verify,
+token, key, limits, a 429, deposit, balance; in full at docs.hanzo.ai/docs/agents/headless) and the one
+TypeScript file run end to end on 2026-10-26, byte for byte hanzo-inc/app `lib/agents.ts` HEADLESS. Then
+the standard prompt verbatim, *Why Hanzo* and *Results* (the Company lines above), path A for a builder
+agent (other credentials, the free allowance, first call, MCP for Claude Code, Codex, Cursor and Zed, Kai
+evaluation, a campaign drafted for the owner to launch, rate limits), path B for an owner of agents (org,
+Team plan, bounded keys, per-session caps, paying, people), then where the rest is.
+
+No wallet-allowance number: cloud is changing what a wallet-only account gets free, so the skill says "a
+small free allowance to try it" and points at `GET /v1/allowance` and `GET /v1/billing/tier`; 50 a day is
+printed only as a person's Free plan, and the run output's remaining count is elided. `public/llms.txt`
+opens its Hanzo block with the same words (`scripts/build.py`).
+
+Republishing one skill without a full rebuild: a Linux `scripts/build.py` churns pages a macOS build wrote
+(see the site section), so build into a scratch `OUT_DIR` and copy only that skill's `<name>.md`,
+`<name>.html`, its row in `llms.txt`, `index.md` and `index.html`, and its section of `all.md`; then
+`scripts/site.py` until it rewrites 0 pages.
 
 Every number in it comes from the 2026-10-26 measurement, which marked each line VERIFIED (ran it) or READ
 (code at a cited commit). Re-measure before changing one; add none from memory. It prints no bank numbers
@@ -227,10 +241,10 @@ tests/site.mjs   browser checks — mark, menu, bar, computed border-radius, Zen
   `hanzoai/ci/.github/actions/site@v1`, which is `bin/site`: enqueue → upload the
   objects straight to S3 → complete. The bytes never pass through the API. Do not
   publish by hand, and do not transcribe those three calls here.
-- GitHub Actions is off for hanzoai/skills: `gh api repos/hanzoai/skills/actions/permissions`
-  answers `{"enabled": false}`, and the last runs, CI and deploy for ef27aaf on 2026-09-09, were
-  cancelled. Until a repo admin turns it back on, a push to main runs neither workflow and
-  publishes nothing.
+- GitHub Actions must be on for hanzoai/skills (`gh api repos/hanzoai/skills/actions/permissions`
+  answers `"enabled": true`). It was found off with no recorded reason and turned back on 2026-10-26.
+  Off, a push to main runs neither workflow and publishes nothing; the site only moved by hand-run
+  `bin/site` publishes.
 - ONE credential, `KMS_CLIENT_ID`/`KMS_CLIENT_SECRET` (org-level on git.hanzo.ai),
   which the action trades at `kms.hanzo.ai` for the deploy key.
 - Controls are pills (`--r: 999px`) and surfaces are `--r-soft: 14px`, matching

@@ -497,6 +497,7 @@ def main():
         f"> {len(docs)} skills and architectural specifications for building apps, backends, agents and agentic companies on Hanzo.\n",
         "> Native compiled code only (Go, Rust, C++). Local-first cloud, realtime SSE, zero interpreter bloat. Plain markdown, curl-able, no auth.\n\n",
         "## Hanzo\n\n",
+        "- [Agents: start here](https://hanzoskills.com/hanzo.md): Sign up free with a wallet. Get an API key free. A small free allowance to try it. Top up in USDC or USDT over the API to raise your limits and pay as you go. No human required.\n",
         "- [Run it locally](https://hanzoskills.com/skill.md): what runs on your own machine, the command that starts each part, and what needs the hosted cloud.\n",
         "- [Install](https://hanzo.sh): `curl -fsSL hanzo.sh | sh` puts the CLI, MCP server and dev agent on this machine.\n",
         "- [API reference](https://docs.hanzo.ai/llms.txt): every endpoint api.hanzo.ai serves, one page per operation.\n",
