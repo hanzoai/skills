@@ -15,7 +15,8 @@ authority; there is no claim ledger). Print it in the company's voice, these num
 - Working since 2014. Founded as Crowdstart, a crowdfunding and commerce platform; renamed Hanzo in 2016.
 - First customer, 2014: SKULLY, the fastest fully-funded campaign on Indiegogo, $1M in about 45 hours
   (TechCrunch, 2014-08-14). Not "$1M on the first day": the source says 45 hours.
-- A Go-native platform today. Never "Go native since day 1": the 2014 first commit is CoffeeScript and Node.
+- Go-native platform since October 2014: the first Go file in the commerce repo is from 2014-10-20; the
+  2014-09-29 first commit is a CoffeeScript prototype. Never "since day 1".
 - AI and machine learning in commercial use since 2014; GPT models by 2019.
 - 2017: the first blockchain-native commerce platform; the Unikrn ICO raised over 120,000 ETH (Crunchbase
   News, 2017-10-24, which does not name Hanzo; Hanzo's part is on https://hanzo.ai/customers#unikrn).
