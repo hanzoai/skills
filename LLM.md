@@ -244,7 +244,10 @@ tests/site.mjs   browser checks — mark, menu, bar, computed border-radius, Zen
 - GitHub Actions must be on for hanzoai/skills (`gh api repos/hanzoai/skills/actions/permissions`
   answers `"enabled": true`). It was found off with no recorded reason and turned back on 2026-10-26.
   Off, a push to main runs neither workflow and publishes nothing; the site only moved by hand-run
-  `bin/site` publishes.
+  `bin/site` publishes. The first runs back on found two more breaks, both fixed in deploy.yml:
+  `actions/upload-artifact@v3` fails the job at setup, and the browser checks must use the chromium
+  the runner image bakes (playwright 1.58.0 at `/opt/playwright`) with no `playwright install`,
+  which locks that unwritable directory before it checks anything.
 - ONE credential, `KMS_CLIENT_ID`/`KMS_CLIENT_SECRET` (org-level on git.hanzo.ai),
   which the action trades at `kms.hanzo.ai` for the deploy key.
 - Controls are pills (`--r: 999px`) and surfaces are `--r-soft: 14px`, matching
