@@ -96,6 +96,25 @@ Measured against production on 2026-10-26.
 5. **Find any other API.** `GET https://api.hanzo.ai/v1` lists every capability,
    `GET https://api.hanzo.ai/v1/openapi.json` is the full spec, and
    `https://docs.hanzo.ai/llms.txt` indexes the docs.
+6. **Start a fresh org and test it free.** With a signed-in identity, one call
+   creates an org and its first key:
+
+   ```bash
+   curl -s https://api.hanzo.ai/v1/account/orgs \
+     -H "Authorization: Bearer $(hanzo auth token)" -H 'content-type: application/json' \
+     -d '{"name":"my-agent-lab"}'
+   # {"org":"my-agent-lab","accessKey":"pk-live-…","accessSecret":"sk-live-…"}  the secret is shown once
+   ```
+
+   The org starts at a zero balance, and `enso-free`, `enso-auto` and `zen-free`
+   answer on that key anyway (checked 2026-10-26). Keep the `sk-` key out of any
+   file a repo tracks.
+7. **Hand the human what only they can do.** Give them these verbatim and stop
+   until they answer: sign in at `https://hanzo.id`, keys at
+   `https://console.hanzo.ai/api-keys`, add funds at `https://hanzo.ai/billing`
+   (or `https://pay.hanzo.ai`), and the dashboard at `https://console.hanzo.ai`.
+   An agent cannot create the first identity alone: the human signs in once
+   (`hanzo auth login`), and everything above then runs without them.
 
 ## On your own machine
 
