@@ -1,6 +1,6 @@
 ---
 name: hanzo
-description: Onboarding manifest for an AI agent working with Hanzo — what runs on your own machine and the command that starts it, what needs an account on the hosted cloud at api.hanzo.ai, and how to work either way safely.
+description: Manifest for an AI agent working with Hanzo — what runs on your own machine and the command that starts it, what needs an account on the hosted cloud at api.hanzo.ai, and how to work either way safely. Onboarding (a credential, the free tier, a first call, MCP, Kai, paying) is the hanzo skill at hanzoskills.com/hanzo.md.
 ---
 
 # Hanzo — Agent Onboarding Manifest (skill.md)
@@ -10,6 +10,11 @@ description: Onboarding manifest for an AI agent working with Hanzo — what run
 > Its parts are open source and run on your own machine; *On your own machine*
 > gives the command that starts each one. Accounts, billing and hosted models
 > live on the hosted cloud at `api.hanzo.ai`.
+
+> **New to Hanzo? Onboard with the `hanzo` skill first:** a credential, the free
+> tier, a first call, MCP for Claude Code, Codex, Cursor and Zed, Kai, and how to
+> pay. `curl hanzoskills.com/hanzo.md`, or
+> `npx skills add https://hanzoskills.com/hanzo.md`.
 
 > **Read the whole file before you run anything.** The section *What actually
 > answers today* is measured, not aspirational, and it names the surfaces that
@@ -46,6 +51,7 @@ apply and which one applies instead.
 
 | The job | Read |
 |---|---|
+| Get a key, make a first call, add MCP, pay | `curl hanzoskills.com/hanzo.md` |
 | Make a rewritten interface match the old one | `curl hanzoskills.com/ui-port.md` |
 | Bring an existing app onto this stack | `curl hanzoskills.com/app-port.md` |
 | Move a Node, Next, Python, Rails or Java backend to Go | `curl hanzoskills.com/app-port.md` |
@@ -216,14 +222,13 @@ groups** — `hanzo <group> --help` is the reliable way to find a verb, not gues
 This section is measured against production, not copied from a design doc. It
 will age; re-measure rather than trusting it.
 
-**The gateway is up and most of its catalogue is not.** `/v1/models` lists **533**
-models. On a serial sweep, roughly **25 of them answer** — about five percent.
+**The gateway is up and most of its catalogue is not.** `/v1/models` lists **559**
+models (2026-10-26). On an earlier serial sweep, roughly **25 of them answered** — about five percent.
 Two independent upstream failures, both live:
 
 - **OpenRouter — `402`, out of credit.** `Insufficient credits. Add more using
   https://openrouter.ai/settings/credits`
 - **DigitalOcean — `401`, credential rejected.** `Unable to authenticate you`.
-  Every bare-name chat model routes here.
 
 **Most of those failures arrive as `HTTP 200` with the error in the body.** This
 is the single most important operational fact on this page. A status-code check
@@ -237,7 +242,8 @@ So: **parse the body, not the status.** If `status` is `"error"`, it failed,
 whatever the HTTP code said. Report that to the operator plainly rather than
 retrying — neither `402` nor `401` clears by retrying.
 
-**Known-good right now:** `fireworks/gpt-oss-120b` and `fireworks/gpt-oss-20b`
+**Known-good right now:** `zen-free` (200 on 2026-10-26, 50 free requests a day),
+`fireworks/gpt-oss-120b` and `fireworks/gpt-oss-20b`
 (uncatalogued passthrough — they work but are absent from `/v1/models`), plus
 the `provider=hanzo` free pool. Prefer one of these when you need a call to
 succeed.
@@ -290,19 +296,25 @@ Develop with the commands in *On your own machine*, then ship on the hosted clou
 
 ## MCP — the tighter binding
 
-One endpoint: `POST https://api.hanzo.ai/v1/mcp`, JSON-RPC 2.0 over ZAP. One tool per capability plus `describe`, so a model searches the list and fetches the schema for the one it picked.
+Run the local server. Claude Code, Codex, Cursor and Zed all take it; the `hanzo`
+skill has the config for each.
 
 ```bash
+claude mcp add hanzo --env HANZO_API_KEY=$HANZO_API_KEY -- npx -y --package=@hanzo/mcp@latest hanzo-mcp serve
 hanzo code                            # a coding session with the toolset attached
 hanzo code --no-mcp                   # opt out
 ```
 
-Any MCP-native agent reaches the same endpoint:
+Any client that reads `mcpServers` (Cursor's `.cursor/mcp.json`, for one):
 
 ```json
-{ "mcpServers": { "hanzo": { "type": "http", "url": "https://api.hanzo.ai/v1/mcp",
-  "headers": { "Authorization": "Bearer sk-live-…" } } } }
+{ "mcpServers": { "hanzo": { "command": "npx", "args": ["-y", "--package=@hanzo/mcp@latest", "hanzo-mcp", "serve"], "env": { "HANZO_API_KEY": "sk-..." } } } }
 ```
+
+The hosted endpoint, `POST https://api.hanzo.ai/v1/mcp` (stateless JSON-RPC;
+`tools/call` needs the Bearer), answers `initialize` with protocol version
+2026-07-28 only. Claude Code 2.1.310 refuses that version, so point a client at
+it only when the client speaks 2026-07-28.
 
 ## The surfaces
 

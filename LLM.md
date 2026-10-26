@@ -4,6 +4,57 @@
 
 A skill is a directory: {name}/SKILL.md says what it covers and names the files beside it. 224 skills, 1,103 markdown files covering the entire Hanzo AI ecosystem. 210 are ours; fourteen are Anthropic's, redistributed under Apache-2.0 — see NOTICE and the section below.
 
+## Company
+
+Positioning, verbatim wherever it appears: "The AI operating system for business. Building business
+software since 2014. Techstars '17."
+
+The source for Hanzo's history is the founder's account (owner override, 2026-10-26: the founder is the
+authority; there is no claim ledger). Print it in the company's voice, these numbers and no others:
+
+- Working since 2014. First customer, 2014: SKULLY, whose campaign passed $1M in 45 hours, the fastest on
+  Indiegogo (powersportsbusiness.com, 2014-10-09). Not "$1M on the first day": that source says 45 hours.
+- AI and machine learning in commercial use since 2014; GPT models by 2019.
+- 2017: the first blockchain-native commerce platform; the Unikrn ICO raised over 120,000 ETH (Crunchbase
+  News, 2017-10-24, which does not name Hanzo; Hanzo's part is on https://hanzo.ai/customers#unikrn).
+- Techstars '17: https://hanzo.blog/2017-06-08-techstars-17/ (2017-06-08) and Startland News, 2017-10-10.
+- Clients funded by Y Combinator, 500 Startups, Techstars and other tier-1 firms: hundreds of venture-funded
+  startups, billions in client revenue, two companies past 100 million users, two that went public on
+  Nasdaq in 2024 (Damon Motorcycles, Triller). "Went public", never "IPO": neither listed by IPO.
+- What that portfolio taught is what Hanzo's AI is built on. Never say client data trained it.
+- First commit of the commerce platform: 2014-09-29.
+- People, as https://hanzo.ai/about states: CEO Antje Worring (https://www.linkedin.com/in/antje-worring/),
+  CTO Zach Kelling (https://www.linkedin.com/in/zeekay/, https://github.com/zeekay). Nothing else about Antje.
+- Contacts: hello@hanzo.ai, enterprise@hanzo.ai (sales), security@hanzo.ai, ir@hanzo.ai (investors),
+  https://hanzo.ai/contact, https://cal.com/hanzo. Print no other address: one more alias on the domain has
+  no reader. No support response time exists; promise none.
+
+Not yet provable, and the artifact that would prove it:
+
+- "original AI OS", "first AI chat app", "LLM chat before ChatGPT": a dated public record (commit, archived
+  page, press) older than what it is compared with. "First" is printed only where the owner dates it.
+- Hosted MCP in Claude Code: `claude mcp get hanzo` answering Connected against https://api.hanzo.ai/v1/mcp.
+  Today Claude Code 2.1.310 refuses the server's protocol version, 2026-07-28.
+- The Zed MCP config: a Zed session listing the server's tools. Only the format was checked.
+- An agent's email-code sign-up end to end: one run from a test inbox to a minted key.
+- A checkout method beyond card, Apple Pay and Google Pay: the live checkout offering it.
+
+## The hanzo skill
+
+`skills/hanzo/SKILL.md` (`name: hanzo`, published as `public/hanzo.md`, installed with
+`npx skills add https://hanzoskills.com/hanzo.md`) onboards an agent: the standard prompt verbatim, *Why
+Hanzo* (the Company lines above), path A for a builder agent (credential, free tier, first call, MCP for
+Claude Code, Codex, Cursor and Zed, Kai evaluation, rate limits), path B for an owner of agents (org, Team
+plan, bounded keys, per-session caps, paying, people), then where the rest is.
+
+Every number in it comes from the 2026-10-26 measurement, which marked each line VERIFIED (ran it) or READ
+(code at a cited commit). Re-measure before changing one; add none from memory. It prints no bank numbers
+(`GET /v1/billing/wire` gives them to a signed-in caller) and no x402: x402 settles priced marketplace tools
+through `POST /v1/tool/call`, and is not a way to pay for chat or decisions.
+
+The root `skill.md` also carries `name: hanzo`; a loader keyed on name keeps one of the two. It is the
+local-first manifest and sends onboarding to this skill.
+
 ## Install
 
 One skill, into any agent, with the skills.sh CLI. The first form fetches the page the site publishes and
