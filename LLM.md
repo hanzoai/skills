@@ -12,8 +12,10 @@ software since 2014. Techstars '17."
 The source for Hanzo's history is the founder's account (owner override, 2026-10-26: the founder is the
 authority; there is no claim ledger). Print it in the company's voice, these numbers and no others:
 
-- Working since 2014. First customer, 2014: SKULLY, whose campaign passed $1M in 45 hours, the fastest on
-  Indiegogo (powersportsbusiness.com, 2014-10-09). Not "$1M on the first day": that source says 45 hours.
+- Working since 2014. Founded as Crowdstart, a crowdfunding and commerce platform; renamed Hanzo in 2016.
+- First customer, 2014: SKULLY, the fastest fully-funded campaign on Indiegogo, $1M in about 45 hours
+  (TechCrunch, 2014-08-14). Not "$1M on the first day": the source says 45 hours.
+- A Go-native platform today. Never "Go native since day 1": the 2014 first commit is CoffeeScript and Node.
 - AI and machine learning in commercial use since 2014; GPT models by 2019.
 - 2017: the first blockchain-native commerce platform; the Unikrn ICO raised over 120,000 ETH (Crunchbase
   News, 2017-10-24, which does not name Hanzo; Hanzo's part is on https://hanzo.ai/customers#unikrn).
@@ -23,6 +25,11 @@ authority; there is no claim ledger). Print it in the company's voice, these num
   Nasdaq in 2024 (Damon Motorcycles, Triller). "Went public", never "IPO": neither listed by IPO.
 - What that portfolio taught is what Hanzo's AI is built on. Never say client data trained it.
 - First commit of the commerce platform: 2014-09-29.
+- Results, each printed with its source: Damon Motorcycles at CES 2020 ($8.4M sold in 30 days, 541:1 return
+  on ad spend, 60,384 people reached on $329 before launch, every AI-generated ad set rated "Above Average"
+  on Facebook within 36 hours, YouTube subscribers +3,752%; https://hanzo.ai/customers/damon-motorcycles);
+  SKULLY ($1M in about 45 hours; TechCrunch); Unikrn (over 120,000 ETH; Crunchbase News). GPT-2 belongs to
+  the founder's account on the about page only, never beside the case-study numbers.
 - People, as https://hanzo.ai/about states: CEO Antje Worring (https://www.linkedin.com/in/antje-worring/),
   CTO Zach Kelling (https://www.linkedin.com/in/zeekay/, https://github.com/zeekay). Nothing else about Antje.
 - Contacts: hello@hanzo.ai, enterprise@hanzo.ai (sales), security@hanzo.ai, ir@hanzo.ai (investors),
@@ -37,15 +44,18 @@ Not yet provable, and the artifact that would prove it:
   Today Claude Code 2.1.310 refuses the server's protocol version, 2026-07-28.
 - The Zed MCP config: a Zed session listing the server's tools. Only the format was checked.
 - An agent's email-code sign-up end to end: one run from a test inbox to a minted key.
+- The campaign flow (event tag, draft, launch, metrics, pause): one run by a non-admin identity. It is read
+  from cloud's OpenAPI at 93083f029, never executed; print no results for it.
 - A checkout method beyond card, Apple Pay and Google Pay: the live checkout offering it.
 
 ## The hanzo skill
 
 `skills/hanzo/SKILL.md` (`name: hanzo`, published as `public/hanzo.md`, installed with
 `npx skills add https://hanzoskills.com/hanzo.md`) onboards an agent: the standard prompt verbatim, *Why
-Hanzo* (the Company lines above), path A for a builder agent (credential, free tier, first call, MCP for
-Claude Code, Codex, Cursor and Zed, Kai evaluation, rate limits), path B for an owner of agents (org, Team
-plan, bounded keys, per-session caps, paying, people), then where the rest is.
+Hanzo* and *Results* (the Company lines above), path A for a builder agent (credential, free tier, first
+call, MCP for Claude Code, Codex, Cursor and Zed, Kai evaluation, a campaign drafted for the owner to
+launch, rate limits), path B for an owner of agents (org, Team plan, bounded keys, per-session caps,
+paying, people), then where the rest is.
 
 Every number in it comes from the 2026-10-26 measurement, which marked each line VERIFIED (ran it) or READ
 (code at a cited commit). Re-measure before changing one; add none from memory. It prints no bank numbers

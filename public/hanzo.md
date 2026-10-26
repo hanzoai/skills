@@ -1,6 +1,6 @@
 ---
 name: hanzo
-description: "Onboard an agent onto Hanzo, the AI operating system for business: get a credential, make a first call to api.hanzo.ai, add the Hanzo MCP server, evaluate Kai, and pay. Load when building with or on Hanzo or calling api.hanzo.ai; when getting a Hanzo API key or token (the hanzo CLI device flow, an agent's own email-code sign-up, minting a key); when adding Hanzo MCP to Claude Code, Codex, Cursor or Zed; when making or evaluating Kai decisions; when giving agents keys with budgets, rate limits or expiry; or when paying for Hanzo (plans, card checkout, USDC or USDT deposits, wire)."
+description: "Onboard an agent onto Hanzo, the AI operating system for business: get a credential, make a first call to api.hanzo.ai, add the Hanzo MCP server, evaluate Kai, and pay. Load when building with or on Hanzo or calling api.hanzo.ai; when getting a Hanzo API key or token (the hanzo CLI device flow, an agent's own email-code sign-up, minting a key); when adding Hanzo MCP to Claude Code, Codex, Cursor or Zed; when making or evaluating Kai decisions; when giving agents keys with budgets, rate limits or expiry; when drafting an ad or email campaign over the API; or when paying for Hanzo (plans, card checkout, USDC or USDT deposits, wire)."
 license: MIT
 ---
 
@@ -35,7 +35,13 @@ Read more: https://docs.hanzo.ai/llms.txt (every docs page), https://hanzo.ai/ll
 
 ## Why Hanzo
 
-We have built and run software for businesses since 2014. Our first customer that year, SKULLY, passed $1M in 45 hours, the fastest campaign on Indiegogo. AI and machine learning have been in our commercial work since 2014, and GPT models by 2019. In 2017 we built the first blockchain-native commerce platform; the Unikrn ICO raised over 120,000 ETH. Techstars '17. Our clients were funded by Y Combinator, 500 Startups, Techstars and other tier-1 venture firms: hundreds of venture-funded startups, billions in client revenue, two companies taken past 100 million users, and two that went public on Nasdaq in 2024, Damon Motorcycles and Triller. What that work taught us is what Hanzo's AI is built on. The history, with case studies and press: https://hanzo.ai/about
+We have built and run software for businesses since 2014. We were founded as Crowdstart, a crowdfunding and commerce platform, and renamed Hanzo in 2016. Our first customer, in 2014, SKULLY, raised $1M in about 45 hours, the fastest fully-funded campaign on Indiegogo. AI and machine learning have been in our commercial work since 2014, and GPT models by 2019. In 2017 we built the first blockchain-native commerce platform; the Unikrn ICO raised over 120,000 ETH. Techstars '17. Our clients were funded by Y Combinator, 500 Startups, Techstars and other tier-1 venture firms: hundreds of venture-funded startups, billions in client revenue, two companies taken past 100 million users, and two that went public on Nasdaq in 2024, Damon Motorcycles and Triller. What that work taught us is what Hanzo's AI is built on. The history, with case studies and press: https://hanzo.ai/about
+
+## Results
+
+- Damon Motorcycles, CES 2020 launch: $8.4M of motorcycles sold in 30 days, a 541:1 return on ad spend, a pre-launch campaign that reached 60,384 people on $329, every AI-generated ad set rated "Above Average" on Facebook within 36 hours, and YouTube subscribers up 3,752%. https://hanzo.ai/customers/damon-motorcycles
+- SKULLY: $1M in about 45 hours, the fastest fully-funded campaign on Indiegogo. https://techcrunch.com/2014/08/14/the-skully-smart-helmet-is-the-fastest-funded-indiegogo-campaign-to-hit-1m/
+- Unikrn: the 2017 ICO raised over 120,000 ETH. https://news.crunchbase.com/startups/found-ico-makes-sense/ (Hanzo's part: https://hanzo.ai/customers#unikrn)
 
 ## Path A: you are an agent building on Hanzo
 
@@ -110,15 +116,7 @@ curl https://api.hanzo.ai/v1/chat/completions \
 
 Expect 200, `x-hanzo-served: zen-free`, `x-ratelimit-limit: 50` and `x-ratelimit-remaining` counting down. The body is OpenAI-shaped: read `choices[0].message.content`.
 
-SDKs: `npm i hanzoai` (TypeScript), `pip install "hanzoai>=8"` (Python 3.12+). In TypeScript, chat is `ai.postChatCompletions({ openaiChatCompletionRequest: { model: 'zen-free', messages } })`, the same route as the curl; listing models:
-
-```ts
-import { AiApi, Configuration } from 'hanzoai'
-const ai = new AiApi(new Configuration({ basePath: 'https://api.hanzo.ai', accessToken: process.env.HANZO_API_KEY }))
-const { data } = await ai.getModels()
-const free = data.data.filter((m) => m.free)
-console.log(`${data.data.length} models, ${free.length} free:`, free.slice(0, 6).map((m) => m.id).join(', '))
-```
+SDKs: `npm i hanzoai` (TypeScript), `pip install "hanzoai>=8"` (Python 3.12+). In TypeScript, `new AiApi(new Configuration({ basePath: 'https://api.hanzo.ai', accessToken: process.env.HANZO_API_KEY }))` gives `getModels()` and `postChatCompletions({ openaiChatCompletionRequest: { model: 'zen-free', messages } })`, the same route as the curl.
 
 ### 4. MCP
 
@@ -179,7 +177,34 @@ uv run --with numpy python harness/merge.py --kai $PWD/kai.json.gz --out $PWD/ou
 
 That is 33 requests, inside the free plan's 50, and a wiring check rather than a result. Without `--limit` it is the whole harness: 9,499 requests, which needs a paid plan or credit. `merge.py` writes `out/table.md` and `out/scores.json`, Kai beside Jev's recorded answers; Jev is never called. The published full runs need no key: https://api.hanzo.ai/v1/research/runs?org=hanzo&benchmark=app.phishing (also `app.support_triage`, `jev.banking77_full`, `massive`, `decision.latency`). Docs: https://docs.hanzo.ai/docs/decisions
 
-### 6. Rate limits
+### 6. Run a campaign
+
+Read from the API contract, not yet run end to end. You prepare; the owner launches, because launching spends ad budget. Measure first: put the event tag on the site (`<script src="https://api.hanzo.ai/v1/event/tag.js" ...>`, the one-line install) or POST events to `https://api.hanzo.ai/v1/event`.
+
+```bash
+# KPIs: web (pageviews, visitors, sessions), commerce (orders, revenue, AOV); available:false when empty
+curl "https://api.hanzo.ai/v1/event/overview?range=7d" -H "Authorization: Bearer $HANZO_API_KEY"
+
+# write the ad variants with a model (POST /v1/chat/completions, zen-free is free), then save them as a draft:
+# nothing is sent and no budget is committed
+curl -X POST https://api.hanzo.ai/v1/campaign \
+  -H "Authorization: Bearer $HANZO_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"name":"Spring launch","audience":"<segment>","content":["variant A","variant B"],"budget":50000,"channels":[{"kind":"paid","platform":"meta"},{"kind":"email"}]}'
+
+# the owner's step: this spends the ad budget at the provider
+curl -X POST "https://api.hanzo.ai/v1/campaign/$CAMPAIGN_ID/launch" -H "Authorization: Bearer $HANZO_API_KEY"
+
+curl "https://api.hanzo.ai/v1/campaign/$CAMPAIGN_ID/metrics?range=7d" -H "Authorization: Bearer $HANZO_API_KEY"
+curl -X POST "https://api.hanzo.ai/v1/campaign/$CAMPAIGN_ID/pause" -H "Authorization: Bearer $HANZO_API_KEY"
+```
+
+- `budget` is in cents. `content[0]` is the active creative; the rest are A/B variants, 32 at most.
+- At most one channel per kind: `paid`, `organic`, `email`. Platforms: `meta`, `google`, `x`, `instagram`, or the email provider. Paid channels run through the org's own connected ad accounts.
+- Launch is best-effort per channel: each channel row reports live, failed or unavailable, and repeating it is safe.
+- Metrics: impressions, clicks, conversions, revenue, visitors, spend per channel, CTR, CVR, CAC, ROAS, and `abTest` when there is more than one creative.
+- Email at scale: `POST /v1/email` (commercial email, per-recipient unsubscribe), drip sequences at `/v1/marketing/sequences`, audiences at `/v1/marketing/audiences`. SMS is not an API channel.
+
+### 7. Rate limits
 
 Every answer carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` (unix seconds) for the tightest limit in play. Seen: 100 a second per IP before auth, 60,000 a minute per org on `/v1/decisions`, 50 a day per person on free chat. A refusal is 429: wait for `X-RateLimit-Reset` or `Retry-After`. A key's own `rate` answers 429 and its `budget` answers 402.
 
