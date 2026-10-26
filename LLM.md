@@ -53,9 +53,10 @@ Not yet provable, and the artifact that would prove it:
 
 `skills/hanzo/SKILL.md` (`name: hanzo`, published as `public/hanzo.md`, installed with
 `npx skills add https://hanzoskills.com/hanzo.md`) onboards an agent: the standard prompt verbatim, *Why
-Hanzo* and *Results* (the Company lines above), path A for a builder agent (credential, free tier, first
-call, MCP for Claude Code, Codex, Cursor and Zed, Kai evaluation, a campaign drafted for the owner to
-launch, rate limits), path B for an owner of agents (org, Team plan, bounded keys, per-session caps,
+Hanzo* and *Results* (the Company lines above), path A for a builder agent (wallet sign-in with no human,
+as one TypeScript file run end to end on 2026-10-26; other credentials, free tier, first call, MCP for
+Claude Code, Codex, Cursor and Zed, Kai evaluation, a campaign drafted for the owner to launch, rate
+limits), path B for an owner of agents (org, Team plan, bounded keys, per-session caps,
 paying, people), then where the rest is.
 
 Every number in it comes from the 2026-10-26 measurement, which marked each line VERIFIED (ran it) or READ

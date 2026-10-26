@@ -71435,11 +71435,13 @@ This skill applies Product Compass GTM strategy methodology, focusing on market 
 
 ---
 name: hanzo
-description: "Onboard an agent onto Hanzo, the AI operating system for business: get a credential, make a first call to api.hanzo.ai, add the Hanzo MCP server, evaluate Kai, and pay. Load when building with or on Hanzo or calling api.hanzo.ai; when getting a Hanzo API key or token (the hanzo CLI device flow, an agent's own email-code sign-up, minting a key); when adding Hanzo MCP to Claude Code, Codex, Cursor or Zed; when making or evaluating Kai decisions; when giving agents keys with budgets, rate limits or expiry; when drafting an ad or email campaign over the API; or when paying for Hanzo (plans, card checkout, USDC or USDT deposits, wire)."
+description: "Onboard an agent onto Hanzo, the AI operating system for business: get a credential, make a first call to api.hanzo.ai, add the Hanzo MCP server, evaluate Kai, and pay. Load when building with or on Hanzo or calling api.hanzo.ai; when getting a Hanzo API key or token (signing in with a wallet, no human; the hanzo CLI device flow; an agent's own email-code sign-up; minting a key); when adding Hanzo MCP to Claude Code, Codex, Cursor or Zed; when making or evaluating Kai decisions; when giving agents keys with budgets, rate limits or expiry; when drafting an ad or email campaign over the API; or when paying for Hanzo (plans, card checkout, USDC or USDT deposits, wire)."
 license: MIT
 ---
 
 # Hanzo
+
+No human required: sign in with a wallet, get a key, call the API, top up in USDC.
 
 The AI operating system for business. Building business software since 2014. Techstars '17.
 
@@ -71448,9 +71450,10 @@ The AI operating system for business. Building business software since 2014. Tec
 Paste this into any agent. It is the whole onboarding in one message; the rest of this page is the detail behind each line.
 
 ```text
-You can build on Hanzo, the AI operating system for business (building business software since 2014; Techstars '17). One API at https://api.hanzo.ai/v1 serves chat, embeddings, images, agents, Kai decisions and the rest of the platform with one key. Start free; nothing below needs a card.
+You can build on Hanzo, the AI operating system for business (building business software since 2014; Techstars '17). One API at https://api.hanzo.ai/v1 serves chat, embeddings, images, agents, Kai decisions and the rest of the platform with one key. Start free; nothing below needs a card, and with a wallet nothing needs a person.
 
 Get a credential:
+- With a wallet, no human required: GET https://hanzo.id/v1/iam/web3/nonce?chain=evm&address=<your address>, sign the CAIP-122 message it describes with EIP-191 personal_sign, POST https://hanzo.id/v1/iam/web3/verify (clientId "hanzo-ai", chain "evm", scheme "secp256k1-eip191", type "code" with a PKCE challenge), exchange the code at https://hanzo.id/v1/iam/oauth/token, then POST https://api.hanzo.ai/v1/account/keys {"name":"agent","type":"secret"}. A first-seen wallet gets its own account and organization on the Free plan. The whole flow as one TypeScript file: https://hanzo.ai/agents#headless
 - With your person nearby: run `curl -fsSL https://hanzo.sh | sh`, then `hanzo auth login`. On a machine with no browser it prints a link and an 8-character code; your person approves it on any device. Then `export HANZO_API_KEY="$(hanzo auth token)"`, or mint a key that does not expire: `hanzo account keys create --name agent --type secret`.
 - On your own, with an inbox: POST https://hanzo.id/v1/iam/verification-codes (form: type=email, dest=<your address>, applicationId=admin/hanzo-ai), then POST https://hanzo.id/v1/iam/login with type "code", the 6-digit code and create true, exchange the code at https://hanzo.id/v1/iam/oauth/token, and POST https://api.hanzo.ai/v1/account/keys {"name":"agent","type":"secret"}. The whole sequence: https://docs.hanzo.ai/docs/agents
 
@@ -71463,7 +71466,7 @@ Tools for your editor or agent: `npx -y --package=@hanzo/mcp@latest hanzo-mcp se
 
 Evaluate Kai, the decision model, yourself: POST https://api.hanzo.ai/v1/decisions with {"model":"kai","state":...,"questions":...}; the frozen harness is public at https://github.com/hanzoai/benchmarks (decision/), and the published runs are at https://api.hanzo.ai/v1/research/runs?org=hanzo&benchmark=app.phishing
 
-Pay when you need more: plans from $20 a month at https://hanzo.ai/pricing (card, Apple Pay or Google Pay at https://hanzo.ai/pay), or fund the balance over the API in USDC or USDT: GET /v1/billing/crypto/options, then POST /v1/billing/crypto/deposit {"chain":"base","token":"usdc","amountCents":2000} and send to the address it returns. Per-key budgets and per-session caps keep spend bounded.
+Pay when you need more: plans from $20 a month at https://hanzo.ai/pricing (card, Apple Pay or Google Pay at https://hanzo.ai/pay), or top up over the API in USDC or USDT with no human: GET /v1/billing/crypto/options, then POST /v1/billing/crypto/deposit {"chain":"base","token":"usdc","amountCents":2000} and send to the address it returns; the balance is credited when the chain confirms. Per-key budgets and per-session caps keep spend bounded.
 
 Read more: https://docs.hanzo.ai/llms.txt (every docs page), https://hanzo.ai/llms.txt, https://api.hanzo.ai/v1/openapi.json (every operation), https://hanzoskills.com/llms.txt (skills). Talk to people at Hanzo: https://cal.com/hanzo, or https://hanzo.ai/contact.
 ```
@@ -71480,9 +71483,109 @@ We have built and run software for businesses since 2014. We were founded as Cro
 
 ## Path A: you are an agent building on Hanzo
 
-### 1. Get a credential
+### 1. Headless: sign in with a wallet
 
-The API is `https://api.hanzo.ai/v1`; identity is `https://hanzo.id` (OIDC discovery at `/.well-known/openid-configuration`, PKCE S256). With a person nearby, headless machines included:
+No person, inbox or card. The API is `https://api.hanzo.ai/v1`; identity is `https://hanzo.id` (OIDC discovery at `/.well-known/openid-configuration`, PKCE S256). This one file signs a CAIP-122 message with EIP-191 `personal_sign`, trades it for a token, mints a key, makes a free call and asks for a USDC deposit address:
+
+```ts
+// No human required: sign in with a wallet, get a key, call the API, top up in USDC.
+// A first-seen wallet gets its own Hanzo account and organization, on the Free plan.
+// npm i viem   ·   node headless.mts   (Node 22.18+; set HANZO_WALLET_KEY to use your own wallet)
+import { createHash, randomBytes } from 'node:crypto'
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
+
+const ID = 'https://hanzo.id'
+const API = 'https://api.hanzo.ai'
+const CLIENT = 'hanzo-ai'
+const REDIRECT = 'http://localhost:3000/callback'
+
+// Your agent's own wallet, or a fresh one. The key never leaves this process.
+const account = privateKeyToAccount((process.env.HANZO_WALLET_KEY as `0x${string}`) ?? generatePrivateKey())
+
+const json = async (r: Response) => {
+  const body = await r.json()
+  if (!r.ok || body?.status === 'error') throw new Error(`${r.url} ${r.status} ${JSON.stringify(body)}`)
+  return body
+}
+
+// 1. A one-time challenge for this wallet.
+const { data: c } = await json(await fetch(`${ID}/v1/iam/web3/nonce?chain=evm&address=${account.address}`))
+
+// 2. The CAIP-122 message the challenge describes, signed with EIP-191 personal_sign.
+const message = [
+  `${c.domain} wants you to sign in with your Ethereum account:`,
+  account.address,
+  '',
+  ...(c.statement ? [c.statement, ''] : []),
+  `URI: ${c.uri}`,
+  `Version: ${c.version}`,
+  `Nonce: ${c.nonce}`,
+  `Issued At: ${c.issuedAt}`,
+  ...(c.expirationTime ? [`Expiration Time: ${c.expirationTime}`] : []),
+].join('\n')
+const signature = await account.signMessage({ message })
+
+// 3. Verify: a first-seen wallet gets an account and an organization of its own.
+const verifier = randomBytes(32).toString('base64url')
+const challenge = createHash('sha256').update(verifier).digest('base64url')
+const { data: code } = await json(
+  await fetch(`${ID}/v1/iam/web3/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      clientId: CLIENT, chain: 'evm', scheme: 'secp256k1-eip191', address: account.address, message, signature,
+      type: 'code', redirectUri: REDIRECT, scope: 'openid profile email', codeChallenge: challenge, codeChallengeMethod: 'S256',
+    }),
+  }),
+)
+
+// 4. The authorization code for a token.
+const token = await json(
+  await fetch(`${ID}/v1/iam/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'authorization_code', client_id: CLIENT, code, code_verifier: verifier, redirect_uri: REDIRECT }),
+  }),
+)
+const bearer = { Authorization: `Bearer ${token.access_token}`, 'Content-Type': 'application/json' }
+
+// 5. A key that outlives the token. Shown once: keep it in your secret store.
+const minted = await json(await fetch(`${API}/v1/account/keys`, { method: 'POST', headers: bearer, body: JSON.stringify({ name: 'agent', type: 'secret' }) }))
+const key = { Authorization: `Bearer ${minted.key}`, 'Content-Type': 'application/json' }
+
+// 6. A first call, free.
+const chat = await fetch(`${API}/v1/chat/completions`, {
+  method: 'POST', headers: key,
+  body: JSON.stringify({ model: 'zen-free', messages: [{ role: 'user', content: 'Reply with the single word: ready' }] }),
+})
+console.log('chat', chat.status, chat.headers.get('x-hanzo-served'), 'free left today:', chat.headers.get('x-ratelimit-remaining'))
+console.log((await chat.json()).choices?.[0]?.message?.content)
+
+// 7. Top up in USDC: ask for a deposit address, then send to exactly that address.
+console.log(await json(await fetch(`${API}/v1/billing/crypto/options`, { headers: key })))
+console.log(await json(await fetch(`${API}/v1/billing/crypto/deposit`, { method: 'POST', headers: key, body: JSON.stringify({ chain: 'base', token: 'usdc', amountCents: 500 }) })))
+console.log('HANZO_API_KEY=' + minted.key.slice(0, 12) + '…  (store the whole key; it is shown once)')
+```
+
+```bash
+npm i viem && node headless.mts
+```
+
+A real run, trimmed:
+
+```text
+chat 200 zen-free free left today: 49
+ready
+{ chains: [ 'base', 'ethereum', 'solana' ], tokens: [ 'usdc', 'usdt' ] }
+{ id, status: 'pending', chain: 'base', token: 'usdc', depositAddress: '0x…', expiresAt: '+24h' }
+HANZO_API_KEY=sk-live-…
+```
+
+A first-seen wallet gets its own account (`wallet_evm_<16 hex>`) and organization (`wallet-evm-<16 hex>`, which it administers) on the Free plan. The token is valid 7 days (`expires_in` 604800); the minted key outlives it. Keep the wallet key and the API key in your secret store: whoever holds the wallet key signs in as you.
+
+### 2. Other ways to get a credential
+
+With a person nearby, headless machines included:
 
 ```bash
 curl -fsSL https://hanzo.sh | sh
@@ -71534,13 +71637,13 @@ hanzo account keys create --name agent --type secret    # the same, from the CLI
 
 Keep the key in your runtime's secret store, never in a tracked file. No card is needed to sign up or mint a key. People can also mint keys at https://platform.hanzo.ai under API keys.
 
-### 2. The free tier
+### 3. The free tier
 
 - 50 requests per person per UTC day. Call 51 answers 429 until the next UTC midnight.
 - Kai is also capped at 50 requests a day on the free plan. Past it: 429 with `"code":"free_plan_cap"`, `resets_at` and `topup_url`.
 - Free models: `zen-free`, `enso-free`, `zen5`, `zen5-flash`, `zen5-mini`, `zen5-pro`, `zen5-coder`. The catalog needs no key: `curl https://api.hanzo.ai/v1/models` (559 models, 33 free, on 2026-10-26).
 
-### 3. First call
+### 4. First call
 
 ```bash
 curl https://api.hanzo.ai/v1/chat/completions \
@@ -71553,7 +71656,7 @@ Expect 200, `x-hanzo-served: zen-free`, `x-ratelimit-limit: 50` and `x-ratelimit
 
 SDKs: `npm i hanzoai` (TypeScript), `pip install "hanzoai>=8"` (Python 3.12+). In TypeScript, `new AiApi(new Configuration({ basePath: 'https://api.hanzo.ai', accessToken: process.env.HANZO_API_KEY }))` gives `getModels()` and `postChatCompletions({ openaiChatCompletionRequest: { model: 'zen-free', messages } })`, the same route as the curl.
 
-### 4. MCP
+### 5. MCP
 
 Run the local server; all four clients below take it. Name the package and the binary apart: `npx -y @hanzo/mcp serve` makes npx read `serve` as a second package. Claude Code:
 
@@ -71588,7 +71691,7 @@ The server (stdio) lists 42 tools: files, shell, git, fetch, code search, browse
 
 The hosted endpoint, `POST https://api.hanzo.ai/v1/mcp`, answers `initialize` with protocol version 2026-07-28 only, and Claude Code 2.1.310 refuses that version. Use it only from a client that speaks 2026-07-28.
 
-### 5. Evaluate Kai
+### 6. Evaluate Kai
 
 Kai is the decision model: it answers typed questions about a state with probabilities over options you name, and writes no text.
 
@@ -71612,7 +71715,7 @@ uv run --with numpy python harness/merge.py --kai $PWD/kai.json.gz --out $PWD/ou
 
 That is 33 requests, inside the free plan's 50, and a wiring check rather than a result. Without `--limit` it is the whole harness: 9,499 requests, which needs a paid plan or credit. `merge.py` writes `out/table.md` and `out/scores.json`, Kai beside Jev's recorded answers; Jev is never called. The published full runs need no key: https://api.hanzo.ai/v1/research/runs?org=hanzo&benchmark=app.phishing (also `app.support_triage`, `jev.banking77_full`, `massive`, `decision.latency`). Docs: https://docs.hanzo.ai/docs/decisions
 
-### 6. Run a campaign
+### 7. Run a campaign
 
 Read from the API contract, not yet run end to end. You prepare; the owner launches, because launching spends ad budget. Measure first: put the event tag on the site (`<script src="https://api.hanzo.ai/v1/event/tag.js" ...>`, the one-line install) or POST events to `https://api.hanzo.ai/v1/event`.
 
@@ -71639,11 +71742,11 @@ curl -X POST "https://api.hanzo.ai/v1/campaign/$CAMPAIGN_ID/pause" -H "Authoriza
 - Metrics: impressions, clicks, conversions, revenue, visitors, spend per channel, CTR, CVR, CAC, ROAS, and `abTest` when there is more than one creative.
 - Email at scale: `POST /v1/email` (commercial email, per-recipient unsubscribe), drip sequences at `/v1/marketing/sequences`, audiences at `/v1/marketing/audiences`. SMS is not an API channel.
 
-### 7. Rate limits
+### 8. Rate limits
 
 Every answer carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` (unix seconds) for the tightest limit in play. Seen: 100 a second per IP before auth, 60,000 a minute per org on `/v1/decisions`, 50 a day per person on free chat. A refusal is 429: wait for `X-RateLimit-Reset` or `Retry-After`. A key's own `rate` answers 429 and its `budget` answers 402.
 
-**Do this now:** get a credential, export `HANZO_API_KEY`, and run the first call. A 200 with `x-ratelimit-remaining` means you are on.
+**Do this now:** run `headless.mts`, or get a credential another way and run the first call. A 200 with `x-ratelimit-remaining` means you are on.
 
 ## Path B: you own the agents
 
