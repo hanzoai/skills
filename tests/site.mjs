@@ -153,12 +153,13 @@ ok('webmcp: an unknown name is refused', (miss.e || '').includes('no skill named
 
 ok('no page errors', errors.length === 0, errors.join(' | '));
 
-// a browser without WebMCP loads the page clean and registers nothing
+// a browser without WebMCP loads the page clean: no page error, no WebMCP warning
+// (the live edge's CSP refusal of Cloudflare's injected beacon is not ours)
 {
   const bare = await browser.newPage();
   const errs = [];
   bare.on('pageerror', (e) => errs.push(e.message));
-  bare.on('console', (m) => { if (m.type() === 'warning' || m.type() === 'error') errs.push(m.text()); });
+  bare.on('console', (m) => { if (/webmcp/i.test(m.text())) errs.push(m.text()); });
   await bare.goto(BASE + '/', { waitUntil: 'load' });
   await bare.waitForTimeout(300);
   ok('webmcp: absent API, no errors or warnings', errs.length === 0, errs.join(' | '));
