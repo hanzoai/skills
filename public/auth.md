@@ -1,4 +1,4 @@
-# Hanzo auth.md
+# auth.md
 
 You are an agent that needs a credential for the Hanzo API. Registration here is wallet sign-in,
 or a device code a person approves: discover, register, exchange the code for an access_token,
@@ -82,7 +82,7 @@ GET https://api.hanzo.ai/v1/account/keys lists your keys; DELETE
 may still be served. Whoever holds the wallet key can sign in as that account: guard it like the
 API key.
 
-## Not offered
+## Not implemented
 
 The auth.md agent-registration protocol is not implemented here: there is no agent identity
 endpoint, no identity assertion exchange and no claim ceremony. Use one of the methods above.
