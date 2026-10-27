@@ -557,10 +557,15 @@ def patch(path):
     out = out.replace(
         "     Send no Accept: text/html and any path returns markdown. -->",
         "     Append .md to any path for the markdown twin. -->")
+    # Every page names its twin, and loads the WebMCP tools (scripts/webmcp.ts).
+    twin = os.path.exists(path[:-5] + ".md")
     head = ('<link rel="icon" href="/favicon.svg">\n'
-            '<link rel="canonical" href="https://hanzoskills.com/%s">\n' % slug)
-    out = re.sub(r'\s*<link rel="(?:icon|canonical)"[^>]*>', "", out)
-    out = out.replace("</head>", "\n" + head + "</head>", 1)
+            '<link rel="canonical" href="https://hanzoskills.com/%s">\n' % slug
+            + ('<link rel="alternate" type="text/markdown" href="/%s.md">\n' % name if twin else "")
+            + '<script type="module" src="/webmcp.js"></script>\n')
+    out = re.sub(r'\s*<link rel="(?:icon|canonical|alternate)"[^>]*>', "", out)
+    out = re.sub(r'\s*<script type="module" src="/webmcp\.js"></script>', "", out)
+    out = re.sub(r"\s*</head>", lambda _: "\n" + head + "</head>", out, count=1)
 
     if os.path.basename(path) == "index.html":
         # Anchored on markup outside each region so a rewritten page re-matches

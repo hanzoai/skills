@@ -207,7 +207,8 @@ public/          index.html + 1,244 <name>.html + <name>.md + all.md, llms.txt, 
 scripts/build.py markdown->html generator: parses skills + core HIPs, formats index & categories
 scripts/site.py  the shared chrome: style, nav, hero, copy-prompt menu, agent bar, Zen fonts
 scripts/marks.py mark geometry, from hanzoai/design assets/{providers,logos}
-tests/site.mjs   browser checks — mark, menu, bar, computed border-radius, Zen fonts
+scripts/webmcp.ts the WebMCP tools every page loads; `npm run webmcp` strips it to public/webmcp.js
+tests/site.mjs   browser checks — mark, menu, bar, WebMCP tools, computed border-radius, Zen fonts
 ```
 
 - `scripts/build.py` compiles `skills/` (including 134 `hanzo/*` skills) and all 275 HIPs into `public/`:
@@ -229,15 +230,17 @@ tests/site.mjs   browser checks — mark, menu, bar, computed border-radius, Zen
   and insights, and scale to the full Hanzo AI Cloud (`api.hanzo.ai`, Zen qwen3+ only). Hanzo AI is Techstars '17.
 - Typography: Canonical Hanzo `Zen` and `Zen Mono` variable font families (`public/fonts/Zen-Variable.woff2`, `Zen-Italic-Variable.woff2`, `ZenMono-Variable.woff2`, `ZenMono-Italic-Variable.woff2`, `ZenPixel-Square.woff2`) loaded via `@font-face` with `font-display: swap`.
 - `scripts/site.py` is the ONE definition of the chrome and rewrites every page.
-  It is idempotent, and CI fails if `public/` does not match it.
+  It is idempotent, and CI fails if `public/` does not match it. It writes each page's
+  head: icon, canonical, `<link rel="alternate" type="text/markdown" href="/<name>.md">`
+  (`/index.md` for `/`, only where the twin exists) and the `/webmcp.js` module.
 - The home page opens on two boxes, from `INSTALL`, `PASTE`, `NEXT` and `AFTER` in
   `scripts/site.py`: the install command for the visitor's OS (tabs; every OS
   without JS) and the line to paste into an agent. `site.py` writes the same
   block into `public/index.md`. Windows is one `INSTALL` row once
   `hanzo.sh/install.ps1` serves a script (404 on 2026-10-12).
 - Publishing is `.github/workflows/deploy.yml` on push to main, beside `ci.yml`.
-  That is the only workflow directory here: the forge reads the first one that
-  exists, and the org's own `linux-amd64` runners serve both planes. It calls
+  GitHub Actions runs both; each job is an ephemeral `runner-github-skills-<id>` pod
+  that platform starts on the AWS cluster for the `linux-amd64` label. It calls
   `hanzoai/ci/.github/actions/site@v1`, which is `bin/site`: enqueue → upload the
   objects straight to S3 → complete. The bytes never pass through the API. Do not
   publish by hand, and do not transcribe those three calls here.
@@ -292,7 +295,16 @@ public/auth.md                             how an agent gets a credential for ap
 public/.well-known/api-catalog             RFC 9727 linkset: the API and the MCP endpoint (hand-written)
 public/.well-known/mcp/server-card.json    MCP Server Card v1 for https://api.hanzo.ai/v1/mcp (hand-written)
 public/.well-known/agent-skills/index.json Agent Skills Discovery 0.2.0, written by scripts/site.py
+public/webmcp.js                           WebMCP tools, stripped from scripts/webmcp.ts (npm run webmcp)
 ```
+
+- The catalog's anchors: api.hanzo.ai/v1, its MCP endpoint, hanzoskills.com (llms.txt, skills index)
+  and hanzo.ai/agents. Live, discovery.py fetches every link in it and fails on any non-200.
+- WebMCP: where the browser has `document.modelContext` (or `navigator.modelContext`), every page
+  registers `search_skills(query, limit)` (every word must match name or description; name hits rank
+  first) and `get_skill(name)` (the skill's markdown, refused unless its SHA-256 matches the index), both
+  `readOnlyHint`. Elsewhere it does nothing. tests/site.mjs drives both through a recording
+  `modelContext`; the deploy step fails when public/webmcp.js differs from a fresh strip.
 
 - The skills index lists every `public/<name>.md` whose front matter names it `<name>` (lowercase,
   hyphens, at most 64) with a description of at most 1,024 characters, and the SHA-256 of its bytes.
@@ -309,7 +321,7 @@ public/.well-known/agent-skills/index.json Agent Skills Discovery 0.2.0, written
 - Not on this host, on purpose: OAuth authorization server metadata and protected resource metadata
   (hanzoskills.com issues nothing and protects nothing; RFC 8414 3.3 and RFC 9728 3.3 tie each document
   to its own host: they live at hanzo.id and api.hanzo.ai), an A2A agent card (no A2A endpoint answers),
-  Web Bot Auth (Hanzo's fetchers sign no requests), WebMCP.
+  Web Bot Auth (Hanzo's fetchers sign no requests).
 - The served type of `/.well-known/api-catalog` (no extension, so the plane sends none), the `Link`
   header on `/` and `Accept: text/markdown` on every page are the plane's: hanzo/universe sites.yaml.
 
@@ -345,7 +357,7 @@ public/.well-known/agent-skills/index.json Agent Skills Discovery 0.2.0, written
 3. GHCR for images -- `ghcr.io/hanzoai/*`, `--platform linux/amd64`; never mix with `ghcr.io/luxfi/*`
 4. Kustomize, not Helm (exception: `cloud/helm/cloud` for BYO-k8s installs)
 5. No nginx, no caddy -- Hanzo Ingress only
-6. CI = Gitea Actions on git.hanzo.ai (own runners); GitHub = OSS mirror; no GH-hosted builders
+6. CI = GitHub Actions on platform's ephemeral cluster runners (`linux-amd64`); no GH-hosted builders
 7. IAM for all auth -- RFC 6749 endpoints, implicit flow preferred
 8. Universe repo is source of truth for K8s manifests; operator reconciles `services.hanzo.ai` CRs
 9. SQLite-primary per-tenant; PostgreSQL only for prod multi-instance; never default to PG locally

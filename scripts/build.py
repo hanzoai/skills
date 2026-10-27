@@ -343,8 +343,7 @@ footer a{color:var(--soft)}
 """
 
 def shell(title, body, up=True, extra='', md=None, hero=None):
-    alt = f'<link rel="alternate" type="text/markdown" href="{md}">' if md else ''
-    note = (f'<!-- Reading this with a machine? Every page here is also plain markdown.\n'
+    note =(f'<!-- Reading this with a machine? Every page here is also plain markdown.\n'
             f'     This one: https://hanzoskills.com{md}\n'
             f'     Index:    https://hanzoskills.com/llms.txt\n'
             f'     Corpus:   https://hanzoskills.com/all.md\n'
@@ -354,7 +353,6 @@ def shell(title, body, up=True, extra='', md=None, hero=None):
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)}</title>
 <meta name="color-scheme" content="dark">\n<style>{CSS}</style>
-{alt}
 </head>
 {note}
 <body>

@@ -89,6 +89,21 @@ if BASE:
            "HTTP %d, %d bytes" % (status, len(body)))
     status, ctype, _ = get("auth.md")
     ok("live auth.md: served as markdown", ctype.startswith("text/markdown"), ctype)
+
+    def answers(url):
+        req = urllib.request.Request(url, headers={"User-Agent": "hanzoskills-deploy"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return r.status
+        except urllib.error.HTTPError as e:
+            return e.code
+        except OSError:
+            return 0
+
+    hrefs = sorted({t["href"] for e in links for k, v in e.items() if k != "anchor" for t in v})
+    with ThreadPoolExecutor(8) as pool:
+        dead = [h for h, code in zip(hrefs, pool.map(answers, hrefs)) if code != 200]
+    ok("live api-catalog: every link answers 200", not dead, ", ".join(dead))
     def served(s):
         status, _, body = get(s["url"].lstrip("/"))
         return status == 200 and "sha256:" + hashlib.sha256(body).hexdigest() == s["digest"]

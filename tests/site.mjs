@@ -1,5 +1,5 @@
 /**
- * Browser checks for the landing page: mark, copy-prompt selector, agent bar,
+ * Browser checks for the landing page: mark, copy-prompt selector, agent bar, WebMCP tools,
  * button radius. Run against a local server or the live host:
  *   node tests/site.mjs [base-url] [shot-dir]
  */
@@ -20,6 +20,15 @@ const browser = await chromium.launch();
 const ctx = await browser.newContext({
   viewport: { width: 1280, height: 900 },
   permissions: ['clipboard-read', 'clipboard-write'],
+});
+// A recording WebMCP: document.modelContext keeps every tool the page registers.
+await ctx.addInitScript(() => {
+  const tools = [];
+  Object.defineProperty(window, '__tools', { value: tools });
+  Object.defineProperty(Document.prototype, 'modelContext', {
+    configurable: true,
+    get: () => ({ registerTool: (t) => { tools.push(t); return Promise.resolve(); } }),
+  });
 });
 const page = await ctx.newPage();
 const errors = [];
@@ -120,9 +129,43 @@ ok('bar: overflows its track', scroll.over, `scrollWidth ${scroll.sw} > clientWi
 ok('bar: actually scrolls', scroll.after > scroll.before, `scrollLeft ${scroll.before} -> ${scroll.after}`);
 await bar.evaluate((e) => { e.scrollLeft = 0; });
 
+// 5 — WebMCP: two read-only tools that answer from the published skills index
+await page.waitForFunction(() => window.__tools.length >= 2, null, { timeout: 5000 }).catch(() => {});
+const tools = await page.evaluate(() => window.__tools.map((t) => ({
+  name: t.name, ro: t.annotations?.readOnlyHint === true, req: t.inputSchema?.required ?? [] })));
+ok('webmcp: registers search_skills and get_skill',
+  tools.map((t) => t.name).sort().join() === 'get_skill,search_skills', tools.map((t) => t.name).join(', '));
+ok('webmcp: both are read-only with a required argument',
+  tools.length === 2 && tools.every((t) => t.ro && t.req.length === 1));
+const run = (name, input) => page.evaluate(([n, i]) =>
+  window.__tools.find((t) => t.name === n).execute(i).then((v) => ({ v }), (e) => ({ e: e.message })), [name, input]);
+const found = await run('search_skills', { query: 'kai' });
+ok('webmcp: search_skills("kai") ranks kai first', found.v?.skills[0]?.name === 'kai',
+  found.e || found.v.skills.slice(0, 3).map((s) => s.name).join(', '));
+ok('webmcp: results link absolute markdown urls',
+  !!found.v && found.v.skills.every((s) => s.url === `${new URL(BASE).origin}/${s.name}.md`));
+const md = await run('get_skill', { name: 'kai' });
+const served = await (await page.request.get(BASE + '/kai.md')).text();
+ok('webmcp: get_skill("kai") returns the served kai.md',
+  md.v === served && served.startsWith('---\nname: kai\n'), md.e || `${md.v.length} chars`);
+const miss = await run('get_skill', { name: 'no-such-skill' });
+ok('webmcp: an unknown name is refused', (miss.e || '').includes('no skill named'), miss.e || 'resolved');
+
 ok('no page errors', errors.length === 0, errors.join(' | '));
 
-// 5 — screenshots
+// a browser without WebMCP loads the page clean and registers nothing
+{
+  const bare = await browser.newPage();
+  const errs = [];
+  bare.on('pageerror', (e) => errs.push(e.message));
+  bare.on('console', (m) => { if (m.type() === 'warning' || m.type() === 'error') errs.push(m.text()); });
+  await bare.goto(BASE + '/', { waitUntil: 'load' });
+  await bare.waitForTimeout(300);
+  ok('webmcp: absent API, no errors or warnings', errs.length === 0, errs.join(' | '));
+  await bare.close();
+}
+
+// 6 — screenshots
 for (const [w, h, tag] of [[1280, 900, 'desktop-1280'], [390, 844, 'mobile-390']]) {
   await page.setViewportSize({ width: w, height: h });
   await page.waitForTimeout(200);
@@ -139,6 +182,10 @@ console.log(`\nshots -> ${SHOTS}`);
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(BASE + '/hip-0026.html', { waitUntil: 'load' });
 ok('subpage: carries the mark', (await page.locator('nav .brand svg.mark path').count()) === 5);
+ok('subpage: names its markdown twin',
+  (await page.locator('link[rel="alternate"][type="text/markdown"]').getAttribute('href')) === '/hip-0026.md');
+await page.waitForFunction(() => window.__tools.length >= 2, null, { timeout: 5000 }).catch(() => {});
+ok('subpage: registers the WebMCP tools', (await page.evaluate(() => window.__tools.length)) === 2);
 const subRadius = await page.$eval('pre', (e) => getComputedStyle(e).borderTopLeftRadius).catch(() => '0px');
 ok('subpage: surfaces rounded', parseFloat(subRadius) > 4, subRadius);
 await page.screenshot({ path: `${SHOTS}/subpage-1280.png` });
