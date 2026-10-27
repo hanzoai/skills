@@ -300,8 +300,12 @@ public/.well-known/agent-skills/index.json Agent Skills Discovery 0.2.0, written
   refuses (`description:` with an unquoted `: ` or a trailing `:`, in hanzo-api-kms, hanzo-api-sandbox,
   redpanda-streaming and four realtime-* files), names with capitals or spaces (the graph pages).
 - Every claim in auth.md and the card was checked live on 2026-10-26 against the hanzo skill. Change
-  them with it. The card carries the MCP Server Card v1 fields plus `serverInfo`, `url`, `transport` and
-  `capabilities` copied from what the endpoint's `initialize` answers, which is the shape the scanner reads.
+  them with it. The card is the MCP Server Card v1 shape and nothing more. A scan of it calls
+  `initialize` and `tools/list` on https://api.hanzo.ai/v1/mcp, so every scanner that reads the card
+  exercises that endpoint.
+- auth.md is read by keyword: a protocol named only to say it is not offered was scored as support,
+  and a URL inside a code span was fetched with the closing backtick. Name no protocol token there,
+  and write URLs as `<https://…>`.
 - Not on this host, on purpose: OAuth authorization server metadata and protected resource metadata
   (hanzoskills.com issues nothing and protects nothing; RFC 8414 3.3 and RFC 9728 3.3 tie each document
   to its own host: they live at hanzo.id and api.hanzo.ai), an A2A agent card (no A2A endpoint answers),
