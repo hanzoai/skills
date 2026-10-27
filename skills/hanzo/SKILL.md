@@ -344,7 +344,7 @@ Inside org hanzo, a few names mean a specific repository:
 |---|---|
 | `cloud`, `hanzo/cloud` | `github.com/hanzo-inc/cloud`, the private backend |
 | `universe` | `github.com/hanzo-inc/universe` |
-| `github.com/hanzoai/cloud` | the open-source edition, a different codebase (a bare `hanzoai/cloud` is refused: say which you mean) |
+| `github.com/hanzoai/cloud` | the open-source single binary for local development, a different codebase (a bare `hanzoai/cloud` is refused: say which you mean) |
 | another bare name, like `docs` or `mcp` | the org's forge copy; current when it mirrors GitHub |
 
 - A run that changed nothing because its repository held no code fails with that reason, and so does one whose model stopped without a final answer.
