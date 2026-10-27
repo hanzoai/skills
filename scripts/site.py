@@ -7,6 +7,7 @@ left untouched. Idempotent: running twice changes nothing, and CI runs it to
 assert public/ matches this file.
 """
 import glob
+import hashlib
 import html
 import json
 import os
@@ -614,6 +615,87 @@ def sitemap(files):
             + "</urlset>\n")
 
 
+# Agent Skills Discovery v0.2.0 (github.com/cloudflare/agent-skills-discovery-rfc).
+# The index lists every file this site serves that an agent can install as a skill:
+# a /<name>.md whose front matter names it <name> (the Agent Skills name rule) and
+# describes it in at most 1,024 characters. Each entry carries the SHA-256 of the
+# exact bytes served, so a client verifies what it fetched, and the index is
+# derived here, beside the sitemap, so CI fails when it disagrees with public/.
+SKILLS_SCHEMA = "https://schemas.agentskills.io/discovery/0.2.0/schema.json"
+SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+BLOCK = re.compile(r"^[|>][+-]?$")
+
+
+def front(text):
+    """The top-level scalar fields of a file's YAML front matter, as strings.
+
+    Plain, single- and double-quoted scalars and `|`/`>` block scalars: the forms
+    the skills here use. A key whose value is a list or mapping maps to "". A plain
+    scalar YAML refuses (": " inside it, a trailing ":", a leading indicator) raises
+    ValueError, as a YAML loader would refuse the file."""
+    if not text.startswith("---\n"):
+        return {}
+    end = text.find("\n---\n", 3)
+    if end < 0:
+        return {}
+    lines = text[4:end].split("\n")
+    out, i = {}, 0
+    while i < len(lines):
+        m = re.match(r"^([A-Za-z0-9_-]+):(?:\s+(.*))?$", lines[i])
+        i += 1
+        if not m:
+            continue
+        key, val = m.group(1), (m.group(2) or "").strip()
+        body = []
+        while i < len(lines) and (lines[i][:1] in (" ", "\t") or lines[i] == ""):
+            body.append(lines[i])
+            i += 1
+        while body and body[-1] == "":
+            body.pop()
+        if BLOCK.match(val):
+            ind = min((len(b) - len(b.lstrip()) for b in body if b.strip()), default=0)
+            rows = [b[ind:] for b in body]
+            if val[0] == "|":
+                val = "\n".join(rows)
+            else:
+                val = re.sub(r"(?<!\n)\n(?!\n)", " ", "\n".join(rows)).replace("\n\n", "\n")
+        elif val[:1] == '"' and val.endswith('"') and len(val) > 1:
+            val = json.loads(val)
+        elif val[:1] == "'" and val.endswith("'") and len(val) > 1:
+            val = val[1:-1].replace("''", "'")
+        else:
+            if ": " in val or val.endswith(":") or val[:1] in tuple("*&!%@`"):
+                raise ValueError("front matter %s: not a plain YAML scalar" % key)
+            if body and val:
+                val = " ".join([val] + [b.strip() for b in body])
+        out[key] = val
+    return out
+
+
+def skills_index(root):
+    skills = []
+    for path in sorted(glob.glob(os.path.join(root, "*.md"))):
+        name = os.path.basename(path)[:-3]
+        raw = open(path, "rb").read()
+        try:
+            fm = front(raw.decode("utf-8"))
+        except ValueError:
+            continue
+        desc = " ".join(fm.get("description", "").split())
+        if fm.get("name") != name or not SKILL_NAME.match(name) or len(name) > 64:
+            continue
+        if not desc or len(desc) > 1024:
+            continue
+        skills.append({
+            "name": name,
+            "type": "skill-md",
+            "description": desc,
+            "url": "/%s.md" % name,
+            "digest": "sha256:" + hashlib.sha256(raw).hexdigest(),
+        })
+    return json.dumps({"$schema": SKILLS_SCHEMA, "skills": skills}, ensure_ascii=False, indent=1) + "\n"
+
+
 def main():
     write(os.path.join(ROOT, "favicon.svg"), FAVICON)
     files = sorted(glob.glob(os.path.join(ROOT, "*.html")))
@@ -625,6 +707,9 @@ def main():
                  lambda _: get_md(), src, count=1, flags=re.S)
     if out != src:
         write(md, out)
+    index = os.path.join(ROOT, ".well-known", "agent-skills", "index.json")
+    os.makedirs(os.path.dirname(index), exist_ok=True)
+    write(index, skills_index(ROOT))
     print("%d/%d pages rewritten" % (changed, len(files)))
 
 

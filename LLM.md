@@ -282,6 +282,33 @@ Measured on the live host for `index.md`, `hanzo-base.md`, `all.md` and `hip-000
 rule: a markdown table on a page arrives as one paragraph of pipes in the HTML, and intact
 in the `.md` twin.
 
+### Agent discovery (Cloudflare Agent Readiness)
+
+What an agent finds the site and the API by. `tests/discovery.py public [https://host]` checks
+all four, before the publish and against the live host after it.
+
+```
+public/auth.md                             how an agent gets a credential for api.hanzo.ai (hand-written)
+public/.well-known/api-catalog             RFC 9727 linkset: the API and the MCP endpoint (hand-written)
+public/.well-known/mcp/server-card.json    MCP Server Card v1 for https://api.hanzo.ai/v1/mcp (hand-written)
+public/.well-known/agent-skills/index.json Agent Skills Discovery 0.2.0, written by scripts/site.py
+```
+
+- The skills index lists every `public/<name>.md` whose front matter names it `<name>` (lowercase,
+  hyphens, at most 64) with a description of at most 1,024 characters, and the SHA-256 of its bytes.
+  site.py writes it, so CI fails when it disagrees with `public/`. Excluded today: front matter YAML
+  refuses (`description:` with an unquoted `: ` or a trailing `:`, in hanzo-api-kms, hanzo-api-sandbox,
+  redpanda-streaming and four realtime-* files), names with capitals or spaces (the graph pages).
+- Every claim in auth.md and the card was checked live on 2026-10-26 against the hanzo skill. Change
+  them with it. The card carries the MCP Server Card v1 fields plus `serverInfo`, `url`, `transport` and
+  `capabilities` copied from what the endpoint's `initialize` answers, which is the shape the scanner reads.
+- Not on this host, on purpose: OAuth authorization server metadata and protected resource metadata
+  (hanzoskills.com issues nothing and protects nothing; RFC 8414 3.3 and RFC 9728 3.3 tie each document
+  to its own host: they live at hanzo.id and api.hanzo.ai), an A2A agent card (no A2A endpoint answers),
+  Web Bot Auth (Hanzo's fetchers sign no requests), WebMCP.
+- The served type of `/.well-known/api-catalog` (no extension, so the plane sends none), the `Link`
+  header on `/` and `Accept: text/markdown` on every page are the plane's: hanzo/universe sites.yaml.
+
 ## Key Skills by Domain
 
 ### Infrastructure

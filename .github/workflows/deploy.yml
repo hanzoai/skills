@@ -25,6 +25,7 @@ on:
       - 'scripts/site.py'
       - 'scripts/marks.py'
       - 'tests/site.mjs'
+      - 'tests/discovery.py'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
@@ -73,6 +74,12 @@ jobs:
           bad=$(grep -ohE '#[0-9a-fA-F]{6}' public/index.html public/favicon.svg | sort -fu \
                 | grep -viE '^#(000000|ffffff|dddddd|f4f4f2|9c9c98|7a7a75|6a6a66|0a0a0a|232323|3a3a3a|d8d8d4|141414|181818)$' || true)
           [ -z "$bad" ] || { echo "::error::non-monochrome colour in the page: $bad"; exit 1; }
+
+      # What an agent discovers the site by: /auth.md, the API catalog, the MCP
+      # server card and the skills index, whose digests site.py derives from the
+      # committed markdown.
+      - name: the discovery documents are well formed
+        run: python3 tests/discovery.py public
 
       - uses: actions/setup-node@v4
         with:
@@ -174,6 +181,19 @@ jobs:
           curl -sfS -o /dev/null "https://$HOST/all.md"
           llms=$(curl -sfS "https://$HOST/llms.txt")
           grep -q 'hanzoskills.com' <<<"$llms"
+
+      # Served, not just committed: each document answers 200 with the committed
+      # bytes, and every skill's digest matches what the host serves for it.
+      - name: the discovery documents are served
+        run: |
+          set -uo pipefail
+          # The plane may answer from its object cache for a moment after the
+          # completion; a document that stays wrong for two minutes is a failure.
+          for i in $(seq 1 8); do
+            python3 tests/discovery.py public "https://$HOST" && exit 0
+            sleep 15
+          done
+          exit 1
 
       - name: the live host renders
         run: node tests/site.mjs "https://$HOST" shots-live
