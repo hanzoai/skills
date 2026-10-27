@@ -1,18 +1,16 @@
 # Hanzo auth.md
 
 For an AI agent that needs a credential for the Hanzo API. The resource server is
-`https://api.hanzo.ai` (REST under `/v1`, MCP at `/v1/mcp`). The authorization server
-is `https://hanzo.id` (OpenID Connect). Every step below is one HTTPS request.
+<https://api.hanzo.ai> (REST under `/v1`, MCP at `/v1/mcp`). The authorization server
+is <https://hanzo.id> (OpenID Connect). Every step below is one HTTPS request.
 
 ## Discover
 
-1. `GET https://api.hanzo.ai/.well-known/oauth-protected-resource` (RFC 9728) answers
+1. GET <https://api.hanzo.ai/.well-known/oauth-protected-resource> (RFC 9728) answers
    `resource: https://api.hanzo.ai`, `authorization_servers: ["https://hanzo.id"]`,
    `bearer_methods_supported: ["header"]`.
-2. `GET https://hanzo.id/.well-known/openid-configuration` answers `issuer: https://hanzo.id`,
+2. GET <https://hanzo.id/.well-known/openid-configuration> answers `issuer: https://hanzo.id`,
    `token_endpoint: https://hanzo.id/v1/iam/oauth/token`, PKCE `S256`.
-
-A call with no credential answers `401` with `WWW-Authenticate: Bearer`.
 
 ## Pick a method
 
@@ -65,6 +63,5 @@ revokes one; a request inside the next 60 seconds may still be served. Whoever h
 
 ## Not offered
 
-The auth.md agent-registration protocol (`POST /agent/identity`, ID-JAG identity assertions, the
-claim ceremony, an `agent_auth` block in authorization server metadata) is not implemented here.
-Use one of the methods above.
+The auth.md agent-registration protocol is not implemented here: there is no agent identity
+endpoint, no identity assertion exchange and no claim ceremony. Use one of the methods above.
