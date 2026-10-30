@@ -635,7 +635,7 @@ BLOCK = re.compile(r"^[|>][+-]?$")
 SOURCE = os.path.join(os.path.dirname(ROOT), "skills")
 # A markdown link's target, and a bare path into a skill's own directories.
 LINK = re.compile(r"\]\(([^)\s]+)")
-PATH = re.compile(r"(?<![\w/.:@~-])((?:\.{1,2}/)*(?:references?|scripts|templates|assets|examples|resources|tools)/[\w.@+-]+(?:/[\w.@+-]+)*)")
+PATH = re.compile(r"(?<![\w/.:@~-])((?:\.{1,2}/)*(?:references?|scripts|templates|assets|examples|resources|tools|skills)/[\w.@+-]+(?:/[\w.@+-]+)*)")
 
 
 def front(text):
