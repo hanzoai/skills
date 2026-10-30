@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>gh-issues</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/gh-issues">
+<link rel="alternate" type="text/markdown" href="/gh-issues.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/gh-issues.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>gh-issues</h1><p class="lede">Fetch GitHub issues, spawn sub-agents to implement fixes and open PRs, then monitor and address PR review comments. Usage: /gh-issues [owner/repo] [--label bug] [--limit 5] [--milestone v1.0] [--assignee @me] [--fork user/repo] [--watch] [--interval 5] [--reviews-only] [--cron] [--dry-run] [--model glm-5] [--notify-channel -1002381931352]</p><h1>gh-issues — Auto-fix GitHub Issues with Parallel Sub-agents</h1>
+<p>You are an orchestrator. Follow these 6 phases exactly. Do not skip phases.</p>
+<p>IMPORTANT — No <code>gh</code> CLI dependency. This skill uses curl + the GitHub REST API exclusively. The GH_TOKEN env var is already injected by HanzoBot. Pass it as a Bearer token in all API calls:</p>
+<pre><code>curl -s -H &quot;Authorization: Bearer $GH_TOKEN&quot; -H &quot;Accept: application/vnd.github+json&quot; ...</code></pre>
+<hr>
+<h2>Phase 1 — Parse Arguments</h2>
+<p>Parse the arguments string provided after /gh-issues.</p>
+<p>Positional:</p>
+<ul><li>owner/repo — optional. This is the source repo to fetch issues from. If omitted, detect from the current git remote:</li></ul>
+<p>  <code>git remote get-url origin</code>   Extract owner/repo from the URL (handles both HTTPS and SSH formats).</p>
+<ul><li>HTTPS: https://github.com/owner/repo.git → owner/repo</li><li>SSH: git@github.com:owner/repo.git → owner/repo</li></ul>
+<p>    If not in a git repo or no remote found, stop with an error asking the user to specify owner/repo.</p>
+<p>Flags (all optional): | Flag | Default | Description | |------|---------|-------------| | --label | _(none)_ | Filter by label (e.g. bug, <code>enhancement</code>) | | --limit | 10 | Max issues to fetch per poll | | --milestone | _(none)_ | Filter by milestone title | | --assignee | _(none)_ | Filter by assignee (<code>@me</code> for self) | | --state | open | Issue state: open, closed, all | | --fork | _(none)_ | Your fork (<code>user/repo</code>) to push branches and open PRs from. Issues are fetched from the source repo; code is pushed to the fork; PRs are opened from the fork to the source repo. | | --watch | false | Keep polling for new issues and PR reviews after each batch | | --interval | 5 | Minutes between polls (only with <code>--watch</code>) | | --dry-run | false | Fetch and display only — no sub-agents | | --yes | false | Skip confirmation and auto-process all filtered issues | | --reviews-only | false | Skip issue processing (Phases 2-5). Only run Phase 6 — check open PRs for review comments and address them. | | --cron | false | Cron-safe mode: fetch issues and spawn sub-agents, exit without waiting for results. | | --model | _(none)_ | Model to use for sub-agents (e.g. <code>glm-5</code>, <code>zai/glm-5</code>). If not specified, uses the agent&#x27;s default model. | | --notify-channel | _(none)_ | Telegram channel ID to send final PR summary to (e.g. -1002381931352). Only the final result with PR links is sent, not status updates. |</p>
+<p>Store parsed values for use in subsequent phases.</p>
+<p>Derived values:</p>
+<ul><li>SOURCE_REPO = the positional owner/repo (where issues live)</li><li>PUSH_REPO = --fork value if provided, otherwise same as SOURCE_REPO</li><li>FORK_MODE = true if --fork was provided, false otherwise</li></ul>
+<p><strong>If <code>--reviews-only</code> is set:</strong> Skip directly to Phase 6. Run token resolution (from Phase 2) first, then jump to Phase 6.</p>
+<p><strong>If <code>--cron</code> is set:</strong></p>
+<ul><li>Force <code>--yes</code> (skip confirmation)</li><li>If <code>--reviews-only</code> is also set, run token resolution then jump to Phase 6 (cron review mode)</li><li>Otherwise, proceed normally through Phases 2-5 with cron-mode behavior active</li></ul>
+<hr>
+<h2>Phase 2 — Fetch Issues</h2>
+<p><strong>Token Resolution:</strong> First, ensure GH_TOKEN is available. Check environment:</p>
+<pre><code>echo $GH_TOKEN</code></pre>
+<p>If empty, read from config:</p>
+<pre><code>cat ~/.hanzo-bot/hanzo-bot.json | jq -r &#x27;.skills.entries[&quot;gh-issues&quot;].apiKey // empty&#x27;</code></pre>
+<p>If still empty, check <code>/data/.clawdbot/hanzo-bot.json</code>:</p>
+<pre><code>cat /data/.clawdbot/hanzo-bot.json | jq -r &#x27;.skills.entries[&quot;gh-issues&quot;].apiKey // empty&#x27;</code></pre>
+<p>Export as GH_TOKEN for subsequent commands:</p>
+<pre><code>export GH_TOKEN=&quot;&lt;token&gt;&quot;</code></pre>
+<p>Build and run a curl request to the GitHub Issues API via exec:</p>
+<pre><code>curl -s -H &quot;Authorization: Bearer $GH_TOKEN&quot; -H &quot;Accept: application/vnd.github+json&quot; \
+  &quot;https://api.github.com/repos/{SOURCE_REPO}/issues?per_page={limit}&amp;state={state}&amp;{query_params}&quot;</code></pre>
+<p>Where {query_params} is built from:</p>
+<ul><li>labels={label} if --label was provided</li><li>milestone={milestone} if --milestone was provided (note: API expects milestone _number_, so if user provides a title, first resolve it via GET /repos/{SOURCE_REPO}/milestones and match by title)</li><li>assignee={assignee} if --assignee was provided (if @me, first resolve your username via <code>GET /user</code>)</li></ul>
+<p>IMPORTANT: The GitHub Issues API also returns pull requests. Filter them out — exclude any item where pull_request key exists in the response object.</p>
+<p>If in watch mode: Also filter out any issue numbers already in the PROCESSED_ISSUES set from previous batches.</p>
+<p>Error handling:</p>
+<ul><li>If curl returns an HTTP 401 or 403 → stop and tell the user:</li></ul>
+<blockquote><p>&quot;GitHub authentication failed. Please check your apiKey in the HanzoBot dashboard or in ~/.hanzo-bot/hanzo-bot.json under skills.entries.gh-issues.&quot;</p></blockquote>
+<ul><li>If the response is an empty array (after filtering) → report &quot;No issues found matching filters&quot; and stop (or loop back if in watch mode).</li><li>If curl fails or returns any other error → report the error verbatim and stop.</li></ul>
+<p>Parse the JSON response. For each issue, extract: number, title, body, labels (array of label names), assignees, html_url.</p>
+<hr>
+<h2>Phase 3 — Present &amp; Confirm</h2>
+<p>Display a markdown table of fetched issues:</p>
+<p>| #   | Title                         | Labels        | | --- | ----------------------------- | ------------- | | 42  | Fix null pointer in parser    | bug, critical | | 37  | Add retry logic for API calls | enhancement   |</p>
+<p>If FORK_MODE is active, also display:</p>
+<blockquote><p>&quot;Fork mode: branches will be pushed to {PUSH_REPO}, PRs will target <code>{SOURCE_REPO}</code>&quot;</p></blockquote>
+<p>If <code>--dry-run</code> is active:</p>
+<ul><li>Display the table and stop. Do not proceed to Phase 4.</li></ul>
+<p>If <code>--yes</code> is active:</p>
+<ul><li>Display the table for visibility</li><li>Auto-process ALL listed issues without asking for confirmation</li><li>Proceed directly to Phase 4</li></ul>
+<p>Otherwise: Ask the user to confirm which issues to process:</p>
+<ul><li>&quot;all&quot; — process every listed issue</li><li>Comma-separated numbers (e.g. <code>42, 37</code>) — process only those</li><li>&quot;cancel&quot; — abort entirely</li></ul>
+<p>Wait for user response before proceeding.</p>
+<p>Watch mode note: On the first poll, always confirm with the user (unless --yes is set). On subsequent polls, auto-process all new issues without re-confirming (the user already opted in). Still display the table so they can see what&#x27;s being processed.</p>
+<hr>
+<h2>Phase 4 — Pre-flight Checks</h2>
+<p>Run these checks sequentially via exec:</p>
+<ol><li><strong>Dirty working tree check:</strong></li></ol>
+<p>   ``<code>    git status --porcelain    </code>``</p>
+<p>   If output is non-empty, warn the user:</p>
+<blockquote><p>&quot;Working tree has uncommitted changes. Sub-agents will create branches from HEAD — uncommitted changes will NOT be included. Continue?&quot; Wait for confirmation. If declined, stop.</p></blockquote>
+<ol><li><strong>Record base branch:</strong></li></ol>
+<p>   ``<code>    git rev-parse --abbrev-ref HEAD    </code>``</p>
+<p>   Store as BASE_BRANCH.</p>
+<ol><li><strong>Verify remote access:</strong></li></ol>
+<p>   If FORK_MODE:</p>
+<ul><li>Verify the fork remote exists. Check if a git remote named <code>fork</code> exists:</li></ul>
+<p>     ``<code>      git remote get-url fork      </code>`<code>      If it doesn&#x27;t exist, add it:      </code>`<code>      git remote add fork https://x-access-token:$GH_TOKEN@github.com/{PUSH_REPO}.git      </code>``</p>
+<ul><li>Also verify origin (the source repo) is reachable:</li></ul>
+<p>     ``<code>      git ls-remote --exit-code origin HEAD      </code>``</p>
+<p>   If not FORK_MODE:</p>
+<p>   ``<code>    git ls-remote --exit-code origin HEAD    </code>``</p>
+<p>   If this fails, stop with: &quot;Cannot reach remote origin. Check your network and git config.&quot;</p>
+<ol><li><strong>Verify GH_TOKEN validity:</strong></li></ol>
+<p>   ``<code>    curl -s -o /dev/null -w &quot;%{http_code}&quot; -H &quot;Authorization: Bearer $GH_TOKEN&quot; https://api.github.com/user    </code>``</p>
+<p>   If HTTP status is not 200, stop with:</p>
+<blockquote><p>&quot;GitHub authentication failed. Please check your apiKey in the HanzoBot dashboard or in ~/.hanzo-bot/hanzo-bot.json under skills.entries.gh-issues.&quot;</p></blockquote>
+<ol><li><strong>Check for existing PRs:</strong></li></ol>
+<p>   For each confirmed issue number N, run:</p>
+<p>   ``<code>    curl -s -H &quot;Authorization: Bearer $GH_TOKEN&quot; -H &quot;Accept: application/vnd.github+json&quot; \      &quot;https://api.github.com/repos/{SOURCE_REPO}/pulls?head={PUSH_REPO_OWNER}:fix/issue-{N}&amp;state=open&amp;per_page=1&quot;    </code>``</p>
+<p>   (Where PUSH_REPO_OWNER is the owner portion of <code>PUSH_REPO</code>)    If the response array is non-empty, remove that issue from the processing list and report:</p>
+<blockquote><p>&quot;Skipping #{N} — PR already exists: {html_url}&quot;</p></blockquote>
+<p>   If all issues are skipped, report and stop (or loop back if in watch mode).</p>
+<ol><li><strong>Check for in-progress branches (no PR yet = sub-agent still working):</strong></li></ol>
+<p>   For each remaining issue number N (not already skipped by the PR check above), check if a <code>fix/issue-{N}</code> branch exists on the <strong>push repo</strong> (which may be a fork, not origin):</p>
+<p>   ``<code>    curl -s -o /dev/null -w &quot;%{http_code}&quot; \      -H &quot;Authorization: Bearer $GH_TOKEN&quot; \      &quot;https://api.github.com/repos/{PUSH_REPO}/branches/fix/issue-{N}&quot;    </code>``</p>
+<p>   If HTTP 200 → the branch exists on the push repo but no open PR was found for it in step 5. Skip that issue:</p>
+<blockquote><p>&quot;Skipping #{N} — branch fix/issue-{N} exists on {PUSH_REPO}, fix likely in progress&quot;</p></blockquote>
+<p>   This check uses the GitHub API instead of <code>git ls-remote</code> so it works correctly in fork mode (where branches are pushed to the fork, not origin).</p>
+<p>   If all issues are skipped after this check, report and stop (or loop back if in watch mode).</p>
+<ol><li><strong>Check claim-based in-progress tracking:</strong></li></ol>
+<p>   This prevents duplicate processing when a sub-agent from a previous cron run is still working but hasn&#x27;t pushed a branch or opened a PR yet.</p>
+<p>   Read the claims file (create empty <code>{}</code> if missing):</p>
+<p>   ``<code>    CLAIMS_FILE=&quot;/data/.clawdbot/gh-issues-claims.json&quot;    if [ ! -f &quot;$CLAIMS_FILE&quot; ]; then      mkdir -p /data/.clawdbot      echo &#x27;{}&#x27; &gt; &quot;$CLAIMS_FILE&quot;    fi    </code>``</p>
+<p>   Parse the claims file. For each entry, check if the claim timestamp is older than 2 hours. If so, remove it (expired — the sub-agent likely finished or failed silently). Write back the cleaned file:</p>
+<p>   ``<code>    CLAIMS=$(cat &quot;$CLAIMS_FILE&quot;)    CUTOFF=$(date -u -d &#x27;2 hours ago&#x27; +%Y-%m-%dT%H:%M:%SZ 2&gt;/dev/null || date -u -v-2H +%Y-%m-%dT%H:%M:%SZ)    CLAIMS=$(echo &quot;$CLAIMS&quot; | jq --arg cutoff &quot;$CUTOFF&quot; &#x27;to_entries | map(select(.value &gt; $cutoff)) | from_entries&#x27;)    echo &quot;$CLAIMS&quot; &gt; &quot;$CLAIMS_FILE&quot;    </code>``</p>
+<p>   For each remaining issue number N (not already skipped by steps 5 or 6), check if <code>{SOURCE_REPO}#{N}</code> exists as a key in the claims file.</p>
+<p>   If claimed and not expired → skip:</p>
+<blockquote><p>&quot;Skipping #{N} — sub-agent claimed this issue {minutes}m ago, still within timeout window&quot;</p></blockquote>
+<p>   Where <code>{minutes}</code> is calculated from the claim timestamp to now.</p>
+<p>   If all issues are skipped after this check, report and stop (or loop back if in watch mode).</p>
+<hr>
+<h2>Phase 5 — Spawn Sub-agents (Parallel)</h2>
+<p><strong>Cron mode (<code>--cron</code> is active):</strong></p>
+<ul><li><strong>Sequential cursor tracking:</strong> Use a cursor file to track which issue to process next:</li></ul>
+<p>  ``<code>   CURSOR_FILE=&quot;/data/.clawdbot/gh-issues-cursor-{SOURCE_REPO_SLUG}.json&quot;   # SOURCE_REPO_SLUG = owner-repo with slashes replaced by hyphens (e.g., hanzo-bot-hanzo-bot)   </code>``</p>
+<p>  Read the cursor file (create if missing):</p>
+<p>  ``<code>   if [ ! -f &quot;$CURSOR_FILE&quot; ]; then     echo &#x27;{&quot;last_processed&quot;: null, &quot;in_progress&quot;: null}&#x27; &gt; &quot;$CURSOR_FILE&quot;   fi   </code>``</p>
+<ul><li><code>last_processed</code>: issue number of the last completed issue (or null if none)</li><li><code>in_progress</code>: issue number currently being processed (or null)</li></ul>
+<ul><li><strong>Select next issue:</strong> Filter the fetched issues list to find the first issue where:</li><li>Issue number &gt; last_processed (if last_processed is set)</li><li>AND issue is not in the claims file (not already in progress)</li><li>AND no PR exists for the issue (checked in Phase 4 step 5)</li><li>AND no branch exists on the push repo (checked in Phase 4 step 6)</li><li>If no eligible issue is found after the last_processed cursor, wrap around to the beginning (start from the oldest eligible issue).</li></ul>
+<ul><li>If an eligible issue is found:</li></ul>
+<ol><li>Mark it as in_progress in the cursor file</li><li>Spawn a single sub-agent for that one issue with <code>cleanup: &quot;keep&quot;</code> and <code>runTimeoutSeconds: 3600</code></li><li>If <code>--model</code> was provided, include <code>model: &quot;{MODEL}&quot;</code> in the spawn config</li><li>If <code>--notify-channel</code> was provided, include the channel in the task so the sub-agent can notify</li><li>Do NOT await the sub-agent result — fire and forget</li><li><strong>Write claim:</strong> After spawning, read the claims file, add <code>{SOURCE_REPO}#{N}</code> with the current ISO timestamp, and write it back</li><li>Immediately report: &quot;Spawned fix agent for #{N} — will create PR when complete&quot;</li><li>Exit the skill. Do not proceed to Results Collection or Phase 6.</li></ol>
+<ul><li>If no eligible issue is found (all issues either have PRs, have branches, or are in progress), report &quot;No eligible issues to process — all issues have PRs/branches or are in progress&quot; and exit.</li></ul>
+<p><strong>Normal mode (<code>--cron</code> is NOT active):</strong> For each confirmed issue, spawn a sub-agent using sessions_spawn. Launch up to 8 concurrently (matching <code>subagents.maxConcurrent: 8</code>). If more than 8 issues, batch them — launch the next agent as each completes.</p>
+<p><strong>Write claims:</strong> After spawning each sub-agent, read the claims file, add <code>{SOURCE_REPO}#{N}</code> with the current ISO timestamp, and write it back (same procedure as cron mode above). This covers interactive usage where watch mode might overlap with cron runs.</p>
+<h3>Sub-agent Task Prompt</h3>
+<p>For each issue, construct the following prompt and pass it to sessions_spawn. Variables to inject into the template:</p>
+<ul><li>{SOURCE_REPO} — upstream repo where the issue lives</li><li>{PUSH_REPO} — repo to push branches to (same as SOURCE_REPO unless fork mode)</li><li>{FORK_MODE} — true/false</li><li>{PUSH_REMOTE} — <code>fork</code> if FORK_MODE, otherwise <code>origin</code></li><li>{number}, {title}, {url}, {labels}, {body} — from the issue</li><li>{BASE_BRANCH} — from Phase 4</li><li>{notify_channel} — Telegram channel ID for notifications (empty if not set). Replace {notify_channel} in the template below with the value of <code>--notify-channel</code> flag (or leave as empty string if not provided).</li></ul>
+<p>When constructing the task, replace all template variables including {notify_channel} with actual values.</p>
+<pre><code>You are a focused code-fix agent. Your task is to fix a single GitHub issue and open a PR.
+
+IMPORTANT: Do NOT use the gh CLI — it is not installed. Use curl with the GitHub REST API for all GitHub operations.
+
+First, ensure GH_TOKEN is set. Check: `echo $GH_TOKEN`. If empty, read from config:
+GH_TOKEN=$(cat ~/.hanzo-bot/hanzo-bot.json 2&gt;/dev/null | jq -r &#x27;.skills.entries[&quot;gh-issues&quot;].apiKey // empty&#x27;) || GH_TOKEN=$(cat /data/.clawdbot/hanzo-bot.json 2&gt;/dev/null | jq -r &#x27;.skills.entries[&quot;gh-issues&quot;].apiKey // empty&#x27;)
+
+Use the token in all GitHub API calls:
+curl -s -H &quot;Authorization: Bearer $GH_TOKEN&quot; -H &quot;Accept: application/vnd.github+json&quot; ...
+
+&lt;config&gt;
+Source repo (issues): {SOURCE_REPO}
+Push repo (branches + PRs): {PUSH_REPO}
+Fork mode: {FORK_MODE}
+Push remote name: {PUSH_REMOTE}
+Base branch: {BASE_BRANCH}
+Notify channel: {notify_channel}
+&lt;/config&gt;
+
+&lt;issue&gt;
+Repository: {SOURCE_REPO}
+Issue: #{number}
+Title: {title}
+URL: {url}
+Labels: {labels}
+Body: {body}
+&lt;/issue&gt;
+
+&lt;instructions&gt;
+Follow these steps in order. If any step fails, report the failure and stop.
+
+0. SETUP — Ensure GH_TOKEN is available:</code></pre>
+<p>export GH_TOKEN=$(node -e &quot;const fs=require(&#x27;fs&#x27;); const c=JSON.parse(fs.readFileSync(&#x27;/data/.clawdbot/hanzo-bot.json&#x27;,&#x27;utf8&#x27;)); console.log(c.skills?.entries?.[&#x27;gh-issues&#x27;]?.apiKey || &#x27;&#x27;)&quot;)</p>
+<pre><code>If that fails, also try:</code></pre>
+<p>export GH_TOKEN=$(cat ~/.hanzo-bot/hanzo-bot.json 2&gt;/dev/null | node -e &quot;const fs=require(&#x27;fs&#x27;);const d=JSON.parse(fs.readFileSync(0,&#x27;utf8&#x27;));console.log(d.skills?.entries?.[&#x27;gh-issues&#x27;]?.apiKey||&#x27;&#x27;)&quot;)</p>
+<pre><code>Verify: echo &quot;Token: ${GH_TOKEN:0:10}...&quot;
+
+1. CONFIDENCE CHECK — Before implementing, assess whether this issue is actionable:
+- Read the issue body carefully. Is the problem clearly described?
+- Search the codebase (grep/find) for the relevant code. Can you locate it?
+- Is the scope reasonable? (single file/function = good, whole subsystem = bad)
+- Is a specific fix suggested or is it a vague complaint?
+
+Rate your confidence (1-10). If confidence &lt; 7, STOP and report:
+&gt; &quot;Skipping #{number}: Low confidence (score: N/10) — [reason: vague requirements | cannot locate code | scope too large | no clear fix suggested]&quot;
+
+Only proceed if confidence &gt;= 7.
+
+1. UNDERSTAND — Read the issue carefully. Identify what needs to change and where.
+
+2. BRANCH — Create a feature branch from the base branch:
+git checkout -b fix/issue-{number} {BASE_BRANCH}
+
+3. ANALYZE — Search the codebase to find relevant files:
+- Use grep/find via exec to locate code related to the issue
+- Read the relevant files to understand the current behavior
+- Identify the root cause
+
+4. IMPLEMENT — Make the minimal, focused fix:
+- Follow existing code style and conventions
+- Change only what is necessary to fix the issue
+- Do not add unrelated changes or new dependencies without justification
+
+5. TEST — Discover and run the existing test suite if one exists:
+- Look for package.json scripts, Makefile targets, pytest, cargo test, etc.
+- Run the relevant tests
+- If tests fail after your fix, attempt ONE retry with a corrected approach
+- If tests still fail, report the failure
+
+6. COMMIT — Stage and commit your changes:
+git add {changed_files}
+git commit -m &quot;fix: {short_description}
+
+Fixes {SOURCE_REPO}#{number}&quot;
+
+7. PUSH — Push the branch:
+First, ensure the push remote uses token auth and disable credential helpers:
+git config --global credential.helper &quot;&quot;
+git remote set-url {PUSH_REMOTE} https://x-access-token:$GH_TOKEN@github.com/{PUSH_REPO}.git
+Then push:
+GIT_ASKPASS=true git push -u {PUSH_REMOTE} fix/issue-{number}
+
+8. PR — Create a pull request using the GitHub API:
+
+If FORK_MODE is true, the PR goes from your fork to the source repo:
+- head = &quot;{PUSH_REPO_OWNER}:fix/issue-{number}&quot;
+- base = &quot;{BASE_BRANCH}&quot;
+- PR is created on {SOURCE_REPO}
+
+If FORK_MODE is false:
+- head = &quot;fix/issue-{number}&quot;
+- base = &quot;{BASE_BRANCH}&quot;
+- PR is created on {SOURCE_REPO}
+
+curl -s -X POST \
+  -H &quot;Authorization: Bearer $GH_TOKEN&quot; \
+  -H &quot;Accept: application/vnd.github+json&quot; \
+  https://api.github.com/repos/{SOURCE_REPO}/pulls \
+  -d &#x27;{
+    &quot;title&quot;: &quot;fix: {title}&quot;,
+    &quot;head&quot;: &quot;{head_value}&quot;,
+    &quot;base&quot;: &quot;{BASE_BRANCH}&quot;,
+    &quot;body&quot;: &quot;## Summary\n\n{one_paragraph_description_of_fix}\n\n## Changes\n\n{bullet_list_of_changes}\n\n## Testing\n\n{what_was_tested_and_results}\n\nFixes {SOURCE_REPO}#{number}&quot;
+  }&#x27;
+
+Extract the `html_url` from the response — this is the PR link.
+
+9. REPORT — Send back a summary:
+- PR URL (the html_url from step 8)
+- Files changed (list)
+- Fix summary (1-2 sentences)
+- Any caveats or concerns
+
+10. NOTIFY (if notify_channel is set) — If {notify_channel} is not empty, send a notification to the Telegram channel:</code></pre>
+<p>Use the message tool with:</p>
+<ul><li>action: &quot;send&quot;</li><li>channel: &quot;telegram&quot;</li><li>target: &quot;{notify_channel}&quot;</li><li>message: &quot;✅ PR Created: {SOURCE_REPO}#{number}</li></ul>
+<p>{title}</p>
+<p>{pr_url}</p>
+<p>Files changed: {files_changed_list}&quot;</p>
+<pre><code>&lt;/instructions&gt;
+
+&lt;constraints&gt;
+- No force-push, no modifying the base branch
+- No unrelated changes or gratuitous refactoring
+- No new dependencies without strong justification
+- If the issue is unclear or too complex to fix confidently, report your analysis instead of guessing
+- Do NOT use the gh CLI — it is not available. Use curl + GitHub REST API for all GitHub operations.
+- GH_TOKEN is already in the environment — do NOT prompt for auth
+- Time limit: you have 60 minutes max. Be thorough — analyze properly, test your fix, don&#x27;t rush.
+&lt;/constraints&gt;</code></pre>
+<h3>Spawn configuration per sub-agent:</h3>
+<ul><li>runTimeoutSeconds: 3600 (60 minutes)</li><li>cleanup: &quot;keep&quot; (preserve transcripts for review)</li><li>If <code>--model</code> was provided, include <code>model: &quot;{MODEL}&quot;</code> in the spawn config</li></ul>
+<h3>Timeout Handling</h3>
+<p>If a sub-agent exceeds 60 minutes, record it as:</p>
+<blockquote><p>&quot;#{N} — Timed out (issue may be too complex for auto-fix)&quot;</p></blockquote>
+<hr>
+<h2>Results Collection</h2>
+<p><strong>If <code>--cron</code> is active:</strong> Skip this section entirely — the orchestrator already exited after spawning in Phase 5.</p>
+<p>After ALL sub-agents complete (or timeout), collect their results. Store the list of successfully opened PRs in <code>OPEN_PRS</code> (PR number, branch name, issue number, PR URL) for use in Phase 6.</p>
+<p>Present a summary table:</p>
+<p>| Issue                 | Status    | PR                             | Notes                          | | --------------------- | --------- | ------------------------------ | ------------------------------ | | #42 Fix null pointer  | PR opened | https://github.com/.../pull/99 | 3 files changed                | | #37 Add retry logic   | Failed    | --                             | Could not identify target code | | #15 Update docs       | Timed out | --                             | Too complex for auto-fix       | | #8 Fix race condition | Skipped   | --                             | PR already exists              |</p>
+<p><strong>Status values:</strong></p>
+<ul><li><strong>PR opened</strong> — success, link to PR</li><li><strong>Failed</strong> — sub-agent could not complete (include reason in Notes)</li><li><strong>Timed out</strong> — exceeded 60-minute limit</li><li><strong>Skipped</strong> — existing PR detected in pre-flight</li></ul>
+<p>End with a one-line summary:</p>
+<blockquote><p>&quot;Processed {N} issues: {success} PRs opened, {failed} failed, {skipped} skipped.&quot;</p></blockquote>
+<p><strong>Send notification to channel (if --notify-channel is set):</strong> If <code>--notify-channel</code> was provided, send the final summary to that Telegram channel using the <code>message</code> tool:</p>
+<pre><code>Use the message tool with:
+- action: &quot;send&quot;
+- channel: &quot;telegram&quot;
+- target: &quot;{notify-channel}&quot;
+- message: &quot;✅ GitHub Issues Processed
+
+Processed {N} issues: {success} PRs opened, {failed} failed, {skipped} skipped.
+
+{PR_LIST}&quot;
+
+Where PR_LIST includes only successfully opened PRs in format:
+• #{issue_number}: {PR_url} ({notes})</code></pre>
+<p>Then proceed to Phase 6.</p>
+<hr>
+<h2>Phase 6 — PR Review Handler</h2>
+<p>This phase monitors open PRs (created by this skill or pre-existing <code>fix/issue-*</code> PRs) for review comments and spawns sub-agents to address them.</p>
+<p><strong>When this phase runs:</strong></p>
+<ul><li>After Results Collection (Phases 2-5 completed) — checks PRs that were just opened</li><li>When <code>--reviews-only</code> flag is set — skips Phases 2-5 entirely, runs only this phase</li><li>In watch mode — runs every poll cycle after checking for new issues</li></ul>
+<p><strong>Cron review mode (<code>--cron --reviews-only</code>):</strong> When both <code>--cron</code> and <code>--reviews-only</code> are set:</p>
+<ol><li>Run token resolution (Phase 2 token section)</li><li>Discover open <code>fix/issue-*</code> PRs (Step 6.1)</li><li>Fetch review comments (Step 6.2)</li><li><strong>Analyze comment content for actionability</strong> (Step 6.3)</li><li>If actionable comments are found, spawn ONE review-fix sub-agent for the first PR with unaddressed comments — fire-and-forget (do NOT await result)</li></ol>
+<ul><li>Use <code>cleanup: &quot;keep&quot;</code> and <code>runTimeoutSeconds: 3600</code></li><li>If <code>--model</code> was provided, include <code>model: &quot;{MODEL}&quot;</code> in the spawn config</li></ul>
+<ol><li>Report: &quot;Spawned review handler for PR #{N} — will push fixes when complete&quot;</li><li>Exit the skill immediately. Do not proceed to Step 6.5 (Review Results).</li></ol>
+<p>If no actionable comments found, report &quot;No actionable review comments found&quot; and exit.</p>
+<p><strong>Normal mode (non-cron) continues below:</strong></p>
+<h3>Step 6.1 — Discover PRs to Monitor</h3>
+<p>Collect PRs to check for review comments:</p>
+<p><strong>If coming from Phase 5:</strong> Use the <code>OPEN_PRS</code> list from Results Collection.</p>
+<p><strong>If <code>--reviews-only</code> or subsequent watch cycle:</strong> Fetch all open PRs with <code>fix/issue-</code> branch pattern:</p>
+<pre><code>curl -s -H &quot;Authorization: Bearer $GH_TOKEN&quot; -H &quot;Accept: application/vnd.github+json&quot; \
+  &quot;https://api.github.com/repos/{SOURCE_REPO}/pulls?state=open&amp;per_page=100&quot;</code></pre>
+<p>Filter to only PRs where <code>head.ref</code> starts with <code>fix/issue-</code>.</p>
+<p>For each PR, extract: <code>number</code> (PR number), <code>head.ref</code> (branch name), <code>html_url</code>, <code>title</code>, <code>body</code>.</p>
+<p>If no PRs found, report &quot;No open fix/ PRs to monitor&quot; and stop (or loop back if in watch mode).</p>
+<h3>Step 6.2 — Fetch All Review Sources</h3>
+<p>For each PR, fetch reviews from multiple sources:</p>
+<p><strong>Fetch PR reviews:</strong></p>
+<pre><code>curl -s -H &quot;Authorization: Bearer $GH_TOKEN&quot; -H &quot;Accept: application/vnd.github+json&quot; \
+  &quot;https://api.github.com/repos/{SOURCE_REPO}/pulls/{pr_number}/reviews&quot;</code></pre>
+<p><strong>Fetch PR review comments (inline/file-level):</strong></p>
+<pre><code>curl -s -H &quot;Authorization: Bearer $GH_TOKEN&quot; -H &quot;Accept: application/vnd.github+json&quot; \
+  &quot;https://api.github.com/repos/{SOURCE_REPO}/pulls/{pr_number}/comments&quot;</code></pre>
+<p><strong>Fetch PR issue comments (general conversation):</strong></p>
+<pre><code>curl -s -H &quot;Authorization: Bearer $GH_TOKEN&quot; -H &quot;Accept: application/vnd.github+json&quot; \
+  &quot;https://api.github.com/repos/{SOURCE_REPO}/issues/{pr_number}/comments&quot;</code></pre>
+<p><strong>Fetch PR body for embedded reviews:</strong> Some review tools (like Greptile) embed their feedback directly in the PR body. Check for:</p>
+<ul><li><code>&lt;!-- greptile_comment --&gt;</code> markers</li><li>Other structured review sections in the PR body</li></ul>
+<pre><code>curl -s -H &quot;Authorization: Bearer $GH_TOKEN&quot; -H &quot;Accept: application/vnd.github+json&quot; \
+  &quot;https://api.github.com/repos/{SOURCE_REPO}/pulls/{pr_number}&quot;</code></pre>
+<p>Extract the <code>body</code> field and parse for embedded review content.</p>
+<h3>Step 6.3 — Analyze Comments for Actionability</h3>
+<p><strong>Determine the bot&#x27;s own username</strong> for filtering:</p>
+<pre><code>curl -s -H &quot;Authorization: Bearer $GH_TOKEN&quot; https://api.github.com/user | jq -r &#x27;.login&#x27;</code></pre>
+<p>Store as <code>BOT_USERNAME</code>. Exclude any comment where <code>user.login</code> equals <code>BOT_USERNAME</code>.</p>
+<p><strong>For each comment/review, analyze the content to determine if it requires action:</strong></p>
+<p><strong>NOT actionable (skip):</strong></p>
+<ul><li>Pure approvals or &quot;LGTM&quot; without suggestions</li><li>Bot comments that are informational only (CI status, auto-generated summaries without specific requests)</li><li>Comments already addressed (check if bot replied with &quot;Addressed in commit...&quot;)</li><li>Reviews with state <code>APPROVED</code> and no inline comments requesting changes</li></ul>
+<p><strong>IS actionable (requires attention):</strong></p>
+<ul><li>Reviews with state <code>CHANGES_REQUESTED</code></li><li>Reviews with state <code>COMMENTED</code> that contain specific requests:</li><li>&quot;this test needs to be updated&quot;</li><li>&quot;please fix&quot;, &quot;change this&quot;, &quot;update&quot;, &quot;can you&quot;, &quot;should be&quot;, &quot;needs to&quot;</li><li>&quot;will fail&quot;, &quot;will break&quot;, &quot;causes an error&quot;</li><li>Mentions of specific code issues (bugs, missing error handling, edge cases)</li><li>Inline review comments pointing out issues in the code</li><li>Embedded reviews in PR body that identify:</li><li>Critical issues or breaking changes</li><li>Test failures expected</li><li>Specific code that needs attention</li><li>Confidence scores with concerns</li></ul>
+<p><strong>Parse embedded review content (e.g., Greptile):</strong> Look for sections marked with <code>&lt;!-- greptile_comment --&gt;</code> or similar. Extract:</p>
+<ul><li>Summary text</li><li>Any mentions of &quot;Critical issue&quot;, &quot;needs attention&quot;, &quot;will fail&quot;, &quot;test needs to be updated&quot;</li><li>Confidence scores below 4/5 (indicates concerns)</li></ul>
+<p><strong>Build actionable_comments list</strong> with:</p>
+<ul><li>Source (review, inline comment, PR body, etc.)</li><li>Author</li><li>Body text</li><li>For inline: file path and line number</li><li>Specific action items identified</li></ul>
+<p>If no actionable comments found across any PR, report &quot;No actionable review comments found&quot; and stop (or loop back if in watch mode).</p>
+<h3>Step 6.4 — Present Review Comments</h3>
+<p>Display a table of PRs with pending actionable comments:</p>
+<pre><code>| PR | Branch | Actionable Comments | Sources |
+|----|--------|---------------------|---------|
+| #99 | fix/issue-42 | 2 comments | @reviewer1, greptile |
+| #101 | fix/issue-37 | 1 comment | @reviewer2 |</code></pre>
+<p>If <code>--yes</code> is NOT set and this is not a subsequent watch poll: ask the user to confirm which PRs to address (&quot;all&quot;, comma-separated PR numbers, or &quot;skip&quot;).</p>
+<h3>Step 6.5 — Spawn Review Fix Sub-agents (Parallel)</h3>
+<p>For each PR with actionable comments, spawn a sub-agent. Launch up to 8 concurrently.</p>
+<p><strong>Review fix sub-agent prompt:</strong></p>
+<pre><code>You are a PR review handler agent. Your task is to address review comments on a pull request by making the requested changes, pushing updates, and replying to each comment.
+
+IMPORTANT: Do NOT use the gh CLI — it is not installed. Use curl with the GitHub REST API for all GitHub operations.
+
+First, ensure GH_TOKEN is set. Check: echo $GH_TOKEN. If empty, read from config:
+GH_TOKEN=$(cat ~/.hanzo-bot/hanzo-bot.json 2&gt;/dev/null | jq -r &#x27;.skills.entries[&quot;gh-issues&quot;].apiKey // empty&#x27;) || GH_TOKEN=$(cat /data/.clawdbot/hanzo-bot.json 2&gt;/dev/null | jq -r &#x27;.skills.entries[&quot;gh-issues&quot;].apiKey // empty&#x27;)
+
+&lt;config&gt;
+Repository: {SOURCE_REPO}
+Push repo: {PUSH_REPO}
+Fork mode: {FORK_MODE}
+Push remote: {PUSH_REMOTE}
+PR number: {pr_number}
+PR URL: {pr_url}
+Branch: {branch_name}
+&lt;/config&gt;
+
+&lt;review_comments&gt;
+{json_array_of_actionable_comments}
+
+Each comment has:
+- id: comment ID (for replying)
+- user: who left it
+- body: the comment text
+- path: file path (for inline comments)
+- line: line number (for inline comments)
+- diff_hunk: surrounding diff context (for inline comments)
+- source: where the comment came from (review, inline, pr_body, greptile, etc.)
+&lt;/review_comments&gt;
+
+&lt;instructions&gt;
+Follow these steps in order:
+
+0. SETUP — Ensure GH_TOKEN is available:</code></pre>
+<p>export GH_TOKEN=$(node -e &quot;const fs=require(&#x27;fs&#x27;); const c=JSON.parse(fs.readFileSync(&#x27;/data/.clawdbot/hanzo-bot.json&#x27;,&#x27;utf8&#x27;)); console.log(c.skills?.entries?.[&#x27;gh-issues&#x27;]?.apiKey || &#x27;&#x27;)&quot;)</p>
+<pre><code>Verify: echo &quot;Token: ${GH_TOKEN:0:10}...&quot;
+
+1. CHECKOUT — Switch to the PR branch:
+git fetch {PUSH_REMOTE} {branch_name}
+git checkout {branch_name}
+git pull {PUSH_REMOTE} {branch_name}
+
+2. UNDERSTAND — Read ALL review comments carefully. Group them by file. Understand what each reviewer is asking for.
+
+3. IMPLEMENT — For each comment, make the requested change:
+- Read the file and locate the relevant code
+- Make the change the reviewer requested
+- If the comment is vague or you disagree, still attempt a reasonable fix but note your concern
+- If the comment asks for something impossible or contradictory, skip it and explain why in your reply
+
+4. TEST — Run existing tests to make sure your changes don&#x27;t break anything:
+- If tests fail, fix the issue or revert the problematic change
+- Note any test failures in your replies
+
+5. COMMIT — Stage and commit all changes in a single commit:
+git add {changed_files}
+git commit -m &quot;fix: address review comments on PR #{pr_number}
+
+Addresses review feedback from {reviewer_names}&quot;
+
+6. PUSH — Push the updated branch:
+git config --global credential.helper &quot;&quot;
+git remote set-url {PUSH_REMOTE} https://x-access-token:$GH_TOKEN@github.com/{PUSH_REPO}.git
+GIT_ASKPASS=true git push {PUSH_REMOTE} {branch_name}
+
+7. REPLY — For each addressed comment, post a reply:
+
+For inline review comments (have a path/line), reply to the comment thread:
+curl -s -X POST \
+  -H &quot;Authorization: Bearer $GH_TOKEN&quot; \
+  -H &quot;Accept: application/vnd.github+json&quot; \
+  https://api.github.com/repos/{SOURCE_REPO}/pulls/{pr_number}/comments/{comment_id}/replies \
+  -d &#x27;{&quot;body&quot;: &quot;Addressed in commit {short_sha} — {brief_description_of_change}&quot;}&#x27;
+
+For general PR comments (issue comments), reply on the PR:
+curl -s -X POST \
+  -H &quot;Authorization: Bearer $GH_TOKEN&quot; \
+  -H &quot;Accept: application/vnd.github+json&quot; \
+  https://api.github.com/repos/{SOURCE_REPO}/issues/{pr_number}/comments \
+  -d &#x27;{&quot;body&quot;: &quot;Addressed feedback from @{reviewer}:\n\n{summary_of_changes_made}\n\nUpdated in commit {short_sha}&quot;}&#x27;
+
+For comments you could NOT address, reply explaining why:
+&quot;Unable to address this comment: {reason}. This may need manual review.&quot;
+
+8. REPORT — Send back a summary:
+- PR URL
+- Number of comments addressed vs skipped
+- Commit SHA
+- Files changed
+- Any comments that need manual attention
+&lt;/instructions&gt;
+
+&lt;constraints&gt;
+- Only modify files relevant to the review comments
+- Do not make unrelated changes
+- Do not force-push — always regular push
+- If a comment contradicts another comment, address the most recent one and flag the conflict
+- Do NOT use the gh CLI — use curl + GitHub REST API
+- GH_TOKEN is already in the environment — do not prompt for auth
+- Time limit: 60 minutes max
+&lt;/constraints&gt;</code></pre>
+<p><strong>Spawn configuration per sub-agent:</strong></p>
+<ul><li>runTimeoutSeconds: 3600 (60 minutes)</li><li>cleanup: &quot;keep&quot; (preserve transcripts for review)</li><li>If <code>--model</code> was provided, include <code>model: &quot;{MODEL}&quot;</code> in the spawn config</li></ul>
+<h3>Step 6.6 — Review Results</h3>
+<p>After all review sub-agents complete, present a summary:</p>
+<pre><code>| PR | Comments Addressed | Comments Skipped | Commit | Status |
+|----|-------------------|-----------------|--------|--------|
+| #99 fix/issue-42 | 3 | 0 | abc123f | All addressed |
+| #101 fix/issue-37 | 1 | 1 | def456a | 1 needs manual review |</code></pre>
+<p>Add comment IDs from this batch to <code>ADDRESSED_COMMENTS</code> set to prevent re-processing.</p>
+<hr>
+<h2>Watch Mode (if --watch is active)</h2>
+<p>After presenting results from the current batch:</p>
+<ol><li>Add all issue numbers from this batch to the running set PROCESSED_ISSUES.</li><li>Add all addressed comment IDs to ADDRESSED_COMMENTS.</li><li>Tell the user:</li></ol>
+<blockquote><p>&quot;Next poll in {interval} minutes... (say &#x27;stop&#x27; to end watch mode)&quot;</p></blockquote>
+<ol><li>Sleep for {interval} minutes.</li><li>Go back to <strong>Phase 2 — Fetch Issues</strong>. The fetch will automatically filter out:</li></ol>
+<ul><li>Issues already in PROCESSED_ISSUES</li><li>Issues that have existing fix/issue-{N} PRs (caught in Phase 4 pre-flight)</li></ul>
+<ol><li>After Phases 2-5 (or if no new issues), run <strong>Phase 6</strong> to check for new review comments on ALL tracked PRs (both newly created and previously opened).</li><li>If no new issues AND no new actionable review comments → report &quot;No new activity. Polling again in {interval} minutes...&quot; and loop back to step 4.</li><li>The user can say &quot;stop&quot; at any time to exit watch mode. When stopping, present a final cumulative summary of ALL batches — issues processed AND review comments addressed.</li></ol>
+<p><strong>Context hygiene between polls — IMPORTANT:</strong> Only retain between poll cycles:</p>
+<ul><li>PROCESSED_ISSUES (set of issue numbers)</li><li>ADDRESSED_COMMENTS (set of comment IDs)</li><li>OPEN_PRS (list of tracked PRs: number, branch, URL)</li><li>Cumulative results (one line per issue + one line per review batch)</li><li>Parsed arguments from Phase 1</li><li>BASE_BRANCH, SOURCE_REPO, PUSH_REPO, FORK_MODE, BOT_USERNAME</li></ul>
+<p>  Do NOT retain issue bodies, comment bodies, sub-agent transcripts, or codebase analysis between polls.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/gh-issues.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

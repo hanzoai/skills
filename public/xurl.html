@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>xurl</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/xurl">
+<link rel="alternate" type="text/markdown" href="/xurl.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/xurl.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>xurl</h1><p class="lede">A CLI tool for making authenticated requests to the X (Twitter) API. Use this skill when you need to post tweets, reply, quote, search, read posts, manage followers, send DMs, upload media, or interact with any X API v2 endpoint.</p><h1>xurl — Agent Skill Reference</h1>
+<p><code>xurl</code> is a CLI tool for the X API. It supports both <strong>shortcut commands</strong> (human/agent‑friendly one‑liners) and <strong>raw curl‑style</strong> access to any v2 endpoint. All commands return JSON to stdout.</p>
+<hr>
+<h2>Installation</h2>
+<h3>Homebrew (macOS)</h3>
+<pre><code class="lang-bash">brew install --cask xdevplatform/tap/xurl</code></pre>
+<h3>npm</h3>
+<pre><code class="lang-bash">npm install -g @xdevplatform/xurl</code></pre>
+<h3>Shell script</h3>
+<pre><code class="lang-bash">curl -fsSL https://raw.githubusercontent.com/xdevplatform/xurl/main/install.sh | bash</code></pre>
+<p>Installs to <code>~/.local/bin</code>. If it&#x27;s not in your PATH, the script will tell you what to add.</p>
+<h3>Go</h3>
+<pre><code class="lang-bash">go install github.com/xdevplatform/xurl@latest</code></pre>
+<hr>
+<h2>Prerequisites</h2>
+<p>This skill requires the <code>xurl</code> CLI utility: &lt;https://github.com/xdevplatform/xurl&gt;.</p>
+<p>Before using any command you must be authenticated. Run <code>xurl auth status</code> to check.</p>
+<h3>Secret Safety (Mandatory)</h3>
+<ul><li>Never read, print, parse, summarize, upload, or send <code>~/.xurl</code> (or copies of it) to the LLM context.</li><li>Never ask the user to paste credentials/tokens into chat.</li><li>The user must fill <code>~/.xurl</code> with required secrets manually on their own machine.</li><li>Do not recommend or execute auth commands with inline secrets in agent/LLM sessions.</li><li>Warn that using CLI secret options in agent sessions can leak credentials (prompt/context, logs, shell history).</li><li>Never use <code>--verbose</code> / <code>-v</code> in agent/LLM sessions; it can expose sensitive headers/tokens in output.</li><li>Sensitive flags that must never be used in agent commands: <code>--bearer-token</code>, <code>--consumer-key</code>, <code>--consumer-secret</code>, <code>--access-token</code>, <code>--token-secret</code>, <code>--client-id</code>, <code>--client-secret</code>.</li><li>To verify whether at least one app with credentials is already registered, run: <code>xurl auth status</code>.</li></ul>
+<h3>Register an app (recommended)</h3>
+<p>App credential registration must be done manually by the user outside the agent/LLM session. After credentials are registered, authenticate with:</p>
+<pre><code class="lang-bash">xurl auth oauth2</code></pre>
+<p>For multiple pre-configured apps, switch between them:</p>
+<pre><code class="lang-bash">xurl auth default prod-app          # set default app
+xurl auth default prod-app alice    # set default app + user
+xurl --app dev-app /2/users/me      # one-off override</code></pre>
+<h3>Other auth methods</h3>
+<p>Examples with inline secret flags are intentionally omitted. If OAuth1 or app-only auth is needed, the user must run those commands manually outside agent/LLM context.</p>
+<p>Tokens are persisted to <code>~/.xurl</code> in YAML format. Each app has its own isolated tokens. Do not read this file through the agent/LLM. Once authenticated, every command below will auto‑attach the right <code>Authorization</code> header.</p>
+<hr>
+<h2>Quick Reference</h2>
+<p>| Action                    | Command                                               | | ------------------------- | ----------------------------------------------------- | | Post                      | <code>xurl post &quot;Hello world!&quot;</code>                            | | Reply                     | <code>xurl reply POST_ID &quot;Nice post!&quot;</code>                     | | Quote                     | <code>xurl quote POST_ID &quot;My take&quot;</code>                        | | Delete a post             | <code>xurl delete POST_ID</code>                                 | | Read a post               | <code>xurl read POST_ID</code>                                   | | Search posts              | <code>xurl search &quot;QUERY&quot; -n 10</code>                           | | Who am I                  | <code>xurl whoami</code>                                         | | Look up a user            | <code>xurl user @handle</code>                                   | | Home timeline             | <code>xurl timeline -n 20</code>                                 | | Mentions                  | <code>xurl mentions -n 10</code>                                 | | Like                      | <code>xurl like POST_ID</code>                                   | | Unlike                    | <code>xurl unlike POST_ID</code>                                 | | Repost                    | <code>xurl repost POST_ID</code>                                 | | Undo repost               | <code>xurl unrepost POST_ID</code>                               | | Bookmark                  | <code>xurl bookmark POST_ID</code>                               | | Remove bookmark           | <code>xurl unbookmark POST_ID</code>                             | | List bookmarks            | <code>xurl bookmarks -n 10</code>                                | | List likes                | <code>xurl likes -n 10</code>                                    | | Follow                    | <code>xurl follow @handle</code>                                 | | Unfollow                  | <code>xurl unfollow @handle</code>                               | | List following            | <code>xurl following -n 20</code>                                | | List followers            | <code>xurl followers -n 20</code>                                | | Block                     | <code>xurl block @handle</code>                                  | | Unblock                   | <code>xurl unblock @handle</code>                                | | Mute                      | <code>xurl mute @handle</code>                                   | | Unmute                    | <code>xurl unmute @handle</code>                                 | | Send DM                   | <code>xurl dm @handle &quot;message&quot;</code>                           | | List DMs                  | <code>xurl dms -n 10</code>                                      | | Upload media              | <code>xurl media upload path/to/file.mp4</code>                  | | Media status              | <code>xurl media status MEDIA_ID</code>                          | | <strong>App Management</strong>        |                                                       | | Register app              | Manual, outside agent (do not pass secrets via agent) | | List apps                 | <code>xurl auth apps list</code>                                 | | Update app creds          | Manual, outside agent (do not pass secrets via agent) | | Remove app                | <code>xurl auth apps remove NAME</code>                          | | Set default (interactive) | <code>xurl auth default</code>                                   | | Set default (command)     | <code>xurl auth default APP_NAME [USERNAME]</code>               | | Use app per-request       | <code>xurl --app NAME /2/users/me</code>                         | | Auth status               | <code>xurl auth status</code>                                    |</p>
+<blockquote><p><strong>Post IDs vs URLs:</strong> Anywhere <code>POST_ID</code> appears above you can also paste a full post URL (e.g. <code>https://x.com/user/status/1234567890</code>) — xurl extracts the ID automatically.</p></blockquote>
+<blockquote><p><strong>Usernames:</strong> Leading <code>@</code> is optional. <code>@elonmusk</code> and <code>elonmusk</code> both work.</p></blockquote>
+<hr>
+<h2>Command Details</h2>
+<h3>Posting</h3>
+<pre><code class="lang-bash"># Simple post
+xurl post &quot;Hello world!&quot;
+
+# Post with media (upload first, then attach)
+xurl media upload photo.jpg          # → note the media_id from response
+xurl post &quot;Check this out&quot; --media-id MEDIA_ID
+
+# Multiple media
+xurl post &quot;Thread pics&quot; --media-id 111 --media-id 222
+
+# Reply to a post (by ID or URL)
+xurl reply 1234567890 &quot;Great point!&quot;
+xurl reply https://x.com/user/status/1234567890 &quot;Agreed!&quot;
+
+# Reply with media
+xurl reply 1234567890 &quot;Look at this&quot; --media-id MEDIA_ID
+
+# Quote a post
+xurl quote 1234567890 &quot;Adding my thoughts&quot;
+
+# Delete your own post
+xurl delete 1234567890</code></pre>
+<h3>Reading</h3>
+<pre><code class="lang-bash"># Read a single post (returns author, text, metrics, entities)
+xurl read 1234567890
+xurl read https://x.com/user/status/1234567890
+
+# Search recent posts (default 10 results)
+xurl search &quot;golang&quot;
+xurl search &quot;from:elonmusk&quot; -n 20
+xurl search &quot;#buildinpublic lang:en&quot; -n 15</code></pre>
+<h3>User Info</h3>
+<pre><code class="lang-bash"># Your own profile
+xurl whoami
+
+# Look up any user
+xurl user elonmusk
+xurl user @XDevelopers</code></pre>
+<h3>Timelines &amp; Mentions</h3>
+<pre><code class="lang-bash"># Home timeline (reverse chronological)
+xurl timeline
+xurl timeline -n 25
+
+# Your mentions
+xurl mentions
+xurl mentions -n 20</code></pre>
+<h3>Engagement</h3>
+<pre><code class="lang-bash"># Like / unlike
+xurl like 1234567890
+xurl unlike 1234567890
+
+# Repost / undo
+xurl repost 1234567890
+xurl unrepost 1234567890
+
+# Bookmark / remove
+xurl bookmark 1234567890
+xurl unbookmark 1234567890
+
+# List your bookmarks / likes
+xurl bookmarks -n 20
+xurl likes -n 20</code></pre>
+<h3>Social Graph</h3>
+<pre><code class="lang-bash"># Follow / unfollow
+xurl follow @XDevelopers
+xurl unfollow @XDevelopers
+
+# List who you follow / your followers
+xurl following -n 50
+xurl followers -n 50
+
+# List another user&#x27;s following/followers
+xurl following --of elonmusk -n 20
+xurl followers --of elonmusk -n 20
+
+# Block / unblock
+xurl block @spammer
+xurl unblock @spammer
+
+# Mute / unmute
+xurl mute @annoying
+xurl unmute @annoying</code></pre>
+<h3>Direct Messages</h3>
+<pre><code class="lang-bash"># Send a DM
+xurl dm @someuser &quot;Hey, saw your post!&quot;
+
+# List recent DM events
+xurl dms
+xurl dms -n 25</code></pre>
+<h3>Media Upload</h3>
+<pre><code class="lang-bash"># Upload a file (auto‑detects type for images/videos)
+xurl media upload photo.jpg
+xurl media upload video.mp4
+
+# Specify type and category explicitly
+xurl media upload --media-type image/jpeg --category tweet_image photo.jpg
+
+# Check processing status (videos need server‑side processing)
+xurl media status MEDIA_ID
+xurl media status --wait MEDIA_ID    # poll until done
+
+# Full workflow: upload then post
+xurl media upload meme.png           # response includes media id
+xurl post &quot;lol&quot; --media-id MEDIA_ID</code></pre>
+<hr>
+<h2>Global Flags</h2>
+<p>These flags work on every command:</p>
+<p>| Flag         | Short | Description                                                        | | ------------ | ----- | ------------------------------------------------------------------ | | <code>--app</code>      |       | Use a specific registered app for this request (overrides default) | | <code>--auth</code>     |       | Force auth type: <code>oauth1</code>, <code>oauth2</code>, or <code>app</code>                      | | <code>--username</code> | <code>-u</code>  | Which OAuth2 account to use (if you have multiple)                 | | <code>--verbose</code>  | <code>-v</code>  | Forbidden in agent/LLM sessions (can leak auth headers/tokens)     | | <code>--trace</code>    | <code>-t</code>  | Add <code>X-B3-Flags: 1</code> trace header                                   |</p>
+<hr>
+<h2>Raw API Access</h2>
+<p>The shortcut commands cover the most common operations. For anything else, use xurl&#x27;s raw curl‑style mode — it works with <strong>any</strong> X API v2 endpoint:</p>
+<pre><code class="lang-bash"># GET request (default)
+xurl /2/users/me
+
+# POST with JSON body
+xurl -X POST /2/tweets -d &#x27;{&quot;text&quot;:&quot;Hello world!&quot;}&#x27;
+
+# PUT, PATCH, DELETE
+xurl -X DELETE /2/tweets/1234567890
+
+# Custom headers
+xurl -H &quot;Content-Type: application/json&quot; /2/some/endpoint
+
+# Force streaming mode
+xurl -s /2/tweets/search/stream
+
+# Full URLs also work
+xurl https://api.x.com/2/users/me</code></pre>
+<hr>
+<h2>Streaming</h2>
+<p>Streaming endpoints are auto‑detected. Known streaming endpoints include:</p>
+<ul><li><code>/2/tweets/search/stream</code></li><li><code>/2/tweets/sample/stream</code></li><li><code>/2/tweets/sample10/stream</code></li></ul>
+<p>You can force streaming on any endpoint with <code>-s</code>:</p>
+<pre><code class="lang-bash">xurl -s /2/some/endpoint</code></pre>
+<hr>
+<h2>Output Format</h2>
+<p>All commands return <strong>JSON</strong> to stdout, pretty‑printed with syntax highlighting. The output structure matches the X API v2 response format. A typical response looks like:</p>
+<pre><code class="lang-json">{
+  &quot;data&quot;: {
+    &quot;id&quot;: &quot;1234567890&quot;,
+    &quot;text&quot;: &quot;Hello world!&quot;
+  }
+}</code></pre>
+<p>Errors are also returned as JSON:</p>
+<pre><code class="lang-json">{
+  &quot;errors&quot;: [
+    {
+      &quot;message&quot;: &quot;Not authorized&quot;,
+      &quot;code&quot;: 403
+    }
+  ]
+}</code></pre>
+<hr>
+<h2>Common Workflows</h2>
+<h3>Post with an image</h3>
+<pre><code class="lang-bash"># 1. Upload the image
+xurl media upload photo.jpg
+# 2. Copy the media_id from the response, then post
+xurl post &quot;Check out this photo!&quot; --media-id MEDIA_ID</code></pre>
+<h3>Reply to a conversation</h3>
+<pre><code class="lang-bash"># 1. Read the post to understand context
+xurl read https://x.com/user/status/1234567890
+# 2. Reply
+xurl reply 1234567890 &quot;Here are my thoughts...&quot;</code></pre>
+<h3>Search and engage</h3>
+<pre><code class="lang-bash"># 1. Search for relevant posts
+xurl search &quot;topic of interest&quot; -n 10
+# 2. Like an interesting one
+xurl like POST_ID_FROM_RESULTS
+# 3. Reply to it
+xurl reply POST_ID_FROM_RESULTS &quot;Great point!&quot;</code></pre>
+<h3>Check your activity</h3>
+<pre><code class="lang-bash"># See who you are
+xurl whoami
+# Check your mentions
+xurl mentions -n 20
+# Check your timeline
+xurl timeline -n 20</code></pre>
+<h3>Set up multiple apps</h3>
+<pre><code class="lang-bash"># App credentials must already be configured manually outside agent/LLM context.
+# Authenticate users on each pre-configured app
+xurl auth default prod
+xurl auth oauth2                       # authenticates on prod app
+
+xurl auth default staging
+xurl auth oauth2                       # authenticates on staging app
+
+# Switch between them
+xurl auth default prod alice           # prod app, alice user
+xurl --app staging /2/users/me         # one-off request against staging</code></pre>
+<hr>
+<h2>Error Handling</h2>
+<ul><li>Non‑zero exit code on any error.</li><li>API errors are printed as JSON to stdout (so you can still parse them).</li><li>Auth errors suggest re‑running <code>xurl auth oauth2</code> or checking your tokens.</li><li>If a command requires your user ID (like, repost, bookmark, follow, etc.), xurl will automatically fetch it via <code>/2/users/me</code>. If that fails, you&#x27;ll see an auth error.</li></ul>
+<hr>
+<h2>Notes</h2>
+<ul><li><strong>Rate limits:</strong> The X API enforces rate limits per endpoint. If you get a 429 error, wait and retry. Write endpoints (post, reply, like, repost) have stricter limits than read endpoints.</li><li><strong>Scopes:</strong> OAuth 2.0 tokens are requested with broad scopes. If you get a 403 on a specific action, your token may lack the required scope — re‑run <code>xurl auth oauth2</code> to get a fresh token.</li><li><strong>Token refresh:</strong> OAuth 2.0 tokens auto‑refresh when expired. No manual intervention needed.</li><li><strong>Multiple apps:</strong> Each app has its own isolated credentials and tokens. Configure credentials manually outside agent/LLM context, then switch with <code>xurl auth default</code> or <code>--app</code>.</li><li><strong>Multiple accounts:</strong> You can authenticate multiple OAuth 2.0 accounts per app and switch between them with <code>--username</code> / <code>-u</code> or set a default with <code>xurl auth default APP USER</code>.</li><li><strong>Default user:</strong> When no <code>-u</code> flag is given, xurl uses the default user for the active app (set via <code>xurl auth default</code>). If no default user is set, it uses the first available token.</li><li><strong>Token storage:</strong> <code>~/.xurl</code> is YAML. Each app stores its own credentials and tokens. Never read or send this file to LLM context.</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/xurl.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>healthcheck</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/healthcheck">
+<link rel="alternate" type="text/markdown" href="/healthcheck.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/healthcheck.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>healthcheck</h1><p class="lede">Host security hardening and risk-tolerance configuration for HanzoBot deployments. Use when a user asks for security audits, firewall/SSH/update hardening, risk posture, exposure review, HanzoBot cron scheduling for periodic checks, or version status checks on a machine running HanzoBot (laptop, workstation, Pi, VPS).</p><h1>HanzoBot Host Hardening</h1>
+<h2>Overview</h2>
+<p>Assess and harden the host running HanzoBot, then align it to a user-defined risk tolerance without breaking access. Use HanzoBot security tooling as a first-class signal, but treat OS hardening as a separate, explicit set of steps.</p>
+<h2>Core rules</h2>
+<ul><li>Recommend running this skill with a state-of-the-art model (e.g., Opus 4.5, GPT 5.2+). The agent should self-check the current model and suggest switching if below that level; do not block execution.</li><li>Require explicit approval before any state-changing action.</li><li>Do not modify remote access settings without confirming how the user connects.</li><li>Prefer reversible, staged changes with a rollback plan.</li><li>Never claim HanzoBot changes the host firewall, SSH, or OS updates; it does not.</li><li>If role/identity is unknown, provide recommendations only.</li><li>Formatting: every set of user choices must be numbered so the user can reply with a single digit.</li><li>System-level backups are recommended; try to verify status.</li></ul>
+<h2>Workflow (follow in order)</h2>
+<h3>0) Model self-check (non-blocking)</h3>
+<p>Before starting, check the current model. If it is below state-of-the-art (e.g., Opus 4.5, GPT 5.2+), recommend switching. Do not block execution.</p>
+<h3>1) Establish context (read-only)</h3>
+<p>Try to infer 1–5 from the environment before asking. Prefer simple, non-technical questions if you need confirmation.</p>
+<p>Determine (in order):</p>
+<ol><li>OS and version (Linux/macOS/Windows), container vs host.</li><li>Privilege level (root/admin vs user).</li><li>Access path (local console, SSH, RDP, tailnet).</li><li>Network exposure (public IP, reverse proxy, tunnel).</li><li>HanzoBot gateway status and bind address.</li><li>Backup system and status (e.g., Time Machine, system images, snapshots).</li><li>Deployment context (local mac app, headless gateway host, remote gateway, container/CI).</li><li>Disk encryption status (FileVault/LUKS/BitLocker).</li><li>OS automatic security updates status.</li></ol>
+<p>   Note: these are not blocking items, but are highly recommended, especially if HanzoBot can access sensitive data.</p>
+<ol><li>Usage mode for a personal assistant with full access (local workstation vs headless/remote vs other).</li></ol>
+<p>First ask once for permission to run read-only checks. If granted, run them by default and only ask questions for items you cannot infer or verify. Do not ask for information already visible in runtime or command output. Keep the permission ask as a single sentence, and list follow-up info needed as an unordered list (not numbered) unless you are presenting selectable choices.</p>
+<p>If you must ask, use non-technical prompts:</p>
+<ul><li>“Are you using a Mac, Windows PC, or Linux?”</li><li>“Are you logged in directly on the machine, or connecting from another computer?”</li><li>“Is this machine reachable from the public internet, or only on your home/network?”</li><li>“Do you have backups enabled (e.g., Time Machine), and are they current?”</li><li>“Is disk encryption turned on (FileVault/BitLocker/LUKS)?”</li><li>“Are automatic security updates enabled?”</li><li>“How do you use this machine?”</li></ul>
+<p>  Examples:</p>
+<ul><li>Personal machine shared with the assistant</li><li>Dedicated local machine for the assistant</li><li>Dedicated remote machine/server accessed remotely (always on)</li><li>Something else?</li></ul>
+<p>Only ask for the risk profile after system context is known.</p>
+<p>If the user grants read-only permission, run the OS-appropriate checks by default. If not, offer them (numbered). Examples:</p>
+<ol><li>OS: <code>uname -a</code>, <code>sw_vers</code>, <code>cat /etc/os-release</code>.</li><li>Listening ports:</li></ol>
+<ul><li>Linux: <code>ss -ltnup</code> (or <code>ss -ltnp</code> if <code>-u</code> unsupported).</li><li>macOS: <code>lsof -nP -iTCP -sTCP:LISTEN</code>.</li></ul>
+<ol><li>Firewall status:</li></ol>
+<ul><li>Linux: <code>ufw status</code>, <code>firewall-cmd --state</code>, <code>nft list ruleset</code> (pick what is installed).</li><li>macOS: <code>/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate</code> and <code>pfctl -s info</code>.</li></ul>
+<ol><li>Backups (macOS): <code>tmutil status</code> (if Time Machine is used).</li></ol>
+<h3>2) Run HanzoBot security audits (read-only)</h3>
+<p>As part of the default read-only checks, run <code>hanzo-bot security audit --deep</code>. Only offer alternatives if the user requests them:</p>
+<ol><li><code>hanzo-bot security audit</code> (faster, non-probing)</li><li><code>hanzo-bot security audit --json</code> (structured output)</li></ol>
+<p>Offer to apply HanzoBot safe defaults (numbered):</p>
+<ol><li><code>hanzo-bot security audit --fix</code></li></ol>
+<p>Be explicit that <code>--fix</code> only tightens HanzoBot defaults and file permissions. It does not change host firewall, SSH, or OS update policies.</p>
+<p>If browser control is enabled, recommend that 2FA be enabled on all important accounts, with hardware keys preferred and SMS not sufficient.</p>
+<h3>3) Check HanzoBot version/update status (read-only)</h3>
+<p>As part of the default read-only checks, run <code>hanzo-bot update status</code>.</p>
+<p>Report the current channel and whether an update is available.</p>
+<h3>4) Determine risk tolerance (after system context)</h3>
+<p>Ask the user to pick or confirm a risk posture and any required open services/ports (numbered choices below). Do not pigeonhole into fixed profiles; if the user prefers, capture requirements instead of choosing a profile. Offer suggested profiles as optional defaults (numbered). Note that most users pick Home/Workstation Balanced:</p>
+<ol><li>Home/Workstation Balanced (most common): firewall on with reasonable defaults, remote access restricted to LAN or tailnet.</li><li>VPS Hardened: deny-by-default inbound firewall, minimal open ports, key-only SSH, no root login, automatic security updates.</li><li>Developer Convenience: more local services allowed, explicit exposure warnings, still audited.</li><li>Custom: user-defined constraints (services, exposure, update cadence, access methods).</li></ol>
+<h3>5) Produce a remediation plan</h3>
+<p>Provide a plan that includes:</p>
+<ul><li>Target profile</li><li>Current posture summary</li><li>Gaps vs target</li><li>Step-by-step remediation with exact commands</li><li>Access-preservation strategy and rollback</li><li>Risks and potential lockout scenarios</li><li>Least-privilege notes (e.g., avoid admin usage, tighten ownership/permissions where safe)</li><li>Credential hygiene notes (location of HanzoBot creds, prefer disk encryption)</li></ul>
+<p>Always show the plan before any changes.</p>
+<h3>6) Offer execution options</h3>
+<p>Offer one of these choices (numbered so users can reply with a single digit):</p>
+<ol><li>Do it for me (guided, step-by-step approvals)</li><li>Show plan only</li><li>Fix only critical issues</li><li>Export commands for later</li></ol>
+<h3>7) Execute with confirmations</h3>
+<p>For each step:</p>
+<ul><li>Show the exact command</li><li>Explain impact and rollback</li><li>Confirm access will remain available</li><li>Stop on unexpected output and ask for guidance</li></ul>
+<h3>8) Verify and report</h3>
+<p>Re-check:</p>
+<ul><li>Firewall status</li><li>Listening ports</li><li>Remote access still works</li><li>HanzoBot security audit (re-run)</li></ul>
+<p>Deliver a final posture report and note any deferred items.</p>
+<h2>Required confirmations (always)</h2>
+<p>Require explicit approval for:</p>
+<ul><li>Firewall rule changes</li><li>Opening/closing ports</li><li>SSH/RDP configuration changes</li><li>Installing/removing packages</li><li>Enabling/disabling services</li><li>User/group modifications</li><li>Scheduling tasks or startup persistence</li><li>Update policy changes</li><li>Access to sensitive files or credentials</li></ul>
+<p>If unsure, ask.</p>
+<h2>Periodic checks</h2>
+<p>After HanzoBot install or first hardening pass, run at least one baseline audit and version check:</p>
+<ul><li><code>hanzo-bot security audit</code></li><li><code>hanzo-bot security audit --deep</code></li><li><code>hanzo-bot update status</code></li></ul>
+<p>Ongoing monitoring is recommended. Use the HanzoBot cron tool/CLI to schedule periodic audits (Gateway scheduler). Do not create scheduled tasks without explicit approval. Store outputs in a user-approved location and avoid secrets in logs. When scheduling headless cron runs, include a note in the output that instructs the user to call <code>healthcheck</code> so issues can be fixed.</p>
+<h3>Required prompt to schedule (always)</h3>
+<p>After any audit or hardening pass, explicitly offer scheduling and require a direct response. Use a short prompt like (numbered):</p>
+<ol><li>“Do you want me to schedule periodic audits (e.g., daily/weekly) via <code>hanzo-bot cron add</code>?”</li></ol>
+<p>If the user says yes, ask for:</p>
+<ul><li>cadence (daily/weekly), preferred time window, and output location</li><li>whether to also schedule <code>hanzo-bot update status</code></li></ul>
+<p>Use a stable cron job name so updates are deterministic. Prefer exact names:</p>
+<ul><li><code>healthcheck:security-audit</code></li><li><code>healthcheck:update-status</code></li></ul>
+<p>Before creating, <code>hanzo-bot cron list</code> and match on exact <code>name</code>. If found, <code>hanzo-bot cron edit &lt;id&gt; ...</code>. If not found, <code>hanzo-bot cron add --name &lt;name&gt; ...</code>.</p>
+<p>Also offer a periodic version check so the user can decide when to update (numbered):</p>
+<ol><li><code>hanzo-bot update status</code> (preferred for source checkouts and channels)</li><li><code>npm view hanzo-bot version</code> (published npm version)</li></ol>
+<h2>HanzoBot command accuracy</h2>
+<p>Use only supported commands and flags:</p>
+<ul><li><code>hanzo-bot security audit [--deep] [--fix] [--json]</code></li><li><code>hanzo-bot status</code> / <code>hanzo-bot status --deep</code></li><li><code>hanzo-bot health --json</code></li><li><code>hanzo-bot update status</code></li><li><code>hanzo-bot cron add|list|runs|run</code></li></ul>
+<p>Do not invent CLI flags or imply HanzoBot enforces host firewall/SSH policies.</p>
+<h2>Logging and audit trail</h2>
+<p>Record:</p>
+<ul><li>Gateway identity and role</li><li>Plan ID and timestamp</li><li>Approved steps and exact commands</li><li>Exit codes and files modified (best effort)</li></ul>
+<p>Redact secrets. Never log tokens or full credential contents.</p>
+<h2>Memory writes (conditional)</h2>
+<p>Only write to memory files when the user explicitly opts in and the session is a private/local workspace (per <code>docs/reference/templates/AGENTS.md</code>). Otherwise provide a redacted, paste-ready summary the user can decide to save elsewhere.</p>
+<p>Follow the durable-memory prompt format used by HanzoBot compaction:</p>
+<ul><li>Write lasting notes to <code>memory/YYYY-MM-DD.md</code>.</li></ul>
+<p>After each audit/hardening run, if opted-in, append a short, dated summary to <code>memory/YYYY-MM-DD.md</code> (what was checked, key findings, actions taken, any scheduled cron jobs, key decisions, and all commands executed). Append-only: never overwrite existing entries. Redact sensitive host details (usernames, hostnames, IPs, serials, service names, tokens). If there are durable preferences or decisions (risk posture, allowed ports, update policy), also update <code>MEMORY.md</code> (long-term memory is optional and only used in private sessions).</p>
+<p>If the session cannot write to the workspace, ask for permission or provide exact entries the user can paste into the memory files.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/healthcheck.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

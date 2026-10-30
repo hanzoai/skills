@@ -1,167 +1,223 @@
-# Profile Templates
+# Section Templates for Competitor Pages
 
-Ready-to-use templates for competitor profile sections and the summary document.
+Ready-to-use templates for each section of competitor comparison pages.
 
 ## Contents
-- Quick Scan Template
-- Summary Comparison Table
-- Positioning Map
-- Competitive SWOT
-- Profile Update Changelog
+- TL;DR Summary
+- Paragraph Comparison (Not Just Tables)
+- Feature Comparison Section
+- Pricing Comparison Section
+- Service & Support Comparison
+- Who It's For Section
+- Migration Section
+- Social Proof Section
+- Comparison Table Best Practices (beyond checkmarks, organize by category, include ratings where useful)
 
----
+## TL;DR Summary
 
-## Quick Scan Template
-
-Abbreviated profile for when speed matters more than depth.
+Start every page with a quick summary for scanners:
 
 ```markdown
-# [Competitor Name] — Quick Profile
-
-**URL**: [website]
-**Generated**: [date]
-
-## At a Glance
-
-| Metric | Value |
-|--------|-------|
-| Tagline | [from homepage] |
-| Target audience | [inferred from copy] |
-| Pricing starts at | [lowest paid tier] |
-| Free tier/trial | [yes/no + details] |
-| Domain rank | [from DataForSEO] |
-| Est. organic traffic | [monthly] |
-| Organic keywords (top 10) | [count] |
-| Referring domains | [count] |
-
-## Positioning
-
-**Headline**: "[exact homepage headline]"
-**Subheadline**: "[exact subheadline]"
-**Positioning angle**: [1-2 sentence summary of how they position]
-
-## Pricing Summary
-
-| Tier | Price | Notable Inclusions |
-|------|-------|-------------------|
-| [tier] | [price] | [key items] |
-| [tier] | [price] | [key items] |
-
-## Key Takeaway
-
-[2-3 sentences: what makes this competitor notable, where they're strong, where they're weak]
+**TL;DR**: [Competitor] excels at [strength] but struggles with [weakness].
+[Your product] is built for [your focus], offering [key differentiator].
+Choose [Competitor] if [their ideal use case]. Choose [You] if [your ideal use case].
 ```
 
 ---
 
-## Summary Comparison Table
+## Paragraph Comparison (Not Just Tables)
 
-Use after profiling all competitors to create a side-by-side view.
+For each major dimension, write a paragraph:
 
 ```markdown
-# Competitive Landscape Summary
+## Features
 
-**Generated**: [date]
-**Your product**: [name]
-**Competitors profiled**: [count]
+[Competitor] offers [description of their feature approach].
+Their strength is [specific strength], which works well for [use case].
+However, [limitation] can be challenging for [user type].
 
-## Side-by-Side Comparison
-
-| Dimension | [Your Product] | [Competitor 1] | [Competitor 2] | [Competitor 3] |
-|-----------|---------------|----------------|----------------|----------------|
-| **Tagline** | [yours] | [theirs] | [theirs] | [theirs] |
-| **Target audience** | [yours] | [theirs] | [theirs] | [theirs] |
-| **Positioning** | [angle] | [angle] | [angle] | [angle] |
-| **Starting price** | $[X]/mo | $[X]/mo | $[X]/mo | $[X]/mo |
-| **Free tier** | [yes/no] | [yes/no] | [yes/no] | [yes/no] |
-| **Domain rank** | [score] | [score] | [score] | [score] |
-| **Est. organic traffic** | [number] | [number] | [number] | [number] |
-| **Referring domains** | [count] | [count] | [count] | [count] |
-| **G2 rating** | [score] | [score] | [score] | [score] |
-| **Key strength** | [one-liner] | [one-liner] | [one-liner] | [one-liner] |
-| **Key weakness** | [one-liner] | [one-liner] | [one-liner] | [one-liner] |
+[Your product] takes a different approach with [your approach].
+This means [benefit], though [honest tradeoff].
+Teams who [specific need] often find this more effective.
 ```
 
 ---
 
-## Positioning Map
+## Feature Comparison Section
 
-Visual representation of where competitors sit along two key dimensions. Choose the two axes most relevant to your market.
-
-### Common Axis Pairs
-
-| Market Type | X-Axis | Y-Axis |
-|-------------|--------|--------|
-| SaaS tools | Simple → Complex | Cheap → Expensive |
-| Developer tools | Low-code → Code-first | Individual → Team |
-| B2B platforms | SMB-focused → Enterprise-focused | Point solution → Platform |
-| Content tools | Template-driven → Custom | Self-serve → Managed |
-
-### Format
+Go beyond checkmarks:
 
 ```markdown
-## Positioning Map
+## Feature Comparison
 
-**Axes**: [X-axis label] vs. [Y-axis label]
+### [Feature Category]
 
-                    [Y-axis high label]
-                           │
-                           │
-          [Competitor A]   │    [Competitor B]
-                           │
-    ───────────────────────┼───────────────────────
-    [X-axis low]           │           [X-axis high]
-                           │
-          [Your Product]   │    [Competitor C]
-                           │
-                    [Y-axis low label]
+**[Competitor]**: [2-3 sentence description of how they handle this]
+- Strengths: [specific]
+- Limitations: [specific]
 
-### Interpretation
-- [1-2 sentences about what the map reveals]
-- [where the whitespace / opportunity is]
+**[Your product]**: [2-3 sentence description]
+- Strengths: [specific]
+- Limitations: [specific]
+
+**Bottom line**: Choose [Competitor] if [scenario]. Choose [You] if [scenario].
 ```
 
 ---
 
-## Competitive SWOT
-
-Per-competitor SWOT relative to your product.
+## Pricing Comparison Section
 
 ```markdown
-## SWOT: [Competitor] vs. [Your Product]
+## Pricing
 
-### Strengths (theirs vs. ours)
-- [Where they genuinely outperform us — be honest]
+| | [Competitor] | [Your Product] |
+|---|---|---|
+| Free tier | [Details] | [Details] |
+| Starting price | $X/user/mo | $X/user/mo |
+| Business tier | $X/user/mo | $X/user/mo |
+| Enterprise | Custom | Custom |
 
-### Weaknesses (theirs vs. ours)
-- [Where they fall short compared to us — with evidence]
+**What's included**: [Competitor]'s $X plan includes [features], while
+[Your product]'s $X plan includes [features].
 
-### Opportunities (for us)
-- [Gaps in their offering we can exploit]
-- [Segments they're ignoring]
-- [Messaging angles they're missing]
+**Total cost consideration**: Beyond per-seat pricing, consider [hidden costs,
+add-ons, implementation]. [Competitor] charges extra for [X], while
+[Your product] includes [Y] in base pricing.
 
-### Threats (from them)
-- [Areas where they're improving fast]
-- [Features they're building that overlap with us]
-- [Market moves that could shift perception]
+**Value comparison**: For a 10-person team, [Competitor] costs approximately
+$X/year while [Your product] costs $Y/year, with [key differences in what you get].
 ```
 
 ---
 
-## Profile Update Changelog
-
-Append to the bottom of any profile when updating it.
+## Service & Support Comparison
 
 ```markdown
+## Service & Support
+
+| | [Competitor] | [Your Product] |
+|---|---|---|
+| Documentation | [Quality assessment] | [Quality assessment] |
+| Response time | [SLA if known] | [Your SLA] |
+| Support channels | [List] | [List] |
+| Onboarding | [What they offer] | [What you offer] |
+| CSM included | [At what tier] | [At what tier] |
+
+**Support quality**: Based on [G2/Capterra reviews, your research],
+[Competitor] support is described as [assessment]. Common feedback includes
+[quotes or themes].
+
+[Your product] offers [your support approach]. [Specific differentiator like
+response time, dedicated CSM, implementation help].
+```
+
 ---
 
-## Change Log
+## Who It's For Section
 
-| Date | What Changed | Source |
-|------|-------------|--------|
-| [date] | Pricing increased from $X to $Y | Pricing page re-scrape |
-| [date] | Launched [feature] | Changelog scrape |
-| [date] | Domain rank changed from X to Y | DataForSEO re-pull |
-| [date] | Added [integration] | Integrations page re-scrape |
+```markdown
+## Who Should Choose [Competitor]
+
+[Competitor] is the right choice if:
+- [Specific use case or need]
+- [Team type or size]
+- [Workflow or requirement]
+- [Budget or priority]
+
+**Ideal [Competitor] customer**: [Persona description in 1-2 sentences]
+
+## Who Should Choose [Your Product]
+
+[Your product] is built for teams who:
+- [Specific use case or need]
+- [Team type or size]
+- [Workflow or requirement]
+- [Priority or value]
+
+**Ideal [Your product] customer**: [Persona description in 1-2 sentences]
 ```
+
+---
+
+## Migration Section
+
+```markdown
+## Switching from [Competitor]
+
+### What transfers
+- [Data type]: [How easily, any caveats]
+- [Data type]: [How easily, any caveats]
+
+### What needs reconfiguration
+- [Thing]: [Why and effort level]
+- [Thing]: [Why and effort level]
+
+### Migration support
+
+We offer [migration support details]:
+- [Free data import tool / white-glove migration]
+- [Documentation / migration guide]
+- [Timeline expectation]
+- [Support during transition]
+
+### What customers say about switching
+
+> "[Quote from customer who switched]"
+> — [Name], [Role] at [Company]
+```
+
+---
+
+## Social Proof Section
+
+Focus on switchers:
+
+```markdown
+## What Customers Say
+
+### Switched from [Competitor]
+
+> "[Specific quote about why they switched and outcome]"
+> — [Name], [Role] at [Company]
+
+> "[Another quote]"
+> — [Name], [Role] at [Company]
+
+### Results after switching
+- [Company] saw [specific result]
+- [Company] reduced [metric] by [amount]
+```
+
+---
+
+## Comparison Table Best Practices
+
+### Beyond Checkmarks
+
+Instead of:
+| Feature | You | Competitor |
+|---------|-----|-----------|
+| Feature A | ✓ | ✓ |
+| Feature B | ✓ | ✗ |
+
+Do this:
+| Feature | You | Competitor |
+|---------|-----|-----------|
+| Feature A | Full support with [detail] | Basic support, [limitation] |
+| Feature B | [Specific capability] | Not available |
+
+### Organize by Category
+
+Group features into meaningful categories:
+- Core functionality
+- Collaboration
+- Integrations
+- Security & compliance
+- Support & service
+
+### Include Ratings Where Useful
+
+| Category | You | Competitor | Notes |
+|----------|-----|-----------|-------|
+| Ease of use | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | [Brief note] |
+| Feature depth | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | [Brief note] |

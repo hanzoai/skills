@@ -196,68 +196,336 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-1172</h1><p class="lede">HIP-1172: visor — Compute You Rent. Status Final. Hanzo architectural specification.</p><h1>HIP-1172: visor — Compute You Rent</h1>
+<h1>hip-1172</h1><p class="lede">HIP-1172: Compute — Machines You Rent or Link. Status Draft. Hanzo architectural specification.</p><h1>HIP-1172: Compute — Machines You Rent or Link</h1>
 <h2>Abstract</h2>
-<p>visor is the compute you rent from Hanzo: machines, GPUs and clusters — launch one, resize it, tear it down. It is the tenant&#x27;s own view of that compute on the public API, covering both what Hanzo provisions and what the customer attached, and it fabricates nothing: a GPU row is a real machine&#x27;s accelerator, a cluster is real node pools, and a field the source does not carry is omitted rather than invented. It is implemented in <code>hanzoai/cloud</code> at <code>apps/visor</code> (HIP-0106).</p>
+<p><code>compute</code> is what an org computes on: machines, GPUs and clusters it rents from Hanzo — launch one, resize it, tear it down — and machines it owns and links. It is the tenant&#x27;s own view of that compute on the public API, covering both what Hanzo provisions and what the customer attached, and it fabricates nothing: a GPU row is a real machine&#x27;s accelerator, a cluster is real node pools, and a field the source does not carry is omitted rather than invented. It is the <code>compute</code> app of the cloud binary (HIP-0106).</p>
+<p>A linked machine runs nothing until the cloud asks, and then only a typed, allow-listed workload its owner&#x27;s local policy admits. That is proposed by the Amendment below and is not served yet; the node side is <code>hanzo link</code> in <code>hanzoai/cli</code>.</p>
+<h2>Amendment: linked nodes run nothing until the cloud asks (proposed)</h2>
+<p>Proposed. Nothing in this section is served today; §1–§9 describe what is. The presence and claim routes, the node credential, the root-owned install, the launcher, the workload sandbox, the relay, the three workload kinds, the org route (HIP-1211, Amendment) and the events below are still to be built.</p>
+<p>compute owns the lifecycle of a workload on a linked machine and not what the workload does: the model API is ai&#x27;s (HIP-1211), the render is Studio&#x27;s (HIP-0506), the script is its requester&#x27;s. As §1 requires, compute keeps no store of its own: presence and activities are records in the durable engine (HIP-1062), where linked presence lives today.</p>
+<h3>A1 What linking does</h3>
+<p><code>hanzo link</code> MUST take no flags and no arguments, and on a host that can offer workloads it MUST run as root (<code>sudo hanzo link</code>); without root it exits non-zero and says so. It:</p>
+<ol><li>signs in with Hanzo IAM when the machine holds no valid session (HIP-0026),</li></ol>
+<p>   and uses that session for one call only, the first registration (A2), whose    answer carries the node credential;</p>
+<ol><li>installs, root-owned, the agent binary, the launcher (A9) and their service</li></ol>
+<p>   units under <code>/usr/local/lib/hanzo/link/</code> and the system&#x27;s service manager.    The agent never runs from a user&#x27;s <code>PATH</code>, and <code>hanzo upgrade</code>, which writes    a user-owned binary, never touches it;</p>
+<ol><li>creates two users: <code>hanzo-link</code>, which runs the agent, and <code>hanzo-work</code>, which</li></ol>
+<p>   runs workloads;</p>
+<ol><li>writes <code>/etc/hanzo/link/policy.json</code> (A3) when it is absent, admitting</li></ol>
+<p>   nothing;</p>
+<ol><li>enrols the node&#x27;s own overlay identity (A7) — a credential on disk, not a</li></ol>
+<p>   process;</p>
+<ol><li>registers the presence record (A2) and starts the agent as <code>hanzo-link</code>, so</li></ol>
+<p>   it survives logout and restarts at boot.</p>
+<p>Re-running <code>sudo hanzo link</code> on a linked host reinstalls nothing that is current, validates the policy file, and prints the kinds the host would offer, computed on the host without asking the cloud; the agent then re-registers.</p>
+<p>On a host that cannot build A9&#x27;s sandbox — today, any host but Linux — linking is presence only: <code>hanzo link</code> needs no root, creates no users, launcher or policy, runs the agent as the linking user, and the node offers nothing.</p>
+<p>Linking MUST NOT start an inference engine, a render backend, a shell or terminal server, an overlay tunnel or daemon, a script runner, or anything that listens on an address other than loopback, and MUST NOT register a run target or hold a HIP-1325 node socket.</p>
+<p>This retires, from linking, behaviour that exists today:</p>
+<p>| Retired | Where it lives | |:--|:--| | A writable shell served by ttyd and published through the share tunnel, and a run-target registration | <code>hanzoai/cli</code>, <code>src/commands/link.rs</code> (bare <code>hanzo link</code>) | | <code>hanzo link host</code> and <code>hanzo link dial</code>, which supervise an overlay child | <code>hanzoai/cli</code>, <code>src/commands/link.rs</code> | | An agent run from the user-writable <code>~/.local/bin/hanzo</code>, replaced by <code>hanzo upgrade</code> against a checksum alone | <code>hanzoai/cli</code> | | Starting <code>hanzod</code> through <code>hanzo node up</code>, and the flags <code>--serve-engine</code>, <code>--engine-url</code>, <code>--engine-endpoint</code>, <code>--register-provider</code>, <code>--studio-dir</code>, <code>--studio-url</code>, <code>--mirror</code>, <code>--jobs-namespace</code>, <code>--no-fabric</code>, <code>--daemon</code> | the Go control binary, <code>cli/link.go</code> | | A sharing policy read from <code>HANZO_GPU_POLICY</code> or <code>HANZO_GPU_POLICY_FILE</code>, where an absent policy admits everything | the Go control binary, <code>cli/gpu.go</code> (<code>SharePolicy</code>) | | <code>fn.run</code> children inheriting the agent&#x27;s whole environment | the Go control binary, <code>cli/gpu.go</code> | | Fetching a render input with the user&#x27;s IAM bearer attached | the Go control binary, <code>cli/gpu.go</code> (<code>fetchInput</code>) |</p>
+<p><strong>Cloud-driven execution on the same host.</strong> A HIP-1325 node that admits <code>system.run</code> (approved by the cloud&#x27;s <code>apps/node</code> policy, not by the machine&#x27;s owner), a published shell, a CI runner started with <code>hanzo runner start</code>, and an agent loop driven through <code>api.hanzo.ai</code> each execute what the cloud sends as the user who started them. None of them is compatible with offering workloads on the same host until it runs under a uid that cannot become root: an owner MUST NOT run both, and <code>sudo hanzo link</code> says so when it links. Nothing in this amendment detects them.</p>
+<p><code>sudo hanzo unlink</code> MUST stop every workload and wait for each to exit (A8), then <code>DELETE /v1/compute/fleet/workers/{id}</code>, which revokes the node credential at IAM and the overlay identity at the controller, and remove the agent&#x27;s and launcher&#x27;s services. It keeps the policy file, the audit log and the model store, which are the owner&#x27;s. An org admin&#x27;s <code>DELETE</code> of the node has the same effect at the node&#x27;s next claim (410).</p>
+<h3>A2 The presence record and the node credential</h3>
+<p><code>PUT /v1/compute/fleet/workers/{id}</code> registers or refreshes a node. <code>{id}</code> is the hostname folded to <code>[a-z0-9-]{1,63}</code>; when another install holds it (409), the agent appends <code>-</code> and the first four hex digits of its <code>key</code> and tries again. The first registration that succeeds carries the user&#x27;s session; its answer carries the node credential, minted by IAM at that moment and bound to <code>(org, id, key)</code>. Every later call carries the node credential and nothing else.</p>
+<p>The node credential can call only the routes under <code>/v1/compute/fleet/workers/{id}</code> for that node, carries the linking user as <code>linkedBy</code>, is readable only by <code>hanzo-link</code>, and is revoked by the node&#x27;s <code>DELETE</code>. A user&#x27;s own session, however privileged, is never stored for the agent. Every node route answers 403 to any other credential.</p>
+<pre><code class="lang-json">{
+  &quot;key&quot;: &quot;9b1c0e6f2a4d4e0b8c7f3a5d1e2b6c90&quot;,
+  &quot;hostname&quot;: &quot;evo&quot;,
+  &quot;os&quot;: &quot;linux&quot;,
+  &quot;arch&quot;: &quot;x86_64&quot;,
+  &quot;cpus&quot;: 32,
+  &quot;cpuModel&quot;: &quot;AMD RYZEN AI MAX+ PRO 395&quot;,
+  &quot;memory&quot;: 137438953472,
+  &quot;disk&quot;: 1099511627776,
+  &quot;gpus&quot;: [{&quot;name&quot;: &quot;AMD Radeon 8060S&quot;, &quot;memoryTotal&quot;: &quot;98304 MiB&quot;, &quot;arch&quot;: &quot;gfx1151&quot;, &quot;unified&quot;: true}],
+  &quot;rocm&quot;: &quot;6.4.1&quot;,
+  &quot;version&quot;: &quot;1.12.0&quot;,
+  &quot;engine&quot;: &quot;&lt;64 hex: SHA-256 of the pinned engine binary&gt;&quot;,
+  &quot;lanes&quot;: [],
+  &quot;offers&quot;: [&quot;engine.serve&quot;],
+  &quot;policy&quot;: {&quot;kinds&quot;: [&quot;engine.serve&quot;], &quot;orgs&quot;: [&quot;acme&quot;], &quot;...&quot;: &quot;A3, verbatim&quot;},
+  &quot;policySha256&quot;: &quot;&lt;64 hex: SHA-256 of the policy file&#x27;s bytes&gt;&quot;
+}</code></pre>
+<ul><li><code>key</code> is 128 random bits the agent generates once. It names an install; the</li></ul>
+<p>  credential bound to it is what authorizes.</p>
+<ul><li><code>offers</code> is the subset of the policy&#x27;s <code>kinds</code> this host can run now: nothing</li></ul>
+<p>  without A9&#x27;s sandbox, <code>studio.render</code> only with a lane. <code>disk</code> is the free   bytes on the store&#x27;s filesystem. <code>cuda</code>, <code>driver</code>, <code>rocm</code> and <code>hip</code> are   reported where the host has them.</p>
+<ul><li>The cloud MUST take the policy only from this call and MUST NOT send a policy</li></ul>
+<p>  to a node. Its copy is a mirror.</p>
+<p><code>GET /v1/compute/fleet/workers</code> answers these fields, without <code>key</code>, plus <code>status</code> (<code>online</code> when a claim landed within 90 s, else <code>offline</code>), <code>linkedBy</code>, <code>firstSeen</code>, <code>lastClaim</code> and <code>workloads: [{activity, kind, state, model}]</code>. <code>capabilities</code> becomes <code>offers</code>, <code>engine</code> now names the pinned binary rather than an endpoint, and <code>jobQueue</code> leaves the record.</p>
+<h3>A3 The policy file</h3>
+<p>Consent lives on the node, in <code>/etc/hanzo/link/policy.json</code>: owner root, mode</p>
+<ol><li>Every user can read it, so a home directory closed to others (0750)</li></ol>
+<p>cannot hide it from the agent, and only root can change it: the owner edits it as root, and <code>sudo hanzo link</code> creates it. No cloud message, API call, activity or workload changes it. The schema is closed: a field the agent does not know makes it offer nothing and log why. As written by <code>hanzo link</code>:</p>
+<pre><code class="lang-json">{
+  &quot;kinds&quot;: [],
+  &quot;orgs&quot;: [&quot;acme&quot;],
+  &quot;sources&quot;: [{&quot;prefix&quot;: &quot;huggingface.co/zenlm/&quot;, &quot;hosts&quot;: [&quot;huggingface.co&quot;, &quot;*.hf.co&quot;]}],
+  &quot;models&quot;: [],
+  &quot;caps&quot;: {&quot;vram&quot;: 0, &quot;memory&quot;: 0, &quot;cpus&quot;: 0, &quot;disk&quot;: 0},
+  &quot;concurrency&quot;: 1,
+  &quot;idleSec&quot;: 600,
+  &quot;maxSec&quot;: 86400
+}</code></pre>
+<p>| Field | Meaning | Default | |:--|:--|:--| | <code>kinds</code> | Kinds the node runs: <code>engine.serve</code>, <code>studio.render</code>, <code>fn.run</code> | none | | <code>orgs</code> | Orgs whose activities it takes | the linking org | | <code>sources</code> | Model sources: a host and path prefix, and the hosts a download may be redirected to | the Zen weights of HIP-0904 | | <code>models</code> | A repository path, <code>huggingface.co/owner/name</code>, or one pinned as <code>…@&lt;40-hex commit&gt;</code>; empty admits every model under a source | empty | | <code>caps</code> | Bytes of accelerator memory, memory and store; logical cores. 0 admits nothing | 0 | | <code>concurrency</code> | Workloads at once, every kind together | 1 | | <code>idleSec</code> | Ceiling on any workload&#x27;s idle seconds | 600 | | <code>maxSec</code> | Ceiling on any workload&#x27;s life, idle or not | 86400 |</p>
+<ul><li>On change the agent re-registers within 5 s and stops, with reason <code>policy</code>,</li></ul>
+<p>  every workload the new file no longer admits.</p>
+<ul><li>Enforcement is at claim, twice: the cloud hands a node only what its mirror</li></ul>
+<p>  admits, and the agent checks every envelope against the file and fails what   the file does not admit with <code>denied</code>. The file wins.</p>
+<ul><li>An unreadable or invalid file offers nothing. The agent never falls back to a</li></ul>
+<p>  default.</p>
+<ul><li>This amendment gives no other org a way to address a node, so an <code>orgs</code> entry</li></ul>
+<p>  beyond the linking org admits nothing yet; the field is the node&#x27;s own refusal   of an activity stamped with any other org.</p>
+<h3>A4 The claim stream</h3>
+<p>The only channel from the cloud to a node is an outbound HTTPS long-poll:</p>
+<pre><code>POST /v1/compute/fleet/workers/{id}/claim
+{&quot;key&quot;: &quot;9b1c…&quot;, &quot;wait&quot;: 25, &quot;running&quot;: [{&quot;activity&quot;: &quot;act_01JB7Q8Z…&quot;, &quot;state&quot;: &quot;idle&quot;}]}</code></pre>
+<ul><li>200 <code>{&quot;start&quot;: [&lt;envelope&gt;…], &quot;stop&quot;: [{&quot;activity&quot;: &quot;act_…&quot;, &quot;reason&quot;: &quot;cancel&quot;}]}</code></li><li>204 when <code>wait</code> elapsed with nothing to do; 409 on a key mismatch; 410 when</li></ul>
+<p>  the node was removed, after which the agent does what <code>hanzo unlink</code> does.</p>
+<p><code>wait</code> is 1–30 s. Any replica answers a claim; the replica holding one learns of a new activity or a cancel from the bus (HIP-1060) and MUST answer within 2 s of it. A claim is the heartbeat. <code>start</code> holds at most <code>concurrency</code> minus the running count, and only what the mirror admits. An envelope stays <code>requested</code> and is offered again until the node reports a state for it, and the agent ignores an envelope for an activity it already runs, so a lost answer neither loses nor doubles a start. <code>running</code> is the node&#x27;s account of itself: the cloud answers <code>stop</code> for a running activity it does not hold as live, and fails with <code>lost</code> one past <code>requested</code> that the node does not list.</p>
+<p>The envelope:</p>
+<pre><code class="lang-json">{
+  &quot;activity&quot;: &quot;act_01JB7Q8ZK3M2N4P5R6S7T8V9W0&quot;,
+  &quot;kind&quot;: &quot;engine.serve&quot;,
+  &quot;org&quot;: &quot;acme&quot;,
+  &quot;project&quot;: &quot;default&quot;,
+  &quot;requester&quot;: &quot;acme/alice&quot;,
+  &quot;issued&quot;: &quot;2026-10-22T17:04:05Z&quot;,
+  &quot;deadline&quot;: &quot;2026-10-22T17:24:05Z&quot;,
+  &quot;input&quot;: {}
+}</code></pre>
+<p><code>activity</code> is minted by the cloud and never reused. <code>deadline</code> is when the workload must be <code>ready</code>; past it the agent stops it (<code>deadline</code>). <code>input</code> is checked against its kind&#x27;s closed schema (A5) by the cloud at enqueue and by the agent at claim; an unknown field, a wrong type or a value out of range fails it (<code>schema</code>), and an unknown kind fails it (<code>unsupported</code>).</p>
+<p>The node reports each transition on its own address:</p>
+<pre><code>POST /v1/compute/fleet/workers/{id}/activities/{activity}/state
+{&quot;key&quot;: &quot;9b1c…&quot;, &quot;state&quot;: &quot;pulling&quot;, &quot;progress&quot;: {&quot;done&quot;: 1073741824, &quot;total&quot;: 7206168928}}</code></pre>
+<p>The cloud accepts a report only from the credential of node <code>{id}</code>, for an activity assigned to <code>{id}</code>. A terminal report carries <code>output</code> or <code>error: {code, message}</code>. The answer is 204, 409 for an illegal transition, or 410 when the activity was cancelled.</p>
+<p>Callers enqueue, read and cancel:</p>
+<ul><li><code>POST /v1/compute/fleet/activities</code> with <code>{node, kind, input}</code> answers 201 in</li></ul>
+<p>  <code>requested</code>, or 403 <code>denied</code> naming the rule the mirror refused (<code>kind</code>,   <code>org</code>, <code>model</code>, <code>caps</code>, <code>concurrency</code>), 404 for an unknown node, and 409 for   a node that is offline or already serving that model.</p>
+<ul><li><code>GET /v1/compute/fleet/activities</code>, filterable by <code>node</code> and <code>state</code>;</li></ul>
+<p>  <code>GET /v1/compute/fleet/activities/{activity}</code>; and <code>DELETE</code> on it, which   reaches the node as <code>stop</code> at its next claim. Each answers only when the   activity&#x27;s org is the caller&#x27;s, and 404 otherwise.</p>
+<ul><li><code>engine.serve</code> publishes a model to the whole org (A7), so it needs an admin</li></ul>
+<p>  of the org (HIP-0118). <code>fn.run</code> needs an admin or the node&#x27;s <code>linkedBy</code>. Any   member MAY enqueue <code>studio.render</code>. Enqueues are rate-limited per requester.</p>
+<ul><li>This collection replaces <code>/v1/compute/fleet/jobs</code> and its cancel: one queue,</li></ul>
+<p>  every kind.</p>
+<h3>A5 The three kinds</h3>
+<p>Every activity moves through one lifecycle. Forward only, except that <code>ready</code> and <code>idle</code> alternate; any live state may end in <code>stopped</code> or <code>failed</code>; a state with nothing to do is skipped.</p>
+<p>| State | engine.serve | studio.render | fn.run | |:--|:--|:--|:--| | <code>requested</code> | enqueued, unclaimed | same | same | | <code>pulling</code> | weights fetched and verified (A6) | — | wheels fetched and verified | | <code>starting</code> | engine loading | render backend booting, when cold | — | | <code>ready</code> | a request in flight | rendering | running | | <code>idle</code> | nothing in flight | — | — | | <code>stopped</code> | <code>reason</code>: <code>idle</code>, <code>cancel</code>, <code>unlink</code>, <code>policy</code>, <code>deadline</code>, <code>max</code>, <code>done</code> | same | same | | <code>failed</code> | <code>error.code</code> | same | same |</p>
+<p>Error codes are a closed set: <code>denied</code>, <code>schema</code>, <code>unsupported</code>, <code>capacity</code>, <code>source</code>, <code>custom_code</code>, <code>integrity</code>, <code>pull</code>, <code>start</code>, <code>crash</code>, <code>deadline</code>, <code>lost</code>.</p>
+<p><strong>Capacity.</strong> A workload fits only inside the caps, less what running workloads hold, and only while a tenth of the host&#x27;s memory and a tenth of the store&#x27;s filesystem stay free; anything else fails <code>capacity</code>.</p>
+<p><strong><code>engine.serve</code></strong> loads a model and serves it with the Hanzo engine (HIP-0043), callable through <code>api.hanzo.ai</code> (A7).</p>
+<pre><code class="lang-json">{
+  &quot;model&quot;: &quot;huggingface.co/zenlm/zen6-flash&quot;,
+  &quot;revision&quot;: &quot;&lt;40 hex: a commit&gt;&quot;,
+  &quot;files&quot;: [{&quot;path&quot;: &quot;Ternary-Bonsai-2-27B-PQ2_0.gguf&quot;, &quot;sha256&quot;: &quot;&lt;64 hex&gt;&quot;, &quot;size&quot;: 7206168928}],
+  &quot;ctx&quot;: 65536,
+  &quot;vram&quot;: 17179869184,
+  &quot;idleSec&quot;: 600,
+  &quot;service&quot;: &quot;evo-1&quot;
+}</code></pre>
+<ul><li><code>files</code> is every file the engine loads.</li><li><code>ctx</code> is at least 1 and at most the context length the model&#x27;s own</li></ul>
+<p>  configuration declares; more fails <code>schema</code>.</p>
+<ul><li><code>vram</code> is the requester&#x27;s declared need. The agent computes the need itself —</li></ul>
+<p>  the weight files&#x27; total size plus the KV cache for <code>ctx</code> from the model&#x27;s   layer count, KV heads, head width and cache precision — and fails <code>capacity</code>   when that exceeds <code>vram</code>, when <code>vram</code> does not fit (above), or when the   accelerator lacks the free memory. It passes <code>vram</code> to the engine as its memory   ceiling and stops a workload that holds more (<code>capacity</code>).</p>
+<ul><li><code>idleSec</code> is 30 to the policy&#x27;s <code>idleSec</code>.</li><li><code>service</code> is the overlay label the cloud created for this workload (A7).</li><li>The <code>ready</code> report carries <code>token</code> (A7) and <code>models</code>, the ids the engine&#x27;s</li></ul>
+<p>  <code>/v1/models</code> lists.</p>
+<p><strong><code>studio.render</code></strong> runs one render on the Studio render backend (HIP-0506).</p>
+<pre><code class="lang-json">{
+  &quot;lane&quot;: &quot;image.zen&quot;,
+  &quot;graph&quot;: {&quot;nodes&quot;: []},
+  &quot;inputs&quot;: [{&quot;name&quot;: &quot;init.png&quot;, &quot;url&quot;: &quot;https://api.hanzo.ai/v1/compute/fleet/activities/act_…/files/…&quot;, &quot;sha256&quot;: &quot;&lt;64 hex&gt;&quot;, &quot;size&quot;: 2097152}],
+  &quot;upload&quot;: &quot;https://api.hanzo.ai/v1/compute/fleet/activities/act_…/files&quot;,
+  &quot;timeoutSec&quot;: 14400,
+  &quot;idleSec&quot;: 600
+}</code></pre>
+<ul><li><code>lane</code> MUST be one the node lists, and every node type in <code>graph</code> MUST be in</li></ul>
+<p>  that lane&#x27;s published set; anything else fails <code>unsupported</code>. The agent never   installs a package, extension or weight a graph names.</p>
+<ul><li>File paths in a graph are the agent&#x27;s, not the requester&#x27;s: inputs land in the</li></ul>
+<p>  workload&#x27;s directory under names the agent chooses, and outputs are the   regular files the backend leaves in its output directory, opened without   following links.</p>
+<ul><li><code>inputs</code> and <code>upload</code> are single-use grants for this activity on the API</li></ul>
+<p>  origin the agent signed in to. The agent sends no credential of its own to   them; another host, a redirect or a private address fails <code>source</code>, and each   input is checked against its <code>sha256</code>.</p>
+<ul><li><code>timeoutSec</code> is at most the policy&#x27;s <code>maxSec</code>. The output is</li></ul>
+<p>  <code>{&quot;files&quot;: [{&quot;name&quot;, &quot;sha256&quot;, &quot;size&quot;}]}</code> once uploaded.</p>
+<ul><li>The backend starts on the first job inside A9&#x27;s sandbox, reachable only</li></ul>
+<p>  through its socket, and stops after <code>idleSec</code> with no job. A warm backend   takes jobs of one org only, and its working directories are emptied between   jobs.</p>
+<p><strong><code>fn.run</code></strong> runs a Python script. It is off unless the owner writes <code>fn.run</code> into <code>kinds</code>.</p>
+<pre><code class="lang-json">{
+  &quot;source&quot;: &quot;print(1)&quot;,
+  &quot;sha256&quot;: &quot;&lt;64 hex&gt;&quot;,
+  &quot;wheels&quot;: [{&quot;name&quot;: &quot;numpy&quot;, &quot;version&quot;: &quot;2.1.3&quot;, &quot;sha256&quot;: &quot;&lt;64 hex&gt;&quot;}],
+  &quot;args&quot;: [],
+  &quot;timeoutSec&quot;: 300
+}</code></pre>
+<p><code>wheels</code> is every distribution the script imports beyond the standard library, dependencies included: nothing is resolved. The agent fetches each wheel from the public Python package index under A6&#x27;s transport rules and checks its SHA-256; source distributions are refused, so installing runs no code. The wheels are installed offline, with no dependency resolution and no user or site configuration, inside the sandbox the script then runs in (A9), which for <code>fn.run</code> has no network at all. <code>timeoutSec</code> is at most <code>maxSec</code>. The output is <code>{&quot;exit&quot;, &quot;stdout&quot;, &quot;stderr&quot;, &quot;truncated&quot;}</code>, each stream at most 1 MiB.</p>
+<h3>A6 Pulling a model</h3>
+<p>The agent&#x27;s own files live under <code>/var/lib/hanzo/link/</code>, owned by <code>hanzo-link</code>: the node credential, the overlay identity and the <code>key</code> (mode 0600), the store, and the audit log (A10).</p>
+<ul><li><code>revision</code> MUST be a 40-hex commit; a branch or tag fails <code>schema</code>. Each</li></ul>
+<p>  segment of <code>model</code> and of every <code>files[].path</code> MUST match <code>[A-Za-z0-9._-]+</code>   and be neither <code>.</code> nor <code>..</code>, and a path MUST NOT begin with <code>/</code>; otherwise   <code>schema</code>. URLs are built from the parsed parts, never by joining strings.</p>
+<ul><li><code>model</code> MUST start with a <code>sources</code> prefix, and a non-empty <code>models</code> MUST hold</li></ul>
+<p>  <code>model</code> or <code>model@revision</code>; otherwise <code>denied</code>.</p>
+<ul><li>Before any weight byte moves, the agent reads the repository&#x27;s full,</li></ul>
+<p>  recursive file listing at <code>revision</code> and fails <code>custom_code</code> when the   repository carries any <code>.py</code> file, a <code>config.json</code> with <code>auto_map</code>, or the   <code>custom_code</code> tag.</p>
+<ul><li>A <code>files</code> entry MUST be data in an admitted format: safetensors or GGUF,</li></ul>
+<p>  checked by its header, or JSON, plain text or a tokenizer model. Anything   else fails <code>custom_code</code>; a pickle in any spelling runs code when it loads.</p>
+<ul><li>Only <code>files</code> are fetched, over https. A redirect is followed only to a host in</li></ul>
+<p>  the matching source&#x27;s <code>hosts</code>, at most five times. A hop elsewhere, to plain   http, or to an address that resolves into loopback, private, link-local,   shared or multicast space fails <code>source</code>.</p>
+<ul><li>Each file is written beneath the store, never through a link, to a temporary</li></ul>
+<p>  name, and renamed to <code>/var/lib/hanzo/link/store/sha256/&lt;hex&gt;</code> only after its   SHA-256 and size match; a mismatch fails <code>integrity</code> and removes it. A model is   a read-only tree, <code>store/models/&lt;model&gt;/&lt;revision&gt;/</code>, of links to blobs. A   blob already present is not fetched again. No workload can write the store, so   a verified blob stays verified.</p>
+<ul><li>When the store would pass <code>caps.disk</code> or the free tenth (A5), trees no live</li></ul>
+<p>  workload uses go least-recently-used first, and blobs no tree references go   with them.</p>
+<ul><li>The engine loads the tree and fetches nothing.</li></ul>
+<h3>A7 The engine, the relay and the data path</h3>
+<p><strong>The engine.</strong> The launcher (A9) runs only the engine binary the agent&#x27;s own release pins by SHA-256 (<code>engine</code> in A2), and refuses one that does not match. It MUST start it:</p>
+<ul><li>listening on a Unix socket in the workload&#x27;s directory, inside A9&#x27;s sandbox,</li></ul>
+<p>  where no network interface exists to bind;</p>
+<ul><li>with mDNS and DNS-SD advertising, web search, MCP, code execution and every</li></ul>
+<p>  model-management route (reload, tune, download) off;</p>
+<ul><li>loading the tree A6 built, and fetching nothing.</li></ul>
+<p><strong>The relay.</strong> The agent is the only client of that socket, reached through the descriptor the launcher hands it (A9). Each connection from the overlay reaches the engine through the agent&#x27;s relay, which:</p>
+<ul><li>MUST refuse with 401 every request that lacks <code>Authorization: Bearer &lt;token&gt;</code>,</li></ul>
+<p>  where the token is 32 bytes from the OS&#x27;s CSPRNG, made per start, reported to   the cloud once in the <code>ready</code> report, and forgotten when the workload stops;</p>
+<ul><li>MUST forward only <code>POST /v1/chat/completions</code>, <code>POST /v1/completions</code>,</li></ul>
+<p>  <code>POST /v1/messages</code>, <code>POST /v1/embeddings</code> and <code>GET /v1/models</code>, and answer   404 to everything else;</p>
+<ul><li>MUST refuse a request that names media by URL, so a request cannot make the</li></ul>
+<p>  node fetch anything;</p>
+<ul><li>closes the engine connection when the overlay connection closes, and the</li></ul>
+<p>  engine MUST stop generating when that happens;</p>
+<ul><li>is what <code>idle</code> measures: a request is in flight until it completes, or until</li></ul>
+<p>  60 s pass with no byte relayed in either direction.</p>
+<p><strong>The overlay.</strong> The gateway cannot dial a machine behind NAT, so the data path is the org&#x27;s overlay (HIP-1173). At claim the cloud creates the service <code>&lt;service&gt;.&lt;org&gt;.zt</code> through the overlay controller, with a bind policy naming this node&#x27;s identity by its id and a dial policy naming the cloud&#x27;s gateway identity by its id, and no role in either. The node&#x27;s identity has its own subject and no <code>org-*</code> role, so no other device of the org can dial it and it can dial nothing. Between <code>ready</code> and stop, and at no other time, the agent hosts that service in process and relays it to the workload&#x27;s socket and nowhere else: it ignores any host configuration the controller attaches, so the controller cannot point a node at another address. Hosting is an outbound connection to the overlay&#x27;s routers, so nothing on the node listens. At stop the agent stops hosting and the cloud deletes the service.</p>
+<p>This retires two overlay behaviours that exist today in the cloud&#x27;s <code>apps/network</code>: a service dial policy that admits the org&#x27;s role and the admin role, and an identity that receives its org&#x27;s role from the linking user&#x27;s IAM subject.</p>
+<p><strong>The token.</strong> On <code>ready</code>, compute seals the token in the platform&#x27;s KMS — not the org&#x27;s — and strips it from the report before the report reaches the durable engine, a log or the bus, so no record of the activity ever holds it.</p>
+<p><strong>The route.</strong> compute then registers the org route <code>local/&lt;node&gt;/&lt;name&gt;</code>, where <code>&lt;name&gt;</code> is the last segment of <code>model</code> folded to lowercase — for the example <code>local/evo/zen6-flash</code> — with endpoint <code>http://evo-1.acme.zt/v1</code>, through HIP-1211&#x27;s route operation. It deletes the route and the sealed token at stop or when the node goes offline. HTTP crosses the overlay unchanged: a streamed answer is the engine&#x27;s own server-sent events relayed as they arrive, and a client that goes away closes the overlay connection, which closes the engine&#x27;s, which stops generation.</p>
+<h3>A8 Idle and stopping</h3>
+<p>A workload is <code>stopped</code> with reason <code>idle</code> after <code>idleSec</code> with nothing in flight, and with reason <code>max</code> after <code>maxSec</code> however busy. Every workload runs in its own control group, and stopping it sends SIGTERM to every process in the group, then kills the whole group after 10 s (<code>cgroup.kill</code>), so no process that left its process group or session survives. The agent reports <code>stopped</code> only after the group is empty, which is what frees the accelerator. If the agent exits for any reason, the service manager kills its delegated control group and every workload in it. A node offline for 90 s has its routes and services reaped and its live activities failed with <code>lost</code>; on return it is told to stop them.</p>
+<h3>A9 The launcher and what a workload is given</h3>
+<p><code>hanzo-link</code> holds no privilege, so it cannot start a workload as another user. A root launcher does, and nothing else does:</p>
+<ul><li>It listens on a root-owned Unix socket and accepts requests only from the uid</li></ul>
+<p>  <code>hanzo-link</code>, checked by the kernel&#x27;s peer credentials.</p>
+<ul><li>A request names a kind, an activity, the model tree and the caps — never a</li></ul>
+<p>  command line, a path outside the store or an environment. The launcher checks   it against the policy file itself and builds the command from the pinned   binaries.</p>
+<ul><li>It starts each workload in its own control group under the agent&#x27;s delegated</li></ul>
+<p>  one, binds into the workload&#x27;s mount namespace the accelerator device nodes   the workload was admitted to and no others, and passes the agent, over its   socket, the descriptor through which the agent reaches the workload&#x27;s socket,   so the run directory stays closed to every other user.</p>
+<p>Every workload runs as <code>hanzo-work</code> — never as root, <code>hanzo-link</code> or the linking user, holding no capability — in its own mount, network, PID and IPC namespaces, with <code>no_new_privs</code> set. Its mount namespace shows the system&#x27;s runtime paths, its own directory (<code>/var/lib/hanzo/link/run/&lt;activity&gt;/</code>, owner <code>hanzo-work</code>, mode 0700, deleted at stop), the model tree it loads read-only, and its accelerator device nodes, and nothing else: no home directory, no session bus, no runtime directory of any user, no policy file, store metadata, node credential or overlay identity. Its network namespace has no interface but its own loopback, so it reaches nothing but its socket. The launcher applies <code>caps.memory</code> and <code>caps.cpus</code> to its control group.</p>
+<p>A host that cannot build this sandbox — today, any host but Linux with control groups v2, delegated control groups and unprivileged namespaces — MUST NOT offer any kind (A1, presence only).</p>
+<p>A workload&#x27;s environment is exactly <code>PATH</code> (a fixed system path), <code>HOME</code> and <code>TMPDIR</code> (its directory) and <code>LANG=C.UTF-8</code>, plus what its kind names. Nothing is inherited. The agent and the launcher MUST NOT pass a workload any IAM credential, the overlay identity, the <code>key</code>, a KMS credential, an SSH agent socket, a cloud or model-host credential, or any variable of their own environment.</p>
+<h3>A10 Audit and events</h3>
+<p>The agent appends one JSON line per link, unlink, policy change, start, stop, deny and failure to <code>/var/lib/hanzo/link/audit.jsonl</code>, mode 0644, which no workload can reach: <code>{time, event, activity, kind, org, requester, model, revision, reason}</code>. It carries no token and no input; a <code>fn.run</code> line carries the source&#x27;s SHA-256.</p>
+<p>The cloud publishes <code>compute.workload.started</code> (on <code>ready</code>), <code>compute.workload.stopped</code>, <code>compute.workload.denied</code> and <code>compute.workload.failed</code> on the platform bus (HIP-1060), with <code>{org, node, activity, kind, requester, model, state, reason, time}</code> and the activity&#x27;s org as tenant. A refusal at enqueue is a <code>denied</code> event too. §6&#x27;s &quot;publishes nothing&quot; does not hold for these four.</p>
+<h3>A11 Money</h3>
+<p>A call to a linked model is metered once, by the route (HIP-1211, Amendment). <code>studio.render</code> and <code>fn.run</code> are recorded on the requester&#x27;s usage with their duration at price zero. Nothing a linked node does is priced as hosted compute; the per-device fee of HIP-0121, where a deployment charges one, is the only charge for the node itself.</p>
+<h3>A12 Acceptance</h3>
+<ol><li><code>hanzo link</code> with any argument but <code>--help</code> exits non-zero, and so does</li></ol>
+<p>   <code>hanzo link</code> without root on Linux. <code>sudo hanzo link</code> on a host with no    policy file writes A3&#x27;s default, and the node&#x27;s record shows <code>offers: []</code>.</p>
+<ol><li>After <code>sudo hanzo link</code>, the agent, the launcher and their units are owned by</li></ol>
+<p>   root and outside every user&#x27;s <code>PATH</code>; the agent runs as <code>hanzo-link</code>; the    host&#x27;s listening sockets show nothing new but the launcher&#x27;s Unix socket; and    the agent holds no credential but the node credential, bound to its    <code>(org, id, key)</code>.</p>
+<ol><li>With <code>kinds: []</code> or a cap of 0, an enqueue of each kind answers 403</li></ol>
+<p>   <code>denied</code>; an envelope handed to the agent anyway fails <code>denied</code>, with an audit    line and a <code>compute.workload.denied</code> event.</p>
+<ol><li><code>/etc/hanzo/link/policy.json</code> is owner root, mode 0644; the linking user,</li></ol>
+<p>   <code>hanzo-link</code> and <code>hanzo-work</code> cannot write it, and the agent reads it with the    linking user&#x27;s home at mode 0750. Removing a running workload&#x27;s kind from it,    as root, stops the workload within 5 s with reason <code>policy</code>.</p>
+<ol><li>With the network down, re-running <code>sudo hanzo link</code> validates the policy and</li></ol>
+<p>   prints the kinds the host would offer.</p>
+<ol><li>On macOS or Windows, <code>hanzo link</code> registers the node with <code>offers: []</code>,</li></ol>
+<p>   creates no user, launcher or policy, and asks for no root.</p>
+<ol><li>A launcher request from any uid but <code>hanzo-link</code>, or naming a command line, a</li></ol>
+<p>   path outside the store or an environment, is refused.</p>
+<ol><li><code>engine.serve</code> of <code>huggingface.co/zenlm/zen6-flash</code> at a commit, with correct</li></ol>
+<p>   hashes, reaches <code>ready</code>. The engine runs as <code>hanzo-work</code> with no capability,    no network interface but loopback, and only its admitted accelerator&#x27;s device    nodes; through the overlay, a request without the token answers 401,    <code>POST /v1/models/reload</code> answers 404, and nothing on the LAN sees an engine    advert.</p>
+<ol><li>Only the gateway&#x27;s identity can dial the workload&#x27;s service; a second</li></ol>
+<p>   identity of the same org is refused by the controller.</p>
+<ol><li>One wrong <code>sha256</code> fails <code>integrity</code>; nothing from that pull is loaded or</li></ol>
+<p>    left outside the store&#x27;s temporary area.</p>
+<ol><li>A branch as <code>revision</code>, or a <code>..</code> segment in <code>model</code> or a path, fails</li></ol>
+<p>    <code>schema</code>; a <code>ctx</code> above the model&#x27;s declared length fails <code>schema</code>; a     repository with a <code>.py</code> file or <code>auto_map</code>, or a pickle in <code>files</code>, fails     <code>custom_code</code> before any weight byte is fetched; a redirect off <code>hosts</code> or     into private space fails <code>source</code>; weights plus KV cache above <code>vram</code> fail     <code>capacity</code>.</p>
+<ol><li>A streamed chat completion naming <code>local/evo/zen6-flash</code> through</li></ol>
+<p>    <code>api.hanzo.ai</code> arrives as server-sent events; closing the client ends     generation on the node within 2 s.</p>
+<ol><li>After <code>idleSec</code> with no request the workload is <code>stopped</code> with reason</li></ol>
+<p>    <code>idle</code>, its control group is empty — including a process that called     <code>setsid</code> — accelerator memory returns to its pre-start level, and the     model, route, sealed token and overlay service are gone.</p>
+<ol><li>A node cut off for 120 s reads <code>offline</code>, its route is gone, and its</li></ol>
+<p>    workload stops within one claim of its return.</p>
+<ol><li><code>sudo hanzo unlink</code> stops every workload, removes the node from</li></ol>
+<p>    <code>/v1/compute/fleet/workers</code>, revokes its credential and overlay identity,     and removes both services; the policy, audit log and store remain.</p>
+<ol><li>A workload sees only A9&#x27;s paths, devices and variables: no home directory,</li></ol>
+<p>    session bus, IAM credential, overlay identity, <code>key</code> or policy file.</p>
+<ol><li>A member who is not an admin gets 403 enqueuing <code>engine.serve</code>; another</li></ol>
+<p>    org&#x27;s caller gets 404 reading or cancelling an activity.</p>
+<ol><li>No activity record in the durable engine, log line, bus event, read or org</li></ol>
+<p>    KMS path holds a route token.</p>
+<ol><li>Every start, stop, deny and failure appears once in the audit log and once</li></ol>
+<p>    on the bus.</p>
+<h3>A13 Threat model</h3>
+<ul><li><strong>A compromised cloud</strong> can start allow-listed kinds for allow-listed orgs, of</li></ul>
+<p>  allow-listed models at pinned commits, within the caps, the concurrency and   <code>maxSec</code>, and call what it started through the relay&#x27;s five routes. It cannot   change the policy, the agent or the launcher, which root owns; pick a source   or a redirect host; open a listener; point the relay or the overlay host   anywhere but a workload&#x27;s socket; reach a file outside a workload&#x27;s   directory; or run code: with <code>fn.run</code> off there is no code path, and with it   on the code runs as <code>hanzo-work</code>, sandboxed and offline. It holds the node   credential, which reaches only this node&#x27;s routes. Cloud-driven execution as a   user who can become root is outside this guarantee, which is why A1 makes it   incompatible. The owner&#x27;s answer is <code>kinds: []</code> or <code>sudo hanzo unlink</code>, and   both take effect without the cloud.</p>
+<ul><li><strong>A malicious org member</strong> is bounded by role (A4), by the node&#x27;s policy, by</li></ul>
+<p>  per-requester rate limits and by attribution: every enqueue names its   requester in the audit log and on the bus. Publishing a model to the org takes   an admin, a route resolves only inside its own org (HIP-1211), and a member   cannot address another org&#x27;s node or activity, or dial a node&#x27;s service from   their own device.</p>
+<ul><li><strong>A poisoned model repository</strong> is defeated by the pin. A commit and the</li></ul>
+<p>  SHA-256 of every file make a later push irrelevant, and admitting only data   formats leaves nothing that runs on load. Naming a poisoned commit with   matching hashes yields data from an allowed source; <code>models</code> can pin exact   commits. What remains is a parser defect in the engine, which finds itself as   <code>hanzo-work</code> in A9&#x27;s namespaces with no capability, no network, no session bus   and no credential.</p>
+<ul><li><strong>A LAN pivot</strong> has no port to forward and no fetch to ride. Nothing listens</li></ul>
+<p>  off loopback, a workload has no network, the overlay host ignores controller   forwards, and the relay&#x27;s only target is a workload&#x27;s socket. Downloads refuse   private space and off-list redirects, render files are single-use grants on   the API origin, and the relay refuses media URLs.</p>
+<ul><li><strong>Leakage into a workload</strong> is closed by A9. A route token lives in the</li></ul>
+<p>  platform&#x27;s KMS alone, is valid for one workload&#x27;s life, and is checked by the   relay, which no workload can reach around.</p>
+<ul><li><strong>Cross-tenant dialing.</strong> Dial and bind are authorized by identity id, never</li></ul>
+<p>  by role, and the cloud&#x27;s own identity can still reach every org&#x27;s names, so   the <code>.&lt;org&gt;.zt</code> suffix is also checked where an endpoint enters. <code>&lt;org&gt;</code> is   the org&#x27;s name as IAM holds it, compared byte for byte with nothing folded. A   route endpoint (HIP-1211) and an attached cluster&#x27;s apiserver (§Security)   that name an overlay host MUST carry the caller&#x27;s own org as that suffix.</p>
+<h3>A14 Why</h3>
+<p>A flag that starts a service when the machine is linked holds a GPU and a port for a request that may never come. When the cloud starts work only on demand, an idle machine stays idle.</p>
+<p>The data path rides the overlay rather than the claim stream. The overlay is already the outbound-only network a linked machine joins, and HTTP crosses it unchanged, so streaming, cancellation and back-pressure are the engine&#x27;s own. Tunnelling requests through the claim stream would mean a framing protocol, a replica that holds each node&#x27;s stream, and a peer hop to reach it (HIP-1325 needs exactly that). Control stays a long-poll with no replica affinity.</p>
+<p>Consent belongs on the node because the policy constrains the cloud, and a policy the cloud could edit would constrain nothing. Root owns the policy and the code that reads it because every user-owned file on the machine is one cloud-driven command away from being rewritten.</p>
 <h2>Motivation</h2>
 <p>Renting a machine is the one operation where the price must be knowable before the money moves, so every launch here carries a quote at the same address as the launch. And a fleet is the one inventory a tenant needs answered in a single question rather than four, so the board unions every source the org has — the machines Hanzo runs for it, the boxes it dialled in, its clusters, its agent run targets at <code>/v1/agents/targets</code> — under &quot;what compute do I have, and how hot is it?&quot;. Both are properties an addressed face can have and a scatter of provider calls cannot.</p>
 <h2>Specification</h2>
 <p>The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as in RFC 2119.</p>
 <h3>§1 It owns no store</h3>
-<p>Every row visor answers with is read from something that owns it, and visor persists none of it.</p>
-<p>Provisioned compute is the compute service&#x27;s: machines, node pools, the DOKS lifecycle. Attached compute is the per-org registry of bring-your-own clusters (<code>apps/fleet</code>), whose kubeconfigs are sealed in the org&#x27;s KMS (HIP-1134) under a per-org, per-project ref — one registry with two readers, visor and model serving (HIP-1140), and therefore neither one&#x27;s store. Utilization is the shared compute time series (<code>apps/samples</code>), one table in the datastore with <code>org</code> as its only tenant key, bound and never interpolated.</p>
-<p>A capability that keeps a private copy of any of the three has two answers to one question. visor keeps none.</p>
+<p>Every row compute answers with is read from something that owns it, and compute persists none of it.</p>
+<p>Provisioned compute is the compute service&#x27;s: machines, node pools, the managed cluster lifecycle. Attached compute is the per-org registry of bring-your-own clusters, whose kubeconfigs are sealed in the org&#x27;s KMS (HIP-1134) under a per-org, per-project ref — one registry with two readers, compute and model serving (HIP-1140), and therefore neither one&#x27;s store. Utilization is the shared compute time series, one table in the datastore with <code>org</code> as its only tenant key, bound and never interpolated.</p>
+<p>A capability that keeps a private copy of any of the three has two answers to one question. compute keeps none.</p>
 <h3>§2 The boundary: the machine, not what runs on it</h3>
-<p>visor answers for rented hardware. Everything a customer puts on it belongs somewhere else, and the split is clean at every neighbour:</p>
+<p>compute answers for hardware. Everything a customer puts on it belongs somewhere else, and the split is clean at every neighbour:</p>
 <ul><li><strong>platform</strong> (HIP-1230) is the container plane: builds, releases,</li></ul>
-<p>  environments, domains, logs. &quot;Give me a GPU box&quot; is visor; &quot;run this image&quot; is   platform. Neither provisions the other&#x27;s noun.</p>
+<p>  environments, domains, logs. &quot;Give me a GPU box&quot; is compute; &quot;run this image&quot;   is platform. Neither provisions the other&#x27;s noun.</p>
 <ul><li><strong>sandboxes</strong> (HIP-1146) is the compute primitive for somebody else&#x27;s code —</li></ul>
-<p>  a pod whose lifetime is a request, on capacity that already exists. visor   never executes a customer&#x27;s code; it hands back a machine and stops.</p>
+<p>  a pod whose lifetime is a request, on capacity that already exists. compute   never executes a customer&#x27;s code on a machine it rents; it hands back a   machine and stops.</p>
 <ul><li><strong>bot</strong> owns <code>/v1/bot/runs</code>, which is a bot doing work on a desktop, live: a</li></ul>
-<p>  session. <code>/v1/visor/compute/bots</code> is a machine of kind bot plus its agent   binding — rented hardware bootstrapped with a runtime. Two nouns share a word   and do not share an address.</p>
-<ul><li><strong>agents</strong> (HIP-1210) owns the agent. visor owns the binding that says a given</li></ul>
-<p>  machine hosts one, because the binding is a property of the machine.</p>
-<p>Inside visor, <code>/v1/visor/clusters</code> is the fleet&#x27;s answer to &quot;what clusters do I have&quot;, provisioned and attached together, while <code>/v1/visor/k8s</code> is the provider lifecycle that creates and destroys them. Both are visor&#x27;s, which is exactly why they fold under one name rather than being called two capabilities.</p>
+<p>  session. <code>/v1/compute/machines?kind=bot</code> is a machine of kind bot plus its   agent binding — rented hardware bootstrapped with a runtime. Two nouns share a   word and do not share an address.</p>
+<ul><li><strong>agents</strong> (HIP-1210) owns the agent. compute owns the binding that says a</li></ul>
+<p>  given machine hosts one, because the binding is a property of the machine.</p>
+<p>Inside compute, <code>/v1/compute/clusters</code> is the fleet&#x27;s answer to &quot;what clusters do I have&quot;, provisioned and attached together, while <code>/v1/compute/k8s</code> is the provider lifecycle that creates and destroys them. Both are compute&#x27;s, which is exactly why they fold under one name rather than being called two capabilities.</p>
 <h3>§3 The addresses</h3>
-<p>visor answers under <code>/v1/visor</code>, the one root HIP-0139 §3 gives a capability (<code>manifest/apps.go:309</code>), and every noun of the compute plane is one segment down (<code>apps/visor/visor.go:143-268</code>). The six top-level roots those nouns used to sit at — <code>/v1/machines</code>, <code>/v1/gpus</code>, <code>/v1/clusters</code>, <code>/v1/k8s</code>, <code>/v1/fleet</code> and <code>/v1/compute</code> — were six lines of the misfiled ratchet (HIP-0139 §5.1), and all six closed by fold (HIP-0139 §7.1), never by split: there is one owner and §1 leaves no second store to split along. No alias was left behind, so an address that begins anywhere else is not visor&#x27;s.</p>
-<ul><li><code>/v1/visor/machines</code> — the org&#x27;s machines, one machine, its agent binding, and</li></ul>
-<p>  every binding in the fleet at <code>/v1/visor/machines/agents</code>.</p>
-<ul><li><code>/v1/visor/gpus</code> — the accelerators on those machines, and</li></ul>
-<p>  <code>/v1/visor/gpus/alerts</code>.</p>
-<ul><li><code>/v1/visor/clusters</code> — the cluster list, attach and detach, and node-pool</li></ul>
+<p>compute answers under <code>/v1/compute</code>, the one root HIP-0139 §3 gives a capability, and every noun of the compute plane is one segment down. The roots those nouns used to sit at — <code>/v1/machines</code>, <code>/v1/gpus</code>, <code>/v1/clusters</code>, <code>/v1/k8s</code> and <code>/v1/fleet</code> — were lines of the misfiled ratchet (HIP-0139 §5.1), and all closed by fold (HIP-0139 §7.1), never by split: there is one owner and §1 leaves no second store to split along. No alias was left behind, and nothing answers at <code>/v1/visor</code>, so an address that begins anywhere else is not compute&#x27;s.</p>
+<ul><li><code>/v1/compute/machines</code> — the org&#x27;s machines, rented and linked (a linked one</li></ul>
+<p>  carries <code>provider: &quot;byo&quot;</code>), one machine, launch and delete; a machine&#x27;s agent   binding at <code>/v1/compute/machines/{id}/agent</code> (put, get, delete), and every   binding in the fleet at <code>/v1/compute/machines/agents</code>.</p>
+<ul><li><code>/v1/compute/gpus</code> — the accelerators on those machines, and</li></ul>
+<p>  <code>/v1/compute/gpus/alerts</code>.</p>
+<ul><li><code>/v1/compute/clusters</code> — the cluster list, attach and detach, and node-pool</li></ul>
 <p>  create, scale and delete.</p>
-<ul><li><code>/v1/visor/k8s</code> — cluster list, one cluster with its pools and worker nodes,</li></ul>
-<p>  create, delete, and the fleet-wide worker nodes at <code>/v1/visor/k8s/nodes</code>.</p>
-<ul><li><code>/v1/visor/fleet</code> — the board, the attached workers at</li></ul>
-<p>  <code>/v1/visor/fleet/workers</code>, the utilization series at   <code>/v1/visor/fleet/samples</code>, and the GPU job queue at <code>/v1/visor/fleet/jobs</code>   with a cancel.</p>
-<ul><li><code>/v1/visor/compute</code> — the launch catalog at <code>/v1/visor/compute/regions</code> and</li></ul>
-<p>  <code>/v1/visor/compute/sizes</code>, and bot machines under <code>/v1/visor/compute/bots</code>.</p>
-<p>Every route with a shape to state is typed. Five are declared with prose beside the route, and each names why it cannot be a value:</p>
-<ol><li><code>POST /v1/visor/machines</code> and <code>POST /v1/visor/compute/bots/launch</code> — the</li></ol>
-<p>   response shape is chosen by the request: <code>dryRun</code> answers 200 with a price    quote, a real launch answers 201 with the created resource. A typed op    declares one <code>Out</code>, so typing either would have to change one of the two    bodies.</p>
-<ol><li><code>GET /v1/visor/compute/regions</code> and <code>GET /v1/visor/compute/sizes</code> — the body</li></ol>
-<p>   is the launch catalog exactly as the compute service states it. visor does    not know that shape, and inventing one is the opposite of what a passthrough    is for.</p>
-<ol><li><code>POST /v1/visor/compute/bots/{id}/{action}</code> — a verb dispatch, not a</li></ol>
+<ul><li><code>/v1/compute/k8s</code> — cluster list, one cluster with its pools and worker</li></ul>
+<p>  nodes, create, delete, and the fleet-wide worker nodes at   <code>/v1/compute/k8s/nodes</code>.</p>
+<ul><li><code>/v1/compute/fleet</code> — the board, the linked machines at</li></ul>
+<p>  <code>/v1/compute/fleet/workers</code>, the utilization series at   <code>/v1/compute/fleet/samples</code>, and the GPU job queue at   <code>/v1/compute/fleet/jobs</code> with a cancel.</p>
+<ul><li><code>/v1/compute/regions</code> and <code>/v1/compute/sizes</code> — the launch catalog, typed as</li></ul>
+<p>  any JSON because the body is the compute service&#x27;s, stated as it states it.</p>
+<p>Every route with a shape to state is typed. Two are declared with prose beside the route, and each names why it cannot be a value:</p>
+<ol><li><code>POST /v1/compute/machines</code> — the response shape is chosen by the request:</li></ol>
+<p>   <code>dryRun</code> answers 200 with a price quote, a real launch answers 201 with the    created resource. A launch with <code>kind: &quot;bot&quot;</code> creates the agent and binds it    in the same call. A typed op declares one <code>Out</code>, so typing it would have to    change one of the two bodies.</p>
+<ol><li><code>POST /v1/compute/machines/{id}/{action}</code> — a verb dispatch, not a</li></ol>
 <p>   resource. The <code>message</code> action streams the bound agent&#x27;s answer back    untouched: the upstream body, its content type and its status. There is no    <code>Out</code>, and declaring one would buffer the stream.</p>
-<p>The two launches spend real money, so their prose MUST state where the quote is; a caller reading only the document has no other place to learn it.</p>
-<p>The address visor serves is not the address it dials. The compute service keeps its own spelling one segment apart — <code>/v1/machines</code>, <code>/v1/machines/launch</code>, <code>/v1/k8s/clusters</code>, <code>/v1/k8s/nodes</code> and their siblings on <code>visor.hanzo.svc</code> — and those literals are the wire, so they did not move with the fold (<code>apps/visor/client.go</code>). In this package a <code>cl.call</code> or <code>cl.op</code> path is upstream&#x27;s and a <code>zip.Get(reg, …)</code> path is ours; the two are read apart by which one holds them, never by resemblance.</p>
+<p>The launch spends real money, so its prose MUST state where the quote is; a caller reading only the document has no other place to learn it.</p>
+<p>The address compute serves is not the address it dials. The compute service keeps its own spelling one segment apart — <code>/v1/machines</code>, <code>/v1/k8s/clusters</code>, <code>/v1/k8s/nodes</code> and their siblings on the compute service — and those literals are the wire, so they did not move with the fold. In the app, an upstream call&#x27;s path is upstream&#x27;s and a registered route&#x27;s path is ours; the two are read apart by which one holds them, never by resemblance.</p>
 <h3>§4 Tenancy</h3>
 <p>The tenant is <code>principal.Org</code>, minted from the validated IAM owner claim (HIP-0026). It is forwarded to the compute service as <code>owner=&lt;org&gt;</code>, beside the gateway&#x27;s own identity headers, which the edge has already sanitized of any client copy. It is never read from a body: a launch always lands in the caller&#x27;s own tenant, and the ownership field a request might carry is ignored, not honoured. Absent a validated principal the answer is 403.</p>
-<p>A machine is addressed upstream as owner plus name, so another tenant&#x27;s id is not reachable rather than refused — the surface is not an existence oracle. Reads are open to any validated member of the org. The two mutations on <code>/v1/visor/k8s/clusters</code>, create and delete, additionally require a platform SuperAdmin or an admin of the caller&#x27;s own org (<code>requireClusterAdmin</code>, HIP-0118), because provisioning spends on the house account rather than the customer&#x27;s.</p>
+<p>A machine is addressed upstream as owner plus name, so another tenant&#x27;s id is not reachable rather than refused — the surface is not an existence oracle. Reads are open to any validated member of the org. The two mutations on <code>/v1/compute/k8s/clusters</code>, create and delete, additionally require a platform SuperAdmin or an admin of the caller&#x27;s own org (<code>requireClusterAdmin</code>, HIP-0118), because provisioning spends on the house account rather than the customer&#x27;s.</p>
 <h3>§5 Money</h3>
-<p>The surface declares <code>cloud.Metered</code> (<code>plugin/visor/main.go</code>).</p>
-<p>A launch is not metered here. It fronts the compute service&#x27;s resell endpoint, which owns the balance gate and the per-hour meter; visor forwards the tenant and returns what came back, and a <code>dryRun</code> quote is that service&#x27;s price verbatim. Putting a second meter on this plane would be a second number for one machine.</p>
-<p>visor meters exactly one unit of its own: attaching a bring-your-own cluster, kind <code>byo-cluster</code>, priced from the shared compute fee (<code>CLOUD_COMPUTE_FEE_CENTS</code>, whose source is the price list, HIP-1222). The customer brings the compute and the management plane is what is charged. The debit lands through the org&#x27;s resource meter under the provider label <code>compute</code> — the commerce attribution and spend-cap scope key — and is gated before the register and metered after it, on the same key, so the amount authorized and the amount charged cannot drift. A deployment that prices the attach at zero is ungated exactly as it is unbilled. Every other route is free.</p>
+<p>The plugin declares <code>cloud.Metered</code>.</p>
+<p>A launch is not metered here. It fronts the compute service&#x27;s resell endpoint, which owns the balance gate and the per-hour meter; compute forwards the tenant and returns what came back, and a <code>dryRun</code> quote is that service&#x27;s price verbatim. Putting a second meter on this plane would be a second number for one machine.</p>
+<p>compute meters exactly one unit of its own: attaching a bring-your-own cluster, kind <code>byo-cluster</code>, priced from the shared compute fee (<code>CLOUD_COMPUTE_FEE_CENTS</code>, whose source is the price list, HIP-1222). The customer brings the compute and the management plane is what is charged. The debit lands through the org&#x27;s resource meter under the provider label <code>compute</code> — the commerce attribution and spend-cap scope key — and is gated before the register and metered after it, on the same key, so the amount authorized and the amount charged cannot drift. A deployment that prices the attach at zero is ungated exactly as it is unbilled. Every other route is free.</p>
 <h3>§6 Events and observability</h3>
-<p>visor publishes nothing on the bus: no <code>visor.*</code> event reaches a customer&#x27;s webhooks. Beyond the request span every route already gets, it writes no audit record and exports no metric of its own.</p>
-<p>What it does emit is the tenant&#x27;s own data, on request. <code>POST /v1/visor/fleet/samples</code> is how an attached worker self-reports utilization; the sample is validated against the closed source and unit vocabularies, stamped with the caller&#x27;s org, and appended to the shared series off the request path, so a slow or absent warehouse never fails an ingest. <code>GET /v1/visor/fleet/samples</code> reads that series back and <code>GET /v1/visor/fleet</code> folds the latest sample onto each unit.</p>
+<p>compute publishes nothing on the bus: no <code>compute.*</code> event reaches a customer&#x27;s webhooks. Beyond the request span every route already gets, it writes no audit record and exports no metric of its own.</p>
+<p>What it does emit is the tenant&#x27;s own data, on request. <code>POST /v1/compute/fleet/samples</code> is how an attached worker self-reports utilization; the sample is validated against the closed source and unit vocabularies, stamped with the caller&#x27;s org, and appended to the shared series off the request path, so a slow or absent warehouse never fails an ingest. <code>GET /v1/compute/fleet/samples</code> reads that series back and <code>GET /v1/compute/fleet</code> folds the latest sample onto each unit.</p>
 <h3>§7 A partial answer says it is partial</h3>
 <p>Several reads here fold two independent sources, and a fold that loses one MUST still answer with the source that replied. An outage in a provider a tenant does not use must not take away the box the tenant does own.</p>
 <p>The fold therefore carries the failure rather than swallowing it: a <code>degraded</code> list names the source that did not answer and gives a terse, log-safe reason — never the upstream&#x27;s body, which for an unknown path is a page of markup. The field is additive and omitted when everything answered, so a healthy response is unchanged and a consumer that wants to tell an outage from an empty estate can. Without it, &quot;the provider is down&quot; and &quot;you own nothing&quot; are the same three bytes on the wire.</p>
 <h3>§8 Stage</h3>
 <p><code>ga</code>. The manifest row declares no stage, and absent is <code>ga</code> (HIP-0139 §8).</p>
 <h3>§9 Upstream</h3>
-<p>The capability derives from no upstream code: <code>apps/visor</code> embeds nothing and holds one HTTP client. The compute service it fronts is <code>hanzoai/visor</code>, Apache-2.0, which derives from Casbin&#x27;s Casibase with that notice preserved in its LICENSE.</p>
+<p>The capability derives from no upstream code: the app embeds nothing and holds one HTTP client. The compute service it fronts is <code>hanzoai/visor</code>, Apache-2.0, which derives from Casbin&#x27;s Casibase with that notice preserved in its LICENSE.</p>
 <p>That client speaks two wires and every call site says which, because they cannot be told apart by looking. The enveloped wire answers HTTP 200 with <code>{status, msg, data}</code>, so a logical failure is <code>status: &quot;error&quot;</code> at 200 and a bare status check reads it as success. The typed wire answers the value: the status is the outcome, 204 for a void result and 404 for a miss, with no envelope. Converting a noun from one to the other is a wire break and lands with its caller in the same change.</p>
 <h2>Rationale</h2>
 <p>The alternative to one face over a compute service is the console and the CLI each calling that service directly. It costs a second copy of the tenant rule in every client, and the tenant rule is the whole security model here. The alternative to folding attached compute into the same lists is a second cluster surface for bring-your-own, which answers &quot;what clusters do I have&quot; twice and eventually differently.</p>
@@ -266,7 +534,7 @@ footer a{color:var(--soft)}
 <p>The attach is the sharpest edge, because a kubeconfig is both a credential for a cluster and an instruction to dial a host. It is validated before it is sealed, at the one check that discovery folds and hand-pasted attaches both pass through: an <code>exec</code> or auth-provider credential plugin is refused, because honouring one runs a binary in the serving process&#x27;s environment, and the apiserver must be a routable https endpoint, because a private address is a request to dial inside the cluster. What is stored is sealed in the org&#x27;s KMS, so the custody nodes hold ciphertext, and it is never echoed back.</p>
 <p>The admin gate on cluster create and delete protects Hanzo&#x27;s own money rather than the tenant&#x27;s data, which is why it is the only mutation here that asks for more than membership.</p>
 <h2>References</h2>
-<ul><li>HIP-0026 — Identity and Access Management</li><li>HIP-0106 — Hanzo Plugin Contract</li><li>HIP-0118 — SuperAdmin and Tenant Isolation</li><li>HIP-0139 — Capability</li><li>HIP-1134 — KMS — Secret Custody</li><li>HIP-1140 — ML — Model Serving</li><li>HIP-1146 — Sandboxes — The Compute Primitive</li><li>HIP-1210 — Agents — Define, Run, Keep the Run</li><li>HIP-1222 — Pricing — The Price List and Who May See It</li><li>HIP-1230 — Platform — The Container Plane</li></ul>
+<ul><li>HIP-0026 — Identity and Access Management</li><li>HIP-0043 — Hanzo Engine</li><li>HIP-0106 — Hanzo Plugin Contract</li><li>HIP-0118 — SuperAdmin and Tenant Isolation</li><li>HIP-0121 — BYO Compute Fleet and Metered Billing</li><li>HIP-0139 — Capability</li><li>HIP-0506 — Hanzo Studio</li><li>HIP-0904 — Zen6 checkpoints</li><li>HIP-1060 — Pubsub — The Tenant Door on the Bus</li><li>HIP-1062 — Workflow — The Durable Run</li><li>HIP-1134 — KMS — Secret Custody</li><li>HIP-1140 — ML — Model Serving</li><li>HIP-1146 — Sandboxes — The Compute Primitive</li><li>HIP-1173 — Network — An Org-Scoped Overlay</li><li>HIP-1210 — Agents — Define, Run, Keep the Run</li><li>HIP-1211 — AI — The Model API</li><li>HIP-1222 — Pricing — The Price List and Who May See It</li><li>HIP-1230 — Platform — The Container Plane</li><li>HIP-1325 — Node — A Machine an Org Owns</li></ul>
 <h2>Copyright</h2>
 <p>Released under CC0 1.0 Universal Public Domain Dedication.</p>
 <footer>

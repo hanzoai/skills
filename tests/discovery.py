@@ -11,6 +11,7 @@ scripts/site.py). Live, each must answer 200 with the committed bytes, and every
 skill's digest must match the bytes the host serves for it.
 """
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -81,6 +82,25 @@ bad = [s.get("name") for s in skills
                and s.get("digest") == "sha256:" + hashlib.sha256(read(s["name"] + ".md")).hexdigest())]
 ok("skills index: every entry well formed, its digest the committed file's", not bad, ", ".join(bad[:5]))
 ok("skills index: names are unique", len({s["name"] for s in skills}) == len(skills))
+
+# The index is site.py's: a skill is a SKILL.md served whole, with every file it
+# points at published beside it.
+spec = importlib.util.spec_from_file_location("site_chrome", os.path.join(os.path.dirname(__file__), "..", "scripts", "site.py"))
+chrome = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(chrome)
+loose = ["%s -> %s" % (s["name"], r) for s in skills
+         for r in sorted(chrome.refs(read(s["name"] + ".md").decode("utf-8")))
+         if not os.path.isfile(os.path.join(ROOT, r))]
+ok("skills index: every file a listed skill points at is published", not loose, ", ".join(loose[:5]))
+ok("skills index: the index site.py derives", read(".well-known/agent-skills/index.json").decode("utf-8")
+   == chrome.skills_index(ROOT))
+
+# A crawler reads only the group that names it (RFC 9309), so every group states
+# the Content Signals.
+groups = [g for g in re.split(r"\n\s*\n", read("robots.txt").decode("utf-8"))
+          if re.search(r"^User-agent:", g, re.M | re.I)]
+ok("robots.txt: every group states Content-Signal", groups and all(re.search(r"^Content-Signal: ", g, re.M) for g in groups),
+   "%d groups" % len(groups))
 
 if BASE:
     for rel in DOCS:

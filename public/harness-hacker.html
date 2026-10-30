@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>harness-hacker</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/harness-hacker">
+<link rel="alternate" type="text/markdown" href="/harness-hacker.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/harness-hacker.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>harness-hacker</h1><p class="lede">Self-modify the bot framework — fork, improve, test, and PR changes to any Hanzo component including your own source code, skills, extensions, and tools. Use when self-improvement maintenance proposes changes or when you detect friction you can fix.</p><h1>Harness Hacker — Self-Modification Protocol</h1>
+<p>You have the ability to modify your own source code, create new tools, improve existing skills, and contribute changes back to any Hanzo repository. This is your most powerful capability.</p>
+<h2>When to Use</h2>
+<ol><li><strong>After a maintenance pass</strong> proposes an approved change</li><li><strong>During a Build It Now cycle</strong> (Loop 1) when friction is detected</li><li><strong>When the user explicitly asks</strong> you to improve yourself</li><li><strong>When you identify a pattern</strong> that a specific tool would solve better than <code>bash</code></li></ol>
+<h2>Safety Rules</h2>
+<ol><li><strong>NEVER modify files in the live bot directory while the gateway is running</strong> — use a worktree</li><li><strong>ALWAYS test changes</strong> before committing — run <code>pnpm test</code> or the relevant test suite</li><li><strong>ALWAYS create a new branch</strong> — never commit directly to <code>main</code></li><li><strong>ALWAYS explain what you&#x27;re changing and why</strong> before doing it</li><li><strong>Keep changes small and focused</strong> — one logical change per commit</li><li><strong>Generated tools go in <code>extensions/self-improvement/tools/generated/</code></strong> — they have a 7-day TTL</li></ol>
+<h2>Creating a New Extension</h2>
+<p>Extensions are the primary way to add capabilities. Follow this exact pattern:</p>
+<pre><code class="lang-bash"># 1. Create directory
+mkdir -p ~/botd/extensions/my-extension
+
+# 2. Create package.json
+cat &gt; ~/botd/extensions/my-extension/package.json &lt;&lt; &#x27;EOF&#x27;
+{
+  &quot;name&quot;: &quot;@hanzo/bot-my-extension&quot;,
+  &quot;version&quot;: &quot;2026.2.26&quot;,
+  &quot;private&quot;: true,
+  &quot;description&quot;: &quot;What this extension does&quot;,
+  &quot;type&quot;: &quot;module&quot;,
+  &quot;devDependencies&quot;: { &quot;@hanzo/bot&quot;: &quot;workspace:*&quot; },
+  &quot;peerDependencies&quot;: { &quot;@hanzo/bot&quot;: &quot;&gt;=2026.1.26&quot; },
+  &quot;bot&quot;: { &quot;extensions&quot;: [&quot;./index.ts&quot;] }
+}
+EOF
+
+# 3. Create index.ts
+cat &gt; ~/botd/extensions/my-extension/index.ts &lt;&lt; &#x27;EOTS&#x27;
+import type { AnyAgentTool, BotPluginApi } from &quot;bot/plugin-sdk&quot;;
+import { emptyPluginConfigSchema } from &quot;bot/plugin-sdk&quot;;
+
+const plugin = {
+  id: &quot;my-extension&quot;,
+  name: &quot;My Extension&quot;,
+  description: &quot;What it does&quot;,
+  configSchema: emptyPluginConfigSchema(),
+  register(api: BotPluginApi) {
+    api.registerTool({
+      name: &quot;my_tool&quot;,
+      description: &quot;What the tool does&quot;,
+      parameters: {
+        type: &quot;object&quot;,
+        properties: {
+          input: { type: &quot;string&quot;, description: &quot;Input parameter&quot; }
+        },
+        required: [&quot;input&quot;]
+      },
+      async execute(params) {
+        // Implementation here
+        return { content: [{ type: &quot;text&quot;, text: &quot;Result&quot; }] };
+      }
+    } as AnyAgentTool);
+  }
+};
+
+export default plugin;
+EOTS</code></pre>
+<h2>Creating a New Skill</h2>
+<p>Skills are documentation files that teach you patterns. They&#x27;re simpler than extensions.</p>
+<pre><code class="lang-bash"># 1. Create directory
+mkdir -p ~/botd/skills/my-skill
+
+# 2. Create SKILL.md
+cat &gt; ~/botd/skills/my-skill/SKILL.md &lt;&lt; &#x27;EOF&#x27;
+---
+name: my-skill
+description: What this skill teaches
+metadata:
+  { &quot;bot&quot;: { &quot;emoji&quot;: &quot;📚&quot; } }
+---
+
+# Skill Name
+
+## When to Use
+Describe the trigger conditions.
+
+## Pattern
+Show the exact steps or commands.
+
+## Rules
+1. Rule one
+2. Rule two
+EOF</code></pre>
+<h2>Modifying Existing Extensions</h2>
+<p>Use git worktrees for safety:</p>
+<pre><code class="lang-bash"># 1. Create worktree from the bot repo
+cd ~/botd
+git worktree add /tmp/bot-hack-$(date +%s) -b hack/my-improvement
+
+# 2. Make changes in the worktree
+cd /tmp/bot-hack-*
+# Edit files...
+
+# 3. Test
+pnpm test
+
+# 4. Commit
+git add -A
+git commit -m &quot;feat(self-improvement): description of change&quot;
+
+# 5. Push and PR (if user approves)
+git push -u origin hack/my-improvement
+gh pr create --title &quot;...&quot; --body &quot;...&quot;
+
+# 6. Cleanup
+cd ~/botd
+git worktree remove /tmp/bot-hack-*</code></pre>
+<h2>Hacking Other Hanzo Components</h2>
+<p>You can improve ANY Hanzo repo, not just the bot. Common targets:</p>
+<p>| Component       | Path                     | What to Improve                                 | | --------------- | ------------------------ | ----------------------------------------------- | | <strong>MCP</strong>         | <code>~/work/hanzo/mcp</code>       | Add new tools, improve search                   | | <strong>Agent SDK</strong>   | <code>~/work/hanzo/agent</code>     | Network patterns, memory                        | | <strong>LLM Gateway</strong> | <code>~/work/hanzo/llm</code>       | Provider support, routing                       | | <strong>Operative</strong>   | <code>~/work/hanzo/operative</code> | Computer use tools                              | | <strong>Universe</strong>    | <code>~/work/hanzo/universe</code>  | K8s manifests, infra                            | | <strong>Zoo Gym</strong>     | <code>~/work/zoo/gym</code>         | GRPO pipeline, SemanticExtractor, BitDelta, DSO | | <strong>Zoo Node</strong>    | <code>~/work/zoo/node</code>        | Rust BitDelta/GRPO (hanzo-libs/hanzo-llm)       | | <strong>Zen Models</strong>  | <code>~/work/hanzo/zen</code>       | Model serving, quantization configs             |</p>
+<p>Pattern for external repos:</p>
+<pre><code class="lang-bash"># 1. Fork/branch
+cd ~/work/hanzo/mcp
+git checkout -b hack/add-tool-xyz
+
+# 2. Make changes
+# 3. Test: pnpm test (or uv run pytest, cargo test, etc.)
+# 4. Commit and push
+# 5. Create PR</code></pre>
+<h2>Runtime Tool Creation (Build It Now — Loop 1)</h2>
+<p>When you detect friction during a session, you have 5 minutes to build a fix:</p>
+<pre><code class="lang-bash"># 1. Identify the pattern (from telemetry)
+#    e.g., &quot;bash fails 3x trying to parse JSON from package.json&quot;
+
+# 2. Create a generated tool (these have a 7-day TTL)
+mkdir -p ~/botd/extensions/self-improvement/tools/generated
+
+cat &gt; ~/botd/extensions/self-improvement/tools/generated/read-package-field.ts &lt;&lt; &#x27;EOTS&#x27;
+// Generated tool: read_package_field
+// Created: $(date -Iseconds)
+// Trigger: bash failed 3x parsing JSON from package.json
+// TTL: 7 days (auto-pruned if unused)
+
+import { readFileSync, existsSync } from &quot;node:fs&quot;;
+import { join } from &quot;node:path&quot;;
+
+export const tool = {
+  name: &quot;read_package_field&quot;,
+  description: &quot;Read a specific field from package.json. Safer than bash + jq for JSON extraction.&quot;,
+  parameters: {
+    type: &quot;object&quot;,
+    properties: {
+      path: { type: &quot;string&quot;, description: &quot;Directory containing package.json&quot; },
+      field: { type: &quot;string&quot;, description: &quot;JSON field path (e.g., &#x27;version&#x27;, &#x27;scripts.build&#x27;)&quot; }
+    },
+    required: [&quot;field&quot;]
+  },
+  async execute(params: any) {
+    const dir = params.path || process.cwd();
+    const pkgPath = join(dir, &quot;package.json&quot;);
+    if (!existsSync(pkgPath)) {
+      return { content: [{ type: &quot;text&quot;, text: `No package.json found at ${dir}` }] };
+    }
+    const pkg = JSON.parse(readFileSync(pkgPath, &quot;utf-8&quot;));
+    const parts = (params.field as string).split(&quot;.&quot;);
+    let value: any = pkg;
+    for (const part of parts) {
+      value = value?.[part];
+    }
+    return {
+      content: [{ type: &quot;text&quot;, text: value !== undefined ? JSON.stringify(value) : &quot;Field not found&quot; }]
+    };
+  }
+};
+EOTS
+
+# 3. Hot-reload (the self-improvement extension watches this directory)</code></pre>
+<h2>Continuous Improvement Workflow</h2>
+<pre><code>Friction detected (Loop 1)
+    → Build specific tool (5 min time-box)
+    → Test against failure cases
+    → Hot-reload into session
+
+Session ends (Loop 3)
+    → 3-question reflection
+    → Structured telemetry summary
+
+Every 5 sessions (Loop 4)
+    → Aggregate telemetry
+    → Generate proposals
+    → Human approves/rejects
+    → YOU implement approved changes using THIS skill</code></pre>
+<h2>Telemetry-Driven Decisions</h2>
+<p>Always check telemetry before building:</p>
+<pre><code class="lang-bash"># View recent session telemetry
+ls -la ~/.hanzo/bot/telemetry/
+
+# View last reflection
+cat ~/.hanzo/bot/self-improvement/reflections/$(ls -t ~/.hanzo/bot/self-improvement/reflections/ | head -1)
+
+# View maintenance proposals
+cat ~/.hanzo/bot/self-improvement/proposals/$(ls -t ~/.hanzo/bot/self-improvement/proposals/ | head -1)
+
+# View learned facts
+cat ~/.hanzo/bot/self-improvement/learned-facts.json</code></pre>
+<h2>Remember</h2>
+<ul><li><strong>Specific tools beat generic flexibility.</strong> <code>read_package_field</code> at 100% success &gt; <code>bash + jq</code> at 84%.</li><li><strong>Telemetry is truth.</strong> Don&#x27;t guess — look at the numbers.</li><li><strong>No backlogs.</strong> Build it now or let it live in telemetry for the maintenance pass.</li><li><strong>Test everything.</strong> Show tests passing, don&#x27;t just say &quot;done.&quot;</li><li><strong>Small changes compound.</strong> 11 tools over 100 sessions is how bmo improved.</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/harness-hacker.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

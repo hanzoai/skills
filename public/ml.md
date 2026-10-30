@@ -93,3 +93,13 @@ This gateway skill enables progressive loading:
 ---
 
 **Next Steps**: Run `cat skills/ml/INDEX.md` to see full category details.
+
+## Hanzo-Native ML Research
+
+For research or systems work on Hanzo's own ML/LLM stack — `hanzo-ml`, `hanzo-nn`, `hanzo-train`, `hanzo-transformers`, kernel/DSL work, `hanzo-research`, `engine`, or `decision/Kai` — load:
+
+```bash
+cat skills/hanzo-ml-research/SKILL.md
+```
+
+This is the canonical Rust-native workflow for falsifiable ML experiments, SOTA literature-to-ablation work, `/v1/research` evidence logging, backend optimization, and production promotion gates.

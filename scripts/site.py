@@ -11,6 +11,7 @@ import hashlib
 import html
 import json
 import os
+import posixpath
 import re
 import sys
 
@@ -621,14 +622,20 @@ def sitemap(files):
 
 
 # Agent Skills Discovery v0.2.0 (github.com/cloudflare/agent-skills-discovery-rfc).
-# The index lists every file this site serves that an agent can install as a skill:
-# a /<name>.md whose front matter names it <name> (the Agent Skills name rule) and
-# describes it in at most 1,024 characters. Each entry carries the SHA-256 of the
-# exact bytes served, so a client verifies what it fetched, and the index is
-# derived here, beside the sitemap, so CI fails when it disagrees with public/.
+# The index lists the skills this site serves whole: a skills/**/SKILL.md whose
+# front matter names it <name> (the Agent Skills name rule, a description of at most
+# 1,024 characters), served byte for byte as /<name>.md, and every file it points at
+# by a relative path published beside it. A skill whose references/, scripts/ or
+# templates/ are not published is left out until they are: type skill-md delivers
+# SKILL.md alone. Each entry carries the SHA-256 of the bytes served, and the index
+# is derived here, beside the sitemap, so CI fails when it disagrees with public/.
 SKILLS_SCHEMA = "https://schemas.agentskills.io/discovery/0.2.0/schema.json"
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 BLOCK = re.compile(r"^[|>][+-]?$")
+SOURCE = os.path.join(os.path.dirname(ROOT), "skills")
+# A markdown link's target, and a bare path into a skill's own directories.
+LINK = re.compile(r"\]\(([^)\s]+)")
+PATH = re.compile(r"(?<![\w/.:@~-])((?:\.{1,2}/)*(?:references?|scripts|templates|assets|examples|resources|tools)/[\w.@+-]+(?:/[\w.@+-]+)*)")
 
 
 def front(text):
@@ -677,19 +684,43 @@ def front(text):
     return out
 
 
-def skills_index(root):
-    skills = []
-    for path in sorted(glob.glob(os.path.join(root, "*.md"))):
-        name = os.path.basename(path)[:-3]
+def refs(text):
+    """The relative paths a skill points at, resolved from its own URL, /<name>.md."""
+    out = set()
+    # A link names a file when it has a directory or an extension; `(URL)` in prose
+    # is a placeholder, not a file.
+    targets = [m.group(1) for m in LINK.finditer(text) if re.search(r"/|\.\w{1,8}$", m.group(1))]
+    targets += [m.group(1) for m in PATH.finditer(text)]
+    for target in targets:
+        target = target.split("#", 1)[0].split("?", 1)[0]
+        if not target or target.startswith("/") or re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target):
+            continue
+        out.add(posixpath.normpath("/" + target).lstrip("/"))
+    return out
+
+
+def skills_index(root, source=SOURCE):
+    sources = {}
+    for path in sorted(glob.glob(os.path.join(source, "**", "SKILL.md"), recursive=True)):
         raw = open(path, "rb").read()
         try:
-            fm = front(raw.decode("utf-8"))
+            name = front(raw.decode("utf-8")).get("name")
         except ValueError:
             continue
-        desc = " ".join(fm.get("description", "").split())
-        if fm.get("name") != name or not SKILL_NAME.match(name) or len(name) > 64:
+        sources.setdefault(name, set()).add(raw)
+    skills = []
+    for name in sorted(n for n in sources if isinstance(n, str)):
+        served = os.path.join(root, name + ".md")
+        if not SKILL_NAME.match(name) or len(name) > 64 or not os.path.isfile(served):
             continue
+        raw = open(served, "rb").read()
+        if raw not in sources[name]:
+            continue
+        text = raw.decode("utf-8")
+        desc = " ".join(front(text).get("description", "").split())
         if not desc or len(desc) > 1024:
+            continue
+        if any(not os.path.isfile(os.path.join(root, r)) for r in refs(text)):
             continue
         skills.append({
             "name": name,

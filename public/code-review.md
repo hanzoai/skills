@@ -6,6 +6,19 @@ source: phuryn/pm-skills
 
 # Code Review
 
+## Release review
+
+On a Hanzo change the reading is done before a person is asked, and a person's attention follows the risk of the diff.
+
+1. The author shows the command that ran and what it returned. A second agent reads the diff in a fresh context.
+2. Security and defects are separate passes. Several reads hunt defects. A finding is posted only when a second read agrees it is real. Style, diagnostics, and cleanup are dropped. Each finding is Important, Nit, or Pre-existing, and names a file and a line.
+3. Open Important defects and open security findings block the release. A nit does not. Fix the finding or say why it is wrong.
+4. Risk comes from the paths. Low (docs, copy) needs no further person once both passes are green. Medium needs the author. High — iam, kms, auth, authz, billing, pay, release, installer, any workflow — needs `Testing`, `Risk`, and `How to revert` in the commit messages before it releases. An agent's approval is not a person's.
+5. Stop at three rounds. After that, re-read only the new diff, do not repeat a finding, and name the class of bug so every instance is fixed. Then reconsider the approach.
+6. The summary starts with a count. Zero findings is a valid result. Say so in words.
+
+`REVIEW.md` in the repo says what failure looks like there. The agreement engine below is how a defect is established. It does not replace the passes above.
+
 ## Purpose
 
 Most review output is noise: a list of things that *look* wrong, unranked, unrefuted, and impossible

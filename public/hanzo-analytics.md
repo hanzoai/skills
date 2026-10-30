@@ -64,7 +64,7 @@ Repo: `hanzoai/analytics` (Umami fork, v3.0.3).
 | Database | PostgreSQL (required), ClickHouse (optional) |
 | ORM | Prisma 6 |
 | Collector | Go + Gin + ClickHouse (`collector/`) |
-| Health check | `/api/heartbeat` |
+| Health check | `/v1/heartbeat` |
 | Repo | `github.com/hanzoai/analytics` |
 | License | MIT |
 
@@ -87,7 +87,7 @@ services:
  condition: service_healthy
  restart: always
  healthcheck:
- test: ["CMD-SHELL", "curl http://localhost:3000/api/heartbeat"]
+ test: ["CMD-SHELL", "curl http://localhost:3000/v1/heartbeat"]
  interval: 5s
  timeout: 5s
  retries: 5
@@ -139,12 +139,12 @@ pnpm start # http://localhost:3000
  │ (Next.js 15) │
  │ │
  │ ┌────────────────┐ │
- Browser ─────────▶│ │ /api/send │ │──── PostgreSQL
- (tracker.js) │ │ /api/batch │ │ (sessions, events,
- │ │ /api/realtime │ │ users, teams, etc.)
- │ │ /api/websites │ │
- │ │ /api/reports │ │
- │ │ /api/auth │ │
+ Browser ─────────▶│ │ /v1/send │ │──── PostgreSQL
+ (tracker.js) │ │ /v1/batch │ │ (sessions, events,
+ │ │ /v1/realtime │ │ users, teams, etc.)
+ │ │ /v1/websites │ │
+ │ │ /v1/reports │ │
+ │ │ /v1/auth │ │
  │ └────────────────┘ │
  └──────────────────────┘
 
@@ -182,18 +182,18 @@ pnpm start # http://localhost:3000
 
 | Route | Purpose |
 |-------|---------|
-| `/api/send` | Receive tracking events |
-| `/api/batch` | Batch event ingestion |
-| `/api/realtime` | Real-time visitor data |
-| `/api/websites` | Website CRUD |
-| `/api/reports` | Report CRUD |
-| `/api/teams` | Team management |
-| `/api/users` | User management |
-| `/api/auth` | Authentication |
-| `/api/links` | URL shortener |
-| `/api/pixels` | Tracking pixels |
-| `/api/share` | Public dashboard sharing |
-| `/api/heartbeat` | Health check |
+| `/v1/send` | Receive tracking events |
+| `/v1/batch` | Batch event ingestion |
+| `/v1/realtime` | Real-time visitor data |
+| `/v1/websites` | Website CRUD |
+| `/v1/reports` | Report CRUD |
+| `/v1/teams` | Team management |
+| `/v1/users` | User management |
+| `/v1/auth` | Authentication |
+| `/v1/links` | URL shortener |
+| `/v1/pixels` | Tracking pixels |
+| `/v1/share` | Public dashboard sharing |
+| `/v1/heartbeat` | Health check |
 
 ### Environment Variables
 

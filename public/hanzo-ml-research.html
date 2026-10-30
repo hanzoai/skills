@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>hanzo-ml-research</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/hanzo-ml-research">
+<link rel="alternate" type="text/markdown" href="/hanzo-ml-research.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/hanzo-ml-research.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>hanzo-ml-research</h1><p class="lede">Native Hanzo AI/ML research and systems-design skill for LLMs, encoders, decision models, training, inference, kernels, quantization, retrieval/reranking, safety, evaluation, and scientific benchmarking. Use Hanzo&#x27;s Rust stack (hanzo-ml, hanzo-nn, hanzo-train, hanzo-transformers, hanzo-kernel/DSL, hanzo-research, engine, and decision/Kai) by default; search current literature when needed; record falsifiable experiments and artifacts through the unified /v1/research plane.</p><h1>Hanzo ML Research</h1>
+<p>Use this skill for machine learning, LLM, encoder, decision-model, retrieval, training, inference, kernel, quantization, safety, evaluation, or AI architecture work in the Hanzo stack.</p>
+<p>The default operating principle is:</p>
+<blockquote><p>Research in the same stack that ships.</p></blockquote>
+<p>Exploratory scripts may be used for disposable analysis, but canonical results, model code, training, evaluation, latency measurements, and production paths should be implemented and reproduced in native Rust on Hanzo&#x27;s ML/runtime stack unless the task explicitly requires another environment.</p>
+<h2>Core stack</h2>
+<p>Prefer the repository/workspace already associated with the task. The important Hanzo components are:</p>
+<ul><li><code>hanzoai/ml</code></li><li><code>hanzo-ml</code>: tensor/autograd/device layer</li><li><code>hanzo-nn</code>: neural-network modules</li><li><code>hanzo-train</code>: optimizers and training utilities</li><li><code>hanzo-transformers</code>: transformer/model building blocks</li><li><code>hanzo-kernel</code> / Hanzo kernel DSL: generated and hand-optimized kernels</li><li><code>hanzo-research</code>: native research/evidence SDK</li><li><code>hanzoai/engine</code>: native Rust model inference, serving, kernels, batching, quantization, and backend integration</li><li><code>hanzoai/decision</code>: Kai typed-decision models, training, evaluation, decision programs, safety heads, retrieval/reranking, and benchmark harness</li><li><code>hanzoai/python-sdk/pkg/hanzo-research</code>: parity client for the research plane; not the canonical implementation for Rust-native experiments</li></ul>
+<p>When a local workspace exposes additional Hanzo DSL, CUDA, ROCm, Metal, Vulkan, distributed-training, or model crates, inspect and reuse them rather than creating parallel implementations.</p>
+<h2>Research plane: /v1/research</h2>
+<p>Canonical R&amp;D evidence should be recorded through <code>hanzo-research</code>, which writes to the unified research plane under <code>/v1/research</code>.</p>
+<p>Rust:</p>
+<pre><code class="lang-rust">use hanzo_research::{Research, Verdict};
+
+let r = Research::from_env();
+
+let mut exp = r
+    .experiment(&quot;pooling&quot;, &quot;j6-logmeanexp&quot;, &quot;override-detection&quot;)
+    .metric(&quot;recall_at_99_5_specificity&quot;)
+    .hypothesis(&quot;localized pooling recovers procedural override evidence hidden by mean pooling&quot;)
+    .predict(&quot;LogMeanExp improves held-out override recall without increasing benign FP beyond the preregistered gate&quot;);
+
+exp.log(&quot;frozen encoder; identical split, seed, optimizer, and token cache across arms&quot;);
+exp.conclude(
+    Verdict::Proven,
+    &quot;LogMeanExp cleared the preregistered gate&quot;,
+    Some(0.87),
+)?;</code></pre>
+<p>Environment:</p>
+<ul><li><code>HANZO_API_KEY</code></li><li><code>RESEARCH_BASE</code> (defaults to <code>https://api.hanzo.ai</code>)</li><li><code>RESEARCH_PROJECT</code></li></ul>
+<p>Important native endpoints include:</p>
+<ul><li><code>POST /v1/research/experiments</code></li><li><code>GET /v1/research/experiments</code></li><li><code>GET /v1/research/totals</code></li><li><code>POST /v1/research/artifacts</code></li></ul>
+<p>Use <code>hanzo-research</code> APIs rather than hand-rolling HTTP when working in Rust. The SDK automatically captures repository, git, host, and resolved Hanzo crate provenance.</p>
+<p>A refutation is a valid research result. Do not rewrite failed hypotheses into successes after the run.</p>
+<h2>Research workflow</h2>
+<p>For substantial research work, follow this order.</p>
+<h3>1. Establish the question</h3>
+<p>Write a falsifiable hypothesis before looking at the decisive result.</p>
+<p>Bad:</p>
+<blockquote><p>Try some pooling methods and see what works.</p></blockquote>
+<p>Good:</p>
+<blockquote><p>Frozen P0 token states already encode procedural-override evidence, but global mean pooling dilutes short localized cues. A learned linear token scorer with normalized LogSumExp pooling should improve family-held-out override recall at fixed benign specificity.</p></blockquote>
+<p>Specify:</p>
+<ul><li>primary metric</li><li>control</li><li>treatment</li><li>non-inferiority constraints</li><li>stopping point</li><li>untouched final set</li><li>expected mechanism</li></ul>
+<h3>2. Inspect the actual Hanzo implementation</h3>
+<p>Before proposing a replacement:</p>
+<ul><li>read the relevant Rust crates</li><li>identify the current execution path</li><li>check whether the desired capability already exists</li><li>inspect tensor shapes, masks, cache layout, quantization, and backend dispatch</li><li>identify CPU/GPU synchronization or host round trips</li><li>confirm whether an apparent model limitation is actually training, data, retrieval, calibration, or runtime behavior</li></ul>
+<p>Do not recommend rebuilding components that already exist.</p>
+<h3>3. Search current research</h3>
+<p>For state-of-the-art or rapidly changing ML topics, search current primary sources before making SOTA claims.</p>
+<p>Prefer:</p>
+<ol><li>peer-reviewed paper or official arXiv manuscript</li><li>authors&#x27; official repository</li><li>model/system technical report</li><li>official benchmark repository</li><li>independent reproduction</li></ol>
+<p>Use external research to generate hypotheses and baselines. Reimplement important mechanisms in the Hanzo stack before treating them as production candidates.</p>
+<p>Good areas to scan when relevant:</p>
+<ul><li>efficient encoders and long-context bidirectional models</li><li>extreme classification and million-label retrieval</li><li>dense retrieval and late interaction</li><li>distillation and calibration</li><li>preference/ranking objectives</li><li>multi-objective gradient methods</li><li>quantization: FP8/NVFP4/INT8/INT4/ternary</li><li>FlashAttention and unpadded attention</li><li>speculative decoding</li><li>KV-cache compression/quantization</li><li>distributed training and optimizer sharding</li><li>MoE routing</li><li>structured prediction and set-equivariant models</li><li>selective prediction / abstention / conformal risk control</li><li>safety classifiers and localized token readouts</li><li>GPU/ROCm/Metal/Vulkan kernel design</li></ul>
+<h3>4. Build the smallest controlled ablation</h3>
+<p>Change one causal factor at a time.</p>
+<p>Examples:</p>
+<ul><li>pooling: mean vs max vs top-k vs LogMeanExp</li><li>targets: hard vs entropy-matched vs relational</li><li>retrieval: semantic vs +memory vs +late-interaction</li><li>optimizer policy: static vs FAMO/CAGrad/D2</li><li>quantization: BF16 reference vs FP8/NVFP4 candidate</li><li>kernel: reference vs generated DSL vs hand kernel</li></ul>
+<p>Keep identical where possible:</p>
+<ul><li>initialization</li><li>seed</li><li>data order</li><li>parent checkpoint</li><li>optimizer</li><li>LR schedule</li><li>evaluation engine</li><li>batching</li><li>numerical policy</li><li>cache</li><li>train/dev/final split</li></ul>
+<p>If one arm uses extra capacity, report it as a capacity ablation, not a clean mechanism ablation.</p>
+<h3>5. Assert implementation invariants</h3>
+<p>Before benchmarking, add tests that make silent confounds fail loudly.</p>
+<p>Typical invariants:</p>
+<ul><li>expected tensor shapes</li><li>masks exclude padding</li><li>gradients reach intended trainable parameters</li><li>frozen parameters do not change</li><li>same initialization checksum across arms</li><li>same input/cache checksum across arms</li><li>ragged and padded/segmented implementations agree</li><li>no unintended host scalar extraction in hot paths</li><li>feature-off behavior matches the pre-feature path</li><li>non-target task outputs remain identical when a specialized head is enabled</li><li>checkpoint, optimizer, scheduler, RNG, and data cursor restoration is exact when testing continuation</li></ul>
+<h3>6. Measure the right decomposition</h3>
+<p>Do not collapse a pipeline failure into one metric.</p>
+<p>For retrieval/reranking, separate:</p>
+<ul><li>Recall@K: did the correct option survive retrieval?</li><li>conditional decision accuracy: did the scorer select it given survival?</li><li>final end-to-end accuracy</li><li>latency by stage</li></ul>
+<p>For classification/safety, separate:</p>
+<ul><li>recall</li><li>specificity</li><li>false positives</li><li>AUPRC</li><li>calibration</li><li>family-held-out performance</li><li>subgroup/tail behavior</li></ul>
+<p>For model adaptation, separate:</p>
+<ul><li>train capacity</li><li>validation accuracy</li><li>NLL</li><li>Brier</li><li>ECE</li><li>tail margins</li><li>repair/damage turnover</li><li>gradient geometry</li></ul>
+<p>For latency, separate:</p>
+<ul><li>encode time</li><li>decision-only time</li><li>retrieval</li><li>rerank</li><li>verification</li><li>host synchronization</li><li>cold vs warm</li><li>p50/p95/p99</li></ul>
+<h3>7. Use parent-relative controls when preserving competence</h3>
+<p>When adding a protection or adaptation mechanism, compare against both:</p>
+<ul><li>frozen parent</li><li>matched continuation without the mechanism</li></ul>
+<p>This distinguishes retention from causal prevention of degradation.</p>
+<p>When continuation matters, prefer full warm resume:</p>
+<ul><li>model weights</li><li>optimizer first moments</li><li>optimizer second moments</li><li>optimizer step</li><li>scheduler</li><li>RNG</li><li>data cursor</li></ul>
+<h3>8. Seal the result</h3>
+<p>Once the preregistered endpoint is reached:</p>
+<ul><li>write the canonical report</li><li>save checkpoint/artifact hashes</li><li>log the experiment to <code>/v1/research</code></li><li>record verdict: <code>proven</code>, <code>refuted</code>, or <code>inconclusive</code></li><li>preserve raw predictions when feasible</li><li>do not retune on the untouched final set</li></ul>
+<h2>Rust-native implementation rules</h2>
+<h3>Tensor graph first</h3>
+<p>Training-time operations return tensors. Do not call <code>to_scalar</code>, <code>to_vec</code>, or equivalent host extraction before the loss/backward boundary.</p>
+<p>Bad:</p>
+<pre><code class="lang-rust">let score: f32 = pooled.to_scalar()?;</code></pre>
+<p>inside a trainable forward path.</p>
+<p>Good:</p>
+<pre><code class="lang-rust">let pooled: Tensor = pool.forward(&amp;scores, &amp;mask)?;
+let loss: Tensor = objective.forward(&amp;pooled, &amp;labels)?;
+loss.backward()?;</code></pre>
+<p>Convert to host scalars only for logging/evaluation.</p>
+<h3>GPU hot path</h3>
+<p>Avoid:</p>
+<ul><li>CPU sorting inside a CUDA inference/training path</li><li>repeated device transfers</li><li>per-token host loops when a segmented/batched reduction is available</li><li>hidden synchronization caused by scalar reads</li></ul>
+<p>Reference implementations may be simple/ragged first. Optimize only after correctness is established.</p>
+<h3>Numerical policy</h3>
+<p>Keep numerically sensitive reductions in F32 unless a validated lower-precision path is equivalent.</p>
+<p>Examples:</p>
+<ul><li>LogSumExp / LogMeanExp</li><li>probability normalization</li><li>calibration</li><li>gradient dot products/norms</li><li>loss accumulation</li></ul>
+<p>Use BF16/FP16/FP8/NVFP4 where supported and validated, but preserve a higher-precision reference.</p>
+<h2>Model-design principles</h2>
+<h3>Prefer modular architecture</h3>
+<p>Separate:</p>
+<ul><li>encoder</li><li>cached state representation</li><li>option representation</li><li>retrieval</li><li>reranking</li><li>joint decoder</li><li>verifier</li><li>calibrator</li><li>abstain/escalate policy</li></ul>
+<p>Do not force one expensive path on every decision.</p>
+<h3>Large option sets</h3>
+<p>For hundreds to millions of options, prefer a cascade:</p>
+<pre><code class="lang-text">StateHandle
+   ↓
+semantic / memory retrieval
+   ↓
+top-K
+   ↓
+late interaction
+   ↓
+smaller K
+   ↓
+cross-attention / decision scorer
+   ↓
+joint verifier</code></pre>
+<p>Measure retrieval recall separately from decision accuracy.</p>
+<h3>Dynamic options</h3>
+<p>Prefer semantic option representations with optional learned/memory residuals so unseen tools/actions can participate without retraining the full model.</p>
+<h3>Set semantics</h3>
+<p>If option order is semantically irrelevant, architecture and tests should enforce permutation invariance/equivariance rather than relying only on shuffled training examples.</p>
+<h3>Calibration</h3>
+<p>For decision systems, accuracy alone is insufficient.</p>
+<p>Report:</p>
+<ul><li>NLL</li><li>Brier</li><li>ECE and/or stronger calibration diagnostics</li><li>confidence on errors</li><li>risk/coverage where abstention exists</li></ul>
+<p>Avoid quantization or objective changes that improve speed/accuracy while silently destroying probability quality.</p>
+<h3>Safety/control-plane heads</h3>
+<p>A specialized safety head should be isolated from unrelated decision types. Require a feature-off/non-target invariance test.</p>
+<p>For token-localized safety evidence, test global and localized pooling under the same scorer capacity. Prefer semantic labels and family-held-out negatives over keyword rules.</p>
+<h2>LLM and inference research</h2>
+<p>When optimizing generative models, inspect:</p>
+<ul><li>prefill vs decode bottlenecks</li><li>KV-cache size and precision</li><li>paged/block allocation</li><li>speculative acceptance rate</li><li>kernel launch count</li><li>quantized matmul path</li><li>attention backend</li><li>tensor parallel communication</li><li>unified-memory behavior</li><li>batch/sequence shape distribution</li></ul>
+<p>Benchmark on the actual hardware/backend targeted for deployment.</p>
+<p>Do not extrapolate CUDA results to ROCm/Metal/Vulkan without measurement.</p>
+<h2>Kernel and DSL research</h2>
+<p>For a kernel change:</p>
+<ol><li>preserve a numerically trusted reference</li><li>state expected bottleneck: memory bandwidth, arithmetic, occupancy, launch overhead, synchronization, etc.</li><li>test dominant real shapes, not only toy shapes</li><li>test cold and warm</li><li>record backend/device/compiler versions</li><li>compare generated DSL and hand-written implementations where relevant</li><li>record a refutation when the generated or hand kernel loses</li></ol>
+<p>Use <code>hanzo-research</code> so kernel evidence accumulates into the same research corpus as model-level experiments.</p>
+<h2>Benchmark integrity</h2>
+<p>Never claim SOTA from mismatched protocols.</p>
+<p>For competitor comparisons, match as closely as possible:</p>
+<ul><li>dataset/version</li><li>split</li><li>prompts/options</li><li>few-shot examples</li><li>candidate count</li><li>hardware where latency is compared</li><li>calibration procedure</li><li>retry/error policy</li></ul>
+<p>If protocols differ, say so explicitly.</p>
+<p>Prefer paired comparisons on the same examples:</p>
+<ul><li>stable correct</li><li>damage</li><li>repair</li><li>persistent wrong</li><li>McNemar or paired bootstrap where appropriate</li></ul>
+<h2>Output style for research tasks</h2>
+<p>When reporting a result, lead with:</p>
+<ol><li>what changed</li><li>what the result supports</li><li>what it does not yet establish</li><li>next decisive experiment</li></ol>
+<p>Use causal language proportional to the design.</p>
+<p>Prefer:</p>
+<blockquote><p>Persistent first-order gradient conflict is strongly disfavored under this matched regime.</p></blockquote>
+<p>over:</p>
+<blockquote><p>We proved gradients never conflict.</p></blockquote>
+<p>Prefer:</p>
+<blockquote><p>The result falsifies the architectural capacity-ceiling hypothesis.</p></blockquote>
+<p>over:</p>
+<blockquote><p>The architecture is optimal.</p></blockquote>
+<h2>Production promotion gates</h2>
+<p>A research mechanism is not production-ready only because it improves one metric.</p>
+<p>Before promotion require, as applicable:</p>
+<ul><li>canonical Rust implementation</li><li>invariant tests</li><li>matched evaluation</li><li>regression suite</li><li>calibration non-inferiority</li><li>tail/subgroup checks</li><li>latency/memory measurement</li><li>non-target invariance</li><li>checkpoint/artifact provenance</li><li>research record sealed in <code>/v1/research</code></li></ul>
+<h2>Default decision rule</h2>
+<p>When choosing between two mechanisms with similar quality, prefer the one that is:</p>
+<ol><li>simpler</li><li>easier to falsify</li><li>cheaper at runtime</li><li>easier to reproduce</li><li>more native to the Hanzo stack</li><li>less coupled to benchmark-specific heuristics</li></ol>
+<p>The goal is not merely to win a benchmark. The goal is to produce a reproducible mechanism that becomes a durable primitive in Hanzo ML.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/hanzo-ml-research.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

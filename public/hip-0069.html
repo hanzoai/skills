@@ -196,82 +196,171 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hip-0069</h1><p class="lede">HIP-69: Service Discovery &amp; Auto-Bridge. Status Final. Hanzo architectural specification.</p><h1>HIP-0069: Service Discovery &amp; Auto-Bridge</h1>
+<h1>hip-0069</h1><p class="lede">HIP-69: ZAP Mesh — One Bus for Every Node. Status Draft. Hanzo architectural specification.</p><h1>HIP-0069: ZAP Mesh — One Bus for Every Node</h1>
 <h2>Abstract</h2>
-<p>Every Hanzo-domain service on the local network advertises itself via multicast DNS (RFC 6762) under one canonical service type. <code>hanzo-mcp</code> auto-discovers neighbours, fetches their tool manifests, and exposes each as a namespaced tool family on its own MCP surface. New service joining the LAN → its tools light up in Claude automatically. Service leaves → tools drop on the next refresh.</p>
-<p>This HIP closes the gap between HIP-007 (ZAP transport), HIP-0010 (MCP integration) and HIP-0068 (Ingress), removing every hard-coded URL, port range, lockfile registry and service-name env-var from the Hanzo stack.</p>
+<p>Every process that speaks ZAP on a machine is a <strong>node</strong> on one bus: an agent&#x27;s MCP server, the dev CLI, the desktop app, an IDE, a browser extension, an inference engine, a model router, a sandbox, a GPU host. A node advertises a descriptor (id, kind, host, what it serves, what it has), can be found by what it offers, addressed by id, and — where it allows — dedicated to one task by a lease.</p>
+<p>There is no daemon. The router is a library, <code>zapd</code> (github.com/zap-proto/zapd), embedded in every process that speaks ZAP. Each of a user&#x27;s processes stands for election on one kernel lock; the holder is that user&#x27;s router and binds its two doors, a unix socket and a loopback WebSocket; when it exits, the next process in line binds them. Browser extensions connect out to the WebSocket, admitted by their extension origin and a pairing token they prove they hold. Routers on one LAN find each other by mDNS and link over IAM-authenticated channels, so a node on one host addresses a node on another.</p>
+<p>The mesh ships in three phases, each tested and live before the next:</p>
+<p>| phase | what | |---|---| | 1 | the local router: election, the socket and the WebSocket door, pairing, and the browser, agent, dev, IDE and desktop nodes | | 2 | LAN: mDNS discovery, IAM-authenticated router links, addressing across hosts | | 3 | resources: engines, model routers, GPUs, sandboxes and hosts with descriptors, <code>find</code>, leases, and the router&#x27;s one MCP endpoint |</p>
+<h2>Motivation</h2>
+<p>The browser was reached through a native-messaging host (<code>zapd host</code>) that the browser launched, speaking to a router daemon (<code>zapd</code>) somebody had to start. Snap Chromium&#x27;s AppArmor profile refuses to exec a host binary outside the snap, Flatpak refuses it the same way, and each browser family wants its own host manifest in its own directory. The daemon was one more thing to install, supervise and upgrade, and nothing stopped two of them running. None of it is needed: a WebSocket from the extension to loopback works in every browser, and a router small enough to embed needs nobody to start it.</p>
+<p>The same bus carries everything else that was reached some other way: MCP servers bridged by polling mDNS, a desktop app on its own socket, IDE extensions on their own servers. One bus, one directory, one addressing scheme.</p>
 <h2>Specification</h2>
-<h3>Service type</h3>
-<pre><code>_hanzo._tcp.local.</code></pre>
-<p>ONE type for the entire mesh. Roles differentiate via TXT, not by service-type. A consumer that wants e.g. only <code>role=kms</code> browses once and filters.</p>
-<h3>TXT record</h3>
-<p>| key            | required | example                                | |----------------|----------|----------------------------------------| | <code>role</code>         | ✓        | <code>mcp</code> / <code>iam</code> / <code>kms</code> / <code>mpc</code> / <code>base</code> / <code>engine</code> / <code>browser</code> / <code>node</code> / <code>desktop</code> / <code>gateway</code> / <code>static</code> | | <code>server_id</code>    | ✓        | <code>kms-laptop.local-12345</code>               | | <code>org</code>          | default <code>hanzo</code> | <code>hanzo</code> / <code>lux</code> / <code>zoo</code> / <code>osage</code> | | <code>version</code>      | ✓        | <code>0.5.1</code>                                | | <code>proto</code>        | ✓        | <code>zap/1</code> / <code>http/1.1</code> / <code>grpc/1</code>        | | <code>capabilities</code> | ✓        | <code>sign,verify,encrypt</code>                  | | <code>agent_label</code>  |          | <code>kms-prod</code>                             | | <code>auth</code>         | default <code>none</code> | <code>none</code> / <code>iam</code> / <code>mtls</code>           |</p>
-<h3>Per-role contracts</h3>
-<p>Each role MUST accept the listed methods over its declared <code>proto</code>.</p>
-<h4><code>role=mcp</code></h4>
-<ul><li><code>tools/list</code>, <code>tools/call</code>, <code>prompts/list</code>, <code>prompts/get</code>,</li></ul>
-<p>  <code>resources/list</code>, <code>resources/read</code></p>
-<h4><code>role=iam</code>  (Hanzo IAM)</h4>
-<ul><li><code>iam.login</code>, <code>iam.token.exchange</code>, <code>iam.user.get</code>, <code>iam.user.list</code>,</li></ul>
-<p>  <code>iam.session.refresh</code>, <code>iam.session.revoke</code></p>
-<ul><li>HTTP equivalents under <code>/v1/iam/*</code></li></ul>
-<h4><code>role=kms</code>  (key store + sign)</h4>
-<ul><li><code>kms.kv.get/put/list/delete</code>, <code>kms.sign</code>, <code>kms.verify</code>,</li></ul>
-<p>  <code>kms.encrypt</code>, <code>kms.decrypt</code>, <code>kms.key.generate/list/delete</code></p>
-<ul><li><code>auth=iam</code> or <code>auth=mtls</code> REQUIRED</li></ul>
-<h4><code>role=mpc</code>  (threshold signing)</h4>
-<ul><li><code>mpc.session.start/join/contribute/finalize/status</code></li><li><code>capabilities</code> lists supported curves (<code>secp256k1,ed25519,bls12-381</code>)</li></ul>
-<h4><code>role=base</code>  (record store, IAM-native)</h4>
-<ul><li><code>base.collection.list/get</code>, <code>base.record.list/get/create/update/delete</code>,</li></ul>
-<p>  <code>base.subscribe</code></p>
-<h4><code>role=engine</code>  (LLM serving)</h4>
-<ul><li><code>engine.completion</code>, <code>engine.chat</code>, <code>engine.embed</code>,</li></ul>
-<p>  <code>engine.tokenize</code>, <code>engine.models.list</code></p>
-<h4><code>role=browser</code>  (extension or browser endpoint)</h4>
-<ul><li>CDP-flavoured: <code>Page.navigate</code>, <code>Runtime.evaluate</code>, <code>hanzo.listTabs</code>,</li></ul>
-<p>  <code>hanzo.screenshot</code></p>
-<h4><code>role=node</code>  (Hanzo Node)</h4>
-<ul><li><code>node.status</code>, <code>node.peers.list</code>, <code>node.task.submit/status</code></li></ul>
-<h4><code>role=desktop</code>  (Electron host)</h4>
-<ul><li><code>desktop.window.list/focus</code>, <code>desktop.notify</code>, <code>desktop.shell.open</code></li></ul>
-<h4><code>role=gateway</code>  (api.hanzo.ai-style ingress, see HIP-0068)</h4>
-<ul><li><code>proto=http/1.1</code>; mDNS used only for LAN-local discovery.</li></ul>
-<p>  Routes follow the platform&#x27;s <code>/v1/&lt;role&gt;/*</code> convention.</p>
-<h4><code>role=static</code>  (CDN-style asset serving)</h4>
-<ul><li><code>proto=http/1.1</code>; capabilities: <code>etag,range,gzip,brotli</code></li></ul>
-<h3><code>hanzo-mcp</code> auto-bridge</h3>
-<p><code>hanzo-mcp</code> MUST:</p>
-<ol><li>On startup, after registering its built-in tools, browse</li></ol>
-<p>   <code>_hanzo._tcp.local.</code> for ≥ 2 s.</p>
-<ol><li>For every peer service whose role appears in the role enum (and</li></ol>
-<p>   whose <code>org</code> matches the local org or is unspecified), open a ZAP    handshake, read the tool manifest from <code>MSG_HANDSHAKE_OK</code>, and    register every tool under the namespace <code>{role}.{toolName}</code>    (e.g. <code>iam.login</code>, <code>kms.sign</code>).</p>
-<ol><li>Re-poll every 30 s. Register new peers; deregister vanished peers.</li><li>NOT register tools from the local server (skip on <code>server_id</code> match).</li></ol>
-<p>For <code>role=mcp</code> peers, tools merge in unprefixed (deduplicated by name) so multiple cooperating MCPs appear as one surface.</p>
-<h3>Single source of truth</h3>
-<p>Every binding (Python, TypeScript, Go, Rust, Swift) MUST own:</p>
-<ul><li>The constant <code>_hanzo._tcp.local.</code></li><li>The TXT key list above</li><li>The role enum</li></ul>
-<p>…in ONE module per language. No hand-rolled mDNS records anywhere in the tree.</p>
-<p>| language     | package                                                     | |--------------|-------------------------------------------------------------| | Python       | <code>hanzo-zap-mdns</code>     (<code>pip install</code>)                        | | TypeScript   | <code>@hanzo/zap-mdns</code>    (npm)                                  | | Go           | <code>github.com/zap-proto/mdns</code>  (not yet published)            | | Rust         | <code>hanzo-zap-mdns</code>     (crates.io)                            | | Swift        | <code>HanzoZapMDNS</code>       (SwiftPM)                              |</p>
-<p>The Go binding is written but not yet a fetchable module: the source is <a href="https://github.com/luxfi/zap/tree/main/mdns/go"><code>mdns/go</code> in <code>luxfi/zap</code></a>, and the import path above is the one it declares once tagged.</p>
-<h3>Backwards compatibility</h3>
-<p>None. <code>_hanzo._tcp.local.</code> is the record; there is no second one to also advertise. A host with no mDNS responder discovers nothing, which is the correct answer rather than a reason to keep a port probe.</p>
-<h2>Reference implementation</h2>
-<ul><li>Python: <code>~/work/zap/mdns/</code> — <code>hanzo_zap_mdns</code> package, including</li></ul>
-<p>  <code>expand_mcp_with_neighbors</code> for the auto-bridge.</p>
-<ul><li>Spec doc lives alongside the implementation at</li></ul>
-<p>  <code>~/work/zap/mdns/SPEC.md</code>.</p>
-<h2>Security considerations</h2>
-<ul><li>mDNS announcements are visible to anyone on the same broadcast domain.</li></ul>
-<p>  Roles that handle secrets (<code>kms</code>, <code>iam</code>, <code>base</code>) MUST set <code>auth=iam</code>   or <code>auth=mtls</code>; consumers MUST honour the auth field and refuse   unauthenticated requests.</p>
-<ul><li>TXT capability advertisements are NOT a substitute for capability</li></ul>
-<p>  negotiation; consumers MUST verify each call against the peer&#x27;s   actual auth-checked tool list.</p>
-<ul><li><code>org</code> SHOULD be honoured: an <code>org=lux</code> consumer SHOULD NOT auto-bridge</li></ul>
-<p>  <code>org=osage</code> services without explicit operator opt-in.</p>
-<h2>Adoption order</h2>
-<ol><li>Python: <code>hanzo-mcp</code>, <code>hanzo-tools-browser</code> ✓ (shipped)</li><li>TypeScript / Node: <code>hanzo-iam</code>, <code>hanzo-desktop</code>, <code>@hanzo/extension</code></li><li>Go: <code>hanzo-kms</code>, <code>hanzo-base</code>, <code>hanzo-mpc</code>, <code>hanzo-ingress</code>,</li></ol>
-<p>   <code>hanzo-gateway</code>, <code>hanzo-static</code></p>
-<ol><li>Rust: <code>hanzo-engine</code>, <code>hanzo-node</code></li><li>Swift: future iOS / macOS native clients</li></ol>
-<p>Each adoption lands as a 5-line change in the service&#x27;s startup path — import the binding, call <code>publish(port, role, server_id, …)</code>. The canonical example for each language ships in the binding repo&#x27;s <code>examples/</code> directory.</p>
+<p>The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as in RFC 2119.</p>
+<h3>1. Nodes</h3>
+<p>A node is one registered connection to a router. Its id is</p>
+<p>    &lt;kind&gt;/&lt;host&gt;/&lt;name&gt;</p>
+<ul><li><code>kind</code> is one of <code>agent</code>, <code>browser</code>, <code>cli</code>, <code>desktop</code>, <code>dev</code>, <code>engine</code>,</li></ul>
+<p>  <code>gpu</code>, <code>host</code>, <code>ide</code>, <code>mcp</code>, <code>router</code>, <code>sandbox</code>.</p>
+<ul><li><code>host</code> is the router&#x27;s host: the first label of the machine&#x27;s hostname,</li></ul>
+<p>  lowercased, every character outside <code>[a-z0-9-]</code> replaced by <code>-</code>, cut to 16   characters. The router stamps it; a node never chooses it.</p>
+<ul><li><code>name</code> matches <code>[a-z0-9][a-z0-9-]{0,15}</code> and is chosen by the node. It MUST</li></ul>
+<p>  be stable across the node&#x27;s reconnects and distinct between nodes of one   kind on one host.</p>
+<p>| node | kind | name | |---|---|---| | a browser extension | <code>browser</code> | <code>&lt;engine&gt;-&lt;4 hex&gt;</code>: the engine (<code>chrome</code>, <code>edge</code>, <code>firefox</code>, <code>safari</code>), then 4 hex of an install id minted once and kept in extension storage | | an agent session&#x27;s MCP server (hanzo-mcp) | <code>agent</code> | <code>hanzo-&lt;pid&gt;</code> | | a <code>dev</code> session | <code>dev</code> | <code>&lt;pid&gt;</code> | | the desktop app | <code>desktop</code> | <code>hanzo</code> | | the IDE | <code>ide</code> | <code>hanzo-&lt;pid&gt;</code> | | a CLI invocation (<code>zapd ls</code>) | <code>cli</code> | <code>&lt;pid&gt;</code> |</p>
+<p>A node&#x27;s <strong>descriptor</strong> is what it says about itself in <code>HELLO</code> and what the directory returns for it:</p>
+<p>    role   u8          1 provider, 2 consumer, 3 router     brand  str     caps   u16 n, n × str               what it serves: tool or capability names     attrs  u16 n, n × (str key, str value)   everything else it says about itself</p>
+<p>Strings are a <code>u16</code> little-endian byte length and UTF-8. <code>attrs</code> holds phase 3&#x27;s resources and <code>leasable</code> (§10); a phase-1 node sends none. A body with bytes after its last field is refused.</p>
+<h3>2. The frame</h3>
+<p>The wire is the ZAP router envelope, little-endian:</p>
+<p>    u32 len            bytes that follow; len = 11 + from_len + to_len + payload_len exactly     u8  type     u16 flags          0     u16 from_len     u16 to_len     u32 payload_len     bytes from         UTF-8, the sender&#x27;s node id; the router overwrites it     bytes to           UTF-8, the address; empty means the router itself     bytes payload</p>
+<p>| type | value | direction | payload | |---|---|---|---| | <code>HELLO</code> | 1 | node → router | the node&#x27;s descriptor; <code>from</code> is <code>&lt;kind&gt;/&lt;name&gt;</code> | | <code>WELCOME</code> | 2 | router → node | empty; <code>to</code> is the node&#x27;s full id | | <code>PROVIDERS_LIST</code> | 3 | node → router | a brand filter (str), or empty for all | | <code>PROVIDERS</code> | 4 | router → node | <code>u16 n</code>, then n × (id str, descriptor): every node registered | | <code>PEER_CONNECTED</code> | 5 | router → nodes | the id (str) of a node that joined | | <code>PEER_DISCONNECTED</code> | 6 | router → nodes | the id (str) of a node that left | | <code>ERROR</code> | 7 | router → node | UTF-8 reason: <code>bad_id:&lt;id&gt;</code>, <code>no_route:&lt;id&gt;</code>, <code>forbidden:&lt;id&gt;</code>, <code>unknown_control</code> | | <code>AUTH</code> | 8 | door only | the pairing proof (§4.3) | | <code>ROUTE</code> | 16 | node → node | opaque: a request | | <code>RESPONSE</code> | 17 | node → node | opaque: a reply | | <code>EVENT</code> | 18 | node → node | opaque: a notification |</p>
+<p>Types 1–8 are the router&#x27;s own control plane; the router reads their bodies and nothing else. Types 16–18 it forwards untouched: a request, reply or event between nodes is whatever the two ends agree on, and MCP traffic rides them as MCP&#x27;s own JSON-RPC bytes. A frame over 64 MiB, a length that disagrees with its parts, or a <code>HELLO</code> whose <code>from</code> is not an id closes the connection.</p>
+<p>On the WebSocket each binary message is exactly one frame, <code>u32 len</code> included, so one codec serves both doors. A text message closes the connection.</p>
+<h3>3. The local router</h3>
+<h4>3.1 Election</h4>
+<p>A user&#x27;s router is whichever of the user&#x27;s ZAP processes holds a write lock on</p>
+<p>    &lt;runtime&gt;/zapd.lock</p>
+<p>where <code>&lt;runtime&gt;</code> is <code>$XDG_RUNTIME_DIR/zap</code>, or <code>~/.zap/run</code> where <code>XDG_RUNTIME_DIR</code> is unset.</p>
+<ul><li>Every process that embeds the library blocks in <code>fcntl(F_SETLKW)</code> on that</li></ul>
+<p>  file from a thread of its own. The kernel grants the lock to exactly one.</p>
+<ul><li>The holder removes any file at the socket path — it holds the lock, so any</li></ul>
+<p>  socket there is stale — binds <code>&lt;runtime&gt;/zapd.sock</code>, sets it <code>0600</code>, and   binds the door (§3.3). It then serves until the process exits.</p>
+<ul><li>Exit of any kind — clean, crash, <code>SIGKILL</code> — releases the lock, and the</li></ul>
+<p>  kernel wakes exactly one waiter, which does the same.</p>
+<ul><li>The lock is an <code>fcntl</code> record lock and not <code>flock(2)</code>: record locks belong to</li></ul>
+<p>  the process and are not inherited across <code>fork(2)</code>, so a child forked   without exec never pins a dead router&#x27;s seat.</p>
+<ul><li>There is no consensus, lease or heartbeat in the election. Every lock and</li></ul>
+<p>  both doors live in the user&#x27;s own directories and port, so two users on one   machine never contend: each has a router of their own.</p>
+<p>A node speaks only to the lock holder. Before <code>HELLO</code> it compares the socket peer&#x27;s pid (<code>SO_PEERCRED</code>, <code>LOCAL_PEERPID</code>) with the lock&#x27;s holder (<code>F_GETLK</code>, or itself if its own process holds it), and on a mismatch closes and retries; a process that bound the socket path without the lock — an older daemon still running — is never spoken to. Because closing any descriptor of a file drops every record lock the process holds on it, a process opens the lock file once and never closes it.</p>
+<p>A node that sees its connection drop reconnects to the socket, starting at 50 ms and doubling to 1 s, and says <code>HELLO</code> again under the same name. A router takeover is invisible to its user except as a call that fails while it happens.</p>
+<h4>3.2 Files</h4>
+<p>| path | mode | holds | |---|---|---| | <code>&lt;runtime&gt;/</code> | <code>0700</code> | the lock and the socket | | <code>&lt;runtime&gt;/zapd.sock</code> | <code>0600</code> | the socket | | <code>&lt;state&gt;/zap/</code> | <code>0700</code> | the pairing | | <code>&lt;state&gt;/zap/pair</code> | <code>0600</code> | the pairing code (§4.3) and a newline |</p>
+<p><code>&lt;state&gt;</code> is <code>$XDG_STATE_HOME</code> (default <code>~/.local/state</code>) on Linux and <code>~/Library/Application Support</code> on macOS. The pairing is state, not configuration: it binds this machine&#x27;s router to this machine&#x27;s browsers and means nothing elsewhere, and configuration directories are what people commit and sync as dotfiles.</p>
+<p>The router creates what is missing. The runtime directory is created <code>0700</code> and checked before anything locks, binds or connects in it: a symlink or a directory another user owns is refused (the router is never elected and no node connects), and one this user left open to others is tightened to <code>0700</code>; the lock file is opened without following links. Before every read it <code>lstat</code>s the pairing directory and file: a symlink, an owner other than the process&#x27;s uid, or any group or other permission bit makes the door refuse every connection (the socket still serves). A missing file is minted from the OS CSPRNG, written to a private temporary file and hard-linked into place, so a reader never sees half a file and of two racing minters exactly one wins. Deleting the file rotates the token; <code>zapd pair --reset</code> replaces it.</p>
+<h4>3.3 Doors</h4>
+<p>| door | address | admits | |---|---|---| | socket | <code>&lt;runtime&gt;/zapd.sock</code> | any process of the user: reaching it is the authentication | | WebSocket | <code>127.0.0.1:&lt;port&gt;</code> | a browser extension that passes §4.2 and §4.3 |</p>
+<p><code>&lt;port&gt;</code> is the one in the pairing code. It is picked when the code is minted: a port in 20000–29999 — below every operating system&#x27;s ephemeral range — that nothing holds at that moment; <code>zapd pair --reset</code> picks a new one with the new token. If another program holds the port later, the router keeps serving the socket, logs an error naming the remedy, and retries the port, starting at 50 ms and doubling to 2 s.</p>
+<h3>4. Joining</h3>
+<h4>4.1 The socket</h4>
+<p>A connection&#x27;s first frame MUST be <code>HELLO</code>. The router stamps its host into the proposed <code>&lt;kind&gt;/&lt;name&gt;</code> (a proposed <code>&lt;kind&gt;/&lt;host&gt;/&lt;name&gt;</code> has its host replaced), registers the descriptor, and answers <code>WELCOME</code> addressed to the full id. A <code>HELLO</code> that names no known kind or an ill-formed name is answered <code>ERROR bad_id:&lt;proposed&gt;</code> and closed.</p>
+<p>On the socket, a second connection registering an id already held replaces the first, and the router closes the first: a node that reconnects after a router takeover gets its id back at once, and two connections never speak as one node. Through the door, an id that is registered is never taken over (§4.2).</p>
+<h4>4.2 The WebSocket door</h4>
+<p>Before upgrading, the router MUST refuse with <code>403</code> a request whose</p>
+<ul><li><code>Host</code> is not <code>127.0.0.1:&lt;port&gt;</code> or <code>localhost:&lt;port&gt;</code> (DNS rebinding), or</li><li><code>Origin</code> is not in the allowlist:</li></ul>
+<p>| browser | origin | |---|---| | Chrome, Chromium, Edge, Brave and every Chromium browser loading the key-pinned build | <code>chrome-extension://biingenefmanpecedoafkfajbnlgdmbl</code> | | Firefox | <code>moz-extension://&lt;uuid&gt;</code>, any uuid | | Safari | <code>safari-web-extension://&lt;uuid&gt;</code>, any uuid |</p>
+<p>A web page cannot set its <code>Origin</code>, so no page gets a socket. The origin is not the authentication — a local process can send any header, and Firefox and Safari give every install its own uuid — the pairing proof is.</p>
+<p>Admission is bounded. At most eight connections MAY be between accept and <code>HELLO</code> at once; a connection past that is closed on accept. The upgrade, the proof and the <code>HELLO</code> together MUST finish within 2 s, and no message on the door may exceed 16 MiB.</p>
+<p>A door context is a browser and nothing else. Its first frame after the proof MUST be a <code>HELLO</code> naming a <code>browser/…</code> id; any other is answered <code>ERROR browser_only:&lt;id&gt;</code> and closed, so no door context can become an engine, an agent or any node other nodes send requests to. Its <code>HELLO</code> MUST NOT take over an id that is registered: the router checks and registers under one lock and answers <code>ERROR taken:&lt;id&gt;</code>, so a door context can never evict a node.</p>
+<p>A paired browser node:</p>
+<ul><li>MAY send frames addressed to the router and <code>RESPONSE</code>s. Any other frame</li></ul>
+<p>  with a <code>to</code> is answered <code>ERROR forbidden:&lt;to&gt;</code> and not forwarded. The browser   renders hostile pages; it is driven and never drives.</p>
+<ul><li>sends a registry probe (<code>PROVIDERS_LIST</code>) every 20 s, which also keeps an</li></ul>
+<p>  MV3 service worker alive; the router closes a WebSocket silent for 60 s;</p>
+<ul><li>reconnects after a drop with a delay starting at 250 ms and doubling to 30 s,</li></ul>
+<p>  reset by a <code>WELCOME</code>.</p>
+<h4>4.3 Pairing</h4>
+<p>The pairing code is</p>
+<p>    ws://127.0.0.1:&lt;port&gt;/#&lt;token&gt;</p>
+<p>where <code>&lt;token&gt;</code> is 32 random bytes as 64 lowercase hex characters. A WebSocket client never sends a URL fragment, so the code names the door and the key without the key ever crossing the wire. An extension MUST accept only a code of exactly this shape and MUST NOT dial any other host.</p>
+<p>After the upgrade, with <code>K</code> the token&#x27;s 32 bytes and <code>‖</code> concatenation:</p>
+<p>    extension → router   AUTH  nc                                   32 random bytes     router → extension   AUTH  ns ‖ HMAC-SHA256(K, &quot;zap router&quot; ‖ nc ‖ ns)     extension → router   AUTH  HMAC-SHA256(K, &quot;zap client&quot; ‖ nc ‖ ns)     extension → router   HELLO</p>
+<p>The extension MUST verify the router&#x27;s MAC before it sends anything else; a wrong MAC closes the socket and the extension reports a pairing mismatch. The router verifies the extension&#x27;s MAC in constant time; a wrong MAC closes the socket without <code>WELCOME</code>. The router reads <code>K</code> afresh for every connection, so a new token takes effect at once.</p>
+<p>A human carries the code once per browser: <code>zapd pair</code> or <code>hanzo-mcp pair</code> prints it to the terminal of the user who asked, and the extension&#x27;s popup takes it and keeps it in <code>storage.local</code> (never <code>storage.sync</code>). No tool returns it, so it never reaches a model. An unpaired extension dials nothing.</p>
+<h3>5. Addressing</h3>
+<p>A frame&#x27;s <code>to</code> is empty (the router) or a node id. The router overwrites <code>from</code> with the sender&#x27;s registered id on every frame it forwards, so no node can speak as another. A frame to an id that is not registered is answered <code>ERROR no_route:&lt;id&gt;</code>.</p>
+<p>A node that calls another matches the reply by its sender: the envelope carries no correlation, so the library holds one outstanding call per node at a time. Correlation that lets calls interleave belongs to the payload&#x27;s protocol (MCP&#x27;s JSON-RPC <code>id</code>).</p>
+<p>The registry answers <code>PROVIDERS_LIST</code> with every node and its descriptor. <code>PEER_CONNECTED</code> and <code>PEER_DISCONNECTED</code> announce arrivals and departures to every other node.</p>
+<h3>6. Embedding</h3>
+<p>There is one router implementation, the Rust crate <code>zapd</code>, and every host embeds that one:</p>
+<p>| host | how | |---|---| | Rust (the dev CLI, the desktop app, the IDE shell) | the crate, natively | | Python (hanzo-mcp) | the crate&#x27;s PyO3 binding, the <code>zapd</code> wheel | | a browser | cannot embed; connects to the WebSocket door as a node and never stands for router |</p>
+<p>The library&#x27;s surface is two calls:</p>
+<ul><li><code>embed()</code> starts one thread with its own runtime that stands for election</li></ul>
+<p>  and serves when elected. It returns at once, is idempotent, and needs nothing   from its host.</p>
+<ul><li><code>Node::join(&lt;kind&gt;/&lt;name&gt;, role, brand, caps)</code> takes this process&#x27;s seat on</li></ul>
+<p>  whichever process is the router, and keeps it: it reconnects and says   <code>HELLO</code> again by itself. <code>nodes()</code> lists the registry; <code>call(to, payload)</code>   sends a <code>ROUTE</code> and returns the <code>RESPONSE</code>.</p>
+<p>A hanzo-mcp stands for router and joins as <code>agent/&lt;host&gt;/hanzo-&lt;pid&gt;</code> when its server starts, so a running agent session is all a browser extension needs.</p>
+<p>The <code>zapd</code> binary is the operator&#x27;s tool and never serves: <code>zapd pair [--reset]</code> prints the pairing code, <code>zapd ls</code> lists the registry.</p>
+<h3>7. Phase 1 nodes</h3>
+<p>| node | serves | |---|---| | <code>browser</code> | the extension&#x27;s browser commands (<code>caps</code> <code>browser.tabs</code>, <code>browser.navigate</code>, <code>browser.dom</code>, <code>browser.screenshot</code>, <code>browser.input</code>). A command body is <code>method(str) u16 n × (key str, value u32-length bytes)</code> and the reply is UTF-8 JSON, or <code>ERR:</code> and a message. | | <code>agent</code> | nothing yet; it calls browsers for its MCP server&#x27;s <code>browser</code> and <code>cdp</code> tools | | <code>dev</code>, <code>desktop</code>, <code>ide</code> | nothing yet; each is present, found, and addressable |</p>
+<h3>8. What phase 1 does not do</h3>
+<p>It does not reach beyond the machine, does not describe resources, does not lease, and does not serve MCP to outside clients. Phases 2 and 3 add each without changing anything above: a remote node is a node whose host is not this one (§9), a resource is an <code>attrs</code> entry (§10), and the MCP endpoint is a door (§11).</p>
+<h3>9. LAN (phase 2)</h3>
+<p>A router links to the routers of the same user and org on other hosts of its LAN.</p>
+<ul><li><strong>Listener.</strong> Each router binds a TLS listener on the LAN, on a port the</li></ul>
+<p>  kernel chooses, and advertises it by mDNS (RFC 6762, RFC 6763): service   <code>_zap._tcp.local.</code>, instance <code>&lt;host&gt;-&lt;uid&gt;</code>, TXT <code>v=1</code>, <code>host=&lt;host&gt;</code>,   <code>org=&lt;org&gt;</code>. Losing the election closes it with the rest of the router.</p>
+<ul><li><strong>Keys.</strong> At each election the router makes a fresh TLS key pair and</li></ul>
+<p>  self-signed certificate, keeps the private key in memory only, and publishes   <code>{host, port, sha256, since}</code> — the certificate&#x27;s SHA-256 fingerprint — to   its org&#x27;s KMS (HIP-1134) at <code>zap/links/&lt;host&gt;</code>, authorized by the user&#x27;s IAM   token (HIP-0026). Writing there requires an IAM identity in that org, so the   org&#x27;s KMS is the directory of which key speaks for which host.</p>
+<ul><li><strong>Links.</strong> TLS 1.3, mutual. Each side requires the peer&#x27;s certificate</li></ul>
+<p>  fingerprint to equal the one its org&#x27;s KMS holds for the host the peer   claims, fetched afresh when it does not. Then each side sends its IAM access   token as an <code>AUTH</code> frame, verified against the issuer&#x27;s JWKS (signature,   <code>iss</code>, <code>exp</code>, and <code>owner</code> equal to its own org). Nothing else is read from a   peer that has not completed both. The token is sent only to a peer whose key   its org vouched for, so an mDNS spoofer learns nothing. When both hosts dial   at once, the connection dialled by the lexically smaller host survives.</p>
+<ul><li><strong>Registration.</strong> A link is a node of kind <code>router</code> on each side, role 3,</li></ul>
+<p>  and may join only over a link. Each router sends its peers its registry on   link and each join and leave; a peer keeps a remote descriptor for 30 s,   refreshed every 10 s.</p>
+<ul><li><strong>Forwarding.</strong> A frame whose <code>to</code> names another host goes over the link to</li></ul>
+<p>  that host&#x27;s router and is delivered there; <code>from</code> keeps the requester&#x27;s full   id, and the receiving router records the peer&#x27;s IAM principal against the   link.</p>
+<ul><li><strong>Reach.</strong> A descriptor&#x27;s <code>reach</code> attr says who on other hosts may send it a</li></ul>
+<p>  <code>ROUTE</code>: <code>user</code> (callers whose IAM principal is the router&#x27;s own; the   default), <code>org</code>, or <code>none</code> (not announced off the machine). <code>dev</code> and   <code>desktop</code> default to <code>none</code>.</p>
+<h3>10. Resources and leases (phase 3)</h3>
+<ul><li><strong>Descriptors.</strong> A resource node describes what it offers in <code>attrs</code>: an</li></ul>
+<p>  engine its <code>model</code> (repeatable), <code>throughput</code> and <code>load</code>; a GPU its <code>gpu</code>,   <code>vram_gb</code> and <code>util</code>; a sandbox its <code>class</code>; a host its <code>cpus</code>, <code>mem_gb</code> and   <code>gpus</code>. A node re-sends <code>HELLO</code> on its open connection to update its   descriptor, at least every 10 s; a remote descriptor not refreshed for 30 s   is dropped.</p>
+<ul><li><strong>Find.</strong> <code>FIND {kind, cap, model, host}</code> returns the matching nodes, this</li></ul>
+<p>  host&#x27;s first and then the LAN&#x27;s.</p>
+<ul><li><strong>Leases.</strong> <code>LEASE {node, ttl}</code> gives the caller exclusive use of a node</li></ul>
+<p>  until it <code>RELEASE</code>s or the lease expires; the node&#x27;s router is authoritative   for its leases. While a node is leased its router refuses every other   caller&#x27;s <code>ROUTE</code> to it. Every lease, renewal, release and refusal is logged   with the holder&#x27;s node id and IAM principal.</p>
+<ul><li><strong>Not leasable.</strong> A node that declares <code>leasable=false</code> cannot be leased.</li></ul>
+<p>  A node advertised to be seen and never driven declares <code>leasable=false</code>,   <code>reach=none</code> for <code>ROUTE</code>, and no caps; its router refuses every <code>ROUTE</code> and   <code>LEASE</code> to it in code, whoever asks. The owner&#x27;s private AI on <code>dgx</code> and   <code>flash_serve</code> on <code>evo</code> are such nodes.</p>
+<h3>11. One MCP endpoint (phase 3)</h3>
+<p>The router serves every node&#x27;s caps as one MCP server, on the socket and on a loopback HTTP door authorized by the pairing token, so any agent that speaks MCP calls any node&#x27;s tools through one endpoint. Agent sessions are nodes, so sessions message each other through the same router.</p>
+<h2>Differences from the working-tree draft</h2>
+<p>An earlier draft of this HIP, written toward the same design, made two choices this specification does not.</p>
+<ol><li><strong>Election by a fixed port for everyone.</strong> The draft elected the router by</li></ol>
+<p>   binding <code>127.0.0.1:9927</code>. That port is machine-wide, so on a machine two    users share, the first user&#x27;s router holds it and the second user has no    router at all: their agents, IDE and browser cannot join anything, and    their processes can only retry against a port they will never get. It also    leaves the router&#x27;s seat to whatever unrelated program took 9927 first.    Here the election is a lock in the user&#x27;s own runtime directory, and the    door is a per-user port; every user has a router, and a foreign holder of a    port costs only that user&#x27;s browser door.</p>
+<ol><li><strong>The control plane as JSON-RPC in frames 16/17/18.</strong> The draft retired the</li></ol>
+<p>   router&#x27;s binary control bodies (types 1–7) and made <code>hello</code>, <code>find</code> and the    rest JSON-RPC methods inside the pass-through types, with the router parsing    every reply to route it. That makes the router parse arbitrary JSON from    every node — including a browser rendering hostile pages — on its hot path,    and turns the types that were opaque into types the router must read, so    the forwarding rule &quot;the router never reads a payload&quot; no longer holds.    Here the router reads only its own small binary bodies (1–8) and forwards    16–18 untouched; MCP traffic between nodes is still MCP&#x27;s JSON-RPC, as the    payload those types carry.</p>
+<p>The draft also served the one MCP endpoint in phase 1; here it is phase 3, after the nodes it would serve exist. The draft&#x27;s node ids, token handling (<code>0600</code>, read afresh, rotate by deleting) and phase framing are kept.</p>
+<h2>Rationale</h2>
+<p><strong>Why a lock and not a port.</strong> An election needs something the kernel grants to exactly one process and takes back the moment that process dies. A record lock is exactly that, it is per user by construction, and it survives <code>fork</code> without being inherited. A socket file is not one: it outlives its owner, and two processes that both find it stale both unlink it.</p>
+<p><strong>Why a library and not a daemon.</strong> A daemon has to be installed, started, supervised and upgraded, and a machine can end up with two. A library embedded in every process that needs the router cannot be missing when one of them runs, and the election makes the count one.</p>
+<p><strong>Why one implementation.</strong> The router&#x27;s correctness is in its election, its door checks and its proof. Two implementations of those are two places to get them wrong and a promise to keep them identical forever. Rust hosts link the crate, Python embeds it through a binding, and a browser, which can embed neither, is a client.</p>
+<p><strong>Why a token and not only the origin.</strong> The origin stops web pages and nothing else: any local process of any user can send <code>Origin: chrome-extension://…</code>, and Firefox and Safari origins are per install. The mutual HMAC stops other users&#x27; processes in both directions — as a client posing as the extension, and as a server squatting on the port — without the token crossing the wire.</p>
+<p><strong>Why the pairing is typed by a human.</strong> Anything that delivers the token without a human — a file the extension reads, a page the router opens — is a channel something else can use too. The human who can read the token file is the principal the router serves, and pasting once per browser is the whole cost.</p>
+<h2>Security Considerations</h2>
+<p>Threat model, phase 1:</p>
+<ul><li><strong>Web pages</strong> cannot open the WebSocket (origin, host), cannot learn the</li></ul>
+<p>  token (it is on disk and in extension storage), and cannot plant one: a code   reaches the extension only through its popup, from a human.</p>
+<ul><li><strong>Other local users</strong> cannot open the socket (<code>0600</code> in a <code>0700</code></li></ul>
+<p>  directory), cannot authenticate on the door (the token is <code>0600</code>, and the   router refuses a token file anyone else could read or have planted), and   cannot pose as the router to an extension (the router proves the token   first). They can hold a user&#x27;s door port first; that denies the browser   door and nothing else.</p>
+<ul><li><strong>Local processes of the same user</strong> are inside the trust boundary: they can</li></ul>
+<p>  read the token and reach the socket, as they can read the user&#x27;s browser   profile.</p>
+<ul><li><strong>Other extensions</strong> in the same Chromium are refused by origin; in Firefox</li></ul>
+<p>  and Safari, where origins are per install, they lack the token.</p>
+<ul><li><strong>The browser</strong> is the process most exposed to hostile content, so it may</li></ul>
+<p>  answer and may not originate: a compromised page or extension context cannot   drive an agent, a dev session or the desktop.</p>
+<ul><li><strong>A door context posing as another node.</strong> A context that holds the token —</li></ul>
+<p>  the extension compromised, or a local process of the same user — could say   <code>HELLO</code> as an engine or an agent, be listed as a provider, and receive the   requests and secrets other nodes send it; or say <code>HELLO</code> as a registered id   and evict it. The door admits <code>browser/…</code> ids only and never takes over a   registered id (§4.2); both are tested by playing the attack.</p>
+<ul><li><strong>Flooding the door.</strong> Any local process can open connections to the</li></ul>
+<p>  loopback port without a token. The door admits eight at a time for at most   2 s each and caps a message at 16 MiB, so a flood holds a bounded number of   descriptors, tasks and bytes in the embedding process, and a real browser is   admitted once it relents.</p>
+<ul><li><strong>A planted runtime directory.</strong> A runtime directory that is a symlink or</li></ul>
+<p>  another user&#x27;s is never used; one left open is tightened (§3.2).</p>
+<ul><li><strong>Spoofing</strong> within the machine: the router stamps every forwarded frame&#x27;s</li></ul>
+<p>  <code>from</code> with the registered id and closes a connection whose id is taken over.</p>
+<ul><li><strong>The token</strong> is never logged, never returned by a tool, and never sent to a</li></ul>
+<p>  model; it travels only in the pairing code a human carries.</p>
+<p>Phase 2 adds: LAN peers are refused until TLS against the fingerprint the org&#x27;s KMS holds for that host and an IAM token of the same org both succeed; mDNS is a hint, so a spoofed announcement leads only to a failed pin; link keys live in memory for one election. Phase 3 adds: every lease names the IAM principal that holds it, and a node declared not leasable is refused in the router&#x27;s code, not by convention.</p>
+<h2>References</h2>
+<ul><li>HIP-0026 — IAM: the identity every LAN link and lease carries.</li><li>HIP-0120 — ZAP as the one transport.</li><li>HIP-0134 — one process, one socket, one identity.</li><li>HIP-1134 — KMS: where each host&#x27;s link key fingerprint lives.</li><li>github.com/zap-proto/zapd — the router library, its Python binding and the</li></ul>
+<p>  operator tool.</p>
+<ul><li>RFC 6455 (WebSocket), RFC 2104 (HMAC), RFC 6762 and RFC 6763 (mDNS, DNS-SD).</li></ul>
+<h2>Copyright</h2>
+<p>Copyright and related rights waived via CC0.</p>
 <footer>
 <div class="fmap">
   <div><b>Build</b>

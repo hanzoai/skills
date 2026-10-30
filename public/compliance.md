@@ -1,202 +1,123 @@
-# SMS Compliance Reference
+# Prospecting Compliance Reference
 
-Comprehensive compliance reference for SMS marketing across major jurisdictions, opt-in copy templates, and STOP/HELP response templates.
+The legal and platform-ToS constraints that apply to prospect list building. Read first, every engagement.
 
-> This is operational guidance, not legal advice. For high-volume programs (50K+ subscribers) or any program with non-trivial revenue, run your compliance setup past a TCPA-experienced attorney.
-
----
-
-## United States — TCPA
-
-### What it is
-
-The Telephone Consumer Protection Act (1991, amended) regulates marketing calls and texts. The FCC enforces it; private plaintiffs sue under it. Statutory damages: $500–$1,500 **per message**. Class actions easily reach 7–8 figures.
-
-### Consent tiers
-
-| Type | What it covers | How to capture |
-|------|---------------|----------------|
-| **Express written consent** | Marketing SMS (sales, promotions, offers) | Checkbox + clear disclosure language, captured electronically with timestamp |
-| **Express consent (non-written)** | Informational/transactional (delivery, account alerts) | Phone number provided during transaction with awareness it'll be used to text |
-| **Established business relationship** | NOT sufficient for marketing SMS | Doesn't apply |
-
-### Express written consent requirements
-
-The opt-in flow must capture all of:
-
-1. The recipient agreed to receive marketing SMS from your brand
-2. The recipient understands consent is not a condition of purchase
-3. The disclosure showed frequency expectation, message and data rate notice, STOP/HELP instructions, terms link
-4. The agreement was electronically recorded with timestamp
-
-### Opt-in disclosure template (compliant)
-
-```
-By signing up via text, you agree to receive recurring automated promotional and
-personalized marketing text messages (e.g., cart reminders) from [Brand] at the
-cell number used when signing up. Consent is not a condition of any purchase.
-Reply HELP for help and STOP to cancel. Msg frequency varies. Msg & data rates
-may apply. View [Terms](link) and [Privacy](link).
-```
-
-Place this **directly adjacent** to the phone number field and submit button. Do not bury it in a footer.
-
-### Quiet hours
-
-- **Federal**: 8am–9pm in the recipient's local time zone
-- **Stricter states**: Florida (8am–8pm), Oklahoma (8am–8pm), Washington (8am–8pm)
-- **Carrier-recommended**: 9am–8pm recipient-local
-- **Practical default**: 9am–8pm recipient-local for safety
-
-Time zone is determined by area code, but area codes lie (people move). Major platforms (Klaviyo, Postscript, Attentive) handle this automatically; verify yours does.
-
-### STOP/HELP handling
-
-**STOP variants you must honor**: STOP, END, CANCEL, UNSUBSCRIBE, QUIT, STOPALL, OPTOUT
-
-**STOP response** (after STOP received):
-```
-You're unsubscribed from [Brand] alerts. No more messages will be sent. Reply HELP for help.
-```
-
-**HELP variants**: HELP, INFO
-
-**HELP response**:
-```
-[Brand] alerts: For help, visit [URL] or email [support@brand.com]. Msg & data rates may apply. Reply STOP to cancel.
-```
-
-**Critical rules**:
-- Honor STOP **within seconds**, every time, every keyword variant
-- Do not require the recipient to log in or visit a website to opt out
-- One STOP confirmation is allowed; do not send additional messages after
-- HELP responses do not count as marketing messages and are not subject to quiet hours
-
-### Sample TCPA-compliant footer language by sequence type
-
-- **Opt-in confirmation**: "Reply HELP for help, STOP to cancel. Msg & data rates may apply." — required
-- **Recurring promotional**: "Reply STOP to opt out" — required quarterly minimum; carrier-recommended every send
-- **Transactional**: Not required by TCPA but carriers expect it; include for safety
+> Operational guidance, not legal advice. For high-volume programs or programs touching EU/UK residents, run your setup past a privacy attorney.
 
 ---
 
-## United States — A2P 10DLC
+## United States — CAN-SPAM (downstream)
 
-### What it is
+CAN-SPAM regulates the cold email **send**, not the list build. But the list build matters because:
 
-Application-to-Person 10-Digit Long Code registration, run by The Campaign Registry (TCR). Required for businesses sending SMS through 10DLC numbers (regular long codes) since 2022. Carriers (T-Mobile, AT&T, Verizon) enforce this; unregistered traffic gets throttled or blocked.
+- You must be able to identify the source of every email address you contact (required if challenged)
+- The "from" line and email content rules apply at send time — but you can't lie about how you got the contact
+- Opt-out requests must be honored within 10 business days and tracked
 
-### Registration components
-
-1. **Brand registration**
-   - Legal entity name, EIN, business type
-   - Trust score assigned (Standard or Verified)
-   - Higher trust = better throughput, lower fees
-
-2. **Campaign registration** (one per use case)
-   - Use case: Marketing, Account Notification, Customer Care, Public Service, Higher Education, Polling and Voting, 2FA, Delivery Notification, etc.
-   - Sample message text (must match what you actually send)
-   - Opt-in flow description and screenshot
-   - Opt-out language
-   - Help message language
-   - Volume estimate
-
-3. **Phone number assignment** to campaigns
-
-### Throughput tiers (varies by carrier and trust score)
-
-| Trust score + use case | Throughput |
-|------------------------|-----------|
-| Verified brand, marketing | 75–100+ msg/sec |
-| Standard brand, marketing | 4–10 msg/sec |
-| Unregistered | 0.1 msg/sec or blocked |
-
-### Common rejections
-
-- Sample message text doesn't match actual sends
-- Opt-in flow screenshot doesn't show required disclosure language
-- "SHAFT" content (Sex, Hate, Alcohol, Firearms, Tobacco) without explicit use case
-- Generic or vague campaign descriptions
-
-**Process time**: 1–7 business days. Plan for this in launch timelines.
+**For prospecting specifically**: capture and retain the source URL + date for every contact you add to a list. CAN-SPAM doesn't require it explicitly, but defending your sender practices does.
 
 ---
 
-## EU / UK — GDPR + ePrivacy Directive
+## EU / UK — GDPR
 
-### Consent requirements
+The strictest applicable framework. Triggers when:
 
-- **Explicit opt-in**: clear affirmative action (no pre-checked boxes)
-- **Specific**: opt-in must be for marketing SMS specifically, separate from generic ToS
-- **Informed**: data subject must know who's processing and why
-- **Freely given**: can't be bundled with service access
+- Your prospect resides in EU/UK
+- You're processing personal data (any identifiable info, including business emails tied to a named person)
 
-### Mandatory provisions
+### Lawful bases for cold B2B outreach
 
-- Sender identity in every message
-- Easy opt-out in every message
-- Right to access data (DSARs)
-- Right to deletion
-- Records of consent kept for the duration of processing + statute of limitations
+You have three credible options:
 
-### Penalty exposure
+1. **Legitimate interest** (most common for B2B). Requires:
+   - The contact is in a business role likely to be interested in your offer
+   - The data was collected from a public, business-context source
+   - You provide a clear opt-out
+   - You can articulate the legitimate interest test in writing
 
-GDPR fines up to €20M or 4% of global revenue, whichever is higher.
+2. **Consent** — typically not feasible for cold outreach (you don't have consent before first contact)
+
+3. **Existing customer relationship** — only applies to current customers, not prospects
+
+### What you must do
+
+- Capture **source + date + lawful basis** for every contact
+- Honor data subject access requests (DSARs) — you must be able to disclose, correct, or delete on request
+- Include a privacy notice / opt-out in the first outreach
+- Don't store personal data longer than necessary for the legitimate interest
+
+### What disqualifies a list
+
+- Bulk-scraped LinkedIn data — explicit ToS violation + GDPR risk
+- Email addresses purchased from a list broker without source provenance
+- "Anyone @ this domain" guessed emails sent without verification (multiplies risk + bounces)
 
 ---
 
 ## Canada — CASL
 
-### Consent
+Stricter than CAN-SPAM. Cold B2B outreach requires:
 
-- **Express consent**: explicit opt-in (same standard as US TCPA express written consent)
-- **Implied consent**: existing business relationship within 24 months — limited use, expires
+- **Express consent** (explicit opt-in) — typically not present for cold prospecting
+- **OR implied consent** — existing business relationship within 24 months, OR business address publicly published on the company's own site for the purpose of receiving such communications
 
-### Every message must include
-
-- Sender identification (legal name + any operating names)
-- Mailing address
-- Phone, email, or website contact
-- Unsubscribe mechanism that works within 10 business days
-
-### Penalty exposure
-
-Up to CAD $10M per violation. Enforced by the CRTC.
+**Practical implication for Canadian prospects**: relying on the publicly-published-address exception is the most defensible cold prospecting basis in Canada. You must include sender identification, mailing address, and an unsubscribe mechanism in every message.
 
 ---
 
-## Australia — Spam Act 2003
+## Platform Terms of Service
 
-- Express or inferred consent (inferred has narrow application)
-- Sender ID required
-- Functional unsubscribe required
-- Enforced by ACMA
+### LinkedIn
+
+- **Sales Navigator** as a research tool: fine
+- **Scraping LinkedIn at any scale**: explicit ToS violation. Banned accounts are permanent. Don't.
+- **Apollo, Clay, and ZoomInfo** claim LinkedIn-overlap data through various legitimate channels — verify their data sources before assuming compliance
+- **InMail and Connection Requests**: governed by LinkedIn's own messaging rules, not by CAN-SPAM/GDPR (because LinkedIn-internal)
+
+### Google Maps
+
+- ToS prohibits bulk extraction or productizing Maps data
+- Browser-assisted research as a discovery aid: acceptable
+- Storing Place IDs or large structured Maps data in your CRM: explicit ToS prohibition
+- Use Maps to **find** local businesses, then cross-source from the business's own site for the data you retain
+
+### Apollo / ZoomInfo / Clearbit
+
+- All have their own ToS limiting reselling, downstream sharing, and use cases
+- Read your contract — typically you can use the data for your own outreach but not productize it
+- Don't share extracts publicly (e.g., on a leaderboard, in a public report)
+
+### Crunchbase
+
+- Free tier is read-only for personal use
+- Paid tier permits broader use within contractual scope
+- API access requires paid Pro+ tier
 
 ---
 
-## Multi-jurisdictional programs
+## Anti-Patterns (Don't Do These)
 
-If you send across US + EU + Canada simultaneously:
-
-- Default to the **strictest** standard across all jurisdictions (US TCPA express written consent + GDPR explicit opt-in)
-- Track consent jurisdiction per subscriber
-- Default quiet hours to recipient-local 9am–8pm
-- Include all required identifiers in every message
+1. **Bulk-scraping LinkedIn / Google Maps / Yelp**. Browser-assisted research is OK; automated scrapers pointed at these platforms are not. **Firecrawl and Browserbase are fine for an individual prospect's own website** (the URL you found through manual discovery) — not for the platforms hosting prospects.
+2. **Buying lists from random vendors** without source provenance. You inherit their legal exposure.
+3. **Guessing emails and sending unverified**. Bounce rates over 2% destroy sender reputation; legally, you can't claim a "legitimate interest" basis for an email you fabricated.
+4. **Harvesting personal email addresses** (Gmail, personal Outlook, etc.) from public profiles. Personal addresses raise GDPR risk significantly.
+5. **Storing data you don't need**. Minimize retention. Don't keep prospect lists forever — GDPR right to deletion applies.
+6. **Skipping the lawful basis documentation**. If challenged, you need to show your work. Capture source URL + collection date for every contact.
+7. **Reselling prospect lists**. You may not have the right to share them downstream. Read your data provider contracts.
+8. **CAPTCHA bypass / login wall bypass**. Even if technically possible, this signals bot behavior and violates virtually every ToS.
 
 ---
 
-## Audit-ready compliance checklist
+## Quick Audit Checklist
 
-- [ ] A2P 10DLC registration complete (US, if applicable)
-- [ ] Opt-in flow includes all required disclosures, adjacent to phone field
-- [ ] Disclosure text matches A2P registered sample messages
-- [ ] Opt-in event captures: timestamp, IP, page URL, exact disclosure shown
-- [ ] STOP/HELP keywords honored across all variants
-- [ ] Quiet hours enforced at platform level (recipient-local time)
-- [ ] Privacy policy includes SMS section
-- [ ] Terms of service include SMS terms
-- [ ] Consent records retained per applicable law (typically 4+ years US, longer EU)
-- [ ] Process for handling DSARs (EU) and consent revocation
-- [ ] Sender identity in every message
-- [ ] Compliance footer on every promotional message (recommended) or quarterly minimum (required)
-- [ ] Test STOP/HELP from a real phone number quarterly to verify it still works
+Before shipping a list to the user (or downstream to cold-email):
+
+- [ ] Every contact has a source URL + collection date
+- [ ] No contacts sourced from scraped LinkedIn data
+- [ ] No Google Maps Place IDs or large Maps-structured data retained
+- [ ] Lawful basis documented (legitimate interest test for B2B, or relevant alternative)
+- [ ] Email addresses validated (deliverability check before outreach)
+- [ ] Personal addresses (Gmail, etc.) flagged or excluded
+- [ ] Source provider contracts permit the intended use case
+- [ ] Retention plan documented (when to delete)
+- [ ] First outreach will include unsubscribe + privacy notice (downstream concern for cold-email skill, but mention it now)

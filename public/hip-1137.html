@@ -199,6 +199,19 @@ footer a{color:var(--soft)}
 <h1>hip-1137</h1><p class="lede">HIP-1137: Marketplace — Listings and Installs. Status Final. Hanzo architectural specification.</p><h1>HIP-1137: Marketplace — Listings and Installs</h1>
 <h2>Abstract</h2>
 <p><code>/v1/marketplace</code> is the shop for tools and agents: browse, install into your project, publish your own free or priced. It is a thin layer over the unified tool plane — discovery reads the tool registry, install and uninstall ARE the registry&#x27;s activation writes — plus a listing store that says what a tool costs and which wallet is paid. Marketplace never dispatches a tool and never moves money itself. It is implemented in <code>hanzoai/cloud</code> at <code>apps/marketplace</code> (HIP-0106).</p>
+<p>A listing is discoverable outside its publisher org once a SuperAdmin approves it. That rule is proposed by the Amendment below and is not served yet.</p>
+<h2>Amendment: a public listing is reviewed (proposed)</h2>
+<p>Proposed with HIP-0528. Nothing in this section is served today; §1–§5 describe what is. The column, the operator route, the filter in discovery and the audit records below are all still to be built.</p>
+<ul><li><strong>The state.</strong> Every listing carries <code>review</code> — <code>submitted</code>, <code>approved</code> or</li></ul>
+<p>  <code>refused</code> — and a <code>reason</code>, which a refusal requires. Publish writes   <code>submitted</code>. A republish that changes what an install would activate — the   tool it names, the price, the payee, and for a mod listing (HIP-0528) the   pinned bundle digest or the permission set — writes <code>submitted</code> again. Rows   that exist when this lands enter <code>submitted</code>.</p>
+<ul><li><strong>Who decides.</strong> Only a SuperAdmin — <code>owner == &quot;admin&quot;</code>, the one predicate</li></ul>
+<p>  (HIP-0118, HIP-0026) — sets <code>approved</code> or <code>refused</code>, at   <code>PUT /v1/admin/marketplace/listings/{org}/{id}/review</code> with <code>{state, reason}</code>:   the operator&#x27;s view of this capability (HIP-0139 §3.2), drawn in the admin   console (HIP-1320). The queue is   <code>GET /v1/admin/marketplace/listings?review=submitted</code>. An org admin&#x27;s   <code>isAdmin</code> admits nothing here, in any org, its own included.</p>
+<ul><li><strong>The record.</strong> Each decision is written to the tamper-evident trail</li></ul>
+<p>  (HIP-1103) before the row changes: the SuperAdmin, the listing key, the state   it left and the one it entered, the reason, and for a mod the digest decided   on. A decision that cannot be recorded changes nothing.</p>
+<ul><li><strong>What it changes.</strong> Discovery answers another org with approved listings</li></ul>
+<p>  only, and installing a listing that is not approved answers as if it did not   exist, so the state is not an oracle. The publisher org&#x27;s own-listings   operation returns every listing it published with its state and reason, and   the publisher MAY install its own listing in any state into its own projects.   An install that already happened is an activation (§1), and a later refusal   does not undo it; withdrawing installed code is HIP-0528&#x27;s block.</p>
+<ul><li><strong>A reviewer&#x27;s verdict is evidence.</strong> A verdict from HIP-0528&#x27;s review (§7)</li></ul>
+<p>  attaches to the submission and is shown beside it. It never sets the state: a   pass approves nothing, and approving over a refusal takes a reason, recorded   as above.</p>
 <h2>Motivation</h2>
 <p>A marketplace that keeps its own installed-tools table drifts from the registry that actually dispatches, and a price that lives only in one process&#x27;s memory is not enforced anywhere else. Both defects were real here: the price table, the charger and the wallet resolver were process-globals, the fleet runs one process per app, so in the settling process the table was nil — and reading a nil table as &quot;nothing is priced&quot; made every listed tool free the moment the fleet split (<code>apps/marketplace/marketplace.go:16-30</code>).</p>
 <h2>Specification</h2>
@@ -219,7 +232,7 @@ footer a{color:var(--soft)}
 <h2>Security Considerations</h2>
 <p>The money path is the exposure, and its two failure shapes are opposite. Fail open: a missing price table read as &quot;free&quot; dispensed paid tools for nothing — closed by making absence an error and free an explicit answer. Redirection: a caller-influenced recipient or price turns the rail into a payout to the attacker — closed by binding both to the listing row, publisher-owned and publisher-org-payable only. The listing store&#x27;s own writes are bounded by the (publisher_org, id) key, so a tenant can unpublish only what it published.</p>
 <h2>References</h2>
-<ul><li>HIP-0026 — Identity and Access Management</li><li>HIP-0106 — Hanzo Plugin Contract</li><li>HIP-0139 — Capability</li></ul>
+<ul><li>HIP-0026 — Identity and Access Management</li><li>HIP-0106 — Hanzo Plugin Contract</li><li>HIP-0118 — SuperAdmin &amp; Tenant Isolation Model</li><li>HIP-0139 — Capability</li><li>HIP-0528 — Mods — The App SDK</li><li>HIP-1103 — Audit — The Tamper-Evident Trail</li><li>HIP-1320 — Admin — The Operator Console</li></ul>
 <h2>Copyright</h2>
 <p>Released under CC0 1.0 Universal Public Domain Dedication.</p>
 <footer>

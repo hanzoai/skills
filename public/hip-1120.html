@@ -198,17 +198,31 @@ footer a{color:var(--soft)}
 <div class="wrap">
 <h1>hip-1120</h1><p class="lede">HIP-1120: CRM — The Sales Pipeline. Status Final. Hanzo architectural specification.</p><h1>HIP-1120: CRM — The Sales Pipeline</h1>
 <h2>Abstract</h2>
-<p>Sales is companies, contacts and opportunities, plus the programme intake that lands as an application. It is not an address of its own: CRM is a module on the document engine (HIP-1126), so the records are framework documents in module <code>crm</code> and the whole surface is <code>/v1/framework</code>. It is implemented in <code>hanzoai/cloud</code> at <code>apps/crm</code>, which declares the document set and nothing else.</p>
-<p>This HIP declares no capability in front matter, and that is the point: a capability is one <code>/v1/&lt;name&gt;</code> the cloud serves, and nothing serves <code>/v1/crm</code>. What this HIP fixes is the record model, the role that reads it, and the boundary that keeps a prospect out of the user roster.</p>
+<p>Sales is companies, people and opportunities, plus hiring and the programme intake that lands as an application. Its records live in the org&#x27;s own Base: the <code>crm</code> module of <code>hanzoai/base</code> (<code>modules/crm</code>) is the collection set, an org installs it into its Base, and the records are read and written through Base&#x27;s own <code>/v1/base</code> surface, rules and realtime.</p>
+<p>This HIP declares no capability in front matter: a capability is one <code>/v1/&lt;name&gt;</code> the cloud serves, and the CRM&#x27;s records need none of their own. What this HIP fixes is the record model, who reads and changes it, and the boundary that keeps a prospect out of the user roster.</p>
+<h2>Amendment: the store is the org&#x27;s Base (2026-10-18)</h2>
+<p>The owner reversed §1 and §2 of this HIP as first written. They put the records on the document engine (HIP-1126) as framework documents in module <code>crm</code>, served at <code>/v1/framework</code>. That engine filters by equality alone, over a JSON column, with no realtime, no files and no aggregates, and a CRM&#x27;s views, segments, pipeline sums and timeline need every one of those. Base has them, so the records move there, one way per capability:</p>
+<ul><li><strong>Schema.</strong> The <code>crm</code> module (companies, people, opportunities, candidates,</li></ul>
+<p>  applications, lists, list_members, segments, activities, notes, tasks,   attachments, views) is installed by an org admin with   <code>POST /v1/base/modules/crm</code>, or by a sibling app with the plane op   <code>base_import</code>. Installing grows a Base and never drops what an org added.</p>
+<ul><li><strong>Field types.</strong> Currency, emails, phones, links, address, full name, actor and</li></ul>
+<p>  rating are Base field types, with a label, description, icon and position on   every field and a colour on every select value.</p>
+<ul><li><strong>Reads.</strong> Base&#x27;s records API, its <code>where</code> structured filter (per-type</li></ul>
+<p>  operators, AND/OR groups, relative dates, <code>@me</code>, in-list and in-segment) and   its aggregate route.</p>
+<ul><li><strong>Writes from other apps.</strong> The plane ops <code>base_upsert</code>, <code>base_get</code> and</li></ul>
+<p>  <code>base_list</code>, which act for the caller&#x27;s org only.</p>
+<ul><li><strong>History and events.</strong> A collection that keeps history writes who changed</li></ul>
+<p>  what, in the record&#x27;s own transaction; every record write is a fact on the   event bus (<code>record_created</code>, <code>record_updated</code>, <code>record_deleted</code>).</p>
+<p>What has not moved yet is the framework documents an org already holds. Until their migration lands, <code>/v1/framework</code> keeps serving them; when it lands, the <code>crm</code> DocTypes are retired and §1 and §2 below are history.</p>
+<p>The roster boundary in §Security is unchanged: nothing resolves a notification audience, a seat or an entitlement from these records.</p>
 <h2>Motivation</h2>
 <p>A CRM contact is a prospect the org tracks, not a product user: the org&#x27;s own users live in IAM, and the marketing subsystem resolves audiences from that roster, never from these documents. Without one place that owns the prospect universe, prospect rows leak into user stores and the two contact universes join by accident — which is a privacy defect, not a modelling choice.</p>
 <p>The second question this settles is where sales records belong at all. A sales pipeline is exactly what the document engine is for: a closed set of typed records with a lifecycle field, per-org isolation, role-gated CRUD and one renderer. Building it as its own app bought a second copy of CRUD, a second store, a second permission model, and a name in the fleet for a thing the engine already served.</p>
 <h2>Specification</h2>
 <p>The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be interpreted as in RFC 2119.</p>
-<h3>§1 The store is the engine&#x27;s</h3>
+<h3>§1 The store is the engine&#x27;s (reversed by the Amendment)</h3>
 <p>crm opens no store. A company, a contact, an opportunity and an application are <code>framework.DocType</code> documents carrying the module tag <code>crm</code> (<code>apps/crm/crm.go</code>), and the engine holds them: one SQLite file per org, opened by the framework, with every call taking the org as an argument — so the tenant boundary is the storage boundary and there is no <code>org</code> column to forget.</p>
 <p><code>apps/crm</code> declares the document set at init and exports nothing else (<code>framework.RegisterModule</code>). Its own gates check that every DocType is valid, every Link resolves to a DocType that exists, every Select is a closed set, and that the module is registered (<code>apps/crm/crm_test.go</code>).</p>
-<h3>§2 The addresses</h3>
+<h3>§2 The addresses (reversed by the Amendment)</h3>
 <p>There is no <code>/v1/crm</code>, and no manifest row claims one. The surface is the engine&#x27;s generic, role-gated one under <code>/v1/framework</code>: list, read, write and delete a document by <code>module.kind</code>, and the console&#x27;s CRM screens are that same DocType renderer scoped to this module. An org gets the lane by installing it — <code>POST /v1/framework/modules/crm/install</code> — which ensures the four DocTypes exist in that org.</p>
 <p>A module that needs an operational read no generic surface can serve is what earns a prefix of its own; <code>patrol</code> is the worked example (HIP-1331). crm needs none, so it has none.</p>
 <h3>§3 Tenancy and roles</h3>

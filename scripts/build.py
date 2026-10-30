@@ -11,6 +11,10 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(REPO_ROOT, "skills")
 HIPS = os.environ.get("HIPS_DIR", "/Users/z/work/hanzo/hips/HIPs")
 OUT = os.environ.get("OUT_DIR", os.path.join(REPO_ROOT, "public"))
+# Pages in public/ that no source here writes, edited in place: auth.md, and the
+# notices a renamed skill leaves at its old name.
+KEEP = {"auth.md", "hanzo-migrate-backend-to-go.md", "hanzo-migrate-backend-to-go.html",
+        "ui-port-parity.md", "ui-port-parity.html"}
 
 CATEGORY_LABELS = {
     "standards-core": "Standards: Core AI & Models",
@@ -122,8 +126,10 @@ def map_hip_category(cat, n, title):
 
 def collect_hips():
     out = []
+    # The build deletes every page it did not write (main), so building without the
+    # HIPs would delete all of theirs. Point HIPS_DIR at a hanzoai/hips checkout.
     if not os.path.isdir(HIPS):
-        return out
+        sys.exit(f"HIPS_DIR {HIPS} is not a directory: point it at a hanzoai/hips checkout's HIPs/")
     for f in sorted(os.listdir(HIPS)):
         if not f.endswith('.md') or f.startswith('_'):
             continue
@@ -175,6 +181,9 @@ def collect():
 
     # 3. All skills in SRC
     for dp, dn, fn in os.walk(SRC):
+        # Walk in name order on every filesystem, so a name two files share is
+        # published from the same file wherever the site is built.
+        dn.sort()
         for f in sorted(fn):
             if not f.endswith('.md') or f in ('INDEX.md', 'README.md', 'SECURITY.md', '_SKILL_TEMPLATE.md'):
                 continue
@@ -526,7 +535,16 @@ def main():
         allp.append(f"\n\n---\n\n<!-- {d['name']} -->\n\n{d['raw']}")
     io.open(f'{OUT}/all.md', 'w', encoding='utf-8').writelines(allp)
 
-    print(f"Generated index: total_files={len(docs)} categories={len(cats)}")
+    # A page whose source is gone is not served on: it would tell an agent to read
+    # a file that no longer exists. Every .md and .html at the top of public/ is
+    # one of this build's, or hand-written and named in KEEP.
+    made = {f"{d['name']}.{ext}" for d in docs for ext in ('md', 'html')}
+    made |= {'index.html', 'index.md', 'llms.txt', 'all.md'}
+    gone = sorted(f for f in os.listdir(OUT)
+                  if f.endswith(('.md', '.html')) and f not in made and f not in KEEP)
+    for f in gone:
+        os.remove(os.path.join(OUT, f))
+    print(f"Generated index: total_files={len(docs)} categories={len(cats)}; removed {len(gone)} pages with no source")
 
 if __name__ == "__main__":
     main()

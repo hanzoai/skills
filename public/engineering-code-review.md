@@ -5,6 +5,8 @@ description: Code review practices, PR etiquette, constructive feedback, automat
 
 # Code Review Best Practices
 
+The operating process is the release review in `skills/code-review/SKILL.md`. Machines read the diff. A person decides whether to build it, whether the code is the risky kind, whether it sets a pattern others will copy, whether the evidence is enough, and who owns the outcome. The etiquette below is for those decisions.
+
 **Scope**: Comprehensive guide to code review processes, PR etiquette, constructive feedback, automation, and team collaboration
 **Lines**: ~350
 **Last Updated**: 2025-10-27

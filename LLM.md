@@ -211,14 +211,17 @@ scripts/webmcp.ts the WebMCP tools every page loads; `npm run webmcp` strips it 
 tests/site.mjs   browser checks — mark, menu, bar, WebMCP tools, computed border-radius, Zen fonts
 ```
 
-- `scripts/build.py` compiles `skills/` (including 134 `hanzo/*` skills) and all 275 HIPs into `public/`:
-  1,182 pages. It deletes nothing, so the other 62 pages in `public/` are left from earlier builds.
+- `scripts/build.py` compiles `skills/` and the HIPs into `public/`: 1,252 documents on
+  2026-10-29. It deletes every top-level `.md`/`.html` it did not write, except the hand-written
+  pages in `KEEP` (auth.md, and the moved notices hanzo-migrate-backend-to-go and ui-port-parity),
+  so a page whose source is gone stops being served.
   The HIPs come from `HIPS_DIR`, whose default is a macOS path; anywhere else point it at a
-  `hanzoai/hips` checkout at origin/main, or the index, llms.txt and all.md drop every HIP.
+  `hanzoai/hips` checkout at origin/main. The build refuses to run without it, since it would
+  otherwise delete every HIP page.
   A name several files share (`tool-use`, `streaming`, `batches`, `files-api`, `reference`,
-  `experiments`, `affiliate-programs`) is published once, from whichever file `os.walk` reaches
-  first, and that order differs between filesystems: a Linux build and a macOS build of the same
-  tree pick different files for those pages.
+  `experiments`, `affiliate-programs`, and 18 `hanzo-*` skills shadowed by `skills/hanzo/*.md`)
+  is published once, from the first file a name-ordered walk reaches, the same on every
+  filesystem. A shadowed skill is left out of the skills index.
   Standards / HIPs are organized across 5 architectural domains explaining all standards:
   `standards-core` (Core AI & Models), `standards-infra` (Cloud & Native Infrastructure),
   `standards-interface` (Protocols & Realtime SSE), `standards-security` (IAM & Cryptography),
@@ -273,7 +276,11 @@ does not exist. DNS is apex + www `A -> 129.212.164.5`, proxied.
 
 The robots.txt in `public/` is the one that is served, and that is the point of
 the move — the zone used to answer with a Cloudflare-managed file that named no
-crawler at all, on a site whose whole purpose is being read by agents.
+crawler at all, on a site whose whole purpose is being read by agents. It is one
+group: `*` and every named crawler, one `Content-Signal`, `Allow: /`. A crawler
+reads only the group that names it, so a signal in the `*` group alone does not
+reach a named one. Bytespider is not named, as on hanzo.ai. `ai-train=yes` is the
+owner's call; it has not been re-decided here.
 
 ### Content types
 
@@ -306,11 +313,14 @@ public/webmcp.js                           WebMCP tools, stripped from scripts/w
   `readOnlyHint`. Elsewhere it does nothing. tests/site.mjs drives both through a recording
   `modelContext`; the deploy step fails when public/webmcp.js differs from a fresh strip.
 
-- The skills index lists every `public/<name>.md` whose front matter names it `<name>` (lowercase,
-  hyphens, at most 64) with a description of at most 1,024 characters, and the SHA-256 of its bytes.
-  site.py writes it, so CI fails when it disagrees with `public/`. Excluded today: front matter YAML
-  refuses (`description:` with an unquoted `: ` or a trailing `:`, in hanzo-api-kms, hanzo-api-sandbox,
-  redpanda-streaming and four realtime-* files), names with capitals or spaces (the graph pages).
+- The skills index lists a skill only when an agent can install it from the site whole: a
+  `skills/**/SKILL.md` whose front matter names it `<name>` (lowercase, hyphens, at most 64) with a
+  description of at most 1,024 characters, served byte for byte as `/<name>.md`, and every file it
+  points at by a relative path (a link with a directory or extension, or a `references/`,
+  `scripts/`, `templates/`, `assets/`, `examples/`, `resources/`, `tools/` path) published beside
+  it. 188 of the SKILL.md files on 2026-10-29; 90 wait on unpublished supporting files, 18 are
+  shadowed. Reference docs and pages that are not a SKILL.md are never listed. site.py writes the
+  index, and `tests/discovery.py` holds it to the same rule, so CI fails when they disagree.
 - Every claim in auth.md and the card was checked live on 2026-10-26 against the hanzo skill. Change
   them with it. The card is the MCP Server Card v1 shape and nothing more. A scan of it calls
   `initialize` and `tools/list` on https://api.hanzo.ai/v1/mcp, so every scanner that reads the card
