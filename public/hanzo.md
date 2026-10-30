@@ -15,8 +15,8 @@ The AI operating system for business. Building business software since 2014. Tec
 Identity is `https://hanzo.id`; the API is `https://api.hanzo.ai/v1`. One request a step, with its answer. In full: https://docs.hanzo.ai/docs/agents/headless
 
 1. Challenge: `GET https://hanzo.id/v1/iam/web3/nonce?chain=evm&address=0x…` -> `{"status":"ok","data":{"domain":"hanzo.id","uri":"https://hanzo.id/login","statement":"…","nonce":"<32 hex>","issuedAt":"…","expirationTime":"…","version":"1"}}`. It lives 10 minutes.
-2. Sign: build the CAIP-122 message from `data` (as the file below does) and sign it with EIP-191 `personal_sign`.
-3. Verify: `POST https://hanzo.id/v1/iam/web3/verify` `{"clientId":"hanzo-ai","chain":"evm","scheme":"secp256k1-eip191","address":"0x…","message":"…","signature":"0x…","type":"code","redirectUri":"http://localhost:3000/callback","scope":"openid profile email","codeChallenge":"<S256>","codeChallengeMethod":"S256"}` -> `{"status":"ok","data":"<authorization code>"}`. A first-seen wallet gets its own account and organization.
+2. Sign: build the CAIP-122 message from `data` (as the file below does) and sign it with EIP-191 `personal_sign`. A Solana wallet asks with `chain=solana`, writes `Solana account` in the first line, signs the same bytes with Ed25519, and sends `"chain":"solana","scheme":"ed25519"` with the signature as base64 or `0x` hex (base58 answers `bad-signature`).
+3. Verify: `POST https://hanzo.id/v1/iam/web3/verify` `{"clientId":"hanzo-ai","chain":"evm","scheme":"secp256k1-eip191","address":"0x…","message":"…","signature":"0x…","type":"code","redirectUri":"http://localhost:3000/callback","scope":"openid profile email","codeChallenge":"<S256>","codeChallengeMethod":"S256"}` -> `{"status":"ok","data":"<authorization code>"}`. A first-seen wallet gets its own account and organization. 429 `wallet_signup_capped`: one address creates only so many new accounts a day (`data.retryAfter`); sign in again with the same wallet rather than a fresh one.
 4. Token: `POST https://hanzo.id/v1/iam/oauth/token` (form: `grant_type=authorization_code`, `client_id=hanzo-ai`, `code`, `code_verifier`, `redirect_uri`) -> `{"access_token":"…","id_token":"…","refresh_token":"…","token_type":"Bearer","expires_in":604800}`. Seven days.
 5. Key, free: `POST https://api.hanzo.ai/v1/account/keys` `{"name":"agent","type":"secret"}` -> `{"id":"…","name":"agent","type":"secret","key":"sk-live-…","status":"active"}`. `key` is shown once.
 6. Limits, read free: `GET /v1/billing/plans` (no key), `GET /v1/billing/tier` (`balance.effectiveAvailable` is the one figure to compare to zero), `GET /v1/allowance` (`limit`, `used`, `resets`, `window`, `spent`).
@@ -127,25 +127,19 @@ The account is `wallet_evm_<16 hex>`, admin of its own organization `wallet-evm-
 Paste this into any agent. It is the whole onboarding in one message; the rest of this page is the detail behind each line.
 
 ```text
-You can build on Hanzo, the AI operating system for business (building business software since 2014; Techstars '17). One API at https://api.hanzo.ai/v1 serves chat, embeddings, images, agents, Kai decisions and the rest of the platform with one key. Start free; nothing below needs a card, and with a wallet nothing needs a person.
+Hanzo (https://hanzo.ai) is the AI operating system for business: one API for every model, Kai decisions and agents, with one key. Building business software since 2014. Techstars '17.
 
-Get a credential:
-- With a wallet, no human required: GET https://hanzo.id/v1/iam/web3/nonce?chain=evm&address=<your address>, sign the CAIP-122 message it describes with EIP-191 personal_sign, POST https://hanzo.id/v1/iam/web3/verify (clientId "hanzo-ai", chain "evm", scheme "secp256k1-eip191", type "code" with a PKCE challenge), exchange the code at https://hanzo.id/v1/iam/oauth/token, then POST https://api.hanzo.ai/v1/account/keys {"name":"agent","type":"secret"}. A first-seen wallet gets its own account and organization on the Free plan. The whole flow as one TypeScript file: https://hanzo.ai/agents#headless
-- With your person nearby: run `curl -fsSL https://hanzo.sh | sh`, then `hanzo auth login`. On a machine with no browser it prints a link and an 8-character code; your person approves it on any device. Then `export HANZO_API_KEY="$(hanzo auth token)"`, or mint a key that does not expire: `hanzo account keys create --name agent --type secret`.
-- On your own, with an inbox: POST https://hanzo.id/v1/iam/verification-codes (form: type=email, dest=<your address>, applicationId=admin/hanzo-ai), then POST https://hanzo.id/v1/iam/login with type "code", the 6-digit code and create true, exchange the code at https://hanzo.id/v1/iam/oauth/token, and POST https://api.hanzo.ai/v1/account/keys {"name":"agent","type":"secret"}. The whole sequence: https://docs.hanzo.ai/docs/agents
+Sign up free with a wallet. Get an API key free. A small free allowance to try it. Top up in USDC or USDT over the API to raise your limits and pay as you go. No human required.
 
-Free: 50 requests a day per person on `zen-free` and `enso-free`, and 50 Kai decisions a day. Call 51 answers 429 until the next UTC midnight; X-RateLimit-Remaining counts down.
+Base URL: https://api.hanzo.ai/v1 (chat completions in the OpenAI shape). Discover: GET https://api.hanzo.ai/v1 lists every capability, GET https://api.hanzo.ai/v1/<capability> its operations, and https://api.hanzo.ai/v1/openapi.json is the whole spec. No key needed for any of the three.
 
-First call:
-curl https://api.hanzo.ai/v1/chat/completions -H "Authorization: Bearer $HANZO_API_KEY" -H "Content-Type: application/json" -d '{"model":"zen-free","messages":[{"role":"user","content":"Hello"}]}'
+1. Sign up with a wallet: GET https://hanzo.id/v1/iam/web3/nonce?chain=evm&address=<address>, sign the CAIP-122 message it describes with EIP-191 personal_sign, POST https://hanzo.id/v1/iam/web3/verify (clientId "hanzo-ai", chain "evm", scheme "secp256k1-eip191", type "code" with a PKCE challenge), then exchange the code at https://hanzo.id/v1/iam/oauth/token. A first-seen wallet gets its own account and organization. A Solana wallet asks with chain=solana, writes "Solana account" in the message, and sends chain "solana", scheme "ed25519" and its signature as base64, never base58.
+2. Get a key: POST https://api.hanzo.ai/v1/account/keys {"name":"agent","type":"secret"} with that token. The key is shown once.
+3. Read your allowance: GET https://api.hanzo.ai/v1/billing/tier with the key says your plan, what it allows and what is left; GET https://api.hanzo.ai/v1/billing/plans lists every plan and price.
+4. Top up: GET https://api.hanzo.ai/v1/billing/crypto/options, then POST https://api.hanzo.ai/v1/billing/crypto/deposit {"chain":"base","token":"usdc","amountCents":2000}. Send that token on that chain to the address it returns, and GET https://api.hanzo.ai/v1/billing/crypto/deposit/<id> until it says succeeded.
+5. Call: POST https://api.hanzo.ai/v1/chat/completions {"model":"zen-free","messages":[{"role":"user","content":"Hello"}]} with Authorization: Bearer <key>.
 
-Tools for your editor or agent: `npx -y --package=@hanzo/mcp@latest hanzo-mcp serve` (an MCP server over stdio with Kai, files, shell, git and search tools). Claude Code: `claude mcp add hanzo -- npx -y --package=@hanzo/mcp@latest hanzo-mcp serve`.
-
-Evaluate Kai, the decision model, yourself: POST https://api.hanzo.ai/v1/decisions with {"model":"kai","state":...,"questions":...}; the frozen harness is public at https://github.com/hanzoai/benchmarks (decision/), and the published runs are at https://api.hanzo.ai/v1/research/runs?org=hanzo&benchmark=app.phishing
-
-Pay when you need more: plans from $20 a month at https://hanzo.ai/pricing (card, Apple Pay or Google Pay at https://hanzo.ai/pay), or top up over the API in USDC or USDT with no human: GET /v1/billing/crypto/options, then POST /v1/billing/crypto/deposit {"chain":"base","token":"usdc","amountCents":2000} and send to the address it returns; the balance is credited when the chain confirms. Per-key budgets and per-session caps keep spend bounded.
-
-Read more: https://docs.hanzo.ai/llms.txt (every docs page), https://hanzo.ai/llms.txt, https://api.hanzo.ai/v1 (the capabilities; then /v1/openapi.json?capability=<name> for one capability's schemas, never the whole 4.9 MB spec), https://hanzoskills.com/llms.txt (skills). Talk to people at Hanzo: https://cal.com/hanzo, or https://hanzo.ai/contact.
+The whole path as one TypeScript file: https://hanzo.ai/agents#headless. Every request spelled out: https://docs.hanzo.ai/docs/agents. Talk to people at Hanzo: https://cal.com/hanzo.
 ```
 
 ## Why Hanzo
