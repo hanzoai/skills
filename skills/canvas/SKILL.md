@@ -1,3 +1,8 @@
+---
+name: canvas
+description: "Display HTML content, games, visualizations, and interactive dashboards on connected HanzoBot nodes (macOS, iOS, Android)."
+---
+
 # Canvas Skill
 
 Display HTML content on connected HanzoBot nodes (Mac app, iOS, Android).
