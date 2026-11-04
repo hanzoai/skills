@@ -1,118 +1,66 @@
 ---
 name: data
-description: Automatically discover data pipeline and ETL skills when working with ETL. Activates for data development tasks.
+description: "Data (Data & Analytics — Seat 15, Engineering & Intelligence). Owns pipelines, dashboards, intelligence. Canonical Hanzo agent skill and business execution playbook."
+source: hanzoai/skills (Hanzo Team Seat 15 — Engineering & Intelligence)
 ---
 
-# Data Skills Discovery
+# Data — Data & Analytics (`data`)
 
-Provides automatic access to comprehensive data skills.
+> **Seat 15 · Engineering & Intelligence**
+> **Owns:** pipelines, dashboards, intelligence
+> **Primary MCP & Platform Tools:** `dataset, metrics, o11y, usage`
+> **Greeting:** *"I am Data. I build pipelines and dashboards and find what the numbers say. What is the question?"*
 
-## When This Skill Activates
-
-This skill auto-activates when you're working with:
-- ETL
-- data pipelines
-- batch processing
-- stream processing
-- data validation
-- orchestration
-- Airflow
-- timely dataflow
-- differential dataflow
-- streaming aggregations
-- windowing
-- real-time analytics
-
-## Available Skills
-
-### Quick Reference
-
-The Data category contains 9 skills:
-
-1. **batch-processing** - Orchestrating complex data pipelines with dependencies
-2. **data-validation** - Validating data schema before processing
-3. **dataflow-coordination** - Coordination patterns for distributed dataflow systems
-4. **differential-dataflow** - Differential computation for incremental updates and efficient joins
-5. **etl-patterns** - Designing data extraction from multiple sources
-6. **pipeline-orchestration** - Coordinating complex multi-step data workflows
-7. **stream-processing** - Processing real-time event streams (Kafka, Flink)
-8. **streaming-aggregations** - Windowing, sessionization, time-series aggregation
-9. **timely-dataflow** - Low-latency streaming computation with progress tracking
-
-### Load Full Category Details
-
-For complete descriptions and workflows:
-
-```bash
-cat skills/data/INDEX.md
-```
-
-This loads the full Data category index with:
-- Detailed skill descriptions
-- Usage triggers for each skill
-- Common workflow combinations
-- Cross-references to related skills
-
-### Load Specific Skills
-
-Load individual skills as needed:
-
-```bash
-# Traditional ETL/Batch
-cat skills/data/batch-processing.md
-cat skills/data/data-validation.md
-cat skills/data/etl-patterns.md
-cat skills/data/pipeline-orchestration.md
-
-# Stream Processing
-cat skills/data/stream-processing.md
-cat skills/data/streaming-aggregations.md
-
-# Advanced Dataflow Systems
-cat skills/data/timely-dataflow.md
-cat skills/data/differential-dataflow.md
-cat skills/data/dataflow-coordination.md
-```
-
-## Common Workflow Combinations
-
-### Real-Time Analytics Pipeline
-```bash
-# Load these skills together:
-cat skills/data/stream-processing.md          # Kafka setup
-cat skills/data/streaming-aggregations.md     # Windowing patterns
-cat skills/data/dataflow-coordination.md      # Coordination
-```
-
-### Incremental Computation System
-```bash
-# Load these skills together:
-cat skills/data/timely-dataflow.md           # Foundation
-cat skills/data/differential-dataflow.md     # Incremental updates
-cat skills/data/dataflow-coordination.md     # Distributed coordination
-```
-
-### Hybrid Batch + Stream
-```bash
-# Load these skills together:
-cat skills/data/batch-processing.md          # Batch jobs
-cat skills/data/stream-processing.md         # Stream processing
-cat skills/data/pipeline-orchestration.md    # Overall coordination
-```
-
-## Progressive Loading
-
-This gateway skill enables progressive loading:
-- **Level 1**: Gateway loads automatically (you're here now)
-- **Level 2**: Load category INDEX.md for full overview
-- **Level 3**: Load specific skills as needed
-
-## Usage Instructions
-
-1. **Auto-activation**: This skill loads automatically when Claude Code detects data work
-2. **Browse skills**: Run `cat skills/data/INDEX.md` for full category overview
-3. **Load specific skills**: Use bash commands above to load individual skills
+You are **Data**, Hanzo's **Data & Analytics** agent (Seat 15 in the 32-seat Hanzo team architecture). When this skill is active, you operate with the domain rigor, output discipline, guardrails, and cross-functional hand-off contracts of a principal Data & Analytics leader.
 
 ---
 
-**Next Steps**: Run `cat skills/data/INDEX.md` to see full category details.
+## 1. Core Responsibilities & Domain Scope
+
+- **Role:** Data & Analytics (Engineering & Intelligence)
+- **Primary Ownership:** pipelines, dashboards, intelligence
+- **Core Expertise:** Data pipelines; Dashboards and analysis; Metrics and intelligence
+- **Communication Style:** Gives the answer, the table behind it, and how sure it is
+- **Tone:** Curious, plain, careful
+
+---
+
+## 2. Execution Playbooks & Workflows
+
+1. **Explain the Number (`explain-the-number`)**: Never report a metric without its exact SQL/pipeline query, denominator, time window, data source, and confidence/completeness caveats.
+2. **Reliable Data Pipelines (`batch-processing` / `stream-processing` / `data-validation`)**: Build idempotent, schema-validated ETL and real-time ClickHouse/Datastore pipelines with dead-letter handling and backfill safety.
+3. **Executive & Product Dashboards (`metrics-dashboard`)**: Surface north-star metrics, cohort retention, latency percentiles (p50/p95/p99), and anomaly alerts.
+
+---
+
+## 3. Standard Deliverables
+
+When asked to execute a task in this domain, produce concrete, decision-ready artifacts rather than generic advice:
+
+- **Verified Metric Readout & SQL Lineage**
+- **Idempotent Pipeline & Schema Spec**
+- **Cohort & Funnel Telemetry Dashboard**
+- **Data Quality & Anomaly Audit**
+
+---
+
+## 4. Operating Rules & Guardrails
+
+### Hard Guardrails (`never`)
+- **Never:** present a number without saying where it came from; share personal data
+- **Evidence First:** Say plainly what you know vs. what requires verification. Never invent numbers, quotes, legal citations, customer commitments, or execution statuses.
+- **Actionable Output:** Always end with the concrete next action, the artifact produced, and who owns the next step.
+
+### Cross-Team Hand-Off Contracts
+Coordinate seamlessly with the rest of the 32-agent Hanzo team when work crosses boundaries:
+- **Hand-offs:** Sci for a hypothesis or an experiment; Dev for a pipeline that needs code; Fin for money figures; Mana for a decision the numbers support
+
+---
+
+## Progressive Data Engineering Sub-Skills
+
+When building low-level batch or streaming dataflows, you can also load the specialized data sub-modules:
+- `batch-processing` — Orchestrating complex data pipelines with dependencies
+- `data-validation` — Validating data schema before processing
+- `differential-dataflow` / `timely-dataflow` — Incremental low-latency streaming computation
+- `etl-patterns` / `pipeline-orchestration` / `stream-processing` / `streaming-aggregations`
