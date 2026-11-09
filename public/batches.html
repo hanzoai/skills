@@ -196,15 +196,85 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>batches</h1><p class="lede">batches</p><h1>Message Batches — C#</h1>
-<h2>Message Batches API</h2>
-<pre><code class="lang-csharp">var batch = await client.Messages.Batches.Create(new() {
-    Requests = [
-        new() { CustomID = &quot;req-1&quot;, Params = new() { Model = &quot;claude-opus-5&quot;, MaxTokens = 1024, Messages = [...] } },
-    ],
+<h1>batches</h1><p class="lede">The Batches API (POST /v1/messages/batches) processes Messages API requests asynchronously at 50% of standard prices.</p><h1>Message Batches API — TypeScript</h1>
+<p>The Batches API (<code>POST /v1/messages/batches</code>) processes Messages API requests asynchronously at 50% of standard prices.</p>
+<h2>Key Facts</h2>
+<ul><li>Up to 100,000 requests or 256 MB per batch</li><li>Most batches complete within 1 hour; maximum 24 hours</li><li>Results available for 29 days after creation</li><li>50% cost reduction on all token usage</li><li>All Messages API features supported (vision, tools, caching, etc.)</li></ul>
+<hr>
+<h2>Create a Batch</h2>
+<pre><code class="lang-typescript">import Anthropic from &quot;@anthropic-ai/sdk&quot;;
+
+const client = new Anthropic();
+
+const messageBatch = await client.messages.batches.create({
+  requests: [
+    {
+      custom_id: &quot;request-1&quot;,
+      params: {
+        model: &quot;claude-opus-5&quot;,
+        max_tokens: 16000,
+        messages: [
+          { role: &quot;user&quot;, content: &quot;Summarize climate change impacts&quot; },
+        ],
+      },
+    },
+    {
+      custom_id: &quot;request-2&quot;,
+      params: {
+        model: &quot;claude-opus-5&quot;,
+        max_tokens: 16000,
+        messages: [
+          { role: &quot;user&quot;, content: &quot;Explain quantum computing basics&quot; },
+        ],
+      },
+    },
+  ],
 });
-// Poll client.Messages.Batches.Retrieve(batch.ID) until ProcessingStatus == &quot;ended&quot;,
-// then iterate client.Messages.Batches.Results(batch.ID).</code></pre>
+
+console.log(`Batch ID: ${messageBatch.id}`);
+console.log(`Status: ${messageBatch.processing_status}`);</code></pre>
+<hr>
+<h2>Poll for Completion</h2>
+<pre><code class="lang-typescript">let batch;
+while (true) {
+  batch = await client.messages.batches.retrieve(messageBatch.id);
+  if (batch.processing_status === &quot;ended&quot;) break;
+  console.log(
+    `Status: ${batch.processing_status}, processing: ${batch.request_counts.processing}`,
+  );
+  await new Promise((resolve) =&gt; setTimeout(resolve, 60_000));
+}
+
+console.log(&quot;Batch complete!&quot;);
+console.log(`Succeeded: ${batch.request_counts.succeeded}`);
+console.log(`Errored: ${batch.request_counts.errored}`);</code></pre>
+<hr>
+<h2>Retrieve Results</h2>
+<pre><code class="lang-typescript">for await (const result of await client.messages.batches.results(
+  messageBatch.id,
+)) {
+  switch (result.result.type) {
+    case &quot;succeeded&quot;:
+      console.log(
+        `[${result.custom_id}] ${result.result.message.content[0].text.slice(0, 100)}`,
+      );
+      break;
+    case &quot;errored&quot;:
+      if (result.result.error.type === &quot;invalid_request&quot;) {
+        console.log(`[${result.custom_id}] Validation error - fix and retry`);
+      } else {
+        console.log(`[${result.custom_id}] Server error - safe to retry`);
+      }
+      break;
+    case &quot;expired&quot;:
+      console.log(`[${result.custom_id}] Expired - resubmit`);
+      break;
+  }
+}</code></pre>
+<hr>
+<h2>Cancel a Batch</h2>
+<pre><code class="lang-typescript">const cancelled = await client.messages.batches.cancel(messageBatch.id);
+console.log(`Status: ${cancelled.processing_status}`); // &quot;canceling&quot;</code></pre>
 <footer>
 <div class="fmap">
   <div><b>Build</b>

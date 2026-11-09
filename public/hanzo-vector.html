@@ -196,402 +196,135 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>hanzo-vector</h1><p class="lede">Hanzo Vector is a high-performance vector search engine for the Hanzo AI platform.</p><h1>Hanzo Vector - High-Performance Vector Search Engine</h1>
-<p><strong>Category</strong>: Hanzo Ecosystem <strong>Related Skills</strong>: <code>hanzo/hanzo-database.md</code>, <code>hanzo/hanzo-storage.md</code>, <code>hanzo/hanzo-llm-gateway.md</code></p>
-<h2>Overview</h2>
-<p>Hanzo Vector is a <strong>high-performance vector search engine</strong> for the Hanzo AI platform. It is a full fork of <a href="https://github.com/qdrant/qdrant">Qdrant</a> v1.17.0, written in Rust, providing dense and sparse vector similarity search with filtering, payloads, quantization, distributed clustering, and GPU acceleration.</p>
-<p>The crate is named <code>hanzo-vector</code> (package name in Cargo.toml), but the binary is still <code>qdrant</code> for wire-protocol compatibility with Qdrant clients.</p>
-<h3>Why Hanzo Vector?</h3>
-<ul><li><strong>Drop-in Qdrant replacement</strong>: Compatible with all Qdrant client SDKs (Python, JS, Rust, Go)</li><li><strong>Dense + sparse vectors</strong>: Hybrid search combining semantic embeddings and keyword matching</li><li><strong>HNSW indexing</strong>: Approximate nearest neighbor with SIMD acceleration</li><li><strong>Vector quantization</strong>: Scalar, product, and binary quantization for memory efficiency</li><li><strong>GPU acceleration</strong>: NVIDIA (Vulkan) and AMD (ROCm) support via <code>--features gpu</code></li><li><strong>Distributed mode</strong>: Raft consensus, sharding, and replication</li><li><strong>REST + gRPC APIs</strong>: OpenAPI 3.0 schema and Protocol Buffer definitions</li><li><strong>Write-ahead logging</strong>: Crash-safe persistence with snapshot-based backup</li><li><strong>Edge runtime</strong>: Embedded mode via <code>lib/edge</code> with Python bindings</li></ul>
-<h3>Tech Stack</h3>
-<ul><li><strong>Language</strong>: Rust (edition 2024, rust-version 1.92)</li><li><strong>HTTP server</strong>: actix-web with rustls TLS</li><li><strong>gRPC server</strong>: tonic (custom fork for qdrant compatibility)</li><li><strong>Consensus</strong>: Raft (via <code>raft</code> crate, prost codec)</li><li><strong>Allocator</strong>: jemalloc (tikv-jemallocator) on x86_64/aarch64</li><li><strong>Profiling</strong>: Pyroscope, tracing-tracy, console-subscriber</li><li><strong>Build</strong>: cargo-chef for Docker layer caching, mold linker</li></ul>
-<h3>OSS Base</h3>
-<p>Fork of <a href="https://github.com/qdrant/qdrant">qdrant/qdrant</a>. Repo: <code>hanzoai/vector</code>, branch <code>master</code> (not <code>main</code>).</p>
-<h2>When to use</h2>
-<ul><li>Storing and searching AI embeddings (LLM, vision, audio)</li><li>Semantic similarity search with metadata filtering</li><li>Recommendation engines using vector similarity</li><li>RAG (Retrieval-Augmented Generation) pipelines</li><li>Hybrid search combining dense vectors with sparse (BM25-style) vectors</li><li>High-throughput vector operations requiring GPU acceleration</li></ul>
-<h2>Hard requirements</h2>
-<ol><li><strong>Rust 1.92+</strong> for building from source</li><li><strong>Protobuf compiler</strong> (<code>protoc</code>) for gRPC code generation</li><li><strong>clang + lld</strong> for linking (or mold)</li><li><strong>Docker</strong> for containerized deployment</li><li><strong>Vulkan drivers</strong> if using GPU features (NVIDIA or AMD)</li></ol>
-<h2>Quick reference</h2>
-<p>| Item | Value | |------|-------| | Repo | <code>github.com/hanzoai/vector</code> | | Branch | <code>master</code> (code), <code>main</code> (stub placeholder) | | Version | 1.17.0 | | Language | Rust (edition 2024) | | Binary | <code>qdrant</code> | | REST port | 6333 | | gRPC port | 6334 | | P2P port | 6335 (cluster mode) | | Docker image | <code>ghcr.io/hanzoai/vector:latest</code> | | License | Apache-2.0 | | Config | <code>config/config.yaml</code> | | OpenAPI | <code>openapi/</code> | | gRPC protos | <code>lib/api/src/grpc/proto/</code> |</p>
-<h2>One-file quickstart</h2>
-<h3>Docker (single node)</h3>
-<pre><code class="lang-bash">docker run -p 6333:6333 -p 6334:6334 ghcr.io/hanzoai/vector:latest</code></pre>
-<h3>Docker with persistent storage</h3>
-<pre><code class="lang-bash">docker run -p 6333:6333 -p 6334:6334 \
- -v $(pwd)/data:/qdrant/storage \
- -v $(pwd)/snapshots:/qdrant/snapshots \
- ghcr.io/hanzoai/vector:latest</code></pre>
-<h3>Docker with custom config</h3>
-<pre><code class="lang-bash">docker run -p 6333:6333 -p 6334:6334 \
- -v $(pwd)/config.yaml:/qdrant/config/production.yaml \
- -v $(pwd)/data:/qdrant/storage \
- ghcr.io/hanzoai/vector:latest</code></pre>
-<h3>Build from source</h3>
-<pre><code class="lang-bash">cargo build --release --bin qdrant
-./target/release/qdrant --config-path config/config.yaml</code></pre>
-<h3>Build with GPU support</h3>
-<pre><code class="lang-bash">cargo build --release --bin qdrant --features gpu</code></pre>
-<h2>Core Concepts</h2>
-<h3>Architecture</h3>
-<pre><code>┌──────────────────────────────────────────────────────────┐
-│ Hanzo Vector Node │
-├──────────────┬───────────────┬───────────────────────────┤
-│ REST API │ gRPC API │ Web UI │
-│ (actix-web) │ (tonic) │ (static files) │
-│ :6333 │ :6334 │ :6333/dashboard │
-├──────────────┴───────────────┴───────────────────────────┤
-│ Storage Layer │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ Collection │ │
-│ │ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │
-│ │ │ Shard 0 │ │ Shard 1 │ │ Shard N │ │ │
-│ │ │┌────────┐│ │┌────────┐│ │┌────────┐│ │ │
-│ │ ││Segment ││ ││Segment ││ ││Segment ││ │ │
-│ │ ││ HNSW ││ ││ HNSW ││ ││ HNSW ││ │ │
-│ │ ││ Index ││ ││ Index ││ ││ Index ││ │ │
-│ │ │└────────┘│ │└────────┘│ │└────────┘│ │ │
-│ │ └──────────┘ └──────────┘ └──────────┘ │ │
-│ └─────────────────────────────────────────────────────┘ │
-├──────────────────────────────────────────────────────────┤
-│ WAL (Write-Ahead Log) │ Snapshots │ Gridstore │
-├──────────────────────────────────────────────────────────┤
-│ Raft Consensus (P2P :6335) -- cluster mode only │
-└──────────────────────────────────────────────────────────┘</code></pre>
-<h3>Data Model</h3>
-<ul><li><strong>Collection</strong>: A named group of points with a defined vector configuration (dimension, distance metric)</li><li><strong>Point</strong>: A record with an ID (u64 or UUID), one or more named vectors, and an optional JSON payload</li><li><strong>Payload</strong>: Arbitrary JSON metadata attached to a point, indexable for filtering</li><li><strong>Shard</strong>: A horizontal partition of a collection, distributable across cluster nodes</li><li><strong>Segment</strong>: An immutable storage unit within a shard containing vectors + indexes</li></ul>
-<h3>Distance Metrics</h3>
-<ul><li><strong>Cosine</strong> -- angular similarity (default for embeddings)</li><li><strong>Euclidean</strong> -- L2 distance</li><li><strong>Dot</strong> -- inner product</li><li><strong>Manhattan</strong> -- L1 distance</li></ul>
-<h3>Quantization</h3>
-<ul><li><strong>Scalar</strong> -- 8-bit quantization (4x memory reduction)</li><li><strong>Product</strong> -- PQ compression (up to 64x reduction)</li><li><strong>Binary</strong> -- 1-bit per dimension (32x reduction, fastest)</li></ul>
-<h2>Workspace Structure</h2>
-<pre><code>hanzoai/vector (master branch)
-├── Cargo.toml # Root workspace, package: hanzo-vector v1.17.0
-├── Cargo.lock
-├── Dockerfile # Multi-stage: chef → planner → builder → runtime
-├── config/
-│ ├── config.yaml # Full reference config with all options
-│ ├── production.yaml # Production overrides
-│ └── development.yaml # Dev overrides
-├── src/ # Main binary source
-│ ├── main.rs # Entry point, CLI args, server startup
-│ ├── consensus.rs # Raft consensus implementation
-│ ├── settings.rs # Config loading and validation
-│ ├── snapshots.rs # Snapshot management
-│ ├── startup.rs # Server initialization
-│ ├── greeting.rs # Startup banner
-│ ├── actix/ # REST API handlers (actix-web)
-│ │ ├── api/ # Route handlers per resource
-│ │ │ ├── collections_api.rs
-│ │ │ ├── search_api.rs
-│ │ │ ├── query_api.rs
-│ │ │ ├── recommend_api.rs
-│ │ │ ├── retrieve_api.rs
-│ │ │ ├── update_api.rs
-│ │ │ ├── count_api.rs
-│ │ │ ├── cluster_api.rs
-│ │ │ ├── snapshot_api.rs
-│ │ │ ├── shards_api.rs
-│ │ │ ├── local_shard_api.rs
-│ │ │ ├── discovery_api.rs
-│ │ │ ├── facet_api.rs
-│ │ │ └── service_api.rs
-│ │ ├── auth.rs # API key + JWT RBAC auth
-│ │ └── mod.rs # Actix server config
-│ ├── tonic/ # gRPC service implementations
-│ ├── tracing/ # Tracing/logging setup
-│ └── migrations/ # Storage format migrations
-├── lib/ # Workspace crates
-│ ├── api/ # API types (REST + gRPC)
-│ │ ├── src/grpc/proto/ # Protobuf definitions
-│ │ │ ├── qdrant.proto
-│ │ │ ├── collections.proto
-│ │ │ ├── points.proto
-│ │ │ ├── collections_service.proto
-│ │ │ ├── points_service.proto
-│ │ │ ├── snapshots_service.proto
-│ │ │ ├── shard_snapshots_service.proto
-│ │ │ ├── raft_service.proto
-│ │ │ └── health_check.proto
-│ │ └── src/rest/ # REST API types
-│ ├── collection/ # Collection management (CRUD, optimization)
-│ ├── segment/ # Core storage engine
-│ │ └── src/
-│ │ ├── index/ # HNSW index implementation
-│ │ ├── vector_storage/ # Vector data storage
-│ │ ├── payload_storage/# Payload storage + indexing
-│ │ ├── id_tracker/ # Point ID mapping
-│ │ ├── spaces/ # Distance metric implementations
-│ │ ├── data_types/ # Vector type definitions
-│ │ └── types.rs # Core type definitions (170KB)
-│ ├── storage/ # Storage orchestration layer
-│ ├── shard/ # Shard management and transfer
-│ ├── sparse/ # Sparse vector support
-│ ├── quantization/ # Quantization (scalar/product/binary, C++ FFI)
-│ ├── posting_list/ # Inverted index for sparse vectors
-│ ├── gridstore/ # Column-oriented storage for payloads
-│ ├── gpu/ # GPU acceleration (Vulkan, NVIDIA/AMD)
-│ ├── edge/ # Embedded mode (no server, direct API)
-│ │ └── python/ # Python bindings for edge mode
-│ ├── trififo/ # Lock-free triple-buffer FIFO
-│ ├── macros/ # Proc macros
-│ └── common/ # Shared utilities
-│ ├── common/ # Core common types
-│ ├── cancel/ # Cancellation tokens
-│ ├── dataset/ # Dataset loading utilities
-│ └── issues/ # Issue tracking/reporting
-├── openapi/ # OpenAPI 3.0 schema (ytt templates)
-│ ├── openapi-main.ytt.yaml
-│ ├── openapi-collections.ytt.yaml
-│ ├── openapi-points.ytt.yaml
-│ ├── openapi-service.ytt.yaml
-│ ├── openapi-snapshots.ytt.yaml
-│ ├── openapi-shard-snapshots.ytt.yaml
-│ ├── openapi-shards.ytt.yaml
-│ ├── openapi-cluster.ytt.yaml
-│ └── schemas/
-├── tests/ # Integration tests
-│ ├── basic_api_test.sh
-│ ├── basic_grpc_test.sh
-│ ├── basic_sparse_test.sh
-│ ├── consensus_tests/
-│ ├── e2e_tests/
-│ └── openapi/
-├── tools/ # Build and dev scripts
-│ ├── entrypoint.sh # Docker entrypoint
-│ ├── sync-web-ui.sh # Download web dashboard
-│ ├── compose/ # Docker compose files for cluster
-│ └── schema2openapi/ # Schema generation tooling
-└── pkg/
- └── appimage/ # AppImage packaging</code></pre>
-<h2>REST API Endpoints</h2>
-<p>All endpoints are on port 6333 by default. Auth via <code>api-key</code> header or JWT bearer token.</p>
-<h3>Collections</h3>
-<pre><code class="lang-bash"># List collections
-GET /collections
+<h1>hanzo-vector</h1><p class="lede">Direct vector similarity search via Hanzo Vector (Qdrant). Store embeddings with metadata, search by similarity, manage collections, and build RAG pipelines. Use when a bot needs to store or query vector embeddings, perform semantic similarity search, or manage vector collections.</p><h1>Hanzo Vector -- Similarity Search Engine</h1>
+<p>Direct vector operations on Hanzo&#x27;s managed Qdrant instance. Store embeddings, search by similarity, manage collections, and build RAG pipelines.</p>
+<h2>Endpoint</h2>
+<p>Qdrant REST API at <code>https://vector.hanzo.ai</code> (standard HTTPS port 443 via K8s ingress, or internal at <code>vector.hanzo.svc:6333</code>).</p>
+<h2>Authentication</h2>
+<p>Pass the API key as the <code>api-key</code> header or via the Qdrant client&#x27;s <code>api_key</code> parameter.</p>
+<pre><code>api-key: &lt;token&gt;</code></pre>
+<h2>Collections</h2>
+<h3>Create a Collection</h3>
+<pre><code class="lang-bash">python3 {baseDir}/scripts/vector.py collection create \
+  --name documents \
+  --dimension 384 \
+  --distance cosine</code></pre>
+<h3>List Collections</h3>
+<pre><code class="lang-bash">python3 {baseDir}/scripts/vector.py collection list</code></pre>
+<h3>Delete a Collection</h3>
+<pre><code class="lang-bash">python3 {baseDir}/scripts/vector.py collection delete --name documents</code></pre>
+<h3>Collection Info</h3>
+<pre><code class="lang-bash">python3 {baseDir}/scripts/vector.py collection info --name documents</code></pre>
+<h2>Store Embeddings</h2>
+<h3>Upsert Points</h3>
+<pre><code class="lang-bash">python3 {baseDir}/scripts/vector.py upsert \
+  --collection documents \
+  --input points.json</code></pre>
+<p>Input JSON format:</p>
+<pre><code class="lang-json">{
+  &quot;points&quot;: [
+    {
+      &quot;id&quot;: 1,
+      &quot;vector&quot;: [0.1, 0.2, 0.3, ...],
+      &quot;payload&quot;: {
+        &quot;text&quot;: &quot;Hello world&quot;,
+        &quot;category&quot;: &quot;greeting&quot;,
+        &quot;source&quot;: &quot;docs&quot;
+      }
+    }
+  ]
+}</code></pre>
+<p>Or pipe from stdin:</p>
+<pre><code class="lang-bash">echo &#x27;{&quot;points&quot;: [...]}&#x27; | python3 {baseDir}/scripts/vector.py upsert \
+  --collection documents \
+  --input -</code></pre>
+<h2>Search by Similarity</h2>
+<pre><code class="lang-bash">python3 {baseDir}/scripts/vector.py search \
+  --collection documents \
+  --vector &quot;[0.1, 0.2, 0.3, ...]&quot; \
+  --limit 10</code></pre>
+<h3>Search with Filters</h3>
+<pre><code class="lang-bash">python3 {baseDir}/scripts/vector.py search \
+  --collection documents \
+  --vector &quot;[0.1, 0.2, ...]&quot; \
+  --filter &#x27;{&quot;must&quot;: [{&quot;key&quot;: &quot;category&quot;, &quot;match&quot;: {&quot;value&quot;: &quot;tech&quot;}}]}&#x27; \
+  --limit 10</code></pre>
+<h3>Filter Syntax</h3>
+<p>Qdrant filter conditions:</p>
+<pre><code class="lang-json">{
+  &quot;must&quot;: [
+    { &quot;key&quot;: &quot;category&quot;, &quot;match&quot;: { &quot;value&quot;: &quot;tech&quot; } },
+    { &quot;key&quot;: &quot;year&quot;, &quot;range&quot;: { &quot;gte&quot;: 2024 } }
+  ],
+  &quot;should&quot;: [{ &quot;key&quot;: &quot;author&quot;, &quot;match&quot;: { &quot;value&quot;: &quot;hanzo&quot; } }],
+  &quot;must_not&quot;: [{ &quot;key&quot;: &quot;status&quot;, &quot;match&quot;: { &quot;value&quot;: &quot;draft&quot; } }]
+}</code></pre>
+<h2>Scripts Reference</h2>
+<h3><code>scripts/vector.py</code></h3>
+<p>Unified CLI for all vector operations.</p>
+<h4>Collection Management</h4>
+<pre><code class="lang-bash"># Create collection
+python3 {baseDir}/scripts/vector.py collection create \
+  --name &lt;name&gt; --dimension &lt;dim&gt; --distance &lt;cosine|euclid|dot&gt;
 
-# Create collection
-PUT /collections/{name}
-{
- &quot;vectors&quot;: { &quot;size&quot;: 1536, &quot;distance&quot;: &quot;Cosine&quot; },
- &quot;optimizers_config&quot;: { &quot;indexing_threshold&quot;: 10000 },
- &quot;replication_factor&quot;: 2
-}
+# List collections
+python3 {baseDir}/scripts/vector.py collection list
 
 # Get collection info
-GET /collections/{name}
+python3 {baseDir}/scripts/vector.py collection info --name &lt;name&gt;
 
 # Delete collection
-DELETE /collections/{name}
+python3 {baseDir}/scripts/vector.py collection delete --name &lt;name&gt;</code></pre>
+<h4>Point Operations</h4>
+<pre><code class="lang-bash"># Upsert points from JSON file or stdin
+python3 {baseDir}/scripts/vector.py upsert \
+  --collection &lt;name&gt; --input &lt;file.json or -&gt;
 
-# Update collection params
-PATCH /collections/{name}</code></pre>
-<h3>Points</h3>
-<pre><code class="lang-bash"># Upsert points
-PUT /collections/{name}/points
-{
- &quot;points&quot;: [
- {
- &quot;id&quot;: 1,
- &quot;vector&quot;: [0.1, 0.2, ...],
- &quot;payload&quot;: { &quot;city&quot;: &quot;Berlin&quot;, &quot;category&quot;: &quot;tech&quot; }
- }
- ]
-}
+# Search by vector
+python3 {baseDir}/scripts/vector.py search \
+  --collection &lt;name&gt; --vector &quot;&lt;json array&gt;&quot; --limit 10
+
+# Search with filter
+python3 {baseDir}/scripts/vector.py search \
+  --collection &lt;name&gt; --vector &quot;&lt;json array&gt;&quot; \
+  --filter &#x27;&lt;json filter&gt;&#x27; --limit 10
 
 # Get points by ID
-POST /collections/{name}/points
-{ &quot;ids&quot;: [1, 2, 3], &quot;with_payload&quot;: true, &quot;with_vector&quot;: true }
+python3 {baseDir}/scripts/vector.py get \
+  --collection &lt;name&gt; --ids &quot;1,2,3&quot;
 
-# Delete points
-POST /collections/{name}/points/delete
-{ &quot;points&quot;: [1, 2, 3] }
+# Delete points by ID
+python3 {baseDir}/scripts/vector.py delete \
+  --collection &lt;name&gt; --ids &quot;1,2,3&quot;
 
 # Count points
-POST /collections/{name}/points/count
-{ &quot;filter&quot;: { &quot;must&quot;: [{ &quot;key&quot;: &quot;city&quot;, &quot;match&quot;: { &quot;value&quot;: &quot;Berlin&quot; } }] } }</code></pre>
-<h3>Search</h3>
-<pre><code class="lang-bash"># Vector search
-POST /collections/{name}/points/search
-{
- &quot;vector&quot;: [0.1, 0.2, ...],
- &quot;limit&quot;: 10,
- &quot;filter&quot;: {
- &quot;must&quot;: [{ &quot;key&quot;: &quot;city&quot;, &quot;match&quot;: { &quot;value&quot;: &quot;Berlin&quot; } }]
- },
- &quot;with_payload&quot;: true
-}
+python3 {baseDir}/scripts/vector.py count --collection &lt;name&gt;</code></pre>
+<h3>Common Options</h3>
+<p>All commands accept:</p>
+<pre><code>--host       Qdrant host (default: $HANZO_VECTOR_HOST or https://vector.hanzo.ai)
+--port       Qdrant port (only for non-standard ports; HTTPS uses standard 443)
+--api-key    API key (default: $HANZO_API_KEY)
+--format     Output: text, json (default: text)</code></pre>
+<h2>RAG Pipeline Example</h2>
+<p>Generate embeddings with the Hanzo API, store in vector DB, and search:</p>
+<pre><code class="lang-python">from hanzoai import Hanzo
 
-# Batch search
-POST /collections/{name}/points/search/batch
-{ &quot;searches&quot;: [...] }
+# 1. Generate embedding
+ai = Hanzo(api_key=&quot;...&quot;)
+embedding = ai.embeddings.create(
+    model=&quot;text-embedding-3-small&quot;,
+    input=&quot;What is Hanzo MCP?&quot;
+).data[0].embedding
 
-# Query (universal search endpoint)
-POST /collections/{name}/points/query
-{
- &quot;query&quot;: [0.1, 0.2, ...],
- &quot;limit&quot;: 10,
- &quot;filter&quot;: { ... }
-}
-
-# Recommend
-POST /collections/{name}/points/recommend
-{
- &quot;positive&quot;: [1, 2],
- &quot;negative&quot;: [3],
- &quot;limit&quot;: 10
-}
-
-# Discover (context-based search)
-POST /collections/{name}/points/discover</code></pre>
-<h3>Snapshots</h3>
-<pre><code class="lang-bash"># Create snapshot
-POST /collections/{name}/snapshots
-
-# List snapshots
-GET /collections/{name}/snapshots
-
-# Download snapshot
-GET /collections/{name}/snapshots/{snapshot_name}
-
-# Full storage snapshot
-POST /snapshots</code></pre>
-<h3>Cluster</h3>
-<pre><code class="lang-bash"># Cluster info
-GET /cluster
-
-# Collection cluster info
-GET /collections/{name}/cluster
-
-# Move shard
-POST /collections/{name}/cluster
-{ &quot;move_shard&quot;: { &quot;shard_id&quot;: 0, &quot;from_peer_id&quot;: 1, &quot;to_peer_id&quot;: 2 } }</code></pre>
-<h3>Service</h3>
-<pre><code class="lang-bash"># Health check
-GET /healthz
-
-# Readiness
-GET /readyz
-
-# Telemetry
-GET /telemetry
-
-# Metrics (Prometheus)
-GET /metrics
-
-# Locks
-GET /locks
-POST /locks</code></pre>
-<h2>gRPC Services</h2>
-<p>Port 6334 by default. Proto files in <code>lib/api/src/grpc/proto/</code>.</p>
-<p>| Service | Proto | Description | |---------|-------|-------------| | <code>Collections</code> | <code>collections_service.proto</code> | CRUD for collections | | <code>Points</code> | <code>points_service.proto</code> | CRUD, search, recommend, query for points | | <code>Snapshots</code> | <code>snapshots_service.proto</code> | Snapshot management | | <code>ShardSnapshots</code> | <code>shard_snapshots_service.proto</code> | Per-shard snapshot operations | | <code>Qdrant</code> | <code>qdrant.proto</code> | Health check, version info | | <code>QdrantInternal</code> | <code>qdrant_internal_service.proto</code> | Internal cluster operations | | <code>Raft</code> | <code>raft_service.proto</code> | Raft consensus messages |</p>
-<h2>Configuration</h2>
-<p>The config file (<code>config/config.yaml</code>) supports YAML with environment variable overrides. Key sections:</p>
-<pre><code class="lang-yaml">storage:
- storage_path: ./storage # Data directory
- snapshots_path: ./snapshots # Snapshot directory
- on_disk_payload: true # Keep payloads on disk (saves RAM)
- wal:
- wal_capacity_mb: 32 # WAL segment size
- hnsw_index:
- m: 16 # HNSW edges per node
- ef_construct: 100 # Build-time neighbors
- full_scan_threshold_kb: 10000
- on_disk: false # HNSW in RAM or disk
- optimizers:
- indexing_threshold_kb: 10000
- flush_interval_sec: 5
- collection:
- replication_factor: 1
- write_consistency_factor: 1
-
-service:
- http_port: 6333
- grpc_port: 6334
- host: 0.0.0.0
- max_request_size_mb: 32
- enable_cors: true
- enable_tls: false
- # api_key: your_secret_key
- # jwt_rbac: true
-
-cluster:
- enabled: false
- p2p:
- port: 6335
- consensus:
- tick_period_ms: 100
-
-telemetry_disabled: false</code></pre>
-<p>Environment variable override pattern: <code>QDRANT__SERVICE__HTTP_PORT=6333</code> (double underscore for nesting).</p>
-<h2>Distributed Deployment</h2>
-<p>Enable cluster mode with <code>cluster.enabled: true</code> and specify bootstrap peers:</p>
-<pre><code class="lang-bash"># Node 1 (bootstrap)
-./qdrant --uri http://node1:6335
-
-# Node 2
-./qdrant --uri http://node2:6335 --bootstrap http://node1:6335
-
-# Node 3
-./qdrant --uri http://node3:6335 --bootstrap http://node1:6335</code></pre>
-<p>Cluster features:</p>
-<ul><li><strong>Raft consensus</strong> for metadata coordination</li><li><strong>Sharding</strong>: Automatic or manual shard distribution</li><li><strong>Replication</strong>: Configurable replication factor per collection</li><li><strong>Shard transfer methods</strong>: <code>stream_records</code>, <code>snapshot</code>, <code>wal_delta</code></li><li><strong>Write consistency</strong>: Configurable quorum (1 to all replicas)</li></ul>
-<h2>Debug Binaries</h2>
-<p>Available with <code>--features service_debug</code>:</p>
-<pre><code class="lang-bash"># Generate JSON schema for all types
-cargo run --features service_debug --bin schema_generator
-
-# Inspect WAL contents
-cargo run --features service_debug --bin wal_inspector -- &lt;path&gt;
-
-# Pop entries from WAL
-cargo run --features service_debug --bin wal_pop -- &lt;path&gt;
-
-# Inspect segment data
-cargo run --features service_debug --bin segment_inspector -- &lt;path&gt;</code></pre>
-<h2>Docker Build</h2>
-<p>The Dockerfile supports multi-platform builds with optional GPU:</p>
-<pre><code class="lang-bash"># Standard build
-docker build -t hanzo-vector .
-
-# With GPU (NVIDIA)
-docker build --build-arg GPU=nvidia -t hanzo-vector:gpu .
-
-# With GPU (AMD)
-docker build --build-arg GPU=amd -t hanzo-vector:gpu-amd .
-
-# Custom profile
-docker build --build-arg PROFILE=ci -t hanzo-vector:ci .
-
-# With extra features
-docker build --build-arg FEATURES=rocksdb -t hanzo-vector:rocksdb .</code></pre>
-<h2>Feature Flags</h2>
-<p>| Feature | Description | |---------|-------------| | <code>gpu</code> | GPU-accelerated HNSW (NVIDIA Vulkan / AMD ROCm) | | <code>rocksdb</code> | RocksDB storage backend (alternative to default) | | <code>tracing</code> | Distributed tracing support | | <code>console</code> | tokio-console subscriber for runtime debugging | | <code>tracy</code> | Tracy profiler integration | | <code>stacktrace</code> | Stack trace capture on Linux | | <code>staging</code> | Staging environment features | | <code>data-consistency-check</code> | Runtime data integrity verification | | <code>chaos-testing</code> | Chaos engineering hooks |</p>
-<h2>Testing</h2>
-<pre><code class="lang-bash"># Unit tests
-cargo test
-
-# Integration tests (requires running instance)
-bash tests/basic_api_test.sh
-bash tests/basic_grpc_test.sh
-bash tests/basic_sparse_test.sh
-
-# Consensus tests
-cd tests/consensus_tests &amp;&amp; cargo test
-
-# E2E tests
-cd tests/e2e_tests &amp;&amp; cargo test
-
-# OpenAPI consistency check
-bash tests/openapi_consistency_check.sh
-
-# Python integration tests (uses uv)
-cd tests &amp;&amp; uv run pytest</code></pre>
-<h2>Troubleshooting</h2>
-<p>| Issue | Cause | Solution | |-------|-------|----------| | Port 6333 in use | Another instance running | <code>lsof -i :6333</code> and kill | | OOM on large collections | Vectors in RAM | Set <code>on_disk: true</code> in vector config or use quantization | | Slow search | No HNSW index built yet | Wait for optimizer or lower <code>indexing_threshold_kb</code> | | gRPC connection refused | gRPC disabled | Set <code>grpc_port: 6334</code> in config | | Cluster peer unreachable | P2P port blocked | Open port 6335, check TLS settings | | GPU not detected | Missing Vulkan drivers | Install <code>vulkan-tools</code>, verify with <code>vulkaninfo</code> | | Build fails on macOS | Missing protoc | <code>brew install protobuf</code> |</p>
-<h2>Related Skills</h2>
-<ul><li><code>hanzo/hanzo-database.md</code> - PostgreSQL (pgvector for simpler vector search)</li><li><code>hanzo/hanzo-storage.md</code> - S3-compatible object storage</li><li><code>hanzo/hanzo-llm-gateway.md</code> - LLM Gateway (generates embeddings for vector storage)</li></ul>
-<hr>
-<p><strong>Last Updated</strong>: 2026-03-13 <strong>Category</strong>: Hanzo Ecosystem <strong>Related</strong>: vector, embeddings, similarity-search, qdrant, hnsw, ai <strong>Prerequisites</strong>: Rust, Docker, protobuf basics</p>
+# 2. Search vector DB
+# python3 {baseDir}/scripts/vector.py search \
+#   --collection knowledge --vector &quot;&lt;embedding&gt;&quot; --limit 5</code></pre>
+<h2>Billing</h2>
+<p>Vector operations are billed per query (search) and per batch (upsert). Collection management operations are free. Usage is tracked automatically through the bot gateway.</p>
+<h2>Environment Variables</h2>
+<pre><code class="lang-bash">HANZO_API_KEY=...                             # API key for authentication
+HANZO_VECTOR_HOST=https://vector.hanzo.ai     # Qdrant host (standard HTTPS, no port needed)
+HANZO_VECTOR_PORT=                            # Only set for non-standard ports (e.g. 6333 for direct access)</code></pre>
 <footer>
 <div class="fmap">
   <div><b>Build</b>

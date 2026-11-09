@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>natal-chart</title>
+<meta name="color-scheme" content="dark">
+<style>
+/* Committed to one visual world: a dark instrument panel. No light variant —
+   the dot field and the hairline rules only read on black, and a naive
+   inversion would wash both out. Every colour is painted explicitly so the page
+   never borrows a host background. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
+  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
+  --r:999px; --r-soft:14px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+
+/* The dot field. A halftone made of one repeating radial-gradient, faded out
+   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
+/* No overflow clip here: the dot field is inset to the box already, and a clip
+   would cut off the copy-prompt menu. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
+  background-size:7px 7px;
+  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
+  pointer-events:none}
+.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+
+nav{border-bottom:1px solid var(--line)}
+nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.6rem}
+.brand i{font-style:normal;color:var(--faint)}
+.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
+nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink)}
+
+h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
+  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
+h1 em{font-style:normal;color:var(--faint)}
+.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+
+.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
+  line-height:1.2;font-weight:400}
+.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
+.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
+.btn.solid:hover{background:#d8d8d4}
+.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
+  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
+  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
+  white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:#181818;outline:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.1em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
+h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
+h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.22rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);
+  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
+pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
+  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
+
+.curl{display:block;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
+  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.9}
+.curl b{color:var(--ink);font-weight:400}
+.curl i{font-style:normal;color:var(--faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
+#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+#q:focus{outline:none;border-color:var(--soft)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none}
+.row:hover{background:#0a0a0a}
+.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
+footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft)}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
+  .btns{gap:.5rem}
+  .btn{padding:.75rem 1.15rem;font-size:.68rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/natal-chart">
+<link rel="alternate" type="text/markdown" href="/natal-chart.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/natal-chart.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
+  <a class="up" href="/">All skills</a>
+</div></nav>
+
+<div class="wrap">
+<h1>natal-chart</h1><p class="lede">Compute an astrology natal/birth chart: planetary positions, Ascendant, MC, houses, and aspects with orbs. Use when someone asks for their birth chart, natal chart, horoscope, rising sign, moon sign, &#x27;what&#x27;s my chart&#x27;, or gives a birth date + time + place.</p><h1>Natal Chart</h1>
+<p>Deterministic computation from (date, local time, UTC offset, lat, lon). Never invent positions — always run the script.</p>
+<h2>Inputs you MUST have</h2>
+<ol><li><strong>Date</strong> (YYYY-MM-DD), <strong>time</strong> (HH:MM local), <strong>place</strong></li><li><strong>Timezone offset</strong> — confirm it, don&#x27;t guess. DST is the #1 error source:</li></ol>
+<p>   a 1-hour mistake shifts the Ascendant ~15° and rehouses every planet.    If the user gives only a place and date, look up whether DST was in effect    (e.g. Topeka KS, June 30 1983 → CDT = UTC−5).</p>
+<ol><li><strong>Coordinates</strong> — geocode the place:</li></ol>
+<p>   <code>curl -s &quot;https://nominatim.openstreetmap.org/search?q=Topeka,KS&amp;format=json&amp;limit=1&quot;</code>    → <code>lat</code>, <code>lon</code> (west is negative).</p>
+<h2>Setup — run via <code>/v1/exec</code>, the session IS the cache</h2>
+<p>One-off Python runs against <code>POST /v1/exec</code> (hanzoai/cloud <code>apps/exec</code>). The design fact that makes caching trivial: <strong>a session is a sandbox</strong> — it has a lease and files that persist across calls. <code>session_id</code> continues an existing sandbox, so an install done in call 1 is still there in call 2. No stamp-file hack needed; the session id IS the cache key.</p>
+<p><strong>Auth: IAM only.</strong> Send the end user&#x27;s validated IAM bearer (the chat server forwards it as <code>codeAuthHeaders</code>). Do NOT use an <code>hrun_</code> run key and do NOT use <code>X-API-Key</code>/<code>CODE_EXEC_API_KEY</code> — both doors are deliberately closed; a caller IAM can&#x27;t resolve an identity for cannot run code.</p>
+<p>Request body (<code>CodeRun</code>):</p>
+<pre><code class="lang-json">{
+  &quot;lang&quot;: &quot;py&quot;,
+  &quot;code&quot;: &quot;&lt;whole program, written to one file&gt;&quot;,
+  &quot;args&quot;: [&quot;--date&quot;, &quot;1983-06-30&quot;, &quot;--time&quot;, &quot;16:20&quot;, &quot;--tz&quot;, &quot;-5&quot;,
+           &quot;--lat&quot;, &quot;39.0473&quot;, &quot;--lon&quot;, &quot;-95.6752&quot;],
+  &quot;session_id&quot;: &quot;&lt;omit on first call; echo it back to reuse the sandbox&gt;&quot;
+}</code></pre>
+<p>Install-once pattern — first call in a fresh session installs, every later call on the same <code>session_id</code> finds it already there:</p>
+<pre><code class="lang-python">import importlib.util, subprocess, sys
+if importlib.util.find_spec(&quot;swisseph&quot;) is None:
+    subprocess.check_call([sys.executable, &quot;-m&quot;, &quot;pip&quot;, &quot;install&quot;, &quot;pyswisseph&quot;])
+# ...then the chart computation</code></pre>
+<p>Policy:</p>
+<ul><li><strong>Reuse the <code>session_id</code></strong> across a day&#x27;s requests → one ~5s install serves</li></ul>
+<p>  every chart on that warm sandbox. The reaper ends the lease on TTL / ~1h   idle; the next call re-leases fresh and reinstalls once. That is the   &quot;≤1 install per day&quot; behavior, for free.</p>
+<ul><li><strong>On explicit request</strong> — start a NEW session (drop the id) or `pip install</li></ul>
+<p>  -U pyswisseph` when a user says &quot;update the astrology lib.&quot; Never silent.</p>
+<ul><li><strong>Shared across users</strong> — sessions are per-principal (the org IAM resolves).</li></ul>
+<p>  One warm sandbox serves that org&#x27;s members; it never crosses tenants.</p>
+<p>The core chart needs <strong>no ephemeris files</strong> — pyswisseph&#x27;s built-in Moshier fallback covers Sun–Pluto + Node to arcsecond precision for 1800–2050.</p>
+<p><strong>Chiron does NOT work out of the box</strong>: it requires <code>seas_18.se1</code>, and the public mirrors (kset.org, astro.com/ftp) return HTML error pages. Do not fabricate a Chiron position. Either skip it and say so, or vendor the file into the sandbox image from a known-good copy.</p>
+<h2>Image input — CPU-only OCR fallback (verified 2026-09-30)</h2>
+<p>When someone drops a <strong>chart image</strong> (a screenshot of an astro.com wheel, a scanned birth card) and the vision-LLM is unavailable, OCR it with <strong>docTR</strong> — pure PyTorch, runs CPU-only, no GPU needed. Extract the placements, then <strong>recompute with this skill</strong> to verify/correct them: OCR misreads degrees, the script doesn&#x27;t.</p>
+<p><strong>Recipe (all via <code>/v1/exec</code>, same session as the chart):</strong></p>
+<pre><code class="lang-python"># 1. CPU-only venv — Python 3.12 (3.14 has no torch wheels yet)
+subprocess.check_call([&quot;uv&quot;, &quot;venv&quot;, &quot;--python&quot;, &quot;3.12&quot;, &quot;/mnt/data/ocrvenv&quot;])
+# 2. torch from the CPU index (default pulls a ~2.5GB CUDA build)
+subprocess.check_call([&quot;uv&quot;, &quot;pip&quot;, &quot;install&quot;, &quot;--python&quot;, &quot;/mnt/data/ocrvenv/bin/python&quot;,
+                      &quot;--index-url&quot;, &quot;https://download.pytorch.org/whl/cpu&quot;, &quot;torch&quot;])
+# 3. doctr + pillow
+subprocess.check_call([&quot;uv&quot;, &quot;pip&quot;, &quot;install&quot;, &quot;--python&quot;, &quot;/mnt/data/ocrvenv/bin/python&quot;,
+                      &quot;python-doctr&quot;, &quot;pillow&quot;])</code></pre>
+<p><strong>The one gotcha that bites:</strong> <code>python-doctr</code> pulls <code>torchvision</code> from PyPI, which is built against a <em>different</em> torch ABI than the <code>+cpu</code> build → <code>RuntimeError: operator torchvision::nms does not exist</code>. Fix by forcing the matching CPU wheel:</p>
+<pre><code>uv pip install --python /mnt/data/ocrvenv/bin/python \
+  --index-url https://download.pytorch.org/whl/cpu torchvision==&lt;ver&gt;+cpu</code></pre>
+<p><strong>Background the install.</strong> The gateway 502s any exec call past ~20–30s; a torch install runs longer. Launch it detached and poll a marker:</p>
+<pre><code class="lang-python">subprocess.Popen([&quot;bash&quot;, &quot;/mnt/data/install.sh&quot;], stdout=open(log,&quot;w&quot;),
+                 stderr=subprocess.STDOUT, start_new_session=True)
+# poll: os.path.exists(&quot;/mnt/data/install.done&quot;)</code></pre>
+<p><strong>Run OCR through the venv python, not the exec <code>code</code></strong> — <code>code</code> runs under the sandbox&#x27;s system Python 3.14, which has no torch. Subprocess into <code>/mnt/data/ocrvenv/bin/python</code>:</p>
+<pre><code class="lang-python">from doctr.io import DocumentFile
+from doctr.models import ocr_predictor
+model = ocr_predictor(det_arch=&quot;db_resnet50&quot;, reco_arch=&quot;crnn_vgg16_bn&quot;,
+                      pretrained=True, assume_straight_pages=True)
+res = model(DocumentFile.from_images(&quot;/mnt/data/chart.png&quot;))
+for line in (w for p in res.export()[&quot;pages&quot;] for b in p[&quot;blocks&quot;]
+             for l in b[&quot;lines&quot;] for w in [l]):
+    print(&quot; &quot;.join(x[&quot;value&quot;] for x in line[&quot;words&quot;]))</code></pre>
+<p><strong>Timings (measured):</strong> install ~35s once per session; pretrained weights (~100MB) download once to <code>~/.cache/doctr</code> and persist with the session; warm predict <strong>~11s on CPU</strong>. Counts as an <code>/v1/exec</code> run against the daily cap like any other.</p>
+<p><strong>Fallback order:</strong> vision-LLM first (reads a wheel&#x27;s geometry directly); docTR CPU when it&#x27;s unavailable or you need text off a scanned card. Either way, <strong>recompute the chart from the birth data</strong> — never trust OCR&#x27;d degrees as final.</p>
+<h2>Run</h2>
+<p><code>POST /v1/exec</code> with <code>lang: &quot;py&quot;</code>, the chart program in <code>code</code>, the birth args in <code>args</code>, and the warm <code>session_id</code> from the install call. The program is <code>scripts/natal_chart.py</code> (same CLI, just shipped as the <code>code</code> field):</p>
+<pre><code>--date 1983-06-30 --time 16:20 --tz -5 --lat 39.0473 --lon -95.6752</code></pre>
+<p>Returns: Ascendant, MC, all planets with sign/degree/house/retrograde, and all aspects with orbs. Default Placidus (<code>--houses K</code> Koch, <code>W</code> Whole-sign). Files the run writes (e.g. a rendered wheel PNG) stay in the session sandbox — read them back with <code>GET /v1/exec/download/{sid}/{fileId}</code>.</p>
+<h2>Correctness traps (all hit and fixed in the script)</h2>
+<ul><li><strong>Retrograde = <code>r[0][3]</code> (dlon/day), NOT <code>r[0][4]</code></strong> — index 4 is dlat;</li></ul>
+<p>  using it falsely flags the Moon retrograde and misses real retrogrades.</p>
+<ul><li><strong>The Moon is never retrograde.</strong> If your output says so, the bug is yours.</li><li><strong>Sun/Moon trine ≠ full/new moon</strong> — aspect geometry is independent of</li></ul>
+<p>  phase; don&#x27;t &quot;correct&quot; one with the other.</p>
+<ul><li>Birth time ±4 min moves the ASC ~1°. State the assumption in your answer.</li></ul>
+<h2>Output shape</h2>
+<p>Lead with the Big Three (Sun / Moon / Ascendant), then planets-by-house, then tight aspects (orb &lt; 2°) as the interesting ones. Note timezone used.</p>
+<h2>Caching &amp; usage policy (decided 2026-09-30)</h2>
+<p>The chart is a <strong>pure function</strong> of <code>(date|time|tz|lat|lon|house_system)</code>.</p>
+<ul><li><strong>Result cache: SHARED across all accounts.</strong> Key =</li></ul>
+<p>  <code>sha1(date|time|tz|lat|lon|system)</code>. Same birth data → one compute,   served to everyone. (Charts aren&#x27;t secret — the inputs are the key.)</p>
+<ul><li><strong>Environment cache:</strong> reuse the <code>session_id</code> so the sandbox keeps its</li></ul>
+<p>  installed <code>pyswisseph</code>; one ~5s install per warm session, reaper recycles   on idle. Worst case one reinstall per cold-start, not per request.</p>
+<ul><li><strong>Every astrology query counts against the daily cap</strong> — cache hit or</li></ul>
+<p>  fresh compute alike. The cap is a <em>fairness</em> limit, not a cost limit.</p>
+<h3>Free-plan limits (grounded in existing metering)</h3>
+<p><code>/v1/exec</code> is already metered at 1¢/run (<code>CODE_EXEC_FEE_CENTS</code>, per-org gate + debit in <code>apps/exec/meter.go</code>); per-scope rate limiting lives in <code>middleware_ratelimit.go</code>. On top of that, for the free astrology surface:</p>
+<p>| Cap | Value | |---|---| | Astrology queries / account / day | <strong>50</strong> (every query counts) | | LLM calls per agentic turn | <strong>5</strong> | | <code>/v1/exec</code> tool calls per turn | <strong>10</strong> | | Hard <code>/v1/exec</code> runs / account / day | <strong>100</strong> |</p>
+<p>A cache hit burns 1 of the 50 but ~0 compute. The per-turn caps stop a runaway agentic loop from spending past the daily ceiling.</p>
+<h2>Verified worked example (accuracy proof)</h2>
+<p>April 11 1985, 2:05 AM, Royal Victoria Hospital Montréal (45.5017, −73.5673), EST = <strong>UTC−5</strong> (NOT EDT — the chat AI&#x27;s &quot;correction&quot; to UTC−4 was backwards):</p>
+<pre><code>Asc 27°Capricorn  MC 24°Scorpio
+Sun 21°Aries  Moon 10°Capricorn  Mercury 8°Aries R  Venus 9°Aries R
+Mars 19°Taurus  Jupiter 12°Aquarius  Saturn 27°Scorpio R
+Uranus 17°Sagittarius R  Neptune 3°Capricorn R  Pluto 3°Scorpio R</code></pre>
+<p>This matches astro.com&#x27;s computed chart to the arcminute. The chat AI, with no compute tool, guessed ~6 of 10 placements wrong and missed every retrograde. <strong>Always run the script; never guess positions.</strong></p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/natal-chart.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -36,7 +36,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 ### hanzo
 - [`ai-development-guide`](ai-development-guide.md) — This guide covers setting up Hanzo's full AI development stack — extensions, CLI agents, MCP tools, Zen models, and skills for cross-stack work across Hanzo AI and Lux blockchain.
 - [`go-sdk`](go-sdk.md) — Hanzo Go SDK is a generated Go client library for the Hanzo AI API.
-- [`hanzo-aci`](hanzo-aci.md) — Hanzo ACI (Agent Computer Interface) is a Python toolkit that gives AI agents the ability to edit files, lint code, index codebases, execute shell commands, and convert documents.
 - [`hanzo-agent`](hanzo-agent.md) — Hanzo Agent SDK is a Python multi-agent framework — fork of OpenAI's Agents SDK with Hanzo AI integration.
 - [`hanzo-analytics`](hanzo-analytics.md) — Hanzo Analytics is a privacy-focused web analytics platform -- an alternative to Google Analytics.
 - [`hanzo-ane`](hanzo-ane.md) — Hanzo ANE enables training neural networks directly on Apple Neural Engine across ALL Apple Silicon (M1+).
@@ -90,7 +89,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hanzo-id`](hanzo-id.md) — Hanzo ID is the client-side identity story for every Hanzo/Lux/Zoo/Pars service: how an app authenticates a user against the shared IAM server and scopes data to the user's org.
 - [`hanzo-identity`](hanzo-identity.md) — Hanzo Identity (hanzoai/identity) is a decentralized identity (DID) registration system with Solidity smart contracts and a Next.js frontend.
 - [`hanzo-ingress`](hanzo-ingress.md) — Hanzo Ingress is a Kubernetes-native L7 reverse proxy and load balancer that serves as the entry point for all Hanzo production traffic.
-- [`hanzo-insights`](hanzo-insights.md) — Hanzo Insights is a full product analytics platform with product analytics, feature flags, session recording, A/B testing, heatmaps, LLM analytics, error tracking, surveys, web analytics, and a custom query language (InsightsQL).
 - [`hanzo-jin`](hanzo-jin.md) — Jin is a research-stage visual self-supervised learning framework implementing Joint Embedding Predictive Architectures (JEPA).
 - [`hanzo-k8s`](hanzo-k8s.md) — Hanzo runs all production services on DOKS (DigitalOcean Kubernetes Service) clusters.
 - [`hanzo-kensho`](hanzo-kensho.md) — Kensho is a 17B parameter image generation foundation model using a Mixture of Experts (MoE) Diffusion Transformer architecture.
@@ -111,7 +109,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hanzo-mugen`](hanzo-mugen.md) — Mugen is a PyTorch framework for deep learning research on audio generation.
 - [`hanzo-nchain`](hanzo-nchain.md) — Nchain is a Kubernetes operator for deploying and scaling blockchain nodes.
 - [`hanzo-network`](hanzo-network.md) — Hanzo Network enables distributed AI agent execution across heterogeneous devices (M1 MacBooks, NVIDIA GPUs, Linux servers, Raspberry Pis, etc.) with automatic peer discovery, device capability detection, and intelligent load balancing.
-- [`hanzo-node`](hanzo-node.md) — Hanzo Node is a Rust-based AI agent infrastructure node that lets you create AI agents without writing code.
 - [`hanzo-numscript`](hanzo-numscript.md) — Numscript is a domain-specific language for modeling complex financial transactions.
 - [`hanzo-o11y`](hanzo-o11y.md) — Hanzo O11y is the full-stack observability platform for logs, metrics, and traces.
 - [`hanzo-openapi`](hanzo-openapi.md) — Hanzo OpenAPI is the canonical OpenAPI 3.1.0 specification for all 26 Hanzo Cloud services.
@@ -126,7 +123,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hanzo-reconciliation`](hanzo-reconciliation.md) — Hanzo Reconciliation is an automated transaction matching engine that compares ledger balances against payment provider data to verify financial consistency and identify discrepancies.
 - [`hanzo-registry`](hanzo-registry.md) — Hanzo Registry is a private Docker container registry running Docker Distribution (registry:2) on hanzo-k8s, authenticated via Hanzo IAM token-based auth.
 - [`hanzo-relay`](hanzo-relay.md) — Hanzo Relay (crate name: hanzo-relay, internally hanzo-tunnel) is a Rust library that connects any local Hanzo app (dev, node, desktop, bot, extension) to the cloud relay at api.hanzo.ai for remote management and multiplayer.
-- [`hanzo-repl`](hanzo-repl.md) — Hanzo REPL is a Python interactive environment for testing Hanzo MCP tools and AI integration.
 - [`hanzo-sdk`](hanzo-sdk.md) — Hanzo SDK is a unified multi-language SDK and CLI (@hanzo/cli) that wraps Python, TypeScript, Rust, and Go implementations into a single hanzo command.
 - [`hanzo-search`](hanzo-search.md) — Hanzo Search is a high-performance search engine built as a Rust workspace with 22 crates.
 - [`hanzo-search-go`](hanzo-search-go.md) — Go client library for Hanzo Search (Meilisearch compatible).
@@ -153,7 +149,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hanzo-ui`](hanzo-ui.md) — Hanzo UI is a React component library forked from shadcn/ui, extended with 161+ components (3x upstream), two themes, multi-framework support, AI components, 3D components, and a visual page builder.
 - [`hanzo-universe`](hanzo-universe.md) — Hanzo Universe (github.com/hanzoai/universe) is the single source of truth for all production infrastructure across the Hanzo ecosystem.
 - [`hanzo-vault`](hanzo-vault.md) — Hanzo Vault is a card tokenization service that runs as an isolated cardholder data environment (CDE).
-- [`hanzo-vector`](hanzo-vector.md) — Hanzo Vector is a high-performance vector search engine for the Hanzo AI platform.
 - [`hanzo-vector-go`](hanzo-vector-go.md) — Go client library for Hanzo Vector (Qdrant compatible).
 - [`hanzo-vllm`](hanzo-vllm.md) — Hanzo vLLM is a Rust LLM inference server with an OpenAI-compatible API, PagedAttention, continuous batching, and multi-GPU/multi-node support.
 - [`hanzo-vm`](hanzo-vm.md) — Hanzo VM is an open-source cloud operating system and virtual machine management platform built with Go (Beego framework) and React.
@@ -188,7 +183,10 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`app-port`](app-port.md) — Port an existing application onto the Hanzo stack — Hanzo Base and Hanzo Cloud OSS for the backend, ZAP for transport, @hanzo/ui and @hanzo/gui for the interface — and move its Python or JavaScript runtime into Go, Rust or C++. Use when adopting a Next.js, Node, Django, Flask, FastAPI, Rails or Spring app; when a service still speaks WebSockets; when a deployment still needs an interpreter beside the binary; or when asked to modernise, migrate or absorb an app somebody else's stack currently runs.
 - [`apple-notes`](apple-notes.md) — Manage Apple Notes via the `memo` CLI on macOS (create, view, edit, delete, search, move, and export notes). Use when a user asks HanzoBot to add a note, list notes, search notes, or manage note folders.
 - [`apple-reminders`](apple-reminders.md) — Manage Apple Reminders via remindctl CLI (list, add, edit, complete, delete). Supports lists, date filters, and JSON/plain output.
+- [`art`](art.md) — Art (Art & Video — Seat 19, Creative & Knowledge). Owns images, animation, film, visual production. Canonical Hanzo agent skill and business execution playbook.
 - [`aso`](aso.md) — When the user wants to audit or optimize an App Store or Google Play listing. Also use when the user mentions 'ASO audit,' 'app store optimization,' 'optimize my app listing,' 'improve app visibility,' 'app store ranking,' 'audit my listing,' 'why aren't people downloading my app,' 'improve my app conversion,' 'keyword optimization for app,' or 'compare my app to competitors.' Use when the user shares an App Store or Google Play URL and wants to improve it.
+- [`audit`](audit.md) — Audit (Internal Audit — Seat 31, Governance & Protection). Owns independent testing and assurance. Canonical Hanzo agent skill and business execution playbook.
+- [`auto`](auto.md) — Auto (Automation — Seat 17, Engineering & Intelligence). Owns workflow building, integrations, agent orchestration. Canonical Hanzo agent skill and business execution playbook.
 - [`beachhead-segment`](beachhead-segment.md) — Identify the first beachhead market segment for a product launch. Evaluates segments against burning pain, willingness to pay, winnable market share, and referral potential. Use when choosing a first market, targeting an initial customer segment, or planning market entry strategy.
 - [`bear-notes`](bear-notes.md) — Create, search, and manage Bear notes via grizzly CLI.
 - [`blogwatcher`](blogwatcher.md) — Monitor blogs and RSS/Atom feeds for updates using the blogwatcher CLI.
@@ -204,6 +202,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`business-model`](business-model.md) — Generate a Business Model Canvas with all 9 building blocks. Use when creating a business model, documenting how a business creates value, or analyzing an existing business model.
 - [`caching`](caching.md) — Automatically discover caching and performance skills when working with caching. Activates for caching development tasks.
 - [`camsnap`](camsnap.md) — Capture frames or clips from RTSP/ONVIF cameras.
+- [`canvas`](canvas.md) — Display HTML content, games, visualizations, and interactive dashboards on connected HanzoBot nodes (macOS, iOS, Android).
 - [`canvas-design`](canvas-design.md) — Create beautiful visual art in .png and .pdf documents using design philosophy. You should use this skill when the user asks to create a poster, piece of art, design, or other static piece. Create original visual designs, never copying existing artists' work to avoid copyright violations.
 - [`churn-prevention`](churn-prevention.md) — When the user wants to reduce churn, build cancellation flows, set up save offers, recover failed payments, or implement retention strategies. Also use when the user mentions 'churn,' 'cancel flow,' 'offboarding,' 'save offer,' 'dunning,' 'failed payment recovery,' 'win-back,' 'retention,' 'exit survey,' 'pause subscription,' 'involuntary churn,' 'people keep canceling,' 'churn rate is too high,' 'how do I keep users,' or 'customers are leaving.' Use this whenever someone is losing subscribers or wants to build systems to prevent it. For post-cancel win-back email sequences, see email-sequence. For in-app upgrade paywalls, see paywall-upgrade-cro.
 - [`cicd`](cicd.md) — Automatically discover CI/CD and automation skills when working with CI/CD. Activates for cicd development tasks.
@@ -213,12 +212,14 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`cloud-host`](cloud-host.md) — Run the Hanzo cloud on your own machine — the local API, the local cluster, ports, keys, and what already exists so you do not rebuild it. Use when self-hosting Hanzo, standing up a development environment, running the cloud from a source checkout, deciding between the local API and a local cluster, wiring KMS or IAM locally, or when someone has written their own launcher scripts because they could not find ours.
 - [`cloud-kubernetes-deployment`](cloud-kubernetes-deployment.md) — Deploy and manage applications on Kubernetes with production best practices
 - [`co-marketing`](co-marketing.md) — When the user wants to find co-marketing partners, plan joint campaigns, or brainstorm partnership opportunities. Use when the user says 'co-marketing,' 'partner marketing,' 'joint campaign,' 'who should we partner with,' 'integration marketing,' 'cross-promotion,' 'collaborate with another company,' 'partnership ideas,' or 'co-brand.' For customer referral programs, see referrals. For launch-specific partnerships, see launch.
-- [`code-review`](code-review.md) — Review code for actionable defects. Correctness is the core; performance and security are optional sub-cases of the same engine. Anchors on agreements between participants across a boundary, forces a violating execution, and refutes every candidate before reporting. Use when asked to review changes, find bugs, audit a codebase, or check whether a fix is safe.
+- [`code-review`](code-review.md) — Hanzo standard code quality, simplification, and correctness review: structural simplicity, 1,000-line file discipline, blast-radius verification, runtime proof, deslop, and cross-boundary agreement checks. Enabled by default across Hanzo Dev, Hanzo MCP, and Hanzo AI.
 - [`coding-agent`](coding-agent.md) — Delegate coding tasks to Codex, Claude Code, or Pi agents via background process. Use when: (1) building/creating new features or apps, (2) reviewing PRs (spawn in temp dir), (3) refactoring large codebases, (4) iterative coding that needs file exploration. NOT for: simple one-liner fixes (just edit), reading code (use read tool), thread-bound ACP harness requests in chat (for example spawn/run Codex or Claude Code in a Discord thread; use sessions_spawn with runtime:"acp"), or any work in ~/clawd workspace (never spawn agents here). Claude Code: use --print --permission-mode bypassPermissions (no PTY). Codex/Pi/OpenCode: pty:true required.
 - [`cohort-analysis`](cohort-analysis.md) — Perform cohort analysis on user engagement data — retention curves, feature adoption trends, and segment-level insights. Use when analyzing user retention by cohort, studying feature adoption over time, investigating churn patterns, or identifying engagement trends.
 - [`cold-email`](cold-email.md) — Write B2B cold emails and follow-up sequences that get replies. Use when the user wants to write cold outreach emails, prospecting emails, cold email campaigns, sales development emails, or SDR emails. Also use when the user mentions "cold outreach," "prospecting email," "outbound email," "email to leads," "reach out to prospects," "sales email," "follow-up email sequence," "nobody's replying to my emails," or "how do I write a cold email." Covers subject lines, opening lines, body copy, CTAs, personalization, and multi-touch follow-up sequences. For warm/lifecycle email sequences, see emails. For sales collateral beyond emails, see sales-enablement.
 - [`collaboration`](collaboration.md) — Automatically discover collaboration and teamwork skills when working with collaboration. Activates for collaboration development tasks.
+- [`com`](com.md) — Com (Community — Seat 10, Revenue & Relationships). Owns open source, developer relations, communities. Canonical Hanzo agent skill and business execution playbook.
 - [`community-marketing`](community-marketing.md) — Build and leverage online communities to drive product growth and brand loyalty. Use when the user wants to create a community strategy, grow a Discord or Slack community, manage a forum or subreddit, build brand advocates, increase word-of-mouth, drive community-led growth, engage users post-signup, or turn customers into evangelists. Trigger phrases: \"build a community,\" \"community strategy,\" \"Discord community,\" \"Slack community,\" \"community-led growth,\" \"brand advocates,\" \"user community,\" \"forum strategy,\" \"community engagement,\" \"grow our community,\" \"ambassador program,\" \"community flywheel.\
+- [`comp`](comp.md) — Comp (Compliance — Seat 29, Governance & Protection). Owns regulatory requirements, monitoring and controls. Canonical Hanzo agent skill and business execution playbook.
 - [`competitive-battlecard`](competitive-battlecard.md) — Create sales-ready competitive battlecards comparing your product against a specific competitor — positioning, feature comparison, objection handling, and win/loss patterns. Use when preparing sales teams, creating competitive materials, or responding to 'why not competitor X?
 - [`competitive-intelligence`](competitive-intelligence.md) — Market research and competitive analysis expertise — competitor tracking, SWOT analysis, market trends, pricing intelligence, and structured intelligence report generation with executive summaries.
 - [`competitor-alternatives`](competitor-alternatives.md) — When the user wants to create competitor comparison or alternative pages for SEO and sales enablement. Also use when the user mentions 'alternative page,' 'vs page,' 'competitor comparison,' 'comparison page,' '[Product] vs [Product],' '[Product] alternative,' 'competitive landing pages,' 'how do we compare to X,' 'battle card,' or 'competitor teardown.' Use this for any content that positions your product against competitors. Covers four formats: singular alternative, plural alternatives, you vs competitor, and competitor vs competitor. For sales-specific competitor docs, see sales-enablement.
@@ -231,28 +232,37 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`content-strategy`](content-strategy.md) — When the user wants to plan a content strategy, decide what content to create, or figure out what topics to cover. Also use when the user mentions "content strategy," "what should I write about," "content ideas," "blog strategy," "topic clusters," "content planning," "editorial calendar," "content marketing," "content roadmap," "what content should I create," "blog topics," "content pillars," or "I don't know what to write." Use this whenever someone needs help deciding what content to produce, not just writing it. For writing individual pieces, see copywriting. For SEO-specific audits, see seo-audit. For social media content specifically, see social.
 - [`copy-editing`](copy-editing.md) — When the user wants to edit, review, or improve existing marketing copy, or refresh outdated content. Also use when the user mentions 'edit this copy,' 'review my copy,' 'copy feedback,' 'proofread,' 'polish this,' 'make this better,' 'copy sweep,' 'tighten this up,' 'this reads awkwardly,' 'clean up this text,' 'too wordy,' 'sharpen the messaging,' 'refresh this content,' 'update this page,' 'this content is outdated,' or 'content audit.' Use this when the user already has copy and wants it improved or refreshed rather than rewritten from scratch. For writing new copy, see copywriting.
 - [`copywriting`](copywriting.md) — Persuasive copywriting using AIDA, PAS, 4U headline formulas, CTA patterns, emotional triggers, anti-slop enforcement, and brand voice awareness
+- [`corp`](corp.md) — Corp (Corporate Development — Seat 27, Financial & Commercial Infrastructure). Owns M&A, acquisitions, divestitures, strategic investments. Canonical Hanzo agent skill and business execution playbook.
 - [`create-prd`](create-prd.md) — Create a Product Requirements Document using a comprehensive 8-section template covering problem, objectives, segments, value propositions, solution, and release planning. Use when writing a PRD, documenting product requirements, preparing a feature spec, or reviewing an existing PRD.
 - [`cro`](cro.md) — When the user wants to optimize, improve, or increase conversions on any marketing page or form — including homepage, landing pages, pricing pages, feature pages, lead capture forms, or contact forms. Also use when the user says 'CRO,' 'conversion rate optimization,' 'this page isn't converting,' 'improve conversions,' 'why isn't this page working,' 'my landing page sucks,' 'form abandonment,' 'nobody's converting,' 'low conversion rate,' or 'this page needs work.' Use this even if the user just shares a URL and asks for feedback. For signup/registration flows, see signup. For post-signup activation, see onboarding. For popups/modals, see popups.
 - [`cryptography`](cryptography.md) — Automatically discover cryptography skills when working with encryption, TLS, certificates, PKI, and security
+- [`cust`](cust.md) — Cust (Customer Success — Seat 9, Revenue & Relationships). Owns onboarding, retention, renewals, account health. Canonical Hanzo agent skill and business execution playbook.
 - [`customer-journey-map`](customer-journey-map.md) — Create an end-to-end customer journey map with stages, touchpoints, emotions, pain points, and opportunities. Use when mapping the customer experience, identifying friction points, improving onboarding, or visualizing the user journey.
 - [`customer-research`](customer-research.md) — When the user wants to conduct, analyze, or synthesize customer research. Use when the user mentions "customer research," "ICP research," "talk to customers," "analyze transcripts," "customer interviews," "survey analysis," "support ticket analysis," "voice of customer," "VOC," "build personas," "customer personas," "jobs to be done," "JTBD," "what do customers say," "what are customers struggling with," "Reddit mining," "G2 reviews," "review mining," "digital watering holes," "community research," "forum research," "competitor reviews," "customer sentiment," or "find out why customers churn/convert/buy." Use for both analyzing existing research assets AND gathering new research from online sources. For writing copy informed by research, see copywriting. For acting on research to improve pages, see cro.
-- [`data`](data.md) — Automatically discover data pipeline and ETL skills when working with ETL. Activates for data development tasks.
+- [`cyber`](cyber.md) — Cyber (Cybersecurity — Seat 13, Engineering & Intelligence). Owns security operations, vulnerability management, access security. Canonical Hanzo agent skill and business execution playbook.
+- [`data`](data.md) — Data (Data & Analytics — Seat 15, Engineering & Intelligence). Owns pipelines, dashboards, intelligence. Canonical Hanzo agent skill and business execution playbook.
 - [`database`](database.md) — Automatically discover database skills when working with SQL, PostgreSQL, MongoDB, Redis, database schema design, query optimization, migrations, connection pooling, ORMs, or database selection. Activates for database design, optimization, and implementation tasks.
 - [`debugging`](debugging.md) — Automatically discover debugging and profiling skills when working with debugging. Activates for debugging development tasks.
 - [`deployment`](deployment.md) — Automatically discover deployment and release skills when working with deployment. Activates for deployment development tasks.
+- [`des`](des.md) — Des (Design — Seat 18, Creative & Knowledge). Owns UX/UI, design systems, product experience. Canonical Hanzo agent skill and business execution playbook.
+- [`dev`](dev.md) — You are a pragmatic senior developer.
 - [`diagrams`](diagrams.md) — Automatically discover diagram and visualization skills when working with flowcharts, sequence diagrams, architecture diagrams, ER diagrams, Gantt charts, mindmaps, or any visual documentation using Mermaid.js. Activates for documentation and visualization tasks.
 - [`directory-submissions`](directory-submissions.md) — When the user wants to submit their product to startup, SaaS, AI, agent, MCP, no-code, or review directories for backlinks, domain rating, and discovery. Also use when the user mentions "directory submissions," "submit to directories," "backlinks from directories," "list my product," "submit to Product Hunt," "BetaList," "TAAFT," "Futurepedia," "G2 listing," "Capterra listing," "AlternativeTo," "SaaSHub," "AI directories," "MCP registry," "agent directory," "dofollow backlinks," "launch directories," or "directory tracker." Use this whenever someone is planning the directory layer of a product launch or an ongoing backlink campaign. For the broader launch moment, see launch. For programmatic SEO pages that should live behind these backlinks, see programmatic-seo. For AI citation optimization, see ai-seo.
 - [`discernment-nudge`](discernment-nudge.md) — People often take an AI answer at face value, especially when it's confidently written and well-structured.
 - [`discord`](discord.md) — Discord ops via the message tool (channel=discord).
 - [`distributed-systems`](distributed-systems.md) — Automatically discover distributed systems skills when working with consensus, CRDTs, replication, partitioning, and distributed algorithms
+- [`doc`](doc.md) — Doc (Documentation — Seat 21, Creative & Knowledge). Owns technical docs, knowledge bases, manuals. Canonical Hanzo agent skill and business execution playbook.
+- [`docx`](docx.md) — Word Document, Spec & Contract Redlining (`docx`). Draft, edit, and redline `.docx` specifications, MSAs/NDAs, RFCs, and executive memos with clean heading styles, tracked changes, and tables.
 - [`draft-nda`](draft-nda.md) — Draft a detailed Non-Disclosure Agreement between two parties covering information types, jurisdiction, and clauses needing legal review. Use when creating confidentiality agreements or preparing an NDA for a partnership.
 - [`dummy-dataset`](dummy-dataset.md) — Generate realistic dummy datasets for testing with customizable columns, constraints, and output formats (CSV, JSON, SQL, Python script). Use when creating test data, building mock datasets, or generating sample data for development and demos.
 - [`ebpf`](ebpf.md) — Automatically discover eBPF and kernel skills when working with eBPF. Activates for ebpf development tasks.
+- [`edu`](edu.md) — Edu (Education — Seat 22, Creative & Knowledge). Owns training, courses, interactive learning. Canonical Hanzo agent skill and business execution playbook.
 - [`eightctl`](eightctl.md) — Control Eight Sleep pods (status, temperature, alarms, schedules).
 - [`elegant-design`](elegant-design.md) — Create world-class, accessible, responsive interfaces with sophisticated interactive elements including chat, terminals, code display, and streaming content. Use when building user interfaces that need professional polish and developer-focused features.
 - [`email-sequence`](email-sequence.md) — When the user wants to create or optimize an email sequence, drip campaign, automated email flow, or lifecycle email program. Also use when the user mentions "email sequence," "drip campaign," "nurture sequence," "onboarding emails," "welcome sequence," "re-engagement emails," "email automation," "lifecycle emails," "trigger-based emails," "email funnel," "email workflow," "what emails should I send," "welcome series," or "email cadence." Use this for any multi-email automated flow. For cold outreach emails, see cold-email. For in-app onboarding, see onboarding-cro.
 - [`emails`](emails.md) — When the user wants to create or optimize an email sequence, drip campaign, automated email flow, or lifecycle email program. Also use when the user mentions "email sequence," "drip campaign," "nurture sequence," "onboarding emails," "welcome sequence," "re-engagement emails," "email automation," "lifecycle emails," "trigger-based emails," "email funnel," "email workflow," "what emails should I send," "welcome series," or "email cadence." Use this for any multi-email automated flow. For cold outreach emails, see cold-email. For in-app onboarding, see onboarding.
 - [`engineering`](engineering.md) — Automatically discover software engineering practice skills when working with engineering practices. Activates for engineering development tasks.
+- [`fin`](fin.md) — Fin (Finance — Seat 24, Financial & Commercial Infrastructure). Owns accounting, treasury, forecasting, budgeting. Canonical Hanzo agent skill and business execution playbook.
 - [`food-order`](food-order.md) — Reorder Foodora orders + track ETA/status with ordercli. Never confirm without explicit user approval. Triggers: order food, reorder, track ETA.
 - [`form-cro`](form-cro.md) — When the user wants to optimize any form that is NOT signup/registration — including lead capture forms, contact forms, demo request forms, application forms, survey forms, or checkout forms. Also use when the user mentions "form optimization," "lead form conversions," "form friction," "form fields," "form completion rate," "contact form," "nobody fills out our form," "form abandonment," "too many fields," "demo request form," or "lead form isn't converting." Use this for any non-signup form that captures information. For signup/registration forms, see signup-flow-cro. For popups containing forms, see popup-cro.
 - [`formal`](formal.md) — Automatically discover formal methods and verification skills when working with formal methods. Activates for formal development tasks.
@@ -267,23 +277,32 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`gog`](gog.md) — Google Workspace CLI for Gmail, Calendar, Drive, Contacts, Sheets, and Docs.
 - [`google-ads-connect`](google-ads-connect.md) — Connect to Google Ads API to pull real account data — campaign performance, keyword health, wasted spend, search terms, impression share. Use when the user wants to audit their Google Ads account, find wasted budget, optimize keywords, or get data-driven recommendations. Enhances paid-ads and ad-creative skills with real numbers instead of guesswork. Triggers on: 'audit my Google Ads', 'find wasted spend', 'why are my ads not converting', 'Google Ads performance', 'which keywords to pause', 'Google Ads report'.
 - [`goplaces`](goplaces.md) — Query Google Places API (New) via the goplaces CLI for text search, place details, resolve, and reviews. Use for human-friendly place lookup or JSON output for scripts.
+- [`gov`](gov.md) — Gov (Government Affairs — Seat 32, Governance & Protection). Owns public policy, government relationships, regulatory engagement. Canonical Hanzo agent skill and business execution playbook.
 - [`grammar-check`](grammar-check.md) — Identify grammar, logical, and flow errors in text and suggest targeted fixes without rewriting the entire text. Use when proofreading content, checking writing quality, or reviewing a draft.
 - [`growth-loops`](growth-loops.md) — Identify growth loops (flywheels) for sustainable traction. Evaluates 5 loop types: Viral, Usage, Collaboration, User-Generated, and Referral. Use when designing growth mechanisms, building product-led traction, or understanding how growth loops work.
 - [`gtm-motions`](gtm-motions.md) — Identify the best GTM motions and tools across 7 motion types: Inbound, Outbound, Paid Digital, Community, Partners, ABM, and PLG. Use when selecting marketing channels, choosing between inbound and outbound strategy, or planning cross-channel campaigns.
 - [`gtm-strategy`](gtm-strategy.md) — Create a go-to-market strategy covering marketing channels, messaging, success metrics, and launch timeline. Use when planning a product launch, creating a GTM plan from scratch, or defining a launch strategy for a new market.
 - [`hanzo`](hanzo.md) — Sign up free with a wallet. Get an API key free. A small free allowance to try it. Top up in USDC or USDT over the API to raise your limits and pay as you go. No human required. Onboard an agent onto Hanzo, the AI operating system for business: get a credential, make a first call to api.hanzo.ai, add the Hanzo MCP server, evaluate Kai, and pay. Load when building with or on Hanzo or calling api.hanzo.ai; when getting a Hanzo API key or token (signing in with a wallet, no human; the hanzo CLI device flow; an agent's own email-code sign-up; minting a key); when adding Hanzo MCP to Claude Code, Codex, Cursor or Zed; when making or evaluating Kai decisions; when giving agents keys with budgets, rate limits or expiry; when drafting an ad or email campaign over the API; or when paying for Hanzo (plans, card checkout, USDC or USDT deposits, wire).
+- [`hanzo-aci`](hanzo-aci.md) — Agent-Computer Interface for software development agents. AST analysis, code editing, linting, and refactoring with tree-sitter across Python, JS, TS, Ruby, and Go.
 - [`hanzo-api`](hanzo-api.md) — Automatically discover how to CALL Hanzo's own products over api.hanzo.ai — models, agents, sandboxes, secrets, billing, deployments, identity, telemetry. Activates when a task needs a Hanzo API rather than code written from scratch: o11y, ai, commerce, iam, git, project, admin, integration, agent, platform, marketing, visor, pricing, cloudflare, captable, provisioning, book, company, deploy, task, crm, team, framework, guide, tool, sandbox, automation, ingress.
 - [`hanzo-cloud-architecture`](hanzo-cloud-architecture.md) — The canonical Hanzo Cloud architecture — one Go binary on zip, ZAP-only transport, plugin registry, embedded console, three deployment modes. Read this before touching any hanzoai service.
 - [`hanzo-consensus`](hanzo-consensus.md) — Metastable consensus protocol for multi-agent agreement. Two-phase finality with k-peer sampling for distributed AI decision making.
 - [`hanzo-crawl`](hanzo-crawl.md) — Crawl and scrape web pages via the Hanzo Crawl API (Crawl4AI). Extract structured content and markdown from URLs, preview pages, and crawl sites with JavaScript rendering support. Use when a bot needs to scrape a webpage, crawl a site, or extract content from URLs.
+- [`hanzo-insights`](hanzo-insights.md) — Product analytics, feature flags, A/B testing, and session recording with Hanzo Insights. Track events, create funnels, manage rollouts.
 - [`hanzo-llm`](hanzo-llm.md) — Hanzo LLM Gateway — unified proxy for 100+ AI providers. Route requests, track costs, manage virtual keys, rate limiting, and model fallbacks.
 - [`hanzo-ml-research`](hanzo-ml-research.md) — Native Hanzo AI/ML research and systems-design skill for LLMs, encoders, decision models, training, inference, kernels, quantization, retrieval/reranking, safety, evaluation, and scientific benchmarking. Use Hanzo's Rust stack (hanzo-ml, hanzo-nn, hanzo-train, hanzo-transformers, hanzo-kernel/DSL, hanzo-research, engine, and decision/Kai) by default; search current literature when needed; record falsifiable experiments and artifacts through the unified /v1/research plane.
+- [`hanzo-node`](hanzo-node.md) — Install and manage Hanzo AI compute nodes. Cross-platform installer for the Rust-based hanzo-node binary with version management.
+- [`hanzo-oss`](hanzo-oss.md) — Complete progressive directory of all Hanzo Open-Source repositories (hanzoai/* and zap-proto/*) — core Go/Rust/C++ runtimes, AI inference, IAM, KMS, Base, UI design system, MCP, and business suite.
 - [`hanzo-paas`](hanzo-paas.md) — Deploy and manage applications on Hanzo PaaS. Manage projects, environments, deployments, domains, logs, and cloud services via the hanzo-tools-paas MCP tool or REST API.
+- [`hanzo-post`](hanzo-post.md) — Run, extend, and automate Hanzo Post (post.hanzo.ai, hanzoai/post) with Hanzo AI drafting, Hanzo CMS blog publishing, and persistent sandboxed browser social automation (hanzo-browser).
+- [`hanzo-repl`](hanzo-repl.md) — Interactive AI REPL for Hanzo — Claude Code-like terminal experience with IPython, TUI, voice, and MCP tool integration.
 - [`hanzo-s3`](hanzo-s3.md) — Manage object storage with Hanzo S3. List, stat, delete, and presign objects in S3-compatible buckets via the hanzo-s3 Python SDK.
 - [`hanzo-telemetry`](hanzo-telemetry.md) — OpenTelemetry-based observability with distributed tracing, metrics, and logs. Instrument applications with OTLP, Prometheus, and Zipkin exporters.
+- [`hanzo-vector`](hanzo-vector.md) — Direct vector similarity search via Hanzo Vector (Qdrant). Store embeddings with metadata, search by similarity, manage collections, and build RAG pipelines. Use when a bot needs to store or query vector embeddings, perform semantic similarity search, or manage vector collections.
 - [`harness-hacker`](harness-hacker.md) — Self-modify the bot framework — fork, improve, test, and PR changes to any Hanzo component including your own source code, skills, extensions, and tools. Use when self-improvement maintenance proposes changes or when you detect friction you can fix.
 - [`healthcheck`](healthcheck.md) — Host security hardening and risk-tolerance configuration for HanzoBot deployments. Use when a user asks for security audits, firewall/SSH/update hardening, risk posture, exposure review, HanzoBot cron scheduling for periodic checks, or version status checks on a machine running HanzoBot (laptop, workstation, Pi, VPS).
 - [`himalaya`](himalaya.md) — CLI to manage emails via IMAP/SMTP. Use `himalaya` to list, read, write, reply, forward, search, and organize emails from the terminal. Supports multiple accounts and message composition with MML (MIME Meta Language).
+- [`huma`](huma.md) — Huma (Human Resources — Seat 4, Executive & Management). Owns recruiting, talent, people management. Canonical Hanzo agent skill and business execution playbook.
 - [`ideal-customer-profile`](ideal-customer-profile.md) — Identify the Ideal Customer Profile (ICP) from research data with demographics, behaviors, JTBD, and needs. Use when defining your ICP, analyzing PMF survey data, or understanding who your best customers are.
 - [`identify-assumptions-existing`](identify-assumptions-existing.md) — Identify risky assumptions for a feature idea in an existing product across Value, Usability, Viability, and Feasibility. Uses multi-perspective devil's advocate thinking. Use when stress-testing a feature idea, doing risk assessment, or preparing for assumption mapping.
 - [`identify-assumptions-new`](identify-assumptions-new.md) — Identify risky assumptions for a new product idea across 8 risk categories including Go-to-Market, Strategy, and Team. Use when evaluating startup risks, assessing a new product concept, or mapping assumptions for a new venture.
@@ -295,14 +314,19 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`internal-comms`](internal-comms.md) — A set of resources to help me write all kinds of internal communications, using the formats that my company likes to use. Claude should use this skill whenever asked to write some sort of internal communications (status reports, leadership updates, 3P updates, company newsletters, FAQs, incident reports, project updates, etc.).
 - [`interview-script`](interview-script.md) — Create a structured customer interview script with JTBD probing questions, warm-up, core exploration, and wrap-up sections. Follows The Mom Test principles — no leading questions, no pitching, focus on past behavior. Use when preparing for user interviews, creating interview guides, or planning discovery research.
 - [`ir`](ir.md) — Automatically discover intermediate representation and compiler skills when working with intermediate representation. Activates for ir development tasks.
+- [`it`](it.md) — IT (Information Technology — Seat 12, Engineering & Intelligence). Owns internal software, devices, enterprise applications. Canonical Hanzo agent skill and business execution playbook.
 - [`job-stories`](job-stories.md) — Create job stories using the 'When [situation], I want to [motivation], so I can [outcome]' format with detailed acceptance criteria. Use when writing job stories, creating JTBD-style backlog items, or expressing user situations and motivations.
 - [`kai`](kai.md) — Build on Kai, Hanzo's decision model: it answers typed questions about a state with calibrated probabilities over options you name, and generates no text (POST https://api.hanzo.ai/v1/decisions). Load when code needs a bounded judgment over known options, such as classify, route, gate an action, rank candidates, extract by picking one of the values code found, or verify a claim or field against its source, where the alternative is prompting an LLM and parsing its prose; when writing choice, score or noul questions, confidence thresholds or escalation; when calling Kai over HTTP, from the hanzo-kai (Python) or @hanzo/kai (TypeScript) SDK, or through the kai_* MCP tools; or when moving an integration off TypeSafe's Jev.
 - [`landing-page-design`](landing-page-design.md) — Conversion-optimized landing page design — single-file HTML with embedded CSS, no external dependencies. Hero sections, social proof, CTA placement, A/B variants, responsive design, accessibility, and performance (<100KB). Use when generating landing pages or conversion-focused web content.
+- [`lang`](lang.md) — Lang (Languages & Translation — Seat 23, Creative & Knowledge). Owns translation, multilingual communication, localization. Canonical Hanzo agent skill and business execution playbook.
 - [`launch`](launch.md) — When the user wants to plan a product launch, feature announcement, or release strategy. Also use when the user mentions 'launch,' 'Product Hunt,' 'feature release,' 'announcement,' 'go-to-market,' 'beta launch,' 'early access,' 'waitlist,' 'product update,' 'how do I launch this,' 'launch checklist,' 'GTM plan,' or 'we're about to ship.' Use this whenever someone is preparing to release something publicly. For ongoing marketing after launch, see marketing-ideas. For the offer being launched (bonuses, guarantees, scarcity, naming), see offers.
 - [`launch-strategy`](launch-strategy.md) — When the user wants to plan a product launch, feature announcement, or release strategy. Also use when the user mentions 'launch,' 'Product Hunt,' 'feature release,' 'announcement,' 'go-to-market,' 'beta launch,' 'early access,' 'waitlist,' 'product update,' 'how do I launch this,' 'launch checklist,' 'GTM plan,' or 'we're about to ship.' Use this whenever someone is preparing to release something publicly. For ongoing marketing after launch, see marketing-ideas.
+- [`law`](law.md) — Law (Legal — Seat 28, Governance & Protection). Owns contracts, IP, legal counsel. Canonical Hanzo agent skill and business execution playbook.
 - [`lead-magnets`](lead-magnets.md) — When the user wants to create, plan, or optimize a lead magnet for email capture or lead generation. Also use when the user mentions "lead magnet," "gated content," "content upgrade," "downloadable," "ebook," "cheat sheet," "checklist," "template download," "opt-in," "freebie," "PDF download," "resource library," "content offer," "email capture content," "Notion template," "spreadsheet template," or "what should I give away for emails." Use this for planning what to create and how to distribute it. For interactive tools as lead magnets, see free-tool-strategy. For writing the actual content, see copywriting. For the email sequence after capture, see email-sequence.
 - [`lean-canvas`](lean-canvas.md) — Generate a Lean Canvas with problem, solution, metrics, cost structure, UVP, unfair advantage, channels, segments, and revenue. Use when exploring a lean startup canvas, testing a business hypothesis, or modeling a new venture.
 - [`listen`](listen.md) — Read what people are publicly saying on X about a product, a competitor, a category or a campaign, and turn it into concrete marketing actions — what to write, who to watch, which objections to answer. Use for social listening, tweet and reply search, mention scans, hashtag scans, competitor monitoring, and gathering evidence before a launch or a content brief. Triggers on: 'what are people saying about', 'social listening', 'monitor mentions', 'competitor tweets', 'find objections', 'search X for'.
+- [`mana`](mana.md) — Mana (Management/Product — Seat 3, Executive & Management). Owns projects, roadmaps, prioritization. Canonical Hanzo agent skill and business execution playbook.
+- [`mark`](mark.md) — Mark (Marketing — Seat 6, Revenue & Relationships). Owns brand, campaigns, demand generation. Canonical Hanzo agent skill and business execution playbook.
 - [`market-segments`](market-segments.md) — Identify 3-5 potential customer segments with demographics, JTBD, and product fit analysis. Use when exploring market segments, identifying target audiences, evaluating new markets, or learning how to segment a market.
 - [`market-sizing`](market-sizing.md) — Estimate market size using TAM, SAM, and SOM with top-down and bottom-up approaches. Use when sizing a market opportunity, estimating addressable market, preparing for investor pitches, or evaluating market entry.
 - [`marketing-ideas`](marketing-ideas.md) — When the user needs marketing ideas, inspiration, or strategies for their SaaS or software product. Also use when the user asks for 'marketing ideas,' 'growth ideas,' 'how to market,' 'marketing strategies,' 'marketing tactics,' 'ways to promote,' 'ideas to grow,' 'what else can I try,' 'I don't know how to market this,' 'brainstorm marketing,' or 'what marketing should I do.' Use this as a starting point whenever someone is stuck or looking for inspiration on how to grow. For specific channel execution, see the relevant skill (ads, social, emails, etc.).
@@ -319,8 +343,10 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`modal`](modal.md) — Automatically discover Modal platform skills when working with Modal. Activates for modal development tasks.
 - [`model-usage`](model-usage.md) — Use CodexBar CLI local cost usage to summarize per-model usage for Codex or Claude, including the current (most recent) model or a full model breakdown. Trigger when asked for model-level usage/cost data from codexbar, or when you need a scriptable per-model summary from codexbar cost JSON.
 - [`monetization-strategy`](monetization-strategy.md) — Brainstorm 3-5 monetization strategies with audience fit, risks, and validation experiments. Use when exploring revenue models, evaluating pricing strategies, or deciding how to monetize a product.
+- [`mu`](mu.md) — Mu (Music & Audio — Seat 20, Creative & Knowledge). Owns music, voice production, sound design. Canonical Hanzo agent skill and business execution playbook.
 - [`nano-banana-pro`](nano-banana-pro.md) — Generate or edit images via Gemini 3 Pro Image (Nano Banana Pro).
 - [`nano-pdf`](nano-pdf.md) — Edit PDFs with natural-language instructions using the nano-pdf CLI.
+- [`natal-chart`](natal-chart.md) — Compute an astrology natal/birth chart: planetary positions, Ascendant, MC, houses, and aspects with orbs. Use when someone asks for their birth chart, natal chart, horoscope, rising sign, moon sign, 'what's my chart', or gives a birth date + time + place.
 - [`networking`](networking.md) — Automatically discover networking and connectivity skills when working with networking. Activates for networking development tasks.
 - [`north-star-metric`](north-star-metric.md) — Define a North Star Metric and 3-5 supporting input metrics that form a metrics constellation. Classify the business game (Attention, Transaction, Productivity) and validate against 7 criteria for an effective North Star. Use when choosing a North Star Metric, setting up a metrics framework, learning about the North Star Framework, or deciding what to measure.
 - [`notion`](notion.md) — Notion API for creating and managing pages, databases, and blocks.
@@ -333,6 +359,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`openai-whisper`](openai-whisper.md) — Local speech-to-text with the Whisper CLI (no API key).
 - [`openai-whisper-api`](openai-whisper-api.md) — Transcribe audio via OpenAI Audio Transcriptions API (Whisper).
 - [`openhue`](openhue.md) — Control Philips Hue lights and scenes via the OpenHue CLI.
+- [`opera`](opera.md) — Opera (Operations — Seat 2, Executive & Management). Owns business execution, operating cadence, coordination. Canonical Hanzo agent skill and business execution playbook.
 - [`opportunity-solution-tree`](opportunity-solution-tree.md) — Build an Opportunity Solution Tree (OST) to structure product discovery — map a desired outcome to opportunities, solutions, and experiments. Based on Teresa Torres' Continuous Discovery Habits. Use when structuring discovery work, mapping opportunities to solutions, or deciding what to build next.
 - [`oracle`](oracle.md) — Best practices for using the oracle CLI (prompt + file bundling, engines, sessions, and file attachment patterns).
 - [`ordercli`](ordercli.md) — Foodora-only CLI for checking past orders and active order status (Deliveroo WIP).
@@ -341,6 +368,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`paid-ads`](paid-ads.md) — When the user wants help with paid advertising campaigns on Google Ads, Meta (Facebook/Instagram), LinkedIn, Twitter/X, or other ad platforms. Also use when the user mentions 'PPC,' 'paid media,' 'ROAS,' 'CPA,' 'ad campaign,' 'retargeting,' 'audience targeting,' 'Google Ads,' 'Facebook ads,' 'LinkedIn ads,' 'ad budget,' 'cost per click,' 'ad spend,' or 'should I run ads.' Use this for campaign strategy, audience targeting, bidding, and optimization. For bulk ad creative generation and iteration, see ad-creative. For landing page optimization, see page-cro.
 - [`paywall-upgrade-cro`](paywall-upgrade-cro.md) — When the user wants to create or optimize in-app paywalls, upgrade screens, upsell modals, or feature gates. Also use when the user mentions "paywall," "upgrade screen," "upgrade modal," "upsell," "feature gate," "convert free to paid," "freemium conversion," "trial expiration screen," "limit reached screen," "plan upgrade prompt," "in-app pricing," "free users won't upgrade," "trial to paid conversion," or "how do I get users to pay." Use this for any in-product moment where you're asking users to upgrade. Distinct from public pricing pages (see page-cro) — this focuses on in-product upgrade moments where the user has already experienced value. For pricing decisions, see pricing-strategy.
 - [`paywalls`](paywalls.md) — When the user wants to create or optimize in-app paywalls, upgrade screens, upsell modals, or feature gates. Also use when the user mentions "paywall," "upgrade screen," "upgrade modal," "upsell," "feature gate," "convert free to paid," "freemium conversion," "trial expiration screen," "limit reached screen," "plan upgrade prompt," "in-app pricing," "free users won't upgrade," "trial to paid conversion," or "how do I get users to pay." Use this for any in-product moment where you're asking users to upgrade. Distinct from public pricing pages (see cro) — this focuses on in-product upgrade moments where the user has already experienced value. For pricing decisions, see pricing.
+- [`pdf`](pdf.md) — PDF Extraction, Form Processing & Report Generation (`pdf`). Parse tables, OCR scanned documents, fill/merge/split PDFs, and render print-ready technical reports and signed agreements.
 - [`peekaboo`](peekaboo.md) — Capture and automate macOS UI with the Peekaboo CLI.
 - [`pestle-analysis`](pestle-analysis.md) — Perform a PESTLE analysis covering Political, Economic, Social, Technological, Legal, and Environmental factors. Use when assessing the macro environment, doing strategic planning, or evaluating external factors affecting your business.
 - [`platform-mastery`](platform-mastery.md) — Platform-by-platform algorithm knowledge, best practices, and content adaptation rules for YouTube, LinkedIn, Twitter/X, Reddit, Instagram, GitHub, Threads, and StackOverflow. Use when optimizing content for a specific platform or adapting cross-platform content.
@@ -349,6 +377,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`popups`](popups.md) — When the user wants to create or optimize popups, modals, overlays, slide-ins, or banners for conversion purposes. Also use when the user mentions "exit intent," "popup conversions," "modal optimization," "lead capture popup," "email popup," "announcement banner," "overlay," "collect emails with a popup," "exit popup," "scroll trigger," "sticky bar," or "notification bar." Use this for any overlay or interrupt-style conversion element. For forms outside of popups, see cro. For general page conversion optimization, see cro.
 - [`porters-five-forces`](porters-five-forces.md) — Perform Porter's Five Forces analysis — competitive rivalry, supplier power, buyer power, threat of substitutes, and threat of new entrants. Use when analyzing industry dynamics, assessing competitive forces, or evaluating market attractiveness.
 - [`positioning-ideas`](positioning-ideas.md) — Brainstorm product positioning ideas differentiated from competitors. Identifies top competitors and generates positioning statements with rationale. Use when developing product positioning, differentiating from competitors, or crafting brand positioning strategy.
+- [`pptx`](pptx.md) — Presentation & Executive Deck Builder (`pptx`). Generate, edit, and structure `.pptx` slide decks, board presentations, pitch decks, and QBR readouts with crisp visual hierarchy and speaker notes.
 - [`pre-mortem`](pre-mortem.md) — Run a pre-mortem risk analysis on a PRD or launch plan. Categorizes risks as Tigers (real problems), Paper Tigers (overblown concerns), and Elephants (unspoken worries), then classifies as launch-blocking, fast-follow, or track. Use when preparing for launch, stress-testing a product plan, or identifying what could go wrong.
 - [`pricing`](pricing.md) — When the user wants help with pricing decisions, packaging, or monetization strategy. Also use when the user mentions 'pricing,' 'pricing tiers,' 'freemium,' 'free trial,' 'packaging,' 'price increase,' 'value metric,' 'Van Westendorp,' 'willingness to pay,' 'monetization,' 'how much should I charge,' 'my pricing is wrong,' 'pricing page,' 'annual vs monthly,' 'per seat pricing,' or 'should I offer a free plan.' Use this whenever someone is figuring out what to charge or how to structure their plans. For in-app upgrade screens, see paywalls. For offer construction (bonuses, guarantees, value framing, naming) on services/courses/coaching/high-ticket B2B, see offers.
 - [`pricing-strategy`](pricing-strategy.md) — When the user wants help with pricing decisions, packaging, or monetization strategy. Also use when the user mentions 'pricing,' 'pricing tiers,' 'freemium,' 'free trial,' 'packaging,' 'price increase,' 'value metric,' 'Van Westendorp,' 'willingness to pay,' 'monetization,' 'how much should I charge,' 'my pricing is wrong,' 'pricing page,' 'annual vs monthly,' 'per seat pricing,' or 'should I offer a free plan.' Use this whenever someone is figuring out what to charge or how to structure their plans. For in-app upgrade screens, see paywall-upgrade-cro.
@@ -356,6 +385,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`prioritize-assumptions`](prioritize-assumptions.md) — Prioritize assumptions using an Impact × Risk matrix and suggest experiments for each. Use when triaging a list of assumptions, deciding what to test first, or applying the assumption prioritization canvas.
 - [`prioritize-features`](prioritize-features.md) — Prioritize a backlog of feature ideas based on impact, effort, risk, and strategic alignment with top 5 recommendations. Use when prioritizing a feature backlog, making scope decisions, or ranking product ideas.
 - [`privacy-policy`](privacy-policy.md) — Draft a detailed privacy policy covering data types, jurisdiction, GDPR and compliance considerations, and clauses needing legal review. Use when creating a privacy policy, updating data protection documentation, or preparing for compliance.
+- [`proc`](proc.md) — Proc (Procurement — Seat 25, Financial & Commercial Infrastructure). Owns purchasing, sourcing, vendor negotiations. Canonical Hanzo agent skill and business execution playbook.
 - [`product`](product.md) — Automatically discover product management skills when working with product management. Activates for product development tasks.
 - [`product-marketing`](product-marketing.md) — When the user wants to create or update their product marketing context document. Also use when the user mentions 'product context,' 'marketing context,' 'set up context,' 'positioning,' 'who is my target audience,' 'describe my product,' 'ICP,' 'ideal customer profile,' or wants to avoid repeating foundational information across marketing tasks. Use this at the start of any new project before using other marketing skills — it creates `.agents/product-marketing.md` that all other skills reference for product, audience, and positioning context.
 - [`product-marketing-context`](product-marketing-context.md) — When the user wants to create or update their product marketing context document. Also use when the user mentions 'product context,' 'marketing context,' 'set up context,' 'positioning,' 'who is my target audience,' 'describe my product,' 'ICP,' 'ideal customer profile,' or wants to avoid repeating foundational information across marketing tasks. Use this at the start of any new project before using other marketing skills — it creates `.agents/product-marketing-context.md` that all other skills reference for product, audience, and positioning context.
@@ -367,6 +397,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`protocols`](protocols.md) — Automatically discover protocol skills when working with HTTP, TCP, UDP, QUIC, and network protocols
 - [`proxies`](proxies.md) — Automatically discover proxy skills when working with forward/reverse proxies, nginx, traefik, envoy, caching, or NATS messaging
 - [`public-relations`](public-relations.md) — When the user wants help with public relations, earned media, press coverage, journalist outreach, or media strategy (not pull requests). Also use when the user mentions 'PR,' 'public relations,' 'press,' 'press release,' 'press coverage,' 'media outreach,' 'pitch a journalist,' 'get featured,' 'media list,' 'media kit,' 'press kit,' 'newsjacking,' 'news hijack,' 'HARO,' 'Qwoted,' 'Featured,' 'Help A Reporter,' 'reporter request,' 'tech press,' 'TechCrunch,' 'earned media,' 'thought leadership placement,' 'op-ed,' 'guest article,' 'press contacts,' or 'how do I get press.' Use this for earned media work — finding journalists, pitching stories, newsjacking, and responding to press requests. For startup/SaaS/AI directory submissions, see directory-submissions. For product launches, see launch. For social-media engagement, see social. For cold-email outreach to prospects, see cold-email.
+- [`qa`](qa.md) — QA (Quality Assurance — Seat 14, Engineering & Intelligence). Owns testing, regression, release validation. Canonical Hanzo agent skill and business execution playbook.
 - [`realtime`](realtime.md) — Automatically discover realtime communication skills when working with realtime. Activates for realtime development tasks.
 - [`referral-program`](referral-program.md) — When the user wants to create, optimize, or analyze a referral program, affiliate program, or word-of-mouth strategy. Also use when the user mentions 'referral,' 'affiliate,' 'ambassador,' 'word of mouth,' 'viral loop,' 'refer a friend,' 'partner program,' 'referral incentive,' 'how to get referrals,' 'customers referring customers,' or 'affiliate payout.' Use this whenever someone wants existing users or partners to bring in new customers. For launch-specific virality, see launch-strategy.
 - [`referrals`](referrals.md) — When the user wants to create, optimize, or analyze a referral program, affiliate program, or word-of-mouth strategy. Also use when the user mentions 'referral,' 'affiliate,' 'ambassador,' 'word of mouth,' 'viral loop,' 'refer a friend,' 'partner program,' 'referral incentive,' 'how to get referrals,' 'customers referring customers,' or 'affiliate payout.' Use this whenever someone wants existing users or partners to bring in new customers. For launch-specific virality, see launch.
@@ -375,9 +406,12 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`remotion-video`](remotion-video.md) — Remotion video composition knowledge — 6 template specs, storyboard-to-composition mapping, frame calculations, animation catalog, transition types, platform rules, retention triggers, and anti-patterns for video production
 - [`research`](research.md) — Gateway skill for research methodology - automatically loads relevant research skills based on task context
 - [`retro`](retro.md) — Facilitate a structured sprint retrospective — what went well, what didn't, and prioritized action items with owners and deadlines. Use when running a retrospective, reflecting on a sprint, creating action items from team feedback, or learning how to run effective retros.
+- [`rev`](rev.md) — Rev (Revenue — Seat 7, Revenue & Relationships). Owns pricing, monetization, billing, revenue optimization. Canonical Hanzo agent skill and business execution playbook.
 - [`review-resume`](review-resume.md) — Comprehensive PM resume review and tailoring against 10 best practices including XYZ+S formula, keyword optimization, job-specific tailoring, and structure. Use when reviewing a PM resume, preparing for job applications, or improving resume impact.
 - [`revops`](revops.md) — When the user wants help with revenue operations, lead lifecycle management, or marketing-to-sales handoff processes. Also use when the user mentions 'RevOps,' 'revenue operations,' 'lead scoring,' 'lead routing,' 'MQL,' 'SQL,' 'pipeline stages,' 'deal desk,' 'CRM automation,' 'marketing-to-sales handoff,' 'data hygiene,' 'leads aren't getting to sales,' 'pipeline management,' 'lead qualification,' or 'when should marketing hand off to sales.' Use this for anything involving the systems and processes that connect marketing to revenue. For cold outreach emails, see cold-email. For email drip campaigns, see emails. For pricing decisions, see pricing.
+- [`risk`](risk.md) — Risk (Risk Management — Seat 30, Governance & Protection). Owns enterprise risk, continuity, assessment. Canonical Hanzo agent skill and business execution playbook.
 - [`sag`](sag.md) — ElevenLabs text-to-speech with mac-style say UX.
+- [`sal`](sal.md) — Sal (Sales — Seat 5, Revenue & Relationships). Owns prospecting, pipelines, negotiations, closing. Canonical Hanzo agent skill and business execution playbook.
 - [`sales-enablement`](sales-enablement.md) — When the user wants to create sales collateral, pitch decks, one-pagers, objection handling docs, or demo scripts. Also use when the user mentions 'sales deck,' 'pitch deck,' 'one-pager,' 'leave-behind,' 'objection handling,' 'deal-specific ROI analysis,' 'demo script,' 'talk track,' 'sales playbook,' 'proposal template,' 'buyer persona card,' 'help my sales team,' 'sales materials,' or 'what should I give my sales reps.' Use this for any document or asset that helps a sales team close deals. For competitor comparison pages and battle cards, see competitors. For marketing website copy, see copywriting. For cold outreach emails, see cold-email. For the offer being sold (bonuses, guarantees, pricing structure), see offers.
 - [`sales-page`](sales-page.md) — You are the Sales Page Architect — an elite production system that builds world-class sales pages through an 8-phase pipeline.
 - [`sales-page-builder`](sales-page-builder.md) — You are the Build Engine of the Sales Page Production System (Phase 7).
@@ -387,6 +421,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`sales-page-visual-psychology`](sales-page-visual-psychology.md) — You are the Sales Page Visual Psychologist — a design director who makes every visual decision with surgical precision, backed by psychological principles and directed references.
 - [`schema`](schema.md) — When the user wants to add, fix, or optimize schema markup and structured data on their site. Also use when the user mentions "schema markup," "structured data," "JSON-LD," "rich snippets," "schema.org," "FAQ schema," "product schema," "review schema," "breadcrumb schema," "Google rich results," "knowledge panel," "star ratings in search," or "add structured data." Use this whenever someone wants their pages to show enhanced results in Google. For broader SEO issues, see seo-audit. For AI search optimization, see ai-seo.
 - [`schema-markup`](schema-markup.md) — When the user wants to add, fix, or optimize schema markup and structured data on their site. Also use when the user mentions "schema markup," "structured data," "JSON-LD," "rich snippets," "schema.org," "FAQ schema," "product schema," "review schema," "breadcrumb schema," "Google rich results," "knowledge panel," "star ratings in search," or "add structured data." Use this whenever someone wants their pages to show enhanced results in Google. For broader SEO issues, see seo-audit. For AI search optimization, see ai-seo.
+- [`sci`](sci.md) — Sci (Science & Research — Seat 16, Engineering & Intelligence). Owns research, experimentation, innovation. Canonical Hanzo agent skill and business execution playbook.
 - [`search-console-connect`](search-console-connect.md) — Connect to Google Search Console API to pull real organic search data — traffic trends, ranking positions, impressions, CTR, top queries, and page-level performance. Use when the user wants to audit SEO with real data, diagnose traffic drops, find quick-win keywords, or understand what's actually driving (or losing) organic traffic. Enhances seo-audit and ai-seo skills with real GSC data. Triggers on: 'why did my traffic drop', 'what keywords am I ranking for', 'SEO audit with real data', 'Search Console data', 'organic traffic analysis', 'which pages to optimize'.
 - [`security`](security.md) — Automatically discover security skills when working with authentication, authorization, input validation, security headers, vulnerability assessment, or secrets management. Activates for application security, OWASP, and security hardening tasks.
 - [`sentiment-analysis`](sentiment-analysis.md) — Analyze user feedback data to identify segments with sentiment scores, JTBD, and product satisfaction insights. Use when analyzing user feedback at scale, running sentiment analysis on reviews or surveys, or identifying satisfaction patterns.
@@ -426,9 +461,11 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`stakeholder-map`](stakeholder-map.md) — Build a stakeholder map using a power/interest grid, identify communication strategies per quadrant, and generate a communication plan. Use when managing stakeholders, preparing for a launch, aligning cross-functional teams, or planning stakeholder engagement.
 - [`startup-canvas`](startup-canvas.md) — Generate a Startup Canvas combining Product Strategy (9 sections) and Business Model (costs + revenue) for a new product. An alternative to BMC and Lean Canvas that separates strategy from business model. Use when launching a new product or evaluating a startup concept.
 - [`strategy-red-team`](strategy-red-team.md) — Red-team a PRD, roadmap, or strategy by attacking its load-bearing assumptions before reality does. Steelmans then attacks each claim, ranks failure modes by impact × likelihood × cheapness-to-test, and returns the cheapest test and kill criteria for each. Use when stress-testing a plan, pressure-testing a strategy, challenging assumptions, or preparing a doc for executive review.
+- [`su`](su.md) — Su (Support — Seat 8, Revenue & Relationships). Owns help desk, tickets, problem resolution. Canonical Hanzo agent skill and business execution playbook.
 - [`summarize`](summarize.md) — Summarize or extract text/transcripts from URLs, podcasts, and local files (great fallback for “transcribe this YouTube/video”).
 - [`summarize-interview`](summarize-interview.md) — Summarize a customer interview transcript into a structured template with JTBD, satisfaction signals, and action items. Use when processing interview recordings or transcripts, synthesizing discovery interviews, or creating interview summaries.
 - [`summarize-meeting`](summarize-meeting.md) — Summarize a meeting transcript into structured notes with date, participants, topic, key decisions, summary points, and action items. Use when processing meeting recordings, creating meeting notes, writing meeting minutes, or recapping discussions.
+- [`supply`](supply.md) — Supply (Supply Chain — Seat 26, Financial & Commercial Infrastructure). Owns logistics, inventory, fulfillment, supplier operations. Canonical Hanzo agent skill and business execution playbook.
 - [`swot-analysis`](swot-analysis.md) — Perform a detailed SWOT analysis — strengths, weaknesses, opportunities, and threats with actionable recommendations. Use when doing strategic assessment, competitive analysis, or evaluating a product or business position.
 - [`test-scenarios`](test-scenarios.md) — Create comprehensive test scenarios from user stories with test objectives, starting conditions, user roles, step-by-step actions, and expected outcomes. Use when writing QA test cases, creating test plans, defining acceptance tests, or preparing for feature validation.
 - [`testing`](testing.md) — Automatically discover testing skills when working with testing. Activates for testing development tasks.
@@ -438,12 +475,14 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`trello`](trello.md) — Manage Trello boards, lists, and cards via the Trello REST API.
 - [`tui`](tui.md) — Automatically discover terminal UI skills when working with terminal user interfaces. Activates for tui development tasks.
 - [`typed-holes-refactor`](typed-holes-refactor.md) — Refactor codebases using Design by Typed Holes methodology - iterative, test-driven refactoring with formal hole resolution, constraint propagation, and continuous validation. Use when refactoring existing code, optimizing architecture, or consolidating technical debt through systematic hole-driven development.
+- [`ui`](ui.md) — Treat the reference UI or specification as an executable visual contract, not inspiration.
 - [`ui-port`](ui-port.md) — Port or migrate a UI from an old/reference implementation to a new system while preserving new-system functionality and achieving high visual parity. Use when comparing reference and target URLs, routes, repos/worktrees, Storybook stories, screenshots, PDFs, DOM/computed-style probes, or any combination; when asked to make a rewrite look like an older UI; when a visual regression is "close" but still reads as a different product; or when agents need a repeatable audit-fix-measure loop for screen-by-screen convergence.
 - [`user-personas`](user-personas.md) — Create refined user personas from research data — 3 personas with JTBD, pains, gains, and unexpected insights. Use when building personas from survey data, creating user profiles from research, or segmenting users for product decisions.
 - [`user-segmentation`](user-segmentation.md) — Segment users from feedback data based on behavior, JTBD, and needs. Identifies at least 3 distinct user segments. Use when segmenting a user base, analyzing diverse user feedback, or building a segmentation model.
 - [`user-stories`](user-stories.md) — Create user stories following the 3 C's (Card, Conversation, Confirmation) and INVEST criteria with descriptions, design links, and acceptance criteria. Use when writing user stories, breaking down features into backlog items, or defining acceptance criteria.
 - [`value-prop-statements`](value-prop-statements.md) — Generate value proposition statements for marketing, sales, and onboarding from existing value propositions. Use when writing marketing copy, creating sales messaging, or crafting onboarding messages.
 - [`value-proposition`](value-proposition.md) — Design a detailed value proposition using a 6-part JTBD template — Who, Why, What before, How, What after, Alternatives. Use when creating a value proposition, analyzing customer value delivery, or articulating why customers should choose your product.
+- [`vi`](vi.md) — Vi (CEO/Vision — Seat 1, Executive & Management). Owns corporate strategy, fundraising, executive decisions. Canonical Hanzo agent skill and business execution playbook.
 - [`video`](video.md) — When the user wants to create, generate, or produce video content using AI tools or programmatic frameworks. Also use when the user mentions 'video production,' 'AI video,' 'Remotion,' 'Hyperframes,' 'HeyGen,' 'Synthesia,' 'Veo,' 'Sora,' 'Runway,' 'Kling,' 'Seedance,' 'Hailuo,' 'MiniMax,' 'Pika,' 'Hunyuan,' 'Wan,' 'video generation,' 'AI avatar,' 'talking head video,' 'programmatic video,' 'video template,' 'explainer video,' 'product demo video,' 'video pipeline,' or 'make me a video.' Use this for video creation, generation, and production workflows. For video content strategy and what to post, see social. For paid video ad creative, see ad-creative.
 - [`video-frames`](video-frames.md) — Extract frames or short clips from videos using ffmpeg.
 - [`video-production`](video-production.md) — Video content expertise — scripts (YouTube format), descriptions, thumbnail concepts (text specs for sharp/SVG), storyboarding, video SEO (tags, chapters), hook-first methodology, and retention patterns. Use when producing any video-related content or strategy.
@@ -456,6 +495,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`workflow`](workflow.md) — Automatically discover workflow and task management skills when working with Beads. Activates for workflow development tasks.
 - [`wwas`](wwas.md) — Create product backlog items in Why-What-Acceptance format — independent, valuable, testable items with strategic context. Use when writing structured backlog items, breaking features into work items, or using the WWA format.
 - [`x-twitter-connect`](x-twitter-connect.md) — Connect TweetClaw to pull public X/Twitter marketing signals into agent workflows. Use when the user wants social listening, tweet search, reply search, follower export, user lookup, media review, monitor setup, webhook-backed tracking, giveaway evidence, or approval-gated post and reply workflows. Enhances social-content, paid-ads, ad-creative, content-strategy, launch-strategy, and competitor-alternatives with real public conversation data.
+- [`xlsx`](xlsx.md) — Excel & Spreadsheet Financial Modeling (`xlsx`). Create, audit, and transform `.xlsx` workbooks with dynamic formulas, multi-sheet financial statements, pivot tables, sensitivity matrices, and zero hardcoded magic numbers.
 - [`xurl`](xurl.md) — A CLI tool for making authenticated requests to the X (Twitter) API. Use this skill when you need to post tweets, reply, quote, search, read posts, manage followers, send DMs, upload media, or interact with any X API v2 endpoint.
 - [`zig`](zig.md) — Automatically discover Zig programming skills when working with Zig. Activates for zig development tasks.
 - [`zoo-gym`](zoo-gym.md) — Three training methods from Zoo Gym — Training-Free GRPO (RLHF with no value network), BitDelta per-user personalisation, and DeltaSoup Byzantine-robust community learning. Use when training or personalising a ZenLM model, or choosing an RLHF method.
@@ -463,11 +503,10 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 ### claude-api
 - [`agent-design`](agent-design.md) — This file covers decision heuristics for building agents on the Claude API: which primitives to reach for, how to design your tool surface, and how to manage context and cost over long runs.
 - [`anthropic-cli`](anthropic-cli.md) — The ant CLI exposes every Claude API resource as a shell subcommand.
-- [`batches`](batches.md) — batches
+- [`batches`](batches.md) — The Batches API (POST /v1/messages/batches) processes Messages API requests asynchronously at 50% of standard prices.
 - [`claude-platform-on-aws`](claude-platform-on-aws.md) — Anthropic-operated access to the Claude Developer Platform through AWS infrastructure — SigV4 authentication, AWS IAM access control, and AWS Marketplace billing.
 - [`error-codes`](error-codes.md) — This file documents HTTP error codes returned by the Claude API, their common causes, and how to handle them.
-- [`examples`](examples.md) — Use these examples when the user needs raw HTTP requests or is working in a language without an official SDK.
-- [`files-api`](files-api.md) — Files live under client.Beta.Files (namespace Anthropic.Models.Beta.Files).
+- [`files-api`](files-api.md) — The Files API uploads files for use in Messages API requests.
 - [`live-sources`](live-sources.md) — This file contains WebFetch URLs for fetching current information from platform.claude.com and Agent SDK repositories.
 - [`managed-agents`](managed-agents.md) — Use these examples when the user needs raw HTTP requests or is working without an SDK.
 - [`managed-agents-api-reference`](managed-agents-api-reference.md) — All endpoints require x-api-key and anthropic-version: 2023-06-01 headers.
@@ -490,7 +529,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`prompt-audit`](prompt-audit.md) — Prompts, skills, and tool descriptions accumulate instructions tuned to older models: emphasis added because an old model under-triggered, step-by-step scripts added because an old model planned poorly, format scaffolds written before the A
 - [`prompt-caching`](prompt-caching.md) — This file covers how to design prompt-building code for effective caching.
 - [`sdk-upgrade`](sdk-upgrade.md) — anthropic 1.x is deliberately a small step from the last 0.x release: no method was restructured and no new pattern is required.
-- [`streaming`](streaming.md) — var parameters = new MessageCreateParams { Model = Model.ClaudeOpus48, MaxTokens = 64000, Messages = new() { Role = Role.User, Content = "Write a haiku" } };
+- [`streaming`](streaming.md) — for await (const event of stream) { if ( event.type === "contentblockdelta" && event.delta.type === "textdelta" ) { process.stdout.write(event.delta.text); } }
 - [`token-counting`](token-counting.md) — Use the counttokens endpoint (POST /v1/messages/counttokens) for accurate token counts against Claude models.
 - [`tool-use`](tool-use.md) — For conceptual overview (tool definitions, tool choice, tips), see shared/tool-use-concepts.md(../../shared/tool-use-concepts.md).
 - [`tool-use-concepts`](tool-use-concepts.md) — This file covers the conceptual foundations of tool use with the Claude API.
@@ -773,16 +812,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`observability-prometheus-monitoring`](observability-prometheus-monitoring.md) — Production-ready Prometheus monitoring and alerting
 - [`observability-structured-logging`](observability-structured-logging.md) — Setting up application logging infrastructure
 
-### api
-- [`api-api-authentication`](api-api-authentication.md) — Implementing API authentication for new services
-- [`api-api-authorization`](api-api-authorization.md) — Implementing authorization logic in APIs
-- [`api-api-error-handling`](api-api-error-handling.md) — Designing error responses for REST APIs
-- [`api-api-rate-limiting`](api-api-rate-limiting.md) — Implementing rate limiting for APIs
-- [`api-api-versioning`](api-api-versioning.md) — Planning API changes and deciding on versioning approach
-- [`api-graphql-schema-design`](api-graphql-schema-design.md) — Designing GraphQL APIs from scratch
-- [`api-rest-api-design`](api-rest-api-design.md) — Designing RESTful APIs from scratch
-- [`reference`](reference.md) — Comprehensive technical reference for JWT, OAuth 2.0, and API authentication specifications.
-
 ### build-systems
 - [`build-systems-bazel-monorepos`](build-systems-bazel-monorepos.md) — Bazel BUILD files, WORKSPACE/MODULE.bazel, hermetic builds, remote caching, build rules, Starlark custom rules, and monorepo best practices for polyglot projects.
 - [`build-systems-build-optimization`](build-systems-build-optimization.md) — Incremental builds, dependency tracking, build caching (ccache, sccache, Bazel), parallel builds, build time profiling, and CI/CD optimization strategies.
@@ -823,6 +852,15 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`protocols-protobuf-schemas`](protocols-protobuf-schemas.md) — Protocol Buffers schema design, evolution, and code generation
 - [`protocols-websocket-protocols`](protocols-websocket-protocols.md) — WebSocket protocol implementation, scaling, and production deployment
 
+### api
+- [`api-api-authentication`](api-api-authentication.md) — Implementing API authentication for new services
+- [`api-api-authorization`](api-api-authorization.md) — Implementing authorization logic in APIs
+- [`api-api-error-handling`](api-api-error-handling.md) — Designing error responses for REST APIs
+- [`api-api-rate-limiting`](api-api-rate-limiting.md) — Implementing rate limiting for APIs
+- [`api-api-versioning`](api-api-versioning.md) — Planning API changes and deciding on versioning approach
+- [`api-graphql-schema-design`](api-graphql-schema-design.md) — Designing GraphQL APIs from scratch
+- [`api-rest-api-design`](api-rest-api-design.md) — Designing RESTful APIs from scratch
+
 ### caching
 - [`caching-cache-invalidation-strategies`](caching-cache-invalidation-strategies.md) — Cache invalidation patterns and techniques - time-based, event-based, key-based, and version-based invalidation for maintaining cache consistency.
 - [`caching-cache-performance-monitoring`](caching-cache-performance-monitoring.md) — Measuring and optimizing cache performance - metrics, monitoring tools, alerts, load testing, and instrumentation for cache hit rates and latency.
@@ -831,6 +869,15 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`caching-http-caching`](caching-http-caching.md) — Browser and HTTP cache layer optimization using cache headers, conditional requests, and validation strategies
 - [`caching-redis-caching-patterns`](caching-redis-caching-patterns.md) — Application-level caching with Redis - patterns, distributed caching, cache stampede prevention, and integration strategies for high-performance applications.
 - [`caching-service-worker-caching`](caching-service-worker-caching.md) — Progressive Web App (PWA) caching with Service Workers - offline-first architecture, caching strategies, Workbox patterns, and modern browser caching.
+
+### offers
+- [`bonus-stacking`](bonus-stacking.md) — How to add bonuses that raise perceived value without devaluing the core offer.
+- [`examples`](examples.md) — Anonymized examples drawn from real engagements.
+- [`guarantee-design`](guarantee-design.md) — A guarantee directly raises perceived likelihood of achievement (the buyer thinks: "they'll only offer this if they're confident") and lowers effort & sacrifice (less emotional risk).
+- [`offer-anatomy`](offer-anatomy.md) — A complete offer has six components.
+- [`offer-formats`](offer-formats.md) — The right offer format depends on what you sell.
+- [`scarcity-urgency`](scarcity-urgency.md) — The reason to buy now, not later.
+- [`value-equation`](value-equation.md) — The single most useful frame for offer design.
 
 ### proxies
 - [`proxies-cache-control`](proxies-cache-control.md) — HTTP caching strategies including cache headers, CDN patterns, cache invalidation, stale-while-revalidate, and edge caching optimization
@@ -891,14 +938,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`infrastructure-kubernetes-basics`](infrastructure-kubernetes-basics.md) — Deploying containerized applications at scale
 - [`infrastructure-terraform-patterns`](infrastructure-terraform-patterns.md) — Provisioning cloud infrastructure (AWS, GCP, Azure, Cloudflare)
 
-### offers
-- [`bonus-stacking`](bonus-stacking.md) — How to add bonuses that raise perceived value without devaluing the core offer.
-- [`guarantee-design`](guarantee-design.md) — A guarantee directly raises perceived likelihood of achievement (the buyer thinks: "they'll only offer this if they're confident") and lowers effort & sacrifice (less emotional risk).
-- [`offer-anatomy`](offer-anatomy.md) — A complete offer has six components.
-- [`offer-formats`](offer-formats.md) — The right offer format depends on what you sell.
-- [`scarcity-urgency`](scarcity-urgency.md) — The reason to buy now, not later.
-- [`value-equation`](value-equation.md) — The single most useful frame for offer design.
-
 ### social
 - [`listening`](listening.md) — How to surface the right posts to engage with each day — instead of randomly scrolling.
 - [`listening-sources-template`](listening-sources-template.md) — Copy this file to .agents/listening-sources.md in your project (or .claude/listening-sources.md) and fill in the brackets.
@@ -931,12 +970,12 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`zig-project-setup`](zig-project-setup.md) — Initializing new Zig projects
 - [`zig-testing`](zig-testing.md) — Writing unit tests in Zig
 
-### aso
-- [`apple-specs`](apple-specs.md) — All data from developer.apple.com as of March 2026.
-- [`benchmarks`](benchmarks.md) — Industry data from AppTweak, SplitMetrics, Sensor Tower, and others.
-- [`google-play-specs`](google-play-specs.md) — All data from support.google.com and developer.android.com as of March 2026.
-- [`report-template`](report-template.md) — Use this structure for all ASO audit reports.
-- [`scoring-criteria`](scoring-criteria.md) — Score each dimension 0-10 using the rubrics below.
+### cold-email
+- [`benchmarks`](benchmarks.md) — 500 emails → 100 opens (20%) → 25 replies (5%) → 8 positive replies (30%) → 4 meetings (50%) → 1 client (25% close).
+- [`follow-up-sequences`](follow-up-sequences.md) — 55% of replies come from follow-ups, not the initial email.
+- [`frameworks`](frameworks.md) — Frameworks beat templates — they teach thinking patterns, not copy-paste shortcuts.
+- [`personalization`](personalization.md) — Personalization drives 50–250% more replies (Lavender).
+- [`subject-lines`](subject-lines.md) — The subject line determines whether the email gets read.
 
 ### ir
 - [`ir-query-understanding`](ir-query-understanding.md) — Query expansion, spell correction, semantic search, query classification, entity recognition, and autocomplete
@@ -952,12 +991,12 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`network-resilience-patterns`](network-resilience-patterns.md) — Building robust network applications
 - [`tailscale-vpn`](tailscale-vpn.md) — Creating secure private networks (mesh VPN)
 
-### prospecting
-- [`b2b-prospecting`](b2b-prospecting.md) — For when the user sells to non-SaaS B2B — services, agencies, manufacturers, mid-market and enterprise companies, professional services firms.
-- [`compliance`](compliance.md) — The legal and platform-ToS constraints that apply to prospect list building.
-- [`data-sources`](data-sources.md) — Tool selection guide for prospecting across all three branches.
-- [`local-prospecting`](local-prospecting.md) — For when the user sells to local small businesses — shops, gyms, restaurants, salons, clinics, professional services, contractors, real estate, fitness studios, dental practices.
-- [`saas-prospecting`](saas-prospecting.md) — For when the user sells SaaS or digital services to other SaaS companies / digital businesses.
+### realtime
+- [`realtime-pubsub-patterns`](realtime-pubsub-patterns.md) — Scope: Publish/subscribe architecture, Redis Pub/Sub, message queues, and fan-out patterns Lines: 372 Last Updated: 2025-10-18
+- [`realtime-realtime-sync`](realtime-realtime-sync.md) — Scope: Conflict resolution, CRDTs, operational transformation, and eventual consistency patterns Lines: 398 Last Updated: 2025-10-18
+- [`realtime-server-sent-events`](realtime-server-sent-events.md) — Scope: SSE protocol, event streams, automatic reconnection, and fallback strategies Lines: 343 Last Updated: 2025-10-18
+- [`realtime-websocket-implementation`](realtime-websocket-implementation.md) — Scope: WebSocket protocol, connection management, reconnection strategies, and heartbeat patterns Lines: 387 Last Updated: 2025-10-18
+- [`reference`](reference.md) — 1. Protocol Fundamentals(#protocol-fundamentals) 2.
 
 ### tui
 - [`bubbletea-architecture`](bubbletea-architecture.md) — Building terminal UIs in Go
@@ -991,17 +1030,17 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`design-patterns`](design-patterns.md) — Reference guide for detecting AI slop patterns in visual and UX design including generic gradients, cookie-cutter layouts, and buzzword-heavy copy. Use as reference when reviewing design quality.
 - [`text-patterns`](text-patterns.md) — Reference guide for detecting AI slop patterns in natural language text including overused phrases, buzzwords, and meta-commentary. Use as reference when reviewing text content for quality.
 
+### aso
+- [`apple-specs`](apple-specs.md) — All data from developer.apple.com as of March 2026.
+- [`google-play-specs`](google-play-specs.md) — All data from support.google.com and developer.android.com as of March 2026.
+- [`report-template`](report-template.md) — Use this structure for all ASO audit reports.
+- [`scoring-criteria`](scoring-criteria.md) — Score each dimension 0-10 using the rubrics below.
+
 ### cicd
 - [`cicd-cd-deployment-patterns`](cicd-cd-deployment-patterns.md) — Implementing zero-downtime deployment strategies
 - [`cicd-ci-optimization`](cicd-ci-optimization.md) — CI pipelines are taking too long (>10 minutes for feedback)
 - [`cicd-ci-security`](cicd-ci-security.md) — Managing secrets and credentials in CI/CD pipelines
 - [`cicd-ci-testing-strategy`](cicd-ci-testing-strategy.md) — Designing test execution strategies for CI pipelines
-
-### cold-email
-- [`follow-up-sequences`](follow-up-sequences.md) — 55% of replies come from follow-ups, not the initial email.
-- [`frameworks`](frameworks.md) — Frameworks beat templates — they teach thinking patterns, not copy-paste shortcuts.
-- [`personalization`](personalization.md) — Personalization drives 50–250% more replies (Lavender).
-- [`subject-lines`](subject-lines.md) — The subject line determines whether the email gets read.
 
 ### ebpf
 - [`ebpf-fundamentals`](ebpf-fundamentals.md) — eBPF basics including program types, verifier, maps, BCC vs libbpf toolchains, and loading programs
@@ -1027,17 +1066,17 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`product-prd-technical-specifications`](product-prd-technical-specifications.md) — API specifications, data models, architecture diagrams, and technical constraints for product requirements
 - [`product-prd-user-stories-acceptance`](product-prd-user-stories-acceptance.md) — Writing effective user stories, epics, acceptance criteria, and story mapping for product requirements
 
+### prospecting
+- [`b2b-prospecting`](b2b-prospecting.md) — For when the user sells to non-SaaS B2B — services, agencies, manufacturers, mid-market and enterprise companies, professional services firms.
+- [`data-sources`](data-sources.md) — Tool selection guide for prospecting across all three branches.
+- [`local-prospecting`](local-prospecting.md) — For when the user sells to local small businesses — shops, gyms, restaurants, salons, clinics, professional services, contractors, real estate, fitness studios, dental practices.
+- [`saas-prospecting`](saas-prospecting.md) — For when the user sells SaaS or digital services to other SaaS companies / digital businesses.
+
 ### public-relations
 - [`journalist-pitching`](journalist-pitching.md) — Building a media list, scoring journalist fit, and crafting pitches that actually get opened.
 - [`media-outlets`](media-outlets.md) — A curated, opinionated list of where to pitch for software/SaaS PR.
 - [`newsjacking`](newsjacking.md) — Injecting your POV into a story that's already trending.
 - [`press-platforms`](press-platforms.md) — Journalists posting "I need a source for X" — you respond, sometimes you get quoted, sometimes you don't.
-
-### realtime
-- [`realtime-pubsub-patterns`](realtime-pubsub-patterns.md) — Scope: Publish/subscribe architecture, Redis Pub/Sub, message queues, and fan-out patterns Lines: 372 Last Updated: 2025-10-18
-- [`realtime-realtime-sync`](realtime-realtime-sync.md) — Scope: Conflict resolution, CRDTs, operational transformation, and eventual consistency patterns Lines: 398 Last Updated: 2025-10-18
-- [`realtime-server-sent-events`](realtime-server-sent-events.md) — Scope: SSE protocol, event streams, automatic reconnection, and fallback strategies Lines: 343 Last Updated: 2025-10-18
-- [`realtime-websocket-implementation`](realtime-websocket-implementation.md) — Scope: WebSocket protocol, connection management, reconnection strategies, and heartbeat patterns Lines: 387 Last Updated: 2025-10-18
 
 ### revops
 - [`automation-playbooks`](automation-playbooks.md) — Platform-specific workflow recipes for HubSpot, Salesforce, scheduling tools, and cross-tool automation.
@@ -1084,11 +1123,6 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`content-refresh`](content-refresh.md) — Copy editing isn't just for new content.
 - [`plain-english-alternatives`](plain-english-alternatives.md) — Replace complex or pompous words with plain English alternatives.
 
-### email-sequence
-- [`copy-guidelines`](copy-guidelines.md) — 1. Hook: First line grabs attention 2.
-- [`email-types`](email-types.md) — A comprehensive guide to lifecycle and campaign emails.
-- [`sequence-templates`](sequence-templates.md) — Detailed templates for common email sequences.
-
 ### hanzo-api
 - [`hanzo-api-ai`](hanzo-api-ai.md) — Hanzo AI — the model API on /v1 (/v1/chat/completions, /v1/messages, /v1/models and the rest of hanzoai/ai's surface) — mounted into a cloud binary with the money, ingest and telemetry callbacks…
 - [`hanzo-api-kms`](hanzo-api-kms.md) — Secret custody: your org's secrets sealed at rest, plus threshold signing.
@@ -1098,6 +1132,11 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`mermaid-templates`](mermaid-templates.md) — Copy-paste-ready Mermaid diagrams for visual sitemaps.
 - [`navigation-patterns`](navigation-patterns.md) — Detailed navigation patterns for different site types and contexts.
 - [`site-type-templates`](site-type-templates.md) — Full page hierarchy templates with ASCII trees, URL maps, and navigation recommendations for common site types.
+
+### sms
+- [`compliance`](compliance.md) — Comprehensive compliance reference for SMS marketing across major jurisdictions, opt-in copy templates, and STOP/HELP response templates.
+- [`platforms`](platforms.md) — Deep-dive on the major SMS marketing platforms — features, pricing, A2P 10DLC support, and integration paths.
+- [`sequence-templates`](sequence-templates.md) — Full copy templates with character counts, timing, and segmentation logic for every major SMS flow.
 
 ### zoo-gym
 - [`bitdelta`](bitdelta.md) — BitDelta enables millions of personalized model variants for individual users WITHOUT LoRA.
@@ -1120,17 +1159,17 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`cancel-flow-patterns`](cancel-flow-patterns.md) — Detailed cancel flow patterns by business type, billing provider, and industry.
 - [`dunning-playbook`](dunning-playbook.md) — Complete guide to recovering failed payments and reducing involuntary churn.
 
-### competitor-alternatives
-- [`content-architecture`](content-architecture.md) — How to structure and maintain competitor data for scalable comparison pages.
-- [`templates`](templates.md) — Ready-to-use templates for each section of competitor comparison pages.
-
-### cro
-- [`experiments`](experiments.md) — Comprehensive list of A/B tests and experiments organized by page type.
-- [`form`](form.md) — You are an expert in form optimization.
+### competitor-profiling
+- [`templates`](templates.md) — Ready-to-use templates for competitor profile sections and the summary document.
+- [`tool-reference`](tool-reference.md) — Quick reference for the Firecrawl and DataForSEO MCP tools used in competitor profiling.
 
 ### directory-submissions
 - [`directory-list`](directory-list.md) — Canonical list of directories organized by tier.
 - [`positioning-variations`](positioning-variations.md) — Directory audiences respond to different framings.
+
+### emails
+- [`copy-guidelines`](copy-guidelines.md) — 1. Hook: First line grabs attention 2.
+- [`email-types`](email-types.md) — A comprehensive guide to lifecycle and campaign emails.
 
 ### himalaya
 - [`configuration`](configuration.md) — Configuration file location: ~/.config/himalaya/config.toml
@@ -1151,11 +1190,14 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 ### bot
 - [`skills-hub`](skills-hub.md) — Use the Hanzo Skills Hub CLI to search, install, update, and publish agent skills from the Hanzo skills hub (hub.hanzo.bot, API at api.hanzo.ai/v1/skills). Use when you need to fetch new skills on the fly, sync installed skills to latest or a specific version, or publish new/updated skill folders with the npm-installed skills-hub CLI.
 
-### competitor-profiling
-- [`tool-reference`](tool-reference.md) — Quick reference for the Firecrawl and DataForSEO MCP tools used in competitor profiling.
+### competitors
+- [`content-architecture`](content-architecture.md) — How to structure and maintain competitor data for scalable comparison pages.
 
 ### content-strategy
 - [`headless-cms`](headless-cms.md) — Reference for choosing, modeling, and implementing a headless CMS for marketing content.
+
+### cro
+- [`form`](form.md) — You are an expert in form optimization.
 
 ### customer-research
 - [`source-guides`](source-guides.md) — Detailed, source-by-source playbooks for gathering customer intelligence from online watering holes.
@@ -1178,14 +1220,14 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 ### model-usage
 - [`codexbar-cli`](codexbar-cli.md) — - App: Preferences -> Advanced -> Install CLI - Repo: ./bin/install-codexbar-cli.sh
 
+### page-cro
+- [`experiments`](experiments.md) — Comprehensive list of A/B tests and experiments organized by page type.
+
 ### programmatic-seo
 - [`playbooks`](playbooks.md) — Beyond mixing and matching data point permutations, these are the proven playbooks for programmatic SEO.
 
-### schema
+### schema-markup
 - [`schema-examples`](schema-examples.md) — Complete JSON-LD examples for common schema types.
-
-### sms
-- [`platforms`](platforms.md) — Deep-dive on the major SMS marketing platforms — features, pricing, A2P 10DLC support, and integration paths.
 
 ### video
 - [`ai-video-prompting`](ai-video-prompting.md) — How to write effective prompts for AI video generation models (Veo, Runway, Kling, Pika).
@@ -1354,6 +1396,9 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-1330`](hip-1330.md) — HIP-1330: Dev — The Agent Loop. Status Draft. Hanzo architectural specification.
 - [`hip-1333`](hip-1333.md) — HIP-1333: Train — One Endpoint for Training. Status Draft. Hanzo architectural specification.
 - [`hip-1334`](hip-1334.md) — HIP-1334: Research — The Unified Research Runtime. Status Draft. Hanzo architectural specification.
+- [`hip-1335`](hip-1335.md) — HIP-1335: Listings — One Market for Apps, Skills, Mods, Plugins, Automations and Packs. Status Draft. Hanzo architectural specification.
+- [`hip-1337`](hip-1337.md) — HIP-1337: Space — Sovereign Organization Workspaces, Virtual Drives & File Namespaces. Status Final. Hanzo architectural specification.
+- [`hip-1339`](hip-1339.md) — HIP-1339: Environment — Codebase Pre-Flight Environments, Sandboxed Scripts & Scoped Secrets. Status Final. Hanzo architectural specification.
 
 ### Standards: Interfaces & Realtime Protocols
 - [`hip-0004`](hip-0004.md) — HIP-4: LLM Gateway - Unified AI Provider Interface. Status Final. Hanzo architectural specification.
@@ -1372,6 +1417,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-0504`](hip-0504.md) — HIP-504: Unified Cross-Platform Design System. Status Final. Hanzo architectural specification.
 - [`hip-0518`](hip-0518.md) — HIP-518: AML — The Obligation Plane. Status Final. Hanzo architectural specification.
 - [`hip-0528`](hip-0528.md) — HIP-528: Mods — The App SDK. Status Draft. Hanzo architectural specification.
+- [`hip-0529`](hip-0529.md) — HIP-529: Unified Settings — One Control Plane for Hanzo. Status Draft. Hanzo architectural specification.
 - [`hip-1020`](hip-1020.md) — HIP-1020: Chain Registry. Status Final. Hanzo architectural specification.
 - [`hip-1021`](hip-1021.md) — HIP-1021: Chain JSON-RPC Endpoint. Status Final. Hanzo architectural specification.
 - [`hip-1022`](hip-1022.md) — HIP-1022: Native Balance Reads. Status Final. Hanzo architectural specification.
@@ -1434,6 +1480,8 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-1045`](hip-1045.md) — HIP-1045: Orgs. Status Final. Hanzo architectural specification.
 - [`hip-1047`](hip-1047.md) — HIP-1047: Security Scanning. Status Final. Hanzo architectural specification.
 - [`hip-1065`](hip-1065.md) — HIP-1065: Connectors — A User's Own Credentials. Status Final. Hanzo architectural specification.
+- [`hip-1340`](hip-1340.md) — HIP-1340: Principal — Cryptographic Identity Statements & Authorization Clearance Plane. Status Final. Hanzo architectural specification.
+- [`hip-1341`](hip-1341.md) — HIP-1341: Hanzo CA — Post-Quantum PKI and Zero-Trust Workload Identity. Status Draft. Hanzo architectural specification.
 
 ### Standards: Platform & Applications
 - [`hip-0124`](hip-0124.md) — HIP-124: Bring-Your-Own Provider & AI — Unified Dashboard and Usage. Status Final. Hanzo architectural specification.
@@ -1457,7 +1505,7 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-0449`](hip-0449.md) — HIP-449: hanzo-login. Status Final. Hanzo architectural specification.
 - [`hip-0506`](hip-0506.md) — HIP-506: Hanzo Studio — Agentic Multi-Modal Creative Runtime. Status Final. Hanzo architectural specification.
 - [`hip-1000`](hip-1000.md) — HIP-1000: Author — A Royalty Bound to a Repository. Status Final. Hanzo architectural specification.
-- [`hip-1001`](hip-1001.md) — HIP-1001: Books — The Double-Entry Ledger. Status Final. Hanzo architectural specification.
+- [`hip-1001`](hip-1001.md) — HIP-1001: Ledger — The Double-Entry Ledger. Status Final. Hanzo architectural specification.
 - [`hip-1046`](hip-1046.md) — HIP-1046: Risk. Status Final. Hanzo architectural specification.
 - [`hip-1048`](hip-1048.md) — HIP-1048: Team. Status Final. Hanzo architectural specification.
 - [`hip-1160`](hip-1160.md) — HIP-1160: Task — The Work Item Board. Status Final. Hanzo architectural specification.
@@ -1478,3 +1526,5 @@ Every page is `text/markdown`. Paths work with or without the `.md`.
 - [`hip-1262`](hip-1262.md) — HIP-1262: Reference — Lookup Sets. Status Final. Hanzo architectural specification.
 - [`hip-1312`](hip-1312.md) — HIP-1312: Company — The Formation Machine. Status Final. Hanzo architectural specification.
 - [`hip-1331`](hip-1331.md) — HIP-1331: Patrol — Standing Watch Over an Estate. Status Final. Hanzo architectural specification.
+- [`hip-1336`](hip-1336.md) — HIP-1336: Patent — Inventorship Conception Provenance & Tamper-Evident Conception Ledger. Status Final. Hanzo architectural specification.
+- [`hip-1338`](hip-1338.md) — HIP-1338: Tax — Informational Returns, Tax Profiles & Form 1099 Compliance. Status Final. Hanzo architectural specification.

@@ -9,12 +9,9 @@ import os, re, io, json, html, shutil, sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(REPO_ROOT, "skills")
-HIPS = os.environ.get("HIPS_DIR", "/Users/z/work/hanzo/hips/HIPs")
+_DEFAULT_HIPS = "/home/z/work/hanzo/hips/HIPs" if os.path.exists("/home/z/work/hanzo/hips/HIPs") else "/Users/z/work/hanzo/hips/HIPs"
+HIPS = os.environ.get("HIPS_DIR", _DEFAULT_HIPS)
 OUT = os.environ.get("OUT_DIR", os.path.join(REPO_ROOT, "public"))
-# Pages in public/ that no source here writes, edited in place: auth.md, and the
-# notices a renamed skill leaves at its old name.
-KEEP = {"auth.md", "hanzo-migrate-backend-to-go.md", "hanzo-migrate-backend-to-go.html",
-        "ui-port-parity.md", "ui-port-parity.html"}
 
 CATEGORY_LABELS = {
     "standards-core": "Standards: Core AI & Models",
@@ -126,10 +123,8 @@ def map_hip_category(cat, n, title):
 
 def collect_hips():
     out = []
-    # The build deletes every page it did not write (main), so building without the
-    # HIPs would delete all of theirs. Point HIPS_DIR at a hanzoai/hips checkout.
     if not os.path.isdir(HIPS):
-        sys.exit(f"HIPS_DIR {HIPS} is not a directory: point it at a hanzoai/hips checkout's HIPs/")
+        return out
     for f in sorted(os.listdir(HIPS)):
         if not f.endswith('.md') or f.startswith('_'):
             continue
@@ -181,9 +176,6 @@ def collect():
 
     # 3. All skills in SRC
     for dp, dn, fn in os.walk(SRC):
-        # Walk in name order on every filesystem, so a name two files share is
-        # published from the same file wherever the site is built.
-        dn.sort()
         for f in sorted(fn):
             if not f.endswith('.md') or f in ('INDEX.md', 'README.md', 'SECURITY.md', '_SKILL_TEMPLATE.md'):
                 continue
@@ -352,7 +344,8 @@ footer a{color:var(--soft)}
 """
 
 def shell(title, body, up=True, extra='', md=None, hero=None):
-    note =(f'<!-- Reading this with a machine? Every page here is also plain markdown.\n'
+    alt = f'<link rel="alternate" type="text/markdown" href="{md}">' if md else ''
+    note = (f'<!-- Reading this with a machine? Every page here is also plain markdown.\n'
             f'     This one: https://hanzoskills.com{md}\n'
             f'     Index:    https://hanzoskills.com/llms.txt\n'
             f'     Corpus:   https://hanzoskills.com/all.md\n'
@@ -362,6 +355,7 @@ def shell(title, body, up=True, extra='', md=None, hero=None):
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)}</title>
 <meta name="color-scheme" content="dark">\n<style>{CSS}</style>
+{alt}
 </head>
 {note}
 <body>
@@ -504,7 +498,6 @@ def main():
         f"> {len(docs)} skills and architectural specifications for building apps, backends, agents and agentic companies on Hanzo.\n",
         "> Native compiled code only (Go, Rust, C++). Local-first cloud, realtime SSE, zero interpreter bloat. Plain markdown, curl-able, no auth.\n\n",
         "## Hanzo\n\n",
-        "- [Agents: start here](https://hanzoskills.com/hanzo.md): Sign up free with a wallet. Get an API key free. A small free allowance to try it. Top up in USDC or USDT over the API to raise your limits and pay as you go. No human required.\n",
         "- [Run it locally](https://hanzoskills.com/skill.md): what runs on your own machine, the command that starts each part, and what needs the hosted cloud.\n",
         "- [Install](https://hanzo.sh): `curl -fsSL hanzo.sh | sh` puts the CLI, MCP server and dev agent on this machine.\n",
         "- [API reference](https://docs.hanzo.ai/llms.txt): every endpoint api.hanzo.ai serves, one page per operation.\n",
@@ -535,16 +528,88 @@ def main():
         allp.append(f"\n\n---\n\n<!-- {d['name']} -->\n\n{d['raw']}")
     io.open(f'{OUT}/all.md', 'w', encoding='utf-8').writelines(allp)
 
-    # A page whose source is gone is not served on: it would tell an agent to read
-    # a file that no longer exists. Every .md and .html at the top of public/ is
-    # one of this build's, or hand-written and named in KEEP.
-    made = {f"{d['name']}.{ext}" for d in docs for ext in ('md', 'html')}
-    made |= {'index.html', 'index.md', 'llms.txt', 'all.md'}
-    gone = sorted(f for f in os.listdir(OUT)
-                  if f.endswith(('.md', '.html')) and f not in made and f not in KEEP)
-    for f in gone:
-        os.remove(os.path.join(OUT, f))
-    print(f"Generated index: total_files={len(docs)} categories={len(cats)}; removed {len(gone)} pages with no source")
+    # Progressive disclosure JSON manifests for MCP tools (public/mcp/*.json) and OSS repos (public/oss/index.json)
+    mcp_dir = os.path.join(OUT, "mcp")
+    oss_dir = os.path.join(OUT, "oss")
+    os.makedirs(mcp_dir, exist_ok=True)
+    os.makedirs(oss_dir, exist_ok=True)
+
+    mcp_tools = [
+        {"name": "fs", "category": "filesystem", "description": "Read, write, edit, patch, list, and manage files", "actions": ["read", "write", "edit", "list", "stat", "mkdir", "rm", "mv", "cp", "patch"]},
+        {"name": "exec", "category": "execution", "description": "Execute shell commands and manage background processes", "actions": ["run", "bg", "ps", "logs", "kill", "stdin", "wait"]},
+        {"name": "code", "category": "semantic", "description": "Search code, AST symbols, definitions, references, and diagnostics", "actions": ["search", "symbols", "definition", "references", "outline", "ast", "diagnostics"]},
+        {"name": "git", "category": "vcs", "description": "Git status, diff, log, commit, branch, checkout, push, and PR workflows", "actions": ["status", "diff", "log", "commit", "branch", "checkout", "push", "pr"]},
+        {"name": "test", "category": "verification", "description": "Run test suites, single tests, watch mode, and coverage", "actions": ["run", "watch", "coverage", "single", "list"]},
+        {"name": "fetch", "category": "network", "description": "HTTP requests, markdown scraping, and OpenAPI discovery", "actions": ["get", "post", "head", "scrape", "markdown", "openapi"]},
+        {"name": "workspace", "category": "context", "description": "Detect workspace roots, packages, scripts, and dependency graphs", "actions": ["detect", "roots", "packages", "env", "scripts", "graph"]},
+        {"name": "computer", "category": "browser", "description": "Browser & desktop control via ZAP bridge (tabs, CDP, snapshot, social automation)", "actions": ["tabs", "navigate", "snapshot", "click", "type", "press", "screenshot", "evaluate", "social.sessions", "social.sync", "social.post"]},
+        {"name": "think", "category": "reasoning", "description": "Structured reasoning, decomposition, critique, and verification", "actions": ["thought", "critic", "decompose", "verify", "hypothesis"]},
+        {"name": "memory", "category": "brain", "description": "Durable SQLite + vector + graph memory (~/.hanzo/brain/brain.db)", "actions": ["recall", "store", "facts", "graph", "search", "forget"]},
+        {"name": "hanzo", "category": "cloud", "description": "Sovereign cloud control plane (api.hanzo.ai/v1/*, IAM, KMS, Base, Post, CRM, CMS, Sandbox)", "actions": ["iam", "kms", "base", "cloud", "deploy", "platform", "billing", "crm", "cms", "social", "post", "sandbox", "describe"]},
+        {"name": "plan", "category": "planning", "description": "Create, update, and track step-by-step execution plans", "actions": ["create", "update", "show", "approve", "step"]},
+        {"name": "tasks", "category": "tasks", "description": "Manage workspace and team tasks", "actions": ["list", "add", "update", "complete", "assign"]},
+    ]
+    for t in mcp_tools:
+        t["schema_url"] = f"https://hanzoskills.com/mcp/{t['name']}.json"
+        schema_doc = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "name": t["name"],
+            "category": t["category"],
+            "description": t["description"],
+            "inputSchema": {
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                    "action": {"type": "string", "enum": t["actions"]},
+                    "params": {"type": "object", "additionalProperties": True},
+                },
+            },
+        }
+        io.open(os.path.join(mcp_dir, f"{t['name']}.json"), "w", encoding="utf-8").write(json.dumps(schema_doc, indent=2) + "\n")
+
+    mcp_index = {
+        "standard": "HIP-0300",
+        "package": "@hanzo/mcp",
+        "endpoint": "https://api.hanzo.ai/v1/mcp",
+        "skill": "https://hanzoskills.com/hanzo-mcp.md",
+        "progressive_disclosure": {
+            "level_0": "Load this index (13 unified tools, <1.5k tokens)",
+            "level_1": "Fetch https://hanzoskills.com/mcp/<tool>.json for action schemas",
+            "level_2": "Call tools/call describe on https://api.hanzo.ai/v1/mcp for live OpenAPI sub-schemas",
+        },
+        "tools": mcp_tools,
+    }
+    io.open(os.path.join(mcp_dir, "index.json"), "w", encoding="utf-8").write(json.dumps(mcp_index, indent=2) + "\n")
+
+    oss_index = {
+        "organization": "hanzoai",
+        "skill": "https://hanzoskills.com/hanzo-oss.md",
+        "repositories": [
+            {"name": "cloud", "repo": "hanzoai/cloud", "path": "~/work/hanzo/cloud", "lang": "Go", "layer": "cloud", "url": "https://github.com/hanzoai/cloud"},
+            {"name": "base", "repo": "hanzoai/base", "path": "~/work/hanzo/base", "lang": "Go", "layer": "data", "url": "https://github.com/hanzoai/base"},
+            {"name": "zap", "repo": "zap-proto/zap", "path": "~/work/hanzo/zap", "lang": "Rust/Go", "layer": "transport", "url": "https://github.com/zap-proto/zap"},
+            {"name": "zip", "repo": "zap-proto/zip", "path": "~/work/hanzo/zip", "lang": "Go", "layer": "framework", "url": "https://github.com/zap-proto/zip"},
+            {"name": "iam", "repo": "hanzoai/iam", "path": "~/work/hanzo/iam", "lang": "Go", "layer": "identity", "url": "https://github.com/hanzoai/iam"},
+            {"name": "kms", "repo": "hanzoai/kms", "path": "~/work/hanzo/kms", "lang": "Go", "layer": "security", "url": "https://github.com/hanzoai/kms"},
+            {"name": "engine", "repo": "hanzoai/engine", "path": "~/work/hanzo/engine", "lang": "Rust/C++", "layer": "inference", "url": "https://github.com/hanzoai/engine"},
+            {"name": "llm", "repo": "hanzoai/llm", "path": "~/work/hanzo/llm", "lang": "Go/Python", "layer": "gateway", "url": "https://github.com/hanzoai/llm"},
+            {"name": "bot", "repo": "hanzoai/bot", "path": "~/work/hanzo/bot", "lang": "TS/Docker", "layer": "sandbox", "url": "https://github.com/hanzoai/bot"},
+            {"name": "cli", "repo": "hanzoai/cli", "path": "~/work/hanzo/cli", "lang": "Go", "layer": "tooling", "url": "https://github.com/hanzoai/cli"},
+            {"name": "dev", "repo": "hanzoai/dev", "path": "~/work/hanzo/dev", "lang": "Rust", "layer": "agent", "url": "https://github.com/hanzoai/dev"},
+            {"name": "mcp", "repo": "hanzoai/mcp", "path": "~/work/hanzo/mcp", "lang": "TS/Rust", "layer": "mcp", "url": "https://github.com/hanzoai/mcp"},
+            {"name": "extension", "repo": "hanzoai/extension", "path": "~/work/hanzo/extension", "lang": "TS", "layer": "browser", "url": "https://github.com/hanzoai/extension"},
+            {"name": "ui", "repo": "hanzoai/ui", "path": "~/work/hanzo/ui", "lang": "TS/React", "layer": "ui", "url": "https://github.com/hanzoai/ui"},
+            {"name": "team", "repo": "hanzoai/team", "path": "~/work/hanzo/team", "lang": "TS/React", "layer": "business", "url": "https://github.com/hanzoai/team"},
+            {"name": "console", "repo": "hanzoai/console", "path": "~/work/hanzo/console", "lang": "TS/React", "layer": "crm", "url": "https://github.com/hanzoai/console"},
+            {"name": "cms", "repo": "hanzoai/cms", "path": "~/work/hanzo/cms", "lang": "Go/TS", "layer": "cms", "url": "https://github.com/hanzoai/cms"},
+            {"name": "post", "repo": "hanzoai/post", "path": "~/work/hanzo/post", "lang": "TS/NestJS/Next", "layer": "social", "url": "https://github.com/hanzoai/post"},
+            {"name": "universe", "repo": "hanzoai/universe", "path": "~/work/hanzo/universe", "lang": "YAML/Helm", "layer": "gitops", "url": "https://github.com/hanzoai/universe"},
+            {"name": "skills", "repo": "hanzoai/skills", "path": "~/work/hanzo/skills", "lang": "Markdown", "layer": "docs", "url": "https://github.com/hanzoai/skills"},
+        ],
+    }
+    io.open(os.path.join(oss_dir, "index.json"), "w", encoding="utf-8").write(json.dumps(oss_index, indent=2) + "\n")
+
+    print(f"Generated index: total_files={len(docs)} categories={len(cats)}")
 
 if __name__ == "__main__":
     main()

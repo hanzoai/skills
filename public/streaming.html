@@ -196,27 +196,140 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>streaming</h1><p class="lede">var parameters = new MessageCreateParams { Model = Model.ClaudeOpus48, MaxTokens = 64000, Messages = new() { Role = Role.User, Content = &quot;Write a haiku&quot; } };</p><h1>Streaming — C#</h1>
-<h2>Streaming</h2>
-<pre><code class="lang-csharp">using Anthropic.Models.Messages;
+<h1>streaming</h1><p class="lede">for await (const event of stream) { if ( event.type === &quot;contentblockdelta&quot; &amp;&amp; event.delta.type === &quot;textdelta&quot; ) { process.stdout.write(event.delta.text); } }</p><h1>Streaming — TypeScript</h1>
+<h2>Quick Start</h2>
+<pre><code class="lang-typescript">const stream = client.messages.stream({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 64000,
+  messages: [{ role: &quot;user&quot;, content: &quot;Write a story&quot; }],
+});
 
-var parameters = new MessageCreateParams
-{
-    Model = Model.ClaudeOpus4_8,
-    MaxTokens = 64000,
-    Messages = [new() { Role = Role.User, Content = &quot;Write a haiku&quot; }]
-};
-
-await foreach (RawMessageStreamEvent streamEvent in client.Messages.CreateStreaming(parameters))
-{
-    if (streamEvent.TryPickContentBlockDelta(out var delta) &amp;&amp;
-        delta.Delta.TryPickText(out var text))
-    {
-        Console.Write(text.Text);
-    }
+for await (const event of stream) {
+  if (
+    event.type === &quot;content_block_delta&quot; &amp;&amp;
+    event.delta.type === &quot;text_delta&quot;
+  ) {
+    process.stdout.write(event.delta.text);
+  }
 }</code></pre>
-<p><strong><code>RawMessageStreamEvent</code> TryPick methods</strong> (naming drops the <code>Message</code>/<code>Raw</code> prefix): <code>TryPickStart</code>, <code>TryPickDelta</code>, <code>TryPickStop</code>, <code>TryPickContentBlockStart</code>, <code>TryPickContentBlockDelta</code>, <code>TryPickContentBlockStop</code>. There is no <code>TryPickMessageStop</code> — use <code>TryPickStop</code>.</p>
 <hr>
+<h2>Handling Different Content Types</h2>
+<blockquote><p><strong>Fable 5 / Claude Opus 5 / Opus 4.8 / Opus 4.7 / Opus 4.6:</strong> Use <code>thinking: {type: &quot;adaptive&quot;}</code>. On Claude Opus 5 adaptive is also what you get by omitting <code>thinking</code> entirely. On older models, use <code>thinking: {type: &quot;enabled&quot;, budget_tokens: N}</code> instead.</p></blockquote>
+<pre><code class="lang-typescript">const stream = client.messages.stream({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 64000,
+  thinking: { type: &quot;adaptive&quot;, display: &quot;summarized&quot; }, // display opt-in: default is omitted (empty thinking text) on Fable 5 / Mythos 5 / Claude Opus 5 / Opus 4.8 / 4.7
+  messages: [{ role: &quot;user&quot;, content: &quot;Analyze this problem&quot; }],
+});
+
+for await (const event of stream) {
+  switch (event.type) {
+    case &quot;content_block_start&quot;:
+      switch (event.content_block.type) {
+        case &quot;thinking&quot;:
+          console.log(&quot;\n[Thinking...]&quot;);
+          break;
+        case &quot;text&quot;:
+          console.log(&quot;\n[Response:]&quot;);
+          break;
+      }
+      break;
+    case &quot;content_block_delta&quot;:
+      switch (event.delta.type) {
+        case &quot;thinking_delta&quot;:
+          process.stdout.write(event.delta.thinking);
+          break;
+        case &quot;text_delta&quot;:
+          process.stdout.write(event.delta.text);
+          break;
+      }
+      break;
+  }
+}</code></pre>
+<hr>
+<h2>Streaming with Tool Use (Tool Runner)</h2>
+<p>Use the tool runner with <code>stream: true</code>. The outer loop iterates over tool runner iterations (messages), the inner loop processes stream events:</p>
+<pre><code class="lang-typescript">import Anthropic from &quot;@anthropic-ai/sdk&quot;;
+import { betaZodTool } from &quot;@anthropic-ai/sdk/helpers/beta/zod&quot;;
+import { z } from &quot;zod&quot;;
+
+const client = new Anthropic();
+
+const getWeather = betaZodTool({
+  name: &quot;get_weather&quot;,
+  description: &quot;Get current weather for a location&quot;,
+  inputSchema: z.object({
+    location: z.string().describe(&quot;City and state, e.g., San Francisco, CA&quot;),
+  }),
+  run: async ({ location }) =&gt; `72°F and sunny in ${location}`,
+});
+
+const runner = client.beta.messages.toolRunner({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 64000,
+  tools: [getWeather],
+  messages: [
+    { role: &quot;user&quot;, content: &quot;What&#x27;s the weather in Paris and London?&quot; },
+  ],
+  stream: true,
+});
+
+// Outer loop: each tool runner iteration
+for await (const messageStream of runner) {
+  // Inner loop: stream events for this iteration
+  for await (const event of messageStream) {
+    switch (event.type) {
+      case &quot;content_block_delta&quot;:
+        switch (event.delta.type) {
+          case &quot;text_delta&quot;:
+            process.stdout.write(event.delta.text);
+            break;
+          case &quot;input_json_delta&quot;:
+            // Tool input being streamed
+            break;
+        }
+        break;
+    }
+  }
+}</code></pre>
+<hr>
+<h2>Getting the Final Message</h2>
+<pre><code class="lang-typescript">const stream = client.messages.stream({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 64000,
+  messages: [{ role: &quot;user&quot;, content: &quot;Hello&quot; }],
+});
+
+for await (const event of stream) {
+  // Process events...
+}
+
+const finalMessage = await stream.finalMessage();
+console.log(`Tokens used: ${finalMessage.usage.output_tokens}`);</code></pre>
+<hr>
+<h2>Stream Event Types</h2>
+<p>| Event Type            | Description                 | When it fires                     | | --------------------- | --------------------------- | --------------------------------- | | <code>message_start</code>       | Contains message metadata   | Once at the beginning             | | <code>content_block_start</code> | New content block beginning | When a text/tool_use block starts | | <code>content_block_delta</code> | Incremental content update  | For each token/chunk              | | <code>content_block_stop</code>  | Content block complete      | When a block finishes             | | <code>message_delta</code>       | Message-level updates       | Contains <code>stop_reason</code>, usage     | | <code>message_stop</code>        | Message complete            | Once at the end                   |</p>
+<h2>Best Practices</h2>
+<ol><li><strong>Always flush output</strong> — Use <code>process.stdout.write()</code> for immediate display</li><li><strong>Handle partial responses</strong> — If the stream is interrupted, you may have incomplete content</li><li><strong>Track token usage</strong> — The <code>message_delta</code> event contains usage information</li><li><strong>Use <code>finalMessage()</code></strong> — Get the complete <code>Anthropic.Message</code> object even when streaming. Don&#x27;t wrap <code>.on()</code> events in <code>new Promise()</code> — <code>finalMessage()</code> handles all completion/error/abort states internally</li><li><strong>Buffer for web UIs</strong> — Consider buffering a few tokens before rendering to avoid excessive DOM updates</li><li><strong>Use <code>stream.on(&quot;text&quot;, ...)</code> for deltas</strong> — The <code>text</code> event provides just the delta string, simpler than manually filtering <code>content_block_delta</code> events</li><li><strong>For agentic loops with streaming</strong> — See the <a href="./tool-use.md#streaming-manual-loop">Streaming Manual Loop</a> section in tool-use.md for combining <code>stream()</code> + <code>finalMessage()</code> with a tool-use loop</li></ol>
+<h2>Raw SSE Format</h2>
+<p>If using raw HTTP (not SDKs), the stream returns Server-Sent Events:</p>
+<pre><code>event: message_start
+data: {&quot;type&quot;:&quot;message_start&quot;,&quot;message&quot;:{&quot;id&quot;:&quot;msg_...&quot;,&quot;type&quot;:&quot;message&quot;,...}}
+
+event: content_block_start
+data: {&quot;type&quot;:&quot;content_block_start&quot;,&quot;index&quot;:0,&quot;content_block&quot;:{&quot;type&quot;:&quot;text&quot;,&quot;text&quot;:&quot;&quot;}}
+
+event: content_block_delta
+data: {&quot;type&quot;:&quot;content_block_delta&quot;,&quot;index&quot;:0,&quot;delta&quot;:{&quot;type&quot;:&quot;text_delta&quot;,&quot;text&quot;:&quot;Hello&quot;}}
+
+event: content_block_stop
+data: {&quot;type&quot;:&quot;content_block_stop&quot;,&quot;index&quot;:0}
+
+event: message_delta
+data: {&quot;type&quot;:&quot;message_delta&quot;,&quot;delta&quot;:{&quot;stop_reason&quot;:&quot;end_turn&quot;},&quot;usage&quot;:{&quot;output_tokens&quot;:12}}
+
+event: message_stop
+data: {&quot;type&quot;:&quot;message_stop&quot;}</code></pre>
 <footer>
 <div class="fmap">
   <div><b>Build</b>

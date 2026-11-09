@@ -196,21 +196,71 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>files-api</h1><p class="lede">Files live under client.Beta.Files (namespace Anthropic.Models.Beta.Files).</p><h1>Files API — C#</h1>
-<h2>Files API (Beta)</h2>
-<p>Files live under <code>client.Beta.Files</code> (namespace <code>Anthropic.Models.Beta.Files</code>). <code>BinaryContent</code> implicit-converts from <code>Stream</code> and <code>byte[]</code>.</p>
-<pre><code class="lang-csharp">using Anthropic.Models.Beta.Files;
-using Anthropic.Models.Beta.Messages;
-
-FileMetadata meta = await client.Beta.Files.Upload(
-    new FileUploadParams { File = File.OpenRead(&quot;doc.pdf&quot;) });
-
-// Referencing the uploaded file requires Beta message types:
-new BetaRequestDocumentBlock {
-    Source = new BetaFileDocumentSource { FileID = meta.ID },
-}</code></pre>
-<p>The non-beta <code>DocumentBlockParamSource</code> union has no file-ID variant — file references need <code>client.Beta.Messages.Create()</code>.</p>
+<h1>files-api</h1><p class="lede">The Files API uploads files for use in Messages API requests.</p><h1>Files API — TypeScript</h1>
+<p>The Files API uploads files for use in Messages API requests. Reference files via <code>file_id</code> in content blocks, avoiding re-uploads across multiple API calls.</p>
+<p><strong>Beta:</strong> Pass <code>betas: [&quot;files-api-2025-04-14&quot;]</code> in your API calls (the SDK sets the required header automatically).</p>
+<h2>Key Facts</h2>
+<ul><li>Maximum file size: 500 MB</li><li>Total storage: 100 GB per organization</li><li>Files persist until deleted</li><li>File operations (upload, list, delete) are free; content used in messages is billed as input tokens</li><li>Not available on Amazon Bedrock or Google Vertex AI</li></ul>
 <hr>
+<h2>Upload a File</h2>
+<pre><code class="lang-typescript">import Anthropic, { toFile } from &quot;@anthropic-ai/sdk&quot;;
+import fs from &quot;fs&quot;;
+
+const client = new Anthropic();
+
+const uploaded = await client.beta.files.upload({
+  file: await toFile(fs.createReadStream(&quot;report.pdf&quot;), undefined, {
+    type: &quot;application/pdf&quot;,
+  }),
+  betas: [&quot;files-api-2025-04-14&quot;],
+});
+
+console.log(`File ID: ${uploaded.id}`);
+console.log(`Size: ${uploaded.size_bytes} bytes`);</code></pre>
+<hr>
+<h2>Use a File in Messages</h2>
+<h3>PDF / Text Document</h3>
+<pre><code class="lang-typescript">const response = await client.beta.messages.create({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  messages: [
+    {
+      role: &quot;user&quot;,
+      content: [
+        { type: &quot;text&quot;, text: &quot;Summarize the key findings in this report.&quot; },
+        {
+          type: &quot;document&quot;,
+          source: { type: &quot;file&quot;, file_id: uploaded.id },
+          title: &quot;Q4 Report&quot;,
+          citations: { enabled: true },
+        },
+      ],
+    },
+  ],
+  betas: [&quot;files-api-2025-04-14&quot;],
+});
+
+console.log(response.content[0].text);</code></pre>
+<hr>
+<h2>Manage Files</h2>
+<h3>List Files</h3>
+<pre><code class="lang-typescript">const files = await client.beta.files.list({
+  betas: [&quot;files-api-2025-04-14&quot;],
+});
+for (const f of files.data) {
+  console.log(`${f.id}: ${f.filename} (${f.size_bytes} bytes)`);
+}</code></pre>
+<h3>Delete a File</h3>
+<pre><code class="lang-typescript">await client.beta.files.delete(&quot;file_011CNha8iCJcU1wXNR6q4V8w&quot;, {
+  betas: [&quot;files-api-2025-04-14&quot;],
+});</code></pre>
+<h3>Download a File</h3>
+<pre><code class="lang-typescript">const response = await client.beta.files.download(
+  &quot;file_011CNha8iCJcU1wXNR6q4V8w&quot;,
+  { betas: [&quot;files-api-2025-04-14&quot;] },
+);
+const content = Buffer.from(await response.arrayBuffer());
+await fs.promises.writeFile(&quot;output.txt&quot;, content);</code></pre>
 <footer>
 <div class="fmap">
   <div><b>Build</b>

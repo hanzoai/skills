@@ -1,256 +1,215 @@
-# Claude API — cURL / Raw HTTP
+# Worked Examples — Before/After Offers
 
-Use these examples when the user needs raw HTTP requests or is working in a language without an official SDK.
-
-## Setup
-
-```bash
-export ANTHROPIC_API_KEY="your-api-key"
-```
+Anonymized examples drawn from real engagements. Each shows the weak version, the diagnostic, and the strong version.
 
 ---
 
-## Basic Message Request
+## Example 1: Fractional CMO service
 
-```bash
-curl https://api.anthropic.com/v1/messages \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -d '{
-    "model": "claude-opus-5",
-    "max_tokens": 16000,
-    "messages": [
-      {"role": "user", "content": "What is the capital of France?"}
-    ]
-  }'
-```
+### Before
 
-### Parsing the response
+**The offer (as it was):**
+> Fractional CMO services. $15K/month. We'll help you grow.
 
-Use `jq` to extract fields from the JSON response. Do not use `grep`/`sed` —
-JSON strings can contain any character and regex parsing will break on quotes,
-escapes, or multi-line content.
+**Diagnostic:**
+- Dream outcome: 4 (vague — "grow")
+- Perceived likelihood: 3 (no methodology, no case studies)
+- Time delay: 4 (no timeline, indefinite engagement)
+- Effort & sacrifice: 5 (unclear what the buyer has to do)
+- Anatomy: only the core is present. No bonuses, no guarantee, no scarcity, no name.
 
-```bash
-# Capture the response, then extract fields
-response=$(curl -s https://api.anthropic.com/v1/messages \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -d '{"model":"claude-opus-5","max_tokens":16000,"messages":[{"role":"user","content":"Hello"}]}')
+**Lowest binding constraint:** perceived likelihood. Buyers don't believe an unnamed service will deliver.
 
-# Print the first text block (-r strips the JSON quotes)
-echo "$response" | jq -r '.content[0].text'
+### After
 
-# Read usage fields
-input_tokens=$(echo "$response" | jq -r '.usage.input_tokens')
-output_tokens=$(echo "$response" | jq -r '.usage.output_tokens')
+| Component | What was added |
+|-----------|----------------|
+| **Core** | "The 90-Day Marketing Reset" — 8-week audit + 12-week execution plan, delivered by a CMO who's run marketing at 3+ similar-stage companies |
+| **Bonuses** | (1) Weekly 1:1s for 12 weeks (~$12K value); (2) Pre-vetted execution-partner intros (priceless); (3) Board-deck marketing strategy section template |
+| **Guarantee** | "After the 8-week audit, if you don't have a clear 90-day plan you'd run yourself, you don't pay the audit fee." |
+| **Scarcity** | "We take 2 engagements per quarter — next slot opens [date]" |
+| **Name** | "The 90-Day Marketing Reset" |
+| **Price** | $15K → $5K start, $5K week 8, $5K week 16 |
 
-# Read stop reason (for tool-use loops)
-stop_reason=$(echo "$response" | jq -r '.stop_reason')
+Same delivery, same person, ~3x close rate, longer engagements (because the buyer is clearer about scope).
 
-# Extract all text blocks (content is an array; filter to type=="text")
-echo "$response" | jq -r '.content[] | select(.type == "text") | .text'
-```
-
+**Lesson:** the price didn't move. The structure did.
 
 ---
 
-## Streaming (SSE)
+## Example 2: $1,997 cohort-based copywriting course
 
-```bash
-curl https://api.anthropic.com/v1/messages \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -d '{
-    "model": "claude-opus-5",
-    "max_tokens": 64000,
-    "stream": true,
-    "messages": [{"role": "user", "content": "Write a haiku"}]
-  }'
-```
+### Before
 
-The response is a stream of Server-Sent Events:
+**The offer:**
+> Learn copywriting. $1,997. Includes 6 modules and Slack access.
 
-```
-event: message_start
-data: {"type":"message_start","message":{"id":"msg_...","type":"message",...}}
+**Diagnostic:**
+- Dream outcome: 5 ("learn copywriting" — surface ask, not dream outcome)
+- Perceived likelihood: 3 (no case studies, no named methodology)
+- Time delay: 4 (6-month course, no first-win)
+- Effort & sacrifice: 4 (lots of homework, weekly calls, big commitment)
 
-event: content_block_start
-data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+**Lowest binding constraint:** perceived likelihood. Buyers don't believe THEY can do it.
 
-event: content_block_delta
-data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}
+### After
 
-event: content_block_stop
-data: {"type":"content_block_stop","index":0}
+| Component | What changed |
+|-----------|--------------|
+| **Core** | "Write sales pages clients pay you $5K+ for in 12 weeks" — outcome-framed |
+| **Bonuses** | (1) 30 winning sales page templates (last updated Q2 2026) — $297 value; (2) 9 named case studies from copywriters in 6 industries — proof, not pitch; (3) 60-day Slack with weekly office hours — $497 value; (4) The tool stack with discount codes — $1,200 value |
+| **Guarantee** | "Complete all 6 modules, submit the final exercise, and if you haven't written a sales page that lands you a $5K+ client within 12 months, refund in full." |
+| **Scarcity** | Cohort scarcity — doors close Friday, next cohort in 3 months |
+| **Name** | "The $5K Sales Page Bootcamp" |
+| **Price** | $1,997 pay-in-full OR $797 × 3 |
 
-event: message_delta
-data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":12}}
+Same modules. Same instructor. ~4x conversion. Lower refund rate (conditional guarantee qualifies).
 
-event: message_stop
-data: {"type":"message_stop"}
-```
+**Lesson:** rename the outcome, add proof, install a real scarcity mechanic.
 
 ---
 
-## Tool Use
+## Example 3: $97 Notion template pack
 
-```bash
-curl https://api.anthropic.com/v1/messages \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -d '{
-    "model": "claude-opus-5",
-    "max_tokens": 16000,
-    "tools": [{
-      "name": "get_weather",
-      "description": "Get current weather for a location",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "location": {"type": "string", "description": "City name"}
-        },
-        "required": ["location"]
-      }
-    }],
-    "messages": [{"role": "user", "content": "What is the weather in Paris?"}]
-  }'
-```
+### Before
 
-When Claude responds with a `tool_use` block, send the result back:
+**The offer:**
+> Notion templates for marketers. $97. 20 templates included.
 
-```bash
-curl https://api.anthropic.com/v1/messages \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -d '{
-    "model": "claude-opus-5",
-    "max_tokens": 16000,
-    "tools": [{
-      "name": "get_weather",
-      "description": "Get current weather for a location",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "location": {"type": "string", "description": "City name"}
-        },
-        "required": ["location"]
-      }
-    }],
-    "messages": [
-      {"role": "user", "content": "What is the weather in Paris?"},
-      {"role": "assistant", "content": [
-        {"type": "text", "text": "Let me check the weather."},
-        {"type": "tool_use", "id": "toolu_abc123", "name": "get_weather", "input": {"location": "Paris"}}
-      ]},
-      {"role": "user", "content": [
-        {"type": "tool_result", "tool_use_id": "toolu_abc123", "content": "72°F and sunny"}
-      ]}
-    ]
-  }'
-```
+**Diagnostic:**
+- Dream outcome: 6 (clear what you get, less clear what you achieve with it)
+- Perceived likelihood: 6 (templates work for some, less for others — no proof)
+- Time delay: 8 (instant access)
+- Effort & sacrifice: 5 (setup work to customize each template)
+
+**Lowest binding constraint:** perceived likelihood + dream outcome. "Will these actually save me time, for *my* setup?"
+
+### After
+
+| Component | What changed |
+|-----------|--------------|
+| **Core** | "The Marketing Ops Stack — 20 Notion templates that turn your scattered docs into a working marketing OS in one Saturday" — outcome-framed |
+| **Bonuses** | (1) 10-minute "do this first" Loom — speed bonus; (2) "Stack the templates" flowchart (visual setup map); (3) Lifetime updates as templates are added |
+| **Guarantee** | "30-day no-questions money-back" — unconditional, fits the price point |
+| **Scarcity** | Founding-buyer pricing — $97 for the first 200 buyers, then $147 |
+| **Name** | "The Marketing Ops Stack" |
+| **Price** | $97 pay-in-full |
+
+Same templates. ~2x close rate from the same traffic. The differentiator was the "in one Saturday" outcome anchor and the Loom that proves the speed claim.
+
+**Lesson:** for low-priced info products, the dream outcome and a fast first-win are the levers. Don't over-engineer the guarantee.
 
 ---
 
-## Prompt Caching
+## Example 4: $50K B2B SaaS annual contract
 
-Put `cache_control` on the last block of the stable prefix. See `shared/prompt-caching.md` for placement patterns and the silent-invalidator audit checklist.
+### Before
 
-```bash
-curl https://api.anthropic.com/v1/messages \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -d '{
-    "model": "claude-opus-5",
-    "max_tokens": 16000,
-    "system": [
-      {"type": "text", "text": "<large shared prompt...>", "cache_control": {"type": "ephemeral"}}
-    ],
-    "messages": [{"role": "user", "content": "Summarize the key points"}]
-  }'
-```
+**The offer:**
+> Enterprise plan: $50K/year. Includes unlimited users, all features, dedicated support.
 
-For 1-hour TTL: `"cache_control": {"type": "ephemeral", "ttl": "1h"}`. Top-level `"cache_control"` on the request body auto-places on the last cacheable block. Verify hits via the response `usage.cache_creation_input_tokens` / `usage.cache_read_input_tokens` fields.
+**Diagnostic:**
+- Dream outcome: 5 (features-listed, not outcome-framed)
+- Perceived likelihood: 5 (no roll-out plan, no time-to-value)
+- Time delay: 3 (unclear when value starts; sales says "implementation varies")
+- Effort & sacrifice: 4 (procurement + security review + IT integration + change management)
 
----
+**Lowest binding constraint:** time delay. Enterprise buyers can't tolerate "implementation varies."
 
-## Extended Thinking
+### After
 
-> **Fable 5, Claude Opus 5, Opus 4.8, Opus 4.7, Opus 4.6, and Sonnet 4.6:** Use adaptive thinking. `budget_tokens` is removed on Fable 5, Claude Opus 5, Opus 4.8, and 4.7 (400 if sent); deprecated on Opus 4.6 and Sonnet 4.6.
-> **Claude Opus 5:** thinking is on by default — omitting `"thinking"` runs adaptive (`{"type": "adaptive"}` is equivalent), unlike Opus 4.8/4.7 where omitting it meant no thinking. `{"type": "disabled"}` is accepted only at effort `high` or lower; pairing it with `xhigh`/`max` returns a 400.
-> **Older models:** Use `"type": "enabled"` with `"budget_tokens": N` (must be < `max_tokens`, min 1024).
+| Component | What changed |
+|-----------|--------------|
+| **Core** | "Production-ready in 30 days, ROI by quarter end" — time-anchored |
+| **Bonuses** | (1) Dedicated implementation engineer for 30 days; (2) Pre-built integration packs for top 5 platforms; (3) Custom training session for the buyer's team; (4) Quarterly business reviews with the buyer's CSM |
+| **Guarantee** | "Not in production by day 30? You don't pay until you are." SLA-based. |
+| **Scarcity** | Capacity-based: "We onboard 4 enterprise accounts per quarter. Next slot starts [date]." |
+| **Name** | Tier name stayed "Enterprise" but added the engagement name "Strategic Onboarding" |
+| **Price** | $50K annual → $50K annual with quarterly billing + paid 30-day pilot |
 
-```bash
-# Fable 5 / Claude Opus 5 / Opus 4.8 / 4.7 / 4.6: adaptive thinking (recommended)
-curl https://api.anthropic.com/v1/messages \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -d '{
-    "model": "claude-opus-5",
-    "max_tokens": 16000,
-    "thinking": {
-      "type": "adaptive",
-      "display": "summarized"
-    },
-    "output_config": {
-      "effort": "high"
-    },
-    "messages": [{"role": "user", "content": "Solve this step by step..."}]
-  }'
-```
+Same product. ~30% higher close rate, 50% shorter sales cycle. The pilot + SLA combination removed the procurement objection.
+
+**Lesson:** for enterprise B2B, time-to-value IS the offer. Solve it explicitly.
 
 ---
 
-## Refusal Fallbacks (Claude Fable 5) — opt in by default
+## Example 5: $4K group coaching mastermind
 
-On `claude-fable-5`, safety classifiers may decline a request (HTTP 200 with `stop_reason: "refusal"`). Fallbacks are **opt-in**: without them the request simply stops. Include the `fallbacks` parameter and its beta header by default — on a policy decline the API re-runs the same request on the fallback model inside the same call. A decline before any output isn't billed (a mid-stream decline bills the streamed partial); the rescue bills at the fallback model's own rates.
+### Before
 
-```bash
-response=$(curl -s https://api.anthropic.com/v1/messages \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -H "anthropic-beta: server-side-fallback-2026-06-01" \
-  -d '{
-    "model": "claude-fable-5",
-    "max_tokens": 16000,
-    "fallbacks": [{"model": "claude-opus-4-8"}],
-    "messages": [{"role": "user", "content": "Hello"}]
-  }')
+**The offer:**
+> Group coaching for founders. $4K/quarter. Includes 12 calls and Slack.
 
-# Which model produced the message
-echo "$response" | jq -r '.model'
+**Diagnostic:**
+- Dream outcome: 5 (vague — "be a better founder")
+- Perceived likelihood: 4 (one alumni testimonial, no methodology)
+- Time delay: 6 (quarterly cadence reasonable)
+- Effort & sacrifice: 7 (12 calls is real time)
 
-# Refusal on the final response means the whole chain refused
-echo "$response" | jq -r '.stop_reason'
+**Lowest binding constraint:** dream outcome + perceived likelihood.
 
-# Switch points: one fallback block per model that ran and declined this turn
-echo "$response" | jq -r '.content[] | select(.type == "fallback") | "\(.from.model) declined; \(.to.model) continued"'
+### After
 
-# Served-by signal — covers sticky turns, which carry no fallback block.
-# Pair with stop_reason: the fallback model can itself refuse.
-if [ "$(echo "$response" | jq -r '.stop_reason')" != "refusal" ] && \
-   echo "$response" | jq -e '[.usage.iterations[]? | select(.type == "fallback_message")] | length > 0' > /dev/null; then
-  echo "fallback model served this turn"
-fi
-```
+| Component | What changed |
+|-----------|--------------|
+| **Core** | "12 founders, 12 weeks, one specific goal each — and a room that's seen it before" — peer-room positioning |
+| **Bonuses** | (1) 1:1 onboarding call to set the personal goal; (2) Founder Library — 90 frameworks from past members; (3) 1:1 mid-quarter check-in; (4) Alumni access for 1 year after |
+| **Guarantee** | "First two weeks — if it's not the room you wanted, full refund. After that, you're in." |
+| **Scarcity** | Cohort size capped at 12 — once full, you're on the waitlist for next quarter |
+| **Name** | "The Founders' Quarter" |
+| **Price** | $4K/quarter pay-in-full OR $1,500 × 3 |
 
-The header must be exactly `server-side-fallback-2026-06-01` **for this array form**; the newer `fallbacks: "default"` scalar form uses `server-side-fallback-2026-07-01` instead (see `shared/model-migration.md` → Migrating to Claude Opus 5 → New API features), and pairing either header with the other form returns a 400. The parameter is rejected on the Batches API and unavailable on Amazon Bedrock, Vertex AI, and Microsoft Foundry. Full semantics (sticky routing, billing, streaming, echoing fallback turns back): `shared/model-migration.md` → Migrating to Claude Fable 5 → `refusal` stop reason.
+Same coach, same cadence. Higher close rate. Notably: members renew at ~70% (was ~35% before) because the "alumni access for 1 year" bonus changed the buying decision frame from "quarter" to "year."
+
+**Lesson:** for coaching, the room IS the offer. Position the room, not the curriculum. Renewal-friendly bonuses lock in long-term LTV.
 
 ---
 
-## Required Headers
+## Example 6: Agency retainer — content marketing
 
-| Header              | Value              | Description                |
-| ------------------- | ------------------ | -------------------------- |
-| `Content-Type`      | `application/json` | Required                   |
-| `x-api-key`         | Your API key       | Authentication             |
-| `anthropic-version` | `2023-06-01`       | API version                |
-| `anthropic-beta`    | Beta feature IDs   | Required for beta features |
+### Before
+
+**The offer:**
+> Content marketing retainer. $8K/month. 4 articles per month + SEO strategy.
+
+**Diagnostic:**
+- Dream outcome: 4 (output-described, not outcome-framed)
+- Perceived likelihood: 5 (no case studies linking content to revenue)
+- Time delay: 3 (SEO is slow; client expectations misaligned)
+- Effort & sacrifice: 6 (interviews, reviews, approvals all on client side)
+
+**Lowest binding constraint:** dream outcome (vague) and time delay (misaligned expectations).
+
+### After
+
+| Component | What changed |
+|-----------|--------------|
+| **Core** | "We own the content engine. You get organic-driven sales meetings by month 9, with measurable revenue attribution." — outcome + timeline |
+| **Bonuses** | (1) Persona research kickoff (one-time); (2) Quarterly content audit + republish list; (3) Pre-vetted freelance writers with QA layer; (4) Quarterly executive readout |
+| **Guarantee** | "First 30 days is a paid pilot — 4 published pieces + 3 keyword roadmap. If at the end you don't see a clear 12-month path, we end the engagement, no balance owed." |
+| **Scarcity** | Capacity-based: "We take on 3 retainer clients per quarter. Next slot is [date]." |
+| **Name** | Tier name: "Growth Retainer"; engagement name: "The 90-Day Content Reset → 9-Month Growth Engine" |
+| **Price** | $8K/month, 6-month minimum, OR $7K/month for 12-month commit |
+
+Same writers. Same SEO methodology. ~2x close rate. 60% of pilots convert to 12-month commits.
+
+**Lesson:** for slow-cycle services (SEO, brand, content), the offer has to address the timeline explicitly. "Trust us, results in 6 months" doesn't sell; "paid pilot → milestone at day 30 → ramp" does.
+
+---
+
+## Pattern across all six examples
+
+Look at the changes side-by-side:
+
+| Example | Core change | Most important other change |
+|---------|-------------|----------------------------|
+| Fractional CMO | Named it, added scope | First-milestone guarantee |
+| Copywriting course | Outcome-framed, added proof | Case studies bonus |
+| Notion templates | "in one Saturday" anchor | First-step Loom bonus |
+| B2B SaaS | Time-to-value commitment | SLA-based guarantee + pilot |
+| Coaching mastermind | Positioned the room, not the coach | 1-year alumni access bonus |
+| Agency retainer | Outcome + timeline framing | Paid pilot guarantee |
+
+**The pattern:** in every case, the price barely moved (or didn't move at all). What moved was the *structure* of the offer — naming, framing, guaranteeing, sequencing.
+
+The price is the comparison. The value is the offer.
