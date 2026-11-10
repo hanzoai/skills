@@ -47,6 +47,8 @@ Repo: `hanzoai/sdk` (298MB -- large due to committed `node_modules` and `dist`).
  - TypeScript: `npm install @hanzo/sdk` (from `hanzoai/js-sdk`)
  - Go: `go get github.com/hanzoai/go-sdk` (from `hanzoai/go-sdk`)
  - Rust: `cargo add hanzo` (from `hanzoai/rust-sdk`)
+ - C# / .NET: `dotnet add package Hanzo --version 8.5.1027` (from `hanzo-csharp/sdk`)
+ - Godot 4: `addons/hanzo_ai/` (from `hanzoai/godot-sdk` v1.1.0)
 
 ## Hard requirements
 

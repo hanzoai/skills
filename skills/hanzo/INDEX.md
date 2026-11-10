@@ -190,7 +190,7 @@ Serverless functions platform.
 **Hanzo Stack** (`hanzo-stack.md`)
 Full local dev environment.
 
-### SDKs & Libraries (15 skills)
+### SDKs & Libraries (17 skills)
 
 **Python SDK** (`python-sdk.md`)
 Python SDK (`hanzoai` v2.2.0, 9 packages).
@@ -203,6 +203,12 @@ Go SDK (`github.com/hanzoai/go-sdk` v0.1.0-alpha.4).
 
 **Rust SDK** (`rust-sdk.md`)
 Rust SDK (v1.1.12, 14 crates: agents, MCP, PQC, guard).
+
+**C# / .NET SDK** (`../csharp/SKILL.md`)
+C# / .NET 8+ SDK (`Hanzo` v8.5.1027 on NuGet & GitHub Packages, `hanzo-csharp/sdk`).
+
+**Godot 4 SDK** (`../godot/SKILL.md`)
+Godot 4 GDScript + C# game backend SDK (`hanzoai/godot-sdk` v1.1.0: Kai NPC/Director decisions, Zen 6 dialogue, Zen Voice 3D MP3, Cloud KV saves, Agents, MCP).
 
 **Hanzo SDK** (`hanzo-sdk.md`)
 Unified multi-language CLI and client library.

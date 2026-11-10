@@ -605,6 +605,8 @@ def main():
             {"name": "post", "repo": "hanzoai/post", "path": "~/work/hanzo/post", "lang": "TS/NestJS/Next", "layer": "social", "url": "https://github.com/hanzoai/post"},
             {"name": "universe", "repo": "hanzoai/universe", "path": "~/work/hanzo/universe", "lang": "YAML/Helm", "layer": "gitops", "url": "https://github.com/hanzoai/universe"},
             {"name": "skills", "repo": "hanzoai/skills", "path": "~/work/hanzo/skills", "lang": "Markdown", "layer": "docs", "url": "https://github.com/hanzoai/skills"},
+            {"name": "godot-sdk", "repo": "hanzoai/godot-sdk", "path": "~/work/hanzo/godot-sdk", "lang": "GDScript/C#", "layer": "sdk", "url": "https://github.com/hanzoai/godot-sdk"},
+            {"name": "csharp-sdk", "repo": "hanzo-csharp/sdk", "path": "~/work/hanzo-csharp/sdk", "lang": "C#", "layer": "sdk", "url": "https://github.com/hanzo-csharp/sdk"},
         ],
     }
     io.open(os.path.join(oss_dir, "index.json"), "w", encoding="utf-8").write(json.dumps(oss_index, indent=2) + "\n")

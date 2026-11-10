@@ -67611,6 +67611,184 @@ This gateway skill enables progressive loading:
 
 ---
 
+<!-- csharp -->
+
+---
+name: csharp
+description: "Build .NET 8+, ASP.NET Core, Unity, and Godot 4 .NET applications on Hanzo Cloud (https://api.hanzo.ai) with the official Hanzo C# SDK (Hanzo 8.5.1027 from hanzo-csharp/sdk). Load when installing or calling the Hanzo NuGet package for Zen 6 chat completions (/v1/chat/completions), Kai zero-output-token decisions (/v1/decisions), Zen Voice binary MP3 synthesis (PostAudioSpeechBytes on /v1/audio/speech), revisioned Cloud KV state and game saves (KvApi on /v1/kv), Cloud Agents (PostAgentByRefRun on /v1/agent), IAM/KMS/Commerce APIs, or Cloud MCP tools (/v1/mcp)."
+license: MIT
+---
+
+# C# / .NET SDK
+
+`Hanzo` (`8.5.1027`, namespace `Hanzo.AI`) is the official C# client for `https://api.hanzo.ai`. It is generated from the live Hanzo Cloud OpenAPI specification (`38` service APIs across AI, Decisions, Cloud KV, Agents, Base, IAM, KMS, Commerce, Console, Platform, Tasks, O11y, and MCP) and extended with handwritten helpers for `Gateway.Configuration()`, agent run execution (`PostAgentByRefRunAsync`), and binary MP3 speech synthesis (`PostAudioSpeechBytesAsync`).
+
+## Docs & Repositories
+
+- **C# / .NET SDK Guide**: [docs.hanzo.ai/docs/sdks/csharp](https://docs.hanzo.ai/docs/sdks/csharp)
+- **Godot 4 & Game Backend Guide**: [docs.hanzo.ai/docs/sdks/godot](https://docs.hanzo.ai/docs/sdks/godot)
+- **Kai Decisions Wire Reference**: [docs.hanzo.ai/docs/decisions](https://docs.hanzo.ai/docs/decisions)
+- **Full Docs Index**: [docs.hanzo.ai/llms.txt](https://docs.hanzo.ai/llms.txt)
+- **Source, Releases & Runnable Slices**: [github.com/hanzo-csharp/sdk](https://github.com/hanzo-csharp/sdk)
+
+## Install & Configure
+
+Target `.NET 8.0+` (`net8.0`). Install from NuGet or GitHub Packages (`https://nuget.pkg.github.com/hanzo-csharp/index.json`):
+
+```bash
+dotnet add package Hanzo --version 8.5.1027
+```
+
+`Gateway.Configuration()` reads `HANZO_API_KEY` (falling back to `OPENAI_API_KEY`) and `HANZO_BASE_URL` (default `https://api.hanzo.ai`), wiring Bearer auth automatically:
+
+```csharp
+using Hanzo.AI;
+using Hanzo.AI.Api;
+using Hanzo.AI.Client;
+
+Configuration cfg = Gateway.Configuration();
+cfg.Timeout = TimeSpan.FromSeconds(90);
+
+var ai = new AiApi(cfg);
+var kv = new KvApi(cfg);
+var agents = new AgentApi(cfg);
+var mcp = new OpenapiApi(cfg);
+```
+
+Keep secret `sk-` keys server-side or in local developer environments (`export HANZO_API_KEY="$(hanzo auth token)"`); never ship secret keys inside browser WASM bundles.
+
+## Core Operations
+
+### 1. Zen 6 Chat Completions (`/v1/chat/completions`)
+
+Use `zen6-flash` for low-latency interactive replies, `zen6` for deep reasoning (`reasoning_effort = "low"` keeps interactive calls fast), and `zen6-coder` / `zen6-max` for heavy synthesis. Never use retired `zen-4` or `zen-5` IDs.
+
+```csharp
+object reply = await ai.PostChatCompletionsAsync(new
+{
+    model = "zen6-flash",
+    max_tokens = 256,
+    messages = new[]
+    {
+        new { role = "system", content = "Reply concisely." },
+        new { role = "user", content = "Summarize three benefits of revisioned KV saves." }
+    }
+});
+```
+
+### 2. Kai Zero-Output-Token Decisions (`/v1/decisions`)
+
+Use `model = "kai"` whenever C# code needs a bounded judgment over known options (routing, triage, moderation gates, NPC state selection, AI Director pacing) instead of parsing LLM prose. `usage.output_tokens` is `0`:
+
+```csharp
+object decision = await ai.PostDecisionsAsync(new
+{
+    model = "kai",
+    state = new { health = 0.22, under_fire = true, cover_distance_m = 4.0 },
+    questions = new
+    {
+        action = new
+        {
+            type = "choice",
+            instructions = "Select the squad unit's immediate combat action.",
+            criteria = new Dictionary<string, string>
+            {
+                ["attack"] = "Healthy unit with clear close-range shot.",
+                ["flank"] = "Medium range engagement with lateral cover.",
+                ["retreat"] = "Health below 25% while under active fire."
+            }
+        }
+    }
+});
+```
+
+### 3. Zen Voice Binary MP3 Synthesis (`/v1/audio/speech`)
+
+Call the handwritten `PostAudioSpeechBytesAsync` extension (`AiApiSpeech.cs`) to receive raw MP3 `byte[]` from `zen-voice` without JSON string corruption:
+
+```csharp
+byte[] mp3Bytes = await ai.PostAudioSpeechBytesAsync(new
+{
+    model = "zen-voice",
+    voice = "af_heart",
+    input = "Checkpoint synced. Hostiles flanking from sector north."
+});
+```
+
+In Godot 4 `.NET`, assign directly to an `AudioStreamPlayer3D`:
+
+```csharp
+player3D.Stream = new AudioStreamMP3 { Data = mp3Bytes };
+player3D.Play();
+```
+
+### 4. Revisioned Cloud KV State & Game Saves (`/v1/kv/{bucket}/{key}`)
+
+Bucket names MUST use 1–64 ASCII letters, digits, or underscores (`^[A-Za-z0-9_]{1,64}$`, never hyphens):
+
+```csharp
+string bucket = "game_saves_prod";
+await kv.PostKvByBucketAsync(bucket, new { history = 10 });
+
+await kv.PutKvByBucketAndKeyAsync(bucket, "slot_1", new
+{
+    value = "{\"scene\":\"bunker_02\",\"tension\":0.68,\"ammo\":15}"
+});
+
+object current = await kv.GetKvByBucketAndKeyAsync(bucket, "slot_1");
+object revisions = await kv.GetKvByBucketAndKeyHistoryAsync(bucket, "slot_1");
+await kv.DeleteKvByBucketAsync(bucket);
+```
+
+### 5. Cloud Agents & MCP (`/v1/agent`, `/v1/mcp`)
+
+Create persistent agents on `zen6-flash`, trigger runs via `PostAgentByRefRunAsync`, and call the 50+ Cloud MCP tools over JSON-RPC `2.0` (`protocolVersion = "2026-07-28"`):
+
+```csharp
+object created = await agents.PostAgentAsync(new
+{
+    name = "world-sim",
+    model = "zen6-flash",
+    system = "Return compact JSON world-event updates."
+});
+
+object mcpInit = await mcp.PostMcpAsync(new
+{
+    jsonrpc = "2.0",
+    id = 1,
+    method = "initialize",
+    @params = new
+    {
+        protocolVersion = "2026-07-28",
+        capabilities = new { },
+        clientInfo = new { name = "hanzo-csharp", version = "8.5.1027" }
+    }
+});
+```
+
+## Verification
+
+Run both wire tests (offline) and live `https://api.hanzo.ai` integration tests in `hanzo-csharp/sdk`:
+
+```bash
+# Offline wire & serialization tests
+HANZO_OFFLINE=1 dotnet test
+
+# Live api.hanzo.ai integration suite + full game-backend slice
+export HANZO_API_KEY="$(hanzo auth token)"
+dotnet test
+dotnet run --project examples -- game-backend
+```
+
+## Install
+
+```bash
+npx skills add https://hanzoskills.com/csharp.md
+```
+
+
+---
+
 <!-- cust -->
 
 ---
@@ -74240,6 +74418,151 @@ gh issue list --repo owner/repo --state open --json number,title,labels,createdA
 - Always specify `--repo owner/repo` when not in a git directory
 - Use URLs directly: `gh pr view https://github.com/owner/repo/pull/55`
 - Rate limits apply; use `gh api --cache 1h` for repeated queries
+
+
+---
+
+<!-- godot -->
+
+---
+name: godot
+description: "Build Godot 4 games, VR/XR experiences, and serverless game backends powered by Hanzo AI (https://api.hanzo.ai/v1) using the official Hanzo Godot SDK (hanzoai/godot-sdk v1.1.0, pure GDScript) or Hanzo C# SDK (Hanzo 8.5.1027 for Godot 4 .NET). Load when wiring Kai zero-output-token NPC brains and AI Directors (/v1/decisions), Zen 6 character dialogue (/v1/chat/completions), Zen Voice spatial 3D MP3 radio synthesis (/v1/audio/speech -> AudioStreamMP3), revisioned Cloud KV saves and checkpoints (/v1/kv/{bucket}/{key}), Cloud Agents (/v1/agent), or Cloud MCP tools (/v1/mcp) into a Godot 4 project without stalling frame budgets."
+license: MIT
+---
+
+# Godot 4 SDK & Game Backend
+
+Power an entire Godot 4 game backend directly from `https://api.hanzo.ai/v1` with zero custom middleware servers. One `sk-` API key gives a Godot 4 project calibrated NPC & AI Director decisions via **Kai** (`/v1/decisions`), dynamic character dialogue via **Zen 6** (`/v1/chat/completions`), spatial 3D radio and character speech via **Zen Voice** (`/v1/audio/speech` -> `AudioStreamMP3`), revisioned cloud saves via **Cloud KV** (`/v1/kv/{bucket}/{key}`), persistent **Cloud Agents** (`/v1/agent`), and **Cloud MCP** tooling (`/v1/mcp`).
+
+## Docs & Repositories
+
+Read the live docs when wiring endpoints or upgrading SDK versions:
+
+- **Godot 4 SDK Guide**: [docs.hanzo.ai/docs/sdks/godot](https://docs.hanzo.ai/docs/sdks/godot)
+- **C# / .NET SDK Guide (Godot 4 .NET)**: [docs.hanzo.ai/docs/sdks/csharp](https://docs.hanzo.ai/docs/sdks/csharp)
+- **Kai Decisions Wire Reference**: [docs.hanzo.ai/docs/decisions](https://docs.hanzo.ai/docs/decisions)
+- **Full Docs Index**: [docs.hanzo.ai/llms.txt](https://docs.hanzo.ai/llms.txt)
+- **Pure GDScript SDK (`v1.1.0`)**: [github.com/hanzoai/godot-sdk](https://github.com/hanzoai/godot-sdk)
+- **C# NuGet SDK (`8.5.1027`)**: [github.com/hanzo-csharp/sdk](https://github.com/hanzo-csharp/sdk)
+
+## Choose GDScript or Godot 4 .NET (C#)
+
+- **Pure GDScript (`hanzoai/godot-sdk` `v1.1.0`)**: Zero external dependencies, works on desktop, mobile, XR/OpenXR headsets, and headless Linux servers. Copy `addons/hanzo_ai/` into your Godot 4 project and enable **Hanzo AI** in **Project -> Project Settings -> Plugins**. Provides `HanzoClient` (synchronous TLS `HTTPClient` + async non-blocking `HTTPRequest` helpers) and `HanzoAgent3D` (drop-in 3D spatial NPC node).
+- **Godot 4 .NET (`Hanzo` `8.5.1027`)**: Add `<PackageReference Include="Hanzo" Version="8.5.1027" />` to your game's `.csproj` (`net8.0+`). Gives strongly typed `AiApi`, `KvApi`, `AgentApi`, `OpenapiApi`, and `PostAudioSpeechBytesAsync` for `AudioStreamMP3`.
+
+```bash
+# Pure GDScript addon install
+git clone https://github.com/hanzoai/godot-sdk.git /tmp/hanzo-godot-sdk
+cp -r /tmp/hanzo-godot-sdk/addons/hanzo_ai ./addons/hanzo_ai
+
+# Or Godot 4 .NET C# NuGet package
+dotnet add package Hanzo --version 8.5.1027
+```
+
+## Canonical Models Only
+
+Always target current Hanzo production model IDs on `https://api.hanzo.ai/v1`:
+
+- **Tactical NPC Brains & AI Director (`/v1/decisions`)**: `kai` (`usage.output_tokens == 0`, calibrated probabilities over named options).
+- **Fast Real-Time NPC Bark & Radio Lines (`/v1/chat/completions`)**: `zen6-flash`.
+- **Deep Narrative, Lore & Quest Dialogue (`/v1/chat/completions`)**: `zen6` (pass `"reasoning_effort": "low"` and `"max_tokens": 800` for interactive responsiveness).
+- **Code / Procedural Generation (`/v1/chat/completions`)**: `zen6-coder` or `zen6-max`.
+- **Spatial 3D Speech Synthesis (`/v1/audio/speech`)**: `zen-voice` (default voice `af_heart`, returns binary MP3 bytes).
+
+Never use retired `zen-4` or `zen-5` identifiers.
+
+## Full Serverless Godot Game Backend Pattern
+
+```gdscript
+extends Node
+
+const HanzoClientScript := preload("res://addons/hanzo_ai/hanzo_client.gd")
+
+var hanzo: RefCounted
+var radio_3d: AudioStreamPlayer3D
+
+func _ready() -> void:
+    # Resolves HANZO_API_KEY from env or ~/.hanzo/auth.json
+    hanzo = HanzoClientScript.new()
+    radio_3d = AudioStreamPlayer3D.new()
+    add_child(radio_3d)
+
+func save_checkpoint(bucket: String, slot: String, state: Dictionary) -> Dictionary:
+    # Bucket names MUST match ^[A-Za-z0-9_]{1,64}$ (underscores, never hyphens)
+    hanzo.create_kv_bucket(bucket, 10)
+    return hanzo.put_kv(bucket, slot, JSON.stringify(state))
+
+func load_checkpoint(bucket: String, slot: String) -> Dictionary:
+    var res: Dictionary = hanzo.get_kv(bucket, slot)
+    if not bool(res.get("ok", false)):
+        return {}
+    var raw: String = str(res.get("data", {}).get("value", ""))
+    var parsed: Variant = JSON.parse_string(raw)
+    return parsed if parsed is Dictionary else {}
+
+func decide_npc_tactic(world_state: Dictionary) -> String:
+    var res: Dictionary = hanzo.decide(world_state, {
+        "tactic": {
+            "type": "choice",
+            "instructions": "Pick the NPC squad's immediate tactical state.",
+            "criteria": {
+                "patrol": "No confirmed target or noise.",
+                "investigate_noise": "Gunshot or footsteps heard, target unseen.",
+                "stalk": "Target spotted beyond 15m; shadow quietly.",
+                "attack": "Target visible within 15m and health is solid.",
+                "flank": "Taking fire at medium range with cover nearby.",
+                "retreat": "Health below 25% under active fire."
+            }
+        }
+    })
+    return str(res.get("data", {}).get("answers", {}).get("tactic", {}).get("choice", "patrol"))
+
+func play_radio_transmission(prompt: String) -> void:
+    var chat: Dictionary = hanzo.chat_completion(
+        [
+            {"role": "system", "content": "Give one terse 12-word tactical radio update."},
+            {"role": "user", "content": prompt}
+        ],
+        "zen6-flash",
+        {"max_tokens": 120, "temperature": 0.6}
+    )
+    var line: String = hanzo.extract_message_text(chat)
+    if line == "":
+        return
+    var tts: Dictionary = hanzo.speech_mp3(line, "af_heart", "zen-voice")
+    var stream: AudioStreamMP3 = tts.get("stream")
+    if stream != null:
+        radio_3d.stream = stream
+        radio_3d.play()
+```
+
+## Non-Blocking Frame Budgets (Desktop & OpenXR / VR)
+
+- **Never stall `_process` or `_physics_process`**: Synchronous `HanzoClient` methods poll `HTTPClient` until TLS + response complete. In live gameplay—especially 90–120 Hz OpenXR/VR—either use `HanzoClient`'s async `Node`-parented `HTTPRequest` methods (`decide_async`, `chat_completion_async`, `speech_mp3_async`) or dispatch synchronous calls onto Godot's `WorkerThreadPool.add_task(...)` and marshal results back with `call_deferred(...)`.
+- **SceneTree CLI TLS initialization**: When writing headless test harnesses (`extends SceneTree`, invoked via `godot --headless --path . -s`), never call `TLSOptions.client()` inside `_init()`. Godot loads CA certificates right before `_initialize()`, so run live HTTPS assertions inside `_initialize()`.
+- **Cloud KV bucket naming**: `/v1/kv/{bucket}/{key}` accepts `[A-Za-z0-9_]{1,64}` for `{bucket}`. Replace hyphens with underscores (`dead_air_saves`, never `dead-air-saves`), and keep a local `user://hanzo_kv/` JSON mirror so saves work offline and sync when online.
+- **Avoid persona conflicts on `zen6`**: Frame NPC system prompts as roleplay context (`"Speak in character as Dispatch Unit 4..."`) rather than `"You are Dispatch Unit 4, not an AI"`, and pass `"reasoning_effort": "low"` when calling flagship `zen6` so reasoning budget goes into dialogue rather than identity resolution.
+- **Deterministic offline fallback**: Always gate live calls behind `has_auth()` (or `HANZO_OFFLINE=1`) with deterministic local heuristics so CI tests and offline single-player runs never break without network access.
+
+## Headless Verification
+
+Verify any Godot integration headlessly against `https://api.hanzo.ai/v1`:
+
+```bash
+# Offline unit & schema assertions (no key required)
+HANZO_OFFLINE=1 godot --headless --path . -s res://tests/sdk_check.gd
+
+# Live end-to-end assertions (models, kai, zen6, zen-voice MP3, KV revisions, agents, MCP)
+export HANZO_API_KEY="$(hanzo auth token)"
+godot --headless --path . -s res://tests/sdk_check.gd
+godot --headless --path . -s res://examples/game_backend.gd
+```
+
+## Install
+
+```bash
+npx skills add https://hanzoskills.com/godot.md
+```
 
 
 ---
@@ -231086,6 +231409,8 @@ Repo: `hanzoai/sdk` (298MB -- large due to committed `node_modules` and `dist`).
  - TypeScript: `npm install @hanzo/sdk` (from `hanzoai/js-sdk`)
  - Go: `go get github.com/hanzoai/go-sdk` (from `hanzoai/go-sdk`)
  - Rust: `cargo add hanzo` (from `hanzoai/rust-sdk`)
+ - C# / .NET: `dotnet add package Hanzo --version 8.5.1027` (from `hanzo-csharp/sdk`)
+ - Godot 4: `addons/hanzo_ai/` (from `hanzoai/godot-sdk` v1.1.0)
 
 ## Hard requirements
 
