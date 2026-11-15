@@ -56,7 +56,7 @@ for (const r of radii) {
   const px = parseFloat(r.r);
   ok(`radius: "${r.t}" is a pill`, px >= r.h / 2, `${r.r} on ${r.h}px tall`);
 }
-const inputRadius = await page.$eval('#q', (e) => getComputedStyle(e).borderTopLeftRadius);
+const inputRadius = await page.$eval('#q', (e) => getComputedStyle(e.closest('.hz-field')).borderTopLeftRadius);
 ok('radius: filter input rounded', parseFloat(inputRadius) > 8, inputRadius);
 
 // 3 — the selector opens and each item copies a DIFFERENT prompt
@@ -119,15 +119,10 @@ ok('bar: every agent has a mark',
   (await bar.locator('.agent svg.mark').count()) === chipCount);
 const names = await chips.allInnerTexts();
 console.log('        agents: ' + names.map((s) => s.trim()).join(' · '));
-const scroll = await bar.evaluate((e) => {
-  const before = e.scrollLeft;
-  e.scrollLeft = e.scrollWidth;
-  return { over: e.scrollWidth > e.clientWidth + 4, before, after: e.scrollLeft,
-           sw: e.scrollWidth, cw: e.clientWidth };
-});
-ok('bar: overflows its track', scroll.over, `scrollWidth ${scroll.sw} > clientWidth ${scroll.cw}`);
-ok('bar: actually scrolls', scroll.after > scroll.before, `scrollLeft ${scroll.before} -> ${scroll.after}`);
-await bar.evaluate((e) => { e.scrollLeft = 0; });
+// the bar wraps into centred rows (version B): nothing hides off to the side
+const wraps = await bar.evaluate((e) => ({ sw: e.scrollWidth, cw: e.clientWidth,
+  rows: new Set([...e.children].map((c) => c.offsetTop)).size }));
+ok('bar: wraps, no hidden overflow', wraps.sw <= wraps.cw + 1 && wraps.rows > 1, `${wraps.rows} rows`);
 
 // 5 — WebMCP: two read-only tools that answer from the published skills index
 await page.waitForFunction(() => window.__tools.length >= 2, null, { timeout: 5000 }).catch(() => {});
