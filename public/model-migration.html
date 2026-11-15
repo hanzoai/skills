@@ -2,182 +2,304 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>model-migration</title>
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="light dark">
 <style>
-/* Committed to one visual world: a dark instrument panel. No light variant —
-   the dot field and the hairline rules only read on black, and a naive
-   inversion would wash both out. Every colour is painted explicitly so the page
-   never borrows a host background. */
+/* Light and dark follow the device. Colour comes only from the --hz-* roles. */
 @font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
 @font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
 @font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
 
-:root{
-  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
-  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
-  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --font-zen-pixel-square:'Zen Pixel Square',monospace;
-  --mono:var(--font-zen-mono);
-  --sans:var(--font-zen-sans);
-  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
-  --r:999px; --r-soft:14px;
+/* hz-kit.css · Hanzo version B · product-true, symmetric, still.
+   One file, no build step, no dependencies. How to use it: KIT.md, beside this file.
+   Put class="hz" on the page container. To follow a host theme, alias the --hz-* colour roles in a
+   rule on .hz: the kit declares them at zero specificity, so the host wins whatever the order. */
+
+/* ---------- 1. tokens ---------- */
+:where(.hz) {
+  /* colour roles, light then dark. light-dark() follows color-scheme: set that on <html>. */
+  --hz-page: light-dark(#ffffff, #0a0a0a);
+  --hz-ink: light-dark(#0a0a0a, #f5f5f7);
+  --hz-soft: light-dark(#525252, #a1a1a6);
+  --hz-faint: light-dark(#6e6e73, #8e8e93);
+  --hz-card: light-dark(#f5f5f7, #0f0f0f);
+  --hz-raised: light-dark(#ffffff, #171717);
+  --hz-line: light-dark(rgb(0 0 0 / .1), rgb(255 255 255 / .12));
+  --hz-line-strong: light-dark(rgb(0 0 0 / .16), rgb(255 255 255 / .2));
+  --hz-on-ink: light-dark(#ffffff, #0a0a0a);
+
+  /* type: one `font` value per step (weight size/line-height family), phone to desktop; tracking beside it */
+  --hz-sans: Zen, 'Zen Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --hz-mono: 'Zen Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --hz-t-display: 560 clamp(40px, 7.2vw, 72px)/1.04 var(--hz-sans); --hz-k-display: -.045em;
+  --hz-t-h2: 560 clamp(28px, 4.4vw, 48px)/1.08 var(--hz-sans); --hz-k-h2: -.035em;
+  --hz-t-h3: 560 clamp(18px, 2.4vw, 20px)/1.25 var(--hz-sans); --hz-k-h3: -.02em;
+  --hz-t-lede: 400 clamp(17px, 1.6vw, 20px)/1.5 var(--hz-sans);
+  --hz-t-body: 400 clamp(15px, 4vw, 16px)/1.55 var(--hz-sans);
+  --hz-t-small: 400 14px/1.45 var(--hz-sans);
+  --hz-t-label: 500 12px/1.2 var(--hz-mono); --hz-k-label: .08em;
+  --hz-t-mono: 400 clamp(12px, 3.4vw, 13px)/1.7 var(--hz-mono);
+
+  /* the one spacing scale */
+  --hz-s1: 4px; --hz-s2: 8px; --hz-s3: 12px; --hz-s4: 16px; --hz-s5: 24px; --hz-s6: 32px; --hz-s7: 48px; --hz-s8: 64px;
+  --hz-section: clamp(72px, 10vw, 144px); /* the air between two sections */
+  --hz-wrap: 1200px; --hz-gutter: clamp(16px, 5vw, 24px);
+
+  --hz-r8: 8px; --hz-r12: 12px; --hz-r16: 16px; --hz-r24: 24px; --hz-pill: 999px;
+  --hz-ease: cubic-bezier(.16, 1, .3, 1);
 }
-*{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
-  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
-.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
 
-/* The dot field. A halftone made of one repeating radial-gradient, faded out
-   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
-/* No overflow clip here: the dot field is inset to the box already, and a clip
-   would cut off the copy-prompt menu. */
-.hero{position:relative;border-bottom:1px solid var(--line)}
-.hero::before{content:"";position:absolute;inset:0;
-  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
-  background-size:7px 7px;
-  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
-  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
-  pointer-events:none}
-.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
+/* ---------- 2. the scope: a small reset that holds inside any host ---------- */
+.hz { background: var(--hz-page); color: var(--hz-ink); font: var(--hz-t-body); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+.hz *, .hz ::before, .hz ::after { box-sizing: border-box; }
+.hz, .hz * { font-feature-settings: 'ss01' !important; } /* Zen's house alternates. Pinned, because every `font` shorthand resets it */
+.hz :where(h1, h2, h3, p, ul, ol, dl, dd, pre, figure) { margin: 0; padding: 0; }
+.hz :where(ul, ol) { list-style: none; }
+.hz :where(a), .hz :where(a):hover { color: inherit; text-decoration: none; }
+.hz :where(code, pre, kbd) { padding: 0; border-radius: 0; background: none; font-family: var(--hz-mono); font-size: inherit; }
+.hz :where(svg) { flex: none; fill: currentColor; }
+.hz :focus-visible { outline: 2px solid var(--hz-ink); outline-offset: 3px; }
+.hz-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-nav{border-bottom:1px solid var(--line)}
-nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
-  justify-content:space-between;align-items:center;gap:1rem}
-.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink);text-decoration:none;
-  display:inline-flex;align-items:center;gap:.6rem}
-.brand i{font-style:normal;color:var(--faint)}
-.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
-nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--soft);text-decoration:none}
-nav a.up:hover{color:var(--ink)}
+/* ---------- 3. page wrap, section rhythm, section head ---------- */
+.hz-wrap { width: min(100% - 2 * var(--hz-gutter), var(--hz-wrap)); margin-inline: auto; }
+.hz-section { padding-block: calc(var(--hz-section) / 2); } /* two neighbours make one full gap */
+.hz-head { display: grid; justify-items: center; gap: var(--hz-s4); margin-bottom: clamp(32px, 4vw, 48px); text-align: center; }
+.hz-head > :where(h1, h2) { max-width: 22ch; font: var(--hz-t-h2); letter-spacing: var(--hz-k-h2); text-wrap: balance; }
+.hz-head > :where(p) { max-width: 56ch; color: var(--hz-soft); font: var(--hz-t-lede); text-wrap: pretty; }
+.hz-head-start { justify-items: start; text-align: start; }
 
-h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
-  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
-h1 em{font-style:normal;color:var(--faint)}
-.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
+/* type steps as classes, for anything outside a section head */
+.hz-display { font: var(--hz-t-display); letter-spacing: var(--hz-k-display); }
+.hz-h3 { font: var(--hz-t-h3); letter-spacing: var(--hz-k-h3); }
+.hz-small { color: var(--hz-soft); font: var(--hz-t-small); }
+.hz-label { color: var(--hz-faint); font: var(--hz-t-label); letter-spacing: var(--hz-k-label); text-transform: uppercase; }
+.hz-mono { font: var(--hz-t-mono); }
 
-.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
-.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
-  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
-  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
-  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
-  line-height:1.2;font-weight:400}
-.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
-.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
-.btn.solid:hover{background:#d8d8d4}
-.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
-.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+/* ---------- 4. pill buttons: secondary (hairline) is the base; primary is ink; quiet is text ---------- */
+.hz-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--hz-s2); min-height: 44px; padding: 0 22px; border: 1px solid var(--hz-line-strong); border-radius: var(--hz-pill); background: none; color: var(--hz-ink); font: 500 15px/1 var(--hz-sans); white-space: nowrap; cursor: pointer; transition: background-color .2s, border-color .2s, color .2s, scale .15s var(--hz-ease); }
+.hz-btn:hover { border-color: var(--hz-ink); color: var(--hz-ink); }
+.hz-btn:active { scale: .97; }
+.hz-btn-primary, .hz-btn-primary:hover { border-color: transparent; background: var(--hz-ink); color: var(--hz-on-ink); }
+.hz-btn-primary:hover { background: color-mix(in srgb, var(--hz-ink) 84%, var(--hz-page)); }
+.hz-btn-quiet, .hz-btn-quiet:hover { padding-inline: var(--hz-s3); border-color: transparent; color: var(--hz-soft); }
+.hz-btn-quiet:hover { color: var(--hz-ink); text-decoration: underline; text-underline-offset: 4px; }
+.hz-btn-sm { min-height: 34px; padding-inline: 14px; font-size: 13px; }
+.hz-btn:disabled, .hz-btn[aria-disabled='true'] { opacity: .4; pointer-events: none; }
+.hz-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--hz-s3); }
+@media (max-width: 479px) { .hz-actions > .hz-btn:not(.hz-btn-quiet) { flex: 1 1 100%; min-height: 48px; } } /* on a phone the actions fill the row, primary on top */
 
-/* Copy-prompt selector. Each row copies the prompt for its own target. */
+/* ---------- 5. card, and the equal grid that never leaves an orphan ---------- */
+.hz-card { display: flex; flex-direction: column; gap: var(--hz-s3); min-width: 0; padding: var(--hz-s5); border: 1px solid var(--hz-line); border-radius: var(--hz-r24); background: var(--hz-card); color: var(--hz-ink); }
+.hz-card > :where(h3) { font: var(--hz-t-h3); letter-spacing: var(--hz-k-h3); }
+.hz-card > :where(p) { color: var(--hz-soft); }
+.hz-card > .hz-tags { margin-top: auto; padding-top: var(--hz-s2); } /* tags sit on the floor of equal-height cards */
+a.hz-card { transition: border-color .2s; }
+a.hz-card:hover { border-color: var(--hz-ink); color: var(--hz-ink); }
+/* Name the grid after the number of items: 2 -> hz-grid-2, 3 or 9 -> hz-grid-3, 4 or 8 -> hz-grid-4, 6 or 12 -> hz-grid-6.
+   Each class only ever uses column counts that divide its item count, so the last row is always full. */
+.hz-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--hz-s4); }
+@media (min-width: 600px) { .hz-grid-2, .hz-grid-4, .hz-grid-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .hz-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .hz-grid-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hz-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ---------- 7. code line, code block, tag ---------- */
+.hz-code { display: block; padding: var(--hz-s4) var(--hz-s5); border: 1px solid var(--hz-line); border-radius: var(--hz-r16); background: var(--hz-raised); color: var(--hz-ink); font: var(--hz-t-mono); text-align: start; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
+.hz-code > :where(span) { display: block; } /* one span per line, so lines can step in */
+.hz-code :where(i) { color: var(--hz-faint); font-style: normal; } /* <i> is the quiet voice: a prompt, a comment, output */
+.hz-codeline { display: flex; align-items: center; gap: var(--hz-s3); min-height: 48px; padding: 0 6px 0 18px; border: 1px solid var(--hz-line); border-radius: var(--hz-pill); background: var(--hz-raised); font: var(--hz-t-mono); }
+.hz-codeline > :where(code) { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; scrollbar-width: none; } /* a long command scrolls inside its line: nothing is cut off */
+.hz-codeblock { position: relative; }
+.hz-codeblock > .hz-code { padding-right: 96px; } /* room for the copy slot */
+.hz-codeblock > .hz-copy { position: absolute; top: var(--hz-s2); right: var(--hz-s2); } /* the copy slot: any .hz-btn.hz-btn-sm.hz-copy; the host wires the click */
+.hz-tags { display: flex; flex-wrap: wrap; gap: var(--hz-s2); }
+.hz-tag { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 0 10px; border: 1px solid var(--hz-line); border-radius: var(--hz-pill); color: var(--hz-soft); font: 500 12px/1 var(--hz-mono); white-space: nowrap; }
+a.hz-tag:hover { border-color: var(--hz-ink); color: var(--hz-ink); }
+
+/* ---------- 8. field: a pill input with an icon slot ---------- */
+.hz-field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 18px; border: 1px solid var(--hz-line-strong); border-radius: var(--hz-pill); background: var(--hz-card); color: var(--hz-faint); cursor: text; }
+.hz-field:focus-within { outline: 2px solid var(--hz-ink); outline-offset: 3px; color: var(--hz-ink); }
+.hz-field > input, .hz-field > input:focus { flex: 1; min-width: 0; height: 46px; padding: 0; border: 0; outline: 0; background: none; color: var(--hz-ink); font: 400 16px/1 var(--hz-sans); } /* 16px: iOS does not zoom the page */
+.hz-field > input::placeholder { color: var(--hz-faint); opacity: 1; }
+
+/* ---------- 10. motion: one gleam, one play, and small responses to what a visitor does ---------- */
+/* hz-gleam: a soft light crosses the primary object once, on hover or press. Never loops. */
+.hz-gleam { position: relative; overflow: clip; }
+.hz-gleam::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(100deg, transparent 34%, color-mix(in srgb, var(--hz-gleam, var(--hz-ink)) 8%, transparent) 50%, transparent 66%); transform: translateX(-100%); }
+.hz-btn-primary.hz-gleam { --hz-gleam: var(--hz-on-ink); }
+@keyframes hz-gleam { to { transform: translateX(100%); } }
+/* hz-seg: segmented control. The host sets --hz-seg-i (active tab) and --hz-seg-n (tab count) on the track: one thumb, no measuring. */
+.hz-seg { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(var(--hz-seg-n, 2), 1fr); padding: 4px; border: 1px solid var(--hz-line); border-radius: var(--hz-pill); background: var(--hz-card); }
+.hz-seg::before { content: ''; position: absolute; z-index: -1; inset: 4px auto 4px 4px; width: calc((100% - 8px) / var(--hz-seg-n, 2)); border-radius: var(--hz-pill); background: var(--hz-ink); transform: translateX(calc(var(--hz-seg-i, 0) * 100%)); }
+.hz-seg > * { min-height: 36px; border: 0; border-radius: var(--hz-pill); background: none; color: var(--hz-soft); font: 500 14px/1 var(--hz-sans); cursor: pointer; }
+.hz-seg > :is([aria-selected='true'], [aria-pressed='true']) { color: var(--hz-on-ink); }
+/* hz-fold: a native <details>; the summary is the control, a CSS chevron replaces the triangle. */
+.hz-fold > summary { display: flex; align-items: center; justify-content: space-between; gap: var(--hz-s3); list-style: none; cursor: pointer; }
+.hz-fold > summary::-webkit-details-marker { display: none; }
+.hz-fold > summary::after { content: ''; width: 8px; height: 8px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; rotate: 45deg; }
+.hz-fold[open] > summary::after { rotate: 225deg; }
+.hz-arrow { display: inline-block; } /* translate does not apply to a plain inline box */
+@media (pointer: coarse) { .hz-seg > *, .hz-fold > summary { min-height: 44px; } }
+/* hz-play: the hero object plays its real example once; each child steps in, in order, then the page is still. */
+@keyframes hz-step { from { opacity: 0; transform: translateY(6px); } }
+@keyframes hz-rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes hz-pop { from { transform: scale(.8); } }
+@media (prefers-reduced-motion: no-preference) {
+  .hz-gleam:hover::after, .hz-gleam:active::after { animation: hz-gleam .9s var(--hz-ease); }
+  .hz-play > * { animation: hz-step .5s var(--hz-ease) backwards; animation-delay: calc(var(--hz-play-at, .2s) + var(--hz-i, 0) * .16s); }
+  .hz-play > :nth-child(2) { --hz-i: 1; } .hz-play > :nth-child(3) { --hz-i: 2; } .hz-play > :nth-child(4) { --hz-i: 3; }
+  .hz-play > :nth-child(5) { --hz-i: 4; } .hz-play > :nth-child(6) { --hz-i: 5; }
+  .hz-play > .hz-label { animation: none; } /* a label is furniture: it is there from the start */
+  /* hz-arrive: on the hero container; the first six children rise once on load. Backwards fill: with animation off the HTML is the end state. */
+  .hz-arrive > :nth-child(-n+6) { animation: hz-rise .5s var(--hz-ease) backwards; animation-delay: calc(var(--hz-i, 0) * 60ms); }
+  :is(.hz-arrive, .hz-fold) > :nth-child(2) { --hz-i: 1; } :is(.hz-arrive, .hz-fold) > :nth-child(3) { --hz-i: 2; } :is(.hz-arrive, .hz-fold) > :nth-child(4) { --hz-i: 3; }
+  :is(.hz-arrive, .hz-fold) > :nth-child(5) { --hz-i: 4; } :is(.hz-arrive, .hz-fold) > :nth-child(6) { --hz-i: 5; } :is(.hz-arrive, .hz-fold) > :nth-child(7) { --hz-i: 6; }
+  .hz-seg::before { transition: transform .3s var(--hz-ease); } .hz-seg > * { transition: color .3s var(--hz-ease); }
+  .hz-swap:is([data-hz-swap], .is-in) { animation: hz-step .22s var(--hz-ease) backwards; } /* plays when the node is inserted or the attribute is set again */
+  .hz-fold { interpolate-size: allow-keywords; } .hz-fold > summary::after { transition: rotate .3s var(--hz-ease); }
+  .hz-fold::details-content { height: 0; overflow: clip; }
+  /* only opening eases; closing is instant, because a tile that leaves its open layout mid-ease flashes */
+  .hz-fold[open]::details-content { height: auto; transition: height .3s var(--hz-ease), content-visibility .3s; transition-behavior: allow-discrete; } /* unsupported: opens instantly */
+  .hz-fold[open] > :nth-child(n+2):nth-child(-n+7) { animation: hz-step .3s var(--hz-ease) backwards; animation-delay: calc((var(--hz-i, 1) - 1) * 40ms); }
+  :is(.is-copied, [data-copied='true']) > :where(svg, .hz-ico) { animation: hz-pop .2s var(--hz-ease); } /* the host swaps the icon to a tick, holds 1.6s, removes the state */
+}
+/* touch: hover and keyboard focus, fine pointers only */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  a.hz-card, .hz-card.hz-lift, .hz-arrow { transition: translate .2s var(--hz-ease), border-color .2s; }
+  :is(a.hz-card, .hz-card.hz-lift):is(:hover, :focus-visible) { translate: 0 -2px; border-color: var(--hz-ink); }
+  :is(a, button):is(:hover, :focus-visible) .hz-arrow { translate: 3px 0; }
+}
+
+/* ---------- 11. touch: every control is at least 44 x 44 ---------- */
+@media (pointer: coarse) { .hz-btn, a.hz-tag, a.hz-item, .hz-copy { min-width: 44px; min-height: 44px; } }
+
+/* ---------- 12. reduced motion: every state still changes, nothing moves (also covers transitions declared outside section 10) ---------- */
+@media (prefers-reduced-motion: reduce) { .hz, .hz *, .hz ::before, .hz ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+/* Version B. The kit above is the system; this layer only composes it for the
+   site's own markup, with --hz-* tokens and nothing else. */
+html{color-scheme:light dark;-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh}
+.hz a{overflow-wrap:anywhere}
+.hz :not(pre,.hz-code)>code{box-decoration-break:clone;-webkit-box-decoration-break:clone;font-size:.88em;background:var(--hz-raised);border:1px solid var(--hz-line);border-radius:6px;padding:.08em .36em;overflow-wrap:anywhere}
+.mark{width:1.15em;height:1.15em;display:block}
+
+/* nav */
+nav{border-bottom:1px solid var(--hz-line)}
+nav .in{display:flex;justify-content:space-between;align-items:center;gap:var(--hz-s4);min-height:64px}
+.brand{display:inline-flex;align-items:center;gap:var(--hz-s3);min-height:44px;font:560 15px/1 var(--hz-sans);letter-spacing:.06em}
+.brand i{font-style:normal;color:var(--hz-faint)}
+
+/* hero: centred, symmetric, still */
+.hero .wrap{display:grid;justify-items:center;padding-block:clamp(48px,8vw,96px) clamp(40px,6vw,72px);text-align:center}
+.hero h1{margin:0 0 var(--hz-s4);font:var(--hz-t-h2);letter-spacing:var(--hz-k-h2);text-wrap:balance}
+.hero h1 em{font-style:normal;color:var(--hz-faint)}
+.lede{max-width:56ch;color:var(--hz-soft);font:var(--hz-t-lede);text-wrap:pretty}
+.hero .lede{margin:0 0 var(--hz-s7)}
+.lede a{text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--hz-line-strong)}
+.lede a:hover{text-decoration-color:var(--hz-ink)}
+.get{width:100%;margin:0 0 var(--hz-s6);text-align:start}
+.ghead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--hz-s2) var(--hz-s3);min-height:34px}
+.ghead b{font:var(--hz-t-h3);letter-spacing:var(--hz-k-h3)}
+.ghead span{color:var(--hz-soft);font:var(--hz-t-small)}
+.tabs[hidden]{display:none}
+.gbox .hz-seg{background:var(--hz-page)}
+.get .cmd{display:flex;flex-direction:column;justify-content:center;min-height:64px;padding-right:6.5rem}
+.get .cmd[id] code{white-space:nowrap}
+@media (max-width:479px){.get .cmd{padding:0 6rem 0 var(--hz-s4)}.hz-field{padding-inline:14px;gap:8px}}
+@media (max-width:399px){.hz-field>svg{display:none}}
+.get .cmd[hidden]{display:none}
+.cmd code{display:block;overflow-wrap:anywhere}
+.get.js .os{display:none}
+.get .cp{display:none;top:50%;translate:0 -50%}
+.get.js .cp{display:inline-flex}
+.next{font:var(--hz-t-small)}
+.hz-gleam{overflow-clip-margin:6px}
+.btns{display:grid;justify-items:center;gap:var(--hz-s4);width:100%}
+.nexts{max-width:72ch;margin:var(--hz-s5) auto var(--hz-s6);display:grid;gap:var(--hz-s3)}
+.nexts p{color:var(--hz-soft)}
 .copy{position:relative;display:inline-flex}
-.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
-  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
-  padding:.4rem;display:flex;flex-direction:column;
-  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.btn .chev{width:.7em;height:.7em;fill:none;transition:transform .15s}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.menu{position:absolute;top:calc(100% + var(--hz-s2));left:0;z-index:20;min-width:21rem;display:flex;flex-direction:column;padding:var(--hz-s2);border:1px solid var(--hz-line-strong);border-radius:var(--hz-r16);background:var(--hz-raised);box-shadow:0 12px 32px rgb(0 0 0/.18);text-align:start}
 .menu[hidden]{display:none}
-.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
-  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
-  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
-  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
-  white-space:nowrap}
-.mi:hover,.mi:focus-visible{background:#181818;outline:none}
-.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
-.mi:hover .mark{color:var(--ink)}
-.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
-  letter-spacing:.1em;text-transform:uppercase}
-
-/* Works-with bar: one scrolling row, name and mark per agent. */
-.strip{border-bottom:1px solid var(--line);background:var(--panel)}
-.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
-  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
-  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
-  display:flex;align-items:center}
-.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
-  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
-  -webkit-overflow-scrolling:touch;
-  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
-  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
-.bar::-webkit-scrollbar{display:none}
-.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
-  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
-  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
-  text-decoration:none;background:var(--ground)}
-.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
-.agent .mark{width:.95rem;height:.95rem}
-
-h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
-h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
-h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
-p{margin:0 0 1rem;max-width:70ch}
-ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
-li{margin:.22rem 0}
-a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
-  text-decoration-color:var(--line-hi)}
-a:hover{text-decoration-color:var(--ink)}
-a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
-code{font-family:var(--mono);font-size:.85em;background:var(--panel);
-  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
-pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
-  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
-pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
-blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
-hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
-table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
-  display:block;overflow-x:auto}
-th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
-
-.curl{display:block;background:var(--panel);border:1px solid var(--line);
-  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
-  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
-  white-space:pre;line-height:1.9}
-.curl b{color:var(--ink);font-weight:400}
-.curl i{font-style:normal;color:var(--faint)}
-
-/* index */
-#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
-  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
-#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
-#q:focus{outline:none;border-color:var(--soft)}
-#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
-  text-transform:uppercase;margin:0 0 2rem}
-.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
-  padding-bottom:.45rem}
-.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
-  border-radius:var(--r-soft);text-decoration:none}
-.row:hover{background:#0a0a0a}
-.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
-.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
-footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
-  color:var(--faint);font-size:.85rem}
-footer a{color:var(--soft)}
-.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
-  margin:0 0 2rem;font-size:.85rem}
-.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
-  border-bottom:1px solid var(--line);padding-bottom:.4rem}
-.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
-.fmap a:hover{text-decoration:underline}
-.fmap div{color:var(--faint);line-height:1.5}
-.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
-
-@media (max-width:640px){
-  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
-  .btns{gap:.5rem}
-  .btn{padding:.75rem 1.15rem;font-size:.68rem}
-  .copy,.copy .btn{width:100%;justify-content:center}
-  .menu{left:0;right:0;min-width:0}
-  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
-  .strip b{border-right:0;padding-right:0}
-  .bar{width:100%}
+.mi{display:flex;align-items:center;gap:var(--hz-s3);width:100%;min-height:44px;padding:0 var(--hz-s3);border:0;border-radius:var(--hz-r12);background:none;color:var(--hz-ink);font:var(--hz-t-small);text-align:start;white-space:nowrap;cursor:pointer}
+.mi:hover,.mi:focus-visible{background:var(--hz-card)}
+.mi .mark{width:16px;height:16px;color:var(--hz-soft)}
+.mi u{margin-left:auto;color:var(--hz-faint);text-decoration:none}
+.strip{border-top:1px solid var(--hz-line)}
+.strip .in{display:grid;justify-items:center;gap:var(--hz-s4);padding-block:var(--hz-s6)}
+.strip b{color:var(--hz-faint);font:var(--hz-t-label);letter-spacing:var(--hz-k-label);text-transform:uppercase}
+.bar{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--hz-s2);max-width:820px}
+.agent{min-height:32px;padding-inline:12px;transition:border-color .2s}
+@media (hover:hover) and (pointer:fine){.agent:hover{border-color:var(--hz-ink);color:var(--hz-ink)}}
+.get .cp{min-width:5rem}.cp .hz-ico{display:inline-block}
+.agent .mark{width:14px;height:14px}
+@media (max-width:479px){
+  .hero .wrap{padding-top:var(--hz-s6)}
+  .btns,.copy{width:100%}.copy .btn{width:100%}
+  .more{display:block;width:100%;border-bottom:1px solid var(--hz-line);text-align:start}
+  .more>a.hz-btn{display:flex;justify-content:space-between;width:100%;min-height:48px;padding:0;border:0;border-top:1px solid var(--hz-line);border-radius:0;font-size:15px;color:var(--hz-ink)}
+  .more>a.hz-btn::after{content:'';width:7px;height:7px;margin-right:4px;border:solid var(--hz-soft);border-width:1.5px 1.5px 0 0;rotate:45deg}
+  .more>a.hz-btn:active{scale:1}
+  .menu{right:0;min-width:0}
 }
+
+/* catalogue: find, index, sections */
+.find{position:sticky;top:0;z-index:10;display:grid;gap:var(--hz-s2);margin-block:var(--hz-s7) var(--hz-s5);padding-block:var(--hz-s2);background:var(--hz-page)}
+.find .hz-field{flex:1;min-width:0}
+.hz-field svg{width:16px;height:16px;fill:none}
+#count{justify-self:end;color:var(--hz-faint);font:var(--hz-t-label);letter-spacing:var(--hz-k-label);text-transform:uppercase}
+.catgrid{align-items:start;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--hz-s6)}
+@media (min-width:960px){.catgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.catstd{grid-template-columns:minmax(0,1fr);margin-top:var(--hz-s7)}
+.sec{min-width:0;border-bottom:1px solid var(--hz-line);scroll-margin-top:88px}
+.sec[hidden]{display:none}
+.sec[open]{grid-column:1/-1;border:1px solid var(--hz-line);border-radius:var(--hz-r16);background:var(--hz-card);margin-block:var(--hz-s3)}
+.sec>summary{display:flex;align-items:center;justify-content:space-between;gap:var(--hz-s3);min-height:48px;padding:0 var(--hz-s2);list-style:none;cursor:pointer}
+.sec[open]>summary{padding-inline:var(--hz-s4)}
+@media (max-width:599px){.sec>summary{min-height:56px}}
+.sec::details-content{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--hz-s4);padding:0 var(--hz-s4) var(--hz-s4)}
+@media (min-width:600px){.sec::details-content{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:960px){.sec::details-content{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@supports not selector(::details-content){.sec[open]{display:grid;gap:var(--hz-s4);padding-bottom:var(--hz-s4);grid-template-columns:repeat(auto-fill,minmax(16rem,1fr))}.sec[open]>summary{grid-column:1/-1}.sec[open]>.row{margin-inline:var(--hz-s4)}}
+.filtering .sec::details-content,.filtering .sec>summary::after{transition:none}
+/* kit transitions (.hz-btn, a.hz-card) are not gated by the kit; here they are, until it is synced */
+@media (prefers-reduced-motion:reduce){.hz-btn,.hz-card,a.hz-card,.btn .chev,.agent{transition:none!important}}.filtering .sec>*{animation:none!important}
+.cat{margin:0;font:var(--hz-t-body);font-weight:560;overflow-wrap:break-word;hyphens:manual}
+.row.hz-card{gap:var(--hz-s2);padding:var(--hz-s4) var(--hz-s5);border-radius:var(--hz-r16);background:var(--hz-page)}
+.nm{font:var(--hz-t-mono);font-weight:560;overflow-wrap:anywhere}
+.ds{color:var(--hz-soft);font:var(--hz-t-small)}
+
+/* content pages: Zen title, a 62ch measure, kit code blocks */
+.doc{--hz-wrap:46rem;padding-block:var(--hz-s7) 0}
+.hz .doc h1{margin:0 0 var(--hz-s4);font:var(--hz-t-h2);letter-spacing:var(--hz-k-h2);text-wrap:balance;overflow-wrap:anywhere}
+.hz .doc h2{margin:var(--hz-s7) 0 var(--hz-s3);font:var(--hz-t-h3);letter-spacing:var(--hz-k-h3)}
+.hz .doc :where(h3,h4,h5,h6){margin:var(--hz-s5) 0 var(--hz-s2);font:var(--hz-t-body);font-weight:560}
+.hz .doc :where(p,ul,ol,blockquote){max-width:62ch;margin-bottom:var(--hz-s4)}
+.hz .doc ul{list-style:disc;padding-left:1.35em}
+.hz .doc ol{list-style:decimal;padding-left:1.35em}
+.doc li{margin:.25em 0}
+.hz .doc :where(p,li,td,blockquote) a{text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--hz-line-strong)}
+.hz .doc :where(p,li,td,blockquote) a:hover{text-decoration-color:var(--hz-ink)}
+.doc .lede{margin-bottom:var(--hz-s5)}
+.doc pre.hz-code{margin-bottom:var(--hz-s5)}
+.doc pre code{font-size:inherit}
+.doc blockquote{padding-left:var(--hz-s4);border-left:1px solid var(--hz-line-strong);color:var(--hz-soft)}
+.doc hr{border:0;border-top:1px solid var(--hz-line);margin:var(--hz-s7) 0}
+.doc table{display:block;overflow-x:auto;width:100%;margin-bottom:var(--hz-s5);border-collapse:collapse;font:var(--hz-t-small)}
+.doc :where(th,td){padding:var(--hz-s2) var(--hz-s3);border:1px solid var(--hz-line);text-align:start}
+
+footer{margin-top:var(--hz-section);padding-block:var(--hz-s7) var(--hz-s8);border-top:1px solid var(--hz-line);color:var(--hz-faint);font:var(--hz-t-small)}
+.fmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:var(--hz-s6);margin-bottom:var(--hz-s7)}
+.fmap>div{display:grid;grid-template-columns:auto 1fr;gap:var(--hz-s1) var(--hz-s3);align-content:start}
+.fmap b{grid-column:1/-1;margin-bottom:var(--hz-s2);color:var(--hz-ink);font-weight:560}
+.fmap a{color:var(--hz-ink)}
+.fmap a:hover,.fend a:hover{text-decoration:underline;text-underline-offset:3px}
+.fend{padding-top:var(--hz-s5);border-top:1px solid var(--hz-line)}
+.fend a{color:var(--hz-soft)}
+@media (max-width:640px){.fmap a,.fend a{display:inline-flex;align-items:center;min-height:44px}}
 </style>
 <link rel="icon" href="/favicon.svg">
 <link rel="canonical" href="https://hanzoskills.com/model-migration">
@@ -189,13 +311,13 @@ footer a{color:var(--soft)}
      Index:    https://hanzoskills.com/llms.txt
      Corpus:   https://hanzoskills.com/all.md
      Append .md to any path for the markdown twin. -->
-<body>
-<nav><div class="in">
+<body class="hz">
+<nav><div class="in hz-wrap">
   <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> HANZO<i>SKILLS</i></a>
-  <a class="up" href="/">All skills</a>
+  <a class="up hz-btn hz-btn-quiet" href="/">All skills</a>
 </div></nav>
 
-<div class="wrap">
+<div class="wrap hz-wrap doc">
 <h1>model-migration</h1><p class="lede">How to move existing code to newer Claude models.</p><h1>Model Migration Guide</h1>
 <blockquote><p><strong>If you arrived via <code>/claude-api migrate</code>:</strong> this is the right file. Execute the steps below in order — do not summarize them back to the user. Start with Step 0 (confirm scope) before touching any file.</p></blockquote>
 <p>How to move existing code to newer Claude models. Covers breaking changes, deprecated parameters, and drop-in replacements for retired models.</p>
@@ -215,7 +337,7 @@ footer a{color:var(--soft)}
 <p>Which one?</p></blockquote>
 <p>Then wait for the answer. The same applies to <em>&quot;Migrate to Opus 4.7&quot;</em> and bare <em>&quot;Help me upgrade to Sonnet 4.6&quot;</em> — ask before editing.</p>
 <p><strong>Sizing the scope question (large repos).</strong> Before asking, get a per-directory count so the user can pick concretely:</p>
-<pre><code class="lang-sh">rg -l &quot;&lt;old-model-id&gt;&quot; --type-not md | cut -d/ -f1 | sort | uniq -c | sort -rn</code></pre>
+<pre class="hz-code"><code class="lang-sh">rg -l &quot;&lt;old-model-id&gt;&quot; --type-not md | cut -d/ -f1 | sort | uniq -c | sort -rn</code></pre>
 <p>Present the breakdown in your scope question (e.g. <em>&quot;Found 217 references across 3 directories: api/ (130), api-go/ (62), routing/ (25). Which to migrate?&quot;</em>). Also confirm <code>git status</code> is clean before surveying — unexpected modifications mean a concurrent process; stop and investigate before proceeding.</p>
 <hr>
 <h2>Step 1: Classify each file</h2>
@@ -268,7 +390,7 @@ footer a{color:var(--soft)}
 <p><strong>Recommended starting points:</strong></p>
 <p>| Workload                                          | Start at       | Notes                                                                                                    | | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------- | | Chat, classification, content generation          | <code>low</code>          | With <code>thinking: {&quot;type&quot;: &quot;disabled&quot;}</code> you&#x27;ll see similar or better performance vs. Sonnet 4.5 no-thinking | | Most applications (balanced)                      | <code>medium</code>       | The default sweet spot for quality vs. cost                                                              | | Agentic coding, tool-heavy workflows              | <code>medium</code>       | Pair with adaptive thinking and a generous <code>max_tokens</code> (up to 128K with streaming — Sonnet 4.6&#x27;s ceiling) | | Autonomous multi-step agents, long-horizon loops  | <code>high</code>         | Scale down to <code>medium</code> if latency/tokens become a concern                                                 | | Computer-use agents                               | <code>high</code> + adaptive | Sonnet 4.6&#x27;s best computer-use accuracy is on adaptive + high                                          |</p>
 <p>For non-thinking chat workloads specifically:</p>
-<pre><code class="lang-python">client.messages.create(
+<pre class="hz-code"><code class="lang-python">client.messages.create(
     model=&quot;claude-sonnet-4-6&quot;,
     max_tokens=8192,
     thinking={&quot;type&quot;: &quot;disabled&quot;},
@@ -279,7 +401,7 @@ footer a{color:var(--soft)}
 <h3>Migrating to Opus 4.6 / Sonnet 4.6 (from any older model)</h3>
 <p><strong>1. Manual extended thinking is deprecated — use adaptive thinking.</strong></p>
 <p><code>thinking: {type: &quot;enabled&quot;, budget_tokens: N}</code> (manual extended thinking with a fixed token budget) is deprecated on Opus 4.6 and Sonnet 4.6. Replace it with <code>thinking: {type: &quot;adaptive&quot;}</code>, which lets Claude decide when and how much to think. Adaptive thinking also enables interleaved thinking automatically (no beta header needed).</p>
-<pre><code class="lang-python"># Old (still works on older models, deprecated on 4.6)
+<pre class="hz-code"><code class="lang-python"># Old (still works on older models, deprecated on 4.6)
 response = client.messages.create(
     model=&quot;claude-sonnet-4-5&quot;,
     max_tokens=16000,
@@ -297,7 +419,7 @@ response = client.messages.create(
 )</code></pre>
 <p>Adaptive thinking is the long-term target, and on internal evaluations it outperforms manual extended thinking. Move when you can.</p>
 <p><strong>Transitional escape hatch:</strong> manual extended thinking is still <em>functional</em> on Opus 4.6 and Sonnet 4.6 (deprecated, will be removed in a future release). If you need a hard ceiling while migrating — for example, to bound token spend on a runaway workload before you&#x27;ve tuned <code>effort</code> — you can keep <code>budget_tokens</code> around alongside an explicit <code>effort</code> value, then remove it in a follow-up. <code>budget_tokens</code> must be strictly less than <code>max_tokens</code>:</p>
-<pre><code class="lang-python"># Transitional only — deprecated, plan to remove
+<pre class="hz-code"><code class="lang-python"># Transitional only — deprecated, plan to remove
 client.messages.create(
     model=&quot;claude-sonnet-4-6&quot;,
     max_tokens=16384,
@@ -308,12 +430,12 @@ client.messages.create(
 <p>If the user asks for a &quot;thinking budget&quot; on 4.6, the preferred answer is <code>effort</code> — use <code>low</code>, <code>medium</code>, <code>high</code>, or <code>max</code> rather than a token count.</p>
 <p><strong>2. Effort parameter (Opus 4.5, Opus 4.6, Sonnet 4.6 only).</strong></p>
 <p>Controls thinking depth and overall token spend. Goes inside <code>output_config</code>, not top-level. Default is <code>high</code>. <code>max</code> is supported on Fable 5, Opus 4.6 and later, Sonnet 5, and Sonnet 4.6 — it errors on Sonnet 4.5 and Haiku 4.5.</p>
-<pre><code class="lang-python">output_config={&quot;effort&quot;: &quot;medium&quot;}  # often the best cost / quality balance</code></pre>
+<pre class="hz-code"><code class="lang-python">output_config={&quot;effort&quot;: &quot;medium&quot;}  # often the best cost / quality balance</code></pre>
 <h3>Migrating to the 4.6 family (Opus 4.6 and Sonnet 4.6)</h3>
 <p><strong>3. Assistant-turn prefills return 400 (Opus 4.6 and Sonnet 4.6).</strong></p>
 <p>Prefilled responses on the final assistant turn are no longer supported on either Opus 4.6 or Sonnet 4.6 — both return a 400. Adding assistant messages <em>elsewhere</em> in the conversation (e.g., for few-shot examples) still works. Pick the replacement that matches what the prefill was doing:</p>
 <p>| Prefill was used for                               | Replacement                                                                                                                               | | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | | Forcing JSON / YAML / schema output                | <code>output_config.format</code> with a <code>json_schema</code> — see example below                                                                           | | Forcing a classification label                     | Tool with an enum field containing valid labels, or structured outputs                                                                    | | Skipping preambles (<code>Here is the summary:\n</code>)      | System prompt instruction: <em>&quot;Respond directly without preamble. Do not start with phrases like &#x27;Here is...&#x27; or &#x27;Based on...&#x27;.&quot;</em>           | | Steering around bad refusals                       | Usually no longer needed — 4.6 refuses far more appropriately. Plain user-turn prompting is sufficient.                                   | | Continuing an interrupted response                 | Move continuation into the user turn: <em>&quot;Your previous response was interrupted and ended with <code>[last text]</code>. Continue from there.&quot;</em>     | | Injecting reminders / context hydration            | Inject into the user turn instead. For complex agent harnesses, expose context via a tool call or during compaction.                      |</p>
-<pre><code class="lang-python"># Old (fails on Opus 4.6 / Sonnet 4.6) — prefill forcing JSON shape
+<pre class="hz-code"><code class="lang-python"># Old (fails on Opus 4.6 / Sonnet 4.6) — prefill forcing JSON shape
 messages=[
     {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Extract the name.&quot;},
     {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;{\&quot;name\&quot;: \&quot;&quot;},
@@ -328,7 +450,7 @@ response = client.messages.create(
 )</code></pre>
 <p><strong>4. Stream for <code>max_tokens &gt; ~16K</code> (all models); only Haiku 4.5 caps lower, at 64K.</strong></p>
 <p>Non-streaming requests hit SDK HTTP timeouts at high <code>max_tokens</code>, regardless of model — stream for anything above ~16K output. The streamable ceiling is 128K for every current model except Haiku 4.5, which caps at 64K.</p>
-<pre><code class="lang-python">with client.messages.stream(model=&quot;claude-opus-4-6&quot;, max_tokens=64000, ...) as stream:
+<pre class="hz-code"><code class="lang-python">with client.messages.stream(model=&quot;claude-opus-4-6&quot;, max_tokens=64000, ...) as stream:
     message = stream.get_final_message()</code></pre>
 <p><strong>5. Tool-call JSON escaping may differ (Opus 4.6 and Sonnet 4.6).</strong></p>
 <p>Both 4.6 models can produce tool call <code>input</code> fields with Unicode or forward-slash escaping. Always parse with <code>json.loads()</code> / <code>JSON.parse()</code> — never raw-string-match the serialized input.</p>
@@ -340,7 +462,7 @@ response = client.messages.create(
 <p>Several beta headers that were required on 4.5 are now GA on 4.6 and should be removed. Leaving them in is harmless but misleading; removing them also lets you move from <code>client.beta.messages.create(...)</code> back to <code>client.messages.create(...)</code>.</p>
 <p>| Header                                    | Status on 4.6                                              | Action                                                  | | ----------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------- | | <code>effort-2025-11-24</code>                       | Effort parameter is GA                                     | Remove                                                  | | <code>fine-grained-tool-streaming-2025-05-14</code>  | GA                                                         | Remove                                                  | | <code>interleaved-thinking-2025-05-14</code>         | Adaptive thinking enables interleaved thinking automatically | Remove when using adaptive thinking; still functional on Sonnet 4.6 <em>with</em> manual extended thinking, but that path is deprecated | | <code>token-efficient-tools-2025-02-19</code>        | Built in to all Claude 4+ models                           | Remove (no effect)                                      | | <code>output-128k-2025-02-19</code>                  | Built in to Claude 4+ models                               | Remove (no effect)                                      |</p>
 <p>Once you remove all of these and finish moving to adaptive thinking, you can switch the SDK call site from the beta namespace back to the regular one:</p>
-<pre><code class="lang-python"># Before
+<pre class="hz-code"><code class="lang-python"># Before
 response = client.beta.messages.create(
     model=&quot;claude-opus-4-5&quot;,
     betas=[&quot;interleaved-thinking-2025-05-14&quot;, &quot;effort-2025-11-24&quot;],
@@ -359,7 +481,7 @@ response = client.messages.create(
 <p>If you&#x27;re jumping from Opus 4.1, Sonnet 4, Sonnet 3.7, or an older Claude 3.x model directly to 4.6, apply everything above <em>plus</em> the items in this section. Users already on Opus 4.5 / Sonnet 4.5 can skip this.</p>
 <p><strong>1. Sampling parameters: <code>temperature</code> OR <code>top_p</code>, not both.</strong></p>
 <p>Passing both will error on every Claude 4+ model:</p>
-<pre><code class="lang-python"># Old (3.x only — errors on 4+)
+<pre class="hz-code"><code class="lang-python"># Old (3.x only — errors on 4+)
 client.messages.create(temperature=0.7, top_p=0.9, ...)
 
 # New
@@ -367,19 +489,19 @@ client.messages.create(temperature=0.7, ...)  # or top_p, not both</code></pre>
 <p><strong>2. Update tool versions.</strong></p>
 <p>Legacy tool versions are not supported on 4+. <strong>Both the <code>type</code> and the <code>name</code> field change</strong> — <code>text_editor_20250728</code> and <code>str_replace_based_edit_tool</code> are a pair; updating one without the other 400s. Also remove the <code>undo_edit</code> command from your text-editor integration:</p>
 <p>| Old                                               | New                                                     | | ------------------------------------------------- | ------------------------------------------------------- | | <code>text_editor_20250124</code> + <code>str_replace_editor</code>     | <code>text_editor_20250728</code> + <code>str_replace_based_edit_tool</code>  | | <code>code_execution_*</code> (earlier versions)             | <code>code_execution_20260521</code>                               | | <code>undo_edit</code> command                               | <em>(no longer supported — delete call sites)</em>             |</p>
-<pre><code class="lang-python"># Before
+<pre class="hz-code"><code class="lang-python"># Before
 tools = [{&quot;type&quot;: &quot;text_editor_20250124&quot;, &quot;name&quot;: &quot;str_replace_editor&quot;}]
 
 # After — BOTH fields change
 tools = [{&quot;type&quot;: &quot;text_editor_20250728&quot;, &quot;name&quot;: &quot;str_replace_based_edit_tool&quot;}]</code></pre>
 <p><strong>3. Handle the <code>refusal</code> stop reason.</strong></p>
 <p>Claude 4+ can return <code>stop_reason: &quot;refusal&quot;</code> on the response. If your code only handles <code>end_turn</code> / <code>tool_use</code> / <code>max_tokens</code>, add a branch:</p>
-<pre><code class="lang-python">if response.stop_reason == &quot;refusal&quot;:
+<pre class="hz-code"><code class="lang-python">if response.stop_reason == &quot;refusal&quot;:
     # Surface the refusal to the user; do not retry with the same prompt
     ...</code></pre>
 <p><strong>4. Handle the <code>model_context_window_exceeded</code> stop reason (4.5+).</strong></p>
 <p>Distinct from <code>max_tokens</code>: it means the model hit the <em>context window</em> limit, not the requested output cap. Handle both:</p>
-<pre><code class="lang-python">if response.stop_reason == &quot;model_context_window_exceeded&quot;:
+<pre class="hz-code"><code class="lang-python">if response.stop_reason == &quot;model_context_window_exceeded&quot;:
     # Context window exhausted — compact or split the conversation
     ...
 elif response.stop_reason == &quot;max_tokens&quot;:
@@ -431,7 +553,7 @@ elif response.stop_reason == &quot;max_tokens&quot;:
 <h3>Breaking changes (will 400 on Opus 4.7)</h3>
 <p><strong>Extended thinking removed.</strong></p>
 <p><code>thinking: {type: &quot;enabled&quot;, budget_tokens: N}</code> is no longer supported on Claude Opus 4.7 or later models and returns a 400 error. Switch to adaptive thinking (<code>thinking: {type: &quot;adaptive&quot;}</code>) and use the effort parameter to control thinking depth. Adaptive thinking is <strong>off by default</strong> on Claude Opus 4.7: requests with no <code>thinking</code> field run without thinking, matching Opus 4.6 behavior. Set <code>thinking: {type: &quot;adaptive&quot;}</code> explicitly to enable it.</p>
-<pre><code class="lang-python"># Before (Opus 4.6)
+<pre class="hz-code"><code class="lang-python"># Before (Opus 4.6)
 client.messages.create(
     model=&quot;claude-opus-4-6&quot;,
     max_tokens=64000,
@@ -451,7 +573,7 @@ client.messages.create(
 <p>Delete <code>budget_tokens</code> plumbing entirely. For the replacement <code>effort</code> value, see <strong>Choosing an effort level on Opus 4.7</strong> below — there is no exact 1:1 mapping from <code>budget_tokens</code>.</p>
 <p><strong>Sampling parameters removed.</strong></p>
 <p>The <code>temperature</code>, <code>top_p</code>, and <code>top_k</code> parameters are no longer accepted on Claude Opus 4.7. Requests that include them return a 400 error. Remove these fields from your request payloads. Prompting is the recommended way to guide model behavior on Claude Opus 4.7. If you were using <code>temperature = 0</code> for determinism, note that it never guaranteed identical outputs on prior models.</p>
-<pre><code class="lang-python"># Before — errors on Opus 4.7
+<pre class="hz-code"><code class="lang-python"># Before — errors on Opus 4.7
 client.messages.create(temperature=0.7, top_p=0.9, ...)
 
 # After
@@ -464,7 +586,7 @@ client.messages.create(...)  # no sampling params</code></pre>
 <p><strong>Thinking content omitted by default.</strong></p>
 <p>Thinking blocks still appear in the response stream on Claude Opus 4.7, but their <code>thinking</code> field is empty unless you explicitly opt in. This is a silent change from Claude Opus 4.6, where the default was to return summarized thinking text. To restore summarized thinking content on Claude Opus 4.7, set <code>thinking.display</code> to <code>&quot;summarized&quot;</code>. <strong>The block-field name is unchanged</strong> — it is still <code>block.thinking</code> on a <code>thinking</code>-type block; do not rename it.</p>
 <p><strong>Detect this:</strong> any code that reads <code>block.thinking</code> (or equivalent) from a <code>thinking</code>-type block and renders it in a UI, log, or trace. <strong>The fix is the request parameter, not the response handling</strong> — add <code>display: &quot;summarized&quot;</code> to the <code>thinking</code> parameter:</p>
-<pre><code class="lang-python">thinking={&quot;type&quot;: &quot;adaptive&quot;, &quot;display&quot;: &quot;summarized&quot;}  # &quot;display&quot; is new on Opus 4.7; values: &quot;omitted&quot; (default) | &quot;summarized&quot;</code></pre>
+<pre class="hz-code"><code class="lang-python">thinking={&quot;type&quot;: &quot;adaptive&quot;, &quot;display&quot;: &quot;summarized&quot;}  # &quot;display&quot; is new on Opus 4.7; values: &quot;omitted&quot; (default) | &quot;summarized&quot;</code></pre>
 <p>The default is <code>&quot;omitted&quot;</code> on Claude Opus 4.7. If thinking content was never surfaced anywhere, no change needed. If your product streams reasoning to users, the new default appears as a long pause before output begins; set <code>display: &quot;summarized&quot;</code> to restore visible progress during thinking.</p>
 <p><strong>Updated token counting.</strong></p>
 <p>Claude Opus 4.7 and Claude Opus 4.6 count tokens differently. The same input text produces a higher token count on Claude Opus 4.7 than on Claude Opus 4.6, and <code>/v1/messages/count_tokens</code> will return a different number of tokens for Claude Opus 4.7 than it did for Claude Opus 4.6. The token efficiency of Claude Opus 4.7 can vary by workload shape. Prompting interventions, <code>task_budget</code>, and <code>effort</code> can help control costs and ensure appropriate token usage. Keep in mind that these controls may trade off model intelligence. <strong>Update your <code>max_tokens</code> parameters to give additional headroom, including compaction triggers.</strong> Claude Opus 4.7 provides a 1M context window at standard API pricing with no long-context premium.</p>
@@ -475,7 +597,7 @@ client.messages.create(...)  # no sampling params</code></pre>
 <p>Opus 4.7 introduces <strong>task budgets</strong> — tell Claude how many tokens it has for a full agentic loop (thinking + tool calls + final output). The model sees a running countdown and uses it to prioritize work and wrap up gracefully as the budget is consumed.</p>
 <p>This is a <strong>suggestion the model is aware of</strong>, not a hard cap. It is distinct from <code>max_tokens</code>, which remains the enforced per-response limit and is <em>not</em> surfaced to the model. Use <code>task_budget</code> when you want the model to self-moderate; use <code>max_tokens</code> as a hard ceiling to cap usage.</p>
 <p>Requires beta header <code>task-budgets-2026-03-13</code>:</p>
-<pre><code class="lang-python">client.beta.messages.create(
+<pre class="hz-code"><code class="lang-python">client.beta.messages.create(
     betas=[&quot;task-budgets-2026-03-13&quot;],
     model=&quot;claude-opus-4-7&quot;,
     max_tokens=64000,
@@ -500,7 +622,7 @@ client.messages.create(...)  # no sampling params</code></pre>
 <h3>Fast Mode: Claude Opus 5 / Opus 4.8 only</h3>
 <p>Fast mode is available on Claude Opus 5 and Opus 4.8. Only surface this if the caller&#x27;s code actually uses fast mode (e.g. <code>model=&quot;claude-opus-4-6-fast&quot;</code>, or <code>speed=&quot;fast&quot;</code> on an unsupported model); if the word &quot;fast&quot; does not appear in the code, say nothing about Fast Mode.</p>
 <p>When you see <code>model=&quot;claude-opus-4-6-fast&quot;</code> (or any retired <code>-fast</code> model string), <strong>the migration edit is</strong> to move the fast-mode traffic onto Claude Opus 5, the current fast-capable default (Opus 4.8 also works if the caller is staying on that tier):</p>
-<pre><code class="lang-python"># Request fast mode on Claude Opus 5.
+<pre class="hz-code"><code class="lang-python"># Request fast mode on Claude Opus 5.
 client.beta.messages.create(
     model=&quot;claude-opus-5&quot;, max_tokens=4096,
     speed=&quot;fast&quot;, betas=[&quot;fast-mode-2026-02-01&quot;],
@@ -554,7 +676,7 @@ client.beta.messages.create(
 <p>If the caller is already on Opus 4.7 and these are clean, there is nothing to change here.</p>
 <h3>New API feature: mid-session system prompts</h3>
 <p>You can deliver trusted instructions partway through a session by placing <code>{&quot;role&quot;: &quot;system&quot;, ...}</code> entries directly in the <code>messages</code> array — without editing the top-level system prompt and invalidating your prompt cache. Use it for things the application learns mid-session: the user delivered async context, a mode toggled (auto-approve enabled), files changed on disk, the remaining token budget dropped.</p>
-<pre><code class="lang-python">messages=[
+<pre class="hz-code"><code class="lang-python">messages=[
     {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: [{&quot;type&quot;: &quot;tool_result&quot;, &quot;tool_use_id&quot;: &quot;...&quot;, &quot;content&quot;: &quot;...&quot;}]},
     {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;This project&#x27;s codebase is Go. Write code in Go.&quot;},
 ]</code></pre>
@@ -567,7 +689,7 @@ client.beta.messages.create(
 <h3>Behavioral shifts (prompt-tunable)</h3>
 <p>None of these break code, but prompts tuned for Opus 4.7 may land differently. 4.8 follows instructions well, so small, explicit nudges close the gap.</p>
 <p><strong>Tool triggering is surface-dependent (search &amp; knowledge).</strong> 4.8&#x27;s tool-triggering is more surface-dependent than in prior models: with a system prompt present it is high-precision / low-recall — web search triggers slightly more often but runs fewer rounds per trigger, while knowledge-retrieval tools (Drive, project knowledge, connected files) trigger <em>less</em> often. It searches when it&#x27;s confident search is needed and otherwise answers from context, which can lower research depth on tasks that need it. Recover should-search rate with an explicit search-first instruction:</p>
-<blockquote><pre><code>&lt;search_first&gt;
+<blockquote><pre class="hz-code"><code>&lt;search_first&gt;
 For questions where current information would change the answer (recent events, current roles or prices, version-specific behavior, or anything the user flags as time-sensitive) search before answering rather than answering from memory. For open-ended research requests, begin searching immediately; do not ask a scoping question first unless the request is genuinely ambiguous about what to research.
 &lt;/search_first&gt;</code></pre></blockquote>
 <p><strong>Under-utilization of subagents, memory, and custom tools.</strong> Separately from search, 4.8 is conservative about reaching for capabilities that need an explicit &quot;decide to use this&quot; step — file-based memory, subagent delegation, custom tools. It won&#x27;t reach for complex or expensive capabilities unless reasonably sure they&#x27;re needed. This is steerable since 4.8 follows instructions well — say <em>when</em> each capability applies, not just that it exists:</p>
@@ -600,7 +722,7 @@ For questions where current information would change the answer (recent events, 
 <h3>Breaking change 2: disabling thinking is capped at <code>high</code> effort</h3>
 <p>Disabling thinking is available only at effort <strong><code>high</code> or lower</strong>; <code>thinking: {type: &quot;disabled&quot;}</code> combined with <code>xhigh</code> or <code>max</code> returns a 400. Opus 4.8 accepts that combination, so audit any route that disables thinking before migrating.</p>
 <p><strong>The check is per request.</strong> Effort and thinking are validated independently on every call, so a later request that raises effort to <code>xhigh</code> while thinking is still disabled is rejected even though earlier requests in the same conversation succeeded.</p>
-<pre><code class="lang-python"># 400 on Claude Opus 5 — disabled thinking above `high`
+<pre class="hz-code"><code class="lang-python"># 400 on Claude Opus 5 — disabled thinking above `high`
 client.messages.create(
     model=&quot;claude-opus-5&quot;,
     max_tokens=4096,
@@ -622,14 +744,14 @@ client.messages.create(
 <h3>New API features</h3>
 <p>Two additions, each behind its own beta header. Both are optional — a migrated request works without them.</p>
 <p><strong>1. <code>fallbacks: &quot;default&quot;</code> — recommended for every caller.</strong> Claude Opus 5&#x27;s safety classifiers can decline a request; the <code>fallbacks</code> parameter re-runs a declined request on another model server-side instead of returning the refusal to you. Previously you named the substitute yourself (<code>&quot;fallbacks&quot;: [{&quot;model&quot;: &quot;claude-opus-4-8&quot;}]</code>). The new <code>&quot;default&quot;</code> mode picks Anthropic&#x27;s recommended fallback automatically, routed <strong>by refusal category</strong> — cyber-category refusals go to Claude Opus 4.8.</p>
-<pre><code class="lang-http">POST /v1/messages
+<pre class="hz-code"><code class="lang-http">POST /v1/messages
 anthropic-beta: server-side-fallback-2026-07-01
 
 {&quot;model&quot;: &quot;claude-opus-5&quot;, &quot;fallbacks&quot;: &quot;default&quot;, &quot;max_tokens&quot;: 1024,
  &quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Say OK.&quot;}]}</code></pre>
 <p><strong>Prefer <code>&quot;default&quot;</code> over pinning a model.</strong> Different fallback models carry different classifiers, so the right substitute depends on <em>why</em> the request was declined — and <code>&quot;default&quot;</code> removes the migration you would otherwise owe when a pinned fallback model is deprecated. Note the header is <code>server-side-fallback-2026-07-01</code>, distinct from the <code>-2026-06-01</code> header that gates the array form; the array form&#x27;s semantics (content blocks, <code>usage.iterations</code>, sticky routing) are unchanged and documented in the Claude Fable 5 refusal section below.</p>
 <p><strong>2. Mid-conversation tool changes (beta <code>mid-conversation-tool-changes-2026-07-01</code>).</strong> Change a conversation&#x27;s tool set between turns without invalidating the prompt cache. Previously <code>tools</code> was fixed for the conversation&#x27;s lifetime and any edit re-billed the whole prefix. Append a <code>{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: [...]}</code> message carrying a <code>tool_addition</code> or <code>tool_removal</code> block:</p>
-<pre><code class="lang-python">messages = [
+<pre class="hz-code"><code class="lang-python">messages = [
     {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;What tools do you have for weather in Paris?&quot;},
     {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: [
         {&quot;type&quot;: &quot;tool_addition&quot;, &quot;tool&quot;: {&quot;type&quot;: &quot;tool_reference&quot;, &quot;name&quot;: &quot;get_forecast&quot;}},
@@ -654,11 +776,11 @@ anthropic-beta: server-side-fallback-2026-07-01
 <p><strong>Longer user-facing responses.</strong> Default response text is longer than on prior models. <strong><code>effort</code> is not the lever here</strong> — changing it may move thinking volume without reliably changing visible output length. Prompting is: in testing, a short conciseness instruction cut user-facing response length by ~20%.</p>
 <blockquote><p><em>&quot;Keep responses focused, brief, and concise to avoid overwhelming the person. Disclaimers and caveats are brief, with most of the response on the main answer; when asked to explain something, give a high-level summary unless an in-depth one is specifically requested.&quot;</em></p></blockquote>
 <p>For a long system prompt, pair that with a one-line reminder near the end:</p>
-<blockquote><pre><code>&lt;tone_preference&gt;
+<blockquote><pre class="hz-code"><code>&lt;tone_preference&gt;
 Keep outputs reasonably concise.
 &lt;/tone_preference&gt;</code></pre></blockquote>
 <p><strong>More narration in agentic sessions</strong> (the lever runs both ways — the same explicit-description technique tunes narration <em>up</em> or restyles it, if your product wants more). Claude Opus 5 narrates what it is about to do, and its per-message output in agentic sessions is longer than prior models&#x27;. It responds well to explicit guidance on <em>how</em> to communicate during a task rather than just <em>how much</em>. For coding agents, this block calibrates it:</p>
-<blockquote><pre><code># Communicating with the user
+<blockquote><pre class="hz-code"><code># Communicating with the user
 Your text output is what the user reads between tool calls; they usually can&#x27;t see your thinking or the raw tool results. Write it for a teammate who stepped away and is catching up, not for a log file: they don&#x27;t know the codenames or shorthand you created along the way, and they didn&#x27;t watch your process unfold. Before your first tool call, say in a sentence what you&#x27;re about to do; while working, give brief updates when you find something load-bearing or change direction.
 
 Lead with the outcome. Your first sentence after finishing should answer &quot;what happened&quot; or &quot;what did you find&quot; — the thing the user would ask for if they said &quot;just give me the TLDR.&quot; Supporting detail and reasoning should come after, for readers who want them.
@@ -678,7 +800,7 @@ Only write a code comment to state a constraint the code itself can&#x27;t show 
 <blockquote><p><em>&quot;Deliver what the user asked for, at the scope they intended. Interpret ambiguity the way a careful colleague would: make routine judgment calls yourself, and check in only when different readings would lead to materially different work. If you conclude the ask is mistaken or a better approach exists, say so in a sentence and keep going with the task as asked — don&#x27;t quietly narrow, widen, or transform it. Finish the whole task, not just the easy part of it - only report completion when it&#x27;s fully done. If you genuinely can&#x27;t complete something, do the rest and state plainly what&#x27;s missing and why. Stop short of actions or changes that are clearly beyond what the user&#x27;s ask implies.&quot;</em></p></blockquote>
 <p>The revised wording adds a <strong>finish-the-whole-task</strong> clause — report completion only when the work is actually done, and if something genuinely can&#x27;t be finished, do the rest and say plainly what is missing. That covers premature &quot;done&quot; claims, which scope-discipline wording alone did not.</p>
 <p><strong>Delegates to subagents more readily — the opposite of Opus 4.8.</strong> This is a direction change worth flagging: Opus 4.8 <em>under</em>-reached for subagents and needed prompting to delegate. Claude Opus 5 reaches for them freely, which multiplies cost and latency — each subagent re-establishes context, re-explores, reports back, and then the coordinator re-reads the report. If your harness supports subagents, <strong>any &quot;delegate more&quot; guidance you added for Opus 4.8 should come out</strong>, and you likely want an explicit cap. A deterministic ceiling on spawn count is the reliable lever; this block reduces delegation and token spend:</p>
-<blockquote><pre><code>## Delegating to subagents
+<blockquote><pre class="hz-code"><code>## Delegating to subagents
 Subagents multiply cost and time: each one re-establishes context, re-explores, and reports back, and you then re-read its report. Delegate rarely and only when the payoff clearly exceeds that overhead.
 
 Do use subagents for:
@@ -699,7 +821,7 @@ When delegating to subagents:
 - If you launch multiple agents for independent work, send them in a single message with multiple tool uses so they run concurrently.</code></pre></blockquote>
 <p>Note the interaction with over-verification below: &quot;do not use subagents to verify&quot; and &quot;delete your verification scaffolding&quot; are the same underlying fix seen from two angles.</p>
 <p><strong>Narrates self-corrections more than prior models.</strong> It flags and explains its own earlier mistakes at length, which reads as thrash in a user-facing product. Scope corrections to the ones that actually change the user&#x27;s outcome:</p>
-<blockquote><pre><code># Corrections
+<blockquote><pre class="hz-code"><code># Corrections
 Avoid unnecessary or excessive self-correction. Only correct an earlier statement in your user-facing text when the error would change the user&#x27;s code, conclusions, or decisions. State corrections plainly and concisely, and continue the task; combine multiple corrections rather than enumerating them all. For slips that change nothing for the user, simply make the correction and move on - no need to note it explicitly. Don&#x27;t add apologies or preambles, don&#x27;t be overly self-critical, and don&#x27;t ruminate or give a detailed account of the mistake or tally past errors. Sometimes, other agents will report incorrect or misleading results - don&#x27;t always take them at face value immediately. If other agents correct your statements and they are right, then simply update your approach without narrating too much about the correction to the user. This instruction does not apply to thinking blocks.
 
 A follow-up question about your earlier work is not, by itself, a signal that you got something wrong — answer what was asked. A statement that was accurate needs no correction: don&#x27;t re-audit how you phrased it, how you verified it, or limits you already stated. When the user does point to a real error, correct it plainly as above.</code></pre></blockquote>
@@ -719,7 +841,7 @@ A follow-up question about your earlier work is not, by itself, a signal that yo
 <h3>Breaking changes (will 400 on Claude Sonnet 5)</h3>
 <p>These bring the Sonnet line onto the same request surface as Opus 4.7/4.8. See the <strong>Per-SDK Syntax Reference</strong> above for the language-specific spelling of each.</p>
 <p><strong>1. Extended thinking removed — adaptive only.</strong> <code>thinking: {type: &quot;enabled&quot;, budget_tokens: N}</code> returns a 400. The transitional escape hatch that still worked on Sonnet 4.6 is gone. Use adaptive thinking with an effort hint:</p>
-<pre><code class="lang-python"># Before — deprecated on Sonnet 4.6, now errors on Claude Sonnet 5
+<pre class="hz-code"><code class="lang-python"># Before — deprecated on Sonnet 4.6, now errors on Claude Sonnet 5
 thinking={&quot;type&quot;: &quot;enabled&quot;, &quot;budget_tokens&quot;: 10000}
 
 # After
@@ -727,7 +849,7 @@ thinking={&quot;type&quot;: &quot;adaptive&quot;},
 output_config={&quot;effort&quot;: &quot;high&quot;},  # or &quot;xhigh&quot; for the hardest coding/agentic tasks</code></pre>
 <p>To turn thinking off entirely, set <code>thinking: {type: &quot;disabled&quot;}</code> — but see <em>Adaptive vs. disabled</em> below before doing so.</p>
 <p><strong>2. Sampling parameters rejected.</strong> Setting <code>temperature</code>, <code>top_p</code>, or <code>top_k</code> to a non-default value returns a 400; omitting the parameter, or passing its default, is still accepted. The safest migration is to omit them entirely and steer with prompting. If the caller was relying on <code>temperature=0</code> for determinism, note in the migration comment that it never guaranteed identical outputs.</p>
-<pre><code class="lang-python"># Before
+<pre class="hz-code"><code class="lang-python"># Before
 client.messages.create(model=&quot;claude-sonnet-4-6&quot;, temperature=0.2, ...)
 
 # After — omit entirely
@@ -799,7 +921,7 @@ client.messages.create(model=&quot;claude-sonnet-5&quot;, ...)</code></pre>
 <p>To measure the difference on your own prompts, call <code>count_tokens</code> once with your current model and once with <code>model: &quot;claude-fable-5&quot;</code>, and compare the two <code>input_tokens</code> values.</p>
 <h3><code>refusal</code> stop reason — handle before reading content</h3>
 <p>Claude Fable 5 runs safety classifiers on incoming requests, targeting research biology and most cybersecurity content (Claude Fable 5 is not intended for those domains); benign adjacent work — security tooling, life-sciences tasks — can occasionally trigger false positives, which is why the fallback patterns below matter even for legitimate workloads. (Most Claude consumer surfaces ship with built-in Opus 4.8 fallbacks; API callers configure their own.) A declined request returns a <strong>successful HTTP 200</strong> with <code>stop_reason: &quot;refusal&quot;</code>, plus a <code>stop_details</code> object with the policy category (values such as <code>&quot;cyber&quot;</code>, <code>&quot;bio&quot;</code>, <code>&quot;reasoning_extraction&quot;</code>, <code>&quot;frontier_llm&quot;</code>, or <code>null</code> — treat <code>null</code> as a permanent valid state; see the refusal category table in the public docs for the full set). <strong>Branch on <code>stop_reason</code>, never on <code>stop_details</code></strong> — <code>stop_details</code> is informational and can be <code>null</code> even on a refusal, and <code>explanation</code> is not guaranteed present. Note that classifier blocks and ordinary model refusals (the model itself declining) both surface as <code>stop_reason: &quot;refusal&quot;</code>; <code>stop_details.category</code> tells you which class you&#x27;re handling, and therefore whether retrying on a fallback model is the right response. The classifier can fire <strong>before any output</strong> (empty <code>content</code> array; not billed at all — no input or output tokens, no rate-limit consumption) or <strong>mid-stream</strong> after partial output (already-streamed output is billed at normal rates — discard the partial output rather than treating it as complete). Code that reads <code>response.content[0]</code> unconditionally will break — check <code>stop_reason</code> first:</p>
-<pre><code class="lang-python">response = client.messages.create(model=&quot;claude-fable-5&quot;, max_tokens=1024, messages=[...])
+<pre class="hz-code"><code class="lang-python">response = client.messages.create(model=&quot;claude-fable-5&quot;, max_tokens=1024, messages=[...])
 if response.stop_reason == &quot;refusal&quot;:
     # classifiers declined; content is empty (pre-output) or partial (mid-stream)
     handle_refusal()
@@ -808,7 +930,7 @@ else:
 <p><strong>Default to opting in.</strong> Fallbacks are not automatic on the API — a request without them simply stops on a refusal. Migrated and new Claude Fable 5 code should ship with pattern 1 below (pattern 2 on providers without server-side support) from day one, not as a later hardening step: emit the opt-in in the code, tell the user it&#x27;s there, and remove it only if they decline.</p>
 <p>Three ways to retry a refused request on another model, in order of preference:</p>
 <p><strong>1. Server-side <code>fallbacks</code> parameter (beta; Claude API and Claude Platform on AWS) — preferred.</strong> One round trip, a plain client, no client-side logic. Name substitute models (the only supported fallback target at launch is <code>claude-opus-4-8</code>, expansion expected); on a policy decline the API runs the next model on the same request and returns its answer, with credit-style repricing applied automatically. A <code>stop_reason: &quot;refusal&quot;</code> on the final response means the whole chain refused.</p>
-<pre><code class="lang-python">response = client.beta.messages.create(
+<pre class="hz-code"><code class="lang-python">response = client.beta.messages.create(
     model=&quot;claude-fable-5&quot;,
     max_tokens=1024,
     betas=[&quot;server-side-fallback-2026-06-01&quot;],
@@ -832,7 +954,7 @@ if fallback_ran and response.stop_reason != &quot;refusal&quot;:
 <p>Key semantics:</p>
 <ul><li><strong>Header depends on the form you use.</strong> The <strong>array</strong> form (<code>fallbacks: [{...}]</code>) requires exactly <code>server-side-fallback-2026-06-01</code> — other <code>server-side-fallback-<em></code> values reject it with a 400, and that header carries the </em>earliest* date of the series (<code>-2026-06-09</code> and <code>-2026-06-02</code> were earlier previews), so do not &quot;correct&quot; it to a newer-looking date. The <strong><code>&quot;default&quot;</code> scalar</strong> form uses <code>server-side-fallback-2026-07-01</code> instead — see § New API features under Migrating to Claude Opus 5. Pairing either header with the other form 400s. Rejected on the Batches API; available on the Claude API and Claude Platform on AWS; not on Amazon Bedrock, Vertex AI, or Microsoft Foundry (use pattern 2 there — the SDK middleware). Entries may override <code>max_tokens</code> per hop (bounding that attempt&#x27;s own output independently of the top-level <code>max_tokens</code>); <code>thinking</code>, <code>output_config</code>, and <code>speed</code> overrides are rolling out (<code>speed</code> additionally requires its beta) — until your requests accept them, include only <code>model</code> and <code>max_tokens</code> in each entry. Entries must be distinct and must be in the requested model&#x27;s <code>allowed_fallback_models</code> (published on <code>/v1/models</code> when the <code>server-side-fallback-2026-06-01</code> beta header is set — not yet visible under the <code>fallback-credit-<em></code> header alone, and not exposed on Amazon Bedrock, Vertex AI, or Microsoft Foundry). The request </em>with an entry&#x27;s overrides merged in* must be valid as a direct request to that entry&#x27;s model.</li><li><strong>Triggers on policy declines only</strong> — rate limits, overloads, and server errors on the requested model are returned as-is, never falling back.</li><li><strong>Reading the response:</strong> a <code>fallback</code> content block (<code>{&quot;type&quot;: &quot;fallback&quot;, &quot;from&quot;: {&quot;model&quot;: ...}, &quot;to&quot;: {&quot;model&quot;: ...}}</code>) marks each switch point in <code>content</code>; the served-by signal is a <code>fallback_message</code> entry in <code>usage.iterations</code> (don&#x27;t rely on the block — sticky-served turns have none). Top-level <code>model</code> names the model that produced the message.</li><li><strong>Billing:</strong> <code>usage.iterations</code> is the per-attempt source of truth; top-level <code>usage</code> covers only the attempt that produced the returned message. Declined-before-output attempts are reported but not billed; fallback attempts bill at the fallback model&#x27;s rates. Each attempt claims the rate limits of the model that ran it — if the fallback model is rate-limited or overloaded, the fallback attempt is not made and the preceding refusal is returned instead with <code>stop_details.recommended_model</code> naming a model to retry directly (the recommendation is a hint, not a guarantee, and is <code>null</code> when no recommendation is available) — size fallback-model limits for expected refusal volume.</li><li><strong>Sticky routing:</strong> once a conversation falls back, later non-streaming requests with <code>fallbacks</code> are served directly by the fallback model for ~1 hour (best-effort; org-scoped content-hash record, not message content; not recorded for ZDR orgs). Handle the requested model being tried again at any time.</li><li><strong>Echoing fallback turns back:</strong> after a mid-output fallback, omit <code>thinking</code>, <code>redacted_thinking</code>, and <code>tool_use</code> blocks — plus any <code>server_tool_use</code> block without its matching <code>server_tool_result</code>, and any other unrecognized model-internal block type — that appear <em>before</em> the final <code>fallback</code> block; text blocks, paired server-tool blocks, and everything after the boundary echo normally. The <code>fallback</code> block itself is an ignored audit marker (keep or drop). Streaming: the retry happens on the same stream and already-received content is never invalidated — a pre-output block is seamless (<code>message_start</code> names the fallback model; the <code>fallback</code> block arrives as an ordinary <code>content_block_start</code>, first in <code>content</code> — there is no special SSE event type; note <code>message_start</code> arrives only after the declined attempt, so time-to-first-byte includes it), and a mid-stream block keeps the partial, marks the boundary with the block, and continues — only the partial&#x27;s <code>text</code> blocks are passed to the fallback model as continuation context (other block types stay in <code>content</code> but aren&#x27;t part of it). Sticky routing is <strong>not consulted on streaming requests</strong> in the initial release, so on streams the <code>fallback</code> block check is the complete signal; non-streaming mid-output declines omit the declined partial entirely.</li></ul>
 <p><strong>2. SDK client-side middleware — for providers without server-side fallbacks (Amazon Bedrock, Vertex AI, Microsoft Foundry).</strong> Register it on the client and every <code>client.beta.messages</code> request (streaming included) retries refusals automatically, splicing the fallback model&#x27;s events onto the open stream in the same wire shape as pattern 1 (a <code>fallback</code> content block at each boundary, per-hop <code>usage.iterations</code>). It is also a beta surface: the middleware sends the <code>fallback-credit-2026-06-01</code> header by default so retries are repriced via credit tokens (override with its <code>betas</code> option). <code>BetaFallbackState</code> pins follow-up turns to the model that accepted (the client-side analog of sticky routing) — reuse one state object per conversation:</p>
-<pre><code class="lang-python">from anthropic import Anthropic, BetaFallbackState, BetaRefusalFallbackMiddleware
+<pre class="hz-code"><code class="lang-python">from anthropic import Anthropic, BetaFallbackState, BetaRefusalFallbackMiddleware
 
 client = Anthropic(middleware=[BetaRefusalFallbackMiddleware([{&quot;model&quot;: &quot;claude-opus-4-8&quot;}])])
 state = BetaFallbackState()  # pins follow-ups to the model that accepted
@@ -874,7 +996,7 @@ with state:
 <blockquote><p>Terse shorthand is fine between tool calls (that&#x27;s you thinking out loud, and brevity there is good). Your final summary is different: it&#x27;s for a reader who didn&#x27;t see any of that. If you&#x27;ve been working for a while without the user watching - overnight, across many tool calls, since they last spoke - your final message is their first look at any of it. Write it as a re-grounding, not a continuation of your working thread: the outcome first, then the one or two things you need from them, each explained as if new. The vocabulary you built up while working is yours, not theirs; leave it behind unless you re-introduce it. When you write the summary at the end, drop the working shorthand. Write complete sentences. Spell out terms instead of abbreviating them. Don&#x27;t use arrow chains, hyphen-stacked compounds, or labels you made up earlier — the reader doesn&#x27;t have the context to decode them. When you mention files, commits, flags, or other identifiers, give each one its own plain-language clause saying what it is or what changed — never pack several into one parenthesized run or slash-separated list. Open with the outcome: one sentence on what happened or what you found. Then the supporting detail. If you have to choose between short and clear, choose clear.</p></blockquote>
 <h3>Long-running agent recommendations</h3>
 <ul><li><strong>Make self-verification explicit.</strong> For long-running builds, instruct it to establish and run its own checking harness on a cadence (&quot;Establish a method for checking your own work as you build; run it every [interval], verifying against the specification with sub-agents&quot;). Separate fresh-context verifier sub-agents tend to outperform self-critique.</li><li><strong>De-prescribe migrated prompts and skills.</strong> Prompts and skills written for prior models are often too prescriptive for Claude Fable 5 and <em>reduce</em> output quality. After migrating, A/B the workload with older step-by-step scaffolding removed — prefer stating the goal and constraints over enumerating the steps. Claude Fable 5 is also good at updating skills on the fly from what it learns mid-task — let it.</li><li><strong>Start at the top of your difficulty range.</strong> The teams with the best early-access outcomes gave it their hardest unsolved problems first — have it scope the problem, ask questions, then execute.</li><li><strong>Add a <code>send_to_user</code> tool for verbatim mid-task delivery.</strong> When an asynchronous agent must deliver something the user sees <em>exactly as written</em> mid-run (a deliverable, a progress update with specific numbers, a direct answer), give it a client-side tool whose input you render directly in the UI — tool inputs are never summarized, so content arrives intact. Return a simple acknowledgement as the tool result:</li></ul>
-<pre><code class="lang-json">{
+<pre class="hz-code"><code class="lang-json">{
   &quot;name&quot;: &quot;send_to_user&quot;,
   &quot;description&quot;: &quot;Display a message directly to the user. Use this for progress updates, partial results, or content the user must see exactly as written before the task finishes.&quot;,
   &quot;input_schema&quot;: {
@@ -891,11 +1013,11 @@ with state:
 <hr>
 <h2>Verify the Migration</h2>
 <p>After updating, spot-check that the new model is actually being used. Replace <code>YOUR_TARGET_MODEL</code> with the model string you migrated to (e.g. <code>claude-fable-5</code>, <code>claude-opus-5</code>, <code>claude-opus-4-8</code>, <code>claude-opus-4-7</code>, <code>claude-sonnet-5</code>, <code>claude-sonnet-4-6</code>, <code>claude-haiku-4-5</code>) and keep the assertion prefix in sync:</p>
-<pre><code class="lang-python">YOUR_TARGET_MODEL = &quot;claude-opus-5&quot;  # or &quot;claude-opus-4-7&quot;, &quot;claude-sonnet-5&quot;, &quot;claude-sonnet-4-6&quot;, &quot;claude-haiku-4-5&quot;
+<pre class="hz-code"><code class="lang-python">YOUR_TARGET_MODEL = &quot;claude-opus-5&quot;  # or &quot;claude-opus-4-7&quot;, &quot;claude-sonnet-5&quot;, &quot;claude-sonnet-4-6&quot;, &quot;claude-haiku-4-5&quot;
 response = client.messages.create(model=YOUR_TARGET_MODEL, max_tokens=64, messages=[...])
 assert response.model.startswith(YOUR_TARGET_MODEL), response.model</code></pre>
 <p>For rate-limit headroom changes, pricing, or capability deltas (vision, structured outputs, effort support), query the Models API:</p>
-<pre><code class="lang-python">m = client.models.retrieve(YOUR_TARGET_MODEL)
+<pre class="hz-code"><code class="lang-python">m = client.models.retrieve(YOUR_TARGET_MODEL)
 m.max_input_tokens, m.max_tokens
 m.capabilities[&quot;effort&quot;][&quot;max&quot;][&quot;supported&quot;]</code></pre>
 <p>See <code>shared/models.md</code> for the full capability lookup pattern.</p>

@@ -186,181 +186,307 @@ Everything is plain markdown over https and needs no auth."""),
 # then the manifest itself. The bar below carries the full set.
 MENU = ["claude-code", "codex", "cursor"]
 
+# The kit, copied verbatim from ~/Code/hanzo-b/kit/hz-kit.css (Hanzo version B).
+# Left out because this site uses neither: section 6 (ledger) and section 9 (stage).
+KIT = r"""
+/* hz-kit.css · Hanzo version B · product-true, symmetric, still.
+   One file, no build step, no dependencies. How to use it: KIT.md, beside this file.
+   Put class="hz" on the page container. To follow a host theme, alias the --hz-* colour roles in a
+   rule on .hz: the kit declares them at zero specificity, so the host wins whatever the order. */
+
+/* ---------- 1. tokens ---------- */
+:where(.hz) {
+  /* colour roles, light then dark. light-dark() follows color-scheme: set that on <html>. */
+  --hz-page: light-dark(#ffffff, #0a0a0a);
+  --hz-ink: light-dark(#0a0a0a, #f5f5f7);
+  --hz-soft: light-dark(#525252, #a1a1a6);
+  --hz-faint: light-dark(#6e6e73, #8e8e93);
+  --hz-card: light-dark(#f5f5f7, #0f0f0f);
+  --hz-raised: light-dark(#ffffff, #171717);
+  --hz-line: light-dark(rgb(0 0 0 / .1), rgb(255 255 255 / .12));
+  --hz-line-strong: light-dark(rgb(0 0 0 / .16), rgb(255 255 255 / .2));
+  --hz-on-ink: light-dark(#ffffff, #0a0a0a);
+
+  /* type: one `font` value per step (weight size/line-height family), phone to desktop; tracking beside it */
+  --hz-sans: Zen, 'Zen Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --hz-mono: 'Zen Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --hz-t-display: 560 clamp(40px, 7.2vw, 72px)/1.04 var(--hz-sans); --hz-k-display: -.045em;
+  --hz-t-h2: 560 clamp(28px, 4.4vw, 48px)/1.08 var(--hz-sans); --hz-k-h2: -.035em;
+  --hz-t-h3: 560 clamp(18px, 2.4vw, 20px)/1.25 var(--hz-sans); --hz-k-h3: -.02em;
+  --hz-t-lede: 400 clamp(17px, 1.6vw, 20px)/1.5 var(--hz-sans);
+  --hz-t-body: 400 clamp(15px, 4vw, 16px)/1.55 var(--hz-sans);
+  --hz-t-small: 400 14px/1.45 var(--hz-sans);
+  --hz-t-label: 500 12px/1.2 var(--hz-mono); --hz-k-label: .08em;
+  --hz-t-mono: 400 clamp(12px, 3.4vw, 13px)/1.7 var(--hz-mono);
+
+  /* the one spacing scale */
+  --hz-s1: 4px; --hz-s2: 8px; --hz-s3: 12px; --hz-s4: 16px; --hz-s5: 24px; --hz-s6: 32px; --hz-s7: 48px; --hz-s8: 64px;
+  --hz-section: clamp(72px, 10vw, 144px); /* the air between two sections */
+  --hz-wrap: 1200px; --hz-gutter: clamp(16px, 5vw, 24px);
+
+  --hz-r8: 8px; --hz-r12: 12px; --hz-r16: 16px; --hz-r24: 24px; --hz-pill: 999px;
+  --hz-ease: cubic-bezier(.16, 1, .3, 1);
+}
+
+/* ---------- 2. the scope: a small reset that holds inside any host ---------- */
+.hz { background: var(--hz-page); color: var(--hz-ink); font: var(--hz-t-body); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+.hz *, .hz ::before, .hz ::after { box-sizing: border-box; }
+.hz, .hz * { font-feature-settings: 'ss01' !important; } /* Zen's house alternates. Pinned, because every `font` shorthand resets it */
+.hz :where(h1, h2, h3, p, ul, ol, dl, dd, pre, figure) { margin: 0; padding: 0; }
+.hz :where(ul, ol) { list-style: none; }
+.hz :where(a), .hz :where(a):hover { color: inherit; text-decoration: none; }
+.hz :where(code, pre, kbd) { padding: 0; border-radius: 0; background: none; font-family: var(--hz-mono); font-size: inherit; }
+.hz :where(svg) { flex: none; fill: currentColor; }
+.hz :focus-visible { outline: 2px solid var(--hz-ink); outline-offset: 3px; }
+.hz-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---------- 3. page wrap, section rhythm, section head ---------- */
+.hz-wrap { width: min(100% - 2 * var(--hz-gutter), var(--hz-wrap)); margin-inline: auto; }
+.hz-section { padding-block: calc(var(--hz-section) / 2); } /* two neighbours make one full gap */
+.hz-head { display: grid; justify-items: center; gap: var(--hz-s4); margin-bottom: clamp(32px, 4vw, 48px); text-align: center; }
+.hz-head > :where(h1, h2) { max-width: 22ch; font: var(--hz-t-h2); letter-spacing: var(--hz-k-h2); text-wrap: balance; }
+.hz-head > :where(p) { max-width: 56ch; color: var(--hz-soft); font: var(--hz-t-lede); text-wrap: pretty; }
+.hz-head-start { justify-items: start; text-align: start; }
+
+/* type steps as classes, for anything outside a section head */
+.hz-display { font: var(--hz-t-display); letter-spacing: var(--hz-k-display); }
+.hz-h3 { font: var(--hz-t-h3); letter-spacing: var(--hz-k-h3); }
+.hz-small { color: var(--hz-soft); font: var(--hz-t-small); }
+.hz-label { color: var(--hz-faint); font: var(--hz-t-label); letter-spacing: var(--hz-k-label); text-transform: uppercase; }
+.hz-mono { font: var(--hz-t-mono); }
+
+/* ---------- 4. pill buttons: secondary (hairline) is the base; primary is ink; quiet is text ---------- */
+.hz-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--hz-s2); min-height: 44px; padding: 0 22px; border: 1px solid var(--hz-line-strong); border-radius: var(--hz-pill); background: none; color: var(--hz-ink); font: 500 15px/1 var(--hz-sans); white-space: nowrap; cursor: pointer; transition: background-color .2s, border-color .2s, color .2s, scale .15s var(--hz-ease); }
+.hz-btn:hover { border-color: var(--hz-ink); color: var(--hz-ink); }
+.hz-btn:active { scale: .97; }
+.hz-btn-primary, .hz-btn-primary:hover { border-color: transparent; background: var(--hz-ink); color: var(--hz-on-ink); }
+.hz-btn-primary:hover { background: color-mix(in srgb, var(--hz-ink) 84%, var(--hz-page)); }
+.hz-btn-quiet, .hz-btn-quiet:hover { padding-inline: var(--hz-s3); border-color: transparent; color: var(--hz-soft); }
+.hz-btn-quiet:hover { color: var(--hz-ink); text-decoration: underline; text-underline-offset: 4px; }
+.hz-btn-sm { min-height: 34px; padding-inline: 14px; font-size: 13px; }
+.hz-btn:disabled, .hz-btn[aria-disabled='true'] { opacity: .4; pointer-events: none; }
+.hz-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--hz-s3); }
+@media (max-width: 479px) { .hz-actions > .hz-btn:not(.hz-btn-quiet) { flex: 1 1 100%; min-height: 48px; } } /* on a phone the actions fill the row, primary on top */
+
+/* ---------- 5. card, and the equal grid that never leaves an orphan ---------- */
+.hz-card { display: flex; flex-direction: column; gap: var(--hz-s3); min-width: 0; padding: var(--hz-s5); border: 1px solid var(--hz-line); border-radius: var(--hz-r24); background: var(--hz-card); color: var(--hz-ink); }
+.hz-card > :where(h3) { font: var(--hz-t-h3); letter-spacing: var(--hz-k-h3); }
+.hz-card > :where(p) { color: var(--hz-soft); }
+.hz-card > .hz-tags { margin-top: auto; padding-top: var(--hz-s2); } /* tags sit on the floor of equal-height cards */
+a.hz-card { transition: border-color .2s; }
+a.hz-card:hover { border-color: var(--hz-ink); color: var(--hz-ink); }
+/* Name the grid after the number of items: 2 -> hz-grid-2, 3 or 9 -> hz-grid-3, 4 or 8 -> hz-grid-4, 6 or 12 -> hz-grid-6.
+   Each class only ever uses column counts that divide its item count, so the last row is always full. */
+.hz-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--hz-s4); }
+@media (min-width: 600px) { .hz-grid-2, .hz-grid-4, .hz-grid-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .hz-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .hz-grid-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hz-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ---------- 7. code line, code block, tag ---------- */
+.hz-code { display: block; padding: var(--hz-s4) var(--hz-s5); border: 1px solid var(--hz-line); border-radius: var(--hz-r16); background: var(--hz-raised); color: var(--hz-ink); font: var(--hz-t-mono); text-align: start; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
+.hz-code > :where(span) { display: block; } /* one span per line, so lines can step in */
+.hz-code :where(i) { color: var(--hz-faint); font-style: normal; } /* <i> is the quiet voice: a prompt, a comment, output */
+.hz-codeline { display: flex; align-items: center; gap: var(--hz-s3); min-height: 48px; padding: 0 6px 0 18px; border: 1px solid var(--hz-line); border-radius: var(--hz-pill); background: var(--hz-raised); font: var(--hz-t-mono); }
+.hz-codeline > :where(code) { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; scrollbar-width: none; } /* a long command scrolls inside its line: nothing is cut off */
+.hz-codeblock { position: relative; }
+.hz-codeblock > .hz-code { padding-right: 96px; } /* room for the copy slot */
+.hz-codeblock > .hz-copy { position: absolute; top: var(--hz-s2); right: var(--hz-s2); } /* the copy slot: any .hz-btn.hz-btn-sm.hz-copy; the host wires the click */
+.hz-tags { display: flex; flex-wrap: wrap; gap: var(--hz-s2); }
+.hz-tag { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 0 10px; border: 1px solid var(--hz-line); border-radius: var(--hz-pill); color: var(--hz-soft); font: 500 12px/1 var(--hz-mono); white-space: nowrap; }
+a.hz-tag:hover { border-color: var(--hz-ink); color: var(--hz-ink); }
+
+/* ---------- 8. field: a pill input with an icon slot ---------- */
+.hz-field { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 18px; border: 1px solid var(--hz-line-strong); border-radius: var(--hz-pill); background: var(--hz-card); color: var(--hz-faint); cursor: text; }
+.hz-field:focus-within { outline: 2px solid var(--hz-ink); outline-offset: 3px; color: var(--hz-ink); }
+.hz-field > input, .hz-field > input:focus { flex: 1; min-width: 0; height: 46px; padding: 0; border: 0; outline: 0; background: none; color: var(--hz-ink); font: 400 16px/1 var(--hz-sans); } /* 16px: iOS does not zoom the page */
+.hz-field > input::placeholder { color: var(--hz-faint); opacity: 1; }
+
+/* ---------- 10. motion: one gleam, one play, and small responses to what a visitor does ---------- */
+/* hz-gleam: a soft light crosses the primary object once, on hover or press. Never loops. */
+.hz-gleam { position: relative; overflow: clip; }
+.hz-gleam::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(100deg, transparent 34%, color-mix(in srgb, var(--hz-gleam, var(--hz-ink)) 8%, transparent) 50%, transparent 66%); transform: translateX(-100%); }
+.hz-btn-primary.hz-gleam { --hz-gleam: var(--hz-on-ink); }
+@keyframes hz-gleam { to { transform: translateX(100%); } }
+/* hz-seg: segmented control. The host sets --hz-seg-i (active tab) and --hz-seg-n (tab count) on the track: one thumb, no measuring. */
+.hz-seg { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(var(--hz-seg-n, 2), 1fr); padding: 4px; border: 1px solid var(--hz-line); border-radius: var(--hz-pill); background: var(--hz-card); }
+.hz-seg::before { content: ''; position: absolute; z-index: -1; inset: 4px auto 4px 4px; width: calc((100% - 8px) / var(--hz-seg-n, 2)); border-radius: var(--hz-pill); background: var(--hz-ink); transform: translateX(calc(var(--hz-seg-i, 0) * 100%)); }
+.hz-seg > * { min-height: 36px; border: 0; border-radius: var(--hz-pill); background: none; color: var(--hz-soft); font: 500 14px/1 var(--hz-sans); cursor: pointer; }
+.hz-seg > :is([aria-selected='true'], [aria-pressed='true']) { color: var(--hz-on-ink); }
+/* hz-fold: a native <details>; the summary is the control, a CSS chevron replaces the triangle. */
+.hz-fold > summary { display: flex; align-items: center; justify-content: space-between; gap: var(--hz-s3); list-style: none; cursor: pointer; }
+.hz-fold > summary::-webkit-details-marker { display: none; }
+.hz-fold > summary::after { content: ''; width: 8px; height: 8px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; rotate: 45deg; }
+.hz-fold[open] > summary::after { rotate: 225deg; }
+.hz-arrow { display: inline-block; } /* translate does not apply to a plain inline box */
+@media (pointer: coarse) { .hz-seg > *, .hz-fold > summary { min-height: 44px; } }
+/* hz-play: the hero object plays its real example once; each child steps in, in order, then the page is still. */
+@keyframes hz-step { from { opacity: 0; transform: translateY(6px); } }
+@keyframes hz-rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes hz-pop { from { transform: scale(.8); } }
+@media (prefers-reduced-motion: no-preference) {
+  .hz-gleam:hover::after, .hz-gleam:active::after { animation: hz-gleam .9s var(--hz-ease); }
+  .hz-play > * { animation: hz-step .5s var(--hz-ease) backwards; animation-delay: calc(var(--hz-play-at, .2s) + var(--hz-i, 0) * .16s); }
+  .hz-play > :nth-child(2) { --hz-i: 1; } .hz-play > :nth-child(3) { --hz-i: 2; } .hz-play > :nth-child(4) { --hz-i: 3; }
+  .hz-play > :nth-child(5) { --hz-i: 4; } .hz-play > :nth-child(6) { --hz-i: 5; }
+  .hz-play > .hz-label { animation: none; } /* a label is furniture: it is there from the start */
+  /* hz-arrive: on the hero container; the first six children rise once on load. Backwards fill: with animation off the HTML is the end state. */
+  .hz-arrive > :nth-child(-n+6) { animation: hz-rise .5s var(--hz-ease) backwards; animation-delay: calc(var(--hz-i, 0) * 60ms); }
+  :is(.hz-arrive, .hz-fold) > :nth-child(2) { --hz-i: 1; } :is(.hz-arrive, .hz-fold) > :nth-child(3) { --hz-i: 2; } :is(.hz-arrive, .hz-fold) > :nth-child(4) { --hz-i: 3; }
+  :is(.hz-arrive, .hz-fold) > :nth-child(5) { --hz-i: 4; } :is(.hz-arrive, .hz-fold) > :nth-child(6) { --hz-i: 5; } :is(.hz-arrive, .hz-fold) > :nth-child(7) { --hz-i: 6; }
+  .hz-seg::before { transition: transform .3s var(--hz-ease); } .hz-seg > * { transition: color .3s var(--hz-ease); }
+  .hz-swap:is([data-hz-swap], .is-in) { animation: hz-step .22s var(--hz-ease) backwards; } /* plays when the node is inserted or the attribute is set again */
+  .hz-fold { interpolate-size: allow-keywords; } .hz-fold > summary::after { transition: rotate .3s var(--hz-ease); }
+  .hz-fold::details-content { height: 0; overflow: clip; }
+  /* only opening eases; closing is instant, because a tile that leaves its open layout mid-ease flashes */
+  .hz-fold[open]::details-content { height: auto; transition: height .3s var(--hz-ease), content-visibility .3s; transition-behavior: allow-discrete; } /* unsupported: opens instantly */
+  .hz-fold[open] > :nth-child(n+2):nth-child(-n+7) { animation: hz-step .3s var(--hz-ease) backwards; animation-delay: calc((var(--hz-i, 1) - 1) * 40ms); }
+  :is(.is-copied, [data-copied='true']) > :where(svg, .hz-ico) { animation: hz-pop .2s var(--hz-ease); } /* the host swaps the icon to a tick, holds 1.6s, removes the state */
+}
+/* touch: hover and keyboard focus, fine pointers only */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  a.hz-card, .hz-card.hz-lift, .hz-arrow { transition: translate .2s var(--hz-ease), border-color .2s; }
+  :is(a.hz-card, .hz-card.hz-lift):is(:hover, :focus-visible) { translate: 0 -2px; border-color: var(--hz-ink); }
+  :is(a, button):is(:hover, :focus-visible) .hz-arrow { translate: 3px 0; }
+}
+
+/* ---------- 11. touch: every control is at least 44 x 44 ---------- */
+@media (pointer: coarse) { .hz-btn, a.hz-tag, a.hz-item, .hz-copy { min-width: 44px; min-height: 44px; } }
+
+/* ---------- 12. reduced motion: every state still changes, nothing moves (also covers transitions declared outside section 10) ---------- */
+@media (prefers-reduced-motion: reduce) { .hz, .hz *, .hz ::before, .hz ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+"""
+
 CSS = """
-/* Committed to one visual world: a dark instrument panel. No light variant —
-   the dot field and the hairline rules only read on black, and a naive
-   inversion would wash both out. Every colour is painted explicitly so the page
-   never borrows a host background. */
+/* Light and dark follow the device. Colour comes only from the --hz-* roles. */
 @font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
 @font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
 @font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+""" + KIT + r"""
+/* Version B. The kit above is the system; this layer only composes it for the
+   site's own markup, with --hz-* tokens and nothing else. */
+html{color-scheme:light dark;-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh}
+.hz a{overflow-wrap:anywhere}
+.hz :not(pre,.hz-code)>code{box-decoration-break:clone;-webkit-box-decoration-break:clone;font-size:.88em;background:var(--hz-raised);border:1px solid var(--hz-line);border-radius:6px;padding:.08em .36em;overflow-wrap:anywhere}
+.mark{width:1.15em;height:1.15em;display:block}
 
-:root{
-  --ink:#f4f4f2; --soft:#9c9c98; --faint:#6a6a66; --ground:#000; --panel:#0a0a0a;
-  --line:#232323; --line-hi:#3a3a3a; --accent:#f4f4f2;
-  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
-  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  --font-zen-pixel-square:'Zen Pixel Square',monospace;
-  --mono:var(--font-zen-mono);
-  --sans:var(--font-zen-sans);
-  /* Controls are pills and surfaces are soft, as on hanzo.ai. */
-  --r:999px; --r-soft:14px;
-}
-*{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
-  font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
-.wrap{max-width:60rem;margin:0 auto;padding:0 1.75rem}
+/* nav */
+nav{border-bottom:1px solid var(--hz-line)}
+nav .in{display:flex;justify-content:space-between;align-items:center;gap:var(--hz-s4);min-height:64px}
+.brand{display:inline-flex;align-items:center;gap:var(--hz-s3);min-height:44px;font:560 15px/1 var(--hz-sans);letter-spacing:.06em}
+.brand i{font-style:normal;color:var(--hz-faint)}
 
-/* The dot field. A halftone made of one repeating radial-gradient, faded out
-   along the diagonal by a mask so it reads as a wave rather than wallpaper. */
-/* No overflow clip here: the dot field is inset to the box already, and a clip
-   would cut off the copy-prompt menu. */
-.hero{position:relative;border-bottom:1px solid var(--line)}
-.hero::before{content:"";position:absolute;inset:0;
-  background-image:radial-gradient(var(--line-hi) 1px, transparent 1px);
-  background-size:7px 7px;
-  -webkit-mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
-  mask-image:linear-gradient(115deg,#000 0%,rgba(0,0,0,.55) 38%,transparent 72%);
-  pointer-events:none}
-.hero .wrap{position:relative;padding-top:5.5rem;padding-bottom:4rem}
-
-nav{border-bottom:1px solid var(--line)}
-nav .in{max-width:60rem;margin:0 auto;padding:1.1rem 1.75rem;display:flex;
-  justify-content:space-between;align-items:center;gap:1rem}
-.brand{font-family:var(--mono);font-size:.85rem;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink);text-decoration:none;
-  display:inline-flex;align-items:center;gap:.6rem}
-.brand i{font-style:normal;color:var(--faint)}
-.mark{width:1.15em;height:1.15em;display:block;flex:0 0 auto}
-nav a.up{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--soft);text-decoration:none}
-nav a.up:hover{color:var(--ink)}
-
-h1{font-family:var(--mono);font-size:clamp(2rem,5.4vw,3.4rem);line-height:1.12;
-  letter-spacing:-.02em;margin:0 0 1.1rem;font-weight:500;text-wrap:balance}
-h1 em{font-style:normal;color:var(--faint)}
-.lede{color:var(--soft);font-size:1.05rem;max-width:52ch;margin:0 0 2.25rem}
-
-.btns{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 .5rem;align-items:center}
-.btn{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);
-  font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
-  padding:.8rem 1.4rem;border:1px solid var(--line-hi);border-radius:var(--r);
-  color:var(--ink);text-decoration:none;background:transparent;cursor:pointer;
-  line-height:1.2;font-weight:400}
-.btn:hover{background:#141414;text-decoration:none;border-color:var(--soft)}
-.btn.solid{background:var(--ink);color:#000;border-color:var(--ink)}
-.btn.solid:hover{background:#d8d8d4}
-.btn .chev{width:.7em;height:.7em;flex:0 0 auto;transition:transform .15s ease}
-.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
-
-/* Copy-prompt selector. Each row copies the prompt for its own target. */
+/* hero: centred, symmetric, still */
+.hero .wrap{display:grid;justify-items:center;padding-block:clamp(48px,8vw,96px) clamp(40px,6vw,72px);text-align:center}
+.hero h1{margin:0 0 var(--hz-s4);font:var(--hz-t-h2);letter-spacing:var(--hz-k-h2);text-wrap:balance}
+.hero h1 em{font-style:normal;color:var(--hz-faint)}
+.lede{max-width:56ch;color:var(--hz-soft);font:var(--hz-t-lede);text-wrap:pretty}
+.hero .lede{margin:0 0 var(--hz-s7)}
+.lede a{text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--hz-line-strong)}
+.lede a:hover{text-decoration-color:var(--hz-ink)}
+.get{width:100%;margin:0 0 var(--hz-s6);text-align:start}
+.ghead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--hz-s2) var(--hz-s3);min-height:34px}
+.ghead b{font:var(--hz-t-h3);letter-spacing:var(--hz-k-h3)}
+.ghead span{color:var(--hz-soft);font:var(--hz-t-small)}
+.tabs[hidden]{display:none}
+.gbox .hz-seg{background:var(--hz-page)}
+.get .cmd{display:flex;flex-direction:column;justify-content:center;min-height:64px;padding-right:6.5rem}
+.get .cmd[id] code{white-space:nowrap}
+@media (max-width:479px){.get .cmd{padding:0 6rem 0 var(--hz-s4)}.hz-field{padding-inline:14px;gap:8px}}
+@media (max-width:399px){.hz-field>svg{display:none}}
+.get .cmd[hidden]{display:none}
+.cmd code{display:block;overflow-wrap:anywhere}
+.get.js .os{display:none}
+.get .cp{display:none;top:50%;translate:0 -50%}
+.get.js .cp{display:inline-flex}
+.next{font:var(--hz-t-small)}
+.hz-gleam{overflow-clip-margin:6px}
+.btns{display:grid;justify-items:center;gap:var(--hz-s4);width:100%}
+.nexts{max-width:72ch;margin:var(--hz-s5) auto var(--hz-s6);display:grid;gap:var(--hz-s3)}
+.nexts p{color:var(--hz-soft)}
 .copy{position:relative;display:inline-flex}
-.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
-  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
-  padding:.4rem;display:flex;flex-direction:column;
-  box-shadow:0 12px 32px rgba(0,0,0,.75)}
+.btn .chev{width:.7em;height:.7em;fill:none;transition:transform .15s}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.menu{position:absolute;top:calc(100% + var(--hz-s2));left:0;z-index:20;min-width:21rem;display:flex;flex-direction:column;padding:var(--hz-s2);border:1px solid var(--hz-line-strong);border-radius:var(--hz-r16);background:var(--hz-raised);box-shadow:0 12px 32px rgb(0 0 0/.18);text-align:start}
 .menu[hidden]{display:none}
-.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
-  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .35rem);
-  background:transparent;color:var(--ink);font-family:var(--mono);font-size:.76rem;
-  letter-spacing:.04em;text-decoration:none;cursor:pointer;line-height:1.3;
-  white-space:nowrap}
-.mi:hover,.mi:focus-visible{background:#181818;outline:none}
-.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
-.mi:hover .mark{color:var(--ink)}
-.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
-  letter-spacing:.1em;text-transform:uppercase}
-
-/* Works-with bar: one scrolling row, name and mark per agent. */
-.strip{border-bottom:1px solid var(--line);background:var(--panel)}
-.strip .in{max-width:60rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
-  align-items:center;gap:1.25rem;font-family:var(--mono);font-size:.72rem;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-.strip b{color:var(--soft);font-weight:400;flex:0 0 auto;
-  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
-  display:flex;align-items:center}
-.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
-  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
-  -webkit-overflow-scrolling:touch;
-  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent);
-  mask-image:linear-gradient(90deg,#000 calc(100% - 3rem),transparent)}
-.bar::-webkit-scrollbar{display:none}
-.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
-  padding:.4rem .85rem;border:1px solid var(--line);border-radius:var(--r);
-  color:var(--soft);white-space:nowrap;scroll-snap-align:start;
-  text-decoration:none;background:var(--ground)}
-.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
-.agent .mark{width:.95rem;height:.95rem}
-
-h2{font-family:var(--mono);font-size:1.1rem;letter-spacing:-.01em;margin:2.75rem 0 .75rem;font-weight:500}
-h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:600}
-h4,h5,h6{font-size:.94rem;margin:1.5rem 0 .5rem;font-weight:600}
-p{margin:0 0 1rem;max-width:70ch}
-ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
-li{margin:.22rem 0}
-a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
-  text-decoration-color:var(--line-hi)}
-a:hover{text-decoration-color:var(--ink)}
-a:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
-code{font-family:var(--mono);font-size:.85em;background:var(--panel);
-  border:1px solid var(--line);border-radius:5px;padding:.1em .36em}
-pre{background:var(--panel);border:1px solid var(--line);padding:1rem 1.1rem;
-  border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
-pre code{background:none;border:0;padding:0;font-size:.82rem;line-height:1.7}
-blockquote{margin:0 0 1rem;padding-left:1rem;border-left:1px solid var(--line-hi);color:var(--soft)}
-hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
-table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
-  display:block;overflow-x:auto}
-th,td{border:1px solid var(--line);padding:.5rem .7rem;text-align:left}
-
-.curl{display:block;background:var(--panel);border:1px solid var(--line);
-  border-radius:var(--r-soft);padding:.95rem 1.1rem;font-family:var(--mono);
-  font-size:.8rem;color:var(--soft);overflow-x:auto;margin:0 0 2.5rem;
-  white-space:pre;line-height:1.9}
-.curl b{color:var(--ink);font-weight:400}
-.curl i{font-style:normal;color:var(--faint)}
-
-/* index */
-#q{width:100%;padding:.85rem 1.2rem;font-family:var(--mono);font-size:.85rem;color:var(--ink);
-  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 .6rem}
-#q::placeholder{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
-#q:focus{outline:none;border-color:var(--soft)}
-#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
-  text-transform:uppercase;margin:0 0 2rem}
-.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
-  padding-bottom:.45rem}
-.row{display:block;padding:.6rem .9rem;margin:0 -.9rem;border-bottom:1px solid var(--line);
-  border-radius:var(--r-soft);text-decoration:none}
-.row:hover{background:#0a0a0a}
-.nm{font-family:var(--mono);font-size:.84rem;color:var(--ink);display:block}
-.ds{color:var(--soft);font-size:.9rem;display:block;margin-top:.12rem}
-footer{margin-top:4rem;padding:2rem 0 4rem;border-top:1px solid var(--line);
-  color:var(--faint);font-size:.85rem}
-footer a{color:var(--soft)}
-.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
-  margin:0 0 2rem;font-size:.85rem}
-.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--faint);font-weight:400;margin:0 0 .6rem;
-  border-bottom:1px solid var(--line);padding-bottom:.4rem}
-.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
-.fmap a:hover{text-decoration:underline}
-.fmap div{color:var(--faint);line-height:1.5}
-.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
-
-@media (max-width:640px){
-  .hero .wrap{padding-top:3.25rem;padding-bottom:2.75rem}
-  .btns{gap:.5rem}
-  .btn{padding:.75rem 1.15rem;font-size:.68rem}
-  .copy,.copy .btn{width:100%;justify-content:center}
-  .menu{left:0;right:0;min-width:0}
-  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
-  .strip b{border-right:0;padding-right:0}
-  .bar{width:100%}
+.mi{display:flex;align-items:center;gap:var(--hz-s3);width:100%;min-height:44px;padding:0 var(--hz-s3);border:0;border-radius:var(--hz-r12);background:none;color:var(--hz-ink);font:var(--hz-t-small);text-align:start;white-space:nowrap;cursor:pointer}
+.mi:hover,.mi:focus-visible{background:var(--hz-card)}
+.mi .mark{width:16px;height:16px;color:var(--hz-soft)}
+.mi u{margin-left:auto;color:var(--hz-faint);text-decoration:none}
+.strip{border-top:1px solid var(--hz-line)}
+.strip .in{display:grid;justify-items:center;gap:var(--hz-s4);padding-block:var(--hz-s6)}
+.strip b{color:var(--hz-faint);font:var(--hz-t-label);letter-spacing:var(--hz-k-label);text-transform:uppercase}
+.bar{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--hz-s2);max-width:820px}
+.agent{min-height:32px;padding-inline:12px;transition:border-color .2s}
+@media (hover:hover) and (pointer:fine){.agent:hover{border-color:var(--hz-ink);color:var(--hz-ink)}}
+.get .cp{min-width:5rem}.cp .hz-ico{display:inline-block}
+.agent .mark{width:14px;height:14px}
+@media (max-width:479px){
+  .hero .wrap{padding-top:var(--hz-s6)}
+  .btns,.copy{width:100%}.copy .btn{width:100%}
+  .more{display:block;width:100%;border-bottom:1px solid var(--hz-line);text-align:start}
+  .more>a.hz-btn{display:flex;justify-content:space-between;width:100%;min-height:48px;padding:0;border:0;border-top:1px solid var(--hz-line);border-radius:0;font-size:15px;color:var(--hz-ink)}
+  .more>a.hz-btn::after{content:'';width:7px;height:7px;margin-right:4px;border:solid var(--hz-soft);border-width:1.5px 1.5px 0 0;rotate:45deg}
+  .more>a.hz-btn:active{scale:1}
+  .menu{right:0;min-width:0}
 }
+
+/* catalogue: find, index, sections */
+.find{position:sticky;top:0;z-index:10;display:grid;gap:var(--hz-s2);margin-block:var(--hz-s7) var(--hz-s5);padding-block:var(--hz-s2);background:var(--hz-page)}
+.find .hz-field{flex:1;min-width:0}
+.hz-field svg{width:16px;height:16px;fill:none}
+#count{justify-self:end;color:var(--hz-faint);font:var(--hz-t-label);letter-spacing:var(--hz-k-label);text-transform:uppercase}
+.catgrid{align-items:start;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--hz-s6)}
+@media (min-width:960px){.catgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.catstd{grid-template-columns:minmax(0,1fr);margin-top:var(--hz-s7)}
+.sec{min-width:0;border-bottom:1px solid var(--hz-line);scroll-margin-top:88px}
+.sec[hidden]{display:none}
+.sec[open]{grid-column:1/-1;border:1px solid var(--hz-line);border-radius:var(--hz-r16);background:var(--hz-card);margin-block:var(--hz-s3)}
+.sec>summary{display:flex;align-items:center;justify-content:space-between;gap:var(--hz-s3);min-height:48px;padding:0 var(--hz-s2);list-style:none;cursor:pointer}
+.sec[open]>summary{padding-inline:var(--hz-s4)}
+@media (max-width:599px){.sec>summary{min-height:56px}}
+.sec::details-content{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--hz-s4);padding:0 var(--hz-s4) var(--hz-s4)}
+@media (min-width:600px){.sec::details-content{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:960px){.sec::details-content{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@supports not selector(::details-content){.sec[open]{display:grid;gap:var(--hz-s4);padding-bottom:var(--hz-s4);grid-template-columns:repeat(auto-fill,minmax(16rem,1fr))}.sec[open]>summary{grid-column:1/-1}.sec[open]>.row{margin-inline:var(--hz-s4)}}
+.filtering .sec::details-content,.filtering .sec>summary::after{transition:none}
+/* kit transitions (.hz-btn, a.hz-card) are not gated by the kit; here they are, until it is synced */
+@media (prefers-reduced-motion:reduce){.hz-btn,.hz-card,a.hz-card,.btn .chev,.agent{transition:none!important}}.filtering .sec>*{animation:none!important}
+.cat{margin:0;font:var(--hz-t-body);font-weight:560;overflow-wrap:break-word;hyphens:manual}
+.row.hz-card{gap:var(--hz-s2);padding:var(--hz-s4) var(--hz-s5);border-radius:var(--hz-r16);background:var(--hz-page)}
+.nm{font:var(--hz-t-mono);font-weight:560;overflow-wrap:anywhere}
+.ds{color:var(--hz-soft);font:var(--hz-t-small)}
+
+/* content pages: Zen title, a 62ch measure, kit code blocks */
+.doc{--hz-wrap:46rem;padding-block:var(--hz-s7) 0}
+.hz .doc h1{margin:0 0 var(--hz-s4);font:var(--hz-t-h2);letter-spacing:var(--hz-k-h2);text-wrap:balance;overflow-wrap:anywhere}
+.hz .doc h2{margin:var(--hz-s7) 0 var(--hz-s3);font:var(--hz-t-h3);letter-spacing:var(--hz-k-h3)}
+.hz .doc :where(h3,h4,h5,h6){margin:var(--hz-s5) 0 var(--hz-s2);font:var(--hz-t-body);font-weight:560}
+.hz .doc :where(p,ul,ol,blockquote){max-width:62ch;margin-bottom:var(--hz-s4)}
+.hz .doc ul{list-style:disc;padding-left:1.35em}
+.hz .doc ol{list-style:decimal;padding-left:1.35em}
+.doc li{margin:.25em 0}
+.hz .doc :where(p,li,td,blockquote) a{text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--hz-line-strong)}
+.hz .doc :where(p,li,td,blockquote) a:hover{text-decoration-color:var(--hz-ink)}
+.doc .lede{margin-bottom:var(--hz-s5)}
+.doc pre.hz-code{margin-bottom:var(--hz-s5)}
+.doc pre code{font-size:inherit}
+.doc blockquote{padding-left:var(--hz-s4);border-left:1px solid var(--hz-line-strong);color:var(--hz-soft)}
+.doc hr{border:0;border-top:1px solid var(--hz-line);margin:var(--hz-s7) 0}
+.doc table{display:block;overflow-x:auto;width:100%;margin-bottom:var(--hz-s5);border-collapse:collapse;font:var(--hz-t-small)}
+.doc :where(th,td){padding:var(--hz-s2) var(--hz-s3);border:1px solid var(--hz-line);text-align:start}
+
+footer{margin-top:var(--hz-section);padding-block:var(--hz-s7) var(--hz-s8);border-top:1px solid var(--hz-line);color:var(--hz-faint);font:var(--hz-t-small)}
+.fmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:var(--hz-s6);margin-bottom:var(--hz-s7)}
+.fmap>div{display:grid;grid-template-columns:auto 1fr;gap:var(--hz-s1) var(--hz-s3);align-content:start}
+.fmap b{grid-column:1/-1;margin-bottom:var(--hz-s2);color:var(--hz-ink);font-weight:560}
+.fmap a{color:var(--hz-ink)}
+.fmap a:hover,.fend a:hover{text-decoration:underline;text-underline-offset:3px}
+.fend{padding-top:var(--hz-s5);border-top:1px solid var(--hz-line)}
+.fend a{color:var(--hz-soft)}
+@media (max-width:640px){.fmap a,.fend a{display:inline-flex;align-items:center;min-height:44px}}
 """
 
 CHEV = ('<svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" '
@@ -368,9 +494,9 @@ CHEV = ('<svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor"
 
 
 def nav(up_href, up_text):
-    return ('<nav><div class="in">\n'
+    return ('<nav><div class="in hz-wrap">\n'
             '  <a class="brand" href="/">%s HANZO<i>SKILLS</i></a>\n'
-            '  <a class="up" href="%s">%s</a>\n'
+            '  <a class="up hz-btn hz-btn-quiet" href="%s">%s</a>\n'
             '</div></nav>' % (svg("hanzo"), up_href, up_text))
 
 
@@ -385,18 +511,19 @@ def btns():
     return (
         '<div class="btns">'
         '<div class="copy">'
-        '<button class="btn solid" id="copybtn" type="button" aria-haspopup="menu" '
+        '<button class="btn solid hz-btn hz-btn-primary" id="copybtn" type="button" aria-haspopup="menu" '
         'aria-expanded="false" aria-controls="copymenu">Copy setup prompt %s</button>'
         '<div class="menu" id="copymenu" role="menu" aria-labelledby="copybtn" hidden>%s</div>'
         '</div>'
-        '<a class="btn" href="/hanzo-base">Upgrade to Native Go</a>'
-        '<a class="btn" href="/hanzo-migrate-backend-to-go">Migration Guide</a>'
-        '<a class="btn" href="/hanzo-coursework-fullstack-go-cloud">Go Coursework</a>'
-        '<a class="btn" href="/hanzo-tutorial-realtime-sse-backend">SSE Tutorial</a>'
-        '<a class="btn" href="/hanzo-examples-native-cloud">Code Examples</a>'
-        '<a class="btn" href="/llms.txt">Index for agents</a>'
-        '<a class="btn" href="https://hanzo.codes">Code with an agent</a>'
-        '</div>'
+        '<div class="more hz-actions">'
+        '<a class=\"btn hz-btn hz-btn-sm\" href="/hanzo-base">Upgrade to Native Go</a>'
+        '<a class=\"btn hz-btn hz-btn-sm\" href="/hanzo-migrate-backend-to-go">Migration Guide</a>'
+        '<a class=\"btn hz-btn hz-btn-sm\" href="/hanzo-coursework-fullstack-go-cloud">Go Coursework</a>'
+        '<a class=\"btn hz-btn hz-btn-sm\" href="/hanzo-tutorial-realtime-sse-backend">SSE Tutorial</a>'
+        '<a class=\"btn hz-btn hz-btn-sm\" href="/hanzo-examples-native-cloud">Code Examples</a>'
+        '<a class=\"btn hz-btn hz-btn-sm\" href="/llms.txt">Index for agents</a>'
+        '<a class=\"btn hz-btn hz-btn-sm\" href="https://hanzo.codes">Code with an agent</a>'
+        '</div></div>'
         '<script type="application/json" id="prompts">%s</script>'
         % (CHEV, "".join(rows),
            json.dumps(prompts, ensure_ascii=False).replace("</", "<\\/")))
@@ -404,9 +531,9 @@ def btns():
 
 def strip():
     chips = "".join(
-        '<span class="agent">%s %s</span>' % (svg(mark), html.escape(name))
+        '<span class="agent hz-tag">%s %s</span>' % (svg(mark), html.escape(name))
         for _, name, mark, _ in AGENTS)
-    return ('<div class="strip"><div class="in"><b>Drop into any agent</b>'
+    return ('<div class="strip"><div class="in hz-wrap"><b>Drop into any agent</b>'
             '<div class="bar">%s</div></div></div>' % chips)
 
 
@@ -448,58 +575,25 @@ AFTER = ("After that, <code>hanzo</code> launches your favourite, "
          "<code>hanzo dev --claude|--codex|--cursor|--agy</code> switches it, and "
          "<code>hanzo -- -c</code> continues the last conversation.")
 
-GET_CSS = """
-.get{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:1rem;margin:0 0 2.25rem}
-.gbox{background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-soft);
-  padding:1rem 1.1rem;min-width:0}
-.ghead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
-  gap:.5rem .75rem;margin:0 0 .8rem;min-height:1.9rem}
-.ghead b{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;
-  font-weight:500;color:var(--soft)}
-.ghead span{font-family:var(--mono);font-size:.68rem;letter-spacing:.04em;color:var(--faint)}
-.tabs{display:inline-flex;gap:.2rem;border:1px solid var(--line);border-radius:var(--r);padding:.18rem}
-.tabs[hidden]{display:none}
-.tab{border:0;background:transparent;color:var(--soft);font-family:var(--mono);font-size:.7rem;
-  letter-spacing:.06em;padding:.32rem .8rem;border-radius:var(--r);cursor:pointer}
-.tab:hover{color:var(--ink)}
-.tab[aria-selected="true"]{background:var(--ink);color:#000}
-.tab:focus-visible,.cp:focus-visible{outline:1px solid var(--ink);outline-offset:2px}
-.cmd{display:flex;align-items:center;gap:.75rem;background:var(--ground);border:1px solid var(--line);
-  border-radius:10px;padding:.55rem .55rem .55rem .9rem;margin:0 0 .5rem}
-.cmd[hidden]{display:none}
-.cmd code{flex:1 1 auto;min-width:0;background:none;border:0;padding:0;font-size:.84rem;
-  color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
-.os{flex:0 0 3.4rem;font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--faint)}
-.get.js .os{display:none}
-.cp{display:none;flex:0 0 auto;border:1px solid var(--line-hi);background:transparent;color:var(--ink);
-  font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;
-  padding:.42rem .85rem;border-radius:var(--r);cursor:pointer}
-.get.js .cp{display:inline-flex}
-.cp:hover{background:#141414;border-color:var(--soft)}
-.next{color:var(--soft);font-size:.86rem;line-height:1.6;margin:.7rem 0 0}
-.next code{overflow-wrap:anywhere}
-@media (max-width:860px){.get{grid-template-columns:minmax(0,1fr)}}
-"""
-
 GET_JS = """
 <script id="getjs">
 (function(){
 var g=document.querySelector('.get'),L=g.querySelector('.tabs'),
     T=[].slice.call(L.querySelectorAll('.tab'));
 g.classList.add('js');
-function pick(os){T.forEach(function(t){var on=t.dataset.os===os;
+function pick(os,anim){T.forEach(function(t,i){var on=t.dataset.os===os,p=document.getElementById(t.getAttribute('aria-controls'));
   t.setAttribute('aria-selected',on?'true':'false');
-  document.getElementById(t.getAttribute('aria-controls')).hidden=!on;});}
+  if(on){L.style.setProperty('--hz-seg-i',i);p.hidden=false;if(anim)p.setAttribute('data-hz-swap','');}else p.hidden=true;});}
 var u=navigator.userAgentData,p=((u&&u.platform)||navigator.platform||'')+' '+navigator.userAgent,
     os=/windows|win32|win64/i.test(p)?'win':/mac|iphone|ipad/i.test(p)?'mac':/linux|x11|cros/i.test(p)?'linux':'';
 if(os==='win'&&!L.querySelector('[data-os="win"]'))os='wsl';
 var f=L.querySelector('[data-os="'+os+'"]')||T[0];
-L.insertBefore(f,L.firstChild);L.hidden=false;pick(f.dataset.os);
-L.addEventListener('click',function(e){var t=e.target.closest('.tab');if(t)pick(t.dataset.os);});
+L.hidden=false;pick(f.dataset.os);
+L.addEventListener('click',function(e){var t=e.target.closest('.tab');if(t)pick(t.dataset.os,true);});
 g.addEventListener('click',function(e){var b=e.target.closest('.cp');if(!b)return;
   navigator.clipboard.writeText(b.previousElementSibling.textContent).then(function(){
-    b.textContent='Copied';setTimeout(function(){b.textContent='Copy';},1400);});});
+    b.innerHTML='<span class="hz-ico">Copied</span>';b.dataset.copied='true';
+    setTimeout(function(){b.textContent='Copy';delete b.dataset.copied;},1400);});});
 })();
 </script>"""
 
@@ -510,21 +604,22 @@ def get():
         'aria-controls="os-%s" aria-selected="false">%s</button>' % (o, o, o, html.escape(n))
         for o, n, _ in INSTALL)
     cmds = "".join(
-        '<div class="cmd" id="os-%s" role="tabpanel" aria-labelledby="tab-%s">'
-        '<span class="os">%s</span><code>%s</code>'
-        '<button class="cp" type="button" aria-label="Copy the %s install command">Copy</button></div>'
+        '<div class="cmd hz-code hz-codeblock hz-swap" id="os-%s" role="tabpanel" aria-labelledby="tab-%s">'
+        '<span class="os hz-label">%s</span><code>%s</code>'
+        '<button class="cp hz-btn hz-btn-sm hz-copy" type="button" aria-label="Copy the %s install command">Copy</button></div>'
         % (o, o, html.escape(n), html.escape(c), html.escape(n))
         for o, n, c in INSTALL)
     return (
-        '<section class="get" aria-label="Get started"><style>%s</style>'
-        '<div class="gbox"><div class="ghead"><b>Install</b>'
-        '<div class="tabs" role="tablist" aria-label="Operating system" hidden>%s</div></div>'
-        '%s<p class="next">%s</p><p class="next">%s</p></div>'
-        '<div class="gbox"><div class="ghead"><b>Or paste into your agent</b><span>%s</span></div>'
-        '<div class="cmd"><code>%s</code>'
-        '<button class="cp" type="button" aria-label="Copy the setup line for your agent">Copy</button>'
+        '<section class="get hz-grid hz-grid-2" aria-label="Get started">'
+        '<div class="gbox hz-card hz-gleam"><div class="ghead"><b>Install</b>'
+        '<div class="tabs hz-seg" style="--hz-seg-n:3" role="tablist" aria-label="Operating system" hidden>%s</div></div>'
+        '%s</div>'
+        '<div class="gbox hz-card"><div class="ghead"><b>Or paste into your agent</b><span>%s</span></div>'
+        '<div class="cmd hz-code hz-codeblock"><code>%s</code>'
+        '<button class="cp hz-btn hz-btn-sm hz-copy" type="button" aria-label="Copy the setup line for your agent">Copy</button>'
         '</div></div>%s</section>'
-        % (GET_CSS, tabs, cmds, NEXT, AFTER, html.escape(PASTE_TO), html.escape(PASTE), GET_JS))
+        '<div class="nexts hz-small"><p>%s</p><p>%s</p></div>'
+        % (tabs, cmds, html.escape(PASTE_TO), html.escape(PASTE), GET_JS, NEXT, AFTER))
 
 
 def get_md():
@@ -540,6 +635,51 @@ def get_md():
             % (plain(NEXT), plain(AFTER), PASTE_TO, PASTE))
 
 
+SEARCH = ('<svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" '
+          'aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>')
+
+FILTER_JS = (
+    '<script id="filterjs">const q=document.getElementById(\'q\'),n=document.getElementById(\'count\'),'
+    'R=[...document.querySelectorAll(\'.row\')],S=[...document.querySelectorAll(\'.sec\')];let was=false;'
+    'function f(){const v=q.value.trim().toLowerCase();let s=0;'
+    'R.forEach(r=>{const m=!v||r.dataset.k.includes(v);r.style.display=m?\'\':\'none\';if(m)s++;});'
+    'document.documentElement.classList.toggle(\'filtering\',!!v||was);S.forEach(c=>{const any=R.some(r=>c.contains(r)&&r.style.display!==\'none\');c.hidden=!any;'
+    'if(v)c.open=any;else if(was)c.open=false;});if(was&&!v)requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!q.value.trim())document.documentElement.classList.remove(\'filtering\')}));was=!!v;'
+    'n.textContent=s+(s===1?\' skill\':\' skills\');}'
+    'function h(){const d=document.getElementById(location.hash.slice(1));if(d&&d.matches(\'.sec\')){d.open=true;d.scrollIntoView();}}'
+    # toggle and re-anchor in the same task, before the browser paints: a frame later shows the jump
+    'document.addEventListener(\'click\',e=>{const m=e.target.closest(\'.sec>summary\');if(!m)return;e.preventDefault();'
+    'const t=m.getBoundingClientRect().top;m.parentElement.open=!m.parentElement.open;scrollBy(0,m.getBoundingClientRect().top-t);});'
+    'q.addEventListener(\'input\',f);addEventListener(\'hashchange\',h);f();h();</script>')
+
+
+def catalogue(out, wrap_open):
+    """Rebuild the catalogue block: sticky filter, an index of the categories, one
+    section per category. Built from the page's own categories and rows, in either
+    the old flat form or this one, so a second run changes nothing."""
+    m = re.search(r'<div class="wrap[^"]*">\n(.*?)(?=\n<footer>)', out, re.S)
+    box = m.group(1)
+    inp = re.search(r'<input id="q"[^>]*>', box).group(0)
+    secs = []
+    for t in re.finditer(r'<(?:div|h2) class="cat" data-cat="([^"]*)">([^<]*)</(?:div|h2)>'
+                         r'|(<a class="row[^"]*" href="[^"]*" data-k="[^"]*">.*?</a>)', box, re.S):
+        if t.group(3):
+            secs[-1][2].append(re.sub(r'^<a class="row[^"]*"', '<a class="row hz-card"', t.group(3)))
+        else:
+            secs.append((t.group(1), t.group(2), []))
+    ids = ["c-" + re.sub(r"[^a-z0-9]+", "-", c.lower()).strip("-") for c, _, _ in secs]
+    assert len(set(ids)) == len(ids)
+    cut = lambda std: "".join(
+        '<details class="sec hz-fold" id="%s"><summary><h2 class="cat" data-cat="%s">%s</h2></summary>'
+        '%s</details>' % (i, c, l, "".join(r))
+        for i, (c, l, r) in zip(ids, secs) if c.startswith("standards-") == std)
+    body, std = cut(False), cut(True)
+    new = ('<div class="find"><label class="hz-field">%s%s</label><div id="count"></div></div>'
+           '<div class="catgrid">%s</div><div class="catgrid catstd">%s</div>' % (SEARCH, inp, body, std))
+    out = out[:m.start()] + wrap_open + "\n" + new + out[m.end(1):]
+    return re.sub(r'<script(?: id="filterjs")?>const q=.*?</script>', lambda _: FILTER_JS, out, count=1, flags=re.S)
+
+
 BEACON = re.compile(r'\s*<script[^>]*cloudflareinsights\.com[^>]*>\s*</script>', re.S)
 
 
@@ -548,8 +688,13 @@ def patch(path):
     # Cloudflare adds its analytics beacon at the edge; it is not ours to ship.
     out = BEACON.sub("", src)
     out = re.sub(r"<style>.*?</style>", lambda _: "<style>%s</style>" % CSS, out, count=1, flags=re.S)
+    # Light and dark follow the device; the kit's tokens live on .hz.
+    out = re.sub(r'<meta name="color-scheme" content="[^"]*">', '<meta name="color-scheme" content="light dark">', out, count=1)
+    out = re.sub(r"<body[^>]*>", '<body class="hz">', out, count=1)
+    out = re.sub(r"<pre(?: class=\"[^\"]*\")?>", '<pre class="hz-code">', out)
+    wrap = '<div class="wrap hz-wrap%s">'
 
-    up = re.search(r'<a class="up" href="([^"]+)">([^<]+)</a>', out)
+    up = re.search(r'<a class="up[^"]*" href="([^"]+)">([^<]+)</a>', out)
     out = re.sub(r"<nav>.*?</nav>", lambda _: nav(up.group(1), up.group(2)), out, count=1, flags=re.S)
 
     name = os.path.basename(path)[:-5]
@@ -578,14 +723,19 @@ def patch(path):
             'and move your backend to Hanzo Base. <a href="/skill">skill.md</a> gives the command that starts '
             'each part and says what needs the hosted cloud.</p>'
         )
-        out = re.sub(r'<h1>.*?(?=<div class="btns">)', lambda _: hero_h1_lede + get(), out,
+        out = re.sub(r'<h1>.*?(?=<div class="btns[^"]*">)', lambda _: hero_h1_lede + get(), out,
                      count=1, flags=re.S)
-        out = re.sub(r'<div class="btns">.*?(?=</div></div><div class="strip">)',
+        out = re.sub(r'<div class="btns[^"]*">.*?(?=</div></div><div class="strip">)',
                      lambda _: btns(), out, count=1, flags=re.S)
-        out = re.sub(r'<div class="strip">.*?(?=\n<div class="wrap">)',
+        out = re.sub(r'<div class="strip">.*?(?=\n<div class="wrap[^"]*">)',
                      lambda _: strip(), out, count=1, flags=re.S)
+        out = re.sub(r'<div class="hero"><div class="wrap[^"]*">', '<div class="hero">' + wrap % " hz-arrive", out, count=1)
+        out = catalogue(out, wrap % " cats")
         out = re.sub(r'\s*<script id="copyjs">.*?</script>', "", out, flags=re.S)
         out = re.sub(r"\s*</body>", COPY_JS + "</body>", out, count=1)
+
+    else:
+        out = re.sub(r'<div class="wrap[^"]*">', wrap % " doc", out, count=1)
 
     if out != src:
         write(path, out)
