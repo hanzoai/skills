@@ -15,7 +15,7 @@ Read these progressive skills as needed:
 - hanzo-oss-legos: the component selection matrix and upstream OSS inventory
 - hanzo-decision-evaluation: the decision-model evaluation protocol
 - hanzo-eu-deployment: customer-owned EU tenant, privacy and deployment gates
-- hanzo-sports-growthos: worked example for an AI-native sports commercial operating system
+- hanzo-enterprise-blueprint: industry-neutral reference pattern for decision-driven workflows
 - hanzo-cloud-architecture and hanzo-ml-research: implementation and native research constraints
 
 ## Intake: write the evidence register first
@@ -33,7 +33,7 @@ Require a named customer decision-maker, workload owner, and technical owner. Cr
 | Economics | Compute, development, licence, operations, margin ceiling | Cost envelope and assumptions |
 | Exit | Portability, IP, escrow, backups, migration, termination | Explicit contract and OSS licence matrix |
 
-Classify facts as verified, customer-stated, assumed, blocked or to-be-tested. Never silently convert a statement like “club connected” into verified credentials or data rights.
+Classify facts as verified, customer-stated, assumed, blocked or to-be-tested. Never silently convert a statement like “integration available” into verified credentials or data rights.
 
 ## Composition workflow
 
@@ -45,7 +45,7 @@ Classify facts as verified, customer-stated, assumed, blocked or to-be-tested. N
 6. Tag every component as production-verified, integrated but unverified, candidate, custom build or future research. Verify claims against a current repository revision, runtime test and licence.
 7. Estimate total lifecycle cost including hardware amortisation, egress, storage, model retraining, support and human review. No vendor-specific model or hardware promises without measurement.
 8. Define reproducible acceptance tests and a holdout/control design before work begins.
-9. Create G0 demo, G1 staging and G2 production gates with explicit exclusions; do not let a proof-of-concept imply a production SLA.
+9. Create proof-of-concept, staging and production gates with explicit exclusions; do not let a proof-of-concept imply a production SLA.
 10. Obtain written approval before making cloud changes, incurring spend, loading personal data, changing prices or contacting customers.
 
 ## Required output pack
