@@ -5,8 +5,8 @@ description: Complete progressive directory of all Hanzo Open-Source repositorie
 
 # Hanzo Open-Source Ecosystem (`hanzoai/*` & `zap-proto/*`)
 
-> Every core component of the Hanzo cloud, AI stack, protocol layer, and developer toolchain is open source.
-> Query the machine-readable catalog at `https://hanzoskills.com/oss/index.json`.
+> This is a progressive repository directory, not proof of each dependency's open-source licence or production readiness. Some model weights and internal services have separate proprietary rights.
+> Query the machine-readable catalog at `https://hanzoskills.com/oss/index.json` and use the `hanzo-oss-legos` skill to choose, verify, and compose components for a customer solution.
 
 ## 1. Core Cloud, Data & Transport (Go / Rust)
 
@@ -48,3 +48,9 @@ description: Complete progressive directory of all Hanzo Open-Source repositorie
 | [`hanzoai/console`](https://github.com/hanzoai/console) | `~/work/hanzo/console` | TS / React | `crm.hanzo.ai` & `console.hanzo.ai` (Audience, CRM, Twenty-style MIT UI) |
 | [`hanzoai/cms`](https://github.com/hanzoai/cms) | `~/work/hanzo/cms` | Go / TS | `cms.hanzo.ai` content & blog management with multi-channel syndication |
 | [`hanzoai/post`](https://github.com/hanzoai/post) | `~/work/hanzo/post` | TS / NestJS / Next | `post.hanzo.ai` (`postiz.hanzo.ai`) private social & blog scheduling + AI copilot |
+
+## 5. Composing Solution Stacks
+
+The catalogue is a starting point, not a list of mandatory dependencies. Read `hanzo-solution-composer` for requirements/evidence and design output, `hanzo-oss-legos` for a capability-to-repository matrix and licence checks, `hanzo-decision-evaluation` for model benchmarking, and `hanzo-eu-deployment` for customer-owned private hosting. The industry-neutral reference pattern is `hanzo-enterprise-blueprint`.
+
+Additional public repository candidates in the machine-readable index include `hanzoai/kai`, `hanzoai/ml`, `hanzoai/s3`, `hanzoai/vfs`, `hanzoai/visor`, `hanzoai/insights`, `hanzoai/ads`, `hanzoai/social`, `hanzoai/zen`, `hanzoai/ai`, `hanzoai/vector`, `hanzoai/commerce`, `hanzoai/o11y`, `hanzoai/telemetry`, and `hanzoai/flow`. Visibility alone is insufficient: check exact repo revisions, LICENSE/NOTICE and model-weight terms before calling anything OSS or ready to deploy.

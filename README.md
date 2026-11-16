@@ -1,3 +1,7 @@
+## Compose Hanzo customer solutions
+
+Start with skills/hanzo-solution-composer/SKILL.md; combine hanzo-oss-legos, hanzo-decision-evaluation, hanzo-eu-deployment and hanzo-enterprise-blueprint. Rebuild the site with npm run build.
+
 <p align="center"><img src=".github/hero.svg" alt="skills" width="880"></p>
 
 # Atomic Skills for Claude Code

@@ -607,7 +607,23 @@ def main():
             {"name": "skills", "repo": "hanzoai/skills", "path": "~/work/hanzo/skills", "lang": "Markdown", "layer": "docs", "url": "https://github.com/hanzoai/skills"},
             {"name": "godot-sdk", "repo": "hanzoai/godot-sdk", "path": "~/work/hanzo/godot-sdk", "lang": "GDScript/C#", "layer": "sdk", "url": "https://github.com/hanzoai/godot-sdk"},
             {"name": "csharp-sdk", "repo": "hanzo-csharp/sdk", "path": "~/work/hanzo-csharp/sdk", "lang": "C#", "layer": "sdk", "url": "https://github.com/hanzo-csharp/sdk"},
+            {"name": "kai", "repo": "hanzoai/kai", "path": "", "lang": "verify", "layer": "decision", "url": "https://github.com/hanzoai/kai"},
+            {"name": "ml", "repo": "hanzoai/ml", "path": "", "lang": "verify", "layer": "ml", "url": "https://github.com/hanzoai/ml"},
+            {"name": "s3", "repo": "hanzoai/s3", "path": "", "lang": "verify", "layer": "object-storage", "url": "https://github.com/hanzoai/s3"},
+            {"name": "vfs", "repo": "hanzoai/vfs", "path": "", "lang": "verify", "layer": "filesystem", "url": "https://github.com/hanzoai/vfs"},
+            {"name": "visor", "repo": "hanzoai/visor", "path": "", "lang": "verify", "layer": "orchestration", "url": "https://github.com/hanzoai/visor"},
+            {"name": "insights", "repo": "hanzoai/insights", "path": "", "lang": "verify", "layer": "analytics", "url": "https://github.com/hanzoai/insights"},
+            {"name": "ads", "repo": "hanzoai/ads", "path": "", "lang": "verify", "layer": "advertising", "url": "https://github.com/hanzoai/ads"},
+            {"name": "social", "repo": "hanzoai/social", "path": "", "lang": "verify", "layer": "social", "url": "https://github.com/hanzoai/social"},
+            {"name": "zen", "repo": "hanzoai/zen", "path": "", "lang": "verify", "layer": "models", "url": "https://github.com/hanzoai/zen"},
+            {"name": "ai", "repo": "hanzoai/ai", "path": "", "lang": "verify", "layer": "ai-control", "url": "https://github.com/hanzoai/ai"},
+            {"name": "vector", "repo": "hanzoai/vector", "path": "", "lang": "verify", "layer": "vectors", "url": "https://github.com/hanzoai/vector"},
+            {"name": "commerce", "repo": "hanzoai/commerce", "path": "", "lang": "verify", "layer": "commerce", "url": "https://github.com/hanzoai/commerce"},
+            {"name": "o11y", "repo": "hanzoai/o11y", "path": "", "lang": "verify", "layer": "observability", "url": "https://github.com/hanzoai/o11y"},
+            {"name": "telemetry", "repo": "hanzoai/telemetry", "path": "", "lang": "verify", "layer": "telemetry", "url": "https://github.com/hanzoai/telemetry"},
+            {"name": "flow", "repo": "hanzoai/flow", "path": "", "lang": "verify", "layer": "workflows", "url": "https://github.com/hanzoai/flow"},
         ],
+        "verification_note": "Repository URLs and visibility were checked on 2026-11-16; public visibility does not establish the licence of code, models/weights or dependencies, integration readiness, or production support. Review pinned revisions and licences before customer deployment.",
     }
     io.open(os.path.join(oss_dir, "index.json"), "w", encoding="utf-8").write(json.dumps(oss_index, indent=2) + "\n")
 
