@@ -51,6 +51,6 @@ description: Complete progressive directory of all Hanzo Open-Source repositorie
 
 ## 5. Composing Solution Stacks
 
-The catalogue is a starting point, not a list of mandatory dependencies. Read `hanzo-solution-composer` for requirements/evidence and design output, `hanzo-oss-legos` for a capability-to-repository matrix and licence checks, `hanzo-decision-evaluation` for model benchmarking, and `hanzo-eu-deployment` for customer-owned private hosting. The sports worked example is `hanzo-sports-growthos`.
+The catalogue is a starting point, not a list of mandatory dependencies. Read `hanzo-solution-composer` for requirements/evidence and design output, `hanzo-oss-legos` for a capability-to-repository matrix and licence checks, `hanzo-decision-evaluation` for model benchmarking, and `hanzo-eu-deployment` for customer-owned private hosting. The industry-neutral reference pattern is `hanzo-enterprise-blueprint`.
 
 Additional public repository candidates in the machine-readable index include `hanzoai/kai`, `hanzoai/ml`, `hanzoai/s3`, `hanzoai/vfs`, `hanzoai/visor`, `hanzoai/insights`, `hanzoai/ads`, `hanzoai/social`, `hanzoai/zen`, `hanzoai/ai`, `hanzoai/vector`, `hanzoai/commerce`, `hanzoai/o11y`, `hanzoai/telemetry`, and `hanzoai/flow`. Visibility alone is insufficient: check exact repo revisions, LICENSE/NOTICE and model-weight terms before calling anything OSS or ready to deploy.
