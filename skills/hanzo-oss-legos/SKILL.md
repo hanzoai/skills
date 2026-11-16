@@ -51,7 +51,7 @@ All repo names here are candidate source references, not assertions of shipped i
 ## Composition rules
 
 - Never deploy every Lego just because it exists. Start with data + identity + one decision path + observation + a real outcome.
-- Club/customer tenancy is a hard boundary. Cross-tenant aggregation, training and reuse require distinct agreements and privacy engineering.
+- Tenant/customer isolation is a hard boundary. Cross-tenant aggregation, training and reuse require distinct agreements and privacy engineering.
 - Kai returns typed decisions; it is not a replacement for a full text generator. Rules and tree-based baselines may be sufficient or superior for some targets.
 - Enso/orchestration and Zen/text generation are optional. Avoid self-hosting expensive generative models for a task that needs only structured output.
 - Build customer-specific adapters against typed interfaces so components can be swapped without replacing all business logic.
@@ -60,4 +60,4 @@ All repo names here are candidate source references, not assertions of shipped i
 
 ## Progressive related skills
 
-See hanzo-solution-composer, hanzo-decision-evaluation, hanzo-eu-deployment, hanzo-sports-growthos, hanzo-cloud-architecture, hanzo-ml-research, hanzo-iam, hanzo-kms, hanzo-s3, hanzo-insights, hanzo-post.
+See hanzo-solution-composer, hanzo-decision-evaluation, hanzo-eu-deployment, hanzo-enterprise-blueprint, hanzo-cloud-architecture, hanzo-ml-research, hanzo-iam, hanzo-kms, hanzo-s3, hanzo-insights, hanzo-post.
