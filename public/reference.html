@@ -196,2552 +196,1248 @@ footer a{color:var(--soft)}
 </div></nav>
 
 <div class="wrap">
-<h1>reference</h1><p class="lede">1. Protocol Fundamentals(#protocol-fundamentals) 2.</p><h1>WebSocket Protocol - Comprehensive Reference</h1>
+<h1>reference</h1><p class="lede">Scope: Comprehensive guide to database migrations, schema versioning, zero-downtime deployments, and migration tooling Lines: ~1800 Last Updated: 2025-10-27</p><h1>PostgreSQL Migrations Reference</h1>
+<p><strong>Scope</strong>: Comprehensive guide to database migrations, schema versioning, zero-downtime deployments, and migration tooling <strong>Lines</strong>: ~1800 <strong>Last Updated</strong>: 2025-10-27</p>
 <h2>Table of Contents</h2>
-<ol><li><a href="#protocol-fundamentals">Protocol Fundamentals</a></li><li><a href="#connection-lifecycle">Connection Lifecycle</a></li><li><a href="#frame-structure">Frame Structure</a></li><li><a href="#message-types">Message Types</a></li><li><a href="#security">Security</a></li><li><a href="#scaling-patterns">Scaling Patterns</a></li><li><a href="#reconnection-strategies">Reconnection Strategies</a></li><li><a href="#server-implementations">Server Implementations</a></li><li><a href="#client-implementations">Client Implementations</a></li><li><a href="#testing-strategies">Testing Strategies</a></li><li><a href="#common-patterns">Common Patterns</a></li><li><a href="#comparison-with-alternatives">Comparison with Alternatives</a></li><li><a href="#production-best-practices">Production Best Practices</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#performance-optimization">Performance Optimization</a></li></ol>
+<ol><li><a href="#migration-fundamentals">Migration Fundamentals</a></li><li><a href="#schema-versioning-strategies">Schema Versioning Strategies</a></li><li><a href="#migration-tools-deep-dive">Migration Tools Deep Dive</a></li><li><a href="#writing-safe-migrations">Writing Safe Migrations</a></li><li><a href="#zero-downtime-patterns">Zero-Downtime Patterns</a></li><li><a href="#postgresql-lock-behavior">PostgreSQL Lock Behavior</a></li><li><a href="#data-migrations">Data Migrations</a></li><li><a href="#testing-migrations">Testing Migrations</a></li><li><a href="#rollback-strategies">Rollback Strategies</a></li><li><a href="#common-pitfalls">Common Pitfalls</a></li><li><a href="#advanced-topics">Advanced Topics</a></li></ol>
 <hr>
-<h2>Protocol Fundamentals</h2>
-<h3>RFC 6455 Overview</h3>
-<p>WebSocket is a computer communications protocol providing full-duplex communication channels over a single TCP connection. Standardized by RFC 6455 in 2011, it enables real-time, bidirectional data exchange between client and server with lower overhead than HTTP polling.</p>
-<p><strong>Key Characteristics</strong>:</p>
-<ul><li>Full-duplex bidirectional communication</li><li>Single TCP connection</li><li>Low overhead (2-14 bytes per frame vs HTTP headers)</li><li>Works over HTTP ports (80/443)</li><li>Upgrades from HTTP via handshake</li><li>UTF-8 text or binary data</li><li>Built-in ping/pong for keepalive</li></ul>
-<p><strong>Protocol URI Schemes</strong>:</p>
-<pre><code>ws://  - Unencrypted WebSocket (like HTTP)
-wss:// - Encrypted WebSocket over TLS (like HTTPS)</code></pre>
-<h3>WebSocket vs HTTP</h3>
-<p><strong>HTTP Request/Response</strong>:</p>
-<pre><code>Client -&gt; Server: GET /data HTTP/1.1
-Server -&gt; Client: 200 OK + data
-[Connection closes or kept alive]
-Client -&gt; Server: New request needed for new data</code></pre>
-<p><strong>WebSocket Persistent Connection</strong>:</p>
-<pre><code>Client -&gt; Server: Upgrade to WebSocket
-Server -&gt; Client: 101 Switching Protocols
-[Connection remains open]
-Client &lt;-&gt; Server: Bidirectional messages anytime</code></pre>
-<p><strong>Overhead Comparison</strong>:</p>
-<pre><code>HTTP Request Headers:  ~200-800 bytes per request
-HTTP Response Headers: ~200-500 bytes per response
-Total per exchange:    ~400-1300 bytes
+<h2>Migration Fundamentals</h2>
+<h3>What Are Migrations?</h3>
+<p>Migrations are <strong>versioned, ordered scripts</strong> that evolve database schema over time.</p>
+<p><strong>Core Properties</strong>:</p>
+<ul><li><strong>Versioned</strong>: Each migration has a unique identifier (timestamp, sequence number, hash)</li><li><strong>Ordered</strong>: Applied sequentially to maintain consistency</li><li><strong>Tracked</strong>: Database maintains record of applied migrations</li><li><strong>Reversible</strong>: Can roll back changes (ideally)</li><li><strong>Idempotent</strong>: Safe to run multiple times (ideally)</li><li><strong>Atomic</strong>: Changes succeed or fail as a unit (when possible)</li></ul>
+<h3>Why Migrations Matter</h3>
+<p><strong>Without migrations</strong>:</p>
+<pre><code class="lang-sql">-- Developer A: Creates table manually
+CREATE TABLE users (id INT, email VARCHAR(255));
 
-WebSocket Frame:       2-14 bytes per message</code></pre>
-<p>For 1000 messages:</p>
-<ul><li>HTTP: 400KB - 1.3MB overhead</li><li>WebSocket: 2KB - 14KB overhead</li></ul>
-<h3>Protocol Layers</h3>
-<pre><code>┌─────────────────────────────────┐
-│   Application Layer             │
-│   (Your application logic)      │
-├─────────────────────────────────┤
-│   WebSocket Protocol            │
-│   (RFC 6455 - Framing/Messages) │
-├─────────────────────────────────┤
-│   TLS (for wss://)              │
-│   (Optional encryption)         │
-├─────────────────────────────────┤
-│   TCP                           │
-│   (Reliable transport)          │
-├─────────────────────────────────┤
-│   IP                            │
-│   (Network routing)             │
-└─────────────────────────────────┘</code></pre>
-<h3>Use Cases</h3>
-<p><strong>Ideal for</strong>:</p>
-<ul><li>Real-time chat applications</li><li>Live sports/stock tickers</li><li>Multiplayer games</li><li>Collaborative editing (Google Docs-style)</li><li>Live dashboards/monitoring</li><li>IoT device communication</li><li>Live video streaming metadata</li><li>Trading platforms</li><li>Real-time notifications</li></ul>
-<p><strong>Not ideal for</strong>:</p>
-<ul><li>One-way server push (use SSE)</li><li>Infrequent updates (use HTTP polling)</li><li>REST API calls (use HTTP)</li><li>File uploads (use HTTP multipart)</li><li>Heavy proxy/firewall environments</li></ul>
+-- Developer B: Different schema!
+CREATE TABLE users (id SERIAL, email TEXT, created_at TIMESTAMP);
+
+-- Production: Who knows what&#x27;s deployed?</code></pre>
+<p><strong>With migrations</strong>:</p>
+<pre><code class="lang-sql">-- V1: Everyone runs same migration
+-- Version controlled, tested, reproducible
+-- Production schema matches development</code></pre>
+<h3>Migration Lifecycle</h3>
+<pre><code>Development → Testing → Staging → Production
+     ↓           ↓         ↓          ↓
+  V1, V2      V1, V2    V1, V2     V1, V2</code></pre>
+<p><strong>Key principle</strong>: Same migrations run in all environments.</p>
+<h3>Migration Tracking</h3>
+<p>Most tools create a metadata table:</p>
+<pre><code class="lang-sql">-- Example: Flyway&#x27;s schema_version table
+CREATE TABLE flyway_schema_history (
+    installed_rank INT NOT NULL,
+    version VARCHAR(50),
+    description VARCHAR(200) NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    script VARCHAR(1000) NOT NULL,
+    checksum INT,
+    installed_by VARCHAR(100) NOT NULL,
+    installed_on TIMESTAMP NOT NULL DEFAULT NOW(),
+    execution_time INT NOT NULL,
+    success BOOLEAN NOT NULL
+);</code></pre>
+<p><strong>Query applied migrations</strong>:</p>
+<pre><code class="lang-sql">SELECT version, description, installed_on, success
+FROM flyway_schema_history
+ORDER BY installed_rank;</code></pre>
 <hr>
-<h2>Connection Lifecycle</h2>
-<h3>Phase 1: HTTP Upgrade Handshake</h3>
-<p>The WebSocket connection begins as an HTTP request that &quot;upgrades&quot; to the WebSocket protocol.</p>
-<p><strong>Client Handshake Request</strong>:</p>
-<pre><code class="lang-http">GET /chat HTTP/1.1
-Host: example.com
-Upgrade: websocket
-Connection: Upgrade
-Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-Sec-WebSocket-Version: 13
-Origin: http://example.com
-Sec-WebSocket-Protocol: chat, superchat
-Sec-WebSocket-Extensions: permessage-deflate</code></pre>
-<p><strong>Header Breakdown</strong>:</p>
-<ul><li><code>Upgrade: websocket</code> - Request protocol upgrade</li><li><code>Connection: Upgrade</code> - Indicate connection will be upgraded</li><li><code>Sec-WebSocket-Key</code> - Random base64-encoded 16-byte value (security)</li><li><code>Sec-WebSocket-Version</code> - WebSocket protocol version (13 is current)</li><li><code>Origin</code> - Browser security (prevent CSRF)</li><li><code>Sec-WebSocket-Protocol</code> - Subprotocols (optional)</li><li><code>Sec-WebSocket-Extensions</code> - Extensions like compression (optional)</li></ul>
-<p><strong>Server Handshake Response</strong>:</p>
-<pre><code class="lang-http">HTTP/1.1 101 Switching Protocols
-Upgrade: websocket
-Connection: Upgrade
-Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
-Sec-WebSocket-Protocol: chat
-Sec-WebSocket-Extensions: permessage-deflate</code></pre>
-<p><strong>Header Breakdown</strong>:</p>
-<ul><li><code>101 Switching Protocols</code> - Upgrade accepted</li><li><code>Sec-WebSocket-Accept</code> - Computed from client&#x27;s key (see below)</li><li><code>Sec-WebSocket-Protocol</code> - Selected subprotocol (if any)</li><li><code>Sec-WebSocket-Extensions</code> - Accepted extensions</li></ul>
-<p><strong>Sec-WebSocket-Accept Calculation</strong>:</p>
-<pre><code class="lang-javascript">// Server computes this from client&#x27;s Sec-WebSocket-Key
-const crypto = require(&#x27;crypto&#x27;);
+<h2>Schema Versioning Strategies</h2>
+<h3>Strategy 1: Forward-Only Migrations</h3>
+<p><strong>Approach</strong>: Only write &quot;up&quot; migrations, never roll back.</p>
+<pre><code>V1 → V2 → V3 → V4
+ ↓    ↓    ↓    ↓</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Simplest approach</li><li>No data loss from rollbacks</li><li>Production always moves forward</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Can&#x27;t easily undo mistakes</li><li>Failed migrations require fix-forward</li></ul>
+<p><strong>Best for</strong>: Production systems where rollback is rare.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-sql">-- V1__initial_schema.sql
+CREATE TABLE users (id SERIAL PRIMARY KEY, email VARCHAR(255));
 
-function generateAcceptKey(clientKey) {
-  const GUID = &#x27;258EAFA5-E914-47DA-95CA-C5AB0DC85B11&#x27;; // RFC 6455 magic string
-  const hash = crypto
-    .createHash(&#x27;sha1&#x27;)
-    .update(clientKey + GUID)
-    .digest(&#x27;base64&#x27;);
-  return hash;
-}
+-- V2__add_username.sql
+ALTER TABLE users ADD COLUMN username VARCHAR(100);
 
-// Example:
-const clientKey = &#x27;dGhlIHNhbXBsZSBub25jZQ==&#x27;;
-const acceptKey = generateAcceptKey(clientKey);
-// Returns: &#x27;s3pPLMBiTxaQ9kYGzzhZRbK+xOo=&#x27;</code></pre>
-<p>This prevents accidental WebSocket connections and ensures both sides understand the protocol.</p>
-<h3>Phase 2: Data Transfer</h3>
-<p>Once upgraded, the connection switches to WebSocket framing. Both client and server can send messages at any time.</p>
-<p><strong>Message Flow</strong>:</p>
-<pre><code>Client                          Server
-  |                               |
-  |-- Text Message --------------&gt;|
-  |                               |
-  |&lt;-- Text Message --------------|
-  |                               |
-  |-- Binary Message ------------&gt;|
-  |                               |
-  |&lt;-- Ping -----------------------|
-  |-- Pong ----------------------&gt;|
-  |                               |</code></pre>
-<p><strong>Multiplexing</strong>: A single WebSocket connection can carry multiple logical channels/topics by using message prefixes or JSON envelopes:</p>
-<pre><code class="lang-javascript">// Topic-based routing
-ws.send(JSON.stringify({
-  topic: &#x27;chat&#x27;,
-  data: { user: &#x27;Alice&#x27;, message: &#x27;Hello&#x27; }
-}));
+-- V3__add_index.sql
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
 
-ws.send(JSON.stringify({
-  topic: &#x27;notifications&#x27;,
-  data: { type: &#x27;friend_request&#x27;, from: &#x27;Bob&#x27; }
-}));</code></pre>
-<h3>Phase 3: Connection Close</h3>
-<p>Either side can initiate a close. The closing handshake ensures graceful shutdown.</p>
-<p><strong>Close Handshake</strong>:</p>
-<pre><code>Client                          Server
-  |                               |
-  |-- Close Frame (code 1000) ---&gt;|
-  |                               |
-  |&lt;-- Close Frame (code 1000) ---|
-  |                               |
-  [TCP connection closes]</code></pre>
-<p><strong>Close Codes</strong> (from RFC 6455):</p>
-<pre><code>1000 - Normal Closure
-1001 - Going Away (server shutdown, browser navigation)
-1002 - Protocol Error
-1003 - Unsupported Data (e.g., text-only but received binary)
-1006 - Abnormal Closure (no close frame, connection lost)
-1007 - Invalid Payload Data (malformed UTF-8 in text)
-1008 - Policy Violation (generic)
-1009 - Message Too Big
-1010 - Mandatory Extension (client expected extension)
-1011 - Internal Server Error
-1015 - TLS Handshake Failure</code></pre>
-<p><strong>Application-Defined Codes</strong>: 3000-4999 range for custom close reasons.</p>
-<p><strong>Close Sequence</strong>:</p>
-<pre><code class="lang-javascript">// Client initiates close
-ws.close(1000, &#x27;User logged out&#x27;);
+-- V4 (fix for V3 if it failed)
+-- V4__retry_index.sql
+DROP INDEX CONCURRENTLY IF EXISTS idx_users_email;
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);</code></pre>
+<h3>Strategy 2: Bidirectional Migrations (Up/Down)</h3>
+<p><strong>Approach</strong>: Every migration has &quot;up&quot; and &quot;down&quot; version.</p>
+<pre><code>V1 ⇄ V2 ⇄ V3 ⇄ V4</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Can roll back bad deployments</li><li>Easier to develop locally (apply/revert)</li><li>Better for testing</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Down migrations can lose data</li><li>More code to maintain</li><li>Rollback may not be safe in production</li></ul>
+<p><strong>Best for</strong>: Development, staging, new projects.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-sql">-- 001_add_users.up.sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL
+);
 
-// Server receives close event
-ws.on(&#x27;close&#x27;, (code, reason) =&gt; {
-  console.log(`Closed: ${code} - ${reason}`);
-  // Cleanup resources
-});
+-- 001_add_users.down.sql
+-- Example of rollback migration - destructive operation for reverting schema
+DROP TABLE users;
 
-// Server responds with close frame
-// TCP connection terminates</code></pre>
-<h3>State Transitions</h3>
-<pre><code>CONNECTING (0)
-    ↓
-    [Handshake completes]
-    ↓
-OPEN (1)
-    ↓
-    [Close initiated]
-    ↓
-CLOSING (2)
-    ↓
-    [Close handshake completes]
-    ↓
-CLOSED (3)</code></pre>
-<p><strong>Browser WebSocket API States</strong>:</p>
-<pre><code class="lang-javascript">WebSocket.CONNECTING  // 0
-WebSocket.OPEN        // 1
-WebSocket.CLOSING     // 2
-WebSocket.CLOSED      // 3
+-- 002_add_username.up.sql
+ALTER TABLE users ADD COLUMN username VARCHAR(100);
 
-// Check state
-if (ws.readyState === WebSocket.OPEN) {
-  ws.send(&#x27;message&#x27;);
+-- 002_add_username.down.sql
+ALTER TABLE users DROP COLUMN username;</code></pre>
+<h3>Strategy 3: Immutable Migrations</h3>
+<p><strong>Approach</strong>: Once applied, migrations NEVER change. Fixes go in new migrations.</p>
+<p><strong>Rule</strong>: Migration files are immutable after merge to main.</p>
+<pre><code>V1 (bug!) → V2 (fix) → V3</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>History preserved</li><li>No checksum conflicts</li><li>Clear audit trail</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Can&#x27;t fix typos in old migrations</li><li>Must create new migration for fixes</li></ul>
+<p><strong>Best practice</strong>: Use checksums to detect unauthorized changes.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-sql">-- V1__create_users.sql (has bug: wrong column type)
+CREATE TABLE users (id INT, email VARCHAR(50)); -- Bug: email too short!
+
+-- V2__fix_email_length.sql (fix in new migration)
+ALTER TABLE users ALTER COLUMN email TYPE VARCHAR(255);</code></pre>
+<h3>Strategy 4: State-Based Migrations</h3>
+<p><strong>Approach</strong>: Define desired state, tool generates migrations.</p>
+<p><strong>Tools</strong>: Atlas, Prisma Migrate, TypeORM with synchronize.</p>
+<pre><code>Schema Definition (code) → Tool → Generated Migrations</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Less manual SQL</li><li>Auto-detects schema drift</li><li>Type-safe (if using ORM)</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Less control over migration details</li><li>Can generate suboptimal SQL</li><li>Tool lock-in</li></ul>
+<p><strong>Example (Atlas)</strong>:</p>
+<pre><code class="lang-hcl">// schema.hcl
+table &quot;users&quot; {
+  column &quot;id&quot; { type = serial }
+  column &quot;email&quot; { type = varchar(255) }
+  primary_key { columns = [column.id] }
 }</code></pre>
-<h3>Connection Errors</h3>
-<p><strong>Common Failure Modes</strong>:</p>
-<ol><li><strong>Handshake Rejection</strong>: Server returns non-101 status</li><li><strong>Network Interruption</strong>: Connection drops without close frame</li><li><strong>Timeout</strong>: No data received for extended period</li><li><strong>Protocol Violation</strong>: Invalid frame received</li><li><strong>TLS Failure</strong>: Certificate issues on wss://</li></ol>
-<p><strong>Error Handling</strong>:</p>
-<pre><code class="lang-javascript">ws.on(&#x27;error&#x27;, (error) =&gt; {
-  console.error(&#x27;WebSocket error:&#x27;, error);
-  // Attempt reconnection if appropriate
-});
-
-ws.on(&#x27;close&#x27;, (code, reason) =&gt; {
-  if (code !== 1000) {
-    console.error(`Abnormal close: ${code} - ${reason}`);
-    // Trigger reconnection logic
-  }
-});</code></pre>
+<pre><code class="lang-bash">atlas migrate diff --env local
+# Generates: 20231027_initial.sql</code></pre>
 <hr>
-<h2>Frame Structure</h2>
-<p>WebSocket uses a binary framing protocol. Each message is split into one or more frames.</p>
-<h3>Frame Format</h3>
-<pre><code> 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-------+-+-------------+-------------------------------+
-|F|R|R|R| opcode|M| Payload len |    Extended payload length    |
-|I|S|S|S|  (4)  |A|     (7)     |             (16/64)           |
-|N|V|V|V|       |S|             |   (if payload len==126/127)   |
-| |1|2|3|       |K|             |                               |
-+-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
-|     Extended payload length continued, if payload len == 127  |
-+ - - - - - - - - - - - - - - - +-------------------------------+
-|                               |Masking-key, if MASK set to 1  |
-+-------------------------------+-------------------------------+
-| Masking-key (continued)       |          Payload Data         |
-+-------------------------------- - - - - - - - - - - - - - - - +
-:                     Payload Data continued ...                :
-+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
-|                     Payload Data continued ...                |
-+---------------------------------------------------------------+</code></pre>
-<h3>Field Descriptions</h3>
-<p><strong>FIN (1 bit)</strong>:</p>
-<ul><li><code>1</code> = Final fragment in message</li><li><code>0</code> = More fragments follow</li><li>Allows message fragmentation</li></ul>
-<p><strong>RSV1, RSV2, RSV3 (1 bit each)</strong>:</p>
-<ul><li>Reserved for extensions</li><li>Must be 0 unless extension defines usage</li><li>Example: RSV1 = 1 for permessage-deflate compression</li></ul>
-<p><strong>Opcode (4 bits)</strong>:</p>
-<pre><code>0x0 - Continuation frame
-0x1 - Text frame (UTF-8)
-0x2 - Binary frame
-0x8 - Connection close
-0x9 - Ping
-0xA - Pong
-0x3-0x7 - Reserved for future data frames
-0xB-0xF - Reserved for future control frames</code></pre>
-<p><strong>MASK (1 bit)</strong>:</p>
-<ul><li><code>1</code> = Payload is masked (MUST be 1 for client-&gt;server)</li><li><code>0</code> = Payload is not masked (server-&gt;client)</li><li>Prevents cache poisoning attacks</li></ul>
-<p><strong>Payload Length (7 bits, 7+16 bits, or 7+64 bits)</strong>:</p>
-<pre><code>0-125:  Actual payload length
-126:    Next 2 bytes are 16-bit length
-127:    Next 8 bytes are 64-bit length</code></pre>
-<p><strong>Masking Key (0 or 4 bytes)</strong>:</p>
-<ul><li>Present if MASK bit is set</li><li>Random 32-bit value</li><li>Used to XOR payload data</li></ul>
-<p><strong>Payload Data</strong>:</p>
-<ul><li>Extension data (if negotiated) + Application data</li><li>Masked if from client</li></ul>
-<h3>Masking Algorithm</h3>
-<p>Client-to-server frames MUST be masked to prevent cache poisoning:</p>
-<pre><code class="lang-javascript">function maskPayload(payload, maskingKey) {
-  const masked = Buffer.alloc(payload.length);
-  for (let i = 0; i &lt; payload.length; i++) {
-    masked[i] = payload[i] ^ maskingKey[i % 4];
-  }
-  return masked;
-}
+<h2>Migration Tools Deep Dive</h2>
+<h3>Flyway</h3>
+<p><strong>Language</strong>: Java/SQL <strong>Philosophy</strong>: SQL-first, version-based <strong>Best for</strong>: Enterprise Java applications</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Simple SQL-based migrations</li><li>Commercial support available</li><li>Callbacks for custom logic</li><li>Out-of-order migrations (advanced)</li></ul>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-properties"># flyway.conf
+flyway.url=jdbc:postgresql://localhost:5432/mydb
+flyway.user=postgres
+flyway.password=secret
+flyway.locations=filesystem:./migrations
+flyway.baselineVersion=1
+flyway.baselineOnMigrate=true</code></pre>
+<p><strong>Naming Convention</strong>:</p>
+<pre><code>V{version}__{description}.sql
+V1__initial_schema.sql
+V2__add_users_table.sql
+V2.1__add_users_email_index.sql  # Dot notation for sub-versions</code></pre>
+<p><strong>Commands</strong>:</p>
+<pre><code class="lang-bash">flyway migrate     # Apply pending migrations
+flyway info        # Show migration status
+flyway validate    # Validate applied migrations
+flyway baseline    # Baseline existing database
+flyway repair      # Fix metadata (use with caution)
+flyway clean       # Drop all objects (DANGEROUS!)</code></pre>
+<p><strong>Callbacks</strong>:</p>
+<pre><code class="lang-sql">-- beforeMigrate.sql: Runs before any migration
+SET statement_timeout = &#x27;30s&#x27;;
 
-// Example
-const payload = Buffer.from(&#x27;Hello&#x27;);
-const maskingKey = Buffer.from([0x12, 0x34, 0x56, 0x78]);
-const masked = maskPayload(payload, maskingKey);
-
-// Unmask (server-side)
-const unmasked = maskPayload(masked, maskingKey); // XOR is reversible
-// unmasked equals original payload</code></pre>
-<h3>Frame Examples</h3>
-<p><strong>Simple Text Message</strong> (client-&gt;server):</p>
-<pre><code>&quot;Hi&quot; (2 bytes payload)
-
-0x81 0x82 [mask] [masked payload]
-
-Breakdown:
-0x81 = 10000001
-  - FIN=1 (final fragment)
-  - RSV=000
-  - Opcode=0001 (text)
-
-0x82 = 10000010
-  - MASK=1
-  - Length=2
-
-[4 bytes masking key]
-[2 bytes masked payload]
-
-Total: 8 bytes</code></pre>
-<p><strong>Ping Frame</strong> (server-&gt;client):</p>
-<pre><code>0x89 0x00
-
-Breakdown:
-0x89 = 10001001
-  - FIN=1
-  - RSV=000
-  - Opcode=1001 (ping)
-
-0x00 = 00000000
-  - MASK=0
-  - Length=0
-
-Total: 2 bytes</code></pre>
-<p><strong>Large Binary Message</strong> (server-&gt;client, 65KB):</p>
-<pre><code>0x82 0x7E [2-byte length] [payload]
-
-Breakdown:
-0x82 = 10000010
-  - FIN=1
-  - Opcode=0010 (binary)
-
-0x7E = 01111110
-  - MASK=0
-  - Length=126 (indicates next 2 bytes are length)
-
-[2 bytes: 0xFF 0xFF = 65535]
-[65535 bytes payload]
-
-Total: 4 + 65535 = 65539 bytes</code></pre>
-<h3>Fragmentation</h3>
-<p>Large messages can be split into multiple frames:</p>
-<pre><code>Frame 1: FIN=0, Opcode=0x1 (text), Payload=&quot;Hello &quot;
-Frame 2: FIN=0, Opcode=0x0 (continuation), Payload=&quot;World&quot;
-Frame 3: FIN=1, Opcode=0x0 (continuation), Payload=&quot;!&quot;
-
-Reassembled: &quot;Hello World!&quot;</code></pre>
-<p><strong>Fragmentation Rules</strong>:</p>
-<ul><li>First frame has message opcode (text/binary)</li><li>Subsequent frames have opcode 0x0 (continuation)</li><li>Control frames (ping/pong/close) can be interleaved</li><li>Control frames MUST NOT be fragmented</li></ul>
-<p><strong>Example with Interleaved Ping</strong>:</p>
-<pre><code>Frame 1: FIN=0, Opcode=0x1 (text), Payload=&quot;Start&quot;
-Frame 2: FIN=1, Opcode=0x9 (ping), Payload=&quot;&quot;
-Frame 3: FIN=1, Opcode=0xA (pong), Payload=&quot;&quot;
-Frame 4: FIN=1, Opcode=0x0 (continuation), Payload=&quot;End&quot;
-
-Text message: &quot;StartEnd&quot;
-Ping/Pong: Handled separately</code></pre>
-<h3>Control Frames</h3>
-<p><strong>Characteristics</strong>:</p>
-<ul><li>Opcode &gt;= 0x8</li><li>MUST NOT be fragmented</li><li>Payload &lt;= 125 bytes</li><li>Can be injected mid-message</li></ul>
-<p><strong>Close Frame Payload</strong>:</p>
-<pre><code>[2-byte status code] [UTF-8 reason]
-
-Example:
-0x03 0xE8 &quot;Going away&quot;
-  = 1000 &quot;Going away&quot;</code></pre>
-<p><strong>Ping/Pong Application Data</strong>:</p>
-<pre><code>Ping: 0x89 0x05 &quot;12345&quot;
-Pong: 0x8A 0x05 &quot;12345&quot;  (echoes ping data)</code></pre>
+-- afterMigrate.sql: Runs after all migrations
+ANALYZE;</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Battle-tested</li><li>Great documentation</li><li>Commercial support</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Java dependency (JVM required)</li><li>Pro features require license</li><li>No native down migrations</li></ul>
 <hr>
-<h2>Message Types</h2>
-<h3>Text Messages</h3>
-<p><strong>Characteristics</strong>:</p>
-<ul><li>Opcode: 0x1</li><li>Payload MUST be valid UTF-8</li><li>Server MUST close connection on invalid UTF-8 (code 1007)</li></ul>
-<p><strong>Sending</strong>:</p>
-<pre><code class="lang-javascript">// Browser
-ws.send(&#x27;Hello World&#x27;);
-ws.send(JSON.stringify({ type: &#x27;chat&#x27;, msg: &#x27;Hi&#x27; }));
-
-// Node.js (ws library)
-ws.send(&#x27;Hello World&#x27;, { binary: false });</code></pre>
-<p><strong>Receiving</strong>:</p>
-<pre><code class="lang-javascript">ws.onmessage = (event) =&gt; {
-  if (typeof event.data === &#x27;string&#x27;) {
-    console.log(&#x27;Text:&#x27;, event.data);
-    const obj = JSON.parse(event.data);
-  }
-};</code></pre>
-<p><strong>UTF-8 Validation</strong>:</p>
-<pre><code class="lang-javascript">// Server must validate
-function isValidUTF8(buffer) {
-  try {
-    buffer.toString(&#x27;utf8&#x27;);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-ws.on(&#x27;message&#x27;, (data, isBinary) =&gt; {
-  if (!isBinary &amp;&amp; !isValidUTF8(data)) {
-    ws.close(1007, &#x27;Invalid UTF-8&#x27;);
-  }
-});</code></pre>
-<p><strong>Common JSON Envelope Pattern</strong>:</p>
-<pre><code class="lang-javascript">// Structured message format
-const message = {
-  type: &#x27;event_type&#x27;,
-  id: &#x27;unique_id&#x27;,
-  timestamp: Date.now(),
-  data: { /* payload */ }
-};
-
-ws.send(JSON.stringify(message));</code></pre>
-<h3>Binary Messages</h3>
-<p><strong>Characteristics</strong>:</p>
-<ul><li>Opcode: 0x2</li><li>Raw binary data</li><li>No encoding constraints</li></ul>
-<p><strong>Sending</strong>:</p>
-<pre><code class="lang-javascript">// Browser - ArrayBuffer
-const buffer = new ArrayBuffer(8);
-const view = new DataView(buffer);
-view.setUint32(0, 12345678);
-ws.send(buffer);
-
-// Browser - Blob
-const blob = new Blob([&#x27;binary data&#x27;], { type: &#x27;application/octet-stream&#x27; });
-ws.send(blob);
-
-// Node.js - Buffer
-const buf = Buffer.from([0x01, 0x02, 0x03]);
-ws.send(buf, { binary: true });</code></pre>
-<p><strong>Receiving</strong>:</p>
-<pre><code class="lang-javascript">// Browser
-ws.binaryType = &#x27;arraybuffer&#x27;; // or &#x27;blob&#x27;
-
-ws.onmessage = (event) =&gt; {
-  if (event.data instanceof ArrayBuffer) {
-    const view = new DataView(event.data);
-    const value = view.getUint32(0);
-  }
-};
-
-// Node.js
-ws.on(&#x27;message&#x27;, (data, isBinary) =&gt; {
-  if (isBinary) {
-    console.log(&#x27;Binary:&#x27;, data); // Buffer
-  }
-});</code></pre>
-<p><strong>Use Cases</strong>:</p>
-<ul><li>Image/video streaming</li><li>Audio data</li><li>Protocol buffers / MessagePack</li><li>Game state (packed binary formats)</li><li>Sensor data</li></ul>
-<h3>Ping/Pong Frames</h3>
-<p><strong>Purpose</strong>:</p>
-<ul><li>Keep connection alive</li><li>Detect broken connections</li><li>Measure latency</li></ul>
-<p><strong>Ping Frame</strong>:</p>
-<ul><li>Opcode: 0x9</li><li>Optional payload (max 125 bytes)</li><li>Recipient MUST respond with Pong</li></ul>
-<p><strong>Pong Frame</strong>:</p>
-<ul><li>Opcode: 0xA</li><li>MUST echo Ping payload</li><li>Can be sent unsolicited (heartbeat)</li></ul>
-<p><strong>Browser Limitation</strong>: JavaScript WebSocket API doesn&#x27;t expose ping/pong directly (browser handles automatically).</p>
-<p><strong>Server-Side Ping</strong> (Node.js ws):</p>
-<pre><code class="lang-javascript">const ws = new WebSocket.Server({ port: 8080 });
-
-ws.on(&#x27;connection&#x27;, (socket) =&gt; {
-  const interval = setInterval(() =&gt; {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.ping();
-    }
-  }, 30000); // Every 30 seconds
-
-  socket.on(&#x27;pong&#x27;, () =&gt; {
-    console.log(&#x27;Pong received&#x27;);
-  });
-
-  socket.on(&#x27;close&#x27;, () =&gt; {
-    clearInterval(interval);
-  });
-});</code></pre>
-<p><strong>Client-Side Pong</strong> (automatic in most libraries):</p>
-<pre><code class="lang-javascript">// Most libraries auto-respond to ping
-// Manual pong (if needed):
-ws.on(&#x27;ping&#x27;, (data) =&gt; {
-  ws.pong(data);
-});</code></pre>
-<p><strong>Latency Measurement</strong>:</p>
-<pre><code class="lang-javascript">let pingStart;
-
-const interval = setInterval(() =&gt; {
-  pingStart = Date.now();
-  ws.ping();
-}, 5000);
-
-ws.on(&#x27;pong&#x27;, () =&gt; {
-  const latency = Date.now() - pingStart;
-  console.log(`Latency: ${latency}ms`);
-});</code></pre>
-<p><strong>Timeout Detection</strong>:</p>
-<pre><code class="lang-javascript">const PING_INTERVAL = 30000;
-const PONG_TIMEOUT = 5000;
-
-let pingTimeout;
-
-function heartbeat() {
-  clearTimeout(pingTimeout);
-  pingTimeout = setTimeout(() =&gt; {
-    console.log(&#x27;Connection timed out&#x27;);
-    ws.terminate(); // Force close
-  }, PONG_TIMEOUT);
-}
-
-const interval = setInterval(() =&gt; {
-  ws.ping();
-  heartbeat();
-}, PING_INTERVAL);
-
-ws.on(&#x27;pong&#x27;, () =&gt; {
-  heartbeat();
-});
-
-ws.on(&#x27;close&#x27;, () =&gt; {
-  clearInterval(interval);
-  clearTimeout(pingTimeout);
-});</code></pre>
-<h3>Close Frames</h3>
-<p><strong>Close Frame Structure</strong>:</p>
-<pre><code>[2-byte status code] [optional UTF-8 reason]</code></pre>
-<p><strong>Common Patterns</strong>:</p>
-<pre><code class="lang-javascript">// Normal closure
-ws.close(1000, &#x27;Goodbye&#x27;);
-
-// Application error
-ws.close(4000, &#x27;Authentication failed&#x27;);
-
-// Policy violation
-ws.close(1008, &#x27;Rate limit exceeded&#x27;);
-
-// Going away
-ws.close(1001, &#x27;Server shutting down&#x27;);</code></pre>
-<p><strong>Graceful Shutdown</strong>:</p>
-<pre><code class="lang-javascript">// Server shutdown
-process.on(&#x27;SIGTERM&#x27;, () =&gt; {
-  wss.clients.forEach((ws) =&gt; {
-    ws.close(1001, &#x27;Server shutting down&#x27;);
-  });
-
-  setTimeout(() =&gt; {
-    process.exit(0);
-  }, 5000);
-});</code></pre>
-<p><strong>Close Handshake Timeout</strong>:</p>
-<pre><code class="lang-javascript">ws.on(&#x27;close&#x27;, (code, reason) =&gt; {
-  console.log(`Closed: ${code} - ${reason}`);
-});
-
-// Force close if handshake takes too long
-const closeTimeout = setTimeout(() =&gt; {
-  ws.terminate(); // Forceful close
-}, 3000);
-
-ws.on(&#x27;close&#x27;, () =&gt; {
-  clearTimeout(closeTimeout);
-});</code></pre>
-<hr>
-<h2>Security</h2>
-<h3>Origin Validation</h3>
-<p>The <code>Origin</code> header (sent by browsers) must be validated to prevent CSRF attacks.</p>
-<p><strong>Attack Scenario</strong>:</p>
-<pre><code>1. User logged into trusted.com (has WebSocket connection)
-2. User visits evil.com
-3. evil.com JavaScript tries: new WebSocket(&#x27;wss://trusted.com/ws&#x27;)
-4. Without origin check, connection succeeds with user&#x27;s cookies</code></pre>
-<p><strong>Server-Side Validation</strong>:</p>
-<pre><code class="lang-javascript">const ALLOWED_ORIGINS = [
-  &#x27;https://trusted.com&#x27;,
-  &#x27;https://app.trusted.com&#x27;
-];
-
-wss.on(&#x27;connection&#x27;, (ws, req) =&gt; {
-  const origin = req.headers.origin;
-
-  if (!ALLOWED_ORIGINS.includes(origin)) {
-    ws.close(1008, &#x27;Origin not allowed&#x27;);
-    return;
-  }
-
-  // Continue with connection
-});</code></pre>
-<p><strong>Development vs Production</strong>:</p>
-<pre><code class="lang-javascript">const ALLOWED_ORIGINS = process.env.NODE_ENV === &#x27;production&#x27;
-  ? [&#x27;https://app.example.com&#x27;]
-  : [&#x27;http://localhost:3000&#x27;, &#x27;http://localhost:5173&#x27;];</code></pre>
-<h3>Authentication</h3>
-<p>WebSocket doesn&#x27;t have built-in authentication. Common patterns:</p>
-<p><strong>1. Token in Query String</strong>:</p>
-<pre><code class="lang-javascript">// Client
-const token = await getAuthToken();
-const ws = new WebSocket(`wss://api.example.com/ws?token=${token}`);
-
-// Server
-wss.on(&#x27;connection&#x27;, (ws, req) =&gt; {
-  const url = new URL(req.url, &#x27;wss://api.example.com&#x27;);
-  const token = url.searchParams.get(&#x27;token&#x27;);
-
-  if (!verifyToken(token)) {
-    ws.close(1008, &#x27;Invalid token&#x27;);
-    return;
-  }
-
-  ws.userId = extractUserId(token);
-});</code></pre>
-<p><strong>Caution</strong>: Tokens in URLs may be logged. Use wss:// to encrypt.</p>
-<p><strong>2. Token in Subprotocol</strong>:</p>
-<pre><code class="lang-javascript">// Client
-const ws = new WebSocket(&#x27;wss://api.example.com/ws&#x27;, [&#x27;access_token&#x27;, token]);
-
-// Server
-wss.on(&#x27;connection&#x27;, (ws, req) =&gt; {
-  const protocol = req.headers[&#x27;sec-websocket-protocol&#x27;];
-  const [_, token] = protocol.split(&#x27;, &#x27;);
-
-  if (!verifyToken(token)) {
-    ws.close(1008, &#x27;Invalid token&#x27;);
-    return;
-  }
-});</code></pre>
-<p><strong>3. Cookie-Based</strong> (if same-origin):</p>
-<pre><code class="lang-javascript">// Cookies sent automatically in handshake
-wss.on(&#x27;connection&#x27;, (ws, req) =&gt; {
-  const cookies = parseCookies(req.headers.cookie);
-  const sessionId = cookies[&#x27;session_id&#x27;];
-
-  if (!validateSession(sessionId)) {
-    ws.close(1008, &#x27;Invalid session&#x27;);
-    return;
-  }
-});</code></pre>
-<p><strong>4. Post-Connection Authentication</strong>:</p>
-<pre><code class="lang-javascript">// Client
-const ws = new WebSocket(&#x27;wss://api.example.com/ws&#x27;);
-
-ws.onopen = () =&gt; {
-  ws.send(JSON.stringify({
-    type: &#x27;auth&#x27;,
-    token: authToken
-  }));
-};
-
-// Server
-const pendingAuth = new WeakMap();
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  pendingAuth.set(ws, setTimeout(() =&gt; {
-    ws.close(1008, &#x27;Authentication timeout&#x27;);
-  }, 5000));
-
-  ws.on(&#x27;message&#x27;, (data) =&gt; {
-    const msg = JSON.parse(data);
-
-    if (msg.type === &#x27;auth&#x27; &amp;&amp; pendingAuth.has(ws)) {
-      clearTimeout(pendingAuth.get(ws));
-      pendingAuth.delete(ws);
-
-      if (verifyToken(msg.token)) {
-        ws.authenticated = true;
-        ws.userId = extractUserId(msg.token);
-      } else {
-        ws.close(1008, &#x27;Invalid credentials&#x27;);
-      }
-    } else if (!ws.authenticated) {
-      ws.close(1008, &#x27;Not authenticated&#x27;);
-    }
-  });
-});</code></pre>
-<h3>TLS/SSL (wss://)</h3>
-<p><strong>Always use wss:// in production</strong>:</p>
-<ul><li>Encrypts all data</li><li>Prevents eavesdropping</li><li>Prevents man-in-the-middle attacks</li><li>Required for browser security features</li></ul>
-<p><strong>Certificate Setup</strong>:</p>
-<pre><code class="lang-javascript">const https = require(&#x27;https&#x27;);
-const WebSocket = require(&#x27;ws&#x27;);
-const fs = require(&#x27;fs&#x27;);
-
-const server = https.createServer({
-  cert: fs.readFileSync(&#x27;/path/to/cert.pem&#x27;),
-  key: fs.readFileSync(&#x27;/path/to/key.pem&#x27;)
-});
-
-const wss = new WebSocket.Server({ server });
-
-server.listen(8080);</code></pre>
-<p><strong>Let&#x27;s Encrypt with Certbot</strong>:</p>
-<pre><code class="lang-bash">certbot certonly --standalone -d api.example.com
-# Certificates in /etc/letsencrypt/live/api.example.com/</code></pre>
-<h3>Rate Limiting</h3>
-<p>Prevent abuse by limiting message frequency:</p>
-<pre><code class="lang-javascript">const MESSAGE_LIMIT = 10;
-const WINDOW_MS = 1000;
-
-const rateLimits = new WeakMap();
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  rateLimits.set(ws, {
-    count: 0,
-    resetTime: Date.now() + WINDOW_MS
-  });
-
-  ws.on(&#x27;message&#x27;, (data) =&gt; {
-    const limit = rateLimits.get(ws);
-
-    if (Date.now() &gt; limit.resetTime) {
-      limit.count = 0;
-      limit.resetTime = Date.now() + WINDOW_MS;
-    }
-
-    limit.count++;
-
-    if (limit.count &gt; MESSAGE_LIMIT) {
-      ws.close(1008, &#x27;Rate limit exceeded&#x27;);
-      return;
-    }
-
-    // Process message
-  });
-});</code></pre>
-<p><strong>Token Bucket Algorithm</strong>:</p>
-<pre><code class="lang-javascript">class TokenBucket {
-  constructor(capacity, refillRate) {
-    this.capacity = capacity;
-    this.tokens = capacity;
-    this.refillRate = refillRate; // tokens per second
-    this.lastRefill = Date.now();
-  }
-
-  consume(tokens = 1) {
-    this.refill();
-
-    if (this.tokens &gt;= tokens) {
-      this.tokens -= tokens;
-      return true;
-    }
-    return false;
-  }
-
-  refill() {
-    const now = Date.now();
-    const elapsed = (now - this.lastRefill) / 1000;
-    const tokensToAdd = elapsed * this.refillRate;
-
-    this.tokens = Math.min(this.capacity, this.tokens + tokensToAdd);
-    this.lastRefill = now;
-  }
-}
-
-const buckets = new WeakMap();
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  buckets.set(ws, new TokenBucket(100, 10)); // 100 capacity, 10/sec refill
-
-  ws.on(&#x27;message&#x27;, (data) =&gt; {
-    const bucket = buckets.get(ws);
-
-    if (!bucket.consume()) {
-      ws.send(JSON.stringify({ error: &#x27;Rate limit exceeded&#x27; }));
-      return;
-    }
-
-    // Process message
-  });
-});</code></pre>
-<h3>Input Validation</h3>
-<p>Always validate and sanitize incoming messages:</p>
-<pre><code class="lang-javascript">ws.on(&#x27;message&#x27;, (data, isBinary) =&gt; {
-  // Size limit
-  if (data.length &gt; 1024 * 1024) { // 1MB
-    ws.close(1009, &#x27;Message too large&#x27;);
-    return;
-  }
-
-  // Type validation
-  if (isBinary &amp;&amp; !expectBinary) {
-    ws.close(1003, &#x27;Unexpected binary data&#x27;);
-    return;
-  }
-
-  // JSON parsing
-  let msg;
-  try {
-    msg = JSON.parse(data);
-  } catch (e) {
-    ws.send(JSON.stringify({ error: &#x27;Invalid JSON&#x27; }));
-    return;
-  }
-
-  // Schema validation
-  if (!isValidSchema(msg)) {
-    ws.send(JSON.stringify({ error: &#x27;Invalid message format&#x27; }));
-    return;
-  }
-
-  // Sanitize strings (prevent XSS if echoed to browser)
-  if (msg.text) {
-    msg.text = sanitizeHtml(msg.text);
-  }
-
-  // Process validated message
-});</code></pre>
-<h3>DoS Protection</h3>
-<p><strong>Connection Limits</strong>:</p>
-<pre><code class="lang-javascript">const MAX_CONNECTIONS_PER_IP = 10;
-const connections = new Map();
-
-wss.on(&#x27;connection&#x27;, (ws, req) =&gt; {
-  const ip = req.socket.remoteAddress;
-  const count = connections.get(ip) || 0;
-
-  if (count &gt;= MAX_CONNECTIONS_PER_IP) {
-    ws.close(1008, &#x27;Too many connections&#x27;);
-    return;
-  }
-
-  connections.set(ip, count + 1);
-
-  ws.on(&#x27;close&#x27;, () =&gt; {
-    connections.set(ip, connections.get(ip) - 1);
-  });
-});</code></pre>
-<p><strong>Message Size Limits</strong>:</p>
-<pre><code class="lang-javascript">const wss = new WebSocket.Server({
-  port: 8080,
-  maxPayload: 100 * 1024 // 100KB max message size
-});</code></pre>
-<p><strong>Compression Bomb Protection</strong>:</p>
-<pre><code class="lang-javascript">const wss = new WebSocket.Server({
-  perMessageDeflate: {
-    zlibDeflateOptions: {
-      level: 6 // Balanced compression
-    },
-    zlibInflateOptions: {
-      chunkSize: 10 * 1024 // Limit decompressed chunks
-    },
-    threshold: 1024 // Only compress messages &gt; 1KB
-  }
-});</code></pre>
-<hr>
-<h2>Scaling Patterns</h2>
-<h3>Horizontal Scaling Challenges</h3>
-<p>WebSocket connections are stateful and long-lived, creating scaling challenges:</p>
-<p><strong>Problem</strong>: Client connected to Server A cannot receive messages from Server B.</p>
-<pre><code>Client 1 ─┬─&gt; Server A ─┐
-Client 2 ─┘             │
-                        ├─&gt; Load Balancer
-Client 3 ─┬─&gt; Server B ─┘
-Client 4 ─┘
-
-If Client 1 sends to Client 3, message stuck in Server A.</code></pre>
-<h3>Sticky Sessions</h3>
-<p>Route all requests from a client to the same server.</p>
-<p><strong>Load Balancer Configuration</strong> (Nginx):</p>
-<pre><code class="lang-nginx">upstream websocket_backend {
-  ip_hash; # Route by client IP
-  server 10.0.0.1:8080;
-  server 10.0.0.2:8080;
-  server 10.0.0.3:8080;
-}
-
-server {
-  listen 80;
-
-  location /ws {
-    proxy_pass http://websocket_backend;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection &quot;Upgrade&quot;;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-  }
-}</code></pre>
-<p><strong>HAProxy Configuration</strong>:</p>
-<pre><code>frontend websocket_front
-  bind *:80
-  default_backend websocket_back
-
-backend websocket_back
-  balance source # IP-based sticky sessions
-  server ws1 10.0.0.1:8080 check
-  server ws2 10.0.0.2:8080 check
-  server ws3 10.0.0.3:8080 check</code></pre>
-<p><strong>Limitations</strong>:</p>
-<ul><li>Uneven distribution if clients behind NAT</li><li>Can&#x27;t rebalance without dropping connections</li><li>Server failure drops all its clients</li></ul>
-<h3>Pub/Sub with Redis</h3>
-<p>Enable cross-server messaging using Redis as a message broker.</p>
-<p><strong>Architecture</strong>:</p>
-<pre><code>Client 1 ──&gt; Server A ──┐
-                        ├──&gt; Redis Pub/Sub ──┬──&gt; Server B ──&gt; Client 3
-Client 2 ──&gt; Server B ──┘                    └──&gt; Server C ──&gt; Client 4</code></pre>
-<p><strong>Implementation</strong> (Node.js):</p>
-<pre><code class="lang-javascript">const Redis = require(&#x27;ioredis&#x27;);
-const WebSocket = require(&#x27;ws&#x27;);
-
-// Create Redis clients (pub and sub must be separate)
-const publisher = new Redis();
-const subscriber = new Redis();
-
-const wss = new WebSocket.Server({ port: 8080 });
-
-// Subscribe to Redis channel
-subscriber.subscribe(&#x27;chat&#x27;);
-
-subscriber.on(&#x27;message&#x27;, (channel, message) =&gt; {
-  const msg = JSON.parse(message);
-
-  // Broadcast to all local WebSocket clients
-  wss.clients.forEach((client) =&gt; {
-    if (client.readyState === WebSocket.OPEN) {
-      // Optional: filter by room/topic
-      if (client.room === msg.room) {
-        client.send(JSON.stringify(msg));
-      }
-    }
-  });
-});
-
-// Handle WebSocket messages
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  ws.on(&#x27;message&#x27;, (data) =&gt; {
-    const msg = JSON.parse(data);
-
-    // Publish to Redis (reaches all servers)
-    publisher.publish(&#x27;chat&#x27;, JSON.stringify(msg));
-  });
-});</code></pre>
-<p><strong>Room-Based Routing</strong>:</p>
-<pre><code class="lang-javascript">// Client joins room
-ws.on(&#x27;message&#x27;, (data) =&gt; {
-  const msg = JSON.parse(data);
-
-  if (msg.type === &#x27;join&#x27;) {
-    ws.room = msg.room;
-    subscriber.subscribe(`chat:${msg.room}`);
-  } else if (msg.type === &#x27;message&#x27;) {
-    publisher.publish(`chat:${ws.room}`, JSON.stringify(msg));
-  }
-});
-
-// Targeted broadcast
-subscriber.on(&#x27;message&#x27;, (channel, message) =&gt; {
-  const room = channel.split(&#x27;:&#x27;)[1];
-
-  wss.clients.forEach((client) =&gt; {
-    if (client.room === room &amp;&amp; client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
-  });
-});</code></pre>
-<p><strong>Presence Tracking</strong>:</p>
-<pre><code class="lang-javascript">const PRESENCE_KEY = &#x27;websocket:presence&#x27;;
-
-wss.on(&#x27;connection&#x27;, (ws, req) =&gt; {
-  const userId = getUserId(req);
-  const serverId = process.env.SERVER_ID;
-
-  // Add to presence set
-  publisher.sadd(PRESENCE_KEY, JSON.stringify({
-    userId,
-    serverId,
-    connectedAt: Date.now()
-  }));
-
-  ws.on(&#x27;close&#x27;, () =&gt; {
-    // Remove from presence set
-    publisher.srem(PRESENCE_KEY, JSON.stringify({ userId, serverId }));
-  });
-});
-
-// Get online users
-async function getOnlineUsers() {
-  const members = await publisher.smembers(PRESENCE_KEY);
-  return members.map(JSON.parse);
-}</code></pre>
-<h3>Redis Streams (Alternative)</h3>
-<p>More robust than Pub/Sub with message persistence and consumer groups:</p>
-<pre><code class="lang-javascript">const Redis = require(&#x27;ioredis&#x27;);
-const redis = new Redis();
-
-// Producer (WebSocket server receives message)
-async function publishMessage(room, message) {
-  await redis.xadd(
-    `stream:${room}`,
-    &#x27;*&#x27;, // Auto-generate ID
-    &#x27;data&#x27;, JSON.stringify(message)
-  );
-}
-
-// Consumer (read messages)
-async function consumeMessages(room) {
-  let lastId = &#x27;0-0&#x27;;
-
-  while (true) {
-    const results = await redis.xread(
-      &#x27;BLOCK&#x27;, 1000,
-      &#x27;STREAMS&#x27;, `stream:${room}`, lastId
-    );
-
-    if (results) {
-      const [stream, messages] = results[0];
-
-      messages.forEach(([id, fields]) =&gt; {
-        const data = fields[1];
-        const msg = JSON.parse(data);
-
-        // Broadcast to WebSocket clients
-        broadcastToRoom(room, msg);
-
-        lastId = id;
-      });
-    }
-  }
-}</code></pre>
-<h3>Message Queue (RabbitMQ)</h3>
-<p>For complex routing and guaranteed delivery:</p>
-<pre><code class="lang-javascript">const amqp = require(&#x27;amqplib&#x27;);
-
-async function setupRabbitMQ() {
-  const connection = await amqp.connect(&#x27;amqp://localhost&#x27;);
-  const channel = await connection.createChannel();
-
-  // Fanout exchange (broadcast to all)
-  await channel.assertExchange(&#x27;websocket&#x27;, &#x27;fanout&#x27;, { durable: false });
-
-  // Create queue for this server
-  const { queue } = await channel.assertQueue(&#x27;&#x27;, { exclusive: true });
-  await channel.bindQueue(queue, &#x27;websocket&#x27;, &#x27;&#x27;);
-
-  // Consume messages
-  channel.consume(queue, (msg) =&gt; {
-    const data = JSON.parse(msg.content.toString());
-
-    wss.clients.forEach((client) =&gt; {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(data));
-      }
-    });
-  }, { noAck: true });
-
-  // Publish messages
-  wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-    ws.on(&#x27;message&#x27;, (data) =&gt; {
-      channel.publish(&#x27;websocket&#x27;, &#x27;&#x27;, Buffer.from(data));
-    });
-  });
-}</code></pre>
-<h3>Database for Persistence</h3>
-<p>Store messages for offline users:</p>
-<pre><code class="lang-javascript">const { Pool } = require(&#x27;pg&#x27;);
-const pool = new Pool();
-
-// Store message
-async function storeMessage(roomId, userId, message) {
-  await pool.query(
-    &#x27;INSERT INTO messages (room_id, user_id, content, created_at) VALUES ($1, $2, $3, NOW())&#x27;,
-    [roomId, userId, message]
-  );
-}
-
-// Get missed messages
-async function getMissedMessages(roomId, since) {
-  const result = await pool.query(
-    &#x27;SELECT * FROM messages WHERE room_id = $1 AND created_at &gt; $2 ORDER BY created_at&#x27;,
-    [roomId, since]
-  );
-  return result.rows;
-}
-
-// On reconnection
-ws.on(&#x27;message&#x27;, async (data) =&gt; {
-  const msg = JSON.parse(data);
-
-  if (msg.type === &#x27;join&#x27;) {
-    const missed = await getMissedMessages(msg.room, msg.lastSeen);
-    missed.forEach((m) =&gt; {
-      ws.send(JSON.stringify(m));
-    });
-  }
-});</code></pre>
-<h3>Serverless WebSocket</h3>
-<p><strong>AWS API Gateway WebSockets</strong>:</p>
-<pre><code class="lang-javascript">// Lambda handler for connect
-exports.connect = async (event) =&gt; {
-  const connectionId = event.requestContext.connectionId;
-
-  // Store connection in DynamoDB
-  await dynamodb.put({
-    TableName: &#x27;WebSocketConnections&#x27;,
-    Item: { connectionId, timestamp: Date.now() }
-  }).promise();
-
-  return { statusCode: 200 };
-};
-
-// Lambda handler for message
-exports.message = async (event) =&gt; {
-  const { connectionId } = event.requestContext;
-  const message = JSON.parse(event.body);
-
-  // Get all connections
-  const connections = await dynamodb.scan({
-    TableName: &#x27;WebSocketConnections&#x27;
-  }).promise();
-
-  // Send to all
-  const apiGateway = new AWS.ApiGatewayManagementApi({
-    endpoint: event.requestContext.domainName + &#x27;/&#x27; + event.requestContext.stage
-  });
-
-  await Promise.all(connections.Items.map(async ({ connectionId: targetId }) =&gt; {
-    try {
-      await apiGateway.postToConnection({
-        ConnectionId: targetId,
-        Data: JSON.stringify(message)
-      }).promise();
-    } catch (e) {
-      if (e.statusCode === 410) {
-        // Clean up stale connection
-        await dynamodb.delete({
-          TableName: &#x27;WebSocketConnections&#x27;,
-          Key: { connectionId: targetId }
-        }).promise();
-      }
-    }
-  }));
-
-  return { statusCode: 200 };
-};</code></pre>
-<hr>
-<h2>Reconnection Strategies</h2>
-<p>Network interruptions require robust reconnection logic.</p>
-<h3>Exponential Backoff</h3>
-<p>Avoid overwhelming the server with reconnection attempts:</p>
-<pre><code class="lang-javascript">class WebSocketClient {
-  constructor(url) {
-    this.url = url;
-    this.ws = null;
-    this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 10;
-    this.reconnectInterval = 1000; // Start at 1 second
-    this.maxReconnectInterval = 30000; // Cap at 30 seconds
-  }
-
-  connect() {
-    this.ws = new WebSocket(this.url);
-
-    this.ws.onopen = () =&gt; {
-      console.log(&#x27;Connected&#x27;);
-      this.reconnectAttempts = 0; // Reset on success
-    };
-
-    this.ws.onclose = (event) =&gt; {
-      console.log(&#x27;Disconnected:&#x27;, event.code, event.reason);
-      this.reconnect();
-    };
-
-    this.ws.onerror = (error) =&gt; {
-      console.error(&#x27;Error:&#x27;, error);
-    };
-  }
-
-  reconnect() {
-    if (this.reconnectAttempts &gt;= this.maxReconnectAttempts) {
-      console.error(&#x27;Max reconnection attempts reached&#x27;);
-      return;
-    }
-
-    this.reconnectAttempts++;
-
-    // Exponential backoff with jitter
-    const delay = Math.min(
-      this.reconnectInterval * Math.pow(2, this.reconnectAttempts),
-      this.maxReconnectInterval
-    );
-
-    const jitter = delay * 0.1 * Math.random(); // +/- 10% jitter
-    const actualDelay = delay + jitter;
-
-    console.log(`Reconnecting in ${actualDelay}ms (attempt ${this.reconnectAttempts})`);
-
-    setTimeout(() =&gt; {
-      this.connect();
-    }, actualDelay);
-  }
-
-  send(data) {
-    if (this.ws &amp;&amp; this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(data);
-    } else {
-      console.warn(&#x27;Cannot send, not connected&#x27;);
-      // Queue message or handle error
-    }
-  }
-}
-
-const client = new WebSocketClient(&#x27;wss://api.example.com/ws&#x27;);
-client.connect();</code></pre>
-<h3>Message Queueing</h3>
-<p>Buffer messages while disconnected:</p>
-<pre><code class="lang-javascript">class RobustWebSocket {
-  constructor(url) {
-    this.url = url;
-    this.ws = null;
-    this.messageQueue = [];
-    this.maxQueueSize = 100;
-    this.connect();
-  }
-
-  connect() {
-    this.ws = new WebSocket(this.url);
-
-    this.ws.onopen = () =&gt; {
-      console.log(&#x27;Connected, flushing queue&#x27;);
-      this.flushQueue();
-    };
-
-    this.ws.onclose = () =&gt; {
-      this.reconnect();
-    };
-  }
-
-  send(data) {
-    if (this.ws &amp;&amp; this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(data);
-    } else {
-      // Queue message
-      if (this.messageQueue.length &lt; this.maxQueueSize) {
-        this.messageQueue.push(data);
-      } else {
-        console.warn(&#x27;Message queue full, dropping oldest&#x27;);
-        this.messageQueue.shift();
-        this.messageQueue.push(data);
-      }
-    }
-  }
-
-  flushQueue() {
-    while (this.messageQueue.length &gt; 0 &amp;&amp; this.ws.readyState === WebSocket.OPEN) {
-      const message = this.messageQueue.shift();
-      this.ws.send(message);
-    }
-  }
-
-  reconnect() {
-    // Exponential backoff logic from previous example
-  }
-}</code></pre>
-<h3>State Synchronization</h3>
-<p>Resync state after reconnection:</p>
-<pre><code class="lang-javascript">class StatefulWebSocket {
-  constructor(url) {
-    this.url = url;
-    this.ws = null;
-    this.lastMessageId = 0;
-    this.connect();
-  }
-
-  connect() {
-    this.ws = new WebSocket(this.url);
-
-    this.ws.onopen = () =&gt; {
-      // Request missed messages
-      this.ws.send(JSON.stringify({
-        type: &#x27;sync&#x27;,
-        lastMessageId: this.lastMessageId
-      }));
-    };
-
-    this.ws.onmessage = (event) =&gt; {
-      const msg = JSON.parse(event.data);
-
-      if (msg.id &gt; this.lastMessageId) {
-        this.lastMessageId = msg.id;
-        this.handleMessage(msg);
-      } else {
-        // Duplicate or old message, ignore
-      }
-    };
-  }
-
-  handleMessage(msg) {
-    // Process message
-    console.log(&#x27;Message:&#x27;, msg);
-  }
-}</code></pre>
-<h3>Heartbeat Detection</h3>
-<p>Detect connection death faster than TCP keepalive:</p>
-<pre><code class="lang-javascript">class HeartbeatWebSocket {
-  constructor(url) {
-    this.url = url;
-    this.ws = null;
-    this.heartbeatInterval = null;
-    this.heartbeatTimeout = null;
-    this.HEARTBEAT_INTERVAL = 30000; // 30 seconds
-    this.HEARTBEAT_TIMEOUT = 5000; // 5 seconds
-    this.connect();
-  }
-
-  connect() {
-    this.ws = new WebSocket(this.url);
-
-    this.ws.onopen = () =&gt; {
-      this.startHeartbeat();
-    };
-
-    this.ws.onmessage = (event) =&gt; {
-      const msg = JSON.parse(event.data);
-
-      if (msg.type === &#x27;pong&#x27;) {
-        this.resetHeartbeat();
-      } else {
-        this.handleMessage(msg);
-      }
-    };
-
-    this.ws.onclose = () =&gt; {
-      this.stopHeartbeat();
-      this.reconnect();
-    };
-  }
-
-  startHeartbeat() {
-    this.heartbeatInterval = setInterval(() =&gt; {
-      this.ping();
-    }, this.HEARTBEAT_INTERVAL);
-  }
-
-  stopHeartbeat() {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
-    }
-    if (this.heartbeatTimeout) {
-      clearTimeout(this.heartbeatTimeout);
-      this.heartbeatTimeout = null;
-    }
-  }
-
-  ping() {
-    this.ws.send(JSON.stringify({ type: &#x27;ping&#x27; }));
-
-    // Expect pong within timeout
-    this.heartbeatTimeout = setTimeout(() =&gt; {
-      console.warn(&#x27;Heartbeat timeout, reconnecting&#x27;);
-      this.ws.close();
-    }, this.HEARTBEAT_TIMEOUT);
-  }
-
-  resetHeartbeat() {
-    if (this.heartbeatTimeout) {
-      clearTimeout(this.heartbeatTimeout);
-      this.heartbeatTimeout = null;
-    }
-  }
-
-  reconnect() {
-    // Exponential backoff logic
-  }
-}</code></pre>
-<h3>Connection State Machine</h3>
-<p>Robust state management:</p>
-<pre><code class="lang-javascript">const States = {
-  DISCONNECTED: &#x27;disconnected&#x27;,
-  CONNECTING: &#x27;connecting&#x27;,
-  CONNECTED: &#x27;connected&#x27;,
-  RECONNECTING: &#x27;reconnecting&#x27;
-};
-
-class StateMachineWebSocket {
-  constructor(url) {
-    this.url = url;
-    this.ws = null;
-    this.state = States.DISCONNECTED;
-    this.listeners = {};
-  }
-
-  connect() {
-    if (this.state !== States.DISCONNECTED) {
-      console.warn(&#x27;Already connecting or connected&#x27;);
-      return;
-    }
-
-    this.setState(States.CONNECTING);
-    this.ws = new WebSocket(this.url);
-
-    this.ws.onopen = () =&gt; {
-      this.setState(States.CONNECTED);
-    };
-
-    this.ws.onclose = () =&gt; {
-      if (this.state === States.CONNECTED) {
-        this.setState(States.RECONNECTING);
-        this.reconnect();
-      } else {
-        this.setState(States.DISCONNECTED);
-      }
-    };
-
-    this.ws.onerror = (error) =&gt; {
-      this.emit(&#x27;error&#x27;, error);
-    };
-  }
-
-  setState(newState) {
-    const oldState = this.state;
-    this.state = newState;
-    this.emit(&#x27;stateChange&#x27;, { from: oldState, to: newState });
-  }
-
-  on(event, callback) {
-    if (!this.listeners[event]) {
-      this.listeners[event] = [];
-    }
-    this.listeners[event].push(callback);
-  }
-
-  emit(event, data) {
-    if (this.listeners[event]) {
-      this.listeners[event].forEach(cb =&gt; cb(data));
-    }
-  }
-
-  reconnect() {
-    // Exponential backoff
-    setTimeout(() =&gt; {
-      this.state = States.DISCONNECTED;
-      this.connect();
-    }, 1000);
-  }
-}
-
-// Usage
-const ws = new StateMachineWebSocket(&#x27;wss://api.example.com/ws&#x27;);
-
-ws.on(&#x27;stateChange&#x27;, ({ from, to }) =&gt; {
-  console.log(`State: ${from} -&gt; ${to}`);
-
-  if (to === States.CONNECTED) {
-    // Update UI to show connected
-  } else if (to === States.RECONNECTING) {
-    // Show reconnecting indicator
-  }
-});
-
-ws.connect();</code></pre>
-<hr>
-<h2>Server Implementations</h2>
-<h3>Node.js (ws library)</h3>
+<h3>golang-migrate</h3>
+<p><strong>Language</strong>: Go/SQL <strong>Philosophy</strong>: Simple, CLI-focused, up/down pattern <strong>Best for</strong>: Go microservices</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Native Go binary (no JVM)</li><li>Up/down migrations</li><li>Multiple database support</li><li>Programmatic API</li></ul>
 <p><strong>Installation</strong>:</p>
-<pre><code class="lang-bash">npm install ws</code></pre>
-<p><strong>Basic Server</strong>:</p>
-<pre><code class="lang-javascript">const WebSocket = require(&#x27;ws&#x27;);
+<pre><code class="lang-bash">go install -tags &#x27;postgres&#x27; github.com/golang-migrate/migrate/v4/cmd/migrate@latest</code></pre>
+<p><strong>Naming Convention</strong>:</p>
+<pre><code>{version}_{description}.up.sql
+{version}_{description}.down.sql
 
-const wss = new WebSocket.Server({ port: 8080 });
+000001_initial_schema.up.sql
+000001_initial_schema.down.sql
+000002_add_users_table.up.sql
+000002_add_users_table.down.sql</code></pre>
+<p><strong>Commands</strong>:</p>
+<pre><code class="lang-bash"># Create migration
+migrate create -ext sql -dir migrations -seq add_users_table
 
-wss.on(&#x27;connection&#x27;, (ws, req) =&gt; {
-  console.log(&#x27;Client connected:&#x27;, req.socket.remoteAddress);
+# Apply all up migrations
+migrate -database &quot;postgres://localhost:5432/db?sslmode=disable&quot; -path migrations up
 
-  ws.on(&#x27;message&#x27;, (data, isBinary) =&gt; {
-    console.log(&#x27;Received:&#x27;, data.toString());
+# Apply one up migration
+migrate -database &quot;$DB_URL&quot; -path migrations up 1
 
-    // Echo back
-    ws.send(data, { binary: isBinary });
-  });
+# Rollback one migration
+migrate -database &quot;$DB_URL&quot; -path migrations down 1
 
-  ws.on(&#x27;close&#x27;, (code, reason) =&gt; {
-    console.log(&#x27;Client disconnected:&#x27;, code, reason.toString());
-  });
+# Force version (recovery from dirty state)
+migrate -database &quot;$DB_URL&quot; -path migrations force 5
 
-  ws.on(&#x27;error&#x27;, (error) =&gt; {
-    console.error(&#x27;WebSocket error:&#x27;, error);
-  });
-
-  ws.send(&#x27;Welcome!&#x27;);
-});
-
-console.log(&#x27;WebSocket server running on ws://localhost:8080&#x27;);</code></pre>
-<p><strong>Broadcast to All Clients</strong>:</p>
-<pre><code class="lang-javascript">function broadcast(data) {
-  wss.clients.forEach((client) =&gt; {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
-    }
-  });
-}
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  ws.on(&#x27;message&#x27;, (data) =&gt; {
-    broadcast(data); // Send to all connected clients
-  });
-});</code></pre>
-<p><strong>Room-Based Broadcasting</strong>:</p>
-<pre><code class="lang-javascript">const rooms = new Map();
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  ws.on(&#x27;message&#x27;, (data) =&gt; {
-    const msg = JSON.parse(data);
-
-    if (msg.type === &#x27;join&#x27;) {
-      if (!rooms.has(msg.room)) {
-        rooms.set(msg.room, new Set());
-      }
-      rooms.get(msg.room).add(ws);
-      ws.room = msg.room;
-    } else if (msg.type === &#x27;message&#x27;) {
-      const room = rooms.get(ws.room);
-      if (room) {
-        room.forEach((client) =&gt; {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(msg));
-          }
-        });
-      }
-    }
-  });
-
-  ws.on(&#x27;close&#x27;, () =&gt; {
-    if (ws.room &amp;&amp; rooms.has(ws.room)) {
-      rooms.get(ws.room).delete(ws);
-    }
-  });
-});</code></pre>
-<p><strong>With Express</strong>:</p>
-<pre><code class="lang-javascript">const express = require(&#x27;express&#x27;);
-const { createServer } = require(&#x27;http&#x27;);
-const WebSocket = require(&#x27;ws&#x27;);
-
-const app = express();
-const server = createServer(app);
-const wss = new WebSocket.Server({ server });
-
-app.get(&#x27;/&#x27;, (req, res) =&gt; {
-  res.send(&#x27;WebSocket server running&#x27;);
-});
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  ws.send(&#x27;Connected to WebSocket server&#x27;);
-});
-
-server.listen(8080, () =&gt; {
-  console.log(&#x27;Server running on http://localhost:8080&#x27;);
-});</code></pre>
-<p><strong>Compression (permessage-deflate)</strong>:</p>
-<pre><code class="lang-javascript">const wss = new WebSocket.Server({
-  port: 8080,
-  perMessageDeflate: {
-    zlibDeflateOptions: {
-      chunkSize: 1024,
-      memLevel: 7,
-      level: 3
-    },
-    zlibInflateOptions: {
-      chunkSize: 10 * 1024
-    },
-    clientNoContextTakeover: true,
-    serverNoContextTakeover: true,
-    serverMaxWindowBits: 10,
-    concurrencyLimit: 10,
-    threshold: 1024 // Only compress messages &gt; 1KB
-  }
-});</code></pre>
-<h3>Python (websockets library)</h3>
-<p><strong>Installation</strong>:</p>
-<pre><code class="lang-bash">pip install websockets</code></pre>
-<p><strong>Basic Server</strong> (async):</p>
-<pre><code class="lang-python">import asyncio
-import websockets
-
-async def handler(websocket, path):
-    print(f&quot;Client connected: {websocket.remote_address}&quot;)
-
-    try:
-        async for message in websocket:
-            print(f&quot;Received: {message}&quot;)
-
-            # Echo back
-            await websocket.send(message)
-    except websockets.exceptions.ConnectionClosed:
-        print(&quot;Client disconnected&quot;)
-
-async def main():
-    async with websockets.serve(handler, &quot;localhost&quot;, 8080):
-        print(&quot;WebSocket server running on ws://localhost:8080&quot;)
-        await asyncio.Future()  # Run forever
-
-asyncio.run(main())</code></pre>
-<p><strong>Broadcast to All Clients</strong>:</p>
-<pre><code class="lang-python">import asyncio
-import websockets
-
-connected = set()
-
-async def handler(websocket, path):
-    connected.add(websocket)
-    try:
-        async for message in websocket:
-            # Broadcast to all clients
-            websockets.broadcast(connected, message)
-    finally:
-        connected.remove(websocket)
-
-async def main():
-    async with websockets.serve(handler, &quot;localhost&quot;, 8080):
-        await asyncio.Future()
-
-asyncio.run(main())</code></pre>
-<p><strong>JSON Messages</strong>:</p>
-<pre><code class="lang-python">import asyncio
-import websockets
-import json
-
-async def handler(websocket, path):
-    async for message in websocket:
-        data = json.loads(message)
-
-        # Process
-        response = {
-            &quot;type&quot;: &quot;response&quot;,
-            &quot;echo&quot;: data
-        }
-
-        await websocket.send(json.dumps(response))
-
-async def main():
-    async with websockets.serve(handler, &quot;localhost&quot;, 8080):
-        await asyncio.Future()
-
-asyncio.run(main())</code></pre>
-<p><strong>With Authentication</strong>:</p>
-<pre><code class="lang-python">import asyncio
-import websockets
-import jwt
-
-async def handler(websocket, path):
-    # Read first message as auth token
-    try:
-        token = await asyncio.wait_for(websocket.recv(), timeout=5.0)
-        payload = jwt.decode(token, &quot;secret&quot;, algorithms=[&quot;HS256&quot;])
-        user_id = payload[&quot;user_id&quot;]
-    except (asyncio.TimeoutError, jwt.InvalidTokenError):
-        await websocket.close(1008, &quot;Authentication failed&quot;)
-        return
-
-    print(f&quot;User {user_id} authenticated&quot;)
-
-    # Continue with authenticated connection
-    async for message in websocket:
-        await websocket.send(f&quot;User {user_id}: {message}&quot;)
-
-async def main():
-    async with websockets.serve(handler, &quot;localhost&quot;, 8080):
-        await asyncio.Future()
-
-asyncio.run(main())</code></pre>
-<h3>Go (gorilla/websocket)</h3>
-<p><strong>Installation</strong>:</p>
-<pre><code class="lang-bash">go get github.com/gorilla/websocket</code></pre>
-<p><strong>Basic Server</strong>:</p>
-<pre><code class="lang-go">package main
-
-import (
-    &quot;fmt&quot;
-    &quot;log&quot;
-    &quot;net/http&quot;
-
-    &quot;github.com/gorilla/websocket&quot;
+# Show current version
+migrate -database &quot;$DB_URL&quot; -path migrations version</code></pre>
+<p><strong>Programmatic Usage</strong>:</p>
+<pre><code class="lang-go">import (
+    &quot;github.com/golang-migrate/migrate/v4&quot;
+    _ &quot;github.com/golang-migrate/migrate/v4/database/postgres&quot;
+    _ &quot;github.com/golang-migrate/migrate/v4/source/file&quot;
 )
 
-var upgrader = websocket.Upgrader{
-    CheckOrigin: func(r *http.Request) bool {
-        return true // Allow all origins (configure for production)
-    },
-}
+m, err := migrate.New(
+    &quot;file://migrations&quot;,
+    &quot;postgres://localhost:5432/db?sslmode=disable&quot;)
 
-func handler(w http.ResponseWriter, r *http.Request) {
-    conn, err := upgrader.Upgrade(w, r, nil)
-    if err != nil {
-        log.Println(&quot;Upgrade error:&quot;, err)
-        return
-    }
-    defer conn.Close()
-
-    fmt.Println(&quot;Client connected:&quot;, conn.RemoteAddr())
-
-    for {
-        messageType, message, err := conn.ReadMessage()
-        if err != nil {
-            log.Println(&quot;Read error:&quot;, err)
-            break
-        }
-
-        fmt.Printf(&quot;Received: %s\n&quot;, message)
-
-        // Echo back
-        err = conn.WriteMessage(messageType, message)
-        if err != nil {
-            log.Println(&quot;Write error:&quot;, err)
-            break
-        }
-    }
-}
-
-func main() {
-    http.HandleFunc(&quot;/ws&quot;, handler)
-
-    fmt.Println(&quot;WebSocket server running on :8080&quot;)
-    log.Fatal(http.ListenAndServe(&quot;:8080&quot;, nil))
-}</code></pre>
-<p><strong>Broadcast Hub</strong>:</p>
-<pre><code class="lang-go">package main
-
-import (
-    &quot;github.com/gorilla/websocket&quot;
-)
-
-type Hub struct {
-    clients    map[*websocket.Conn]bool
-    broadcast  chan []byte
-    register   chan *websocket.Conn
-    unregister chan *websocket.Conn
-}
-
-func newHub() *Hub {
-    return &amp;Hub{
-        clients:    make(map[*websocket.Conn]bool),
-        broadcast:  make(chan []byte),
-        register:   make(chan *websocket.Conn),
-        unregister: make(chan *websocket.Conn),
-    }
-}
-
-func (h *Hub) run() {
-    for {
-        select {
-        case conn := &lt;-h.register:
-            h.clients[conn] = true
-        case conn := &lt;-h.unregister:
-            if _, ok := h.clients[conn]; ok {
-                delete(h.clients, conn)
-                conn.Close()
-            }
-        case message := &lt;-h.broadcast:
-            for conn := range h.clients {
-                err := conn.WriteMessage(websocket.TextMessage, message)
-                if err != nil {
-                    h.unregister &lt;- conn
-                }
-            }
-        }
-    }
-}
-
-var hub = newHub()
-
-func handler(w http.ResponseWriter, r *http.Request) {
-    conn, _ := upgrader.Upgrade(w, r, nil)
-    hub.register &lt;- conn
-
-    defer func() {
-        hub.unregister &lt;- conn
-    }()
-
-    for {
-        _, message, err := conn.ReadMessage()
-        if err != nil {
-            break
-        }
-        hub.broadcast &lt;- message
-    }
-}
-
-func main() {
-    go hub.run()
-
-    http.HandleFunc(&quot;/ws&quot;, handler)
-    http.ListenAndServe(&quot;:8080&quot;, nil)
-}</code></pre>
+m.Up() // Apply all migrations
+m.Steps(2) // Apply 2 migrations
+m.Down() // Rollback all (DANGEROUS!)</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Lightweight, single binary</li><li>Native Go integration</li><li>Simple up/down pattern</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Manual version numbering</li><li>No automatic rollback on failure</li><li>Limited advanced features</li></ul>
 <hr>
-<h2>Client Implementations</h2>
-<h3>Browser (Native WebSocket API)</h3>
-<p><strong>Basic Connection</strong>:</p>
-<pre><code class="lang-javascript">const ws = new WebSocket(&#x27;wss://api.example.com/ws&#x27;);
+<h3>Alembic</h3>
+<p><strong>Language</strong>: Python/SQL <strong>Philosophy</strong>: SQLAlchemy integration, auto-generate <strong>Best for</strong>: Python applications (Flask, FastAPI, Django alternatives)</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Auto-generate from SQLAlchemy models</li><li>Branching/merging migrations</li><li>Offline SQL generation</li><li>Revision history</li></ul>
+<p><strong>Installation</strong>:</p>
+<pre><code class="lang-bash">uv add alembic psycopg2-binary
+alembic init alembic</code></pre>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-python"># alembic.ini
+[alembic]
+script_location = alembic
+sqlalchemy.url = postgresql://localhost:5432/mydb
 
-ws.onopen = (event) =&gt; {
-  console.log(&#x27;Connected&#x27;);
-  ws.send(&#x27;Hello Server&#x27;);
-};
+# alembic/env.py
+from myapp.models import Base
+target_metadata = Base.metadata</code></pre>
+<p><strong>Creating Migrations</strong>:</p>
+<pre><code class="lang-bash"># Manual migration
+alembic revision -m &quot;add users table&quot;
 
-ws.onmessage = (event) =&gt; {
-  console.log(&#x27;Received:&#x27;, event.data);
+# Auto-generate from models
+alembic revision --autogenerate -m &quot;add users table&quot;</code></pre>
+<p><strong>Migration File</strong>:</p>
+<pre><code class="lang-python"># alembic/versions/abc123_add_users_table.py
+from alembic import op
+import sqlalchemy as sa
 
-  // Parse JSON if needed
-  const data = JSON.parse(event.data);
-};
+revision = &#x27;abc123&#x27;
+down_revision = &#x27;def456&#x27;  # Previous migration
+branch_labels = None
+depends_on = None
 
-ws.onerror = (error) =&gt; {
-  console.error(&#x27;WebSocket error:&#x27;, error);
-};
+def upgrade():
+    op.create_table(
+        &#x27;users&#x27;,
+        sa.Column(&#x27;id&#x27;, sa.Integer(), primary_key=True),
+        sa.Column(&#x27;email&#x27;, sa.String(255), unique=True, nullable=False),
+        sa.Column(&#x27;created_at&#x27;, sa.DateTime(), server_default=sa.func.now())
+    )
+    op.create_index(&#x27;idx_users_email&#x27;, &#x27;users&#x27;, [&#x27;email&#x27;])
 
-ws.onclose = (event) =&gt; {
-  console.log(&#x27;Disconnected:&#x27;, event.code, event.reason);
-};</code></pre>
-<p><strong>Send Binary Data</strong>:</p>
-<pre><code class="lang-javascript">// ArrayBuffer
-const buffer = new ArrayBuffer(4);
-const view = new DataView(buffer);
-view.setUint32(0, 42);
-ws.send(buffer);
+def downgrade():
+    op.drop_index(&#x27;idx_users_email&#x27;, &#x27;users&#x27;)
+    op.drop_table(&#x27;users&#x27;)</code></pre>
+<p><strong>Commands</strong>:</p>
+<pre><code class="lang-bash">alembic upgrade head        # Apply all migrations
+alembic upgrade +1          # Apply one migration
+alembic downgrade -1        # Rollback one migration
+alembic current             # Show current version
+alembic history             # Show migration history
+alembic stamp head          # Mark as current without running
+alembic revision --sql ...  # Generate SQL without applying</code></pre>
+<p><strong>Branching</strong>:</p>
+<pre><code class="lang-bash"># Create branch
+alembic revision -m &quot;feature A&quot; --head=base --branch-label=feature_a
+alembic revision -m &quot;feature B&quot; --head=base --branch-label=feature_b
 
-// Blob
-const blob = new Blob([&#x27;binary data&#x27;]);
-ws.send(blob);</code></pre>
-<p><strong>Receive Binary Data</strong>:</p>
-<pre><code class="lang-javascript">ws.binaryType = &#x27;arraybuffer&#x27;; // or &#x27;blob&#x27;
+# Merge branches
+alembic merge -m &quot;merge features&quot; feature_a feature_b</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Tight SQLAlchemy integration</li><li>Auto-generate migrations</li><li>Advanced branching/merging</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Python-only</li><li>Auto-generate not always accurate</li><li>Complex for simple projects</li></ul>
+<hr>
+<h3>Liquibase</h3>
+<p><strong>Language</strong>: Java/XML/YAML/SQL <strong>Philosophy</strong>: Database-agnostic, change sets <strong>Best for</strong>: Enterprise multi-database environments</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Database-agnostic (Postgres, MySQL, Oracle, etc.)</li><li>XML/YAML/SQL/JSON formats</li><li>Preconditions and contexts</li><li>Rollback tags</li></ul>
+<p><strong>Example (YAML)</strong>:</p>
+<pre><code class="lang-yaml"># changelog.yml
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: developer
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: SERIAL
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+                  constraints:
+                    unique: true
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: users</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Database-agnostic</li><li>Rich feature set</li><li>Enterprise support</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Complex XML/YAML syntax</li><li>Java dependency</li><li>Steeper learning curve</li></ul>
+<hr>
+<h3>dbmate</h3>
+<p><strong>Language</strong>: Any/SQL <strong>Philosophy</strong>: Simple, language-agnostic, minimal <strong>Best for</strong>: Polyglot projects, simple setups</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Single binary</li><li>Simple up/down SQL</li><li>No dependencies</li><li>URL-based configuration</li></ul>
+<p><strong>Installation</strong>:</p>
+<pre><code class="lang-bash"># macOS
+brew install dbmate
 
-ws.onmessage = (event) =&gt; {
-  if (event.data instanceof ArrayBuffer) {
-    const view = new DataView(event.data);
-    const value = view.getUint32(0);
-    console.log(&#x27;Binary:&#x27;, value);
-  } else {
-    console.log(&#x27;Text:&#x27;, event.data);
+# Or download binary
+curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
+chmod +x /usr/local/bin/dbmate</code></pre>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-bash"># Set database URL
+export DATABASE_URL=&quot;postgres://localhost:5432/mydb?sslmode=disable&quot;
+
+# Create migration
+dbmate new add_users_table
+
+# Apply migrations
+dbmate up
+
+# Rollback
+dbmate down
+
+# Status
+dbmate status</code></pre>
+<p><strong>Migration File</strong>:</p>
+<pre><code class="lang-sql">-- migrations/20231027120000_add_users_table.sql
+-- migrate:up
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL
+);
+
+-- migrate:down
+-- Example of rollback migration - destructive operation for reverting schema
+DROP TABLE users;</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Dead simple</li><li>Language-agnostic</li><li>Lightweight</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Limited features</li><li>No auto-generate</li><li>No branching</li></ul>
+<hr>
+<h3>Atlas</h3>
+<p><strong>Language</strong>: Go/HCL <strong>Philosophy</strong>: Modern, declarative, schema-as-code <strong>Best for</strong>: Modern Go applications, GitOps workflows</p>
+<p><strong>Features</strong>:</p>
+<ul><li>Declarative schema definition</li><li>Automatic migration generation</li><li>Schema diffing</li><li>Policy-as-code (Pro)</li><li>Cloud integration (Pro)</li></ul>
+<p><strong>Schema Definition</strong>:</p>
+<pre><code class="lang-hcl">// schema.hcl
+table &quot;users&quot; {
+  schema = schema.public
+  column &quot;id&quot; {
+    type = serial
   }
-};</code></pre>
-<h3>Node.js Client (ws library)</h3>
-<pre><code class="lang-javascript">const WebSocket = require(&#x27;ws&#x27;);
-
-const ws = new WebSocket(&#x27;wss://api.example.com/ws&#x27;);
-
-ws.on(&#x27;open&#x27;, () =&gt; {
-  console.log(&#x27;Connected&#x27;);
-  ws.send(&#x27;Hello&#x27;);
-});
-
-ws.on(&#x27;message&#x27;, (data, isBinary) =&gt; {
-  console.log(&#x27;Received:&#x27;, data.toString());
-});
-
-ws.on(&#x27;close&#x27;, (code, reason) =&gt; {
-  console.log(&#x27;Closed:&#x27;, code, reason.toString());
-});
-
-ws.on(&#x27;error&#x27;, (error) =&gt; {
-  console.error(&#x27;Error:&#x27;, error);
-});</code></pre>
-<h3>Python Client (websockets)</h3>
-<pre><code class="lang-python">import asyncio
-import websockets
-
-async def client():
-    async with websockets.connect(&#x27;wss://api.example.com/ws&#x27;) as ws:
-        await ws.send(&#x27;Hello&#x27;)
-
-        async for message in ws:
-            print(f&quot;Received: {message}&quot;)
-
-asyncio.run(client())</code></pre>
-<h3>React Hook (useWebSocket)</h3>
-<pre><code class="lang-typescript">import { useEffect, useRef, useState } from &#x27;react&#x27;;
-
-function useWebSocket(url: string) {
-  const [isConnected, setIsConnected] = useState(false);
-  const [lastMessage, setLastMessage] = useState&lt;string | null&gt;(null);
-  const ws = useRef&lt;WebSocket | null&gt;(null);
-
-  useEffect(() =&gt; {
-    ws.current = new WebSocket(url);
-
-    ws.current.onopen = () =&gt; {
-      setIsConnected(true);
-    };
-
-    ws.current.onmessage = (event) =&gt; {
-      setLastMessage(event.data);
-    };
-
-    ws.current.onclose = () =&gt; {
-      setIsConnected(false);
-    };
-
-    return () =&gt; {
-      ws.current?.close();
-    };
-  }, [url]);
-
-  const send = (data: string) =&gt; {
-    if (ws.current?.readyState === WebSocket.OPEN) {
-      ws.current.send(data);
-    }
-  };
-
-  return { isConnected, lastMessage, send };
-}
-
-// Usage
-function App() {
-  const { isConnected, lastMessage, send } = useWebSocket(&#x27;wss://api.example.com/ws&#x27;);
-
-  return (
-    &lt;div&gt;
-      &lt;p&gt;Status: {isConnected ? &#x27;Connected&#x27; : &#x27;Disconnected&#x27;}&lt;/p&gt;
-      &lt;p&gt;Last message: {lastMessage}&lt;/p&gt;
-      &lt;button onClick={() =&gt; send(&#x27;Hello&#x27;)}&gt;Send&lt;/button&gt;
-    &lt;/div&gt;
-  );
-}</code></pre>
-<hr>
-<h2>Testing Strategies</h2>
-<h3>Unit Testing</h3>
-<p><strong>Test Message Handling</strong>:</p>
-<pre><code class="lang-javascript">const WebSocket = require(&#x27;ws&#x27;);
-
-describe(&#x27;WebSocket Handler&#x27;, () =&gt; {
-  let wss, ws;
-
-  beforeAll((done) =&gt; {
-    wss = new WebSocket.Server({ port: 8080 });
-    wss.on(&#x27;connection&#x27;, (socket) =&gt; {
-      socket.on(&#x27;message&#x27;, (data) =&gt; {
-        const msg = JSON.parse(data);
-        socket.send(JSON.stringify({ echo: msg }));
-      });
-    });
-    done();
-  });
-
-  afterAll(() =&gt; {
-    wss.close();
-  });
-
-  test(&#x27;echoes message&#x27;, (done) =&gt; {
-    ws = new WebSocket(&#x27;ws://localhost:8080&#x27;);
-
-    ws.on(&#x27;open&#x27;, () =&gt; {
-      ws.send(JSON.stringify({ test: &#x27;data&#x27; }));
-    });
-
-    ws.on(&#x27;message&#x27;, (data) =&gt; {
-      const msg = JSON.parse(data);
-      expect(msg.echo.test).toBe(&#x27;data&#x27;);
-      ws.close();
-      done();
-    });
-  });
-});</code></pre>
-<h3>Integration Testing</h3>
-<p><strong>Test Full Flow</strong>:</p>
-<pre><code class="lang-javascript">describe(&#x27;Chat Integration&#x27;, () =&gt; {
-  let server, client1, client2;
-
-  beforeAll(async () =&gt; {
-    server = new WebSocket.Server({ port: 8080 });
-    // Setup broadcast logic
-
-    client1 = new WebSocket(&#x27;ws://localhost:8080&#x27;);
-    client2 = new WebSocket(&#x27;ws://localhost:8080&#x27;);
-
-    await Promise.all([
-      new Promise((resolve) =&gt; client1.on(&#x27;open&#x27;, resolve)),
-      new Promise((resolve) =&gt; client2.on(&#x27;open&#x27;, resolve))
-    ]);
-  });
-
-  test(&#x27;broadcasts message to all clients&#x27;, (done) =&gt; {
-    client2.on(&#x27;message&#x27;, (data) =&gt; {
-      expect(data.toString()).toBe(&#x27;Hello&#x27;);
-      done();
-    });
-
-    client1.send(&#x27;Hello&#x27;);
-  });
-
-  afterAll(() =&gt; {
-    client1.close();
-    client2.close();
-    server.close();
-  });
-});</code></pre>
-<h3>Load Testing</h3>
-<p><strong>Artillery</strong>:</p>
-<pre><code class="lang-yaml"># artillery.yml
-config:
-  target: &quot;wss://api.example.com&quot;
-  phases:
-    - duration: 60
-      arrivalRate: 10
-      name: &quot;Warm up&quot;
-    - duration: 120
-      arrivalRate: 50
-      name: &quot;Sustained load&quot;
-  engines:
-    ws:
-      timeout: 60
-
-scenarios:
-  - engine: ws
-    flow:
-      - connect:
-          target: &quot;/ws&quot;
-      - send: &#x27;{&quot;type&quot;: &quot;join&quot;, &quot;room&quot;: &quot;test&quot;}&#x27;
-      - think: 1
-      - loop:
-          - send: &#x27;{&quot;type&quot;: &quot;message&quot;, &quot;text&quot;: &quot;Hello&quot;}&#x27;
-          - think: 2
-        count: 10</code></pre>
-<pre><code class="lang-bash">artillery run artillery.yml</code></pre>
-<p><strong>k6</strong>:</p>
-<pre><code class="lang-javascript">import ws from &#x27;k6/ws&#x27;;
-import { check } from &#x27;k6&#x27;;
-
-export let options = {
-  vus: 100,
-  duration: &#x27;30s&#x27;,
-};
-
-export default function () {
-  const url = &#x27;wss://api.example.com/ws&#x27;;
-
-  const res = ws.connect(url, {}, function (socket) {
-    socket.on(&#x27;open&#x27;, () =&gt; socket.send(&#x27;Hello&#x27;));
-
-    socket.on(&#x27;message&#x27;, (data) =&gt; {
-      console.log(&#x27;Received:&#x27;, data);
-    });
-
-    socket.setTimeout(() =&gt; {
-      socket.close();
-    }, 10000);
-  });
-
-  check(res, { &#x27;status is 101&#x27;: (r) =&gt; r &amp;&amp; r.status === 101 });
-}</code></pre>
-<hr>
-<h2>Common Patterns</h2>
-<h3>Chat Application</h3>
-<p><strong>Server</strong> (Node.js):</p>
-<pre><code class="lang-javascript">const rooms = new Map();
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  ws.on(&#x27;message&#x27;, (data) =&gt; {
-    const msg = JSON.parse(data);
-
-    switch (msg.type) {
-      case &#x27;join&#x27;:
-        if (!rooms.has(msg.room)) {
-          rooms.set(msg.room, new Set());
-        }
-        rooms.get(msg.room).add(ws);
-        ws.room = msg.room;
-        ws.username = msg.username;
-        break;
-
-      case &#x27;message&#x27;:
-        const room = rooms.get(ws.room);
-        if (room) {
-          const payload = JSON.stringify({
-            type: &#x27;message&#x27;,
-            username: ws.username,
-            text: msg.text,
-            timestamp: Date.now()
-          });
-
-          room.forEach((client) =&gt; {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(payload);
-            }
-          });
-        }
-        break;
-    }
-  });
-
-  ws.on(&#x27;close&#x27;, () =&gt; {
-    if (ws.room &amp;&amp; rooms.has(ws.room)) {
-      rooms.get(ws.room).delete(ws);
-    }
-  });
-});</code></pre>
-<p><strong>Client</strong> (React):</p>
-<pre><code class="lang-typescript">function Chat() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState(&#x27;&#x27;);
-  const ws = useRef&lt;WebSocket&gt;();
-
-  useEffect(() =&gt; {
-    ws.current = new WebSocket(&#x27;wss://api.example.com/ws&#x27;);
-
-    ws.current.onopen = () =&gt; {
-      ws.current.send(JSON.stringify({
-        type: &#x27;join&#x27;,
-        room: &#x27;general&#x27;,
-        username: &#x27;Alice&#x27;
-      }));
-    };
-
-    ws.current.onmessage = (event) =&gt; {
-      const msg = JSON.parse(event.data);
-      setMessages((prev) =&gt; [...prev, msg]);
-    };
-
-    return () =&gt; ws.current?.close();
-  }, []);
-
-  const sendMessage = () =&gt; {
-    ws.current?.send(JSON.stringify({
-      type: &#x27;message&#x27;,
-      text: input
-    }));
-    setInput(&#x27;&#x27;);
-  };
-
-  return (
-    &lt;div&gt;
-      {messages.map((msg, i) =&gt; (
-        &lt;div key={i}&gt;{msg.username}: {msg.text}&lt;/div&gt;
-      ))}
-      &lt;input value={input} onChange={(e) =&gt; setInput(e.target.value)} /&gt;
-      &lt;button onClick={sendMessage}&gt;Send&lt;/button&gt;
-    &lt;/div&gt;
-  );
-}</code></pre>
-<h3>Real-Time Dashboard</h3>
-<p><strong>Server</strong> (push updates):</p>
-<pre><code class="lang-javascript">const clients = new Set();
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  clients.add(ws);
-
-  ws.on(&#x27;close&#x27;, () =&gt; {
-    clients.remove(ws);
-  });
-});
-
-// Push data updates
-setInterval(() =&gt; {
-  const data = {
-    type: &#x27;metrics&#x27;,
-    cpu: Math.random() * 100,
-    memory: Math.random() * 100,
-    timestamp: Date.now()
-  };
-
-  clients.forEach((client) =&gt; {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(data));
-    }
-  });
-}, 1000);</code></pre>
-<p><strong>Client</strong> (React with Chart):</p>
-<pre><code class="lang-typescript">function Dashboard() {
-  const [metrics, setMetrics] = useState([]);
-
-  useEffect(() =&gt; {
-    const ws = new WebSocket(&#x27;wss://api.example.com/ws&#x27;);
-
-    ws.onmessage = (event) =&gt; {
-      const data = JSON.parse(event.data);
-      setMetrics((prev) =&gt; [...prev.slice(-60), data]); // Keep last 60
-    };
-
-    return () =&gt; ws.close();
-  }, []);
-
-  return (
-    &lt;LineChart data={metrics}&gt;
-      &lt;Line dataKey=&quot;cpu&quot; stroke=&quot;#8884d8&quot; /&gt;
-      &lt;Line dataKey=&quot;memory&quot; stroke=&quot;#82ca9d&quot; /&gt;
-    &lt;/LineChart&gt;
-  );
-}</code></pre>
-<h3>Multiplayer Game (State Sync)</h3>
-<p><strong>Server</strong>:</p>
-<pre><code class="lang-javascript">const gameState = {
-  players: new Map()
-};
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  const playerId = generateId();
-
-  gameState.players.set(playerId, {
-    id: playerId,
-    x: 0,
-    y: 0
-  });
-
-  // Send full state to new player
-  ws.send(JSON.stringify({
-    type: &#x27;init&#x27;,
-    playerId,
-    state: Array.from(gameState.players.values())
-  }));
-
-  // Broadcast new player to others
-  broadcast({
-    type: &#x27;player_joined&#x27;,
-    player: gameState.players.get(playerId)
-  });
-
-  ws.on(&#x27;message&#x27;, (data) =&gt; {
-    const msg = JSON.parse(data);
-
-    if (msg.type === &#x27;move&#x27;) {
-      const player = gameState.players.get(playerId);
-      player.x = msg.x;
-      player.y = msg.y;
-
-      // Broadcast position update
-      broadcast({
-        type: &#x27;player_moved&#x27;,
-        playerId,
-        x: msg.x,
-        y: msg.y
-      });
-    }
-  });
-
-  ws.on(&#x27;close&#x27;, () =&gt; {
-    gameState.players.delete(playerId);
-    broadcast({
-      type: &#x27;player_left&#x27;,
-      playerId
-    });
-  });
-});</code></pre>
-<hr>
-<h2>Comparison with Alternatives</h2>
-<h3>Server-Sent Events (SSE)</h3>
-<p><strong>SSE Characteristics</strong>:</p>
-<ul><li>Unidirectional (server → client only)</li><li>HTTP-based (simpler than WebSocket)</li><li>Automatic reconnection</li><li>Text-only (no binary)</li><li>EventSource API in browsers</li></ul>
-<p><strong>When to Use SSE</strong>:</p>
-<ul><li>One-way server push (notifications, live feeds)</li><li>Simpler infrastructure requirements</li><li>No binary data needed</li><li>Want automatic reconnection</li></ul>
-<p><strong>When to Use WebSocket</strong>:</p>
-<ul><li>Bidirectional communication needed</li><li>Low latency critical</li><li>Binary data</li><li>Custom protocols</li></ul>
-<p><strong>SSE Example</strong>:</p>
-<pre><code class="lang-javascript">// Server (Express)
-app.get(&#x27;/events&#x27;, (req, res) =&gt; {
-  res.setHeader(&#x27;Content-Type&#x27;, &#x27;text/event-stream&#x27;);
-  res.setHeader(&#x27;Cache-Control&#x27;, &#x27;no-cache&#x27;);
-  res.setHeader(&#x27;Connection&#x27;, &#x27;keep-alive&#x27;);
-
-  const interval = setInterval(() =&gt; {
-    res.write(`data: ${JSON.stringify({ time: Date.now() })}\n\n`);
-  }, 1000);
-
-  req.on(&#x27;close&#x27;, () =&gt; {
-    clearInterval(interval);
-  });
-});
-
-// Client
-const eventSource = new EventSource(&#x27;/events&#x27;);
-
-eventSource.onmessage = (event) =&gt; {
-  const data = JSON.parse(event.data);
-  console.log(data);
-};</code></pre>
-<h3>Long Polling</h3>
-<p><strong>Characteristics</strong>:</p>
-<ul><li>Client repeatedly requests updates</li><li>Server holds request until data available</li><li>High overhead (new request each time)</li></ul>
-<p><strong>When to Use Long Polling</strong>:</p>
-<ul><li>Legacy browser support</li><li>Restrictive firewall/proxy</li><li>Very infrequent updates</li></ul>
-<p><strong>When to Use WebSocket</strong>:</p>
-<ul><li>Frequent updates</li><li>Modern browsers</li><li>Real-time requirements</li></ul>
-<h3>HTTP/2 Server Push</h3>
-<p><strong>Characteristics</strong>:</p>
-<ul><li>Server can push resources proactively</li><li>Still request/response model</li><li>Limited browser support</li></ul>
-<p><strong>WebSocket Advantages</strong>:</p>
-<ul><li>True bidirectional</li><li>Lower overhead</li><li>Better browser support</li><li>Persistent connection</li></ul>
-<hr>
-<h2>Production Best Practices</h2>
-<h3>Monitoring</h3>
-<p><strong>Key Metrics</strong>:</p>
-<ul><li>Active connections count</li><li>Message throughput (messages/sec)</li><li>Message latency (time from send to receive)</li><li>Connection duration</li><li>Reconnection rate</li><li>Error rate</li><li>Memory usage per connection</li></ul>
-<p><strong>Prometheus Metrics</strong>:</p>
-<pre><code class="lang-javascript">const prometheus = require(&#x27;prom-client&#x27;);
-
-const activeConnections = new prometheus.Gauge({
-  name: &#x27;websocket_connections_active&#x27;,
-  help: &#x27;Number of active WebSocket connections&#x27;
-});
-
-const messagesTotal = new prometheus.Counter({
-  name: &#x27;websocket_messages_total&#x27;,
-  help: &#x27;Total number of WebSocket messages&#x27;,
-  labelNames: [&#x27;direction&#x27;, &#x27;type&#x27;]
-});
-
-const messageLatency = new prometheus.Histogram({
-  name: &#x27;websocket_message_latency_seconds&#x27;,
-  help: &#x27;WebSocket message latency&#x27;,
-  buckets: [0.001, 0.01, 0.1, 0.5, 1]
-});
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  activeConnections.inc();
-
-  ws.on(&#x27;message&#x27;, (data) =&gt; {
-    messagesTotal.inc({ direction: &#x27;inbound&#x27;, type: &#x27;text&#x27; });
-
-    const start = Date.now();
-    // Process message
-    const duration = (Date.now() - start) / 1000;
-    messageLatency.observe(duration);
-  });
-
-  ws.on(&#x27;close&#x27;, () =&gt; {
-    activeConnections.dec();
-  });
-});</code></pre>
-<h3>Logging</h3>
-<p><strong>Structured Logging</strong>:</p>
-<pre><code class="lang-javascript">const winston = require(&#x27;winston&#x27;);
-
-const logger = winston.createLogger({
-  format: winston.format.json(),
-  transports: [
-    new winston.transports.File({ filename: &#x27;websocket.log&#x27; })
-  ]
-});
-
-wss.on(&#x27;connection&#x27;, (ws, req) =&gt; {
-  const connId = generateId();
-
-  logger.info(&#x27;connection&#x27;, {
-    connId,
-    ip: req.socket.remoteAddress,
-    origin: req.headers.origin
-  });
-
-  ws.on(&#x27;message&#x27;, (data) =&gt; {
-    logger.debug(&#x27;message&#x27;, {
-      connId,
-      size: data.length,
-      type: typeof data
-    });
-  });
-
-  ws.on(&#x27;close&#x27;, (code, reason) =&gt; {
-    logger.info(&#x27;disconnect&#x27;, {
-      connId,
-      code,
-      reason: reason.toString()
-    });
-  });
-
-  ws.on(&#x27;error&#x27;, (error) =&gt; {
-    logger.error(&#x27;error&#x27;, {
-      connId,
-      error: error.message,
-      stack: error.stack
-    });
-  });
-});</code></pre>
-<h3>Resource Limits</h3>
-<p><strong>Per-Connection Limits</strong>:</p>
-<pre><code class="lang-javascript">const MAX_MESSAGE_SIZE = 100 * 1024; // 100KB
-const MAX_MESSAGES_PER_MINUTE = 60;
-
-const wss = new WebSocket.Server({
-  port: 8080,
-  maxPayload: MAX_MESSAGE_SIZE
-});
-
-const rateLimits = new WeakMap();
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  rateLimits.set(ws, {
-    count: 0,
-    resetAt: Date.now() + 60000
-  });
-
-  ws.on(&#x27;message&#x27;, (data) =&gt; {
-    const limit = rateLimits.get(ws);
-
-    if (Date.now() &gt; limit.resetAt) {
-      limit.count = 0;
-      limit.resetAt = Date.now() + 60000;
-    }
-
-    if (++limit.count &gt; MAX_MESSAGES_PER_MINUTE) {
-      ws.close(1008, &#x27;Rate limit exceeded&#x27;);
-      return;
-    }
-  });
-});</code></pre>
-<h3>Graceful Shutdown</h3>
-<pre><code class="lang-javascript">process.on(&#x27;SIGTERM&#x27;, () =&gt; {
-  console.log(&#x27;SIGTERM received, closing connections&#x27;);
-
-  wss.clients.forEach((ws) =&gt; {
-    ws.close(1001, &#x27;Server shutting down&#x27;);
-  });
-
-  const timeout = setTimeout(() =&gt; {
-    console.log(&#x27;Force closing remaining connections&#x27;);
-    wss.close(() =&gt; {
-      process.exit(0);
-    });
-  }, 30000);
-
-  wss.close(() =&gt; {
-    clearTimeout(timeout);
-    process.exit(0);
-  });
-});</code></pre>
-<hr>
-<h2>Troubleshooting</h2>
-<h3>Connection Fails</h3>
-<p><strong>Check</strong>:</p>
-<ol><li>Correct URL scheme (ws:// vs wss://)</li><li>Server is running and accessible</li><li>Firewall allows WebSocket connections</li><li>Load balancer configured for WebSocket upgrade</li><li>Certificate valid (for wss://)</li></ol>
-<p><strong>Debug</strong>:</p>
-<pre><code class="lang-javascript">ws.onerror = (error) =&gt; {
-  console.error(&#x27;Connection error:&#x27;, error);
-  // Check: incorrect URL, network issues, server down
-};
-
-ws.onclose = (event) =&gt; {
-  console.log(&#x27;Close code:&#x27;, event.code);
-  console.log(&#x27;Close reason:&#x27;, event.reason);
-  // 1006 = abnormal closure (network issue)
-  // 1011 = server error
-};</code></pre>
-<h3>Messages Not Received</h3>
-<p><strong>Check</strong>:</p>
-<ol><li>Connection state (OPEN)</li><li>Message size within limits</li><li>Proper masking (client→server)</li><li>Valid UTF-8 (text messages)</li><li>Server is broadcasting correctly</li></ol>
-<p><strong>Debug</strong>:</p>
-<pre><code class="lang-javascript">console.log(&#x27;WebSocket state:&#x27;, ws.readyState);
-// 0 = CONNECTING, 1 = OPEN, 2 = CLOSING, 3 = CLOSED
-
-if (ws.readyState === WebSocket.OPEN) {
-  ws.send(&#x27;test&#x27;);
-} else {
-  console.warn(&#x27;Cannot send, connection not open&#x27;);
-}</code></pre>
-<h3>High Latency</h3>
-<p><strong>Causes</strong>:</p>
-<ul><li>Network congestion</li><li>Server overload</li><li>Message queue backlog</li><li>Slow message processing</li></ul>
-<p><strong>Solutions</strong>:</p>
-<pre><code class="lang-javascript">// Measure latency
-ws.send(JSON.stringify({ type: &#x27;ping&#x27;, sent: Date.now() }));
-
-ws.onmessage = (event) =&gt; {
-  const msg = JSON.parse(event.data);
-  if (msg.type === &#x27;pong&#x27;) {
-    const latency = Date.now() - msg.sent;
-    console.log(&#x27;Latency:&#x27;, latency, &#x27;ms&#x27;);
+  column &quot;email&quot; {
+    type = varchar(255)
   }
-};
-
-// Server-side processing time
-const start = Date.now();
-// ... process message ...
-const duration = Date.now() - start;
-if (duration &gt; 100) {
-  console.warn(&#x27;Slow processing:&#x27;, duration, &#x27;ms&#x27;);
-}</code></pre>
-<h3>Memory Leaks</h3>
-<p><strong>Common Causes</strong>:</p>
-<ul><li>Not removing event listeners</li><li>Storing references to closed connections</li><li>Unbounded message buffers</li></ul>
-<p><strong>Prevention</strong>:</p>
-<pre><code class="lang-javascript">const clients = new Set();
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  clients.add(ws);
-
-  ws.on(&#x27;close&#x27;, () =&gt; {
-    clients.delete(ws); // Clean up reference
-  });
-});
-
-// Use WeakMap for connection metadata
-const metadata = new WeakMap();
-
-wss.on(&#x27;connection&#x27;, (ws) =&gt; {
-  metadata.set(ws, { /* data */ }); // Auto-cleaned when ws GC&#x27;d
-});</code></pre>
-<hr>
-<h2>Performance Optimization</h2>
-<h3>Compression</h3>
-<p>Enable permessage-deflate for text messages:</p>
-<pre><code class="lang-javascript">const wss = new WebSocket.Server({
-  perMessageDeflate: {
-    threshold: 1024 // Only compress &gt; 1KB
+  primary_key {
+    columns = [column.id]
   }
-});</code></pre>
+  index &quot;idx_email&quot; {
+    unique  = true
+    columns = [column.email]
+  }
+}</code></pre>
+<p><strong>Commands</strong>:</p>
+<pre><code class="lang-bash"># Inspect current schema
+atlas schema inspect -u &quot;postgres://localhost:5432/db&quot; &gt; schema.hcl
+
+# Generate migration
+atlas migrate diff add_users --env local
+
+# Apply migrations
+atlas migrate apply --env local
+
+# Validate
+atlas migrate validate --env local</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Modern, declarative approach</li><li>Type-safe schema definitions</li><li>Great CI/CD integration</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Newer tool (less mature)</li><li>Pro features require license</li><li>Go-centric</li></ul>
+<hr>
+<h2>Writing Safe Migrations</h2>
+<h3>Safety Principles</h3>
+<ol><li><strong>Idempotency</strong>: Safe to run multiple times</li><li><strong>Atomicity</strong>: All-or-nothing changes</li><li><strong>Reversibility</strong>: Can undo changes</li><li><strong>Non-blocking</strong>: Don&#x27;t lock tables</li><li><strong>Backward compatible</strong>: Old code still works</li><li><strong>Testable</strong>: Can verify locally</li></ol>
+<h3>Idempotent Migrations</h3>
+<p><strong>Problem</strong>: Migration fails halfway, retried, errors on existing objects.</p>
+<p><strong>Solution</strong>: Use <code>IF NOT EXISTS</code> / <code>IF EXISTS</code>.</p>
+<pre><code class="lang-sql">-- ✅ GOOD: Idempotent
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255)
+);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+ALTER TABLE users ADD CONSTRAINT IF NOT EXISTS users_email_unique UNIQUE (email);
+
+-- ✅ GOOD: Idempotent drop (safe cleanup operation)
+DROP TABLE IF EXISTS old_temp_table;
+
+DROP INDEX IF EXISTS idx_old_index;</code></pre>
+<p><strong>PostgreSQL version check</strong>:</p>
+<pre><code class="lang-sql">-- IF NOT EXISTS added in:
+-- CREATE TABLE IF NOT EXISTS: 9.1+
+-- ALTER TABLE ADD COLUMN IF NOT EXISTS: 9.6+
+-- CREATE INDEX IF NOT EXISTS: 9.5+</code></pre>
+<h3>Transaction Wrapping</h3>
+<p><strong>Use transactions when possible</strong>:</p>
+<pre><code class="lang-sql">BEGIN;
+
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id),
+    total DECIMAL(10,2) NOT NULL
+);
+
+CREATE INDEX idx_orders_user_id ON orders(user_id);
+
+COMMIT;</code></pre>
+<p><strong>When NOT to use transactions</strong>:</p>
+<pre><code class="lang-sql">-- ❌ Cannot run in transaction block
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
+DROP INDEX CONCURRENTLY idx_old_index;
+VACUUM;
+REINDEX CONCURRENTLY;</code></pre>
+<p><strong>Solution</strong>: Split into separate migration files.</p>
+<pre><code class="lang-sql">-- V1__add_orders_table.sql (transactional)
+BEGIN;
+CREATE TABLE orders (...);
+COMMIT;
+
+-- V2__add_orders_index.sql (non-transactional)
+CREATE INDEX CONCURRENTLY idx_orders_user_id ON orders(user_id);</code></pre>
+<h3>Checking Constraints Without Locking</h3>
+<p><strong>Problem</strong>: <code>ALTER TABLE ADD CONSTRAINT</code> locks table for validation.</p>
+<p><strong>Solution</strong>: Add constraint as <code>NOT VALID</code>, then validate separately.</p>
+<pre><code class="lang-sql">-- Step 1: Add constraint without validation (fast, allows writes)
+ALTER TABLE users
+ADD CONSTRAINT check_age_positive
+CHECK (age &gt; 0) NOT VALID;
+
+-- Step 2: Validate constraint (slow, but doesn&#x27;t block writes)
+ALTER TABLE users VALIDATE CONSTRAINT check_age_positive;</code></pre>
+<p><strong>Locking behavior</strong>:</p>
+<ul><li><code>ADD CONSTRAINT ... NOT VALID</code>: ShareUpdateExclusiveLock (allows SELECT, INSERT, UPDATE, DELETE)</li><li><code>VALIDATE CONSTRAINT</code>: ShareUpdateExclusiveLock (allows SELECT, INSERT, UPDATE, DELETE)</li></ul>
+<h3>Creating Indexes Without Locking</h3>
+<p><strong>Problem</strong>: <code>CREATE INDEX</code> takes AccessExclusiveLock, blocks all queries.</p>
+<p><strong>Solution</strong>: <code>CREATE INDEX CONCURRENTLY</code></p>
+<pre><code class="lang-sql">-- ❌ BAD: Locks table
+CREATE INDEX idx_users_email ON users(email);
+
+-- ✅ GOOD: No lock
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);</code></pre>
 <p><strong>Trade-offs</strong>:</p>
-<ul><li>CPU usage vs bandwidth</li><li>Latency increase (compression time)</li><li>Memory usage (compression contexts)</li></ul>
-<h3>Binary Protocols</h3>
-<p>Use binary formats for structured data:</p>
-<p><strong>MessagePack</strong>:</p>
-<pre><code class="lang-javascript">const msgpack = require(&#x27;msgpack-lite&#x27;);
+<ul><li>Takes 2-3x longer than regular CREATE INDEX</li><li>Cannot run in transaction</li><li>Can fail and leave invalid index</li></ul>
+<p><strong>Check for invalid indexes</strong>:</p>
+<pre><code class="lang-sql">SELECT
+    schemaname,
+    tablename,
+    indexname,
+    indexdef
+FROM pg_indexes
+WHERE indexname NOT IN (
+    SELECT indexrelid::regclass::text
+    FROM pg_index
+    WHERE indisvalid
+);
 
-// Send
-const data = { user: &#x27;Alice&#x27;, count: 42 };
-const encoded = msgpack.encode(data);
-ws.send(encoded, { binary: true });
+-- Or simpler:
+SELECT indexrelid::regclass AS index_name
+FROM pg_index
+WHERE NOT indisvalid;</code></pre>
+<p><strong>Clean up invalid index</strong>:</p>
+<pre><code class="lang-sql">DROP INDEX CONCURRENTLY idx_users_email;
+-- Then retry creation
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);</code></pre>
+<h3>Adding NOT NULL Columns</h3>
+<p><strong>Problem</strong>: Adding NOT NULL column to non-empty table fails.</p>
+<p><strong>Solution</strong>: Multi-step approach.</p>
+<pre><code class="lang-sql">-- ❌ FAILS on existing rows
+ALTER TABLE users ADD COLUMN phone VARCHAR(20) NOT NULL;
+-- ERROR: column &quot;phone&quot; contains null values
 
-// Receive
-ws.on(&#x27;message&#x27;, (data, isBinary) =&gt; {
-  if (isBinary) {
-    const decoded = msgpack.decode(data);
-  }
-});</code></pre>
-<p><strong>Protocol Buffers</strong>:</p>
-<pre><code class="lang-protobuf">message ChatMessage {
-  string username = 1;
-  string text = 2;
-  int64 timestamp = 3;
-}</code></pre>
-<pre><code class="lang-javascript">const protobuf = require(&#x27;protobufjs&#x27;);
+-- ✅ GOOD: Multi-step
+-- Step 1: Add nullable column
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
 
-const root = protobuf.loadSync(&#x27;chat.proto&#x27;);
-const ChatMessage = root.lookupType(&#x27;ChatMessage&#x27;);
+-- Step 2: Backfill (in batches, see Data Migrations section)
+UPDATE users SET phone = &#x27;unknown&#x27; WHERE phone IS NULL;
 
-// Send
-const message = ChatMessage.create({
-  username: &#x27;Alice&#x27;,
-  text: &#x27;Hello&#x27;,
-  timestamp: Date.now()
-});
-const buffer = ChatMessage.encode(message).finish();
-ws.send(buffer, { binary: true });</code></pre>
-<h3>Batching</h3>
-<p>Reduce overhead by batching multiple messages:</p>
-<pre><code class="lang-javascript">const batch = [];
-const BATCH_SIZE = 10;
-const BATCH_INTERVAL = 100; // ms
+-- Step 3: Add NOT NULL constraint (fast, already validated)
+ALTER TABLE users ALTER COLUMN phone SET NOT NULL;</code></pre>
+<p><strong>Alternative with default</strong>:</p>
+<pre><code class="lang-sql">-- ✅ GOOD: Use default value
+ALTER TABLE users ADD COLUMN phone VARCHAR(20) NOT NULL DEFAULT &#x27;unknown&#x27;;
 
-function queueMessage(msg) {
-  batch.push(msg);
-
-  if (batch.length &gt;= BATCH_SIZE) {
-    flushBatch();
-  }
-}
-
-function flushBatch() {
-  if (batch.length === 0) return;
-
-  ws.send(JSON.stringify(batch));
-  batch.length = 0;
-}
-
-setInterval(flushBatch, BATCH_INTERVAL);</code></pre>
-<h3>Connection Pooling (Client)</h3>
-<p>Reuse connections for multiple logical channels:</p>
-<pre><code class="lang-javascript">class WebSocketPool {
-  constructor(url, size) {
-    this.connections = [];
-    for (let i = 0; i &lt; size; i++) {
-      this.connections.push(new WebSocket(url));
-    }
-    this.index = 0;
-  }
-
-  getConnection() {
-    const conn = this.connections[this.index];
-    this.index = (this.index + 1) % this.connections.length;
-    return conn;
-  }
-
-  send(data) {
-    const conn = this.getConnection();
-    if (conn.readyState === WebSocket.OPEN) {
-      conn.send(data);
-    }
-  }
-}
-
-const pool = new WebSocketPool(&#x27;wss://api.example.com/ws&#x27;, 5);
-pool.send(&#x27;message 1&#x27;);
-pool.send(&#x27;message 2&#x27;);</code></pre>
+-- Optionally remove default after
+ALTER TABLE users ALTER COLUMN phone DROP DEFAULT;</code></pre>
+<p><strong>Note</strong>: Adding column with DEFAULT rewrites entire table in PG &lt; 11. In PG 11+, it&#x27;s fast (default stored in metadata).</p>
 <hr>
-<p><strong>End of WebSocket Reference</strong></p>
-<p>This comprehensive reference covers the WebSocket protocol from fundamentals to production deployment. For hands-on examples, see the <code>examples/</code> directory. For testing and analysis tools, see the <code>scripts/</code> directory.</p>
+<h2>Zero-Downtime Patterns</h2>
+<h3>Pattern 1: Adding Nullable Column</h3>
+<p><strong>Scenario</strong>: Add new optional column.</p>
+<p><strong>Strategy</strong>: Single-step, backward compatible.</p>
+<pre><code class="lang-sql">-- Migration: Add nullable column
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);</code></pre>
+<p><strong>Deployment</strong>:</p>
+<ol><li>Apply migration</li><li>Deploy new code (can read/write phone)</li></ol>
+<p><strong>Compatibility</strong>:</p>
+<ul><li>Old code: Ignores new column</li><li>New code: Reads/writes new column</li><li>Zero downtime</li></ul>
+<hr>
+<h3>Pattern 2: Adding NOT NULL Column</h3>
+<p><strong>Scenario</strong>: Add required column.</p>
+<p><strong>Strategy</strong>: Multi-phase deployment.</p>
+<p><strong>Phase 1 Migration</strong>:</p>
+<pre><code class="lang-sql">-- Add nullable column with default
+ALTER TABLE users ADD COLUMN status VARCHAR(20) DEFAULT &#x27;active&#x27;;</code></pre>
+<p><strong>Phase 1 Deployment</strong>:</p>
+<ul><li>Deploy code that writes to status</li><li>Old code ignores column, new code writes it</li></ul>
+<p><strong>Phase 2 Migration</strong> (after all instances updated):</p>
+<pre><code class="lang-sql">-- Backfill any NULLs (shouldn&#x27;t be any if Phase 1 worked)
+UPDATE users SET status = &#x27;active&#x27; WHERE status IS NULL;
+
+-- Add NOT NULL constraint
+ALTER TABLE users ALTER COLUMN status SET NOT NULL;
+
+-- Optionally drop default
+ALTER TABLE users ALTER COLUMN status DROP DEFAULT;</code></pre>
+<p><strong>Timeline</strong>:</p>
+<ul><li>Day 1: Phase 1 migration + deployment</li><li>Day 7: Verify all rows have status set</li><li>Day 7: Phase 2 migration</li></ul>
+<hr>
+<h3>Pattern 3: Removing Column (Expand-Contract)</h3>
+<p><strong>Scenario</strong>: Remove unused column.</p>
+<p><strong>Strategy</strong>: Three-phase deployment.</p>
+<p><strong>Phase 1</strong>: Stop writing (code change only, no migration)</p>
+<ul><li>Deploy code that stops writing to old column</li><li>Old code may still read column</li></ul>
+<p><strong>Phase 2</strong>: Stop reading (code change only, no migration)</p>
+<ul><li>Deploy code that doesn&#x27;t reference column at all</li><li>Wait for all instances to update</li></ul>
+<p><strong>Phase 3</strong>: Remove column (migration)</p>
+<pre><code class="lang-sql">ALTER TABLE users DROP COLUMN old_field;</code></pre>
+<p><strong>Timeline</strong>:</p>
+<ul><li>Week 1: Phase 1 - stop writing</li><li>Week 2: Phase 2 - stop reading</li><li>Week 3: Verify no references in logs</li><li>Week 3: Phase 3 - drop column</li></ul>
+<hr>
+<h3>Pattern 4: Renaming Column (Dual-Write)</h3>
+<p><strong>Scenario</strong>: Rename column (email → email_address).</p>
+<p><strong>Strategy</strong>: Four-phase deployment with dual-write.</p>
+<p><strong>Phase 1 Migration</strong>:</p>
+<pre><code class="lang-sql">-- Add new column
+ALTER TABLE users ADD COLUMN email_address VARCHAR(255);
+
+-- Create trigger for dual-write
+CREATE OR REPLACE FUNCTION sync_email_columns()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.email_address := NEW.email;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER sync_email_to_email_address
+BEFORE INSERT OR UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION sync_email_columns();</code></pre>
+<p><strong>Phase 1 Deployment</strong>:</p>
+<ul><li>Application writes to email (trigger copies to email_address)</li></ul>
+<p><strong>Phase 2 Migration</strong>:</p>
+<pre><code class="lang-sql">-- Backfill existing rows
+UPDATE users SET email_address = email WHERE email_address IS NULL;</code></pre>
+<p><strong>Phase 3 Deployment</strong>:</p>
+<ul><li>Application reads from email_address, writes to both</li></ul>
+<p><strong>Phase 4 Migration</strong>:</p>
+<pre><code class="lang-sql">-- Drop trigger
+DROP TRIGGER sync_email_to_email_address ON users;
+DROP FUNCTION sync_email_columns();
+
+-- Drop old column
+ALTER TABLE users DROP COLUMN email;
+
+-- Optionally rename (fast metadata change)
+-- Or keep email_address as final name</code></pre>
+<p><strong>Timeline</strong>:</p>
+<ul><li>Week 1: Phase 1 - add column, trigger</li><li>Week 2: Phase 2 - backfill</li><li>Week 3: Phase 3 - app reads new column</li><li>Week 4: Verify, Phase 4 - drop old column</li></ul>
+<hr>
+<h3>Pattern 5: Changing Column Type</h3>
+<p><strong>Scenario</strong>: Change column type (age INT → age BIGINT).</p>
+<p><strong>Strategy</strong>: Add new column, dual-write, swap.</p>
+<p><strong>Phase 1 Migration</strong>:</p>
+<pre><code class="lang-sql">-- Add new column with new type
+ALTER TABLE users ADD COLUMN age_new BIGINT;</code></pre>
+<p><strong>Phase 1 Deployment</strong>:</p>
+<ul><li>Application writes to both age and age_new</li></ul>
+<p><strong>Phase 2 Migration</strong>:</p>
+<pre><code class="lang-sql">-- Backfill
+UPDATE users SET age_new = age WHERE age_new IS NULL;</code></pre>
+<p><strong>Phase 3 Deployment</strong>:</p>
+<ul><li>Application reads from age_new</li></ul>
+<p><strong>Phase 4 Migration</strong>:</p>
+<pre><code class="lang-sql">-- Drop old, rename new
+ALTER TABLE users DROP COLUMN age;
+ALTER TABLE users RENAME COLUMN age_new TO age;</code></pre>
+<p><strong>Shortcut for compatible types</strong>:</p>
+<pre><code class="lang-sql">-- Some type changes don&#x27;t require table rewrite
+ALTER TABLE users ALTER COLUMN email TYPE TEXT;  -- VARCHAR → TEXT (fast)
+ALTER TABLE users ALTER COLUMN age TYPE BIGINT USING age::BIGINT;  -- May rewrite table</code></pre>
+<p><strong>Fast type changes (PG 12+)</strong>:</p>
+<ul><li>VARCHAR(N) → VARCHAR(M) where M &gt; N</li><li>VARCHAR → TEXT</li><li>NUMERIC(a,b) → NUMERIC(c,d) where c &gt;= a and d = b</li></ul>
+<hr>
+<h3>Pattern 6: Adding Index (CONCURRENTLY)</h3>
+<p><strong>Scenario</strong>: Add index without blocking writes.</p>
+<p><strong>Strategy</strong>: CREATE INDEX CONCURRENTLY.</p>
+<pre><code class="lang-sql">-- ❌ BAD: Locks table
+CREATE INDEX idx_users_email ON users(email);
+
+-- ✅ GOOD: No lock
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);</code></pre>
+<p><strong>Migration file</strong>:</p>
+<pre><code class="lang-sql">-- V5__add_users_email_index.sql
+-- NOTE: Cannot run in transaction
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email ON users(email);</code></pre>
+<p><strong>Handling failures</strong>:</p>
+<pre><code class="lang-sql">-- Check for invalid indexes
+SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid;
+
+-- Drop and retry
+DROP INDEX CONCURRENTLY idx_users_email;
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);</code></pre>
+<hr>
+<h3>Pattern 7: Adding Foreign Key</h3>
+<p><strong>Scenario</strong>: Add foreign key constraint.</p>
+<p><strong>Strategy</strong>: Add NOT VALID, then validate.</p>
+<pre><code class="lang-sql">-- Step 1: Add constraint without validation
+ALTER TABLE orders
+ADD CONSTRAINT fk_orders_user_id
+FOREIGN KEY (user_id) REFERENCES users(id)
+NOT VALID;
+
+-- Step 2: Validate (allows concurrent reads/writes)
+ALTER TABLE orders VALIDATE CONSTRAINT fk_orders_user_id;</code></pre>
+<p><strong>Locking</strong>:</p>
+<ul><li>Step 1: ShareRowExclusiveLock (allows SELECT, INSERT, UPDATE, DELETE)</li><li>Step 2: ShareUpdateExclusiveLock (allows SELECT, INSERT, UPDATE, DELETE)</li></ul>
+<hr>
+<h2>PostgreSQL Lock Behavior</h2>
+<h3>Lock Modes Reference</h3>
+<p>| Lock Mode | SELECT | INSERT | UPDATE | DELETE | DDL | |-----------|--------|--------|--------|--------|-----| | AccessShareLock | ✓ | ✓ | ✓ | ✓ | ✗ | | RowShareLock | ✓ | ✓ | ✓ | ✓ | ✗ | | RowExclusiveLock | ✓ | ✓ | ✓ | ✓ | ✗ | | ShareUpdateExclusiveLock | ✓ | ✓ | ✓ | ✓ | ✗ | | ShareLock | ✓ | ✗ | ✗ | ✗ | ✗ | | ShareRowExclusiveLock | ✓ | ✗ | ✗ | ✗ | ✗ | | ExclusiveLock | ✓ | ✗ | ✗ | ✗ | ✗ | | AccessExclusiveLock | ✗ | ✗ | ✗ | ✗ | ✗ |</p>
+<h3>Common DDL Operations and Locks</h3>
+<p>| Operation | Lock Mode | Blocks Reads? | Blocks Writes? | |-----------|-----------|---------------|----------------| | CREATE TABLE | AccessExclusiveLock | ✗ (new table) | ✗ (new table) | | DROP TABLE | AccessExclusiveLock | ✓ | ✓ |  &lt;!-- Example of operation impact --&gt; | ALTER TABLE ADD COLUMN | AccessExclusiveLock | ✓ | ✓ | | ALTER TABLE ADD COLUMN (with DEFAULT, PG 11+) | AccessExclusiveLock (brief) | ✗ (metadata only) | ✗ (metadata only) | | CREATE INDEX | ShareLock | ✗ | ✓ | | CREATE INDEX CONCURRENTLY | ShareUpdateExclusiveLock | ✗ | ✗ | | DROP INDEX | AccessExclusiveLock | ✓ | ✓ | | DROP INDEX CONCURRENTLY | ShareUpdateExclusiveLock | ✗ | ✗ | | ADD CONSTRAINT (validated) | AccessExclusiveLock | ✓ | ✓ | | ADD CONSTRAINT NOT VALID | ShareUpdateExclusiveLock | ✗ | ✗ | | VALIDATE CONSTRAINT | ShareUpdateExclusiveLock | ✗ | ✗ |</p>
+<h3>Monitoring Locks</h3>
+<p><strong>View current locks</strong>:</p>
+<pre><code class="lang-sql">SELECT
+    locktype,
+    relation::regclass,
+    mode,
+    granted,
+    pid,
+    usename,
+    query
+FROM pg_locks
+JOIN pg_stat_activity USING (pid)
+WHERE NOT granted
+ORDER BY relation;</code></pre>
+<p><strong>View blocking queries</strong>:</p>
+<pre><code class="lang-sql">SELECT
+    blocked_locks.pid AS blocked_pid,
+    blocked_activity.usename AS blocked_user,
+    blocking_locks.pid AS blocking_pid,
+    blocking_activity.usename AS blocking_user,
+    blocked_activity.query AS blocked_query,
+    blocking_activity.query AS blocking_query
+FROM pg_catalog.pg_locks blocked_locks
+JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
+JOIN pg_catalog.pg_locks blocking_locks
+    ON blocking_locks.locktype = blocked_locks.locktype
+    AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
+    AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
+    AND blocking_locks.page IS NOT DISTINCT FROM blocked_locks.page
+    AND blocking_locks.tuple IS NOT DISTINCT FROM blocked_locks.tuple
+    AND blocking_locks.virtualxid IS NOT DISTINCT FROM blocked_locks.virtualxid
+    AND blocking_locks.transactionid IS NOT DISTINCT FROM blocked_locks.transactionid
+    AND blocking_locks.classid IS NOT DISTINCT FROM blocked_locks.classid
+    AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
+    AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
+    AND blocking_locks.pid != blocked_locks.pid
+JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
+WHERE NOT blocked_locks.granted;</code></pre>
+<p><strong>Set statement timeout for migrations</strong>:</p>
+<pre><code class="lang-sql">-- Prevent migration from locking too long
+SET statement_timeout = &#x27;30s&#x27;;
+
+-- Then run migration
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);</code></pre>
+<hr>
+<h2>Data Migrations</h2>
+<h3>Batching Large Updates</h3>
+<p><strong>Problem</strong>: <code>UPDATE users SET status = &#x27;active&#x27;</code> locks rows and can time out.</p>
+<p><strong>Solution</strong>: Batch updates with pg_sleep.</p>
+<pre><code class="lang-sql">-- ❌ BAD: Locks entire table
+UPDATE users SET status = &#x27;active&#x27; WHERE status IS NULL;
+
+-- ✅ GOOD: Batch updates
+DO $$
+DECLARE
+    batch_size INT := 1000;
+    rows_updated INT;
+    total_updated INT := 0;
+BEGIN
+    LOOP
+        UPDATE users
+        SET status = &#x27;active&#x27;
+        WHERE id IN (
+            SELECT id
+            FROM users
+            WHERE status IS NULL
+            LIMIT batch_size
+        );
+
+        GET DIAGNOSTICS rows_updated = ROW_COUNT;
+        total_updated := total_updated + rows_updated;
+
+        RAISE NOTICE &#x27;Updated % rows (total: %)&#x27;, rows_updated, total_updated;
+
+        EXIT WHEN rows_updated = 0;
+
+        COMMIT; -- Release locks
+        PERFORM pg_sleep(0.1); -- Avoid overwhelming database
+    END LOOP;
+END $$;</code></pre>
+<p><strong>Alternative with external script</strong>:</p>
+<pre><code class="lang-python"># batch_update.py
+import psycopg2
+import time
+
+conn = psycopg2.connect(&quot;dbname=mydb&quot;)
+cursor = conn.cursor()
+
+batch_size = 1000
+total_updated = 0
+
+while True:
+    cursor.execute(&quot;&quot;&quot;
+        UPDATE users SET status = &#x27;active&#x27;
+        WHERE id IN (
+            SELECT id FROM users WHERE status IS NULL LIMIT %s
+        )
+    &quot;&quot;&quot;, (batch_size,))
+
+    rows = cursor.rowcount
+    total_updated += rows
+    conn.commit()
+
+    print(f&quot;Updated {rows} rows (total: {total_updated})&quot;)
+
+    if rows == 0:
+        break
+
+    time.sleep(0.1)
+
+cursor.close()
+conn.close()</code></pre>
+<h3>Backfilling Data</h3>
+<p><strong>Scenario</strong>: New column needs data from existing columns.</p>
+<pre><code class="lang-sql">-- Add column
+ALTER TABLE users ADD COLUMN full_name VARCHAR(255);
+
+-- Backfill in batches
+DO $$
+DECLARE
+    batch_size INT := 1000;
+    rows_updated INT;
+BEGIN
+    LOOP
+        UPDATE users
+        SET full_name = first_name || &#x27; &#x27; || last_name
+        WHERE id IN (
+            SELECT id
+            FROM users
+            WHERE full_name IS NULL
+            LIMIT batch_size
+        );
+
+        GET DIAGNOSTICS rows_updated = ROW_COUNT;
+        EXIT WHEN rows_updated = 0;
+
+        COMMIT;
+        PERFORM pg_sleep(0.1);
+    END LOOP;
+END $$;</code></pre>
+<h3>Complex Data Transformations</h3>
+<p><strong>Scenario</strong>: Normalize data (e.g., extract JSON to columns).</p>
+<pre><code class="lang-sql">-- Existing: user_data JSONB column
+-- New: email, phone columns
+
+ALTER TABLE users ADD COLUMN email VARCHAR(255);
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+
+-- Backfill
+UPDATE users
+SET
+    email = user_data-&gt;&gt;&#x27;email&#x27;,
+    phone = user_data-&gt;&gt;&#x27;phone&#x27;
+WHERE email IS NULL;</code></pre>
+<p><strong>With batching</strong>:</p>
+<pre><code class="lang-python">import psycopg2
+import time
+
+conn = psycopg2.connect(&quot;dbname=mydb&quot;)
+cursor = conn.cursor()
+
+batch_size = 1000
+offset = 0
+
+while True:
+    cursor.execute(&quot;&quot;&quot;
+        WITH batch AS (
+            SELECT id, user_data
+            FROM users
+            WHERE email IS NULL
+            LIMIT %s OFFSET %s
+        )
+        UPDATE users
+        SET
+            email = batch.user_data-&gt;&gt;&#x27;email&#x27;,
+            phone = batch.user_data-&gt;&gt;&#x27;phone&#x27;
+        FROM batch
+        WHERE users.id = batch.id
+    &quot;&quot;&quot;, (batch_size, offset))
+
+    rows = cursor.rowcount
+    conn.commit()
+
+    if rows == 0:
+        break
+
+    offset += batch_size
+    time.sleep(0.1)
+
+cursor.close()
+conn.close()</code></pre>
+<hr>
+<h2>Testing Migrations</h2>
+<h3>Local Testing</h3>
+<p><strong>1. Test on production-like data</strong>:</p>
+<pre><code class="lang-bash"># Dump production schema + sample data
+pg_dump -Fc --schema-only production &gt; schema.dump
+pg_dump -Fc --data-only --table=users --limit=10000 production &gt; data.dump
+
+# Restore to local
+createdb local_test
+pg_restore -d local_test schema.dump
+pg_restore -d local_test data.dump
+
+# Apply migration
+migrate -database &quot;postgres://localhost:5432/local_test&quot; up
+
+# Verify schema
+psql local_test -c &quot;\d users&quot;</code></pre>
+<p><strong>2. Test rollback</strong>:</p>
+<pre><code class="lang-bash"># Apply migration
+migrate up
+
+# Test rollback
+migrate down
+
+# Re-apply
+migrate up
+
+# Verify data integrity
+psql local_test -c &quot;SELECT COUNT(*) FROM users&quot;</code></pre>
+<p><strong>3. Test application against new schema</strong>:</p>
+<pre><code class="lang-bash"># Point application to migrated database
+export DATABASE_URL=&quot;postgres://localhost:5432/local_test&quot;
+
+# Run tests
+pytest tests/
+npm test
+go test ./...</code></pre>
+<h3>Staging Testing</h3>
+<p><strong>1. Mirror production</strong>:</p>
+<pre><code class="lang-bash"># Refresh staging from production
+pg_dump -Fc production | pg_restore -d staging
+
+# Apply migration
+migrate -database &quot;$STAGING_DB&quot; up</code></pre>
+<p><strong>2. Run smoke tests</strong>:</p>
+<pre><code class="lang-bash"># API smoke tests
+curl https://staging.example.com/api/users
+curl https://staging.example.com/api/health
+
+# Load test (optional)
+ab -n 1000 -c 10 https://staging.example.com/api/users</code></pre>
+<p><strong>3. Monitor</strong>:</p>
+<pre><code class="lang-sql">-- Check for slow queries
+SELECT query, mean_exec_time, calls
+FROM pg_stat_statements
+ORDER BY mean_exec_time DESC
+LIMIT 10;
+
+-- Check for locks
+SELECT * FROM pg_locks WHERE NOT granted;</code></pre>
+<h3>CI/CD Testing</h3>
+<p><strong>GitHub Actions example</strong>:</p>
+<pre><code class="lang-yaml">name: Test Migrations
+
+on: [push, pull_request]
+
+jobs:
+  test-migrations:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_PASSWORD: postgres
+        options: &gt;-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Apply migrations
+        run: |
+          migrate -database &quot;postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable&quot; up
+
+      - name: Verify schema
+        run: |
+          psql postgres://postgres:postgres@localhost:5432/testdb -c &quot;\d users&quot;
+
+      - name: Test rollback
+        run: |
+          migrate -database &quot;postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable&quot; down
+          migrate -database &quot;postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable&quot; up
+
+      - name: Run application tests
+        run: |
+          export DATABASE_URL=&quot;postgres://postgres:postgres@localhost:5432/testdb&quot;
+          pytest tests/</code></pre>
+<hr>
+<h2>Rollback Strategies</h2>
+<h3>Strategy 1: Down Migrations</h3>
+<p><strong>Approach</strong>: Write explicit rollback in down migration.</p>
+<p><strong>Pros</strong>:</p>
+<ul><li>Fast rollback</li><li>Built into migration tool</li><li>Easy to test</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Data loss if columns dropped</li><li>Not all changes reversible</li></ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-sql">-- 001_add_users.up.sql
+CREATE TABLE users (id SERIAL PRIMARY KEY, email VARCHAR(255));
+
+-- 001_add_users.down.sql
+-- Example of dangerous rollback - loses data! Use data preservation strategies instead.
+DROP TABLE users; -- ⚠️  Loses data!</code></pre>
+<p><strong>Safe rollback with data preservation</strong>:</p>
+<pre><code class="lang-sql">-- 002_add_phone.up.sql
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+
+-- 002_add_phone.down.sql
+-- Instead of DROP, could archive to another table
+CREATE TABLE IF NOT EXISTS users_phone_archive AS
+SELECT id, phone FROM users WHERE phone IS NOT NULL;
+
+ALTER TABLE users DROP COLUMN phone;</code></pre>
+<h3>Strategy 2: Database Backups</h3>
+<p><strong>Approach</strong>: Backup before migration, restore if needed.</p>
+<pre><code class="lang-bash"># Before migration
+pg_dump -Fc production &gt; backup_$(date +%Y%m%d_%H%M%S).dump
+
+# Apply migration
+migrate up
+
+# If rollback needed
+pg_restore -d production backup_20231027_120000.dump</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Complete rollback</li><li>Restores data</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Slow for large databases</li><li>Downtime during restore</li><li>Loses data written after migration</li></ul>
+<h3>Strategy 3: Point-in-Time Recovery (PITR)</h3>
+<p><strong>Approach</strong>: Use WAL archiving to recover to specific point in time.</p>
+<p><strong>Setup</strong>:</p>
+<pre><code class="lang-sql">-- postgresql.conf
+wal_level = replica
+archive_mode = on
+archive_command = &#x27;cp %p /mnt/archive/%f&#x27;</code></pre>
+<p><strong>Recovery</strong>:</p>
+<pre><code class="lang-bash"># Stop database
+pg_ctl stop
+
+# ⚠️ WARNING: This permanently deletes all database data
+# Always verify backups before running
+# Restore base backup
+rm -rf $PGDATA/*
+tar -xzf base_backup.tar.gz -C $PGDATA
+
+# Create recovery.conf (PG &lt; 12) or recovery.signal (PG 12+)
+cat &gt; $PGDATA/recovery.signal &lt;&lt;EOF
+restore_command = &#x27;cp /mnt/archive/%f %p&#x27;
+recovery_target_time = &#x27;2023-10-27 12:00:00&#x27;
+EOF
+
+# Start database
+pg_ctl start</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>Precise rollback</li><li>No data loss (up to target time)</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Requires WAL archiving setup</li><li>Complex recovery process</li><li>Downtime</li></ul>
+<h3>Strategy 4: Blue-Green Deployment</h3>
+<p><strong>Approach</strong>: Run two databases, switch traffic.</p>
+<pre><code>Blue (current) ←─── Traffic
+Green (with migrations)</code></pre>
+<p><strong>Process</strong>:</p>
+<ol><li>Clone Blue → Green</li><li>Apply migrations to Green</li><li>Switch traffic Blue → Green</li><li>If issues, switch back to Blue</li></ol>
+<p><strong>Pros</strong>:</p>
+<ul><li>Instant rollback</li><li>Zero downtime</li><li>Test migrations in production environment</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Requires load balancer/proxy</li><li>Data sync complexity</li><li>Expensive (two databases)</li></ul>
+<h3>Strategy 5: Forward-Fix</h3>
+<p><strong>Approach</strong>: Don&#x27;t roll back, fix forward with new migration.</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-sql">-- V5__add_age_column.sql (has bug: wrong type)
+ALTER TABLE users ADD COLUMN age INT; -- Should be SMALLINT!
+
+-- Don&#x27;t rollback, instead:
+-- V6__fix_age_column_type.sql
+ALTER TABLE users ALTER COLUMN age TYPE SMALLINT;</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul><li>No data loss</li><li>Simple</li><li>Maintains migration history</li></ul>
+<p><strong>Cons</strong>:</p>
+<ul><li>Requires quick fix</li><li>Can&#x27;t undo schema changes immediately</li></ul>
+<p><strong>Best for</strong>: Production systems with continuous deployment.</p>
+<hr>
+<h2>Common Pitfalls</h2>
+<h3>Pitfall 1: Adding NOT NULL Without Default</h3>
+<p><strong>Problem</strong>:</p>
+<pre><code class="lang-sql">-- ❌ Fails on existing rows
+ALTER TABLE users ADD COLUMN phone VARCHAR(20) NOT NULL;
+-- ERROR: column &quot;phone&quot; contains null values</code></pre>
+<p><strong>Fix</strong>:</p>
+<pre><code class="lang-sql">-- ✅ Add with default, or add nullable then backfill
+ALTER TABLE users ADD COLUMN phone VARCHAR(20) NOT NULL DEFAULT &#x27;unknown&#x27;;
+
+-- Or multi-step:
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+UPDATE users SET phone = &#x27;unknown&#x27; WHERE phone IS NULL;
+ALTER TABLE users ALTER COLUMN phone SET NOT NULL;</code></pre>
+<hr>
+<h3>Pitfall 2: Renaming Columns Directly</h3>
+<p><strong>Problem</strong>:</p>
+<pre><code class="lang-sql">-- ❌ Breaks old code immediately
+ALTER TABLE users RENAME COLUMN email TO email_address;</code></pre>
+<p><strong>Fix</strong>: Use expand-contract pattern (see Zero-Downtime Patterns).</p>
+<hr>
+<h3>Pitfall 3: Creating Indexes Without CONCURRENTLY</h3>
+<p><strong>Problem</strong>:</p>
+<pre><code class="lang-sql">-- ❌ Locks table, blocks writes
+CREATE INDEX idx_users_email ON users(email);</code></pre>
+<p><strong>Fix</strong>:</p>
+<pre><code class="lang-sql">-- ✅ No lock
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);</code></pre>
+<hr>
+<h3>Pitfall 4: Large UPDATEs in One Transaction</h3>
+<p><strong>Problem</strong>:</p>
+<pre><code class="lang-sql">-- ❌ Locks millions of rows, can timeout
+UPDATE users SET status = &#x27;active&#x27;; -- 10M rows</code></pre>
+<p><strong>Fix</strong>: Batch with LIMIT and pg_sleep (see Data Migrations).</p>
+<hr>
+<h3>Pitfall 5: Changing Column Type Without Care</h3>
+<p><strong>Problem</strong>:</p>
+<pre><code class="lang-sql">-- ❌ Rewrites entire table, locks
+ALTER TABLE users ALTER COLUMN email TYPE TEXT;</code></pre>
+<p><strong>Fix</strong>: Check if rewrite needed, or use add/drop pattern.</p>
+<pre><code class="lang-sql">-- Fast (no rewrite) in PostgreSQL
+ALTER TABLE users ALTER COLUMN email TYPE TEXT;
+-- VARCHAR → TEXT is safe, no rewrite
+
+-- Slow (rewrites table)
+ALTER TABLE users ALTER COLUMN age TYPE BIGINT USING age::BIGINT;</code></pre>
+<hr>
+<h3>Pitfall 6: Not Testing Rollback</h3>
+<p><strong>Problem</strong>: Migration applied, can&#x27;t be reversed, data lost.</p>
+<p><strong>Fix</strong>: Always test down migration locally.</p>
+<pre><code class="lang-bash">migrate up
+migrate down  # Test rollback
+migrate up    # Re-apply</code></pre>
+<hr>
+<h3>Pitfall 7: Mixing Schema and Data Changes</h3>
+<p><strong>Problem</strong>: Hard to debug, slow migrations.</p>
+<pre><code class="lang-sql">-- ❌ Mixing concerns
+ALTER TABLE users ADD COLUMN status VARCHAR(20);
+UPDATE users SET status = &#x27;active&#x27; WHERE status IS NULL;
+ALTER TABLE users ALTER COLUMN status SET NOT NULL;</code></pre>
+<p><strong>Fix</strong>: Separate migrations.</p>
+<pre><code class="lang-sql">-- V1__add_status_column.sql (schema)
+ALTER TABLE users ADD COLUMN status VARCHAR(20);
+
+-- V2__backfill_status.sql (data)
+UPDATE users SET status = &#x27;active&#x27; WHERE status IS NULL;
+
+-- V3__make_status_not_null.sql (schema)
+ALTER TABLE users ALTER COLUMN status SET NOT NULL;</code></pre>
+<hr>
+<h2>Advanced Topics</h2>
+<h3>Handling Schema Drift</h3>
+<p><strong>Problem</strong>: Production schema differs from migration history.</p>
+<p><strong>Detection</strong>:</p>
+<pre><code class="lang-bash"># Dump production schema
+pg_dump --schema-only production &gt; production_schema.sql
+
+# Apply migrations to clean database
+migrate -database &quot;postgres://localhost/test&quot; up
+pg_dump --schema-only test &gt; migrated_schema.sql
+
+# Compare
+diff production_schema.sql migrated_schema.sql</code></pre>
+<p><strong>Fix</strong>:</p>
+<pre><code class="lang-bash"># Option 1: Baseline (for tools supporting it)
+flyway baseline -baselineVersion=10
+
+# Option 2: Force version
+migrate force 10
+
+# Option 3: Manually add/remove from metadata table
+INSERT INTO schema_migrations (version) VALUES (&#x27;20231027120000&#x27;);</code></pre>
+<hr>
+<h3>Multi-Tenancy Migrations</h3>
+<p><strong>Strategy 1: Shared schema</strong>:</p>
+<pre><code class="lang-sql">-- All tenants share same schema
+-- Tenant ID in each table
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    email VARCHAR(255)
+);
+
+-- Migration applies to all tenants
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);</code></pre>
+<p><strong>Strategy 2: Schema-per-tenant</strong>:</p>
+<pre><code class="lang-sql">-- Each tenant has own schema
+CREATE SCHEMA tenant_123;
+CREATE TABLE tenant_123.users (...);
+
+CREATE SCHEMA tenant_456;
+CREATE TABLE tenant_456.users (...);
+
+-- Migration must run for each schema
+DO $$
+DECLARE
+    schema_name TEXT;
+BEGIN
+    FOR schema_name IN
+        SELECT nspname FROM pg_namespace WHERE nspname LIKE &#x27;tenant_%&#x27;
+    LOOP
+        EXECUTE format(&#x27;ALTER TABLE %I.users ADD COLUMN phone VARCHAR(20)&#x27;, schema_name);
+    END LOOP;
+END $$;</code></pre>
+<hr>
+<h3>Handling Enum Changes</h3>
+<p><strong>Problem</strong>: Can&#x27;t modify enum values in place.</p>
+<pre><code class="lang-sql">-- Existing enum
+CREATE TYPE status_enum AS ENUM (&#x27;pending&#x27;, &#x27;active&#x27;);
+
+-- ❌ Can&#x27;t add value to enum in one step in transaction
+ALTER TYPE status_enum ADD VALUE &#x27;inactive&#x27;; -- Works, but not in transaction</code></pre>
+<p><strong>Safe approach</strong>:</p>
+<pre><code class="lang-sql">-- Step 1: Create new enum
+CREATE TYPE status_enum_new AS ENUM (&#x27;pending&#x27;, &#x27;active&#x27;, &#x27;inactive&#x27;);
+
+-- Step 2: Add new column with new enum
+ALTER TABLE users ADD COLUMN status_new status_enum_new;
+
+-- Step 3: Migrate data
+UPDATE users SET status_new = status::TEXT::status_enum_new;
+
+-- Step 4: Drop old column, rename new
+ALTER TABLE users DROP COLUMN status;
+ALTER TABLE users RENAME COLUMN status_new TO status;
+
+-- Step 5: Drop old enum
+DROP TYPE status_enum;
+
+-- Step 6: Rename new enum (optional)
+ALTER TYPE status_enum_new RENAME TO status_enum;</code></pre>
+<hr>
+<h3>Partitioned Tables</h3>
+<p><strong>Adding partitions</strong>:</p>
+<pre><code class="lang-sql">-- Existing partitioned table
+CREATE TABLE events (
+    id BIGSERIAL,
+    event_date DATE,
+    data JSONB
+) PARTITION BY RANGE (event_date);
+
+-- Add new partition (safe, no lock on parent)
+CREATE TABLE events_2023_11 PARTITION OF events
+FOR VALUES FROM (&#x27;2023-11-01&#x27;) TO (&#x27;2023-12-01&#x27;);</code></pre>
+<p><strong>Detaching partitions</strong>:</p>
+<pre><code class="lang-sql">-- Detach old partition (for archiving)
+ALTER TABLE events DETACH PARTITION events_2023_01;
+
+-- Archive
+\copy events_2023_01 TO &#x27;/archive/events_2023_01.csv&#x27; CSV
+
+-- Drop partition after archiving (safe cleanup operation)
+DROP TABLE events_2023_01;</code></pre>
+<hr>
+<h3>Managing Long-Running Migrations</h3>
+<p><strong>Problem</strong>: Migration takes hours, blocks deployments.</p>
+<p><strong>Solution</strong>: Run migrations outside deployment.</p>
+<p><strong>Workflow</strong>:</p>
+<ol><li>Run migration manually during low-traffic window</li><li>Mark as applied in migration metadata</li><li>Deploy application (skips already-applied migration)</li></ol>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-bash"># Manually apply slow migration
+psql production &lt; migrations/V5__add_large_index.sql
+
+# Mark as applied
+INSERT INTO schema_migrations (version, description, success)
+VALUES (&#x27;V5&#x27;, &#x27;add_large_index&#x27;, TRUE);
+
+# Deploy application
+# Migration tool sees V5 already applied, skips it</code></pre>
+<hr>
+<p><strong>End of Reference</strong></p>
+<p>This reference covers PostgreSQL migrations comprehensively. For practical scripts and examples, see the <code>scripts/</code> and <code>examples/</code> directories.</p>
 <footer>
 <div class="fmap">
   <div><b>Build</b>

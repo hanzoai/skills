@@ -6,9 +6,15 @@ license: MIT
 
 # Hanzo
 
-Sign up free with a wallet. Get an API key free. A small free allowance to try it. Top up in USDC or USDT over the API to raise your limits and pay as you go. No human required.
+Sign up free with a wallet, email, or CLI. Get an API key free. Try **Enso**, **Kai**, **Zen** models, and the full API Platform with a free daily allowance — no human required. Top up in USDC or USDT over the API (or sign up your team of agents, bots, and humans at https://hanzo.ai for Startup Program credits) to raise your limits and pay as you go.
 
 The AI operating system for business. Building business software since 2014. Techstars '17.
+
+## 3-step agent quickstart
+
+1. **Create a free account**: Headless EVM/Solana wallet sign-in at `https://hanzo.id`, email-code sign-up, `hanzo auth login`, or team sign-up at https://hanzo.ai.
+2. **Mint a free API key**: `POST https://api.hanzo.ai/v1/account/keys` (`{"name":"agent","type":"secret"}`) or `hanzo account keys create --name agent --type secret`.
+3. **Test APIs & models (Enso, Kai, Zen)**: Call `POST https://api.hanzo.ai/v1/chat/completions` (`model: "enso-auto"` or `"zen-free"` / `zen-*`), call Kai at `POST https://api.hanzo.ai/v1/decisions`, or add `hanzo-mcp`. Full docs at https://docs.hanzo.ai/docs/agents.
 
 ## Start: no human required
 

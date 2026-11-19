@@ -574,9 +574,10 @@ def patch(path):
         hero_h1_lede = (
             '<h1>The native cloud in a single binary.<br>Go. Rust. C++. '
             '<em>Zero interpreter bloat.</em></h1>'
-            '<p class="lede">Run the open-source parts on your own machine, extend the cloud with <code>/v1/*</code>, '
-            'and move your backend to Hanzo Base. <a href="/skill">skill.md</a> gives the command that starts '
-            'each part and says what needs the hosted cloud.</p>'
+            '<p class="lede">Agents and bots can create a free account, get an API key, and test '
+            '<strong>Enso</strong>, <strong>Kai</strong>, <strong>Zen</strong> models and the API Platform via '
+            '<a href="/hanzo">hanzo.md</a> (<code>curl hanzoskills.com/hanzo.md</code>) — or run the open-source '
+            'stack locally with <a href="/skill">skill.md</a>.</p>'
         )
         out = re.sub(r'<h1>.*?(?=<div class="btns">)', lambda _: hero_h1_lede + get(), out,
                      count=1, flags=re.S)
