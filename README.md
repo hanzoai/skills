@@ -2,6 +2,8 @@
 
 # Atomic Skills for Claude Code
 
+[![Open in Hanzo](https://hanzo.app/badges/open-in-hanzo.svg)](https://hanzo.app/dev/open?repo=github.com/hanzoai/skills&ref=main&action=open) [![Edit with Hanzo](https://hanzo.app/badges/edit-with-hanzo.svg)](https://hanzo.app/dev/open?repo=github.com/hanzoai/skills&ref=main&action=edit)
+
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-blue)](https://docs.claude.com/en/docs/claude-code/plugins)
 [![Skills](https://img.shields.io/badge/Skills-350+-green)](skills/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
