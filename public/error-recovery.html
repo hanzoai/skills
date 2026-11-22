@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>error-recovery</title>
+<style>
+/* Matches hanzo.ai's monochrome editorial aesthetic: light-first white canvas
+   with automatic light/dark color-scheme support, Zen sans display headings,
+   edge halftone dot framing, pill controls, and crisp dark terminal cards. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  color-scheme:light dark;
+  --ground-light:#ffffff; --ground-dark:#000000;
+  --panel-light:#fafafa; --panel-dark:#0f0f0f;
+  --panel-2-light:#f5f5f7; --panel-2-dark:#171717;
+  --ink-light:#0a0a0a; --ink-dark:#f5f5f7;
+  --soft-light:#6e6e73; --soft-dark:#a1a1a6;
+  --faint-light:#86868b; --faint-dark:#737378;
+  --line-light:#e5e5e5; --line-dark:#232323;
+  --line-hi-light:#d4d4d4; --line-hi-dark:#3a3a3a;
+  --solid-bg-light:#0a0a0a; --solid-bg-dark:#ffffff;
+  --solid-ink-light:#ffffff; --solid-ink-dark:#0a0a0a;
+  --solid-hover-light:#262626; --solid-hover-dark:#e5e5e5;
+  --dot-light:#d4d4d4; --dot-dark:#262626;
+
+  --ground:var(--ground-light); --panel:var(--panel-light); --panel-2:var(--panel-2-light);
+  --ink:var(--ink-light); --soft:var(--soft-light); --faint:var(--faint-light);
+  --line:var(--line-light); --line-hi:var(--line-hi-light);
+  --solid-bg:var(--solid-bg-light); --solid-ink:var(--solid-ink-light);
+  --solid-hover:var(--solid-hover-light); --dot:var(--dot-light);
+  --term-bg:#0a0a0a; --term-ink:#f5f5f7; --term-soft:#a1a1a6; --term-faint:#737378; --term-line:#232323;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  --r:999px; --r-soft:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:var(--ground-dark); --panel:var(--panel-dark); --panel-2:var(--panel-2-dark);
+    --ink:var(--ink-dark); --soft:var(--soft-dark); --faint:var(--faint-dark);
+    --line:var(--line-dark); --line-hi:var(--line-hi-dark);
+    --solid-bg:var(--solid-bg-dark); --solid-ink:var(--solid-ink-dark);
+    --solid-hover:var(--solid-hover-dark); --dot:var(--dot-dark);
+  }
+}
+@supports (color: light-dark(white, black)){
+  :root{
+    --ground:light-dark(var(--ground-light),var(--ground-dark));
+    --panel:light-dark(var(--panel-light),var(--panel-dark));
+    --panel-2:light-dark(var(--panel-2-light),var(--panel-2-dark));
+    --ink:light-dark(var(--ink-light),var(--ink-dark));
+    --soft:light-dark(var(--soft-light),var(--soft-dark));
+    --faint:light-dark(var(--faint-light),var(--faint-dark));
+    --line:light-dark(var(--line-light),var(--line-dark));
+    --line-hi:light-dark(var(--line-hi-light),var(--line-hi-dark));
+    --solid-bg:light-dark(var(--solid-bg-light),var(--solid-bg-dark));
+    --solid-ink:light-dark(var(--solid-ink-light),var(--solid-ink-dark));
+    --solid-hover:light-dark(var(--solid-hover-light),var(--solid-hover-dark));
+    --dot:light-dark(var(--dot-light),var(--dot-dark));
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--ground);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:1rem;line-height:1.58;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility}
+.wrap{max-width:68rem;margin:0 auto;padding:0 1.75rem}
+
+/* Edge halftone dot field framing the hero, matching hanzo.ai. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before,.hero::after{content:"";position:absolute;top:0;bottom:0;width:min(24vw,280px);
+  background-image:radial-gradient(var(--dot) 1.25px,transparent 1.25px);
+  background-size:9px 9px;pointer-events:none}
+.hero::before{inset-inline-start:0;
+  -webkit-mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero::after{inset-inline-end:0;
+  -webkit-mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero .wrap{position:relative;z-index:1;padding-top:4.5rem;padding-bottom:3.75rem}
+
+nav{position:sticky;top:0;z-index:40;border-bottom:1px solid var(--line);
+  background:var(--ground);background:color-mix(in srgb,var(--ground) 90%,transparent);
+  backdrop-filter:blur(16px)}
+nav .in{max-width:68rem;margin:0 auto;padding:.85rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--sans);font-size:.95rem;font-weight:600;letter-spacing:-.02em;
+  color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:.55rem}
+.brand i{font-style:normal;font-weight:400;color:var(--soft)}
+.mark{width:1.25em;height:1.25em;display:block;flex:0 0 auto}
+.nlinks{display:flex;align-items:center;gap:1.15rem}
+.nlinks a{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+.nlinks a:hover{color:var(--ink);text-decoration:none}
+nav a.up{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink);text-decoration:none}
+.ncta{display:inline-flex;align-items:center;justify-content:center;padding:.45rem 1rem;
+  border-radius:var(--r);background:var(--solid-bg);color:var(--solid-ink);font-size:.84rem;
+  font-weight:500;text-decoration:none;white-space:nowrap}
+.ncta:hover{background:var(--solid-hover);color:var(--solid-ink);text-decoration:none}
+
+h1{font-family:var(--sans);font-size:clamp(2.15rem,4.8vw,3.5rem);line-height:1.06;
+  letter-spacing:-.038em;margin:0 0 1.15rem;font-weight:600;text-wrap:balance;max-width:20ch}
+h1 em{font-style:normal;color:var(--soft);font-weight:500}
+.lede{color:var(--soft);font-size:1.0625rem;line-height:1.55;max-width:58ch;margin:0 0 2rem;text-wrap:pretty}
+
+.btns{display:flex;flex-wrap:wrap;gap:.55rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--sans);
+  font-size:.875rem;font-weight:500;letter-spacing:-.005em;
+  min-height:2.5rem;padding:.55rem 1.2rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:var(--ground);cursor:pointer;
+  line-height:1.2;transition:background .15s ease,border-color .15s ease}
+.btn:hover{background:var(--panel-2);text-decoration:none;border-color:var(--ink)}
+.btn.solid{background:var(--solid-bg);color:var(--solid-ink);border-color:var(--solid-bg)}
+.btn.solid:hover{background:var(--solid-hover);border-color:var(--solid-hover)}
+.btn .chev{width:.75em;height:.75em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--ground);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 16px 40px rgba(0,0,0,.18)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .4rem);
+  background:transparent;color:var(--ink);font-family:var(--sans);font-size:.86rem;
+  font-weight:500;text-decoration:none;cursor:pointer;line-height:1.3;white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:var(--panel-2);outline:none;text-decoration:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.08em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:68rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--sans);font-size:.8rem;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:500;flex:0 0 auto;font-family:var(--mono);font-size:.7rem;
+  letter-spacing:.1em;text-transform:uppercase;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .9rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;font-size:.82rem;font-weight:500;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--sans);font-size:1.35rem;letter-spacing:-.025em;margin:2.75rem 0 .75rem;font-weight:600;text-wrap:balance}
+h3{font-size:1.05rem;margin:2rem 0 .5rem;font-weight:600;letter-spacing:-.015em}
+h4,h5,h6{font-size:.95rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch;text-wrap:pretty}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.25rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.84em;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:6px;padding:.12em .4em}
+pre{color-scheme:dark;background:var(--term-bg);color:var(--term-ink);border:1px solid var(--term-line);
+  padding:1.05rem 1.2rem;border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.84rem;line-height:1.68;color:var(--term-ink)}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:2px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.55rem .75rem;text-align:left}
+
+.curl{color-scheme:dark;display:block;background:var(--term-bg);border:1px solid var(--term-line);
+  border-radius:var(--r-soft);padding:1rem 1.2rem;font-family:var(--mono);
+  font-size:.82rem;color:var(--term-soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.85}
+.curl b{color:var(--term-ink);font-weight:500}
+.curl i{font-style:normal;color:var(--term-faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.25rem;font-family:var(--sans);font-size:.95rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r);margin:2rem 0 .65rem}
+#q::placeholder{color:var(--faint)}
+#q:focus{outline:none;border-color:var(--ink);background:var(--ground)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.75rem 1rem;margin:0 -1rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none;transition:background .12s ease}
+.row:hover{background:var(--panel-2);text-decoration:none}
+.nm{font-family:var(--mono);font-size:.86rem;font-weight:500;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.92rem;display:block;margin-top:.15rem}
+footer{margin-top:4rem;padding:2.25rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft);text-decoration:none}
+footer a:hover{color:var(--ink);text-decoration:underline}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);font-weight:500;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3rem;padding-bottom:2.5rem}
+  .nlinks .nhide{display:none}
+  .btns{gap:.5rem}
+  .btn{padding:.55rem 1rem;font-size:.84rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/error-recovery">
+<link rel="alternate" type="text/markdown" href="/error-recovery.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/error-recovery.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> Hanzo <i>Skills</i></a>
+  <div class="nlinks"><a class="nhide" href="https://hanzo.sh">hanzo.sh</a><a class="nhide" href="https://docs.hanzo.ai">Docs</a><a class="nhide" href="https://hanzo.ai/security">Security</a><a class="up" href="/">All skills</a><a class="ncta" href="https://hanzo.app">Try Hanzo</a></div>
+</div></nav>
+
+<div class="wrap">
+<h1>error-recovery</h1><p class="lede">Protocol for handling failures, partial state, and incomplete runs across a 20–100+ call design system build.</p><blockquote><p>Part of the <a href="../SKILL.md">figma-generate-library skill</a>.</p></blockquote>
+<h1>Error Recovery Reference</h1>
+<p>Protocol for handling failures, partial state, and incomplete runs across a 20–100+ call design system build.</p>
+<hr>
+<h2>1. Core Protocol: STOP → Inspect → Identify → Clean → Fix → Retry</h2>
+<p><strong>Never retry a failed script without cleanup first.</strong> A failed script may have created partial state — frames, components, or variables that are half-built. Retrying on top of partial state compounds the problem and can make recovery impossible.</p>
+<p>The mandatory recovery sequence:</p>
+<pre><code>1. STOP   — Do not run any more use_figma writes.
+2. INSPECT — Call get_metadata on the current page. Optionally call get_screenshot.
+3. IDENTIFY — Find artifacts from the failed attempt using dsb_run_id pluginData tags.
+4. CLEAN   — Run a targeted cleanup script to remove orphaned nodes (pluginData-based, never name-based).
+5. VERIFY  — Run get_metadata again to confirm cleanup was complete.
+6. FIX     — Correct the script that failed.
+7. RETRY   — Re-run the corrected script from the last clean checkpoint.
+8. PERSIST — Update the state ledger with the outcome.</code></pre>
+<p>Do not skip step 4 even if the failure seems minor. Partial frames and components accumulate and cause confusing results in later steps.</p>
+<hr>
+<h2>2. <code>pluginData</code>-Based Cleanup: Why Name Matching is Dangerous</h2>
+<h3>Why name-prefix matching fails</h3>
+<p>A cleanup script that deletes &quot;all nodes whose name starts with <code>Button</code>&quot; will also delete nodes the user may have created manually with that name, or nodes from a previous approved phase. Name-based cleanup has no way to distinguish &quot;orphan from a failed attempt&quot; from &quot;intentional user node.&quot;</p>
+<p>Furthermore, variant names (<code>Size=Medium, Style=Primary, State=Default</code>) do not have consistent prefixes that are safe to target without also hitting legitimate nodes.</p>
+<h3>How <code>setPluginData</code> / <code>getPluginData</code> works</h3>
+<p><code>pluginData</code> is a key-value store attached to individual nodes. It persists across sessions and is invisible to the user in the Figma UI. Only plugins with the same <code>pluginId</code> can read/write data scoped to that plugin. Use three keys:</p>
+<pre><code class="lang-javascript">node.setPluginData(&#x27;dsb_run_id&#x27;, &#x27;ds-build-2024-001&#x27;); // identifies the build run
+node.setPluginData(&#x27;dsb_phase&#x27;,  &#x27;phase3&#x27;);             // which phase created this node
+node.setPluginData(&#x27;dsb_key&#x27;,    &#x27;componentset/button&#x27;);// unique logical key
+
+// Reading:
+const runId = node.getPluginData(&#x27;dsb_run_id&#x27;); // returns &#x27;&#x27; if never set
+const key   = node.getPluginData(&#x27;dsb_key&#x27;);</code></pre>
+<p><code>getPluginData</code> returns <code>&#x27;&#x27;</code> (empty string, not null) for unset keys. Always check for <code>!== &#x27;&#x27;</code>.</p>
+<p><strong>Tag every created node immediately after creation</strong> — before any further operations that might fail. If a failure happens between <code>createComponent()</code> and the tagging line, the node will be an untagged orphan. To minimize this window, tag in the same statement sequence as creation:</p>
+<pre><code class="lang-javascript">const comp = figma.createComponent();
+comp.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);  // tag immediately
+comp.setPluginData(&#x27;dsb_key&#x27;, key);         // tag immediately
+// ... then do the rest of the setup</code></pre>
+<h3>Complete <code>cleanupOrphans</code> script using <code>dsb_run_id</code></h3>
+<p>This script finds all nodes tagged with a given <code>dsb_run_id</code> and optionally a <code>dsb_phase</code> filter, then removes them. Run it on the specific page where the failure occurred.</p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const TARGET_RUN_ID = &#x27;ds-build-2024-001&#x27;; // run ID to clean
+    const TARGET_PHASE  = &#x27;phase3&#x27;;            // optionally filter by phase (&#x27;&#x27; = all phases)
+    const PAGE_NAME     = &#x27;Button&#x27;;            // page to clean (or null for all pages)
+
+    const pagesToSearch = PAGE_NAME
+      ? [figma.root.children.find(p =&gt; p.name === PAGE_NAME)].filter(Boolean)
+      : figma.root.children;
+
+    const removed = [];
+    const skipped = [];
+
+    for (const page of pagesToSearch) {
+      await figma.setCurrentPageAsync(page);
+
+      const orphans = page.findAll(node =&gt; {
+        const runId = node.getPluginData(&#x27;dsb_run_id&#x27;);
+        if (runId !== TARGET_RUN_ID) return false;
+        if (TARGET_PHASE &amp;&amp; node.getPluginData(&#x27;dsb_phase&#x27;) !== TARGET_PHASE) return false;
+        return true;
+      });
+
+      // Remove leaf-first to avoid removing parents before children
+      // Sort by depth (deepest first) to avoid double-remove errors
+      const sorted = orphans.slice().sort((a, b) =&gt; {
+        let depthA = 0, depthB = 0;
+        let n = a; while (n.parent) { depthA++; n = n.parent; }
+        n = b; while (n.parent) { depthB++; n = n.parent; }
+        return depthB - depthA;
+      });
+
+      for (const node of sorted) {
+        try {
+          if (node.removed) continue; // already removed (was a child of removed parent)
+          node.remove();
+          removed.push({ id: node.id, name: node.name, key: node.getPluginData(&#x27;dsb_key&#x27;) });
+        } catch (e) {
+          skipped.push({ id: node.id, name: node.name, error: e.message });
+        }
+      }
+    }
+
+    figma.closePlugin(JSON.stringify({ removed: removed.length, skipped: skipped.length, details: removed }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p>After running cleanup, call <code>get_metadata</code> on the target page to confirm the orphaned nodes are gone before retrying.</p>
+<hr>
+<h2>3. Idempotency Patterns: Check-Before-Create</h2>
+<p>Run an idempotency check at the start of every create operation. If the entity already exists (tagged with the expected <code>dsb_key</code>), skip creation and return the existing ID.</p>
+<h3>Check-before-create for a variable collection</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const KEY = &#x27;collection/color&#x27;;
+    const RUN_ID = &#x27;ds-build-2024-001&#x27;;
+    const COLLECTION_NAME = &#x27;Color&#x27;;
+
+    // Check: does a collection tagged with this key already exist?
+    const allCollections = await figma.variables.getLocalVariableCollectionsAsync();
+    // Variables/collections support pluginData too — check by name as fallback
+    // Note: VariableCollection pluginData is set via collection.setPluginData(...)
+    const existing = allCollections.find(c =&gt;
+      c.getPluginData(&#x27;dsb_key&#x27;) === KEY
+    );
+
+    if (existing) {
+      figma.closePlugin(JSON.stringify({
+        collectionId: existing.id,
+        modeIds: existing.modes.map(m =&gt; ({ name: m.name, id: m.modeId })),
+        alreadyExisted: true,
+      }));
+      return;
+    }
+
+    // Create fresh
+    const collection = figma.variables.createVariableCollection(COLLECTION_NAME);
+    collection.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+    collection.setPluginData(&#x27;dsb_key&#x27;, KEY);
+
+    // Rename default mode, add second mode
+    collection.renameMode(collection.modes[0].modeId, &#x27;Light&#x27;);
+    const darkModeId = collection.addMode(&#x27;Dark&#x27;);
+
+    figma.closePlugin(JSON.stringify({
+      collectionId: collection.id,
+      modeIds: [
+        { name: &#x27;Light&#x27;, id: collection.modes[0].modeId },
+        { name: &#x27;Dark&#x27;,  id: darkModeId },
+      ],
+    }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Check-before-create for a page</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const KEY = &#x27;page/button&#x27;;
+    const PAGE_NAME = &#x27;Button&#x27;;
+    const RUN_ID = &#x27;ds-build-2024-001&#x27;;
+
+    // Check by pluginData key first, then by name as fallback
+    let page = figma.root.children.find(p =&gt; p.getPluginData(&#x27;dsb_key&#x27;) === KEY);
+    if (!page) {
+      page = figma.root.children.find(p =&gt; p.name === PAGE_NAME);
+    }
+
+    if (page) {
+      // Ensure it&#x27;s tagged if it was found by name only
+      if (!page.getPluginData(&#x27;dsb_key&#x27;)) {
+        page.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+        page.setPluginData(&#x27;dsb_key&#x27;, KEY);
+      }
+      figma.closePlugin(JSON.stringify({ pageId: page.id, alreadyExisted: true }));
+      return;
+    }
+
+    page = figma.createPage();
+    page.name = PAGE_NAME;
+    page.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+    page.setPluginData(&#x27;dsb_key&#x27;, KEY);
+
+    figma.closePlugin(JSON.stringify({ pageId: page.id, alreadyExisted: false }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Check-before-create for a component set</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const KEY = &#x27;componentset/button&#x27;;
+    const PAGE_ID = &#x27;PAGE_ID_FROM_STATE&#x27;;
+    const RUN_ID = &#x27;ds-build-2024-001&#x27;;
+
+    const page = await figma.getNodeByIdAsync(PAGE_ID);
+    await figma.setCurrentPageAsync(page);
+
+    const existing = page.findAll(n =&gt;
+      n.type === &#x27;COMPONENT_SET&#x27; &amp;&amp; n.getPluginData(&#x27;dsb_key&#x27;) === KEY
+    );
+
+    if (existing.length &gt; 0) {
+      figma.closePlugin(JSON.stringify({
+        componentSetId: existing[0].id,
+        alreadyExisted: true,
+      }));
+      return;
+    }
+
+    // ... proceed with creation
+    figma.closePlugin(JSON.stringify({ componentSetId: null, alreadyExisted: false }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<hr>
+<h2>4. State Ledger</h2>
+<h3>JSON Schema</h3>
+<p>Maintain a state ledger in your context (not in the Figma file) across calls. This is your source of truth for node IDs, completed steps, and pending validations.</p>
+<pre><code class="lang-json">{
+  &quot;runId&quot;: &quot;ds-build-2024-001&quot;,
+  &quot;phase&quot;: &quot;phase3&quot;,
+  &quot;step&quot;: &quot;component-button/combine-variants&quot;,
+  &quot;completedSteps&quot;: [
+    &quot;phase0&quot;,
+    &quot;phase1/collections&quot;,
+    &quot;phase1/primitives&quot;,
+    &quot;phase1/semantics&quot;,
+    &quot;phase2/pages&quot;,
+    &quot;phase2/foundations-docs&quot;,
+    &quot;phase3/component-avatar&quot;,
+    &quot;phase3/component-icon&quot;
+  ],
+  &quot;entities&quot;: {
+    &quot;collections&quot;: {
+      &quot;primitives&quot;: &quot;VariableCollectionId:1234:5678&quot;,
+      &quot;color&quot;:      &quot;VariableCollectionId:1234:5679&quot;,
+      &quot;spacing&quot;:    &quot;VariableCollectionId:1234:5680&quot;
+    },
+    &quot;variables&quot;: {
+      &quot;color/bg/primary&quot;:         &quot;VariableId:2345:1&quot;,
+      &quot;color/bg/secondary&quot;:       &quot;VariableId:2345:2&quot;,
+      &quot;color/bg/disabled&quot;:        &quot;VariableId:2345:3&quot;,
+      &quot;color/text/on-primary&quot;:    &quot;VariableId:2345:4&quot;,
+      &quot;color/text/on-secondary&quot;:  &quot;VariableId:2345:5&quot;,
+      &quot;color/text/disabled&quot;:      &quot;VariableId:2345:6&quot;,
+      &quot;spacing/sm&quot;:               &quot;VariableId:2345:7&quot;,
+      &quot;spacing/md&quot;:               &quot;VariableId:2345:8&quot;,
+      &quot;spacing/lg&quot;:               &quot;VariableId:2345:9&quot;,
+      &quot;radius/md&quot;:                &quot;VariableId:2345:10&quot;
+    },
+    &quot;modes&quot;: {
+      &quot;color/light&quot;: &quot;2345:1&quot;,
+      &quot;color/dark&quot;:  &quot;2345:2&quot;
+    },
+    &quot;pages&quot;: {
+      &quot;Cover&quot;:       &quot;0:1&quot;,
+      &quot;Foundations&quot;: &quot;0:2&quot;,
+      &quot;Button&quot;:      &quot;0:3&quot;
+    },
+    &quot;components&quot;: {
+      &quot;Icon&quot;:        &quot;3456:1&quot;,
+      &quot;Avatar&quot;:      &quot;3456:2&quot;,
+      &quot;Button&quot;:      &quot;3456:3&quot;
+    },
+    &quot;componentSets&quot;: {
+      &quot;Button&quot;: &quot;4567:1&quot;
+    }
+  },
+  &quot;pendingValidations&quot;: [
+    &quot;Button:metadata&quot;,
+    &quot;Button:screenshot&quot;
+  ],
+  &quot;userCheckpoints&quot;: {
+    &quot;phase0&quot;: &quot;approved-2024-01-15&quot;,
+    &quot;phase1&quot;: &quot;approved-2024-01-15&quot;,
+    &quot;phase2&quot;: &quot;approved-2024-01-15&quot;,
+    &quot;component-avatar&quot;: &quot;approved-2024-01-15&quot;
+  }
+}</code></pre>
+<h3>Persisting between calls</h3>
+<p>After every successful <code>use_figma</code> call:</p>
+<ol><li>Extract all IDs from the <code>closePlugin</code> return value</li><li>Add them to the appropriate <code>entities</code> section of the ledger</li><li>Add the completed step to <code>completedSteps</code></li><li>Remove from <code>pendingValidations</code> if this call validated something</li><li>Update <code>phase</code> and <code>step</code> to the current position</li></ol>
+<h3>Rehydrating at session start</h3>
+<p>If a conversation is interrupted and resumed, read the state ledger and verify key entities still exist:</p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    // Verify that critical nodes from the ledger still exist
+    const toVerify = {
+      &#x27;color-collection&#x27;:  &#x27;VariableCollectionId:1234:5679&#x27;,
+      &#x27;button-page&#x27;:       &#x27;0:3&#x27;,
+      &#x27;button-componentset&#x27;: &#x27;4567:1&#x27;,
+    };
+
+    const results = {};
+    for (const [label, id] of Object.entries(toVerify)) {
+      const node = await figma.getNodeByIdAsync(id)
+        .catch(() =&gt; null);
+      results[label] = node ? { found: true, name: node.name } : { found: false };
+    }
+
+    figma.closePlugin(JSON.stringify(results));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p>If any entity is missing, treat the phase that created it as incomplete and re-run from that checkpoint.</p>
+<hr>
+<h2>5. Resume Protocol</h2>
+<h3>Step 1: Inspect the file for <code>dsb_run_id</code> tags</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const TARGET_RUN_ID = &#x27;ds-build-2024-001&#x27;;
+    const inventory = { pages: [], variables: [], componentSets: [], frames: [] };
+
+    // Scan pages
+    for (const page of figma.root.children) {
+      if (page.getPluginData(&#x27;dsb_run_id&#x27;) === TARGET_RUN_ID) {
+        inventory.pages.push({ id: page.id, name: page.name, key: page.getPluginData(&#x27;dsb_key&#x27;) });
+      }
+    }
+
+    // Scan variables
+    const allVars = await figma.variables.getLocalVariablesAsync();
+    for (const v of allVars) {
+      if (v.getPluginData(&#x27;dsb_run_id&#x27;) === TARGET_RUN_ID) {
+        inventory.variables.push({ id: v.id, name: v.name, key: v.getPluginData(&#x27;dsb_key&#x27;) });
+      }
+    }
+
+    // Scan all component sets and frames on each page
+    for (const page of figma.root.children) {
+      await figma.setCurrentPageAsync(page);
+      const nodes = page.findAll(n =&gt; n.getPluginData(&#x27;dsb_run_id&#x27;) === TARGET_RUN_ID);
+      for (const n of nodes) {
+        if (n.type === &#x27;COMPONENT_SET&#x27;) {
+          inventory.componentSets.push({ id: n.id, name: n.name, key: n.getPluginData(&#x27;dsb_key&#x27;) });
+        } else if (n.type === &#x27;FRAME&#x27;) {
+          inventory.frames.push({ id: n.id, name: n.name, key: n.getPluginData(&#x27;dsb_key&#x27;) });
+        }
+      }
+    }
+
+    figma.closePlugin(JSON.stringify(inventory));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Step 2: Reconstruct state from inventory</h3>
+<p>Map the inventory keys back to the state ledger schema. For each entity found with a <code>dsb_key</code>, add its ID to the appropriate section. Mark the corresponding step as <code>completedSteps</code>.</p>
+<p>Example mapping:</p>
+<pre><code>key: &#x27;collection/color&#x27;        → entities.collections.color
+key: &#x27;variable/color/bg/primary&#x27; → entities.variables[&#x27;color/bg/primary&#x27;]
+key: &#x27;page/button&#x27;             → entities.pages.Button
+key: &#x27;componentset/button&#x27;     → entities.componentSets.Button</code></pre>
+<h3>Step 3: Identify the resume point</h3>
+<p>The resume point is the first step in the workflow that is NOT in <code>completedSteps</code>. If the inventory shows the Button component set exists but the pending validations list shows <code>&#x27;Button:screenshot&#x27;</code>, the resume point is the screenshot validation call, not re-creation.</p>
+<p>Use the checkpoint table from the workflow to determine which phase to continue from:</p>
+<pre><code>Phase 0 complete: all planned pages listed in entities.pages
+Phase 1 complete: all planned variables listed in entities.variables with correct scopes
+Phase 2 complete: all structural pages + foundations doc frames present
+Phase 3 complete (per component): componentSet exists + no pending validations + user checkpoint recorded</code></pre>
+<hr>
+<h2>6. Failure Taxonomy</h2>
+<h3>Recoverable Errors</h3>
+<p>These can be fixed and retried without affecting already-created entities:</p>
+<p>| Category | Examples | Recovery | |---|---|---| | Layout errors | Variants stacked at (0,0), wrong padding values | Re-run the positioning step only | | Naming issues | Typo in variant name, wrong casing | Find nodes by <code>dsb_key</code>, update <code>name</code> property | | Missing property wiring | <code>componentPropertyReferences</code> not set | Find component set by ID, re-run the property wiring step | | Variable binding omission | A fill was hardcoded instead of bound | Find nodes by <code>dsb_key</code>, re-bind the fill | | Wrong variable bound | Bound to wrong variable ID | Re-bind with correct variable ID | | Text not visible | Font not loaded before text write | Re-run text creation with <code>loadFontAsync</code> first | | Partial variant creation | Only 12 of 18 variants created before timeout | Run cleanup for the partial set, re-run full variant creation |</p>
+<h3>Structural Corruption (Requires Rollback or Restart)</h3>
+<p>These errors leave the file in a state where continuing forward is unreliable:</p>
+<p>| Category | Examples | Recovery | |---|---|---| | Component cycle | A component instance was accidentally nested inside itself | Full cleanup of the affected component, restart that component from Call 1 | | combineAsVariants with non-components | Mixed node types passed to combineAsVariants, causing unexpected merges | Remove the malformed component set, re-run from variant creation | | Variable collection ID drift | Collection was deleted and re-created, old IDs in state ledger are stale | Re-run Phase 1 completely; update all IDs in state ledger | | Page deletion | A page was deleted after component sets were created on it | Treat as Phase 2 incomplete; re-create the page + re-run affected component creations | | Mode limit exceeded | <code>addMode</code> threw because the plan is Starter or Professional | Redesign variable collection architecture to fit mode limits, restart Phase 1 |</p>
+<p><strong>Recovery from structural corruption</strong>: run <code>cleanupOrphans</code> for the entire run ID, then restart from the affected phase. Do NOT attempt to patch corrupted structure in-place.</p>
+<hr>
+<h2>7. Common Error Table</h2>
+<p>| Error message | Likely cause | Fix | |---|---|---| | <code>&quot;Cannot create component from node&quot;</code> | Tried to call <code>createComponentFromNode</code> on a node inside a component | Create a fresh component instead: <code>figma.createComponent()</code> | | <code>&quot;in addMode: Limited to N modes only&quot;</code> | Plan mode limit hit (Starter=1, Professional=4) | Redesign to use fewer modes or upgrade plan | | <code>&quot;setCurrentPageAsync: page does not exist&quot;</code> | Page was deleted or wrong ID | Re-create the page using the idempotency pattern | | <code>&quot;Cannot read properties of null&quot;</code> | <code>getNodeByIdAsync</code> returned null — node was deleted | Run the resume protocol to find what exists, update state ledger | | <code>&quot;Expected nodes to be component nodes&quot;</code> | Passed a non-ComponentNode to <code>combineAsVariants</code> | Filter the array: <code>nodes.filter(n =&gt; n.type === &#x27;COMPONENT&#x27;)</code> | | <code>&quot;in createVariable: Cannot create variable&quot;</code> | Collection was deleted or ID is wrong | Verify collection exists with <code>getVariableCollectionByIdAsync</code> | | <code>&quot;font not loaded&quot;</code> | Called a text property setter without <code>loadFontAsync</code> first | Add <code>await figma.loadFontAsync({ family, style })</code> before the text operation | | <code>&quot;Cannot set properties of a read-only array&quot;</code> | Tried to mutate fills/strokes in-place | Clone first: <code>const fills = JSON.parse(JSON.stringify(node.fills))</code> | | <code>&quot;Expected RGBA color&quot;</code> | Color value out of 0–1 range | Divide RGB 0–255 values by 255: <code>{ r: 65/255, g: 85/255, b: 143/255 }</code> | | <code>&quot;Cannot add children to a non-parent node&quot;</code> | Tried to append a child to a leaf node (text, rect) | Ensure the parent is a FrameNode, ComponentNode, or GroupNode | | <code>&quot;in combineAsVariants: nodes must be in the same parent&quot;</code> | Components are on different pages | Move all components to the same page before combining | | <code>&quot;Script exceeded time limit&quot;</code> | Loop creating too many nodes in one call | Split the work: create N/2 variants per call | | Component set deletes itself | Tried to create a component set with no children | <code>combineAsVariants</code> requires at least 1 node — always pass 1+ | | <code>addComponentProperty</code> returns unexpected name | This is normal — <code>BOOLEAN</code>/<code>TEXT</code>/<code>INSTANCE_SWAP</code> get <code>#id:id</code> suffix | Save the returned key immediately and use that, not the input name |</p>
+<hr>
+<h2>8. Per-Phase Recovery Guidance</h2>
+<h3>Phase 1 fails mid-execution (variable creation)</h3>
+<p>Symptoms: partial variable collections exist; some variables are missing; some have wrong values.</p>
+<p>Recovery steps:</p>
+<ol><li>Run inspection script to find all variables tagged with your <code>dsb_run_id</code></li><li>For each variable with <code>dsb_key</code> matching the plan, verify its <code>valuesByMode</code> and <code>scopes</code> are correct</li><li>If a variable is malformed, call <code>variable.remove()</code> and recreate it</li><li>If the collection itself is malformed, remove the entire collection and recreate from scratch</li><li>Do NOT proceed to Phase 2 until ALL planned variables exist with correct scopes and code syntax</li></ol>
+<p><strong>The most common Phase 1 failure:</strong> running out of time in a single <code>use_figma</code> call when creating many variables. Fix: batch variable creation — create at most 20–30 variables per call.</p>
+<h3>Phase 2 fails mid-execution (page/file structure)</h3>
+<p>Symptoms: some pages exist, others are missing; foundations doc frames are incomplete.</p>
+<p>Recovery steps:</p>
+<ol><li>Identify which pages were successfully created (check for <code>dsb_key</code> tags)</li><li>Mark remaining pages as pending and create them in subsequent calls</li><li>If a foundations doc frame is malformed, run <code>cleanupOrphans</code> for <code>dsb_phase: &#x27;phase2&#x27;</code> on that page, then recreate</li></ol>
+<p>Phase 2 failures rarely require Phase 1 rollback unless the page structure itself is corrupted (which is unusual).</p>
+<h3>Phase 3 fails mid-execution (component creation)</h3>
+<p>This is the most common failure mode in long builds. Handle by component:</p>
+<pre><code>If failure in Call 1 (page creation):
+  → Idempotency check will handle on retry. Safe to re-run.
+
+If failure in Call 2 (doc frame):
+  → cleanupOrphans for dsb_key=&#x27;doc/{component}&#x27;, then re-run.
+
+If failure in Call 3 (base component):
+  → Remove the partial base component node, re-run from Call 3.
+
+If failure in Call 4 (variant creation):
+  → cleanupOrphans for dsb_phase=&#x27;phase3&#x27; on the component page (scoped by page).
+  → Re-run from Call 3 (base) or Call 4 if base was successfully tagged.
+
+If failure in Call 5 (combineAsVariants + layout):
+  → Remove the malformed component set.
+  → Remove all variant ComponentNodes for this component (by dsb_key pattern).
+  → Re-run from Call 3.
+
+If failure in Call 6 (component properties):
+  → The component set already exists and is structurally sound.
+  → Re-run Call 6 only — addComponentProperty is safe to retry if
+    you first check componentPropertyDefinitions for existing properties.
+  → Idempotency check: if &#x27;Label&#x27; property already exists, skip addComponentProperty.</code></pre>
+<p><strong>Idempotency for component properties (Call 6 retry):</strong></p>
+<pre><code class="lang-javascript">const existingDefs = cs.componentPropertyDefinitions;
+const labelKey = existingDefs[&#x27;Label&#x27;]
+  ? Object.keys(existingDefs).find(k =&gt; k.startsWith(&#x27;Label&#x27;))
+  : cs.addComponentProperty(&#x27;Label&#x27;, &#x27;TEXT&#x27;, &#x27;Button&#x27;);</code></pre>
+<h3>Phase 4 fails mid-execution (QA / Code Connect)</h3>
+<p>Phase 4 is non-destructive. Failures here do not corrupt Phase 3 work. Common failures:</p>
+<ul><li><strong>Accessibility audit finds contrast failures:</strong> do not attempt auto-fix. Report the specific variable IDs and token names that fail, then ask the user which value to update.</li><li><strong>Naming audit finds duplicates:</strong> list all duplicates with their <code>dsb_key</code> values, ask user which to keep, then remove the duplicates.</li><li><strong>Code Connect mapping fails:</strong> treat as incomplete, not broken. Continue and leave as pending.</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/error-recovery.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

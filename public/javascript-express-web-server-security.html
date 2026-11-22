@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>javascript-express-web-server-security</title>
+<style>
+/* Matches hanzo.ai's monochrome editorial aesthetic: light-first white canvas
+   with automatic light/dark color-scheme support, Zen sans display headings,
+   edge halftone dot framing, pill controls, and crisp dark terminal cards. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  color-scheme:light dark;
+  --ground-light:#ffffff; --ground-dark:#000000;
+  --panel-light:#fafafa; --panel-dark:#0f0f0f;
+  --panel-2-light:#f5f5f7; --panel-2-dark:#171717;
+  --ink-light:#0a0a0a; --ink-dark:#f5f5f7;
+  --soft-light:#6e6e73; --soft-dark:#a1a1a6;
+  --faint-light:#86868b; --faint-dark:#737378;
+  --line-light:#e5e5e5; --line-dark:#232323;
+  --line-hi-light:#d4d4d4; --line-hi-dark:#3a3a3a;
+  --solid-bg-light:#0a0a0a; --solid-bg-dark:#ffffff;
+  --solid-ink-light:#ffffff; --solid-ink-dark:#0a0a0a;
+  --solid-hover-light:#262626; --solid-hover-dark:#e5e5e5;
+  --dot-light:#d4d4d4; --dot-dark:#262626;
+
+  --ground:var(--ground-light); --panel:var(--panel-light); --panel-2:var(--panel-2-light);
+  --ink:var(--ink-light); --soft:var(--soft-light); --faint:var(--faint-light);
+  --line:var(--line-light); --line-hi:var(--line-hi-light);
+  --solid-bg:var(--solid-bg-light); --solid-ink:var(--solid-ink-light);
+  --solid-hover:var(--solid-hover-light); --dot:var(--dot-light);
+  --term-bg:#0a0a0a; --term-ink:#f5f5f7; --term-soft:#a1a1a6; --term-faint:#737378; --term-line:#232323;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  --r:999px; --r-soft:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:var(--ground-dark); --panel:var(--panel-dark); --panel-2:var(--panel-2-dark);
+    --ink:var(--ink-dark); --soft:var(--soft-dark); --faint:var(--faint-dark);
+    --line:var(--line-dark); --line-hi:var(--line-hi-dark);
+    --solid-bg:var(--solid-bg-dark); --solid-ink:var(--solid-ink-dark);
+    --solid-hover:var(--solid-hover-dark); --dot:var(--dot-dark);
+  }
+}
+@supports (color: light-dark(white, black)){
+  :root{
+    --ground:light-dark(var(--ground-light),var(--ground-dark));
+    --panel:light-dark(var(--panel-light),var(--panel-dark));
+    --panel-2:light-dark(var(--panel-2-light),var(--panel-2-dark));
+    --ink:light-dark(var(--ink-light),var(--ink-dark));
+    --soft:light-dark(var(--soft-light),var(--soft-dark));
+    --faint:light-dark(var(--faint-light),var(--faint-dark));
+    --line:light-dark(var(--line-light),var(--line-dark));
+    --line-hi:light-dark(var(--line-hi-light),var(--line-hi-dark));
+    --solid-bg:light-dark(var(--solid-bg-light),var(--solid-bg-dark));
+    --solid-ink:light-dark(var(--solid-ink-light),var(--solid-ink-dark));
+    --solid-hover:light-dark(var(--solid-hover-light),var(--solid-hover-dark));
+    --dot:light-dark(var(--dot-light),var(--dot-dark));
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--ground);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:1rem;line-height:1.58;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility}
+.wrap{max-width:68rem;margin:0 auto;padding:0 1.75rem}
+
+/* Edge halftone dot field framing the hero, matching hanzo.ai. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before,.hero::after{content:"";position:absolute;top:0;bottom:0;width:min(24vw,280px);
+  background-image:radial-gradient(var(--dot) 1.25px,transparent 1.25px);
+  background-size:9px 9px;pointer-events:none}
+.hero::before{inset-inline-start:0;
+  -webkit-mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero::after{inset-inline-end:0;
+  -webkit-mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero .wrap{position:relative;z-index:1;padding-top:4.5rem;padding-bottom:3.75rem}
+
+nav{position:sticky;top:0;z-index:40;border-bottom:1px solid var(--line);
+  background:var(--ground);background:color-mix(in srgb,var(--ground) 90%,transparent);
+  backdrop-filter:blur(16px)}
+nav .in{max-width:68rem;margin:0 auto;padding:.85rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--sans);font-size:.95rem;font-weight:600;letter-spacing:-.02em;
+  color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:.55rem}
+.brand i{font-style:normal;font-weight:400;color:var(--soft)}
+.mark{width:1.25em;height:1.25em;display:block;flex:0 0 auto}
+.nlinks{display:flex;align-items:center;gap:1.15rem}
+.nlinks a{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+.nlinks a:hover{color:var(--ink);text-decoration:none}
+nav a.up{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink);text-decoration:none}
+.ncta{display:inline-flex;align-items:center;justify-content:center;padding:.45rem 1rem;
+  border-radius:var(--r);background:var(--solid-bg);color:var(--solid-ink);font-size:.84rem;
+  font-weight:500;text-decoration:none;white-space:nowrap}
+.ncta:hover{background:var(--solid-hover);color:var(--solid-ink);text-decoration:none}
+
+h1{font-family:var(--sans);font-size:clamp(2.15rem,4.8vw,3.5rem);line-height:1.06;
+  letter-spacing:-.038em;margin:0 0 1.15rem;font-weight:600;text-wrap:balance;max-width:20ch}
+h1 em{font-style:normal;color:var(--soft);font-weight:500}
+.lede{color:var(--soft);font-size:1.0625rem;line-height:1.55;max-width:58ch;margin:0 0 2rem;text-wrap:pretty}
+
+.btns{display:flex;flex-wrap:wrap;gap:.55rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--sans);
+  font-size:.875rem;font-weight:500;letter-spacing:-.005em;
+  min-height:2.5rem;padding:.55rem 1.2rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:var(--ground);cursor:pointer;
+  line-height:1.2;transition:background .15s ease,border-color .15s ease}
+.btn:hover{background:var(--panel-2);text-decoration:none;border-color:var(--ink)}
+.btn.solid{background:var(--solid-bg);color:var(--solid-ink);border-color:var(--solid-bg)}
+.btn.solid:hover{background:var(--solid-hover);border-color:var(--solid-hover)}
+.btn .chev{width:.75em;height:.75em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--ground);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 16px 40px rgba(0,0,0,.18)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .4rem);
+  background:transparent;color:var(--ink);font-family:var(--sans);font-size:.86rem;
+  font-weight:500;text-decoration:none;cursor:pointer;line-height:1.3;white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:var(--panel-2);outline:none;text-decoration:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.08em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:68rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--sans);font-size:.8rem;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:500;flex:0 0 auto;font-family:var(--mono);font-size:.7rem;
+  letter-spacing:.1em;text-transform:uppercase;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .9rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;font-size:.82rem;font-weight:500;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--sans);font-size:1.35rem;letter-spacing:-.025em;margin:2.75rem 0 .75rem;font-weight:600;text-wrap:balance}
+h3{font-size:1.05rem;margin:2rem 0 .5rem;font-weight:600;letter-spacing:-.015em}
+h4,h5,h6{font-size:.95rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch;text-wrap:pretty}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.25rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.84em;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:6px;padding:.12em .4em}
+pre{color-scheme:dark;background:var(--term-bg);color:var(--term-ink);border:1px solid var(--term-line);
+  padding:1.05rem 1.2rem;border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.84rem;line-height:1.68;color:var(--term-ink)}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:2px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.55rem .75rem;text-align:left}
+
+.curl{color-scheme:dark;display:block;background:var(--term-bg);border:1px solid var(--term-line);
+  border-radius:var(--r-soft);padding:1rem 1.2rem;font-family:var(--mono);
+  font-size:.82rem;color:var(--term-soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.85}
+.curl b{color:var(--term-ink);font-weight:500}
+.curl i{font-style:normal;color:var(--term-faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.25rem;font-family:var(--sans);font-size:.95rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r);margin:2rem 0 .65rem}
+#q::placeholder{color:var(--faint)}
+#q:focus{outline:none;border-color:var(--ink);background:var(--ground)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.75rem 1rem;margin:0 -1rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none;transition:background .12s ease}
+.row:hover{background:var(--panel-2);text-decoration:none}
+.nm{font-family:var(--mono);font-size:.86rem;font-weight:500;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.92rem;display:block;margin-top:.15rem}
+footer{margin-top:4rem;padding:2.25rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft);text-decoration:none}
+footer a:hover{color:var(--ink);text-decoration:underline}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);font-weight:500;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3rem;padding-bottom:2.5rem}
+  .nlinks .nhide{display:none}
+  .btns{gap:.5rem}
+  .btn{padding:.55rem 1rem;font-size:.84rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/javascript-express-web-server-security">
+<link rel="alternate" type="text/markdown" href="/javascript-express-web-server-security.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/javascript-express-web-server-security.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> Hanzo <i>Skills</i></a>
+  <div class="nlinks"><a class="nhide" href="https://hanzo.sh">hanzo.sh</a><a class="nhide" href="https://docs.hanzo.ai">Docs</a><a class="nhide" href="https://hanzo.ai/security">Security</a><a class="up" href="/">All skills</a><a class="ncta" href="https://hanzo.app">Try Hanzo</a></div>
+</div></nav>
+
+<div class="wrap">
+<h1>javascript-express-web-server-security</h1><p class="lede">This document is designed as a security spec that supports:</p><h1>Express (Node.js) Web Security Spec (Express 5.x / 4.19.2+, Node.js LTS)</h1>
+<p>This document is designed as a <strong>security spec</strong> that supports:</p>
+<ol><li><strong>Secure-by-default code generation</strong> for new Express apps and routes.</li><li><strong>Security review / vulnerability hunting</strong> in existing Express code (passive “notice issues while working” and active “scan the repo and report findings”).</li></ol>
+<p>It is intentionally written as a set of <strong>normative requirements</strong> (“MUST/SHOULD/MAY”) plus <strong>audit rules</strong> (what bad patterns look like, how to detect them, and how to fix/mitigate them).</p>
+<hr>
+<h2>0) Safety, boundaries, and anti-abuse constraints (MUST FOLLOW)</h2>
+<ul><li>MUST NOT request, output, log, or commit secrets (API keys, passwords, private keys, session secrets, cookies, tokens).</li><li>MUST NOT “fix” security by disabling protections (e.g., weakening cookie flags, disabling CSRF defenses for cookie-authenticated apps, enabling permissive CORS, trusting proxy headers from the open internet, turning on debugging/stack traces in production, disabling TLS without a replacement).</li><li>MUST provide <strong>evidence-based findings</strong> during audits: cite file paths, code snippets, middleware/config values, and runtime assumptions that justify the claim.</li><li>MUST treat uncertainty honestly: if a protection might exist in infrastructure (reverse proxy, gateway, WAF, CDN), report it as “not visible in app code; verify at runtime/config.”</li><li>MUST prefer vetted libraries and platform controls over “roll your own” crypto/auth/session/CSRF. Express explicitly expects the application to validate/handle user input correctly; it does not do this automatically. ([Express][1])</li></ul>
+<hr>
+<h2>1) Operating modes</h2>
+<h3>1.1 Generation mode (default)</h3>
+<p>When asked to write new Express code or modify existing code:</p>
+<ul><li>MUST follow every <strong>MUST</strong> requirement in this spec.</li><li>SHOULD follow every <strong>SHOULD</strong> requirement unless the user explicitly says otherwise.</li><li>MUST prefer safe-by-default APIs and proven libraries over custom security code.</li><li>MUST avoid introducing new risky sinks (shell execution, dynamic code evaluation, unsafe redirects, serving user files as HTML, template rendering from untrusted strings, unsafe filesystem paths, SSRF URL fetch endpoints, etc.).</li></ul>
+<h3>1.2 Passive review mode (always on while editing)</h3>
+<p>While working anywhere in an Express repo (even if the user did not ask for a security scan):</p>
+<ul><li>MUST “notice” violations of this spec in touched/nearby code.</li><li>SHOULD mention issues as they come up, with a brief explanation + safe fix.</li></ul>
+<h3>1.3 Active audit mode (explicit scan request)</h3>
+<p>When the user asks to “scan”, “audit”, or “hunt for vulns”:</p>
+<ul><li>MUST systematically search the codebase for violations of this spec.</li><li>MUST output findings in a structured format (see §2.3).</li></ul>
+<p>Recommended audit order:</p>
+<ol><li>Entrypoints (server/app bootstrap), deployment manifests, Dockerfiles, process manager config, CI/CD.</li><li>Express settings + middleware stack order (helmet, parsers, auth, sessions, CSRF, CORS).</li><li>Proxy trust (<code>trust proxy</code>) and IP/protocol/host handling. ([Express][2])</li><li>Auth flows, sessions, cookies, password reset links, redirect handling. ([Express][1])</li><li>State-changing routes + CSRF protections (cookie-authenticated apps). ([OWASP Cheat Sheet Series][3])</li><li>Template rendering and XSS defenses (HTML generation, CSP, <code>res.locals</code>). ([OWASP Cheat Sheet Series][4])</li><li>File handling (uploads + downloads + static files) and path traversal. ([Express][5])</li><li>Injection classes (SQL, NoSQL, command execution, unsafe deserialization). ([OWASP Cheat Sheet Series][6])</li><li>Outbound requests (SSRF) and webhook/callback delivery. ([OWASP Cheat Sheet Series][7])</li><li>Rate limiting / brute-force defenses / abuse controls. ([Express][1])</li><li>Dependency hygiene / lockfiles / npm audit / vulnerable Express versions. ([Express][1])</li></ol>
+<hr>
+<h2>2) Definitions and review guidance</h2>
+<h3>2.1 Untrusted input (treat as attacker-controlled unless proven otherwise)</h3>
+<p>In Express, common untrusted inputs include:</p>
+<ul><li><code>req.params</code> (route parameters)</li><li><code>req.query</code> (query string parameters; can be strings/arrays/objects depending on parsing) ([OWASP Cheat Sheet Series][8])</li><li><code>req.body</code> from <code>express.json()</code>, <code>express.urlencoded()</code>, <code>express.text()</code>, <code>express.raw()</code> ([Express][5])</li><li><code>req.headers</code> / <code>req.get(...)</code></li><li><code>req.cookies</code> / <code>req.signedCookies</code> (if cookie parsing middleware is used)</li><li>Upload metadata and filenames (e.g., multer <code>file.originalname</code>, <code>file.mimetype</code>)</li><li>Any data from external systems (webhooks, third-party APIs, message queues)</li><li>Any persisted user content (DB rows) that originated from users</li></ul>
+<p>Special proxy note:</p>
+<ul><li>If <code>trust proxy</code> is enabled, values like <code>req.ip</code>, <code>req.hostname</code>, and <code>req.protocol</code> may be derived from <code>X-Forwarded-*</code> headers which <strong>can be attacker-controlled</strong> if your proxy chain is not correctly overwriting/removing them. ([Express][2])</li></ul>
+<h3>2.2 State-changing request</h3>
+<p>A request is state-changing if it can create/update/delete data, change auth/session state, trigger side effects (purchase, email send, webhook send), or initiate privileged actions.</p>
+<h3>2.3 Required audit finding format</h3>
+<p>For each issue found, output:</p>
+<ul><li>Rule ID:</li><li>Severity: Critical / High / Medium / Low</li><li>Location: file path + function/route/middleware name + line(s)</li><li>Evidence: the exact code/config snippet</li><li>Impact: what could go wrong, who can exploit it</li><li>Fix: safe change (prefer minimal diff)</li><li>Mitigation: defense-in-depth if immediate fix is hard</li><li>False positive notes: what to verify if uncertain</li></ul>
+<hr>
+<h2>3) Secure baseline: minimum production configuration (MUST in production)</h2>
+<p>This is the smallest “production baseline” that prevents common Express misconfigurations.</p>
+<p>Minimum baseline targets:</p>
+<ul><li><code>helmet()</code> is used and configured (especially CSP where applicable), and fingerprinting is reduced (disable <code>x-powered-by</code>). ([Express][1])</li><li>A custom 404 handler and a custom error handler exist, and production does not leak internal stack traces. ([Express][1])</li><li>Cookie/session usage is deliberate:</li></ul>
+<ul><li>Not using default session cookie names</li><li>Cookies use secure attributes (<code>Secure</code>, <code>HttpOnly</code>, <code>SameSite</code>) as appropriate</li><li>Cookie-backed sessions never store secrets (they are readable by the client)</li><li>Server-side sessions never use MemoryStore in production. ([Express][1])</li><li>Request body parsing has explicit limits (<code>express.json({ limit })</code>, <code>express.urlencoded({ limit, parameterLimit, depth })</code>). ([Express][5])</li><li><code>trust proxy</code> is configured explicitly to match your proxy topology; not blindly <code>true</code>. ([Express][2])</li><li>Login/auth endpoints have brute-force protection and rate limiting. ([Express][1])</li><li>Dependencies are regularly audited/updated (<code>npm audit</code> + advisory response). ([Express][1])</li></ul>
+<hr>
+<h2>4) Rules (generation + audit)</h2>
+<p>Each rule contains: required practice, insecure patterns, detection hints, and remediation.</p>
+<h3>EXPRESS-INPUT-001: Treat all user input as untrusted and validate it</h3>
+<p>Severity: High</p>
+<p>Required:</p>
+<ul><li>MUST validate and normalize untrusted inputs before using them in security-sensitive logic or dangerous sinks (DB queries, redirects, filesystem, HTML output, shell commands). Ensure the untrusted inputs are type checked and structure checked before using or passing forward.</li><li>SHOULD apply allowlists (known-good) rather than blocklists when feasible.</li><li>MUST reject or safely handle unexpected types/shapes in <code>req.query</code>, <code>req.params</code>, and <code>req.body</code>.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Passing <code>req.query</code>, <code>req.params</code>, <code>req.body</code> directly into database/query builders, redirects, filesystem paths, or templates.</li><li>Assuming <code>req.query.foo</code> is always a string (it can be an array/object depending on parsing). ([OWASP Cheat Sheet Series][8])</li></ul>
+<p>Detection hints:</p>
+<ul><li>Identify “untrusted-to-sink” flows: request → sink (<code>res.redirect</code>, SQL execution, <code>sendFile</code>, <code>child_process</code>, template render, outbound fetch).</li><li>Search for direct usage of <code>req.query.<em></code>, <code>req.body.</em></code>, <code>req.params.*</code> in sensitive calls.</li></ul>
+<p>Fix:</p>
+<ul><li>Add schema validation (e.g., zod/joi/express-validator) at route boundaries.</li><li>Normalize types (e.g., force IDs to integers; reject arrays when scalar expected).</li></ul>
+<p>Notes:</p>
+<ul><li>Express production security guidance explicitly says input validation/handling is the application’s responsibility. ([Express][1])</li></ul>
+<hr>
+<h3>EXPRESS-REDIRECT-001: Prevent open redirects; validate redirect targets</h3>
+<p>Severity: Medium</p>
+<p>Required:</p>
+<ul><li>MUST validate redirect destinations derived from untrusted input (<code>next</code>, <code>return_to</code>, <code>url</code>).</li><li>SHOULD allowlist only same-site relative paths (preferred) or a strict allowlist of domains.</li><li>MUST fall back to a safe default when validation fails.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>res.redirect(req.query.next)</code> with no validation.</li><li><code>res.redirect(req.body.url)</code> or <code>res.location(...)</code> using untrusted URLs.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>res.redirect(</code> and <code>res.location(</code> and trace the source of the target.</li><li>Look for query params named <code>next</code>, <code>redirect</code>, <code>return</code>, <code>url</code>.</li></ul>
+<p>Fix:</p>
+<ul><li>Only allow relative paths (starting with <code>/</code>) and disallow <code>//</code>, backslashes, and encoded variants.</li><li>If cross-domain redirects are required, allowlist exact hosts and enforce <code>https</code>.</li></ul>
+<p>Notes:</p>
+<ul><li>Express documentation calls out open redirects as dangerous user input and shows validating the host before redirecting. ([Express][1])</li><li>Keep Express updated: Express has had an open-redirect-related CVE affecting some versions, and upgrades are part of the mitigation posture. ([NVD][9])</li></ul>
+<hr>
+<h3>EXPRESS-HEADERS-001: Use Helmet (or equivalent) to set essential security headers</h3>
+<p>Severity: Medium</p>
+<p>Required:</p>
+<ul><li>SHOULD use <code>helmet()</code> to set common security headers.</li><li>SHOULD configure CSP realistically (avoid <code>unsafe-inline</code> where possible) for pages that render user-influenced content.</li><li>SHOULD set <code>X-Content-Type-Options: nosniff</code>, clickjacking defenses (<code>X-Frame-Options</code> or CSP <code>frame-ancestors</code>), and appropriate referrer policy.</li></ul>
+<p>NOTE: It is most important to set the CSP&#x27;s script-src. All other directives are not as important and can generally be excluded for the ease of development.</p>
+<p>Insecure patterns:</p>
+<ul><li>No security headers set in app code and no evidence they are set at the edge.</li><li>CSP missing on apps that display user content.</li><li>Misconfigured framing headers that unintentionally allow clickjacking.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>helmet(</code> usage; check if CSP is configured or disabled.</li><li>Search for <code>res.setHeader(</code> / <code>res.set(</code> for security header setting.</li><li>If not visible in app code, check nginx/CDN config; otherwise flag “verify at edge.”</li></ul>
+<p>Fix:</p>
+<ul><li>Add <code>helmet()</code> early in middleware order and configure:</li></ul>
+<ul><li>CSP (<code>contentSecurityPolicy</code>)</li><li>Frame protections (<code>frameguard</code> or CSP <code>frame-ancestors</code>)</li><li><code>X-Content-Type-Options</code> (<code>noSniff</code>)</li></ul>
+<p>Notes:</p>
+<ul><li>Express production security best practices recommend Helmet and list headers Helmet sets by default. ([Express][1])</li><li>OWASP HTTP Headers guidance is a useful reference when tuning policies. ([OWASP Cheat Sheet Series][10])</li></ul>
+<hr>
+<h3>EXPRESS-FINGERPRINT-001: Reduce fingerprinting by disabling <code>x-powered-by</code> and customizing error/404 responses</h3>
+<p>Severity: Low (defense-in-depth)</p>
+<p>Required:</p>
+<ul><li>SHOULD disable <code>X-Powered-By</code> using <code>app.disable(&#x27;x-powered-by&#x27;)</code>.</li><li>SHOULD provide a custom 404 handler and a custom error handler to avoid distinct default responses and to control information leakage.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Default <code>X-Powered-By: Express</code> header left enabled.</li><li>Default Express 404/error responses in production with identifiable formatting and/or stack traces.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>app.disable(&#x27;x-powered-by&#x27;)</code>.</li><li>Check middleware tail for a custom 404 (<code>app.use((req,res)=&gt;...)</code>) and a custom error handler (<code>app.use((err,req,res,next)=&gt;...)</code>).</li><li>Check if <code>NODE_ENV</code> is correctly set for production behavior (see EXPRESS-ERROR-001). ([Express][11])</li></ul>
+<p>Fix:</p>
+<ul><li>Add:</li></ul>
+<ul><li><code>app.disable(&#x27;x-powered-by&#x27;)</code></li><li>A custom 404 handler</li><li>A custom error handler that logs server-side and returns generic messages client-side</li></ul>
+<p>Notes:</p>
+<ul><li>Express docs explicitly recommend disabling <code>x-powered-by</code> and adding your own not-found and error handlers. ([Express][1])</li></ul>
+<hr>
+<h3>EXPRESS-COOKIE-001: Cookies must use secure attributes and minimal scope</h3>
+<p>Severity: Medium</p>
+<p>Required:</p>
+<ul><li>MUST set cookie flags appropriately for any authentication/session cookie:</li></ul>
+<ul><li><code>Secure</code> when HTTPS (production) IMPORTANT NOTE: Only set <code>Secure</code> in production environment if TLS is configured. When running in a local dev environment over HTTP, do not set <code>Secure</code> property on cookies. You should do this conditionally based on if the app is running in production mode. You should also include a property like <code>SESSION_COOKIE_SECURE</code> which can be used to disable <code>Secure</code> cookies when testing over HTTP.</li><li><code>HttpOnly</code> for auth/session cookies</li><li><code>SameSite</code> set deliberately (<code>Lax</code> is a common baseline; <code>Strict</code> if compatible; <code>None</code> only with <code>Secure</code> and a justified cross-site need)</li><li>SHOULD avoid setting <code>domain</code> broadly (avoid “all subdomains” unless required).</li><li>SHOULD set bounded expiry appropriate to risk and UX.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Session/auth cookies without <code>HttpOnly</code>.</li><li>Cookies without <code>Secure</code> in production HTTPS.</li><li><code>SameSite=None</code> + cookie-authenticated state-changing endpoints without CSRF protections.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>res.cookie(</code>, <code>Set-Cookie</code>, <code>cookie: { ... }</code>, <code>express-session</code>, <code>cookie-session</code>.</li><li>Verify cookie flags in session middleware configuration.</li></ul>
+<p>Fix:</p>
+<ul><li>Set these attributes centrally in session/cookie middleware configuration.</li></ul>
+<p>Notes:</p>
+<ul><li>Express production security guidance lists cookie security options (<code>secure</code>, <code>httpOnly</code>, etc.). ([Express][1])</li><li><code>res.cookie()</code> ultimately sets <code>Set-Cookie</code> with options; defaults follow RFC 6265 behavior when options are omitted. ([Express][5])</li><li>OWASP session management guidance is relevant for choosing flags and lifetimes. ([OWASP Cheat Sheet Series][12])</li></ul>
+<hr>
+<h3>EXPRESS-SESS-001: Do not use the default session cookie name; avoid session fingerprinting</h3>
+<p>Severity: Low (defense-in-depth)</p>
+<p>Required:</p>
+<ul><li>SHOULD override the default session cookie name (e.g., do not keep <code>connect.sid</code> when using <code>express-session</code>).</li><li>SHOULD use a generic name (e.g., <code>sessionId</code>) unless you have a compatibility reason.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>express-session</code> used with no <code>name:</code> configured (default cookie name).</li><li>Multiple apps on the same domain sharing a cookie name accidentally.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>express-session</code> config blocks; check for <code>name:</code>.</li></ul>
+<p>Fix:</p>
+<ul><li>Set <code>name: &#x27;sessionId&#x27;</code> (or similar) in <code>express-session</code> options.</li></ul>
+<p>Notes:</p>
+<ul><li>Express docs explicitly recommend not using the default session cookie name to reduce fingerprinting. ([Express][1])</li></ul>
+<hr>
+<h3>EXPRESS-SESS-002: Session storage and lifecycle must be production-safe</h3>
+<p>Severity: High</p>
+<p>Required:</p>
+<ul><li>MUST NOT use <code>MemoryStore</code> in production (it is not designed for production use).</li><li>MUST store session secrets outside source control and rotate them safely.</li><li>SHOULD regenerate sessions on login / privilege changes to reduce session fixation risk.</li><li>MUST NOT store sensitive secrets in client-readable cookie sessions.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>app.use(session({ store: new MemoryStore(), ... }))</code> or missing store (defaults to MemoryStore).</li><li>Hard-coded for example: <code>secret: &#x27;keyboard cat&#x27;</code> / <code>secret: &#x27;s3Cur3&#x27;</code> in repo.</li><li>Using <code>cookie-session</code> to store access tokens, refresh tokens, or PII.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>express-session</code> and look for <code>MemoryStore</code> usage or missing <code>store</code>.</li><li>Search for <code>secret:</code> in session config and check if it’s hard-coded.</li><li>Look for <code>req.session = ...</code> patterns and whether sensitive data is stored.</li></ul>
+<p>Fix:</p>
+<ul><li>Use a production session store (Redis, database-backed, etc.).</li><li>Load secrets from environment/secret manager.</li><li>On login: <code>req.session.regenerate(...)</code> or equivalent flow with safe privilege re-binding.</li></ul>
+<p>Notes:</p>
+<ul><li><code>express-session</code> explicitly warns that <code>MemoryStore</code> is not designed for production. ([Express][1])</li><li><code>express-session</code> documents rotating secrets and session regeneration to guard against fixation. ([Express][1])</li><li>Express notes that cookie-backed sessions serialize data into the cookie and that cookie data is visible to the client; keep it small and non-secret. ([Express][1])</li></ul>
+<hr>
+<h3>EXPRESS-CSRF-001: Cookie-authenticated state-changing requests MUST be CSRF-protected</h3>
+<p>Severity: High</p>
+<ul><li>IMPORTANT NOTE: If cookies are not being used for auth (ie auth is via Authentication header or other passed token), then there is no CSRF risk.</li></ul>
+<p>Required:</p>
+<ul><li>MUST protect all state-changing endpoints (POST/PUT/PATCH/DELETE) that rely on cookies for authentication.</li><li>SHOULD use a well-understood CSRF mitigation (token-based is the typical baseline).</li><li>MAY add defense-in-depth: Origin/Referer validation, Fetch Metadata enforcement, SameSite cookies, custom header requirements for XHR/fetch—<strong>but do not treat these as a full replacement</strong> unless explicitly designed and justified.</li><li>MUST use at a minimum require a custom HTTP header if form based CRSF tokens are not practical, as this is the second strongest method.</li></ul>
+<p>IMPORTANT NOTE:</p>
+<ul><li>If authentication is done via <code>Authorization: Bearer ...</code> headers (and not cookies), classic browser CSRF is typically not applicable; </li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Cookie-authenticated endpoints that change state with no CSRF protection.</li><li>Using GET for state-changing actions (amplifies CSRF risk).</li><li>“CSRF protection” that only checks a user-controlled field.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Enumerate routes with methods other than GET/HEAD and identify whether cookies gate auth.</li><li>Look for presence/absence of CSRF middleware and token checks.</li><li>Check JSON APIs too, not only HTML forms.</li></ul>
+<p>Fix:</p>
+<ul><li>Implement CSRF tokens for cookie-authenticated flows.</li><li>Add Origin/Referer checks where feasible, and ensure SameSite is set appropriately.</li></ul>
+<p>Notes:</p>
+<ul><li>OWASP CSRF guidance and OWASP Node.js guidance both recommend anti-CSRF tokens as a standard control for web apps. ([OWASP Cheat Sheet Series][3])</li></ul>
+<hr>
+<h3>EXPRESS-CORS-001: CORS must be explicit and least-privilege</h3>
+<p>Severity: Medium (High if misconfigured with credentials)</p>
+<p>Required:</p>
+<ul><li>If CORS is not needed, MUST keep it disabled.</li><li>If CORS is needed:</li></ul>
+<ul><li>MUST allowlist trusted origins (do not reflect arbitrary <code>Origin</code> without validation).</li><li>MUST NOT combine broad origins with credentialed cookies (<code>Access-Control-Allow-Credentials: true</code>).</li><li>SHOULD restrict methods, headers, and exposed headers to what’s required.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>Access-Control-Allow-Origin: *</code> with <code>Access-Control-Allow-Credentials: true</code>.</li><li>Reflecting <code>Origin</code> for all requests without allowlist validation.</li><li>Applying permissive CORS middleware globally when only a subset needs cross-origin access.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>cors(</code>, <code>Access-Control-Allow-Origin</code>, <code>Access-Control-Allow-Credentials</code>.</li><li>Inspect whether cookies are used for auth on endpoints exposed cross-origin.</li></ul>
+<p>Fix:</p>
+<ul><li>Implement strict origin allowlist and ensure credentialed requests only for intended origins.</li><li>Consider splitting CORS config per route group rather than global.</li></ul>
+<p>Notes:</p>
+<ul><li>OWASP HTTP header guidance covers security implications of response headers, including those that affect browser behavior; use it as a reference when reviewing header posture. ([OWASP Cheat Sheet Series][10])</li></ul>
+<hr>
+<h3>EXPRESS-PROXY-001: Reverse proxy trust (<code>trust proxy</code>) must be configured correctly</h3>
+<p>Severity: Medium (High if using IP based authentication)</p>
+<p>Required:</p>
+<ul><li>If behind a reverse proxy/LB, MUST configure <code>app.set(&#x27;trust proxy&#x27;, ...)</code> to match the real proxy chain.</li><li>MUST NOT blindly set <code>trust proxy = true</code> unless you fully control the proxy behavior and header rewriting.</li><li>MUST ensure the last trusted proxy overwrites/removes <code>X-Forwarded-For</code>, <code>X-Forwarded-Host</code>, and <code>X-Forwarded-Proto</code> so clients cannot spoof them.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>app.set(&#x27;trust proxy&#x27;, true)</code> in an app directly exposed to the internet or behind unknown proxies.</li><li>Using <code>req.ip</code>, <code>req.protocol</code>, <code>req.hostname</code> for security decisions without correct proxy trust configuration.</li><li>Rate limiting keyed by <code>req.ip</code> with spoofable forwarded headers.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>app.set(&#x27;trust proxy&#x27;</code>.</li><li>Check infra docs (nginx/LB) for header rewriting behavior.</li><li>Identify any security logic using <code>req.ip</code>, <code>req.ips</code>, <code>req.protocol</code>, <code>req.hostname</code>.</li></ul>
+<p>Fix:</p>
+<ul><li>Set <code>trust proxy</code> to a hop count, explicit IP/subnet list, or a custom function matching your network.</li><li>Ensure proxies overwrite forwarded headers.</li></ul>
+<p>Notes:</p>
+<ul><li>Express explicitly warns that when <code>trust proxy</code> is <code>true</code>, the client IP is derived from <code>X-Forwarded-For</code>, and if proxies don’t overwrite forwarded headers, the client can provide any value. It also describes that enabling trust proxy impacts <code>req.hostname</code> and <code>req.protocol</code> derived from forwarded headers. ([Express][2])</li></ul>
+<hr>
+<h3>EXPRESS-BODY-001: Request body size and parsing limits MUST be set appropriately</h3>
+<p>Severity: Low</p>
+<p>Required:</p>
+<ul><li>SHOULD set explicit body size limits for:</li></ul>
+<ul><li><code>express.json({ limit })</code></li><li><code>express.urlencoded({ limit, parameterLimit, depth })</code></li><li>SHOULD only enable the parsers you need; do not parse large bodies by default for all routes.</li><li>SHOULD enforce additional limits at the reverse proxy / gateway level.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>No explicit body limits (accepting arbitrarily large JSON/urlencoded).</li><li>Global parsers applied to all routes when only some need bodies.</li><li><code>parameterLimit</code> very high without justification (DoS potential).</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>express.json(</code> and confirm <code>limit</code> is set (or consciously accepted).</li><li>Search for <code>express.urlencoded(</code> and inspect <code>limit</code>, <code>parameterLimit</code>, and <code>depth</code>.</li><li>Review upload/webhook endpoints for special parsing needs.</li></ul>
+<p>Fix:</p>
+<ul><li>Configure parsers with conservative defaults and override per route group when needed.</li></ul>
+<p>Notes:</p>
+<ul><li>Express documents <code>express.json</code> options (including <code>limit</code>, defaulting to 100kb) and explicitly notes <code>req.body</code> is untrusted and should be validated. ([Express][5])</li><li>Express documents <code>express.urlencoded</code> options including <code>limit</code>, <code>parameterLimit</code>, and <code>depth</code>. ([Express][5])</li><li>OWASP Node.js guidance also recommends setting request size limits. ([OWASP Cheat Sheet Series][8])</li></ul>
+<hr>
+<h3>EXPRESS-INPUT-002: Prevent HTTP Parameter Pollution and type confusion in <code>req.query</code></h3>
+<p>Severity: Medium</p>
+<p>Required:</p>
+<ul><li>MUST treat <code>req.query</code> values as potentially multi-valued (array/object), depending on query parsing.</li><li>SHOULD reject ambiguous multi-valued parameters for security-sensitive fields (e.g., <code>role</code>, <code>isAdmin</code>, <code>redirect</code>, <code>amount</code>, <code>userId</code>).</li><li>SHOULD consider explicit parsing or dedicated middleware if parameter pollution is a concern.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>if (req.query.admin) { ... }</code> without type checks (arrays/objects may coerce truthy).</li><li>Passing <code>req.query</code> directly into ORM/NoSQL query objects.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for security-sensitive comparisons on <code>req.query.*</code> without type enforcement.</li><li>Look for code that assumes query params are strings.</li></ul>
+<p>Fix:</p>
+<ul><li>Validate shape: enforce string-only for certain params and reject arrays/objects.</li><li>Normalize query parsing settings (simple vs extended) where applicable and documented.</li></ul>
+<p>Notes:</p>
+<ul><li>OWASP Node.js cheat sheet explicitly highlights that Express query parsing can produce strings, arrays, or objects and recommends preventing HTTP Parameter Pollution. ([OWASP Cheat Sheet Series][8])</li></ul>
+<hr>
+<h3>EXPRESS-XSS-001: Prevent reflected/stored XSS in HTML responses and templating</h3>
+<p>Severity: High</p>
+<p>Required:</p>
+<ul><li>MUST escape untrusted content in HTML output (templates should auto-escape by default; do not bypass).</li><li>MUST NOT inject untrusted strings into HTML without escaping/sanitization.</li><li>SHOULD set CSP (via Helmet) for apps rendering user-controlled content.</li><li>SHOULD keep <code>res.locals</code> free of user-controlled input intended for templates unless it is validated/escaped.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>res.send(&quot;&lt;div&gt;&quot; + req.query.q + &quot;&lt;/div&gt;&quot;)</code></li><li>Passing untrusted HTML through “safe” template flags/filters.</li><li>Writing untrusted strings into <code>res.locals</code> and then rendering without escaping.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>res.send(</code> with strings containing user input.</li><li>Search for template “safe” flags (engine-specific) and trace data origin.</li><li>Search for assignments to <code>res.locals</code> and whether they might contain untrusted data.</li></ul>
+<p>Fix:</p>
+<ul><li>Use a template engine with autoescaping; pass only validated data.</li><li>For rich text that must contain HTML, use a trusted sanitizer and an allowlist policy.</li><li>Add CSP with realistic directives.</li></ul>
+<p>Notes:</p>
+<ul><li>Express API docs explicitly warn that <code>res.locals</code> “should not contain user-controlled input” and is often used to expose things like CSRF tokens to templates. ([Express][5])</li><li>OWASP XSS prevention guidance provides standard output-encoding and policy recommendations. ([OWASP Cheat Sheet Series][4])</li><li>Helmet can mitigate some XSS classes via headers such as CSP. ([Express][1])</li></ul>
+<hr>
+<h3>EXPRESS-TEMPLATE-001: Never render untrusted templates or template paths (SSTI / LFI risk)</h3>
+<p>Severity: Critical (if you can prove template strings/paths are user/attacker-controlled)</p>
+<p>Required:</p>
+<ul><li>MUST NOT render templates whose contents or template path/name is influenced by untrusted input.</li><li>MUST NOT load templates from user-controlled filesystem locations.</li><li>SHOULD treat “email template editors”, “theme engines”, and “CMS-like template storage” as high-risk designs requiring sandboxing and isolation.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>res.render(req.query.view, data)</code> where <code>view</code> is not allowlisted.</li><li>Rendering a template from a string that includes user input (engine-specific).</li><li>Loading templates from uploads directories.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>res.render(</code> where the first argument is derived from request/DB without allowlist.</li><li>Search for template compilation APIs (engine-specific) fed by user content.</li></ul>
+<p>Fix:</p>
+<ul><li>Use allowlisted template names and a fixed templates directory.</li><li>If user-defined templates are required, implement strict sandboxing and isolate execution.</li></ul>
+<p>Notes:</p>
+<ul><li>Express’s template system depends on the chosen engine; assume unsafe if user input influences template selection or source.</li></ul>
+<hr>
+<h3>EXPRESS-FILES-001: Prevent path traversal and unsafe file serving (sendFile/download)</h3>
+<p>Severity: High</p>
+<p>Required:</p>
+<ul><li>MUST NOT pass user-controlled filesystem paths directly to <code>res.sendFile()</code> / <code>res.download()</code> / filesystem APIs.</li><li>SHOULD use <code>res.sendFile</code> with a fixed <code>root</code> and strict options (e.g., deny dotfiles) when serving user-selected files from a directory.</li><li>MUST enforce authorization checks before serving user-specific files.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>res.sendFile(req.query.path)</code> or <code>res.download(req.params.file)</code> with no root restriction.</li><li>File-serving routes that accept <code>..</code> segments, encoded traversal, or absolute paths.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>res.sendFile(</code> and trace the <code>path</code> argument origin.</li><li>Search for <code>res.download(</code> and trace the <code>path</code> argument origin.</li><li>Look for <code>fs.readFile</code>/<code>createReadStream</code> on paths derived from requests.</li></ul>
+<p>Fix:</p>
+<ul><li>Use an identifier-to-path mapping stored server-side (DB), not raw paths from clients.</li><li>Use <code>root: &lt;trusted_base_dir&gt;</code> and <code>dotfiles: &#x27;deny&#x27;</code> where appropriate; validate the filename component strictly.</li></ul>
+<p>Notes:</p>
+<ul><li>Express’s <code>res.sendFile</code> docs show using a <code>root</code> option and <code>dotfiles: &#x27;deny&#x27;</code> as part of a safe serving configuration. ([Express][5])</li><li><code>res.download</code> transfers the file as an attachment, but you still must control/validate the underlying <code>path</code>. ([Express][5])</li></ul>
+<hr>
+<h3>EXPRESS-STATIC-001: Harden <code>express.static</code> / serve-static and never serve untrusted uploads as active content</h3>
+<p>Severity: Medium (if serving untrusted user files if there are not robust limits tot eh file extensions)</p>
+<p>Required:</p>
+<ul><li>MUST NOT serve user uploads from a public static directory as active content (especially HTML/JS/SVG) unless explicitly intended and sandboxed. If sure that the content is inactive (png, jpg, other images etc) then it may be safe. It may be good to validate image file extensions are allow-listed before serving them.</li><li>SHOULD configure static serving to:</li></ul>
+<ul><li>deny/ignore dotfiles</li><li>avoid unintended directory indexes if not needed</li><li>apply appropriate cache controls for immutable assets</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>app.use(express.static(&#x27;uploads&#x27;))</code> where users can upload arbitrary files.</li><li>Serving uploaded HTML or SVG inline from the same origin as the app.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>express.static(</code> and identify served directories.</li><li>Compare served directories with upload storage locations.</li><li>Check for <code>dotfiles</code> and <code>index</code> options in static middleware.</li></ul>
+<p>Fix:</p>
+<ul><li>Store uploads outside any static web root and serve via controlled routes that set safe <code>Content-Type</code> and <code>Content-Disposition: attachment</code> when appropriate.</li><li>Configure <code>express.static(root, { dotfiles: &#x27;deny&#x27;|&#x27;ignore&#x27;, index: false (if desired) })</code>.</li></ul>
+<p>Notes:</p>
+<ul><li>Express documents <code>express.static</code> options, including <code>dotfiles</code> behavior and <code>index</code>. ([Express][5])</li></ul>
+<hr>
+<h3>EXPRESS-UPLOAD-001: File uploads must be validated, stored safely, and served safely</h3>
+<p>Severity: Low - Medium</p>
+<p>Required:</p>
+<ul><li>SHOULD enforce upload size limits (app + edge).</li><li>MUST validate file type using allowlists and content checks (not only filename extension).</li><li>MUST store uploads outside executable/static roots when possible.</li><li>SHOULD generate server-side filenames (random IDs); do not trust original names.</li><li>MUST serve potentially active formats safely (download attachment) unless explicitly intended.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Accepting arbitrary file types and serving them back inline.</li><li>Using <code>file.originalname</code> as the storage path.</li><li>Missing size/type validation.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Look for multer/busboy/formidable usage and check for <code>limits</code>.</li><li>Check where uploaded files are written and how they are served.</li><li>Check whether uploads end up under <code>public/</code> or any <code>express.static</code> root.</li></ul>
+<p>Fix:</p>
+<ul><li>Implement allowlist validation + safe storage + safe serving, per OWASP upload guidance.</li></ul>
+<p>Notes:</p>
+<ul><li>OWASP File Upload guidance covers allowlists, content validation, storage, and safe serving patterns. ([OWASP Cheat Sheet Series][13])</li></ul>
+<hr>
+<h3>EXPRESS-INJECT-001: Prevent SQL injection (use parameterized queries / ORM)</h3>
+<p>Severity: High</p>
+<p>Required:</p>
+<ul><li>MUST use parameterized queries or an ORM/query builder that parameterizes under the hood.</li><li>MUST NOT build SQL via string concatenation/template literals with untrusted input.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>`<code>db.query(</code>SELECT * FROM users WHERE id = ${req.query.id}<code>)</code>`</li><li><code>&quot;SELECT ... WHERE name = &#x27;&quot; + req.body.name + &quot;&#x27;&quot;</code></li></ul>
+<p>Detection hints:</p>
+<ul><li>Grep for <code>SELECT</code>, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code> strings in JS/TS.</li><li>Trace untrusted input into <code>.query(...)</code>, <code>.execute(...)</code>, or raw SQL APIs.</li></ul>
+<p>Fix:</p>
+<ul><li>Replace with parameterized queries (placeholders) or ORM query APIs.</li><li>Validate types (e.g., integer IDs) before querying.</li></ul>
+<p>Notes:</p>
+<ul><li>OWASP SQL injection prevention guidance strongly favors parameterized queries. ([OWASP Cheat Sheet Series][6])</li></ul>
+<hr>
+<h3>EXPRESS-INJECT-002: Prevent NoSQL injection / operator injection (Mongo-style)</h3>
+<p>Severity: High (app-dependent)</p>
+<p>Required:</p>
+<ul><li>MUST validate types and schemas for any query object built from untrusted input.</li><li>MUST prevent operator injection (e.g., <code>$ne</code>, <code>$gt</code>, <code>$where</code>) if user input is merged into query objects.</li><li>SHOULD consider defensive libraries/middleware when appropriate.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>collection.find(req.body)</code> where the body is attacker-controlled.</li><li>Merging <code>req.query</code>/<code>req.body</code> into Mongo queries without schema validation.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>find(</code>, <code>findOne(</code>, <code>aggregate(</code> calls where argument is request-derived.</li><li>Check for patterns like <code>{ ...req.query }</code> or <code>Object.assign(query, req.body)</code>.</li></ul>
+<p>Fix:</p>
+<ul><li>Use schema validation at boundary; explicitly construct query objects from validated fields only.</li></ul>
+<p>Notes:</p>
+<ul><li>OWASP Node.js cheat sheet discusses input validation and mentions Node ecosystem modules commonly used for sanitization in NoSQL contexts. ([OWASP Cheat Sheet Series][8])</li></ul>
+<hr>
+<h3>EXPRESS-CMD-001: Prevent OS command injection (child_process)</h3>
+<p>Severity: Critical to High (depends on exposure), please prove it is user/attacker controlled</p>
+<p>Required:</p>
+<ul><li>MUST avoid executing shell commands with untrusted input.</li><li>If subprocess is necessary:</li></ul>
+<ul><li>MUST avoid <code>exec()</code> / <code>execSync()</code> with attacker-influenced strings</li><li>MUST NOT use <code>shell: true</code> with attacker-influenced data</li><li>SHOULD use <code>spawn()</code> with an argument array and strict allowlists. Ensure the executable is hardcoded or allow-listed, do not use a user supplied command name.</li><li>SHOULD place user-controlled values after <code>--</code> when supported by the subcommand to avoid flag injection</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>exec(req.query.cmd)</code></li><li><code>exec(</code>convert ${userPath} ...<code>)</code></li><li><code>spawn(&#x27;sh&#x27;, [&#x27;-c&#x27;, userString])</code></li><li><code>spawn(userString, [&#x27;foo&#x27;])</code></li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>child_process</code>, <code>exec(</code>, <code>execSync(</code>, <code>spawn(</code>, <code>fork(</code>.</li><li>Trace request/DB data into command construction.</li></ul>
+<p>Fix:</p>
+<ul><li>If possible, write the functionality in javascript or use a library instead of subprocess.</li><li>If unavoidable, hard-code command and strictly allowlist parameters.</li></ul>
+<p>Notes:</p>
+<ul><li>OWASP OS command injection defense guidance covers avoid-shell and allowlist patterns. ([OWASP Cheat Sheet Series][14])</li></ul>
+<hr>
+<h3>EXPRESS-SSRF-001: Prevent server-side request forgery (SSRF) in outbound HTTP</h3>
+<p>Severity: Medium (High in cloud/LAN deployments)</p>
+<p>NOTE: This is mostly only applicable to apps which will be deployed in a cloud/LAN setup or have other http services on the same box. Sometimes the feature requires this functionality unavoidably (webhooks).</p>
+<p>Required:</p>
+<ul><li>MUST treat outbound requests to user-provided URLs as high risk if there are other reachable private http endpoints.</li><li>SHOULD validate and restrict destinations (allowlist hosts/domains) for any user-influenced URL fetch.</li><li>SHOULD block access to:</li></ul>
+<ul><li>localhost / private IP ranges / link-local</li><li>cloud metadata endpoints</li><li>MUST allow only <code>http</code>/<code>https</code> for URL fetch features (to avoid schemas such as <code>file:</code>,<code>javascript:</code>)</li><li>SHOULD set timeouts and restrict redirects.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>fetch(req.query.url)</code></li><li>“URL preview” / “import from URL” endpoints that accept arbitrary URLs.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>fetch(</code>, <code>axios(</code>, <code>got(</code>, <code>request(</code>, <code>node-fetch</code> usage where URL originates from users/DB.</li><li>Review webhook testers, previewers, image fetchers.</li></ul>
+<p>Fix:</p>
+<ul><li>Enforce scheme allowlist, host allowlist, DNS/IP resolution checks, timeouts, and redirect policy.</li><li>Consider network egress controls at infrastructure level.</li></ul>
+<p>Notes:</p>
+<ul><li>OWASP SSRF prevention guidance provides standard controls and common pitfalls. ([OWASP Cheat Sheet Series][7])</li></ul>
+<hr>
+<h3>EXPRESS-ERROR-001: Error handling MUST not leak sensitive details in production</h3>
+<p>Severity: Low</p>
+<p>Required:</p>
+<ul><li>SHOULD define a centralized error handler (<code>app.use((err, req, res, next) =&gt; ...)</code>) at the end of middleware.</li><li>MUST avoid returning stack traces, internal error messages, or secrets to clients in production.</li><li>SHOULD log errors server-side with appropriate redaction.</li><li>SHOULD ensure the app runs with production settings so default behavior doesn’t leak details.</li><li>MUST avoid logging or returning sensitive information such as secrets, env vars, sessions, cookies in error messages in production.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Returning <code>err.stack</code> to clients.</li><li>Using dev-only error middleware in production.</li><li><code>NODE_ENV</code> left as development, causing verbose error responses.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Verify there is a final error-handling middleware.</li><li>Search for <code>res.status(500).send(err)</code> or similar.</li><li>Check production environment variables and startup scripts.</li></ul>
+<p>Fix:</p>
+<ul><li>Add a production-safe error handler that returns generic messages and logs details internally.</li><li>Ensure environment is configured for production behavior.</li></ul>
+<p>Notes:</p>
+<ul><li>Express production security guidance recommends custom error handling. ([Express][1])</li><li>Express error handling docs describe the default error handler behavior and how production mode affects what is exposed. ([Express][11])</li></ul>
+<hr>
+<h3>EXPRESS-AUTH-001: Prevent brute-force attacks against authorization endpoints</h3>
+<p>Severity: Medium</p>
+<p>NOTE: This is highly application specific and while it is good to bring to the attention of the user, it is hard to fix without additional complex configurations. Prefer to inform the user and if they request you to help implement a solution, help walk them through possible solutions.</p>
+<p>Required:</p>
+<ul><li>SHOULD protect login/auth endpoints against brute forcing.</li><li>SHOULD rate-limit by:</li></ul>
+<ol><li>consecutive failed attempts per username+IP</li><li>failed attempts per IP over a time window</li></ol>
+<p>Insecure patterns:</p>
+<ul><li>Unlimited login attempts.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Identify all auth endpoints and check for rate limiting/throttling.</li><li>Search for <code>rate-limiter-flexible</code>, <code>express-rate-limit</code>, or gateway policies.</li></ul>
+<p>Fix:</p>
+<ul><li>Implement rate-limiting/throttling (app or edge). Express docs point to <code>rate-limiter-flexible</code> as a tool for this approach. ([Express][1])</li></ul>
+<p>Notes:</p>
+<ul><li>OWASP Node.js cheat sheet also recommends precautions against brute forcing. ([OWASP Cheat Sheet Series][8])</li></ul>
+<hr>
+<h3>EXPRESS-DEPS-001: Dependency and patch hygiene (Express + Node + critical middleware)</h3>
+<p>Severity: Medium / Low</p>
+<p>NOTE: <code>npm audit</code> often returns a large number of insignificant &quot;vulnerabilities&quot; which do not actually matter. You should only focus on Express or other extremely critical packages, ignoring ones listed in dev tools, bundlers, etc.</p>
+<p>Do not upgrade packages without concent from the user. This may break existing code in unexpected ways. Instead, inform them of the outdated packages.</p>
+<p>Required:</p>
+<ul><li>MUST keep Express on a maintained version line (avoid EOL major versions).</li><li>MAY use <code>npm audit</code> in CI and during maintenance work.</li><li>SHOULD pin dependencies via lockfiles and review major updates carefully.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Running EOL Express versions (e.g., very old major lines).</li><li>Ignoring <code>npm audit</code> findings without triage.</li><li>Unpinned dependency ranges that auto-upgrade into insecure versions.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Check <code>package.json</code> and lockfiles for <code>express</code> version and other critical middleware versions.</li><li>Inspect CI pipelines for <code>npm audit</code>/SCA steps.</li></ul>
+<p>Fix:</p>
+<ul><li>Upgrade to latest stable Express and apply patches.</li><li>Add automated dependency scanning and upgrade process.</li></ul>
+<p>Notes:</p>
+<ul><li>Express production security guidance emphasizes that dependency vulnerabilities can compromise the app, and recommends <code>npm audit</code>. ([Express][1])</li><li>Track security issues affecting Express versions (including known open-redirect-related CVEs). ([NVD][9])</li></ul>
+<hr>
+<h3>EXPRESS-DOS-001: Configure DoS protections (timeouts, limits, reverse proxy)</h3>
+<p>Severity: Low</p>
+<p>NOTE: It may be hard to tell from the provided application context if the application runs behind a reverse proxy. You can inform the user or recommend one, but do not attempt to configure one without them initiating it. This is highly deployment dependant.</p>
+<p>Required:</p>
+<ul><li>SHOULD use a reverse proxy to provide caching, load balancing, and filtering controls when feasible.</li><li>MAY configure server/proxy timeouts and connection limits to reduce exposure to Slowloris and similar DoS patterns.</li><li>MUST ensure server/socket errors are handled so malformed connections do not crash the process. (Express should handle exceptions, but there are edgecases)</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>No reverse proxy in front of a public Node server, with defaults everywhere.</li><li>Missing error handlers on server/socket objects.</li><li>Extremely permissive timeouts and unlimited body sizes.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Inspect server creation (<code>http.createServer</code>, <code>https.createServer</code>) and whether timeouts are set.</li><li>Check proxy/gateway config for timeouts and max body size.</li></ul>
+<p>Fix:</p>
+<ul><li>Explain how to configure reverse proxy and timeouts, set request size limits</li><li>add robust error handling middleware</li></ul>
+<p>Notes:</p>
+<ul><li>Node’s security guidance for HTTP DoS discusses using reverse proxies and correctly configuring server timeouts. ([Node.js][15])</li></ul>
+<hr>
+<h3>EXPRESS-NODE-INSPECT-001: Do not expose the Node inspector in production</h3>
+<p>Severity: Critical</p>
+<p>NOTE: Ensure that this detection is actually in the production path, and not just being used for local debugging.</p>
+<p>Required:</p>
+<ul><li>MUST NOT run Node with <code>--inspect</code> (especially bound to non-loopback) in production.</li><li>MUST ensure <code>NODE_OPTIONS</code> or startup scripts do not enable inspector in prod.</li><li>SHOULD firewall/debug locally only.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>node --inspect=0.0.0.0:9229 app.js</code> in production.</li><li>Container/PM2/systemd configs enabling inspector.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>--inspect</code> in Dockerfiles, Procfiles, systemd units, PM2 configs, npm scripts.</li><li>Check <code>NODE_OPTIONS</code>.</li></ul>
+<p>Fix:</p>
+<ul><li>Remove inspector flags from production start commands; restrict to local dev.</li></ul>
+<p>Notes:</p>
+<ul><li>Node security guidance discusses inspector exposure risks (e.g., DNS rebinding) and recommends not running inspector in production. ([Node.js][15])</li></ul>
+<hr>
+<h3>EXPRESS-NODE-HTTP-001: Do not enable insecure HTTP parsing in production</h3>
+<p>Severity: High</p>
+<p>NOTE: Ensure that this detection is actually in the production path, and not just being used for local dev.</p>
+<p>Required:</p>
+<ul><li>MUST NOT use Node’s <code>insecureHTTPParser</code> in production.</li><li>MAY suggest configuring front-end proxies to normalize ambiguous requests to reduce request smuggling risk.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Creating an HTTP server with <code>{ insecureHTTPParser: true }</code>.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>insecureHTTPParser</code> in server creation code.</li></ul>
+<p>Fix:</p>
+<ul><li>Remove insecure parsing; rely on spec-compliant parsing and normalize at the edge.</li></ul>
+<p>Notes:</p>
+<ul><li>Node security guidance explicitly recommends not using <code>insecureHTTPParser</code>. ([Node.js][15])</li></ul>
+<hr>
+<h2>5) Practical scanning heuristics (how to “hunt”)</h2>
+<p>When actively scanning an Express repo, these patterns are high-signal:</p>
+<ul><li>TLS / transport:</li></ul>
+<ul><li><code>app.listen(80</code> without reverse proxy mention; missing <code>helmet</code>; cookies missing <code>secure</code> ([Express][1]) (NOTE this only applies to web facing applications, internal apps likely won&#x27;t have TLS)</li><li>Proxy trust:</li></ul>
+<ul><li><code>app.set(&#x27;trust proxy&#x27;, true)</code>; logic using <code>req.ip</code>/<code>req.protocol</code>/<code>req.hostname</code> ([Express][2])</li><li>Security headers / fingerprinting:</li></ul>
+<ul><li>missing <code>helmet(</code>; missing <code>app.disable(&#x27;x-powered-by&#x27;)</code> ([Express][1])</li><li>Cookies / sessions:</li></ul>
+<ul><li><code>express-session</code> with missing <code>store</code> (MemoryStore risk), hard-coded <code>secret:</code>, missing <code>cookie: { secure/httpOnly/sameSite }</code> ([Express][1])</li><li><code>cookie-session</code> storing large objects or secrets ([Express][1])</li><li>Body parsing limits:</li></ul>
+<ul><li><code>express.json()</code> or <code>express.urlencoded()</code> without <code>limit</code>/<code>parameterLimit</code>/<code>depth</code> ([Express][5])</li><li>CSRF:</li></ul>
+<ul><li>POST/PUT/PATCH/DELETE routes using cookie auth with no CSRF tokens/origin checks ([OWASP Cheat Sheet Series][3])</li><li>Open redirects:</li></ul>
+<ul><li><code>res.redirect(req.query.next)</code> or similar ([Express][1])</li><li>XSS / HTML output:</li></ul>
+<ul><li><code>res.send(</code> building HTML with user input; template “safe” flags; untrusted values in <code>res.locals</code> ([Express][5])</li><li>File handling:</li></ul>
+<ul><li><code>res.sendFile(</code> / <code>res.download(</code> where path originates from request; <code>express.static(&#x27;uploads&#x27;)</code> ([Express][5])</li><li>Injection:</li></ul>
+<ul><li>SQL strings + template literals into DB calls ([OWASP Cheat Sheet Series][6])</li><li><code>child_process.exec</code> / <code>execSync</code> / <code>shell: true</code> ([OWASP Cheat Sheet Series][14])</li><li>SSRF:</li></ul>
+<ul><li>outbound <code>fetch/axios/got</code> to user-provided URLs ([OWASP Cheat Sheet Series][7])</li><li>Brute force / abuse:</li></ul>
+<ul><li>auth endpoints lacking throttling; no rate limiting middleware ([Express][1])</li><li>Supply chain:</li></ul>
+<ul><li>outdated Express versions; no lockfiles; no <code>npm audit</code> workflow ([Express][1])</li><li>Node runtime hazards:</li></ul>
+<ul><li><code>--inspect</code> in production scripts; <code>insecureHTTPParser</code> usage ([Node.js][15])</li></ul>
+<p>Always try to confirm:</p>
+<ul><li>data origin (untrusted vs trusted)</li><li>sink type (HTML/template, SQL/NoSQL, subprocess, filesystem, redirect, outbound HTTP)</li><li>protective controls present (validation, allowlists, middleware, proxy config, header policies)</li><li>whether protections are at the edge vs in app code</li></ul>
+<hr>
+<h2>6) Sources (accessed 2026-01-27)</h2>
+<p>Primary Express documentation:</p>
+<ul><li>Express: Production Best Practices — Security: <code>https://expressjs.com/en/advanced/best-practice-security.html</code> ([Express][1])</li><li>Express: Behind Proxies (<code>trust proxy</code>): <code>https://expressjs.com/en/guide/behind-proxies.html</code> ([Express][2])</li><li>Express 5.x API Reference (parsers, static, sendFile, redirect, cookies): <code>https://expressjs.com/en/5x/api.html</code> ([Express][5])</li><li>Express: Error Handling: <code>https://expressjs.com/en/guide/error-handling.html</code> ([Express][11])</li></ul>
+<p>Session middleware documentation:</p>
+<ul><li>express-session docs (cookie flags, secret rotation, fixation mitigation, MemoryStore warning): <code>https://expressjs.com/en/resources/middleware/session.html</code> ([Express][1])</li></ul>
+<p>Node.js and npm official references:</p>
+<ul><li>Node.js — Security Best Practices (DoS, proxy guidance, inspector risks, request smuggling notes): <code>https://nodejs.org/en/learn/getting-started/security-best-practices</code> ([Node.js][15])</li><li>npm Docs — <code>npm audit</code>: <code>https://docs.npmjs.com/cli/v9/commands/npm-audit/</code> ([npm Docs][16])</li></ul>
+<p>OWASP Cheat Sheet Series:</p>
+<ul><li>Session Management: <code>https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html</code> ([OWASP Cheat Sheet Series][12])</li><li>CSRF Prevention: <code>https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html</code> ([OWASP Cheat Sheet Series][3])</li><li>XSS Prevention: <code>https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html</code> ([OWASP Cheat Sheet Series][4])</li><li>Input Validation: <code>https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html</code> ([OWASP Cheat Sheet Series][17])</li><li>SQL Injection Prevention: <code>https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html</code> ([OWASP Cheat Sheet Series][6])</li><li>OS Command Injection Defense: <code>https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html</code> ([OWASP Cheat Sheet Series][14])</li><li>SSRF Prevention: <code>https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html</code> ([OWASP Cheat Sheet Series][7])</li><li>File Upload: <code>https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html</code> ([OWASP Cheat Sheet Series][13])</li><li>Unvalidated Redirects: <code>https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html</code> ([OWASP Cheat Sheet Series][18])</li><li>HTTP Headers: <code>https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html</code> ([OWASP Cheat Sheet Series][10])</li></ul>
+<p>Versioning / advisories:</p>
+<ul><li>Express package version (npm): <code>https://www.npmjs.com/package/express</code></li><li>Express open redirect advisory (CVE): <code>https://nvd.nist.gov/vuln/detail/CVE-2024-29041</code> ([NVD][9])</li></ul>
+<p>[1]: https://expressjs.com/en/advanced/best-practice-security.html &quot;Security Best Practices for Express in Production&quot; [2]: https://expressjs.com/en/guide/behind-proxies.html &quot;Express behind proxies&quot; [3]: https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html &quot;Cross-Site Request Forgery Prevention - OWASP Cheat Sheet Series&quot; [4]: https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html &quot;Cross Site Scripting Prevention - OWASP Cheat Sheet Series&quot; [5]: https://expressjs.com/en/5x/api.html &quot;Express 5.x - API Reference&quot; [6]: https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html &quot;SQL Injection Prevention - OWASP Cheat Sheet Series&quot; [7]: https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html &quot;Server Side Request Forgery Prevention - OWASP Cheat Sheet Series&quot; [8]: https://cheatsheetseries.owasp.org/cheatsheets/Nodejs_Security_Cheat_Sheet.html &quot;Nodejs Security - OWASP Cheat Sheet Series&quot; [9]: https://nvd.nist.gov/vuln/detail/cve-2024-29041?utm_source=chatgpt.com &quot;CVE-2024-29041 Detail - NVD&quot; [10]: https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html &quot;HTTP Headers - OWASP Cheat Sheet Series&quot; [11]: https://expressjs.com/en/guide/error-handling.html &quot;Express error handling&quot; [12]: https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html &quot;Session Management - OWASP Cheat Sheet Series&quot; [13]: https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html &quot;File Upload - OWASP Cheat Sheet Series&quot; [14]: https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html &quot;OS Command Injection Defense - OWASP Cheat Sheet Series&quot; [15]: https://nodejs.org/en/learn/getting-started/security-best-practices &quot;Node.js — Security Best Practices&quot; [16]: https://docs.npmjs.com/cli/v9/commands/npm-audit/ &quot;npm-audit | npm Docs&quot; [17]: https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html &quot;Input Validation - OWASP Cheat Sheet Series&quot; [18]: https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html &quot;Unvalidated Redirects and Forwards - OWASP Cheat Sheet Series&quot;</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/javascript-express-web-server-security.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

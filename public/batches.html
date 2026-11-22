@@ -246,159 +246,85 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 </div></nav>
 
 <div class="wrap">
-<h1>batches</h1><p class="lede">The Batches API (POST /v1/messages/batches) processes Messages API requests asynchronously at 50% of standard prices.</p><h1>Message Batches API — Python</h1>
+<h1>batches</h1><p class="lede">The Batches API (POST /v1/messages/batches) processes Messages API requests asynchronously at 50% of standard prices.</p><h1>Message Batches API — TypeScript</h1>
 <p>The Batches API (<code>POST /v1/messages/batches</code>) processes Messages API requests asynchronously at 50% of standard prices.</p>
 <h2>Key Facts</h2>
 <ul><li>Up to 100,000 requests or 256 MB per batch</li><li>Most batches complete within 1 hour; maximum 24 hours</li><li>Results available for 29 days after creation</li><li>50% cost reduction on all token usage</li><li>All Messages API features supported (vision, tools, caching, etc.)</li></ul>
 <hr>
 <h2>Create a Batch</h2>
-<pre><code class="lang-python">import anthropic
-from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
-from anthropic.types.messages.batch_create_params import Request
+<pre><code class="lang-typescript">import Anthropic from &quot;@anthropic-ai/sdk&quot;;
 
-client = anthropic.Anthropic()
+const client = new Anthropic();
 
-message_batch = client.messages.batches.create(
-    requests=[
-        Request(
-            custom_id=&quot;request-1&quot;,
-            params=MessageCreateParamsNonStreaming(
-                model=&quot;claude-opus-5&quot;,
-                max_tokens=16000,
-                messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Summarize climate change impacts&quot;}]
-            )
-        ),
-        Request(
-            custom_id=&quot;request-2&quot;,
-            params=MessageCreateParamsNonStreaming(
-                model=&quot;claude-opus-5&quot;,
-                max_tokens=16000,
-                messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Explain quantum computing basics&quot;}]
-            )
-        ),
-    ]
-)
+const messageBatch = await client.messages.batches.create({
+  requests: [
+    {
+      custom_id: &quot;request-1&quot;,
+      params: {
+        model: &quot;claude-opus-5&quot;,
+        max_tokens: 16000,
+        messages: [
+          { role: &quot;user&quot;, content: &quot;Summarize climate change impacts&quot; },
+        ],
+      },
+    },
+    {
+      custom_id: &quot;request-2&quot;,
+      params: {
+        model: &quot;claude-opus-5&quot;,
+        max_tokens: 16000,
+        messages: [
+          { role: &quot;user&quot;, content: &quot;Explain quantum computing basics&quot; },
+        ],
+      },
+    },
+  ],
+});
 
-print(f&quot;Batch ID: {message_batch.id}&quot;)
-print(f&quot;Status: {message_batch.processing_status}&quot;)</code></pre>
+console.log(`Batch ID: ${messageBatch.id}`);
+console.log(`Status: ${messageBatch.processing_status}`);</code></pre>
 <hr>
 <h2>Poll for Completion</h2>
-<pre><code class="lang-python">import time
+<pre><code class="lang-typescript">let batch;
+while (true) {
+  batch = await client.messages.batches.retrieve(messageBatch.id);
+  if (batch.processing_status === &quot;ended&quot;) break;
+  console.log(
+    `Status: ${batch.processing_status}, processing: ${batch.request_counts.processing}`,
+  );
+  await new Promise((resolve) =&gt; setTimeout(resolve, 60_000));
+}
 
-while True:
-    batch = client.messages.batches.retrieve(message_batch.id)
-    if batch.processing_status == &quot;ended&quot;:
-        break
-    print(f&quot;Status: {batch.processing_status}, processing: {batch.request_counts.processing}&quot;)
-    time.sleep(60)
-
-print(&quot;Batch complete!&quot;)
-print(f&quot;Succeeded: {batch.request_counts.succeeded}&quot;)
-print(f&quot;Errored: {batch.request_counts.errored}&quot;)</code></pre>
+console.log(&quot;Batch complete!&quot;);
+console.log(`Succeeded: ${batch.request_counts.succeeded}`);
+console.log(`Errored: ${batch.request_counts.errored}`);</code></pre>
 <hr>
 <h2>Retrieve Results</h2>
-<blockquote><p><strong>Note:</strong> Examples below use <code>match/case</code> syntax, requiring Python 3.10+. For earlier versions, use <code>if/elif</code> chains instead.</p></blockquote>
-<pre><code class="lang-python">for result in client.messages.batches.results(message_batch.id):
-    match result.result.type:
-        case &quot;succeeded&quot;:
-            msg = result.result.message
-            text = next((b.text for b in msg.content if b.type == &quot;text&quot;), &quot;&quot;)
-            print(f&quot;[{result.custom_id}] {text[:100]}&quot;)
-        case &quot;errored&quot;:
-            if result.result.error.type == &quot;invalid_request&quot;:
-                print(f&quot;[{result.custom_id}] Validation error - fix request and retry&quot;)
-            else:
-                print(f&quot;[{result.custom_id}] Server error - safe to retry&quot;)
-        case &quot;canceled&quot;:
-            print(f&quot;[{result.custom_id}] Canceled&quot;)
-        case &quot;expired&quot;:
-            print(f&quot;[{result.custom_id}] Expired - resubmit&quot;)</code></pre>
+<pre><code class="lang-typescript">for await (const result of await client.messages.batches.results(
+  messageBatch.id,
+)) {
+  switch (result.result.type) {
+    case &quot;succeeded&quot;:
+      console.log(
+        `[${result.custom_id}] ${result.result.message.content[0].text.slice(0, 100)}`,
+      );
+      break;
+    case &quot;errored&quot;:
+      if (result.result.error.type === &quot;invalid_request&quot;) {
+        console.log(`[${result.custom_id}] Validation error - fix and retry`);
+      } else {
+        console.log(`[${result.custom_id}] Server error - safe to retry`);
+      }
+      break;
+    case &quot;expired&quot;:
+      console.log(`[${result.custom_id}] Expired - resubmit`);
+      break;
+  }
+}</code></pre>
 <hr>
 <h2>Cancel a Batch</h2>
-<pre><code class="lang-python">cancelled = client.messages.batches.cancel(message_batch.id)
-print(f&quot;Status: {cancelled.processing_status}&quot;)  # &quot;canceling&quot;</code></pre>
-<hr>
-<h2>List Batches (auto-pagination)</h2>
-<p>Iterating the return value of any <code>list()</code> call auto-paginates across all pages — do not index into <code>.data</code> if you want the full set:</p>
-<pre><code class="lang-python">for batch in client.messages.batches.list(limit=20):
-    print(batch.id, batch.processing_status)</code></pre>
-<p>For manual control, use <code>first_page.has_next_page()</code> / <code>first_page.get_next_page()</code> / <code>first_page.next_page_info()</code>; <code>first_page.data</code> holds the current page&#x27;s items and <code>first_page.last_id</code> is the cursor.</p>
-<hr>
-<h2>Batch with Prompt Caching</h2>
-<pre><code class="lang-python">shared_system = [
-    {&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;You are a literary analyst.&quot;},
-    {
-        &quot;type&quot;: &quot;text&quot;,
-        &quot;text&quot;: large_document_text,  # Shared across all requests
-        &quot;cache_control&quot;: {&quot;type&quot;: &quot;ephemeral&quot;}
-    }
-]
-
-message_batch = client.messages.batches.create(
-    requests=[
-        Request(
-            custom_id=f&quot;analysis-{i}&quot;,
-            params=MessageCreateParamsNonStreaming(
-                model=&quot;claude-opus-5&quot;,
-                max_tokens=16000,
-                system=shared_system,
-                messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: question}]
-            )
-        )
-        for i, question in enumerate(questions)
-    ]
-)</code></pre>
-<hr>
-<h2>Full End-to-End Example</h2>
-<pre><code class="lang-python">import anthropic
-import time
-from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
-from anthropic.types.messages.batch_create_params import Request
-
-client = anthropic.Anthropic()
-
-# 1. Prepare requests
-items_to_classify = [
-    &quot;The product quality is excellent!&quot;,
-    &quot;Terrible customer service, never again.&quot;,
-    &quot;It&#x27;s okay, nothing special.&quot;,
-]
-
-requests = [
-    Request(
-        custom_id=f&quot;classify-{i}&quot;,
-        params=MessageCreateParamsNonStreaming(
-            model=&quot;claude-haiku-4-5&quot;,
-            max_tokens=50,
-            messages=[{
-                &quot;role&quot;: &quot;user&quot;,
-                &quot;content&quot;: f&quot;Classify as positive/negative/neutral (one word): {text}&quot;
-            }]
-        )
-    )
-    for i, text in enumerate(items_to_classify)
-]
-
-# 2. Create batch
-batch = client.messages.batches.create(requests=requests)
-print(f&quot;Created batch: {batch.id}&quot;)
-
-# 3. Wait for completion
-while True:
-    batch = client.messages.batches.retrieve(batch.id)
-    if batch.processing_status == &quot;ended&quot;:
-        break
-    time.sleep(10)
-
-# 4. Collect results
-results = {}
-for result in client.messages.batches.results(batch.id):
-    if result.result.type == &quot;succeeded&quot;:
-        msg = result.result.message
-        results[result.custom_id] = next((b.text for b in msg.content if b.type == &quot;text&quot;), &quot;&quot;)
-
-for custom_id, classification in sorted(results.items()):
-    print(f&quot;{custom_id}: {classification}&quot;)</code></pre>
+<pre><code class="lang-typescript">const cancelled = await client.messages.batches.cancel(messageBatch.id);
+console.log(`Status: ${cancelled.processing_status}`); // &quot;canceling&quot;</code></pre>
 <footer>
 <div class="fmap">
   <div><b>Build</b>

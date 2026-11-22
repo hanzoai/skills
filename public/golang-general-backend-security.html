@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>golang-general-backend-security</title>
+<style>
+/* Matches hanzo.ai's monochrome editorial aesthetic: light-first white canvas
+   with automatic light/dark color-scheme support, Zen sans display headings,
+   edge halftone dot framing, pill controls, and crisp dark terminal cards. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  color-scheme:light dark;
+  --ground-light:#ffffff; --ground-dark:#000000;
+  --panel-light:#fafafa; --panel-dark:#0f0f0f;
+  --panel-2-light:#f5f5f7; --panel-2-dark:#171717;
+  --ink-light:#0a0a0a; --ink-dark:#f5f5f7;
+  --soft-light:#6e6e73; --soft-dark:#a1a1a6;
+  --faint-light:#86868b; --faint-dark:#737378;
+  --line-light:#e5e5e5; --line-dark:#232323;
+  --line-hi-light:#d4d4d4; --line-hi-dark:#3a3a3a;
+  --solid-bg-light:#0a0a0a; --solid-bg-dark:#ffffff;
+  --solid-ink-light:#ffffff; --solid-ink-dark:#0a0a0a;
+  --solid-hover-light:#262626; --solid-hover-dark:#e5e5e5;
+  --dot-light:#d4d4d4; --dot-dark:#262626;
+
+  --ground:var(--ground-light); --panel:var(--panel-light); --panel-2:var(--panel-2-light);
+  --ink:var(--ink-light); --soft:var(--soft-light); --faint:var(--faint-light);
+  --line:var(--line-light); --line-hi:var(--line-hi-light);
+  --solid-bg:var(--solid-bg-light); --solid-ink:var(--solid-ink-light);
+  --solid-hover:var(--solid-hover-light); --dot:var(--dot-light);
+  --term-bg:#0a0a0a; --term-ink:#f5f5f7; --term-soft:#a1a1a6; --term-faint:#737378; --term-line:#232323;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  --r:999px; --r-soft:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:var(--ground-dark); --panel:var(--panel-dark); --panel-2:var(--panel-2-dark);
+    --ink:var(--ink-dark); --soft:var(--soft-dark); --faint:var(--faint-dark);
+    --line:var(--line-dark); --line-hi:var(--line-hi-dark);
+    --solid-bg:var(--solid-bg-dark); --solid-ink:var(--solid-ink-dark);
+    --solid-hover:var(--solid-hover-dark); --dot:var(--dot-dark);
+  }
+}
+@supports (color: light-dark(white, black)){
+  :root{
+    --ground:light-dark(var(--ground-light),var(--ground-dark));
+    --panel:light-dark(var(--panel-light),var(--panel-dark));
+    --panel-2:light-dark(var(--panel-2-light),var(--panel-2-dark));
+    --ink:light-dark(var(--ink-light),var(--ink-dark));
+    --soft:light-dark(var(--soft-light),var(--soft-dark));
+    --faint:light-dark(var(--faint-light),var(--faint-dark));
+    --line:light-dark(var(--line-light),var(--line-dark));
+    --line-hi:light-dark(var(--line-hi-light),var(--line-hi-dark));
+    --solid-bg:light-dark(var(--solid-bg-light),var(--solid-bg-dark));
+    --solid-ink:light-dark(var(--solid-ink-light),var(--solid-ink-dark));
+    --solid-hover:light-dark(var(--solid-hover-light),var(--solid-hover-dark));
+    --dot:light-dark(var(--dot-light),var(--dot-dark));
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--ground);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:1rem;line-height:1.58;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility}
+.wrap{max-width:68rem;margin:0 auto;padding:0 1.75rem}
+
+/* Edge halftone dot field framing the hero, matching hanzo.ai. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before,.hero::after{content:"";position:absolute;top:0;bottom:0;width:min(24vw,280px);
+  background-image:radial-gradient(var(--dot) 1.25px,transparent 1.25px);
+  background-size:9px 9px;pointer-events:none}
+.hero::before{inset-inline-start:0;
+  -webkit-mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero::after{inset-inline-end:0;
+  -webkit-mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero .wrap{position:relative;z-index:1;padding-top:4.5rem;padding-bottom:3.75rem}
+
+nav{position:sticky;top:0;z-index:40;border-bottom:1px solid var(--line);
+  background:var(--ground);background:color-mix(in srgb,var(--ground) 90%,transparent);
+  backdrop-filter:blur(16px)}
+nav .in{max-width:68rem;margin:0 auto;padding:.85rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--sans);font-size:.95rem;font-weight:600;letter-spacing:-.02em;
+  color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:.55rem}
+.brand i{font-style:normal;font-weight:400;color:var(--soft)}
+.mark{width:1.25em;height:1.25em;display:block;flex:0 0 auto}
+.nlinks{display:flex;align-items:center;gap:1.15rem}
+.nlinks a{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+.nlinks a:hover{color:var(--ink);text-decoration:none}
+nav a.up{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink);text-decoration:none}
+.ncta{display:inline-flex;align-items:center;justify-content:center;padding:.45rem 1rem;
+  border-radius:var(--r);background:var(--solid-bg);color:var(--solid-ink);font-size:.84rem;
+  font-weight:500;text-decoration:none;white-space:nowrap}
+.ncta:hover{background:var(--solid-hover);color:var(--solid-ink);text-decoration:none}
+
+h1{font-family:var(--sans);font-size:clamp(2.15rem,4.8vw,3.5rem);line-height:1.06;
+  letter-spacing:-.038em;margin:0 0 1.15rem;font-weight:600;text-wrap:balance;max-width:20ch}
+h1 em{font-style:normal;color:var(--soft);font-weight:500}
+.lede{color:var(--soft);font-size:1.0625rem;line-height:1.55;max-width:58ch;margin:0 0 2rem;text-wrap:pretty}
+
+.btns{display:flex;flex-wrap:wrap;gap:.55rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--sans);
+  font-size:.875rem;font-weight:500;letter-spacing:-.005em;
+  min-height:2.5rem;padding:.55rem 1.2rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:var(--ground);cursor:pointer;
+  line-height:1.2;transition:background .15s ease,border-color .15s ease}
+.btn:hover{background:var(--panel-2);text-decoration:none;border-color:var(--ink)}
+.btn.solid{background:var(--solid-bg);color:var(--solid-ink);border-color:var(--solid-bg)}
+.btn.solid:hover{background:var(--solid-hover);border-color:var(--solid-hover)}
+.btn .chev{width:.75em;height:.75em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--ground);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 16px 40px rgba(0,0,0,.18)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .4rem);
+  background:transparent;color:var(--ink);font-family:var(--sans);font-size:.86rem;
+  font-weight:500;text-decoration:none;cursor:pointer;line-height:1.3;white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:var(--panel-2);outline:none;text-decoration:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.08em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:68rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--sans);font-size:.8rem;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:500;flex:0 0 auto;font-family:var(--mono);font-size:.7rem;
+  letter-spacing:.1em;text-transform:uppercase;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .9rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;font-size:.82rem;font-weight:500;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--sans);font-size:1.35rem;letter-spacing:-.025em;margin:2.75rem 0 .75rem;font-weight:600;text-wrap:balance}
+h3{font-size:1.05rem;margin:2rem 0 .5rem;font-weight:600;letter-spacing:-.015em}
+h4,h5,h6{font-size:.95rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch;text-wrap:pretty}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.25rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.84em;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:6px;padding:.12em .4em}
+pre{color-scheme:dark;background:var(--term-bg);color:var(--term-ink);border:1px solid var(--term-line);
+  padding:1.05rem 1.2rem;border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.84rem;line-height:1.68;color:var(--term-ink)}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:2px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.55rem .75rem;text-align:left}
+
+.curl{color-scheme:dark;display:block;background:var(--term-bg);border:1px solid var(--term-line);
+  border-radius:var(--r-soft);padding:1rem 1.2rem;font-family:var(--mono);
+  font-size:.82rem;color:var(--term-soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.85}
+.curl b{color:var(--term-ink);font-weight:500}
+.curl i{font-style:normal;color:var(--term-faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.25rem;font-family:var(--sans);font-size:.95rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r);margin:2rem 0 .65rem}
+#q::placeholder{color:var(--faint)}
+#q:focus{outline:none;border-color:var(--ink);background:var(--ground)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.75rem 1rem;margin:0 -1rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none;transition:background .12s ease}
+.row:hover{background:var(--panel-2);text-decoration:none}
+.nm{font-family:var(--mono);font-size:.86rem;font-weight:500;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.92rem;display:block;margin-top:.15rem}
+footer{margin-top:4rem;padding:2.25rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft);text-decoration:none}
+footer a:hover{color:var(--ink);text-decoration:underline}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);font-weight:500;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3rem;padding-bottom:2.5rem}
+  .nlinks .nhide{display:none}
+  .btns{gap:.5rem}
+  .btn{padding:.55rem 1rem;font-size:.84rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/golang-general-backend-security">
+<link rel="alternate" type="text/markdown" href="/golang-general-backend-security.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/golang-general-backend-security.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> Hanzo <i>Skills</i></a>
+  <div class="nlinks"><a class="nhide" href="https://hanzo.sh">hanzo.sh</a><a class="nhide" href="https://docs.hanzo.ai">Docs</a><a class="nhide" href="https://hanzo.ai/security">Security</a><a class="up" href="/">All skills</a><a class="ncta" href="https://hanzo.app">Try Hanzo</a></div>
+</div></nav>
+
+<div class="wrap">
+<h1>golang-general-backend-security</h1><p class="lede">This document is designed as a security spec that supports: 1) Secure-by-default code generation for new Go code.</p><h1>Go (Golang) Security Spec (Go 1.25.x, Standard Library, net/http)</h1>
+<p>This document is designed as a <strong>security spec</strong> that supports: 1) <strong>Secure-by-default code generation</strong> for new Go code. 2) <strong>Security review / vulnerability hunting</strong> in existing Go code (passive “notice issues while working” and active “scan the repo and report findings”).</p>
+<p>It is intentionally written as a set of <strong>normative requirements</strong> (“MUST/SHOULD/MAY”) plus <strong>audit rules</strong> (what bad patterns look like, how to detect them, and how to fix/mitigate them).</p>
+<hr>
+<h2>0) Safety, boundaries, and anti-abuse constraints (MUST FOLLOW)</h2>
+<ul><li>MUST NOT request, output, log, or commit secrets (API keys, passwords, private keys, session cookies, JWTs, database URLs with credentials, signing keys, client secrets).</li><li>MUST NOT “fix” security by disabling protections (e.g., <code>InsecureSkipVerify</code>, <code>GOSUMDB=off</code> for public modules, wildcard CORS + credentials, removing auth checks, disabling CSRF defenses on cookie-auth apps).</li><li>MUST provide <strong>evidence-based findings</strong> during audits: cite file paths, code snippets, build/deploy configs, and concrete values that justify the claim.</li><li>MUST treat uncertainty honestly: if a control might exist in infrastructure (reverse proxy, WAF, service mesh, platform config), report it as “not visible in app code; verify at runtime/config.”</li><li>MUST keep fixes minimal, correct, and production-safe; avoid introducing breaking changes without warning (especially around auth/session flows, and proxies).</li></ul>
+<hr>
+<h2>1) Operating modes</h2>
+<h3>1.1 Generation mode (default)</h3>
+<p>When asked to write new Go code or modify existing code:</p>
+<ul><li>MUST follow every <strong>MUST</strong> requirement in this spec.</li><li>SHOULD follow every <strong>SHOULD</strong> requirement unless the user explicitly says otherwise.</li><li>MUST prefer safe-by-default APIs and proven libraries over custom security code.</li><li>MUST avoid introducing new risky sinks (shell execution, dynamic template execution, serving user files as HTML, unsafe redirects, weak crypto, unbounded parsing, etc.).</li></ul>
+<h3>1.2 Passive review mode (always on while editing)</h3>
+<p>While working anywhere in a Go repo (even if the user did not ask for a security scan):</p>
+<ul><li>MUST “notice” violations of this spec in touched/nearby code.</li><li>SHOULD mention issues as they come up, with a brief explanation + safe fix.</li></ul>
+<h3>1.3 Active audit mode (explicit scan request)</h3>
+<p>When the user asks to “scan”, “audit”, or “hunt for vulns”:</p>
+<ul><li>MUST systematically search the codebase for violations of this spec.</li><li>MUST output findings in a structured format (see §2.3).</li></ul>
+<p>Recommended audit order: 1) Build/deploy entrypoints: <code>main.go</code>, <code>cmd/*</code>, Dockerfiles, Kubernetes manifests, systemd units, CI workflows. 2) Go toolchain &amp; dependency policy: Go version, modules, <code>go.mod/go.sum</code>, proxy/sumdb settings, govulncheck usage. 3) Secret management and config loading (env, files, secret stores) + logging patterns. 4) HTTP server configuration (timeouts, body limits, proxy trust, security headers). 5) AuthN/AuthZ boundaries, session/cookie settings, token validation. 6) CSRF protections for cookie-authenticated state-changing endpoints. 7) Template usage and output encoding (XSS), and any “render template from string” behavior (SSTI). 8) File handling (uploads/downloads/path traversal/temp files), static file serving. 9) Injection sinks: SQL, OS command execution, SSRF/outbound fetch, open redirects. 10) Concurrency/resource exhaustion (unbounded goroutines/queues, missing timeouts/contexts). 11) Use of <code>unsafe</code> / <code>cgo</code> / <code>reflect</code> in security-sensitive paths. 12) Debug/diagnostic endpoints (pprof/expvar/metrics) exposure. 13) Cryptography usage (randomness, password hashing).</p>
+<hr>
+<h2>2) Definitions and review guidance</h2>
+<h3>2.1 Untrusted input (treat as attacker-controlled unless proven otherwise)</h3>
+<p>Examples include:</p>
+<ul><li><code>*http.Request</code> fields: <code>r.URL.Path</code>, <code>r.URL.RawQuery</code>, <code>r.Form</code>, <code>r.PostForm</code>, headers, cookies, <code>r.Body</code></li><li>Path parameters from routers (including values extracted from URL paths)</li><li>JSON/XML/YAML bodies, multipart form parts, uploaded files</li><li>Any data from external systems (webhooks, third-party APIs, message queues)</li><li>Any persisted user content (DB rows) that originated from users</li><li>Configuration values that might be attacker-influenced in some deployments (headers set by upstream proxies, environment variables in multi-tenant systems)</li></ul>
+<h3>2.2 State-changing request</h3>
+<p>A request is state-changing if it can create/update/delete data, change auth/session state, trigger side effects (purchase, email send, webhook send), or initiate privileged actions.</p>
+<h3>2.3 Required audit finding format</h3>
+<p>For each issue found, output:</p>
+<ul><li>Rule ID:</li><li>Severity: Critical / High / Medium / Low</li><li>Location: file path + function/handler name + line(s)</li><li>Evidence: the exact code/config snippet</li><li>Impact: what could go wrong, who can exploit it</li><li>Fix: safe change (prefer minimal diff)</li><li>Mitigation: defense-in-depth if immediate fix is hard</li><li>False positive notes: what to verify if uncertain (edge configs, proxy behavior, auth assumptions)</li></ul>
+<hr>
+<h2>3) Secure baseline: minimum production configuration (MUST in production)</h2>
+<p>This is the smallest “production baseline” that prevents common Go misconfigurations.</p>
+<h3>3.1 Toolchain, patching, and dependency hygiene (MUST)</h3>
+<ul><li>MUST run a supported Go major version and keep to the latest patch releases.</li><li>MUST treat Go standard library patch releases as security-relevant (many security fixes land in stdlib components like <code>net/http</code>, <code>crypto/*</code>, parsing packages).</li><li>MUST use Go modules with committed <code>go.mod</code> and <code>go.sum</code>.</li><li>MUST NOT disable module authenticity mechanisms for public modules (checksum DB) unless you have a controlled, documented replacement.</li><li>MUST run <code>govulncheck</code> (source scan and/or binary scan) in CI and address findings.</li></ul>
+<h3>3.2 HTTP server baseline (MUST for network-facing services)</h3>
+<p>If the program serves HTTP (directly or via a framework built on <code>net/http</code>):</p>
+<ul><li>MUST configure an <code>http.Server</code> with explicit timeouts and header limits.</li><li>MUST set request body size limits (global and per-route as needed).</li><li>MUST avoid exposing diagnostic endpoints (pprof/expvar) publicly.</li><li>SHOULD set a consistent set of security headers (or verify they are set at the edge).</li><li>MUST set cookie security attributes for any cookies you issue.</li><li>SHOULD implement rate limiting and abuse controls for auth and expensive endpoints.</li></ul>
+<p>Illustrative baseline skeleton (adjust to your project):</p>
+<ul><li>Create a dedicated mux (avoid implicit global defaults unless intentionally managed).</li><li>Wrap handlers with: panic-safe error handling, request ID, logging, auth, and limits.</li></ul>
+<hr>
+<h2>4) Rules (generation + audit)</h2>
+<p>Each rule contains: required practice, insecure patterns, detection hints, and remediation.</p>
+<h3>GO-DEPLOY-001: Keep the Go toolchain and standard library updated (security releases)</h3>
+<p>Severity: Medium</p>
+<p>NOTE: Upgrading dependencies and the core Go version can break projects in unexpected ways. Focus on only security-critical dependencies and if noticed, let the user know rather than upgrading automatically.</p>
+<p>Required:</p>
+<ul><li>MUST run a supported Go major release and apply patch releases promptly.</li><li>SHOULD treat patch releases as security-relevant, even if your application code didn’t change.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Production builds pinned to old Go versions without a patching process.</li><li>Docker images like <code>golang:1.xx</code> or custom base images that are not updated regularly.</li><li>CI pipelines that intentionally suppress Go updates.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Inspect CI (<code>.github/workflows</code>, <code>gitlab-ci.yml</code>, etc.) for <code>go-version:</code> or toolchain setup.</li><li>Inspect Dockerfiles for <code>FROM golang:</code> tags.</li><li>Inspect <code>go.mod</code> <code>go</code> directive and any toolchain pinning.</li></ul>
+<p>Fix:</p>
+<ul><li>Upgrade to the latest patch of a supported Go version.</li><li>Add an automated check (CI) that fails when Go is below an approved minimum.</li></ul>
+<p>Notes:</p>
+<ul><li>Go publishes regular minor releases that frequently include security fixes across standard library packages.</li></ul>
+<hr>
+<h3>GO-SUPPLY-001: Go module authenticity MUST NOT be disabled for public dependencies</h3>
+<p>Severity: High</p>
+<p>Required:</p>
+<ul><li>MUST keep module checksum verification enabled for public modules.</li><li>SHOULD commit <code>go.sum</code> and treat changes as security-sensitive.</li><li>MUST NOT use insecure module fetching settings for public modules.</li><li>MAY configure private module behavior using <code>GOPRIVATE</code>/<code>GONOSUMDB</code> for private repos, but must do so narrowly and intentionally.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>GOSUMDB=off</code> in CI or production build environments for public modules.</li><li><code>GONOSUMDB=*</code> or overly broad patterns that effectively disable verification.</li><li><code>GOINSECURE=*</code> or broad <code>GOINSECURE</code> patterns for public modules.</li><li><code>GOPROXY=direct</code> everywhere without a clear policy.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search build configs for <code>GOSUMDB</code>, <code>GONOSUMDB</code>, <code>GOINSECURE</code>, <code>GOPROXY</code>, <code>GOPRIVATE</code>.</li><li>Look for documentation/scripts that recommend disabling checksum DB “to make builds work”.</li></ul>
+<p>Fix:</p>
+<ul><li>Restore defaults for public module verification.</li><li>For private modules:</li><li>Set <code>GOPRIVATE=your.private.domain/*</code></li><li>Configure an internal proxy or direct fetching, and restrict <code>GONOSUMDB</code> to private patterns only.</li></ul>
+<p>Notes:</p>
+<ul><li>Disabling checksum verification removes an important integrity layer against targeted or compromised upstream delivery.</li></ul>
+<hr>
+<h3>GO-CONFIG-001: Secrets must be externalized and never logged or committed</h3>
+<p>Severity: High (Critical if credentials are committed)</p>
+<p>Required:</p>
+<ul><li>MUST load secrets from environment variables, secret managers, or secure config files with restricted permissions.</li><li>MUST NOT hard-code secrets in Go source, test fixtures that may reach production, or build args.</li><li>MUST NOT log secrets or full credential-bearing connection strings.</li><li>SHOULD fail closed in production if required secrets are missing.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>String constants containing tokens/keys/passwords.</li><li><code>.env</code> files or config files with secrets committed to repo.</li><li>Logging <code>os.Environ()</code>, dumping full configs, or printing DSNs.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for suspicious literals (<code>API_KEY</code>, <code>SECRET</code>, <code>PASSWORD</code>, <code>Authorization:</code>).</li><li>Inspect config loaders and logging statements.</li><li>Inspect CI logs or debug print paths.</li></ul>
+<p>Fix:</p>
+<ul><li>Move secrets to a secret store / environment variables.</li><li>Redact sensitive fields in logs.</li><li>Add secret scanning to CI and pre-commit.</li></ul>
+<hr>
+<h3>GO-HTTP-001: HTTP servers MUST set timeouts and MaxHeaderBytes</h3>
+<p>Severity: High (DoS risk)</p>
+<p>Required:</p>
+<ul><li>MUST set: <code>ReadHeaderTimeout</code>, and SHOULD set <code>ReadTimeout</code>, <code>WriteTimeout</code>, <code>IdleTimeout</code> as appropriate for the service.</li><li>MUST set <code>MaxHeaderBytes</code> to a justified limit for your application.</li><li>MUST NOT rely on default zero-values for timeouts in production for internet-facing servers.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>http.ListenAndServe(&quot;:8080&quot;, handler)</code> with a default <code>http.Server</code> (no explicit timeouts).</li><li><code>&amp;http.Server{}</code> with timeouts left at zero.</li><li>Missing <code>MaxHeaderBytes</code>.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>http.ListenAndServe(</code>, <code>ListenAndServeTLS(</code>, <code>Server{</code> and inspect configured fields.</li><li>Check for reverse proxies; even with a proxy, app-level timeouts still matter.</li></ul>
+<p>Fix:</p>
+<ul><li>Use <code>http.Server{ReadHeaderTimeout: ..., ReadTimeout: ..., WriteTimeout: ..., IdleTimeout: ..., MaxHeaderBytes: ...}</code>.</li><li>Calibrate timeouts per endpoint type (streaming vs JSON APIs).</li></ul>
+<p>Notes:</p>
+<ul><li>Net/http documents that these timeouts exist and that zero/negative values mean “no timeout”; production services should choose explicit values.</li></ul>
+<hr>
+<h3>GO-HTTP-002: Request body and multipart parsing MUST be size-bounded</h3>
+<p>Severity: Medium (DoS risk; can be High for upload-heavy apps)</p>
+<p>Required:</p>
+<ul><li>MUST enforce a global maximum request body size for endpoints that accept bodies.</li><li>MUST enforce strict multipart upload limits and avoid unbounded form parsing.</li><li>SHOULD enforce per-route limits when some endpoints legitimately need larger bodies.</li><li>SHOULD set upstream (proxy) limits as defense-in-depth.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Reading <code>r.Body</code> with <code>io.ReadAll(r.Body)</code> without a size cap.</li><li>Calling <code>r.ParseMultipartForm(...)</code> with overly large limits (or forgetting size controls).</li><li>Accepting file uploads with no limits on file size, number of parts, or total body size.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>io.ReadAll(r.Body)</code>, <code>json.NewDecoder(r.Body)</code>, <code>ParseMultipartForm</code>, <code>FormFile</code>, <code>multipart</code>.</li><li>Look for missing <code>http.MaxBytesReader</code> or equivalent per-handler limiting.</li><li>Look for “upload” endpoints and check limits.</li></ul>
+<p>Fix:</p>
+<ul><li>Wrap request bodies with <code>http.MaxBytesReader(w, r.Body, maxBytes)</code> before parsing.</li><li>For multipart, set conservative limits and validate file sizes/part counts explicitly.</li><li>Set proxy limits (e.g., at ingress) in addition to app limits.</li></ul>
+<p>Notes:</p>
+<ul><li>There are known vulnerability classes and advisories related to excessive resource consumption in multipart/form parsing; treat unbounded parsing as a security issue.</li></ul>
+<hr>
+<h3>GO-DEPLOY-002: Diagnostic endpoints (pprof/expvar/metrics) MUST NOT be publicly exposed</h3>
+<p>Severity: High</p>
+<p>NOTE: This only applies to production configurations. These endpoints are often used for debug or dev endpoints. If found, confirm that it would be reachable from the actual production deployment.</p>
+<p>Required:</p>
+<ul><li>MUST NOT expose <code>net/http/pprof</code> handlers on a public internet-facing listener without strong access controls.</li><li>SHOULD run diagnostics on a separate, internal-only listener (loopback/VPC-only) and require auth.</li><li>MUST review what diagnostic endpoints reveal (stack traces, memory, command lines, environment, internal URLs).</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Side-effect import <code>import _ &quot;net/http/pprof&quot;</code> in a server binary with a public mux.</li><li><code>/debug/pprof/*</code> reachable without auth.</li><li><code>/debug/vars</code> (expvar) reachable without auth.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>net/http/pprof</code> imports (including blank imports).</li><li>Search for route prefixes <code>/debug/pprof</code>, <code>/debug/vars</code>.</li><li>Check whether <code>http.DefaultServeMux</code> is used and whether any debug handlers register globally.</li></ul>
+<p>Fix:</p>
+<ul><li>Remove diagnostics from production builds, or bind them to an internal-only listener.</li><li>Add strong authentication/authorization (and ideally network-level restrictions).</li></ul>
+<p>Notes:</p>
+<ul><li>pprof is typically imported for its side effect of registering HTTP handlers under <code>/debug/pprof/</code>.</li></ul>
+<hr>
+<h3>GO-HTTP-003: Reverse proxy and forwarded header trust MUST be explicit</h3>
+<p>Severity: High (auth, URL generation, logging/auditing correctness)</p>
+<p>Required:</p>
+<ul><li>If behind a reverse proxy, MUST define which proxy is trusted and how client IP/scheme/host are derived.</li><li>MUST NOT trust <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code>, <code>Forwarded</code>, or similar headers from the open internet.</li><li>MUST ensure “secure cookie” logic, redirects, and absolute URL generation do not rely on spoofable headers.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Using <code>r.Header.Get(&quot;X-Forwarded-For&quot;)</code> as the client IP without validating the proxy boundary.</li><li>Deriving “is HTTPS” from <code>X-Forwarded-Proto</code> without confirming it came from a trusted proxy.</li><li>Using forwarded <code>Host</code> values for password reset links without allowlisting.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code>, <code>Forwarded</code>, <code>Real-IP</code>, and any custom “client IP” helpers.</li><li>Inspect ingress/proxy configs; if not visible, mark as “verify at edge”.</li></ul>
+<p>Fix:</p>
+<ul><li>Enforce proxy trust at the edge and in app:</li><li>Accept forwarded headers only from known proxy IP ranges.</li><li>Prefer platform-provided mechanisms where available.</li><li>If generating external links, use a configured allowlisted canonical origin (not the request’s Host header).</li></ul>
+<hr>
+<h3>GO-HTTP-004: Security headers SHOULD be set (in app or at the edge)</h3>
+<p>Severity: Medium</p>
+<p>Required (typical web app serving browsers):</p>
+<ul><li>SHOULD set:</li><li><code>Content-Security-Policy</code> (CSP) appropriate to the app. NOTE: It is most important to set the CSP&#x27;s script-src. All other directives are not as important and can generally be excluded for the ease of development.</li><li><code>X-Content-Type-Options: nosniff</code></li><li>Clickjacking protection (<code>X-Frame-Options</code> and/or CSP <code>frame-ancestors</code>)</li><li><code>Referrer-Policy</code> and <code>Permissions-Policy</code> where appropriate</li><li>MUST ensure cookies have secure attributes (see GO-HTTP-005).</li></ul>
+<p>NOTE:</p>
+<ul><li>These headers may be set via reverse proxy/CDN; if not visible in app code, report as “verify at edge”.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>No security headers anywhere (app or edge) for a browser-facing app.</li><li>CSP missing for apps rendering untrusted content.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for middleware setting headers: <code>w.Header().Set(&quot;Content-Security-Policy&quot;, ...)</code>, etc.</li><li>Search for reverse proxy config that sets headers.</li></ul>
+<p>Fix:</p>
+<ul><li>Add centralized header middleware in Go, or configure at the edge.</li><li>Keep CSP realistic; avoid <code>unsafe-inline</code> where possible.</li></ul>
+<hr>
+<h3>GO-HTTP-005: Cookies MUST use secure attributes in production</h3>
+<p>Severity: Medium</p>
+<p>Required (production, HTTPS):</p>
+<ul><li>MUST set <code>Secure</code> on cookies that carry auth/session state. IMPORTANT NOTE: Only set <code>Secure</code> in production environment when TLS is configured. When running in a local dev environment over HTTP, do not set <code>Secure</code> property on cookies. You should do this conditionally based on if the app is running in production mode. You should also include a property like <code>SESSION_COOKIE_SECURE</code> which can be used to disable <code>Secure</code> cookies when testing over HTTP.</li><li>MUST set <code>HttpOnly</code> on auth/session cookies.</li><li>SHOULD set <code>SameSite=Lax</code> by default (or <code>Strict</code> if compatible), and only use <code>None</code> when necessary (and only with <code>Secure</code>).</li><li>SHOULD set bounded lifetimes (<code>Max-Age</code>/<code>Expires</code>) appropriate to the app.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Setting auth/session cookies without <code>Secure</code> in HTTPS deployments.</li><li>Cookies without <code>HttpOnly</code> for session identifiers.</li><li><code>SameSite=None</code> for cookie-authenticated apps without a strong CSRF strategy.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>http.SetCookie</code>, <code>&amp;http.Cookie{</code>, <code>Set-Cookie</code>.</li><li>Inspect cookie flags in auth/session code.</li></ul>
+<p>Fix:</p>
+<ul><li>Set the correct fields on <code>http.Cookie</code> and centralize cookie creation.</li></ul>
+<p>Notes:</p>
+<ul><li>SameSite is defense-in-depth and does not replace CSRF protections for cookie-auth apps.</li></ul>
+<hr>
+<h3>GO-HTTP-006: Cookie-authenticated state-changing endpoints MUST be CSRF-protected</h3>
+<p>Severity: High</p>
+<ul><li>IMPORTANT NOTE: If cookies are not used for auth (e.g., pure bearer token in Authorization header with no ambient cookies), CSRF is not a risk for those endpoints.</li></ul>
+<p>Required:</p>
+<ul><li>MUST protect all state-changing endpoints (POST/PUT/PATCH/DELETE) that rely on cookies for authentication.</li><li>SHOULD use a well-tested CSRF library/middleware rather than rolling your own.</li><li>MAY use additional defenses (Origin/Referer checks, Fetch Metadata, SameSite cookies), but tokens remain the primary defense for cookie-authenticated apps.</li></ul>
+<p>If tokens are impractical, or for small applications:</p>
+<ul><li>MUST at a minimum require a custom header to be set and set the session cookie SESSION_COOKIE_SAMESITE=lax, as this is the strongest method besides requiring a form token, and may be much easier to implement.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Cookie-authenticated JSON endpoints that mutate state with no CSRF checks.</li><li>Using GET for state-changing actions.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Enumerate all non-GET routes and identify auth mechanism.</li><li>Look for CSRF middleware usage; if absent, treat as suspicious in browser-facing apps.</li></ul>
+<p>Fix:</p>
+<ul><li>Add CSRF middleware and ensure it covers all state-changing routes.</li><li>If the service is an API intended for non-browser clients, avoid cookie auth; use Authorization headers.</li></ul>
+<hr>
+<h3>GO-HTTP-007: CORS must be explicit and least-privilege</h3>
+<p>Severity: Medium (High if misconfigured with credentials)</p>
+<p>Required:</p>
+<ul><li>If CORS is not needed, MUST keep it disabled.</li><li>If CORS is needed:</li><li>MUST allowlist trusted origins (do not reflect arbitrary origins)</li><li>MUST be careful with credentialed requests; do not combine broad origins with cookies</li><li>SHOULD restrict allowed methods/headers</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>Access-Control-Allow-Origin: *</code> paired with cookies (<code>Access-Control-Allow-Credentials: true</code>).</li><li>Reflecting <code>Origin</code> without validation.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>Access-Control-Allow-</code> header setting.</li><li>Search for CORS middleware configuration.</li></ul>
+<p>Fix:</p>
+<ul><li>Implement strict origin allowlists and minimal methods/headers.</li><li>Ensure cookie-auth endpoints are not exposed cross-origin unless required.</li></ul>
+<hr>
+<h3>GO-XSS-001: Use html/template and avoid bypassing auto-escaping with untrusted data</h3>
+<p>Severity: High</p>
+<p>Required:</p>
+<ul><li>MUST use <code>html/template</code> for HTML rendering (not <code>text/template</code>).</li><li>MUST NOT convert untrusted data into “trusted” template types (<code>template.HTML</code>, <code>template.JS</code>, <code>template.URL</code>, etc.).</li><li>SHOULD keep templates static and controlled by developers; treat dynamic templates as high risk.</li><li>MUST NOT serve user-uploaded HTML/JS as active content unless explicitly intended and safely sandboxed.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>text/template</code> used to generate HTML.</li><li>Using <code>template.HTML(userInput)</code> or similar typed wrappers.</li><li>Directly writing unescaped user content into HTML responses.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>text/template</code>, <code>template.New(...).Parse(...)</code>, and typed wrappers like <code>template.HTML(</code>.</li><li>Inspect handlers that return HTML with string concatenation.</li></ul>
+<p>Fix:</p>
+<ul><li>Use <code>html/template</code> and pass untrusted data as data, not markup.</li><li>If you must allow limited HTML, use a vetted HTML sanitizer and still be careful with attributes/URLs.</li></ul>
+<hr>
+<h3>GO-SSTI-001: Never parse/execute templates from untrusted input (SSTI)</h3>
+<p>Severity: Critical</p>
+<p>Required:</p>
+<ul><li>MUST NOT call <code>template.Parse</code> / <code>template.ParseFiles</code> / <code>template.New(...).Parse(...)</code> on template text influenced by untrusted input.</li><li>MUST treat “user-defined templates” as a special high-risk design:</li><li>MUST use heavy sandboxing and strict allowlists</li><li>MUST isolate execution (process/container boundary) if truly required</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>tmpl := template.Must(template.New(&quot;x&quot;).Parse(r.FormValue(&quot;tmpl&quot;)))</code></li><li>Reading templates from uploads / DB entries and executing them in the same trust domain as server code.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>.Parse(</code> and trace the origin of the template string.</li><li>Look for “custom email templates”, “user theming templates”, etc.</li></ul>
+<p>Fix:</p>
+<ul><li>Replace with safe substitution mechanisms (no code execution).</li><li>If templates must be user-controlled, isolate and sandbox aggressively.</li></ul>
+<hr>
+<h3>GO-PATH-001: Prevent path traversal and unsafe file serving</h3>
+<p>Severity: High</p>
+<p>Required:</p>
+<ul><li>MUST NOT pass user-controlled paths to <code>os.Open</code>, <code>os.ReadFile</code>, <code>http.ServeFile</code>, or <code>http.FileServer</code> without strict validation and base-dir enforcement.</li><li>MUST treat <code>..</code>, absolute paths, and OS-specific path tricks as hostile input.</li><li>SHOULD store user uploads outside any static web root; serve through controlled handlers.</li><li>MUST avoid directory listing for sensitive file trees.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>http.ServeFile(w, r, r.URL.Query().Get(&quot;path&quot;))</code></li><li><code>os.Open(filepath.Join(baseDir, userPath))</code> without checking that the result stays under <code>baseDir</code></li><li><code>http.FileServer(http.Dir(&quot;.&quot;))</code> serving the project root or user-writable directories</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>ServeFile(</code>, <code>FileServer(</code>, <code>http.Dir(</code>, <code>os.Open(</code>, <code>ReadFile(</code>, <code>filepath.Join(</code>.</li><li>Trace whether path components come from request/DB.</li></ul>
+<p>Fix:</p>
+<ul><li>Use an allowlist of file identifiers (e.g., database IDs) mapped to server-side paths.</li><li>Enforce base directory containment after cleaning and joining.</li><li>Serve active formats as downloads (<code>Content-Disposition: attachment</code>) unless explicitly intended.</li></ul>
+<hr>
+<h3>GO-UPLOAD-001: File uploads must be validated, stored safely, and served safely</h3>
+<p>Severity: High</p>
+<p>Required:</p>
+<ul><li>MUST enforce upload size limits (app + edge).</li><li>MUST validate file type using allowlists and content checks (not only extensions).</li><li>MUST store uploads outside executable/static roots when possible.</li><li>SHOULD generate server-side filenames (random IDs) and avoid trusting original names.</li><li>MUST serve potentially active formats safely (download attachment) unless explicitly intended.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Accepting arbitrary file types and serving them back inline.</li><li>Using user-supplied filename as storage path.</li><li>Missing size/type validation.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>multipart</code>, <code>FormFile</code>, <code>ParseMultipartForm</code>, <code>io.Copy</code> to disk.</li><li>Check where files are stored and how they are served.</li></ul>
+<p>Fix:</p>
+<ul><li>Implement allowlist validation + safe storage + safe serving.</li><li>Add scanning/quarantine workflows where applicable.</li></ul>
+<hr>
+<h3>GO-INJECT-001: Prevent SQL injection (parameterized queries / ORM)</h3>
+<p>Severity: High</p>
+<p>Required:</p>
+<ul><li>MUST use parameterized queries or an ORM that parameterizes under the hood.</li><li>MUST NOT build SQL by string concatenation / <code>fmt.Sprintf</code> / string interpolation with untrusted input.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>fmt.Sprintf(&quot;SELECT ... WHERE id=%s&quot;, r.URL.Query().Get(&quot;id&quot;))</code></li><li><code>query := &quot;UPDATE users SET role=&#x27;&quot; + role + &quot;&#x27; WHERE id=&quot; + id</code></li></ul>
+<p>Detection hints:</p>
+<ul><li>Grep for <code>SELECT</code>, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code> and check how query strings are built.</li><li>Trace untrusted data into <code>db.Query</code>, <code>db.Exec</code>, <code>QueryRow</code>, etc.</li></ul>
+<p>Fix:</p>
+<ul><li>Replace with placeholders (<code>?</code>, <code>$1</code>, etc.) and pass parameters separately.</li><li>Validate and type-check IDs before use.</li></ul>
+<hr>
+<h3>GO-INJECT-002: Prevent OS command injection; avoid shelling out with untrusted input</h3>
+<p>Severity: Critical to High (depends on exposure)</p>
+<p>Required:</p>
+<ul><li>MUST avoid executing external commands with attacker-controlled strings.</li><li>If subprocess is necessary:</li><li>MUST use <code>exec.CommandContext</code> with an argument list (not <code>sh -c</code>).</li><li>MUST NOT pass untrusted input to a shell (<code>bash -c</code>, <code>sh -c</code>, PowerShell).</li><li>SHOULD use strict allowlists for any variable component (subcommand, flags, filenames).</li><li>MUST assume CLI tools may interpret attacker-controlled args as flags or special values.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>exec.Command(&quot;sh&quot;, &quot;-c&quot;, userString)</code></li><li><code>exec.Command(&quot;bash&quot;, &quot;-c&quot;, fmt.Sprintf(&quot;tool %s&quot;, user))</code></li><li>Calling the shell to get glob expansion for user-supplied globs.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>os/exec</code>, <code>exec.Command(</code>, <code>CommandContext(</code>, <code>&quot;sh&quot;</code>, <code>&quot;bash&quot;</code>, <code>&quot;-c&quot;</code>.</li><li>Trace untrusted input into command name/args.</li></ul>
+<p>Fix:</p>
+<ul><li>Use library APIs instead of subprocesses.</li><li>Hardcode command and allowlist/validate args.</li><li>If a shell is unavoidable, escape robustly and treat as high risk (prefer avoiding).</li></ul>
+<p>Notes:</p>
+<ul><li>The Go <code>os/exec</code> package intentionally does invoke a shell; introducing <code>sh -c</code> reintroduces shell injection hazards.</li></ul>
+<hr>
+<h3>GO-SSRF-001: Prevent SSRF in outbound HTTP requests</h3>
+<p>Severity: Medium (High in cloud/LAN environments)</p>
+<ul><li>Note: For small stand alone projects this is less important. It is most important when deploying into an LAN or with other services listening on the same server.</li></ul>
+<p>Required:</p>
+<ul><li>MUST treat outbound requests to user-provided URLs as high risk.</li><li>SHOULD allowlist hosts/domains for any user-influenced URL fetch.</li><li>SHOULD block access to localhost/private IP ranges/link-local addresses and cloud metadata endpoints.</li><li>MUST restrict schemes to <code>http</code>/<code>https</code> (no <code>file:</code>, <code>gopher:</code>, etc.).</li><li>MUST set client timeouts and restrict redirects.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>http.Get(r.URL.Query().Get(&quot;url&quot;))</code></li><li>“URL preview” / “webhook test” endpoints that fetch arbitrary URLs.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>http.Get</code>, <code>client.Do</code>, and URL values derived from requests/DB.</li><li>Identify features that fetch remote resources.</li></ul>
+<p>Fix:</p>
+<ul><li>Parse URLs strictly; enforce scheme and allowlisted hostnames.</li><li>Resolve DNS and enforce IP-range restrictions (with care for DNS rebinding).</li><li>Set timeouts, disable redirects unless needed, and cap response sizes.</li></ul>
+<hr>
+<h3>GO-HTTPCLIENT-001: Outbound HTTP clients MUST set timeouts and close bodies</h3>
+<p>Severity: High (DoS and resource exhaustion)</p>
+<p>Required:</p>
+<ul><li>MUST set an overall timeout on <code>http.Client</code> usage (or equivalent per-request deadlines via context + transport timeouts).</li><li>MUST ensure <code>resp.Body.Close()</code> is called for all successful requests (typically <code>defer resp.Body.Close()</code> immediately after error check).</li><li>SHOULD limit response body reads (do not <code>io.ReadAll</code> unbounded responses).</li><li>SHOULD restrict redirects for security-sensitive fetches (SSRF, auth flows).</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Using <code>http.DefaultClient</code> / <code>http.Get</code> for user-influenced destinations with no timeout policy.</li><li>Missing <code>defer resp.Body.Close()</code> leading to resource leaks.</li><li><code>io.ReadAll(resp.Body)</code> with no limit.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>http.Get(</code>, <code>http.Post(</code>, <code>client := &amp;http.Client{}</code> without <code>Timeout</code>, <code>client.Do(</code> and missing closes.</li><li>Search for <code>io.ReadAll(resp.Body)</code>.</li></ul>
+<p>Fix:</p>
+<ul><li>Use a configured client with timeouts.</li><li>Always close response bodies.</li><li>Use bounded readers (<code>io.LimitReader</code>) for large/untrusted responses.</li></ul>
+<p>Notes:</p>
+<ul><li>The net/http package exposes <code>DefaultClient</code> as a zero-valued <code>http.Client</code>, which can easily lead to “no timeout” behavior unless configured.</li></ul>
+<hr>
+<h3>GO-REDIRECT-001: Prevent open redirects</h3>
+<p>Severity: Medium (can be High with auth flows)</p>
+<p>Required:</p>
+<ul><li>MUST validate redirect targets derived from untrusted input (<code>next</code>, <code>redirect</code>, <code>return_to</code>).</li><li>SHOULD prefer only same-site relative paths.</li><li>SHOULD fall back to a safe default on validation failure.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>http.Redirect(w, r, r.URL.Query().Get(&quot;next&quot;), http.StatusFound)</code> with no validation.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>http.Redirect(</code> and check origin of the location.</li></ul>
+<p>Fix:</p>
+<ul><li>Allowlist internal paths or known domains.</li><li>Reject absolute URLs unless explicitly needed and allowlisted.</li></ul>
+<hr>
+<h3>GO-CRYPTO-001: Cryptographic randomness MUST come from crypto/rand</h3>
+<p>Severity: High (Critical if used for auth/session tokens or keys)</p>
+<p>Required:</p>
+<ul><li>MUST use <code>crypto/rand</code> for:</li><li>session IDs, password reset tokens, API keys, CSRF tokens, nonces</li><li>encryption keys, signing keys, salts when required</li><li>MUST NOT use <code>math/rand</code> for any security-sensitive value.</li><li>SHOULD use built-in helpers that produce appropriately strong tokens when available.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>math/rand.Seed(time.Now().UnixNano())</code> followed by token generation for auth or sessions.</li><li>Using UUIDv4-like constructs built from <code>math/rand</code>.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>math/rand</code>, <code>rand.Seed</code>, <code>rand.Intn</code> in code that touches auth/session/token flows.</li><li>Search for custom token generators.</li></ul>
+<p>Fix:</p>
+<ul><li>Switch to <code>crypto/rand</code> (<code>rand.Reader</code>, <code>rand.Read</code>, or secure token helpers).</li><li>Ensure sufficient entropy and use URL-safe encoding.</li></ul>
+<p>Notes:</p>
+<ul><li>The crypto/rand package provides secure randomness APIs and token generation helpers.</li></ul>
+<hr>
+<h3>GO-AUTH-001: Password storage MUST use adaptive hashing (bcrypt/argon2id) and safe comparisons</h3>
+<p>Severity: High</p>
+<p>Required:</p>
+<ul><li>MUST hash passwords using an adaptive password hashing function (bcrypt or argon2id).</li><li>MUST NOT store plaintext passwords or reversible encryption of passwords.</li><li>MUST compare secrets in constant time when relevant (tokens, MACs, API keys) to reduce timing leaks.</li><li>SHOULD ensure password policies do not exceed algorithm constraints (e.g., bcrypt has input length limits; handle long passphrases appropriately).</li></ul>
+<p>Insecure patterns:</p>
+<ul><li><code>sha256(password)</code> stored as password hash.</li><li>Plaintext password storage.</li><li>Comparing secrets with <code>==</code> in timing-sensitive contexts.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>sha1</code>, <code>sha256</code>, <code>md5</code> used on passwords.</li><li>Search for <code>bcrypt</code>/<code>argon2</code> usage; if absent, suspect.</li><li>Search for <code>==</code> comparisons on tokens/API keys.</li></ul>
+<p>Fix:</p>
+<ul><li>Use <code>bcrypt.GenerateFromPassword</code> / <code>CompareHashAndPassword</code> or argon2id with recommended parameters.</li><li>Use constant-time compare helpers when comparing MACs/tokens.</li></ul>
+<p>Notes:</p>
+<ul><li>Go provides bcrypt in <code>golang.org/x/crypto/bcrypt</code>, and constant-time comparisons in <code>crypto/subtle</code>.</li></ul>
+<hr>
+<h3>GO-CONC-001: Data races and concurrency hazards MUST be treated as security-relevant</h3>
+<p>Severity: Medium to High (depends on what races affect)</p>
+<p>Required:</p>
+<ul><li>MUST run tests with the race detector (<code>go test -race</code>) in CI for security-sensitive services.</li><li>MUST fix detected races; do not suppress without deep justification.</li><li>SHOULD treat shared mutable state in handlers as high risk; enforce synchronization or avoid shared mutability.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Global maps/slices mutated from multiple goroutines without a mutex.</li><li>Caches or auth/session state stored in globals without concurrency protection.</li><li>Racy access to authorization state (can lead to bypasses or inconsistent enforcement).</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>var someMap = map[...]...</code> used in handlers.</li><li>Look for missing <code>sync.Mutex</code>, <code>sync.Map</code>, channels, or other synchronization.</li><li>Ensure CI includes <code>-race</code> and that it runs relevant tests.</li></ul>
+<p>Fix:</p>
+<ul><li>Add proper synchronization or redesign to avoid shared mutable state.</li><li>Add race tests and run them continuously.</li></ul>
+<p>Notes:</p>
+<ul><li>The Go race detector only finds races that occur in executed code paths; improve test coverage and run realistic workloads with <code>-race</code> where feasible.</li></ul>
+<hr>
+<h3>GO-UNSAFE-001: Use of unsafe/cgo MUST be minimized and audited like memory-unsafe code</h3>
+<p>Severity: High (Critical in high-risk code paths)</p>
+<p>Required:</p>
+<ul><li>SHOULD avoid importing <code>unsafe</code> in application code unless absolutely necessary.</li><li>If <code>unsafe</code> is used, MUST treat it as “manual memory safety” requiring careful review and test coverage.</li><li>If <code>cgo</code> is used, MUST treat the C/C++ boundary as memory-unsafe; apply secure coding practices on the C side and isolate where possible.</li></ul>
+<p>Insecure patterns:</p>
+<ul><li>Widespread <code>unsafe.Pointer</code> casts in parsing, serialization, auth, or network code.</li><li><code>cgo</code> used for parsing or security boundaries without sandboxing.</li></ul>
+<p>Detection hints:</p>
+<ul><li>Search for <code>import &quot;unsafe&quot;</code>, <code>unsafe.Pointer</code>, <code>// #cgo</code>, <code>import &quot;C&quot;</code>.</li><li>Prioritize review where unsafe touches untrusted input.</li></ul>
+<p>Fix:</p>
+<ul><li>Replace unsafe/cgo usage with safe standard library alternatives where possible.</li><li>Isolate unsafe code in small, well-tested modules with fuzz/race tests.</li></ul>
+<p>Notes:</p>
+<ul><li>The unsafe package explicitly provides operations that step around Go’s type safety guarantees.</li></ul>
+<hr>
+<h2>5) Practical scanning heuristics (how to “hunt”)</h2>
+<p>When actively scanning, use these high-signal patterns:</p>
+<p>Toolchain &amp; dependencies:</p>
+<ul><li><code>FROM golang:</code> (Dockerfiles), <code>go-version:</code> (CI), <code>toolchain go</code> (go.mod), pinned old versions</li><li><code>GOSUMDB=off</code>, <code>GOINSECURE</code>, <code>GONOSUMDB</code>, <code>GOPROXY=direct</code></li><li><code>replace</code> directives in <code>go.mod</code> to forks/paths</li><li><code>govulncheck</code> missing in CI</li></ul>
+<p>HTTP server hardening:</p>
+<ul><li><code>http.ListenAndServe(</code>, <code>ListenAndServeTLS(</code>, <code>&amp;http.Server{</code> with missing timeouts</li><li><code>ReadHeaderTimeout: 0</code>, <code>ReadTimeout: 0</code>, <code>WriteTimeout: 0</code>, <code>IdleTimeout: 0</code>, missing <code>MaxHeaderBytes</code></li></ul>
+<p>Body parsing / DoS:</p>
+<ul><li><code>io.ReadAll(r.Body)</code>, <code>json.NewDecoder(r.Body)</code> without size cap</li><li><code>ParseMultipartForm</code>, <code>FormFile</code>, <code>multipart.NewReader</code> without explicit limits</li><li>Missing <code>http.MaxBytesReader</code></li></ul>
+<p>Debug exposure:</p>
+<ul><li><code>import _ &quot;net/http/pprof&quot;</code></li><li><code>/debug/pprof</code>, <code>/debug/vars</code></li></ul>
+<p>Templates / XSS / SSTI:</p>
+<ul><li><code>text/template</code> used for HTML output</li><li><code>template.HTML(</code>, <code>template.JS(</code>, <code>template.URL(</code> with user-controlled data</li><li><code>.Parse(</code> on user-controlled strings</li></ul>
+<p>Files:</p>
+<ul><li><code>http.ServeFile(</code> with user path</li><li><code>http.FileServer(http.Dir(</code> pointing at repo root or uploads</li><li><code>os.Open(filepath.Join(base, user))</code> without containment checks</li></ul>
+<p>Injection:</p>
+<ul><li>SQL building with <code>fmt.Sprintf</code>, string concatenation near <code>db.Query/Exec</code></li><li><code>exec.Command(&quot;sh&quot;,&quot;-c&quot;, ...)</code>, <code>exec.Command(&quot;bash&quot;,&quot;-c&quot;, ...)</code></li></ul>
+<p>SSRF / outbound HTTP:</p>
+<ul><li><code>http.Get(userURL)</code>, <code>client.Do(req)</code> where URL comes from request/DB</li><li>Missing client timeout, missing <code>resp.Body.Close()</code>, unbounded <code>io.ReadAll(resp.Body)</code></li></ul>
+<p>Crypto:</p>
+<ul><li><code>math/rand</code> in token/session generation</li><li><code>InsecureSkipVerify: true</code></li><li>Password hashing with <code>sha256</code>/<code>md5</code> instead of bcrypt/argon2</li></ul>
+<p>Concurrency:</p>
+<ul><li>Shared maps/slices mutated from handlers without locks</li><li>CI lacking <code>go test -race</code></li></ul>
+<p>Always try to confirm:</p>
+<ul><li>data origin (untrusted vs trusted)</li><li>sink type (template/SQL/subprocess/files/http)</li><li>protective controls present (limits, validation, allowlists, middleware, network controls)</li></ul>
+<hr>
+<h2>6) Sources (accessed 2026-01-28)</h2>
+<p>Primary Go documentation:</p>
+<ul><li>Go Security Policy — https://go.dev/doc/security/policy</li><li>Go Release History (security fixes in patch releases) — https://go.dev/doc/devel/release</li><li>Go 1.25 Release Notes — https://go.dev/doc/go1.25</li><li>net/http (server timeouts, MaxHeaderBytes, DefaultClient) — https://pkg.go.dev/net/http</li><li>html/template (auto-escaping and trusted-template assumptions) — https://pkg.go.dev/html/template</li><li>crypto/tls (MinVersion defaults, InsecureSkipVerify warnings) — https://pkg.go.dev/crypto/tls</li><li>crypto/rand (secure randomness, token helpers) — https://pkg.go.dev/crypto/rand</li><li>crypto/subtle (constant-time comparisons) — https://pkg.go.dev/crypto/subtle</li><li>os/exec (no shell by default; command execution guidance) — https://pkg.go.dev/os/exec</li><li>unsafe (bypasses type safety) — https://go.dev/src/unsafe/unsafe.go</li><li>net/http/pprof (debug endpoints) — https://pkg.go.dev/net/http/pprof</li><li>cmd/go (module authentication via go.sum/checksum DB; env vars like GOINSECURE) — https://pkg.go.dev/cmd/go</li><li>Module Mirror and Checksum Database Launched (Go blog) — https://go.dev/blog/module-mirror-launch</li><li>govulncheck documentation — https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck</li><li>Go Race Detector documentation — https://go.dev/doc/articles/race_detector</li><li>bcrypt (password hashing) — https://pkg.go.dev/golang.org/x/crypto/bcrypt</li><li>Go vulnerability entry example (multipart resource consumption) — https://pkg.go.dev/vuln/GO-2023-1569</li></ul>
+<p>OWASP Cheat Sheet Series (general web security):</p>
+<ul><li>Session Management — https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html</li><li>CSRF Prevention — https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html</li><li>SSRF Prevention — https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html</li><li>XSS Prevention — https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html</li><li>HTTP Security Response Headers — https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/golang-general-backend-security.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

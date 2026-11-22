@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>render-deploy</title>
+<style>
+/* Matches hanzo.ai's monochrome editorial aesthetic: light-first white canvas
+   with automatic light/dark color-scheme support, Zen sans display headings,
+   edge halftone dot framing, pill controls, and crisp dark terminal cards. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  color-scheme:light dark;
+  --ground-light:#ffffff; --ground-dark:#000000;
+  --panel-light:#fafafa; --panel-dark:#0f0f0f;
+  --panel-2-light:#f5f5f7; --panel-2-dark:#171717;
+  --ink-light:#0a0a0a; --ink-dark:#f5f5f7;
+  --soft-light:#6e6e73; --soft-dark:#a1a1a6;
+  --faint-light:#86868b; --faint-dark:#737378;
+  --line-light:#e5e5e5; --line-dark:#232323;
+  --line-hi-light:#d4d4d4; --line-hi-dark:#3a3a3a;
+  --solid-bg-light:#0a0a0a; --solid-bg-dark:#ffffff;
+  --solid-ink-light:#ffffff; --solid-ink-dark:#0a0a0a;
+  --solid-hover-light:#262626; --solid-hover-dark:#e5e5e5;
+  --dot-light:#d4d4d4; --dot-dark:#262626;
+
+  --ground:var(--ground-light); --panel:var(--panel-light); --panel-2:var(--panel-2-light);
+  --ink:var(--ink-light); --soft:var(--soft-light); --faint:var(--faint-light);
+  --line:var(--line-light); --line-hi:var(--line-hi-light);
+  --solid-bg:var(--solid-bg-light); --solid-ink:var(--solid-ink-light);
+  --solid-hover:var(--solid-hover-light); --dot:var(--dot-light);
+  --term-bg:#0a0a0a; --term-ink:#f5f5f7; --term-soft:#a1a1a6; --term-faint:#737378; --term-line:#232323;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  --r:999px; --r-soft:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:var(--ground-dark); --panel:var(--panel-dark); --panel-2:var(--panel-2-dark);
+    --ink:var(--ink-dark); --soft:var(--soft-dark); --faint:var(--faint-dark);
+    --line:var(--line-dark); --line-hi:var(--line-hi-dark);
+    --solid-bg:var(--solid-bg-dark); --solid-ink:var(--solid-ink-dark);
+    --solid-hover:var(--solid-hover-dark); --dot:var(--dot-dark);
+  }
+}
+@supports (color: light-dark(white, black)){
+  :root{
+    --ground:light-dark(var(--ground-light),var(--ground-dark));
+    --panel:light-dark(var(--panel-light),var(--panel-dark));
+    --panel-2:light-dark(var(--panel-2-light),var(--panel-2-dark));
+    --ink:light-dark(var(--ink-light),var(--ink-dark));
+    --soft:light-dark(var(--soft-light),var(--soft-dark));
+    --faint:light-dark(var(--faint-light),var(--faint-dark));
+    --line:light-dark(var(--line-light),var(--line-dark));
+    --line-hi:light-dark(var(--line-hi-light),var(--line-hi-dark));
+    --solid-bg:light-dark(var(--solid-bg-light),var(--solid-bg-dark));
+    --solid-ink:light-dark(var(--solid-ink-light),var(--solid-ink-dark));
+    --solid-hover:light-dark(var(--solid-hover-light),var(--solid-hover-dark));
+    --dot:light-dark(var(--dot-light),var(--dot-dark));
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--ground);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:1rem;line-height:1.58;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility}
+.wrap{max-width:68rem;margin:0 auto;padding:0 1.75rem}
+
+/* Edge halftone dot field framing the hero, matching hanzo.ai. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before,.hero::after{content:"";position:absolute;top:0;bottom:0;width:min(24vw,280px);
+  background-image:radial-gradient(var(--dot) 1.25px,transparent 1.25px);
+  background-size:9px 9px;pointer-events:none}
+.hero::before{inset-inline-start:0;
+  -webkit-mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero::after{inset-inline-end:0;
+  -webkit-mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero .wrap{position:relative;z-index:1;padding-top:4.5rem;padding-bottom:3.75rem}
+
+nav{position:sticky;top:0;z-index:40;border-bottom:1px solid var(--line);
+  background:var(--ground);background:color-mix(in srgb,var(--ground) 90%,transparent);
+  backdrop-filter:blur(16px)}
+nav .in{max-width:68rem;margin:0 auto;padding:.85rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--sans);font-size:.95rem;font-weight:600;letter-spacing:-.02em;
+  color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:.55rem}
+.brand i{font-style:normal;font-weight:400;color:var(--soft)}
+.mark{width:1.25em;height:1.25em;display:block;flex:0 0 auto}
+.nlinks{display:flex;align-items:center;gap:1.15rem}
+.nlinks a{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+.nlinks a:hover{color:var(--ink);text-decoration:none}
+nav a.up{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink);text-decoration:none}
+.ncta{display:inline-flex;align-items:center;justify-content:center;padding:.45rem 1rem;
+  border-radius:var(--r);background:var(--solid-bg);color:var(--solid-ink);font-size:.84rem;
+  font-weight:500;text-decoration:none;white-space:nowrap}
+.ncta:hover{background:var(--solid-hover);color:var(--solid-ink);text-decoration:none}
+
+h1{font-family:var(--sans);font-size:clamp(2.15rem,4.8vw,3.5rem);line-height:1.06;
+  letter-spacing:-.038em;margin:0 0 1.15rem;font-weight:600;text-wrap:balance;max-width:20ch}
+h1 em{font-style:normal;color:var(--soft);font-weight:500}
+.lede{color:var(--soft);font-size:1.0625rem;line-height:1.55;max-width:58ch;margin:0 0 2rem;text-wrap:pretty}
+
+.btns{display:flex;flex-wrap:wrap;gap:.55rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--sans);
+  font-size:.875rem;font-weight:500;letter-spacing:-.005em;
+  min-height:2.5rem;padding:.55rem 1.2rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:var(--ground);cursor:pointer;
+  line-height:1.2;transition:background .15s ease,border-color .15s ease}
+.btn:hover{background:var(--panel-2);text-decoration:none;border-color:var(--ink)}
+.btn.solid{background:var(--solid-bg);color:var(--solid-ink);border-color:var(--solid-bg)}
+.btn.solid:hover{background:var(--solid-hover);border-color:var(--solid-hover)}
+.btn .chev{width:.75em;height:.75em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--ground);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 16px 40px rgba(0,0,0,.18)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .4rem);
+  background:transparent;color:var(--ink);font-family:var(--sans);font-size:.86rem;
+  font-weight:500;text-decoration:none;cursor:pointer;line-height:1.3;white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:var(--panel-2);outline:none;text-decoration:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.08em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:68rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--sans);font-size:.8rem;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:500;flex:0 0 auto;font-family:var(--mono);font-size:.7rem;
+  letter-spacing:.1em;text-transform:uppercase;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .9rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;font-size:.82rem;font-weight:500;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--sans);font-size:1.35rem;letter-spacing:-.025em;margin:2.75rem 0 .75rem;font-weight:600;text-wrap:balance}
+h3{font-size:1.05rem;margin:2rem 0 .5rem;font-weight:600;letter-spacing:-.015em}
+h4,h5,h6{font-size:.95rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch;text-wrap:pretty}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.25rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.84em;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:6px;padding:.12em .4em}
+pre{color-scheme:dark;background:var(--term-bg);color:var(--term-ink);border:1px solid var(--term-line);
+  padding:1.05rem 1.2rem;border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.84rem;line-height:1.68;color:var(--term-ink)}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:2px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.55rem .75rem;text-align:left}
+
+.curl{color-scheme:dark;display:block;background:var(--term-bg);border:1px solid var(--term-line);
+  border-radius:var(--r-soft);padding:1rem 1.2rem;font-family:var(--mono);
+  font-size:.82rem;color:var(--term-soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.85}
+.curl b{color:var(--term-ink);font-weight:500}
+.curl i{font-style:normal;color:var(--term-faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.25rem;font-family:var(--sans);font-size:.95rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r);margin:2rem 0 .65rem}
+#q::placeholder{color:var(--faint)}
+#q:focus{outline:none;border-color:var(--ink);background:var(--ground)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.75rem 1rem;margin:0 -1rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none;transition:background .12s ease}
+.row:hover{background:var(--panel-2);text-decoration:none}
+.nm{font-family:var(--mono);font-size:.86rem;font-weight:500;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.92rem;display:block;margin-top:.15rem}
+footer{margin-top:4rem;padding:2.25rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft);text-decoration:none}
+footer a:hover{color:var(--ink);text-decoration:underline}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);font-weight:500;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3rem;padding-bottom:2.5rem}
+  .nlinks .nhide{display:none}
+  .btns{gap:.5rem}
+  .btn{padding:.55rem 1rem;font-size:.84rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/render-deploy">
+<link rel="alternate" type="text/markdown" href="/render-deploy.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/render-deploy.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> Hanzo <i>Skills</i></a>
+  <div class="nlinks"><a class="nhide" href="https://hanzo.sh">hanzo.sh</a><a class="nhide" href="https://docs.hanzo.ai">Docs</a><a class="nhide" href="https://hanzo.ai/security">Security</a><a class="up" href="/">All skills</a><a class="ncta" href="https://hanzo.app">Try Hanzo</a></div>
+</div></nav>
+
+<div class="wrap">
+<h1>render-deploy</h1><p class="lede">Deploy applications to Render by analyzing codebases, generating render.yaml Blueprints, and providing Dashboard deeplinks. Use when the user wants to deploy, host, publish, or set up their application on Render&#x27;s cloud platform.</p><h1>Deploy to Render</h1>
+<p>Render supports <strong>Git-backed</strong> services and <strong>prebuilt Docker image</strong> services.</p>
+<p>This skill covers <strong>Git-backed</strong> flows:</p>
+<ol><li><strong>Blueprint Method</strong> - Generate render.yaml for Infrastructure-as-Code deployments</li><li><strong>Direct Creation</strong> - Create services instantly via MCP tools</li></ol>
+<p>Blueprints can also run a <strong>prebuilt Docker image</strong> by using <code>runtime: image</code>, but the <code>render.yaml</code> still must live in a Git repo.</p>
+<p>If there is no Git remote, stop and ask the user to either:</p>
+<ul><li>Create/push a Git remote (can be minimal if only the Blueprint is needed), or</li><li>Use the Render Dashboard/API to deploy a prebuilt Docker image (MCP cannot create image-backed services).</li></ul>
+<h2>Prerequisites</h2>
+<ul><li>When sandboxing blocks the deployment network calls, rerun with <code>sandbox_permissions=require_escalated</code>.</li><li>The deployment might take a few minutes. Use appropriate timeout values.</li></ul>
+<h2>When to Use This Skill</h2>
+<p>Activate this skill when users want to:</p>
+<ul><li>Deploy an application to Render</li><li>Create a render.yaml Blueprint file</li><li>Set up Render deployment for their project</li><li>Host or publish their application on Render&#x27;s cloud platform</li><li>Create databases, cron jobs, or other Render resources</li></ul>
+<h2>Happy Path (New Users)</h2>
+<p>Use this short prompt sequence before deep analysis to reduce friction:</p>
+<ol><li>Ask whether they want to deploy from a Git repo or a prebuilt Docker image.</li><li>Ask whether Render should provision everything the app needs (based on what seems likely from the user&#x27;s description) or only the app while they bring their own infra. If dependencies are unclear, ask a short follow-up to confirm whether they need a database, workers, cron, or other services.</li></ol>
+<p>Then proceed with the appropriate method below.</p>
+<h2>Choose Your Source Path</h2>
+<p><strong>Git Repo Path:</strong> Required for both Blueprint and Direct Creation. The repo must be pushed to GitHub, GitLab, or Bitbucket.</p>
+<p><strong>Prebuilt Docker Image Path:</strong> Supported by Render via image-backed services. This is <strong>not</strong> supported by MCP; use the Dashboard/API. Ask for:</p>
+<ul><li>Image URL (registry + tag)</li><li>Registry auth (if private)</li><li>Service type (web/worker) and port</li></ul>
+<p>If the user chooses a Docker image, guide them to the Render Dashboard image deploy flow or ask them to add a Git remote (so you can use a Blueprint with <code>runtime: image</code>).</p>
+<h2>Choose Your Deployment Method (Git Repo)</h2>
+<p>Both methods require a Git repository pushed to GitHub, GitLab, or Bitbucket. (If using <code>runtime: image</code>, the repo can be minimal and only contain <code>render.yaml</code>.)</p>
+<p>| Method | Best For | Pros | |--------|----------|------| | <strong>Blueprint</strong> | Multi-service apps, IaC workflows | Version controlled, reproducible, supports complex setups | | <strong>Direct Creation</strong> | Single services, quick deployments | Instant creation, no render.yaml file needed |</p>
+<h3>Method Selection Heuristic</h3>
+<p>Use this decision rule by default unless the user requests a specific method. Analyze the codebase first; only ask if deployment intent is unclear (e.g., DB, workers, cron).</p>
+<p><strong>Use Direct Creation (MCP) when ALL are true:</strong></p>
+<ul><li>Single service (one web app or one static site)</li><li>No separate worker/cron services</li><li>No attached databases or Key Value</li><li>Simple env vars only (no shared env groups)</li></ul>
+<p>If this path fits and MCP isn&#x27;t configured yet, stop and guide MCP setup before proceeding.</p>
+<p><strong>Use Blueprint when ANY are true:</strong></p>
+<ul><li>Multiple services (web + worker, API + frontend, etc.)</li><li>Databases, Redis/Key Value, or other datastores are required</li><li>Cron jobs, background workers, or private services</li><li>You want reproducible IaC or a render.yaml committed to the repo</li><li>Monorepo or multi-env setup that needs consistent configuration</li></ul>
+<p>If unsure, ask a quick clarifying question, but default to Blueprint for safety. For a single service, strongly prefer Direct Creation via MCP and guide MCP setup if needed.</p>
+<h2>Prerequisites Check</h2>
+<p>When starting a deployment, verify these requirements in order:</p>
+<p><strong>1. Confirm Source Path (Git vs Docker)</strong></p>
+<p>If using Git-based methods (Blueprint or Direct Creation), the repo must be pushed to GitHub/GitLab/Bitbucket. Blueprints that reference a prebuilt image still require a Git repo with <code>render.yaml</code>.</p>
+<pre><code class="lang-bash">git remote -v</code></pre>
+<ul><li>If no remote exists, stop and ask the user to create/push a remote <strong>or</strong> switch to Docker image deploy.</li></ul>
+<p><strong>2. Check MCP Tools Availability (Preferred for Single-Service)</strong></p>
+<p>MCP tools provide the best experience. Check if available by attempting:</p>
+<pre><code>list_services()</code></pre>
+<p>If MCP tools are available, you can skip CLI installation for most operations.</p>
+<p><strong>3. Check Render CLI Installation (for Blueprint validation)</strong></p>
+<pre><code class="lang-bash">render --version</code></pre>
+<p>If not installed, offer to install:</p>
+<ul><li>macOS: <code>brew install render</code></li><li>Linux/macOS: <code>curl -fsSL https://raw.githubusercontent.com/render-oss/cli/main/bin/install.sh | sh</code></li></ul>
+<p><strong>4. MCP Setup (if MCP isn&#x27;t configured)</strong></p>
+<p>If <code>list_services()</code> fails because MCP isn&#x27;t configured, ask whether they want to set up MCP (preferred) or continue with the CLI fallback. If they choose MCP, ask which AI tool they&#x27;re using, then provide the matching instructions below. Always use their API key.</p>
+<h3>Cursor</h3>
+<p>Walk the user through these steps:</p>
+<p>1) Get a Render API key:</p>
+<pre><code>https://dashboard.render.com/u/*/settings#api-keys</code></pre>
+<p>2) Add this to <code>~/.cursor/mcp.json</code> (replace <code>&lt;YOUR_API_KEY&gt;</code>):</p>
+<pre><code class="lang-json">{
+  &quot;mcpServers&quot;: {
+    &quot;render&quot;: {
+      &quot;url&quot;: &quot;https://mcp.render.com/mcp&quot;,
+      &quot;headers&quot;: {
+        &quot;Authorization&quot;: &quot;Bearer &lt;YOUR_API_KEY&gt;&quot;
+      }
+    }
+  }
+}</code></pre>
+<p>3) Restart Cursor, then retry <code>list_services()</code>.</p>
+<h3>Claude Code</h3>
+<p>Walk the user through these steps:</p>
+<p>1) Get a Render API key:</p>
+<pre><code>https://dashboard.render.com/u/*/settings#api-keys</code></pre>
+<p>2) Add the MCP server with Claude Code (replace <code>&lt;YOUR_API_KEY&gt;</code>):</p>
+<pre><code class="lang-bash">claude mcp add --transport http render https://mcp.render.com/mcp --header &quot;Authorization: Bearer &lt;YOUR_API_KEY&gt;&quot;</code></pre>
+<p>3) Restart Claude Code, then retry <code>list_services()</code>.</p>
+<h3>Codex</h3>
+<p>Walk the user through these steps:</p>
+<p>1) Get a Render API key:</p>
+<pre><code>https://dashboard.render.com/u/*/settings#api-keys</code></pre>
+<p>2) Set it in their shell:</p>
+<pre><code class="lang-bash">export RENDER_API_KEY=&quot;&lt;YOUR_API_KEY&gt;&quot;</code></pre>
+<p>3) Add the MCP server with the Codex CLI:</p>
+<pre><code class="lang-bash">codex mcp add render --url https://mcp.render.com/mcp --bearer-token-env-var RENDER_API_KEY</code></pre>
+<p>4) Restart Codex, then retry <code>list_services()</code>.</p>
+<h3>Other Tools</h3>
+<p>If the user is on another AI app, direct them to the Render MCP docs for that tool&#x27;s setup steps and install method.</p>
+<h3>Workspace Selection</h3>
+<p>After MCP is configured, have the user set the active Render workspace with a prompt like:</p>
+<pre><code>Set my Render workspace to [WORKSPACE_NAME]</code></pre>
+<p><strong>5. Check Authentication (CLI fallback only)</strong></p>
+<p>If MCP isn&#x27;t available, use the CLI instead and verify you can access your account:</p>
+<pre><code class="lang-bash"># Check if user is logged in (use -o json for non-interactive mode)
+render whoami -o json</code></pre>
+<p>If <code>render whoami</code> fails or returns empty data, the CLI is not authenticated. The CLI won&#x27;t always prompt automatically, so explicitly prompt the user to authenticate:</p>
+<p>If neither is configured, ask user which method they prefer:</p>
+<ul><li><strong>API Key (CLI)</strong>: <code>export RENDER_API_KEY=&quot;rnd_xxxxx&quot;</code> (Get from https://dashboard.render.com/u/*/settings#api-keys)</li><li><strong>Login</strong>: <code>render login</code> (Opens browser for OAuth)</li></ul>
+<p><strong>6. Check Workspace Context</strong></p>
+<p>Verify the active workspace:</p>
+<pre><code>get_selected_workspace()</code></pre>
+<p>Or via CLI:</p>
+<pre><code class="lang-bash">render workspace current -o json</code></pre>
+<p>To list available workspaces:</p>
+<pre><code>list_workspaces()</code></pre>
+<p>If user needs to switch workspaces, they must do so via Dashboard or CLI (<code>render workspace set</code>).</p>
+<p>Once prerequisites are met, proceed with deployment workflow.</p>
+<hr>
+<h1>Method 1: Blueprint Deployment (Recommended for Complex Apps)</h1>
+<h2>Blueprint Workflow</h2>
+<h3>Step 1: Analyze Codebase</h3>
+<p>Analyze the codebase to determine framework/runtime, build and start commands, required env vars, datastores, and port binding. Use the detailed checklists in <a href="references/codebase-analysis.md">references/codebase-analysis.md</a>.</p>
+<h3>Step 2: Generate render.yaml</h3>
+<p>Create a <code>render.yaml</code> Blueprint file following the Blueprint specification.</p>
+<p>Complete specification: <a href="references/blueprint-spec.md">references/blueprint-spec.md</a></p>
+<p><strong>Key Points:</strong></p>
+<ul><li>Always use <code>plan: free</code> unless user specifies otherwise</li><li>Include ALL environment variables the app needs</li><li>Mark secrets with <code>sync: false</code> (user fills these in Dashboard)</li><li>Use appropriate service type: <code>web</code>, <code>worker</code>, <code>cron</code>, <code>static</code>, or <code>pserv</code></li><li>Use appropriate runtime: <a href="references/runtimes.md">references/runtimes.md</a></li></ul>
+<p><strong>Basic Structure:</strong></p>
+<pre><code class="lang-yaml">services:
+  - type: web
+    name: my-app
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: postgres
+          property: connectionString
+      - key: JWT_SECRET
+        sync: false  # User fills in Dashboard
+
+databases:
+  - name: postgres
+    databaseName: myapp_db
+    plan: free</code></pre>
+<p><strong>Service Types:</strong></p>
+<ul><li><code>web</code>: HTTP services, APIs, web applications (publicly accessible)</li><li><code>worker</code>: Background job processors (not publicly accessible)</li><li><code>cron</code>: Scheduled tasks that run on a cron schedule</li><li><code>static</code>: Static sites (HTML/CSS/JS served via CDN)</li><li><code>pserv</code>: Private services (internal only, within same account)</li></ul>
+<p>Service type details: <a href="references/service-types.md">references/service-types.md</a> Runtime options: <a href="references/runtimes.md">references/runtimes.md</a> Template examples: <a href="assets/">assets/</a></p>
+<h3>Step 2.5: Immediate Next Steps (Always Provide)</h3>
+<p>After creating <code>render.yaml</code>, always give the user a short, explicit checklist and run validation immediately when the CLI is available:</p>
+<ol><li><strong>Authenticate (CLI)</strong>: run <code>render whoami -o json</code> (if not logged in, run <code>render login</code> or set <code>RENDER_API_KEY</code>)</li><li><strong>Validate (recommended)</strong>: run <code>render blueprints validate</code></li></ol>
+<ul><li>If the CLI isn&#x27;t installed, offer to install it and provide the command.</li></ul>
+<ol><li><strong>Commit + push</strong>: <code>git add render.yaml &amp;&amp; git commit -m &quot;Add Render deployment configuration&quot; &amp;&amp; git push origin main</code></li><li><strong>Open Dashboard</strong>: Use the Blueprint deeplink and complete Git OAuth if prompted</li><li><strong>Fill secrets</strong>: Set env vars marked <code>sync: false</code></li><li><strong>Deploy</strong>: Click &quot;Apply&quot; and monitor the deploy</li></ol>
+<h3>Step 3: Validate Configuration</h3>
+<p>Validate the render.yaml file to catch errors before deployment. If the CLI is installed, run the commands directly; only prompt the user if the CLI is missing:</p>
+<pre><code class="lang-bash">render whoami -o json  # Ensure CLI is authenticated (won&#x27;t always prompt)
+render blueprints validate</code></pre>
+<p>Fix any validation errors before proceeding. Common issues:</p>
+<ul><li>Missing required fields (<code>name</code>, <code>type</code>, <code>runtime</code>)</li><li>Invalid runtime values</li><li>Incorrect YAML syntax</li><li>Invalid environment variable references</li></ul>
+<p>Configuration guide: <a href="references/configuration-guide.md">references/configuration-guide.md</a></p>
+<h3>Step 4: Commit and Push</h3>
+<p><strong>IMPORTANT:</strong> You must merge the <code>render.yaml</code> file into your repository before deploying.</p>
+<p>Ensure the <code>render.yaml</code> file is committed and pushed to your Git remote:</p>
+<pre><code class="lang-bash">git add render.yaml
+git commit -m &quot;Add Render deployment configuration&quot;
+git push origin main</code></pre>
+<p>If there is no Git remote yet, stop here and guide the user to create a GitHub/GitLab/Bitbucket repo, add it as <code>origin</code>, and push before continuing.</p>
+<p><strong>Why this matters:</strong> The Dashboard deeplink will read the render.yaml from your repository. If the file isn&#x27;t merged and pushed, Render won&#x27;t find the configuration and deployment will fail.</p>
+<p>Verify the file is in your remote repository before proceeding to the next step.</p>
+<h3>Step 5: Generate Deeplink</h3>
+<p>Get the Git repository URL:</p>
+<pre><code class="lang-bash">git remote get-url origin</code></pre>
+<p>This will return a URL from your Git provider. <strong>If the URL is SSH format, convert it to HTTPS:</strong></p>
+<p>| SSH Format | HTTPS Format | |------------|--------------| | <code>git@github.com:user/repo.git</code> | <code>https://github.com/user/repo</code> | | <code>git@gitlab.com:user/repo.git</code> | <code>https://gitlab.com/user/repo</code> | | <code>git@bitbucket.org:user/repo.git</code> | <code>https://bitbucket.org/user/repo</code> |</p>
+<p><strong>Conversion pattern:</strong> Replace <code>git@&lt;host&gt;:</code> with <code>https://&lt;host&gt;/</code> and remove <code>.git</code> suffix.</p>
+<p>Format the Dashboard deeplink using the HTTPS repository URL:</p>
+<pre><code>https://dashboard.render.com/blueprint/new?repo=&lt;REPOSITORY_URL&gt;</code></pre>
+<p>Example:</p>
+<pre><code>https://dashboard.render.com/blueprint/new?repo=https://github.com/username/repo-name</code></pre>
+<h3>Step 6: Guide User</h3>
+<p><strong>CRITICAL:</strong> Ensure the user has merged and pushed the render.yaml file to their repository before clicking the deeplink. If the file isn&#x27;t in the repository, Render cannot read the Blueprint configuration and deployment will fail.</p>
+<p>Provide the deeplink to the user with these instructions:</p>
+<ol><li><strong>Verify render.yaml is merged</strong> - Confirm the file exists in your repository on GitHub/GitLab/Bitbucket</li><li>Click the deeplink to open Render Dashboard</li><li>Complete Git provider OAuth if prompted</li><li>Name the Blueprint (or use default from render.yaml)</li><li>Fill in secret environment variables (marked with <code>sync: false</code>)</li><li>Review services and databases configuration</li><li>Click &quot;Apply&quot; to deploy</li></ol>
+<p>The deployment will begin automatically. Users can monitor progress in the Render Dashboard.</p>
+<h3>Step 7: Verify Deployment</h3>
+<p>After the user deploys via Dashboard, verify everything is working.</p>
+<p><strong>Check deployment status via MCP:</strong></p>
+<pre><code>list_deploys(serviceId: &quot;&lt;service-id&gt;&quot;, limit: 1)</code></pre>
+<p>Look for <code>status: &quot;live&quot;</code> to confirm successful deployment.</p>
+<p><strong>Check for runtime errors (wait 2-3 minutes after deploy):</strong></p>
+<pre><code>list_logs(resource: [&quot;&lt;service-id&gt;&quot;], level: [&quot;error&quot;], limit: 20)</code></pre>
+<p><strong>Check service health metrics:</strong></p>
+<pre><code>get_metrics(
+  resourceId: &quot;&lt;service-id&gt;&quot;,
+  metricTypes: [&quot;http_request_count&quot;, &quot;cpu_usage&quot;, &quot;memory_usage&quot;]
+)</code></pre>
+<p>If errors are found, proceed to the <strong>Post-deploy verification and basic triage</strong> section below.</p>
+<hr>
+<h1>Method 2: Direct Service Creation (Quick Single-Service Deployments)</h1>
+<p>For simple deployments without Infrastructure-as-Code, create services directly via MCP tools.</p>
+<h2>When to Use Direct Creation</h2>
+<ul><li>Single web service or static site</li><li>Quick prototypes or demos</li><li>When you don&#x27;t need a render.yaml file in your repo</li><li>Adding databases or cron jobs to existing projects</li></ul>
+<h2>Prerequisites for Direct Creation</h2>
+<p><strong>Repository must be pushed to a Git provider.</strong> Render clones your repository to build and deploy services.</p>
+<pre><code class="lang-bash">git remote -v  # Verify remote exists
+git push origin main  # Ensure code is pushed</code></pre>
+<p>Supported providers: GitHub, GitLab, Bitbucket</p>
+<p>If no remote exists, stop and ask the user to create/push a remote or switch to Docker image deploy.</p>
+<p><strong>Note:</strong> MCP does not support creating image-backed services. Use the Dashboard/API for prebuilt Docker image deploys.</p>
+<h2>Direct Creation Workflow</h2>
+<p>Use the concise steps below, and refer to <a href="references/direct-creation.md">references/direct-creation.md</a> for full MCP command examples and follow-on configuration.</p>
+<h3>Step 1: Analyze Codebase</h3>
+<p>Use <a href="references/codebase-analysis.md">references/codebase-analysis.md</a> to determine runtime, build/start commands, env vars, and datastores.</p>
+<h3>Step 2: Create Resources via MCP</h3>
+<p>Create the service (web or static) and any required databases or key-value stores. See <a href="references/direct-creation.md">references/direct-creation.md</a>.</p>
+<p>If MCP returns an error about missing Git credentials or repo access, stop and guide the user to connect their Git provider in the Render Dashboard, then retry.</p>
+<h3>Step 3: Configure Environment Variables</h3>
+<p>Add required env vars via MCP after creation. See <a href="references/direct-creation.md">references/direct-creation.md</a>.</p>
+<p>Remind the user that secrets can be set in the Dashboard if they prefer not to pass them via MCP.</p>
+<h3>Step 4: Verify Deployment</h3>
+<p>Check deploy status, logs, and metrics. See <a href="references/direct-creation.md">references/direct-creation.md</a>.</p>
+<hr>
+<p>For service discovery, configuration details, quick commands, and common issues, see <a href="references/deployment-details.md">references/deployment-details.md</a>.</p>
+<hr>
+<h1>Post-deploy verification and basic triage (All Methods)</h1>
+<p>Keep this short and repeatable. If any check fails, fix it before redeploying.</p>
+<ol><li>Confirm the latest deploy is <code>live</code> and serving traffic</li><li>Hit the health endpoint (or root) and verify a 200 response</li><li>Scan recent error logs for a clear failure signature</li><li>Verify required env vars and port binding (<code>0.0.0.0:$PORT</code>)</li></ol>
+<p>Detailed checklist and commands: <a href="references/post-deploy-checks.md">references/post-deploy-checks.md</a></p>
+<p>If the service fails to start or health checks time out, use the basic triage guide: <a href="references/troubleshooting-basics.md">references/troubleshooting-basics.md</a></p>
+<h2>Troubleshooting</h2>
+<h3>Escalated Network Access</h3>
+<p>If deployment fails due to network issues (timeouts, DNS errors, connection resets), rerun the deploy with escalated permissions (use <code>sandbox_permissions=require_escalated</code>). The deploy requires escalated network access when sandbox networking blocks outbound requests.</p>
+<p>Example guidance to the user:</p>
+<pre><code>The deploy needs escalated network access to deploy to Render. I can rerun the command with escalated permissions—want me to proceed?</code></pre>
+<p>Optional: If you need deeper diagnostics (metrics/DB checks/error catalog), suggest installing the <code>render-debug</code> skill. It is not required for the core deploy flow.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/render-deploy.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>
