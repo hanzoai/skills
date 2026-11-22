@@ -5,7 +5,7 @@ Run the open-source parts on your own machine, extend the cloud with /v1/*, and 
 
 ## Install
 
-    curl -fsSL hanzo.sh | sh   # macOS, Linux, WSL
+    curl -fsSL https://hanzo.sh | sh   # macOS, Linux, WSL
 
 Then run `hanzo`. It signs you in through the browser, links this machine to Hanzo Tabs, asks once which coding agent is your favourite, adds Hanzo's tools to it, and launches it accelerated. After that, `hanzo` launches your favourite, `hanzo dev --claude|--codex|--cursor|--agy` switches it, and `hanzo -- -c` continues the last conversation.
 
@@ -15,9 +15,9 @@ Or paste this into your agent (Claude Code, Codex, Cursor, Antigravity):
 
 The skills, over plain https:
 
-    curl hanzoskills.com/llms.txt          # the index, for an agent
-    curl hanzoskills.com/<skill>.md        # one skill
-    curl hanzoskills.com/all.md            # the whole corpus, one file
+    curl -fsSL https://hanzoskills.com/llms.txt          # the index, for an agent
+    curl -fsSL https://hanzoskills.com/<skill>.md        # one skill
+    curl -fsSL https://hanzoskills.com/all.md            # the whole corpus, one file
 
 Every page is `text/markdown`. Paths work with or without the `.md`.
 

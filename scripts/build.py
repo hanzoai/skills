@@ -465,7 +465,7 @@ def main():
             '<a class="btn" href="/llms.txt">Index for agents</a>'
             '</div></div></div>'
             '<div class="strip"><div class="in"><b>Drop into any agent</b>'
-            '<span>curl hanzoskills.com/skill.md</span></div></div>')
+            '<span>curl -fsSL https://hanzoskills.com/skill.md</span></div></div>')
 
     body = (f'<input id="q" type="search" placeholder="Filter {len(docs)} skills, guides & standards"'
             f' autocomplete="off" spellcheck="false">'
@@ -478,9 +478,9 @@ def main():
         "# Hanzo Skills\n\n",
         "The native cloud in a single binary. Go, Rust, C++. Zero interpreter bloat.\n",
         "Run the open-source parts on your own machine, extend the cloud with /v1/*, and move your backend to Hanzo Base. skill.md gives the command that starts each part and says what needs the hosted cloud.\n\n",
-        "    curl hanzoskills.com/llms.txt          # the index, for an agent\n",
-        "    curl hanzoskills.com/<skill>.md        # one skill\n",
-        "    curl hanzoskills.com/all.md            # the whole corpus, one file\n\n",
+        "    curl -fsSL https://hanzoskills.com/llms.txt          # the index, for an agent\n",
+        "    curl -fsSL https://hanzoskills.com/<skill>.md        # one skill\n",
+        "    curl -fsSL https://hanzoskills.com/all.md            # the whole corpus, one file\n\n",
         "Every page is `text/markdown`. Paths work with or without the `.md`.\n\n",
         "## Start Here: Migrate to Native Go with Hanzo Base\n\n",
         "- [`skill`](skill.md) — What runs on your own machine, the command that starts each part, and what needs the hosted cloud.\n",
@@ -499,7 +499,7 @@ def main():
         "> Native compiled code only (Go, Rust, C++). Local-first cloud, realtime SSE, zero interpreter bloat. Plain markdown, curl-able, no auth.\n\n",
         "## Hanzo\n\n",
         "- [Run it locally](https://hanzoskills.com/skill.md): what runs on your own machine, the command that starts each part, and what needs the hosted cloud.\n",
-        "- [Install](https://hanzo.sh): `curl -fsSL hanzo.sh | sh` puts the CLI, MCP server and dev agent on this machine.\n",
+        "- [Install](https://hanzo.sh): `curl -fsSL https://hanzo.sh | sh` puts the CLI, MCP server and dev agent on this machine.\n",
         "- [API reference](https://docs.hanzo.ai/llms.txt): every endpoint api.hanzo.ai serves, one page per operation.\n",
         "- [Company](https://hanzo.ai/llms.txt): what Hanzo is and runs.\n\n",
         "## Upgrade to Native Go with Hanzo Base\n\n",
