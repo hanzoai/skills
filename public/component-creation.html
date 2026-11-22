@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>component-creation</title>
+<style>
+/* Matches hanzo.ai's monochrome editorial aesthetic: light-first white canvas
+   with automatic light/dark color-scheme support, Zen sans display headings,
+   edge halftone dot framing, pill controls, and crisp dark terminal cards. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  color-scheme:light dark;
+  --ground-light:#ffffff; --ground-dark:#000000;
+  --panel-light:#fafafa; --panel-dark:#0f0f0f;
+  --panel-2-light:#f5f5f7; --panel-2-dark:#171717;
+  --ink-light:#0a0a0a; --ink-dark:#f5f5f7;
+  --soft-light:#6e6e73; --soft-dark:#a1a1a6;
+  --faint-light:#86868b; --faint-dark:#737378;
+  --line-light:#e5e5e5; --line-dark:#232323;
+  --line-hi-light:#d4d4d4; --line-hi-dark:#3a3a3a;
+  --solid-bg-light:#0a0a0a; --solid-bg-dark:#ffffff;
+  --solid-ink-light:#ffffff; --solid-ink-dark:#0a0a0a;
+  --solid-hover-light:#262626; --solid-hover-dark:#e5e5e5;
+  --dot-light:#d4d4d4; --dot-dark:#262626;
+
+  --ground:var(--ground-light); --panel:var(--panel-light); --panel-2:var(--panel-2-light);
+  --ink:var(--ink-light); --soft:var(--soft-light); --faint:var(--faint-light);
+  --line:var(--line-light); --line-hi:var(--line-hi-light);
+  --solid-bg:var(--solid-bg-light); --solid-ink:var(--solid-ink-light);
+  --solid-hover:var(--solid-hover-light); --dot:var(--dot-light);
+  --term-bg:#0a0a0a; --term-ink:#f5f5f7; --term-soft:#a1a1a6; --term-faint:#737378; --term-line:#232323;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  --r:999px; --r-soft:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:var(--ground-dark); --panel:var(--panel-dark); --panel-2:var(--panel-2-dark);
+    --ink:var(--ink-dark); --soft:var(--soft-dark); --faint:var(--faint-dark);
+    --line:var(--line-dark); --line-hi:var(--line-hi-dark);
+    --solid-bg:var(--solid-bg-dark); --solid-ink:var(--solid-ink-dark);
+    --solid-hover:var(--solid-hover-dark); --dot:var(--dot-dark);
+  }
+}
+@supports (color: light-dark(white, black)){
+  :root{
+    --ground:light-dark(var(--ground-light),var(--ground-dark));
+    --panel:light-dark(var(--panel-light),var(--panel-dark));
+    --panel-2:light-dark(var(--panel-2-light),var(--panel-2-dark));
+    --ink:light-dark(var(--ink-light),var(--ink-dark));
+    --soft:light-dark(var(--soft-light),var(--soft-dark));
+    --faint:light-dark(var(--faint-light),var(--faint-dark));
+    --line:light-dark(var(--line-light),var(--line-dark));
+    --line-hi:light-dark(var(--line-hi-light),var(--line-hi-dark));
+    --solid-bg:light-dark(var(--solid-bg-light),var(--solid-bg-dark));
+    --solid-ink:light-dark(var(--solid-ink-light),var(--solid-ink-dark));
+    --solid-hover:light-dark(var(--solid-hover-light),var(--solid-hover-dark));
+    --dot:light-dark(var(--dot-light),var(--dot-dark));
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--ground);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:1rem;line-height:1.58;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility}
+.wrap{max-width:68rem;margin:0 auto;padding:0 1.75rem}
+
+/* Edge halftone dot field framing the hero, matching hanzo.ai. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before,.hero::after{content:"";position:absolute;top:0;bottom:0;width:min(24vw,280px);
+  background-image:radial-gradient(var(--dot) 1.25px,transparent 1.25px);
+  background-size:9px 9px;pointer-events:none}
+.hero::before{inset-inline-start:0;
+  -webkit-mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero::after{inset-inline-end:0;
+  -webkit-mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero .wrap{position:relative;z-index:1;padding-top:4.5rem;padding-bottom:3.75rem}
+
+nav{position:sticky;top:0;z-index:40;border-bottom:1px solid var(--line);
+  background:var(--ground);background:color-mix(in srgb,var(--ground) 90%,transparent);
+  backdrop-filter:blur(16px)}
+nav .in{max-width:68rem;margin:0 auto;padding:.85rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--sans);font-size:.95rem;font-weight:600;letter-spacing:-.02em;
+  color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:.55rem}
+.brand i{font-style:normal;font-weight:400;color:var(--soft)}
+.mark{width:1.25em;height:1.25em;display:block;flex:0 0 auto}
+.nlinks{display:flex;align-items:center;gap:1.15rem}
+.nlinks a{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+.nlinks a:hover{color:var(--ink);text-decoration:none}
+nav a.up{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink);text-decoration:none}
+.ncta{display:inline-flex;align-items:center;justify-content:center;padding:.45rem 1rem;
+  border-radius:var(--r);background:var(--solid-bg);color:var(--solid-ink);font-size:.84rem;
+  font-weight:500;text-decoration:none;white-space:nowrap}
+.ncta:hover{background:var(--solid-hover);color:var(--solid-ink);text-decoration:none}
+
+h1{font-family:var(--sans);font-size:clamp(2.15rem,4.8vw,3.5rem);line-height:1.06;
+  letter-spacing:-.038em;margin:0 0 1.15rem;font-weight:600;text-wrap:balance;max-width:20ch}
+h1 em{font-style:normal;color:var(--soft);font-weight:500}
+.lede{color:var(--soft);font-size:1.0625rem;line-height:1.55;max-width:58ch;margin:0 0 2rem;text-wrap:pretty}
+
+.btns{display:flex;flex-wrap:wrap;gap:.55rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--sans);
+  font-size:.875rem;font-weight:500;letter-spacing:-.005em;
+  min-height:2.5rem;padding:.55rem 1.2rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:var(--ground);cursor:pointer;
+  line-height:1.2;transition:background .15s ease,border-color .15s ease}
+.btn:hover{background:var(--panel-2);text-decoration:none;border-color:var(--ink)}
+.btn.solid{background:var(--solid-bg);color:var(--solid-ink);border-color:var(--solid-bg)}
+.btn.solid:hover{background:var(--solid-hover);border-color:var(--solid-hover)}
+.btn .chev{width:.75em;height:.75em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--ground);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 16px 40px rgba(0,0,0,.18)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .4rem);
+  background:transparent;color:var(--ink);font-family:var(--sans);font-size:.86rem;
+  font-weight:500;text-decoration:none;cursor:pointer;line-height:1.3;white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:var(--panel-2);outline:none;text-decoration:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.08em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:68rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--sans);font-size:.8rem;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:500;flex:0 0 auto;font-family:var(--mono);font-size:.7rem;
+  letter-spacing:.1em;text-transform:uppercase;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .9rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;font-size:.82rem;font-weight:500;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--sans);font-size:1.35rem;letter-spacing:-.025em;margin:2.75rem 0 .75rem;font-weight:600;text-wrap:balance}
+h3{font-size:1.05rem;margin:2rem 0 .5rem;font-weight:600;letter-spacing:-.015em}
+h4,h5,h6{font-size:.95rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch;text-wrap:pretty}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.25rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.84em;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:6px;padding:.12em .4em}
+pre{color-scheme:dark;background:var(--term-bg);color:var(--term-ink);border:1px solid var(--term-line);
+  padding:1.05rem 1.2rem;border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.84rem;line-height:1.68;color:var(--term-ink)}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:2px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.55rem .75rem;text-align:left}
+
+.curl{color-scheme:dark;display:block;background:var(--term-bg);border:1px solid var(--term-line);
+  border-radius:var(--r-soft);padding:1rem 1.2rem;font-family:var(--mono);
+  font-size:.82rem;color:var(--term-soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.85}
+.curl b{color:var(--term-ink);font-weight:500}
+.curl i{font-style:normal;color:var(--term-faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.25rem;font-family:var(--sans);font-size:.95rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r);margin:2rem 0 .65rem}
+#q::placeholder{color:var(--faint)}
+#q:focus{outline:none;border-color:var(--ink);background:var(--ground)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.75rem 1rem;margin:0 -1rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none;transition:background .12s ease}
+.row:hover{background:var(--panel-2);text-decoration:none}
+.nm{font-family:var(--mono);font-size:.86rem;font-weight:500;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.92rem;display:block;margin-top:.15rem}
+footer{margin-top:4rem;padding:2.25rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft);text-decoration:none}
+footer a:hover{color:var(--ink);text-decoration:underline}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);font-weight:500;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3rem;padding-bottom:2.5rem}
+  .nlinks .nhide{display:none}
+  .btns{gap:.5rem}
+  .btn{padding:.55rem 1rem;font-size:.84rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/component-creation">
+<link rel="alternate" type="text/markdown" href="/component-creation.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/component-creation.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> Hanzo <i>Skills</i></a>
+  <div class="nlinks"><a class="nhide" href="https://hanzo.sh">hanzo.sh</a><a class="nhide" href="https://docs.hanzo.ai">Docs</a><a class="nhide" href="https://hanzo.ai/security">Security</a><a class="up" href="/">All skills</a><a class="ncta" href="https://hanzo.app">Try Hanzo</a></div>
+</div></nav>
+
+<div class="wrap">
+<h1>component-creation</h1><p class="lede">Complete guide for Phase 3: building components with variant matrices, variable bindings, component properties, and documentation.</p><blockquote><p>Part of the <a href="../SKILL.md">figma-generate-library skill</a>.</p></blockquote>
+<h1>Component Creation Reference</h1>
+<p>Complete guide for Phase 3: building components with variant matrices, variable bindings, component properties, and documentation.</p>
+<hr>
+<h2>1. Component Architecture</h2>
+<h3>Dependency Ordering: Atoms Before Molecules</h3>
+<p>Always build in dependency order. A molecule that contains an atom instance cannot exist until the atom is published. Suggested ordering:</p>
+<pre><code>Tier 0 (atoms): Icon, Avatar, Badge, Spinner
+Tier 1 (molecules): Button, Checkbox, Toggle, Input, Select
+Tier 2 (organisms): Card, Dialog, Menu, Navigation, Form</code></pre>
+<p>If a component embeds an instance of another component, the embedded component must be created first. Build your dependency graph during Phase 0 and encode the creation order in the plan.</p>
+<h3>Building Blocks Sub-Components (M3 Pattern)</h3>
+<p>For complex components with independent sub-element state machines, extract the sub-element into its own component set prefixed with <code>Building Blocks/</code> (public) or <code>.Building Blocks/</code> (hidden from assets panel). The dot-prefix is a Figma convention for suppressing a component from the public assets panel.</p>
+<p><strong>When to use Building Blocks:</strong></p>
+<ul><li>The sub-element has its own variant axes (state, selection) that would cause combinatorial explosion in the parent</li><li>The sub-element repeats (nav items, table cells, calendar cells, segmented button segments)</li><li>The sub-element has different variant axes than the parent</li></ul>
+<p><strong>Example (M3 Segmented Button):</strong></p>
+<pre><code>Building Blocks/Segmented button/Button segment (start)   [27 variants: Config × State × Selected]
+Building Blocks/Segmented button/Button segment (middle)  [27 variants]
+Building Blocks/Segmented button/Button segment (end)     [27 variants]
+
+Segmented button  [16 variants: Segments=2-5 × Density=0/-1/-2/-3]
+  Each variant contains instances of the appropriate Building Block segment components.</code></pre>
+<p>The parent manages composition and configuration; the Building Block manages its own interaction states.</p>
+<h3>Private Components (<code>__</code> Prefix)</h3>
+<p>Use the <code>__</code> prefix for internal helper components that should not appear in the team library (Shop Minis pattern). Use <code>_</code> for documentation-only components (UI3 pattern).</p>
+<pre><code>__asset          // private icon/asset holder
+_Label/Direction // documentation annotation helper</code></pre>
+<hr>
+<h2>2. Creating the Component Page</h2>
+<p>Each component lives on its own dedicated page (one page per component is the default). The page contains: a documentation frame at top-left and the component set positioned to its right or below.</p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    // Create or find the component page
+    let page = figma.root.children.find(p =&gt; p.name === &#x27;Button&#x27;);
+    if (!page) {
+      page = figma.createPage();
+      page.name = &#x27;Button&#x27;;
+    }
+    await figma.setCurrentPageAsync(page);
+
+    // Documentation frame — positioned at (40, 40)
+    const docFrame = figma.createFrame();
+    docFrame.name = &#x27;Button / Documentation&#x27;;
+    docFrame.x = 40;
+    docFrame.y = 40;
+    docFrame.resize(600, 400);
+    docFrame.fills = [{ type: &#x27;SOLID&#x27;, color: { r: 1, g: 1, b: 1 } }];
+    docFrame.layoutMode = &#x27;VERTICAL&#x27;;
+    docFrame.primaryAxisSizingMode = &#x27;AUTO&#x27;;
+    docFrame.counterAxisSizingMode = &#x27;FIXED&#x27;;
+    docFrame.paddingTop = 40;
+    docFrame.paddingBottom = 40;
+    docFrame.paddingLeft = 40;
+    docFrame.paddingRight = 40;
+    docFrame.itemSpacing = 16;
+
+    // Title text node
+    await figma.loadFontAsync({ family: &#x27;Inter&#x27;, style: &#x27;Bold&#x27; });
+    const title = figma.createText();
+    title.fontName = { family: &#x27;Inter&#x27;, style: &#x27;Bold&#x27; };
+    title.fontSize = 32;
+    title.characters = &#x27;Button&#x27;;
+    docFrame.appendChild(title);
+
+    // Description text node
+    await figma.loadFontAsync({ family: &#x27;Inter&#x27;, style: &#x27;Regular&#x27; });
+    const desc = figma.createText();
+    desc.fontName = { family: &#x27;Inter&#x27;, style: &#x27;Regular&#x27; };
+    desc.fontSize = 14;
+    desc.characters = &#x27;Buttons allow users to take actions and make choices with a single tap.&#x27;;
+    docFrame.appendChild(desc);
+
+    // Tag docFrame with pluginData for idempotency
+    docFrame.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+    docFrame.setPluginData(&#x27;dsb_key&#x27;, &#x27;doc/button&#x27;);
+
+    figma.closePlugin(JSON.stringify({ docFrameId: docFrame.id, pageId: page.id }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<hr>
+<h2>3. Base Component: Auto-Layout, Child Nodes, Variable Bindings</h2>
+<p>The base component is the template from which all variants are cloned. It must have:</p>
+<ol><li>Auto-layout (not manual positioning)</li><li>All child nodes present</li><li>ALL visual properties bound to variables (no hardcoded values)</li></ol>
+<h3>Complete Button Base Component Example</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const RUN_ID = &#x27;ds-build-2024-001&#x27;; // replace with your actual run ID
+    await figma.setCurrentPageAsync(
+      figma.root.children.find(p =&gt; p.name === &#x27;Button&#x27;)
+    );
+
+    // Rehydrate variables from IDs stored in state ledger
+    const bgVar     = await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_color_bg_primary&#x27;);
+    const textVar   = await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_color_text_on_primary&#x27;);
+    const paddingVar = await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_spacing_md&#x27;);
+    const radiusVar = await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_radius_md&#x27;);
+    const gapVar    = await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_spacing_sm&#x27;);
+
+    // --- Base component frame ---
+    const comp = figma.createComponent();
+    comp.name = &#x27;Size=Medium, Style=Primary, State=Default&#x27;;
+    comp.layoutMode = &#x27;HORIZONTAL&#x27;;
+    comp.primaryAxisSizingMode = &#x27;AUTO&#x27;;
+    comp.counterAxisSizingMode = &#x27;AUTO&#x27;;
+    comp.counterAxisAlignItems = &#x27;CENTER&#x27;;
+    comp.primaryAxisAlignItems = &#x27;CENTER&#x27;;
+
+    // Padding — bound to spacing variables
+    comp.setBoundVariable(&#x27;paddingTop&#x27;,    paddingVar);
+    comp.setBoundVariable(&#x27;paddingBottom&#x27;, paddingVar);
+    comp.setBoundVariable(&#x27;paddingLeft&#x27;,   paddingVar);
+    comp.setBoundVariable(&#x27;paddingRight&#x27;,  paddingVar);
+    comp.setBoundVariable(&#x27;itemSpacing&#x27;,   gapVar);
+
+    // Corner radius — bound to radius variable
+    comp.setBoundVariable(&#x27;topLeftRadius&#x27;,     radiusVar);
+    comp.setBoundVariable(&#x27;topRightRadius&#x27;,    radiusVar);
+    comp.setBoundVariable(&#x27;bottomLeftRadius&#x27;,  radiusVar);
+    comp.setBoundVariable(&#x27;bottomRightRadius&#x27;, radiusVar);
+
+    // Background fill — bound to color variable
+    const bgPaint = figma.variables.setBoundVariableForPaint(
+      { type: &#x27;SOLID&#x27;, color: { r: 0, g: 0, b: 0 } },
+      &#x27;color&#x27;,
+      bgVar
+    );
+    comp.fills = [bgPaint];
+
+    // --- Label text node ---
+    await figma.loadFontAsync({ family: &#x27;Inter&#x27;, style: &#x27;Medium&#x27; });
+    const label = figma.createText();
+    label.name = &#x27;label&#x27;;
+    label.fontName = { family: &#x27;Inter&#x27;, style: &#x27;Medium&#x27; };
+    label.fontSize = 14;
+    label.characters = &#x27;Button&#x27;;
+    label.layoutSizingHorizontal = &#x27;HUG&#x27;;
+    label.layoutSizingVertical = &#x27;HUG&#x27;;
+
+    // Text fill — bound to color variable
+    const textPaint = figma.variables.setBoundVariableForPaint(
+      { type: &#x27;SOLID&#x27;, color: { r: 1, g: 1, b: 1 } },
+      &#x27;color&#x27;,
+      textVar
+    );
+    label.fills = [textPaint];
+    comp.appendChild(label);
+
+    // --- Icon placeholder (Rectangle for now — will be INSTANCE_SWAP) ---
+    const iconBox = figma.createFrame();
+    iconBox.name = &#x27;icon&#x27;;
+    iconBox.resize(16, 16);
+    iconBox.fills = [];
+    iconBox.layoutSizingHorizontal = &#x27;FIXED&#x27;;
+    iconBox.layoutSizingVertical = &#x27;FIXED&#x27;;
+    comp.appendChild(iconBox);
+
+    // Tag for idempotency
+    comp.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+    comp.setPluginData(&#x27;dsb_phase&#x27;, &#x27;phase3&#x27;);
+    comp.setPluginData(&#x27;dsb_key&#x27;, &#x27;component/button/base&#x27;);
+
+    figma.closePlugin(JSON.stringify({ baseCompId: comp.id }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p><strong>ALL of these must be variable-bound (never hardcoded):</strong></p>
+<p>| Property | Variable type | API method | |---|---|---| | Fill color | COLOR | <code>setBoundVariableForPaint(..., &#x27;color&#x27;, var)</code> | | Stroke color | COLOR | <code>setBoundVariableForPaint(..., &#x27;color&#x27;, var)</code> | | Text fill | COLOR | <code>setBoundVariableForPaint(..., &#x27;color&#x27;, var)</code> | | Padding (all 4 sides) | FLOAT | <code>comp.setBoundVariable(&#x27;paddingTop&#x27;, var)</code> | | Gap / itemSpacing | FLOAT | <code>comp.setBoundVariable(&#x27;itemSpacing&#x27;, var)</code> | | Corner radius (all 4) | FLOAT | <code>comp.setBoundVariable(&#x27;topLeftRadius&#x27;, var)</code> etc. | | Stroke weight | FLOAT | <code>comp.setBoundVariable(&#x27;strokeWeight&#x27;, var)</code> |</p>
+<hr>
+<h2>4. Variant Matrix</h2>
+<h3>Defining Axes</h3>
+<p>For each component, identify its variant axes before writing any code. Standard axes:</p>
+<pre><code>Button:
+  Size   → [Small, Medium, Large]
+  Style  → [Primary, Secondary, Outline, Ghost]
+  State  → [Default, Hover, Focused, Pressed, Disabled]
+  Total  = 3 × 4 × 5 = 60 combinations — exceeds 30 limit → split by Style</code></pre>
+<h3>The 30-Combination Cap and Split Strategy</h3>
+<p>When the product of all variant axes exceeds 30 combinations, split the matrix. Options:</p>
+<ol><li><strong>Split by a primary axis</strong>: Create separate component sets, one per Style (Primary Button, Secondary Button, etc.)</li><li><strong>Use INSTANCE_SWAP</strong>: Remove a visual axis (like Icon) from the variant matrix entirely and expose it as an INSTANCE_SWAP property instead</li><li><strong>Use Building Blocks</strong>: Extract sub-elements with their own state axes into Building Block component sets</li></ol>
+<p>For Button with Size × State = 15 combinations, add Style as a variant axis only if Style ≤ 2 options (15 × 2 = 30). For more Styles, split.</p>
+<h3>Creating All Variants with use_figma</h3>
+<p>Build each variant by cloning the base component and adjusting the variable bindings that differ per variant. Pass in the base component ID from the previous call&#x27;s state.</p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const RUN_ID = &#x27;ds-build-2024-001&#x27;;
+    const BASE_COMP_ID = &#x27;BASE_ID_FROM_STATE&#x27;; // from state ledger
+
+    await figma.setCurrentPageAsync(
+      figma.root.children.find(p =&gt; p.name === &#x27;Button&#x27;)
+    );
+
+    const base = await figma.getNodeByIdAsync(BASE_COMP_ID);
+
+    // Variable IDs from state ledger
+    const vars = {
+      // Primary style
+      bg_primary:    await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_color_bg_primary&#x27;),
+      text_primary:  await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_color_text_on_primary&#x27;),
+      // Secondary style
+      bg_secondary:  await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_color_bg_secondary&#x27;),
+      text_secondary: await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_color_text_secondary&#x27;),
+      // Disabled
+      bg_disabled:   await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_color_bg_disabled&#x27;),
+      text_disabled: await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_color_text_disabled&#x27;),
+      // Sizes
+      padding_sm: await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_spacing_sm&#x27;),
+      padding_md: await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_spacing_md&#x27;),
+      padding_lg: await figma.variables.getVariableByIdAsync(&#x27;VAR_ID_spacing_lg&#x27;),
+    };
+
+    const axes = {
+      Size:  [&#x27;Small&#x27;, &#x27;Medium&#x27;, &#x27;Large&#x27;],
+      Style: [&#x27;Primary&#x27;, &#x27;Secondary&#x27;],
+      State: [&#x27;Default&#x27;, &#x27;Hover&#x27;, &#x27;Disabled&#x27;],
+    };
+
+    const paddingBySize = { Small: vars.padding_sm, Medium: vars.padding_md, Large: vars.padding_lg };
+
+    const components = [];
+
+    for (const size of axes.Size) {
+      for (const style of axes.Style) {
+        for (const state of axes.State) {
+          const clone = base.clone();
+          clone.name = `Size=${size}, Style=${style}, State=${state}`;
+
+          // Bind padding by size
+          clone.setBoundVariable(&#x27;paddingTop&#x27;,    paddingBySize[size]);
+          clone.setBoundVariable(&#x27;paddingBottom&#x27;, paddingBySize[size]);
+          clone.setBoundVariable(&#x27;paddingLeft&#x27;,   paddingBySize[size]);
+          clone.setBoundVariable(&#x27;paddingRight&#x27;,  paddingBySize[size]);
+
+          // Bind fill by style + state
+          const isDisabled = state === &#x27;Disabled&#x27;;
+          const bgVar  = isDisabled ? vars.bg_disabled  : (style === &#x27;Primary&#x27; ? vars.bg_primary  : vars.bg_secondary);
+          const txtVar = isDisabled ? vars.text_disabled : (style === &#x27;Primary&#x27; ? vars.text_primary : vars.text_secondary);
+
+          const bgPaint = figma.variables.setBoundVariableForPaint(
+            { type: &#x27;SOLID&#x27;, color: { r: 0, g: 0, b: 0 } }, &#x27;color&#x27;, bgVar
+          );
+          clone.fills = [bgPaint];
+
+          const labelNode = clone.findOne(n =&gt; n.name === &#x27;label&#x27;);
+          const textPaint = figma.variables.setBoundVariableForPaint(
+            { type: &#x27;SOLID&#x27;, color: { r: 1, g: 1, b: 1 } }, &#x27;color&#x27;, txtVar
+          );
+          labelNode.fills = [textPaint];
+
+          clone.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+          clone.setPluginData(&#x27;dsb_key&#x27;, `component/button/variant/${size}/${style}/${state}`);
+
+          components.push(clone);
+        }
+      }
+    }
+
+    figma.closePlugin(JSON.stringify({ variantIds: components.map(c =&gt; c.id) }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<hr>
+<h2>5. <code>combineAsVariants</code> + Grid Layout</h2>
+<p>After all variant components exist, combine them into a ComponentSet and position them in a grid. This MUST be a separate <code>use_figma</code> call — you must pass in all variant IDs from the previous call&#x27;s return value.</p>
+<h3>Grid Design Conventions</h3>
+<p>Professional design systems lay out variants in a readable grid where:</p>
+<ul><li><strong>Columns</strong> = the property users interact with most (typically <strong>State</strong>: Default, Hover, Focused, Pressed, Disabled)</li><li><strong>Rows</strong> = structural axes grouped together (typically <strong>Size × Style</strong>, where Size varies fastest)</li><li><strong>Gap</strong> = 16–40px between variants (20px is a safe default; match existing file if one exists)</li><li><strong>Padding</strong> = 40px around the grid inside the ComponentSet frame</li></ul>
+<pre><code>Visual structure:
+                    Default    Hover     Focused   Pressed   Disabled
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  Small/Primary   [comp]    [comp]    [comp]    [comp]    [comp] │
+  │  Small/Secondary [comp]    [comp]    [comp]    [comp]    [comp] │
+  │  Medium/Primary  [comp]    [comp]    [comp]    [comp]    [comp] │
+  │  Medium/Secondary[comp]    [comp]    [comp]    [comp]    [comp] │
+  │  Large/Primary   [comp]    [comp]    [comp]    [comp]    [comp] │
+  │  Large/Secondary [comp]    [comp]    [comp]    [comp]    [comp] │
+  └──────────────────────────────────────────────────────────────────┘</code></pre>
+<p><strong>Why State on columns?</strong> State is the axis designers scan horizontally to verify interaction consistency. Size/Style define the &quot;identity&quot; of each row. This matches how professional design systems (M3, Polaris, Simple DS) organize their grids.</p>
+<h3>Adding Row/Column Header Labels</h3>
+<p>After laying out the grid, add text labels OUTSIDE the ComponentSet to help navigation. These are siblings of the ComponentSet on the page — not children of it:</p>
+<pre><code class="lang-javascript">// Add column headers above the component set
+const colLabels = [&#x27;Default&#x27;, &#x27;Hover&#x27;, &#x27;Focused&#x27;, &#x27;Pressed&#x27;, &#x27;Disabled&#x27;];
+await figma.loadFontAsync({ family: &#x27;Inter&#x27;, style: &#x27;Medium&#x27; });
+for (let i = 0; i &lt; colLabels.length; i++) {
+  const label = figma.createText();
+  label.fontName = { family: &#x27;Inter&#x27;, style: &#x27;Medium&#x27; };
+  label.characters = colLabels[i];
+  label.fontSize = 11;
+  label.fills = [{ type: &#x27;SOLID&#x27;, color: { r: 0.5, g: 0.5, b: 0.5 } }];
+  label.x = cs.x + padding + i * (childWidth + gap);
+  label.y = cs.y - 20;
+}
+
+// Add row headers to the left of the component set
+const rowLabels = [&#x27;Small / Primary&#x27;, &#x27;Small / Secondary&#x27;, &#x27;Med / Primary&#x27;, ...];
+for (let i = 0; i &lt; rowLabels.length; i++) {
+  const label = figma.createText();
+  label.fontName = { family: &#x27;Inter&#x27;, style: &#x27;Medium&#x27; };
+  label.characters = rowLabels[i];
+  label.fontSize = 11;
+  label.fills = [{ type: &#x27;SOLID&#x27;, color: { r: 0.5, g: 0.5, b: 0.5 } }];
+  label.x = cs.x - 120;
+  label.y = cs.y + padding + i * (childHeight + gap) + childHeight / 2 - 6;
+}</code></pre>
+<p><strong>Note:</strong> These labels are documentation aids, not part of the component itself. They help designers navigate the variant grid.</p>
+<h3>Grid layout code</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const VARIANT_IDS = [&#x27;ID1&#x27;, &#x27;ID2&#x27;, &#x27;...&#x27;]; // from state ledger
+    const PAGE_ID = &#x27;PAGE_ID&#x27;; // from state ledger
+
+    await figma.setCurrentPageAsync(await figma.getNodeByIdAsync(PAGE_ID));
+
+    // Collect component nodes
+    const components = await Promise.all(
+      VARIANT_IDS.map(id =&gt; figma.getNodeByIdAsync(id))
+    );
+
+    // Combine as variants
+    const cs = figma.combineAsVariants(components, figma.currentPage);
+    cs.name = &#x27;Button&#x27;;
+
+    // Grid layout: position each variant based on its property values
+    // Determine column axis (State) and row axes (Size × Style)
+    const axes = {
+      Size:  [&#x27;Small&#x27;, &#x27;Medium&#x27;, &#x27;Large&#x27;],
+      Style: [&#x27;Primary&#x27;, &#x27;Secondary&#x27;],
+      State: [&#x27;Default&#x27;, &#x27;Hover&#x27;, &#x27;Disabled&#x27;],
+    };
+    const COL_AXIS = &#x27;State&#x27;;  // columns
+    const ROW_AXES = [&#x27;Size&#x27;, &#x27;Style&#x27;]; // rows (Size changes fastest)
+
+    const gap = 16;
+    const padding = 40;
+
+    // Measure child dimensions (all should be same height within Size tier)
+    // Use the first child as reference for column width
+    const childWidth  = 120; // approximate; refine after first screenshot
+    const childHeight = 40;
+
+    cs.children.forEach(child =&gt; {
+      const props = {};
+      child.name.split(&#x27;, &#x27;).forEach(part =&gt; {
+        const [k, v] = part.split(&#x27;=&#x27;);
+        props[k] = v;
+      });
+
+      const colIdx = axes[COL_AXIS].indexOf(props[COL_AXIS]);
+      // Row = Size index * number of styles + Style index
+      const rowIdx = axes.Size.indexOf(props.Size) * axes.Style.length
+                   + axes.Style.indexOf(props.Style);
+
+      child.x = padding + colIdx * (childWidth  + gap);
+      child.y = padding + rowIdx * (childHeight + gap);
+    });
+
+    // Resize component set to fit all children + padding
+    let maxX = 0, maxY = 0;
+    for (const child of cs.children) {
+      maxX = Math.max(maxX, child.x + child.width);
+      maxY = Math.max(maxY, child.y + child.height);
+    }
+    cs.resizeWithoutConstraints(maxX + padding, maxY + padding);
+
+    // Style the component set frame
+    cs.fills = [{ type: &#x27;SOLID&#x27;, color: { r: 0.95, g: 0.95, b: 0.98 } }];
+    cs.cornerRadius = 8;
+
+    // Position component set on page (to the right of doc frame)
+    cs.x = 680;
+    cs.y = 40;
+
+    cs.setPluginData(&#x27;dsb_run_id&#x27;, &#x27;ds-build-2024-001&#x27;);
+    cs.setPluginData(&#x27;dsb_key&#x27;, &#x27;componentset/button&#x27;);
+
+    figma.closePlugin(JSON.stringify({ componentSetId: cs.id }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p><strong>Critical rules for combineAsVariants:</strong></p>
+<ul><li><code>components</code> must be a non-empty array containing ONLY <code>ComponentNode</code> objects (not frames, not groups)</li><li>After combining, children are placed at (0,0) and overlap — you MUST manually position them</li><li><code>resizeWithoutConstraints</code> is required after positioning to make the component set frame fit its contents</li><li>There is no <code>figma.createComponentSet()</code> — you cannot create an empty component set</li></ul>
+<hr>
+<h2>6. Component Properties</h2>
+<p>Add TEXT, BOOLEAN, and INSTANCE_SWAP properties to the ComponentSet (not to individual variants). The return value of <code>addComponentProperty</code> is the actual property key (it gets a <code>#id:id</code> suffix appended) — save this key and use it immediately when setting <code>componentPropertyReferences</code>.</p>
+<h3>TEXT Properties</h3>
+<p>Expose editable text in instances:</p>
+<pre><code class="lang-javascript">// On the ComponentSetNode (cs):
+const labelKey = cs.addComponentProperty(&#x27;Label&#x27;, &#x27;TEXT&#x27;, &#x27;Button&#x27;);
+// labelKey is now something like &quot;Label#0:1&quot;
+
+// Wire to the label child in each variant:
+for (const child of cs.children) {
+  const labelNode = child.findOne(n =&gt; n.name === &#x27;label&#x27;);
+  if (labelNode) {
+    labelNode.componentPropertyReferences = { characters: labelKey };
+  }
+}</code></pre>
+<h3>BOOLEAN Properties</h3>
+<p>Toggle child node visibility:</p>
+<pre><code class="lang-javascript">const showIconKey = cs.addComponentProperty(&#x27;Show Icon&#x27;, &#x27;BOOLEAN&#x27;, true);
+
+for (const child of cs.children) {
+  const iconNode = child.findOne(n =&gt; n.name === &#x27;icon&#x27;);
+  if (iconNode) {
+    iconNode.componentPropertyReferences = { visible: showIconKey };
+  }
+}</code></pre>
+<h3>INSTANCE_SWAP Properties</h3>
+<p>Allow swapping a nested component instance (e.g., swap the icon):</p>
+<pre><code class="lang-javascript">// defaultIconCompId is the ID of the default icon component (from state ledger)
+const iconKey = cs.addComponentProperty(&#x27;Icon&#x27;, &#x27;INSTANCE_SWAP&#x27;, DEFAULT_ICON_COMP_ID);
+
+for (const child of cs.children) {
+  const iconSlot = child.findOne(n =&gt; n.name === &#x27;icon&#x27;);
+  if (iconSlot &amp;&amp; iconSlot.type === &#x27;INSTANCE&#x27;) {
+    iconSlot.componentPropertyReferences = { mainComponent: iconKey };
+  }
+}</code></pre>
+<p><strong>Use INSTANCE_SWAP instead of creating a variant per icon.</strong> Never add &quot;Icon=ChevronRight, Icon=ChevronLeft, ...&quot; as VARIANT axes — that causes combinatorial explosion. One INSTANCE_SWAP property covers all icons.</p>
+<h3>Creating Icon Components for INSTANCE_SWAP</h3>
+<p>INSTANCE_SWAP needs a real Component ID as its default value. Before wiring INSTANCE_SWAP, you need at least one icon component. Here&#x27;s how to create icons from SVG:</p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    // Create a simple icon component from SVG
+    const svgNode = figma.createNodeFromSvg(
+      &#x27;&lt;svg width=&quot;24&quot; height=&quot;24&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;&#x27; +
+      &#x27;&lt;path d=&quot;M9 18l6-6-6-6&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;/&gt;&#x27; +
+      &#x27;&lt;/svg&gt;&#x27;
+    );
+
+    // Wrap in a component
+    const iconComp = figma.createComponent();
+    iconComp.name = &#x27;Icon/ChevronRight&#x27;;
+    iconComp.resize(24, 24);
+    iconComp.clipsContent = true;
+
+    // Move SVG children into the component
+    for (const child of [...svgNode.children]) {
+      iconComp.appendChild(child);
+    }
+    svgNode.remove();
+
+    // Bind the icon fill to a color variable (so it respects themes)
+    // Find vector children and bind their fills
+    iconComp.findAll(n =&gt; n.type === &#x27;VECTOR&#x27;).forEach(vec =&gt; {
+      // For stroke-based icons:
+      if (vec.strokes.length &gt; 0) {
+        const strokePaint = figma.variables.setBoundVariableForPaint(
+          { type: &#x27;SOLID&#x27;, color: { r: 0, g: 0, b: 0 } }, &#x27;color&#x27;, iconColorVar
+        );
+        vec.strokes = [strokePaint];
+      }
+    });
+
+    iconComp.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+    iconComp.setPluginData(&#x27;dsb_key&#x27;, &#x27;icon/chevron-right&#x27;);
+
+    figma.closePlugin(JSON.stringify({ iconCompId: iconComp.id }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p><strong>Then use the returned <code>iconCompId</code> as the default value for INSTANCE_SWAP:</strong></p>
+<pre><code class="lang-javascript">const iconKey = cs.addComponentProperty(&#x27;Icon&#x27;, &#x27;INSTANCE_SWAP&#x27;, ICON_COMP_ID);</code></pre>
+<p><strong>Constraining swap options with <code>preferredValues</code>:</strong> After adding the INSTANCE_SWAP property, you can optionally limit which components appear in the swap picker:</p>
+<pre><code class="lang-javascript">// Get the property definitions to find the exact key
+const props = cs.componentPropertyDefinitions;
+const iconPropKey = Object.keys(props).find(k =&gt; k.startsWith(&#x27;Icon&#x27;));
+
+// Set preferred values (array of component keys or instance IDs)
+cs.editComponentProperty(iconPropKey, {
+  preferredValues: [
+    { type: &#x27;COMPONENT&#x27;, key: chevronRightComp.key },
+    { type: &#x27;COMPONENT&#x27;, key: chevronLeftComp.key },
+    { type: &#x27;COMPONENT&#x27;, key: closeComp.key },
+  ],
+});</code></pre>
+<p><strong>Icon library tip:</strong> Create all icon components on a dedicated <code>Icons</code> page before building any UI components. Then reference their IDs when wiring INSTANCE_SWAP properties.</p>
+<h3><code>componentPropertyReferences</code> mapping</h3>
+<p>The <code>componentPropertyReferences</code> object maps a node&#x27;s own property to a component property key:</p>
+<p>| Node property | Component property type | Used for | |---|---|---| | <code>characters</code> | TEXT | Editable text content | | <code>visible</code> | BOOLEAN | Show/hide toggle | | <code>mainComponent</code> | INSTANCE_SWAP | Swap nested instances |</p>
+<hr>
+<h2>7. <code>pluginData</code> Tagging for Idempotency</h2>
+<p>Tag EVERY created node immediately after creation. This enables safe cleanup, resumability, and idempotency checks.</p>
+<pre><code class="lang-javascript">// After creating any node:
+node.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);   // identifies the build run
+node.setPluginData(&#x27;dsb_phase&#x27;, &#x27;phase3&#x27;);  // which phase created it
+node.setPluginData(&#x27;dsb_key&#x27;, KEY);         // unique logical key for this entity
+
+// Reading back:
+const runId = node.getPluginData(&#x27;dsb_run_id&#x27;); // &#x27;&#x27; if not set
+const key   = node.getPluginData(&#x27;dsb_key&#x27;);</code></pre>
+<p><strong>Key naming convention:</strong> use <code>/</code>-separated logical paths that mirror the entity hierarchy:</p>
+<pre><code>&#x27;component/button/base&#x27;
+&#x27;component/button/variant/Medium/Primary/Default&#x27;
+&#x27;componentset/button&#x27;
+&#x27;doc/button&#x27;
+&#x27;page/button&#x27;</code></pre>
+<p><strong>Idempotency check before creating:</strong> before creating a node, scan the current page for an existing node with the same <code>dsb_key</code>:</p>
+<pre><code class="lang-javascript">const existing = figma.currentPage.findAll(n =&gt;
+  n.getPluginData(&#x27;dsb_key&#x27;) === &#x27;componentset/button&#x27;
+);
+if (existing.length &gt; 0) {
+  // Skip creation — already done. Return existing node&#x27;s ID.
+  figma.closePlugin(JSON.stringify({ componentSetId: existing[0].id }));
+  return;
+}</code></pre>
+<hr>
+<h2>8. Documentation</h2>
+<h3>Page title + description frame</h3>
+<p>The documentation frame (see Section 2) should contain:</p>
+<ol><li>Component name as a large title (32px+ Bold)</li><li>1–3 sentence description of what the component is and when to use it</li><li>Spec notes (sizes, spacing values, accessibility notes)</li></ol>
+<h3>Component <code>description</code> property</h3>
+<p>Set the description on the ComponentSet — it appears in the Figma properties panel and is exported as documentation:</p>
+<pre><code class="lang-javascript">cs.description = &#x27;Buttons allow users to take actions and make choices. Use Primary for the highest-emphasis action on a page.&#x27;;</code></pre>
+<h3><code>documentationLinks</code></h3>
+<p>Link to external documentation (Storybook, design spec, tokens reference):</p>
+<pre><code class="lang-javascript">cs.documentationLinks = [
+  { uri: &#x27;https://your-storybook.com/button&#x27; }
+];</code></pre>
+<h3>Node names and organization</h3>
+<ul><li>ComponentSet: plain component name — <code>&#x27;Button&#x27;</code></li><li>Individual variants: <code>&#x27;Property=Value, Property=Value&#x27;</code> format (match the file&#x27;s existing casing)</li><li>Child nodes: semantic names — <code>&#x27;label&#x27;</code>, <code>&#x27;icon&#x27;</code>, <code>&#x27;container&#x27;</code>, <code>&#x27;state-layer&#x27;</code></li><li>Documentation frames: <code>&#x27;ComponentName / Documentation&#x27;</code></li></ul>
+<hr>
+<h2>9. Validation</h2>
+<p>Always validate after creating or modifying a component before proceeding to the next one.</p>
+<h3><code>get_metadata</code> structural checks</h3>
+<p>After creating the component set, call <code>get_metadata</code> on the ComponentSet node and verify:</p>
+<ul><li><code>variantGroupProperties</code> lists the expected axes with the correct value arrays</li><li><code>componentPropertyDefinitions</code> contains the expected TEXT/BOOLEAN/INSTANCE_SWAP properties</li><li><code>children.length</code> equals the expected variant count (e.g., 18 for 3×2×3)</li><li>No children are named <code>&#x27;Component 1&#x27;</code> (unnamed components are a sign of a bug)</li></ul>
+<h3><code>get_screenshot</code> — Visual Validation (Critical)</h3>
+<p><code>get_screenshot</code> returns an <strong>image</strong> of the specified node. Call it on the <strong>component page node</strong> (not the component set) to see the full page including documentation and grid labels.</p>
+<pre><code>Tool: get_screenshot
+Args: { nodeId: &quot;PAGE_NODE_ID&quot;, fileKey: &quot;FILE_KEY&quot; }</code></pre>
+<p><strong>How to use the screenshot:</strong></p>
+<ol><li><strong>Display it to the user</strong> — this is the primary purpose. Show the screenshot as part of the user checkpoint: &quot;Here&#x27;s the Button component. Does it look right?&quot;</li><li><strong>Analyze it yourself</strong> — if you have vision capabilities, check the visual checklist below. If you don&#x27;t (text-only agent), fall back to structural validation only via <code>get_metadata</code> and describe what you created textually.</li></ol>
+<p><strong>Visual validation checklist</strong> (check each item when viewing the screenshot):</p>
+<p>| # | Check | What &quot;good&quot; looks like | What &quot;broken&quot; looks like | |---|-------|----------------------|------------------------| | 1 | <strong>Grid layout</strong> | Variants in neat rows and columns with consistent spacing | All variants piled at top-left (0,0 stacking bug) | | 2 | <strong>Color fills</strong> | Components show distinct, correct colors per style variant | All components are black or same color (variable binding failed) | | 3 | <strong>Size differentiation</strong> | Small variants are visibly smaller than Large variants | All variants are the same size (height/padding not bound to variables) | | 4 | <strong>Text readability</strong> | Labels are visible with correct font and color | Text is invisible (white on white), missing, or shows &quot;undefined&quot; | | 5 | <strong>Spacing/padding</strong> | Interior padding visible, components aren&#x27;t &quot;shrink-wrapped&quot; | Components look cramped or have no visible internal space | | 6 | <strong>State differentiation</strong> | Hover/Pressed variants have visible color differences from Default | All states look identical (state-specific fills not applied) | | 7 | <strong>Disabled state</strong> | Lower opacity or muted colors compared to active states | Disabled looks identical to Default | | 8 | <strong>Documentation frame</strong> | Title + description text visible above or beside the component grid | No documentation, or it overlaps the component set | | 9 | <strong>Grid labels</strong> | Row/column headers visible around the component set (if added) | Labels overlap the grid or are missing | | 10 | <strong>Component set boundary</strong> | Gray background frame wraps all variants with even padding | Frame is too small (variants clipped) or way too large |</p>
+<p><strong>Screenshot → diagnosis → fix mapping:</strong></p>
+<p>| Screenshot shows | Diagnosis | Fix script | |-----------------|-----------|------------| | All variants stacked top-left | Grid layout wasn&#x27;t applied after <code>combineAsVariants</code> | Re-run the grid layout script (§5) | | Everything black/same color | Variable bindings failed or variables don&#x27;t have values for the active mode | Re-run variable binding, check mode values | | No text visible | Font wasn&#x27;t loaded, or text fill is same color as background | Check <code>loadFontAsync</code> was called; bind text fill to <code>color/text/*</code> variable | | Variants all same size | Padding/height not bound to size variables | Re-run <code>bindVariablesToComponent</code> with size-specific tokens | | Component set frame tiny | <code>resizeWithoutConstraints</code> wasn&#x27;t called or used wrong dimensions | Re-calculate bounds from children and resize | | Doc frame overlaps components | Component set positioned at same x,y as doc frame | Move component set: <code>cs.x = docFrame.x + docFrame.width + 60</code> |</p>
+<p><strong>When visual analysis isn&#x27;t available:</strong> If your model can&#x27;t process images (text-only mode), validate structurally instead:</p>
+<ol><li>Call <code>get_metadata</code> on the component set — verify child count, property definitions, variant names</li><li>Run an <code>use_figma</code> that samples key properties:</li></ol>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const cs = await figma.getNodeByIdAsync(CS_ID);
+    const sample = cs.children.slice(0, 3).map(c =&gt; ({
+      name: c.name,
+      width: c.width, height: c.height,
+      x: c.x, y: c.y,
+      fills: c.fills?.map(f =&gt; f.type === &#x27;SOLID&#x27; ?
+        { r: f.color.r.toFixed(2), g: f.color.g.toFixed(2), b: f.color.b.toFixed(2), boundVar: f.boundVariables?.color?.id } : f.type
+      ),
+    }));
+    figma.closePlugin(JSON.stringify({ sampleVariants: sample, totalChildren: cs.children.length }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p>This gives you positions (grid working?), dimensions (size differentiation?), and fill info (bindings working?) without needing vision.</p>
+<p><strong>When to take a screenshot:</strong></p>
+<ul><li>After EVERY completed component (mandatory — part of the user checkpoint)</li><li>After creating the foundations documentation page</li><li>After final QA (screenshot every page)</li><li>Do NOT screenshot after every intermediate step (wastes tool calls)</li></ul>
+<h3>Common issues</h3>
+<p>| Symptom | Likely cause | Fix | |---|---|---| | All variants stacked at (0,0) | <code>combineAsVariants</code> was called but children were never repositioned | Re-run grid layout script | | Variants show wrong colors | Variable bindings applied after <code>combineAsVariants</code> instead of before | Rebind on component set children | | Variant count wrong | Clone loop indexing error | Print <code>components.map(c =&gt; c.name)</code> before combining | | BOOLEAN property has no effect | <code>componentPropertyReferences</code> was set on the component set frame, not on the child node | Find the actual child node and set references there | | INSTANCE_SWAP shows no swap option | Default value was not a valid component ID | Pass a real existing component ID as <code>defaultValue</code> | | <code>combineAsVariants</code> throws | At least one node in the array is not a <code>ComponentNode</code> | Filter array: <code>nodes.filter(n =&gt; n.type === &#x27;COMPONENT&#x27;)</code> | | <code>addComponentProperty</code> returns unexpected key | Expected — the key gets a <code>#id:id</code> suffix | Save the returned value immediately: <code>const key = cs.addComponentProperty(...)</code> |</p>
+<hr>
+<h2>10. Complete Worked Example: Button Component</h2>
+<p>This shows the full sequence of <code>use_figma</code> calls for a Button component, including state passing between calls. Replace <code>RUN_ID</code> and variable IDs with your actual values from the state ledger.</p>
+<h3>Call 1: Create the component page</h3>
+<p><strong>Goal:</strong> Create (or find) the Button page. <strong>State input:</strong> None <strong>State output:</strong> <code>{ pageId }</code></p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    let page = figma.root.children.find(p =&gt; p.name === &#x27;Button&#x27;);
+    if (!page) { page = figma.createPage(); page.name = &#x27;Button&#x27;; }
+    page.setPluginData(&#x27;dsb_run_id&#x27;, &#x27;ds-build-2024-001&#x27;);
+    page.setPluginData(&#x27;dsb_key&#x27;, &#x27;page/button&#x27;);
+    figma.closePlugin(JSON.stringify({ pageId: page.id }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Call 2: Create documentation frame</h3>
+<p><strong>Goal:</strong> Add title + description frame. <strong>State input:</strong> <code>{ pageId }</code> <strong>State output:</strong> <code>{ docFrameId }</code></p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const PAGE_ID = &#x27;PAGE_ID_FROM_STATE&#x27;;
+    const page = await figma.getNodeByIdAsync(PAGE_ID);
+    await figma.setCurrentPageAsync(page);
+
+    // Idempotency check
+    const existing = page.findAll(n =&gt; n.getPluginData(&#x27;dsb_key&#x27;) === &#x27;doc/button&#x27;);
+    if (existing.length &gt; 0) {
+      figma.closePlugin(JSON.stringify({ docFrameId: existing[0].id }));
+      return;
+    }
+
+    await figma.loadFontAsync({ family: &#x27;Inter&#x27;, style: &#x27;Bold&#x27; });
+    await figma.loadFontAsync({ family: &#x27;Inter&#x27;, style: &#x27;Regular&#x27; });
+
+    const docFrame = figma.createFrame();
+    docFrame.name = &#x27;Button / Documentation&#x27;;
+    docFrame.x = 40; docFrame.y = 40;
+    docFrame.layoutMode = &#x27;VERTICAL&#x27;;
+    docFrame.primaryAxisSizingMode = &#x27;AUTO&#x27;;
+    docFrame.counterAxisSizingMode = &#x27;FIXED&#x27;;
+    docFrame.resize(560, 100);
+    docFrame.paddingTop = 40; docFrame.paddingBottom = 40;
+    docFrame.paddingLeft = 40; docFrame.paddingRight = 40;
+    docFrame.itemSpacing = 16;
+    docFrame.fills = [{ type: &#x27;SOLID&#x27;, color: { r: 1, g: 1, b: 1 } }];
+
+    const title = figma.createText();
+    title.fontName = { family: &#x27;Inter&#x27;, style: &#x27;Bold&#x27; };
+    title.fontSize = 32;
+    title.characters = &#x27;Button&#x27;;
+    docFrame.appendChild(title);
+
+    const desc = figma.createText();
+    desc.fontName = { family: &#x27;Inter&#x27;, style: &#x27;Regular&#x27; };
+    desc.fontSize = 14;
+    desc.characters = &#x27;Buttons allow users to take actions with a single tap. Use Primary for the highest-emphasis action on a page, Secondary for supporting actions.&#x27;;
+    desc.layoutSizingHorizontal = &#x27;FILL&#x27;;
+    docFrame.appendChild(desc);
+
+    docFrame.setPluginData(&#x27;dsb_run_id&#x27;, &#x27;ds-build-2024-001&#x27;);
+    docFrame.setPluginData(&#x27;dsb_key&#x27;, &#x27;doc/button&#x27;);
+
+    figma.closePlugin(JSON.stringify({ docFrameId: docFrame.id }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Call 3: Create base component</h3>
+<p><strong>Goal:</strong> Create the base component with auto-layout and all variable bindings. <strong>State input:</strong> <code>{ pageId }</code> + variable IDs from Phase 1 <strong>State output:</strong> <code>{ baseCompId }</code></p>
+<p><em>(See Section 3 for full code — substituting the actual variable IDs from the state ledger.)</em></p>
+<h3>Call 4: Create all variants</h3>
+<p><strong>Goal:</strong> Clone base and produce all 18 variants (3 Size × 2 Style × 3 State). <strong>State input:</strong> <code>{ pageId, baseCompId }</code> + variable IDs <strong>State output:</strong> <code>{ variantIds: [&#x27;id1&#x27;, &#x27;id2&#x27;, ..., &#x27;id18&#x27;] }</code></p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const RUN_ID = &#x27;ds-build-2024-001&#x27;;
+    const BASE_ID = &#x27;BASE_COMP_ID_FROM_STATE&#x27;;
+    const PAGE_ID = &#x27;PAGE_ID_FROM_STATE&#x27;;
+    // Variable IDs from state ledger:
+    const VAR = {
+      bg_primary:     &#x27;VAR_ID_1&#x27;,
+      text_primary:   &#x27;VAR_ID_2&#x27;,
+      bg_secondary:   &#x27;VAR_ID_3&#x27;,
+      text_secondary: &#x27;VAR_ID_4&#x27;,
+      bg_disabled:    &#x27;VAR_ID_5&#x27;,
+      text_disabled:  &#x27;VAR_ID_6&#x27;,
+      padding_sm:     &#x27;VAR_ID_7&#x27;,
+      padding_md:     &#x27;VAR_ID_8&#x27;,
+      padding_lg:     &#x27;VAR_ID_9&#x27;,
+    };
+
+    const page = await figma.getNodeByIdAsync(PAGE_ID);
+    await figma.setCurrentPageAsync(page);
+
+    const base = await figma.getNodeByIdAsync(BASE_ID);
+
+    // Load all variables
+    const vars = {};
+    for (const [k, v] of Object.entries(VAR)) {
+      vars[k] = await figma.variables.getVariableByIdAsync(v);
+    }
+
+    const axes = {
+      Size:  [&#x27;Small&#x27;, &#x27;Medium&#x27;, &#x27;Large&#x27;],
+      Style: [&#x27;Primary&#x27;, &#x27;Secondary&#x27;],
+      State: [&#x27;Default&#x27;, &#x27;Hover&#x27;, &#x27;Disabled&#x27;],
+    };
+    const paddingMap = { Small: vars.padding_sm, Medium: vars.padding_md, Large: vars.padding_lg };
+
+    const components = [];
+    for (const size of axes.Size) {
+      for (const style of axes.Style) {
+        for (const state of axes.State) {
+          const clone = base.clone();
+          clone.name = `Size=${size}, Style=${style}, State=${state}`;
+
+          clone.setBoundVariable(&#x27;paddingTop&#x27;,    paddingMap[size]);
+          clone.setBoundVariable(&#x27;paddingBottom&#x27;, paddingMap[size]);
+          clone.setBoundVariable(&#x27;paddingLeft&#x27;,   paddingMap[size]);
+          clone.setBoundVariable(&#x27;paddingRight&#x27;,  paddingMap[size]);
+
+          const isDisabled = state === &#x27;Disabled&#x27;;
+          const bgV  = isDisabled ? vars.bg_disabled  : (style === &#x27;Primary&#x27; ? vars.bg_primary  : vars.bg_secondary);
+          const txV  = isDisabled ? vars.text_disabled : (style === &#x27;Primary&#x27; ? vars.text_primary : vars.text_secondary);
+
+          clone.fills = [figma.variables.setBoundVariableForPaint(
+            { type: &#x27;SOLID&#x27;, color: { r: 0, g: 0, b: 0 } }, &#x27;color&#x27;, bgV
+          )];
+
+          const labelNode = clone.findOne(n =&gt; n.name === &#x27;label&#x27;);
+          labelNode.fills = [figma.variables.setBoundVariableForPaint(
+            { type: &#x27;SOLID&#x27;, color: { r: 1, g: 1, b: 1 } }, &#x27;color&#x27;, txV
+          )];
+
+          clone.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+          clone.setPluginData(&#x27;dsb_key&#x27;, `component/button/variant/${size}/${style}/${state}`);
+          components.push(clone);
+        }
+      }
+    }
+
+    figma.closePlugin(JSON.stringify({ variantIds: components.map(c =&gt; c.id) }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Call 5: combineAsVariants + grid layout</h3>
+<p><strong>Goal:</strong> Combine all 18 variants into a ComponentSet and lay them out in a grid. <strong>State input:</strong> <code>{ pageId, variantIds }</code> (18 IDs) <strong>State output:</strong> <code>{ componentSetId }</code></p>
+<p><em>(See Section 5 for full code.)</em></p>
+<h3>Call 6: Add component properties</h3>
+<p><strong>Goal:</strong> Add TEXT, BOOLEAN, INSTANCE_SWAP properties and wire them to child nodes. <strong>State input:</strong> <code>{ pageId, componentSetId }</code> <strong>State output:</strong> <code>{ componentSetId, properties: { labelKey, showIconKey, iconKey } }</code></p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const CS_ID = &#x27;CS_ID_FROM_STATE&#x27;;
+    const DEFAULT_ICON_ID = &#x27;ICON_COMP_ID_FROM_STATE&#x27;;
+    const page = figma.root.children.find(p =&gt; p.name === &#x27;Button&#x27;);
+    await figma.setCurrentPageAsync(page);
+
+    const cs = await figma.getNodeByIdAsync(CS_ID);
+    cs.description = &#x27;Buttons allow users to take actions and make choices with a single tap.&#x27;;
+    cs.documentationLinks = [{ uri: &#x27;https://your-storybook.com/button&#x27; }];
+
+    // Add properties — save returned keys
+    const labelKey    = cs.addComponentProperty(&#x27;Label&#x27;, &#x27;TEXT&#x27;, &#x27;Button&#x27;);
+    const showIconKey = cs.addComponentProperty(&#x27;Show Icon&#x27;, &#x27;BOOLEAN&#x27;, true);
+    const iconKey     = cs.addComponentProperty(&#x27;Icon&#x27;, &#x27;INSTANCE_SWAP&#x27;, DEFAULT_ICON_ID);
+
+    // Wire to children
+    for (const child of cs.children) {
+      const labelNode = child.findOne(n =&gt; n.name === &#x27;label&#x27;);
+      if (labelNode) labelNode.componentPropertyReferences = { characters: labelKey };
+
+      const iconNode = child.findOne(n =&gt; n.name === &#x27;icon&#x27;);
+      if (iconNode) {
+        iconNode.componentPropertyReferences = {
+          visible: showIconKey,
+          ...(iconNode.type === &#x27;INSTANCE&#x27; ? { mainComponent: iconKey } : {}),
+        };
+      }
+    }
+
+    figma.closePlugin(JSON.stringify({
+      componentSetId: cs.id,
+      properties: { labelKey, showIconKey, iconKey },
+    }));
+  } catch (e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Call 7: Validate with get_metadata</h3>
+<p><strong>Goal:</strong> Structural check — variant count, properties, axes. <strong>Action:</strong> Call <code>get_metadata</code> on the ComponentSet node ID (from state). Verify in the result:</p>
+<ul><li><code>children.length === 18</code></li><li><code>variantGroupProperties</code> has <code>Size</code>, <code>Style</code>, <code>State</code> keys with correct value arrays</li><li><code>componentPropertyDefinitions</code> has <code>Label</code>, <code>Show Icon</code>, <code>Icon</code> entries</li></ul>
+<h3>Call 8: Validate with get_screenshot</h3>
+<p><strong>Goal:</strong> Visual check — layout, colors, text. <strong>Action:</strong> Call <code>get_screenshot</code> on the Button page. Inspect the screenshot. If variants are stacked, re-run Call 5. If colors look wrong, inspect variable bindings.</p>
+<h3>Checkpoint</h3>
+<p>After Call 8: show the screenshot to the user. Ask: &quot;Here&#x27;s the Button component with 18 variants. Does this look correct?&quot; Do not proceed to the next component until the user approves.</p>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/component-creation.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

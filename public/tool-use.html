@@ -246,183 +246,479 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 </div></nav>
 
 <div class="wrap">
-<h1>tool-use</h1><p class="lede">For conceptual overview (tool definitions, tool choice, tips), see shared/tool-use-concepts.md(../../shared/tool-use-concepts.md).</p><h1>Tool Use — Go</h1>
+<h1>tool-use</h1><p class="lede">For conceptual overview (tool definitions, tool choice, tips), see shared/tool-use-concepts.md(../../shared/tool-use-concepts.md).</p><h1>Tool Use — TypeScript</h1>
 <p>For conceptual overview (tool definitions, tool choice, tips), see <a href="../../shared/tool-use-concepts.md">shared/tool-use-concepts.md</a>.</p>
-<h2>Tool Use</h2>
-<h3>Tool Runner (Beta — Recommended)</h3>
-<p><strong>Beta:</strong> The Go SDK provides <code>BetaToolRunner</code> for automatic tool use loops via the <code>toolrunner</code> package.</p>
-<pre><code class="lang-go">import (
-    &quot;context&quot;
-    &quot;fmt&quot;
-    &quot;log&quot;
+<h2>Tool Runner (Recommended)</h2>
+<p><strong>Beta:</strong> The tool runner is in beta in the TypeScript SDK.</p>
+<p>Use <code>betaZodTool</code> with Zod schemas to define tools with a <code>run</code> function, then pass them to <code>client.beta.messages.toolRunner()</code>:</p>
+<pre><code class="lang-typescript">import Anthropic from &quot;@anthropic-ai/sdk&quot;;
+import { betaZodTool } from &quot;@anthropic-ai/sdk/helpers/beta/zod&quot;;
+import { z } from &quot;zod&quot;;
 
-    &quot;github.com/anthropics/anthropic-sdk-go&quot;
-    &quot;github.com/anthropics/anthropic-sdk-go/toolrunner&quot;
-)
+const client = new Anthropic();
 
-// Define tool input with jsonschema tags for automatic schema generation
-type GetWeatherInput struct {
-    City string `json:&quot;city&quot; jsonschema:&quot;required,description=The city name&quot;`
+const getWeather = betaZodTool({
+  name: &quot;get_weather&quot;,
+  description: &quot;Get current weather for a location&quot;,
+  inputSchema: z.object({
+    location: z.string().describe(&quot;City and state, e.g., San Francisco, CA&quot;),
+    unit: z.enum([&quot;celsius&quot;, &quot;fahrenheit&quot;]).optional(),
+  }),
+  run: async (input) =&gt; {
+    // Your implementation here
+    return `72°F and sunny in ${input.location}`;
+  },
+});
+
+// The tool runner handles the agentic loop and returns the final message
+const finalMessage = await client.beta.messages.toolRunner({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  tools: [getWeather],
+  messages: [{ role: &quot;user&quot;, content: &quot;What&#x27;s the weather in Paris?&quot; }],
+});
+
+console.log(finalMessage.content);</code></pre>
+<p>Zod is optional — <code>betaTool()</code> from <code>@anthropic-ai/sdk/helpers/beta/json-schema</code> accepts a raw JSON Schema <code>inputSchema</code> plus a <code>run</code> function if you don&#x27;t want a Zod dependency.</p>
+<p><strong>Key benefits of the tool runner:</strong></p>
+<ul><li>No manual loop — the SDK handles calling tools and feeding results back</li><li>Type-safe tool inputs via Zod schemas (or raw JSON Schema via <code>betaTool()</code>)</li><li>Tool schemas are generated automatically from Zod definitions</li><li>Iteration stops automatically when Claude has no more tool calls</li></ul>
+<h3>Server tools with the tool runner</h3>
+<p>The runner&#x27;s <code>tools</code> array accepts raw server-tool definitions (<code>web_search_20260209</code>, <code>web_fetch_20260209</code>, code execution) alongside runnable tools — pass the literal tool object; server tools run on Anthropic&#x27;s servers, so there is no <code>run</code> function.</p>
+<p><strong>Caution — the runner does not auto-resume <code>pause_turn</code> (as of <code>@anthropic-ai/sdk</code> 0.110.0).</strong> A long-running server-tool turn can stop with <code>stop_reason: &quot;pause_turn&quot;</code>. The runner only continues after a client tool produces a result, so a paused turn ends the loop and is returned as the final message — no error, no warning, just a silently truncated answer. If you mix server tools into the runner, check <code>stop_reason</code> on every iteration and resume by pushing the paused assistant turn back:</p>
+<pre><code class="lang-typescript">const params = {
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  tools: [getWeather, { type: &quot;web_search_20260209&quot;, name: &quot;web_search&quot;, max_uses: 5 }],
+  messages: [{ role: &quot;user&quot;, content: &quot;Compare this week&#x27;s forecasts for Paris across two sources&quot; }],
+};
+
+const runner = client.beta.messages.toolRunner(params);
+
+// Non-streaming: each iteration yields a complete message
+for await (const message of runner) {
+  if (message.stop_reason === &quot;pause_turn&quot;) {
+    runner.pushMessages({ role: &quot;assistant&quot;, content: message.content });
+  }
 }
 
-// Create a tool with automatic schema generation from struct tags
-weatherTool, err := toolrunner.NewBetaToolFromJSONSchema(
-    &quot;get_weather&quot;,
-    &quot;Get current weather for a city&quot;,
-    func(ctx context.Context, input GetWeatherInput) (anthropic.BetaToolResultBlockParamContentUnion, error) {
-        return anthropic.BetaToolResultBlockParamContentUnion{
-            OfText: &amp;anthropic.BetaTextBlockParam{
-                Text: fmt.Sprintf(&quot;The weather in %s is sunny, 72°F&quot;, input.City),
-            },
-        }, nil
-    },
-)
-if err != nil {
-    log.Fatal(err)
-}
-
-// Create a tool runner that handles the conversation loop automatically
-runner := client.Beta.Messages.NewToolRunner(
-    []anthropic.BetaTool{weatherTool},
-    anthropic.BetaToolRunnerParams{
-        BetaMessageNewParams: anthropic.BetaMessageNewParams{
-            Model:     anthropic.ModelClaudeOpus4_8,
-            MaxTokens: 16000,
-            Messages: []anthropic.BetaMessageParam{
-                anthropic.NewBetaUserMessage(anthropic.NewBetaTextBlock(&quot;What&#x27;s the weather in Paris?&quot;)),
-            },
-        },
-        MaxIterations: 5,
-    },
-)
-
-// Run until Claude produces a final response
-message, err := runner.RunToCompletion(context.Background())
-if err != nil {
-    log.Fatal(err)
-}
-
-// RunToCompletion returns *BetaMessage; content is []BetaContentBlockUnion.
-// Narrow via AsAny() switch — note the Beta-namespace types (BetaTextBlock,
-// not TextBlock):
-for _, block := range message.Content {
-    switch block := block.AsAny().(type) {
-    case anthropic.BetaTextBlock:
-        fmt.Println(block.Text)
-    }
+// Streaming alternative — construct the runner with `stream: true` (same
+// params as above). Each iteration then yields a stream, not a message — a
+// bare `message.stop_reason` check never fires. Resolve the stream first:
+const streamingRunner = client.beta.messages.toolRunner({ ...params, stream: true });
+for await (const stream of streamingRunner) {
+  const message = await stream.finalMessage();
+  if (message.stop_reason === &quot;pause_turn&quot;) {
+    streamingRunner.pushMessages({ role: &quot;assistant&quot;, content: message.content });
+  }
 }</code></pre>
-<p><strong>Key features of the Go tool runner:</strong></p>
-<ul><li>Automatic schema generation from Go structs via <code>jsonschema</code> tags</li><li><code>RunToCompletion()</code> for simple one-shot usage</li><li><code>All()</code> iterator for processing each message in the conversation</li><li><code>NextMessage()</code> for step-by-step iteration</li><li>Streaming variant via <code>NewToolRunnerStreaming()</code> with <code>AllStreaming()</code></li></ul>
-<h3>Manual Loop</h3>
-<p>Prefer the tool runner above. For interception, validation, logging, or human-in-the-loop approval, gate inside the tool&#x27;s run function or step the runner with <code>NextMessage()</code>/<code>All()</code> and inspect each message (the runner&#x27;s public <code>Params</code> field lets you adjust the next request) — a manual loop is not required. Drop to a manual loop only when you need control the runner does not expose: define tools with <code>ToolParam</code>, check <code>StopReason</code>, execute tools yourself, and feed <code>tool_result</code> blocks back.</p>
-<p>Derived from <code>anthropic-sdk-go/examples/tools/main.go</code>.</p>
-<pre><code class="lang-go">package main
+<p>Each pause–resume consumes a <code>max_iterations</code> tick, so a capped run can still end paused — check the final message&#x27;s <code>stop_reason</code> before trusting the result (after the loop, call <code>.done()</code> on the runner you iterated to get the final message). Alternatively, use the manual loop below, which handles <code>pause_turn</code> explicitly.</p>
+<hr>
+<h2>Manual Agentic Loop</h2>
+<p>Prefer the tool runner above. Drop to a manual loop only when you need control the runner does not expose (e.g., a custom transport, request shapes the SDK cannot build, or avoiding a beta dependency — the runner is beta, and it supports per-token streaming via <code>stream: true</code>). Human-in-the-loop approval does <em>not</em> require a manual loop — gate inside the tool&#x27;s <code>run()</code> function (return a &quot;user declined&quot; result) or inspect pending <code>tool_use</code> blocks and call <code>setMessagesParams()</code> between iterations.</p>
+<p>If you do need a manual loop:</p>
+<pre><code class="lang-typescript">import Anthropic from &quot;@anthropic-ai/sdk&quot;;
 
-import (
-    &quot;context&quot;
-    &quot;encoding/json&quot;
-    &quot;fmt&quot;
-    &quot;log&quot;
+const client = new Anthropic();
+const tools: Anthropic.Tool[] = [...]; // Your tool definitions
+let messages: Anthropic.MessageParam[] = [{ role: &quot;user&quot;, content: userInput }];
 
-    &quot;github.com/anthropics/anthropic-sdk-go&quot;
-)
+while (true) {
+  const response = await client.messages.create({
+    model: &quot;claude-opus-5&quot;,
+    max_tokens: 16000,
+    tools: tools,
+    messages: messages,
+  });
 
-func main() {
-    client := anthropic.NewClient()
+  if (response.stop_reason === &quot;end_turn&quot;) break;
 
-    // 1. Define tools. ToolParam.InputSchema uses a map, no struct tags needed.
-    addTool := anthropic.ToolParam{
-        Name:        &quot;add&quot;,
-        Description: anthropic.String(&quot;Add two integers&quot;),
-        InputSchema: anthropic.ToolInputSchemaParam{
-            Properties: map[string]any{
-                &quot;a&quot;: map[string]any{&quot;type&quot;: &quot;integer&quot;},
-                &quot;b&quot;: map[string]any{&quot;type&quot;: &quot;integer&quot;},
-            },
-        },
-    }
-    // ToolParam must be wrapped in ToolUnionParam for the Tools slice
-    tools := []anthropic.ToolUnionParam{{OfTool: &amp;addTool}}
+  // Server-side tool hit iteration limit; append assistant turn and re-send to continue
+  if (response.stop_reason === &quot;pause_turn&quot;) {
+    messages.push({ role: &quot;assistant&quot;, content: response.content });
+    continue;
+  }
 
-    messages := []anthropic.MessageParam{
-        anthropic.NewUserMessage(anthropic.NewTextBlock(&quot;What is 2 + 3?&quot;)),
-    }
+  const toolUseBlocks = response.content.filter(
+    (b): b is Anthropic.ToolUseBlock =&gt; b.type === &quot;tool_use&quot;,
+  );
 
-    for {
-        resp, err := client.Messages.New(context.Background(), anthropic.MessageNewParams{
-            Model:     anthropic.ModelClaudeSonnet4_6,
-            MaxTokens: 16000,
-            Messages:  messages,
-            Tools:     tools,
-        })
-        if err != nil {
-            log.Fatal(err)
-        }
+  messages.push({ role: &quot;assistant&quot;, content: response.content });
 
-        // 2. Append the assistant response to history BEFORE processing tool calls.
-        //    resp.ToParam() converts Message → MessageParam in one call.
-        messages = append(messages, resp.ToParam())
+  const toolResults: Anthropic.ToolResultBlockParam[] = [];
+  for (const tool of toolUseBlocks) {
+    const result = await executeTool(tool.name, tool.input);
+    toolResults.push({
+      type: &quot;tool_result&quot;,
+      tool_use_id: tool.id,
+      content: result,
+    });
+  }
 
-        // 3. Walk content blocks. ContentBlockUnion is a flattened struct;
-        //    use block.AsAny().(type) to switch on the actual variant.
-        toolResults := []anthropic.ContentBlockParamUnion{}
-        for _, block := range resp.Content {
-            switch variant := block.AsAny().(type) {
-            case anthropic.TextBlock:
-                fmt.Println(variant.Text)
-            case anthropic.ToolUseBlock:
-                // 4. Parse the tool input. Use variant.JSON.Input.Raw() to get the
-                //    raw JSON — block.Input is json.RawMessage, not the parsed value.
-                var in struct {
-                    A int `json:&quot;a&quot;`
-                    B int `json:&quot;b&quot;`
-                }
-                if err := json.Unmarshal([]byte(variant.JSON.Input.Raw()), &amp;in); err != nil {
-                    log.Fatal(err)
-                }
-                result := fmt.Sprintf(&quot;%d&quot;, in.A+in.B)
-                // 5. NewToolResultBlock(toolUseID, content, isError) builds the
-                //    ContentBlockParamUnion for you. block.ID is the tool_use_id.
-                toolResults = append(toolResults,
-                    anthropic.NewToolResultBlock(block.ID, result, false))
-            }
-        }
-
-        // 6. Exit when Claude stops asking for tools
-        if resp.StopReason != anthropic.StopReasonToolUse {
-            break
-        }
-
-        // 7. Tool results go in a user message (variadic: all results in one turn)
-        messages = append(messages, anthropic.NewUserMessage(toolResults...))
-    }
+  messages.push({ role: &quot;user&quot;, content: toolResults });
 }</code></pre>
-<p><strong>Key API surface:</strong></p>
-<p>| Symbol | Purpose | |---|---| | <code>resp.ToParam()</code> | Convert <code>Message</code> response → <code>MessageParam</code> for history | | <code>block.AsAny().(type)</code> | Type-switch on <code>ContentBlockUnion</code> variants | | <code>variant.JSON.Input.Raw()</code> | Raw JSON string of tool input (for <code>json.Unmarshal</code>) | | <code>anthropic.NewToolResultBlock(id, content, isError)</code> | Build <code>tool_result</code> block | | <code>anthropic.NewUserMessage(blocks...)</code> | Wrap tool results as a user turn | | <code>anthropic.StopReasonToolUse</code> | <code>StopReason</code> constant to check loop termination | | <code>anthropic.ToolUnionParam{OfTool: &amp;t}</code> | Wrap <code>ToolParam</code> in the union for <code>Tools:</code> |</p>
+<h3>Streaming Manual Loop</h3>
+<p>Use <code>client.messages.stream()</code> + <code>finalMessage()</code> instead of <code>.create()</code> when you need streaming within a manual loop. Text deltas are streamed on each iteration; <code>finalMessage()</code> collects the complete <code>Message</code> so you can inspect <code>stop_reason</code> and extract tool-use blocks:</p>
+<pre><code class="lang-typescript">import Anthropic from &quot;@anthropic-ai/sdk&quot;;
+
+const client = new Anthropic();
+const tools: Anthropic.Tool[] = [...];
+let messages: Anthropic.MessageParam[] = [{ role: &quot;user&quot;, content: userInput }];
+
+while (true) {
+  const stream = client.messages.stream({
+    model: &quot;claude-opus-5&quot;,
+    max_tokens: 64000,
+    tools,
+    messages,
+  });
+
+  // Stream text deltas on each iteration
+  stream.on(&quot;text&quot;, (delta) =&gt; {
+    process.stdout.write(delta);
+  });
+
+  // finalMessage() resolves with the complete Message — no need to
+  // manually wire up .on(&quot;message&quot;) / .on(&quot;error&quot;) / .on(&quot;abort&quot;)
+  const message = await stream.finalMessage();
+
+  if (message.stop_reason === &quot;end_turn&quot;) break;
+
+  // Server-side tool hit iteration limit; append assistant turn and re-send to continue
+  if (message.stop_reason === &quot;pause_turn&quot;) {
+    messages.push({ role: &quot;assistant&quot;, content: message.content });
+    continue;
+  }
+
+  const toolUseBlocks = message.content.filter(
+    (b): b is Anthropic.ToolUseBlock =&gt; b.type === &quot;tool_use&quot;,
+  );
+
+  messages.push({ role: &quot;assistant&quot;, content: message.content });
+
+  const toolResults: Anthropic.ToolResultBlockParam[] = [];
+  for (const tool of toolUseBlocks) {
+    const result = await executeTool(tool.name, tool.input);
+    toolResults.push({
+      type: &quot;tool_result&quot;,
+      tool_use_id: tool.id,
+      content: result,
+    });
+  }
+
+  messages.push({ role: &quot;user&quot;, content: toolResults });
+}</code></pre>
+<blockquote><p><strong>Important:</strong> Don&#x27;t wrap <code>.on()</code> events in <code>new Promise()</code> to collect the final message — use <code>stream.finalMessage()</code> instead. The SDK handles all error/abort/completion states internally.</p></blockquote>
+<blockquote><p><strong>Error handling in the loop:</strong> Use the SDK&#x27;s typed exceptions (e.g., <code>Anthropic.RateLimitError</code>, <code>Anthropic.APIError</code>) — see <a href="./README.md#error-handling">Error Handling</a> for examples. Don&#x27;t check error messages with string matching.</p></blockquote>
+<blockquote><p><strong>SDK types:</strong> Use <code>Anthropic.MessageParam</code>, <code>Anthropic.Tool</code>, <code>Anthropic.ToolUseBlock</code>, <code>Anthropic.ToolResultBlockParam</code>, <code>Anthropic.Message</code>, etc. for all API-related data structures. Don&#x27;t redefine equivalent interfaces.</p></blockquote>
+<hr>
+<h2>Handling Tool Results</h2>
+<pre><code class="lang-typescript">const response = await client.messages.create({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  tools: tools,
+  messages: [{ role: &quot;user&quot;, content: &quot;What&#x27;s the weather in Paris?&quot; }],
+});
+
+for (const block of response.content) {
+  if (block.type === &quot;tool_use&quot;) {
+    const result = await executeTool(block.name, block.input);
+
+    const followup = await client.messages.create({
+      model: &quot;claude-opus-5&quot;,
+      max_tokens: 16000,
+      tools: tools,
+      messages: [
+        { role: &quot;user&quot;, content: &quot;What&#x27;s the weather in Paris?&quot; },
+        { role: &quot;assistant&quot;, content: response.content },
+        {
+          role: &quot;user&quot;,
+          content: [
+            { type: &quot;tool_result&quot;, tool_use_id: block.id, content: result },
+          ],
+        },
+      ],
+    });
+  }
+}</code></pre>
+<hr>
+<h2>Tool Choice</h2>
+<pre><code class="lang-typescript">const response = await client.messages.create({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  tools: tools,
+  tool_choice: { type: &quot;tool&quot;, name: &quot;get_weather&quot; },
+  messages: [{ role: &quot;user&quot;, content: &quot;What&#x27;s the weather in Paris?&quot; }],
+});</code></pre>
 <hr>
 <h2>Anthropic-Defined Tools</h2>
-<p>Version-suffixed struct names with <code>Param</code> suffix. <code>Name</code>/<code>Type</code> are <code>constant.<em></code> types — zero value marshals correctly, so <code>{}</code> works. Wrap in <code>ToolUnionParam</code> with the matching <code>Of</em></code> field. Web search and code execution are server-executed; bash and text editor are client-executed (you handle the <code>tool_use</code> locally — see <code>shared/tool-use-concepts.md</code>).</p>
-<pre><code class="lang-go">Tools: []anthropic.ToolUnionParam{
-    {OfWebSearchTool20260209: &amp;anthropic.WebSearchTool20260209Param{}},
-    {OfBashTool20250124: &amp;anthropic.ToolBash20250124Param{}},
-    {OfTextEditor20250728: &amp;anthropic.ToolTextEditor20250728Param{}},
-    {OfCodeExecutionTool20260120: &amp;anthropic.CodeExecutionTool20260120Param{}},
-},</code></pre>
-<p>Also available: <code>WebFetchTool20260209Param</code>, <code>ToolSearchToolBm25_20251119Param</code>, <code>ToolSearchToolRegex20251119Param</code>. For the advisor and memory tools, use <code>BetaAdvisorTool20260301Param</code> / <code>BetaMemoryTool20250818Param</code> in the beta namespace on <code>client.Beta.Messages.New</code>.</p>
-<h3>Advisor tool (beta)</h3>
-<p>Server-side — no tool_result round-trip. The advisor model must be ≥ the executor (top-level) model; invalid pairs return 400.</p>
-<pre><code class="lang-go">response, err := client.Beta.Messages.New(ctx, anthropic.BetaMessageNewParams{
-    Model:     anthropic.ModelClaudeSonnet4_6,
-    MaxTokens: 4096,
-    Tools: []anthropic.BetaToolUnionParam{
-        {OfAdvisorTool20260301: &amp;anthropic.BetaAdvisorTool20260301Param{
-            Model: anthropic.ModelClaudeOpus4_8,
-        }},
-    },
-    Messages: []anthropic.BetaMessageParam{ /* ... */ },
-    Betas:    []anthropic.AnthropicBeta{anthropic.AnthropicBetaAdvisorTool2026_03_01},
-})</code></pre>
+<p>Version-suffixed <code>type</code> literals; <code>name</code> is fixed per interface. Web search and code execution are server-executed; bash and text editor are client-executed (you handle the <code>tool_use</code> locally — see <code>shared/tool-use-concepts.md</code>). Pass plain object literals — the <code>ToolUnion</code> type is satisfied structurally. <strong>The <code>name</code>/<code>type</code> pair must match the interface</strong>: mixing <code>str_replace_based_edit_tool</code> (20250728 name) with <code>text_editor_20250124</code> (which expects <code>str_replace_editor</code>) is a TS2322.</p>
+<p><strong>Don&#x27;t type-annotate as <code>Tool[]</code></strong> — <code>Tool</code> is just the custom-tool variant. Let structural typing infer from the <code>tools</code> param, or annotate as <code>Anthropic.Messages.ToolUnion[]</code> if you must:</p>
+<pre><code class="lang-typescript">// ✓ let inference work — no annotation
+const response = await client.messages.create({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  tools: [
+    { type: &quot;text_editor_20250728&quot;, name: &quot;str_replace_based_edit_tool&quot; },
+    { type: &quot;bash_20250124&quot;, name: &quot;bash&quot; },
+    { type: &quot;web_search_20260209&quot;, name: &quot;web_search&quot; },
+    { type: &quot;code_execution_20260120&quot;, name: &quot;code_execution&quot; },
+  ],
+  messages: [{ role: &quot;user&quot;, content: &quot;...&quot; }],
+});
+
+// ✗ this is a TS2352 — Tool is the CUSTOM tool variant only
+// const tools: Anthropic.Tool[] = [{ type: &quot;text_editor_20250728&quot;, ... }]</code></pre>
+<p>| Interface | <code>name</code> | <code>type</code> | |---|---|---| | <code>ToolTextEditor20250124</code> | <code>str_replace_editor</code> | <code>text_editor_20250124</code> | | <code>ToolTextEditor20250429</code> | <code>str_replace_based_edit_tool</code> | <code>text_editor_20250429</code> | | <code>ToolTextEditor20250728</code> | <code>str_replace_based_edit_tool</code> | <code>text_editor_20250728</code> | | <code>ToolBash20250124</code> | <code>bash</code> | <code>bash_20250124</code> | | <code>WebSearchTool20260209</code> | <code>web_search</code> | <code>web_search_20260209</code> | | <code>WebFetchTool20260209</code> | <code>web_fetch</code> | <code>web_fetch_20260209</code> | | <code>CodeExecutionTool20260120</code> | <code>code_execution</code> | <code>code_execution_20260120</code> |</p>
+<p><strong>Don&#x27;t mix beta and non-beta types</strong>: if you call <code>client.beta.messages.create()</code>, the response <code>content</code> is <code>BetaContentBlock[]</code> — you cannot pass that to a non-beta <code>ContentBlockParam[]</code> without narrowing each element.</p>
 <hr>
+<h2>Code Execution</h2>
+<h3>Basic Usage</h3>
+<pre><code class="lang-typescript">import Anthropic from &quot;@anthropic-ai/sdk&quot;;
+
+const client = new Anthropic();
+
+const response = await client.messages.create({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  messages: [
+    {
+      role: &quot;user&quot;,
+      content:
+        &quot;Calculate the mean and standard deviation of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]&quot;,
+    },
+  ],
+  tools: [{ type: &quot;code_execution_20260120&quot;, name: &quot;code_execution&quot; }],
+});</code></pre>
+<h3>Reading Local Files (ESM note)</h3>
+<p><code>__dirname</code> doesn&#x27;t exist in ES modules. For script-relative paths use <code>import.meta.url</code>:</p>
+<pre><code class="lang-typescript">import { readFileSync } from &quot;fs&quot;;
+import { fileURLToPath } from &quot;url&quot;;
+import { dirname, join } from &quot;path&quot;;
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pdfBytes = readFileSync(join(__dirname, &quot;sample.pdf&quot;));</code></pre>
+<p>Or use a CWD-relative path if the script runs from a known directory: <code>readFileSync(&quot;./sample.pdf&quot;)</code>.</p>
+<h3>Upload Files for Analysis</h3>
+<pre><code class="lang-typescript">import Anthropic, { toFile } from &quot;@anthropic-ai/sdk&quot;;
+import { createReadStream } from &quot;fs&quot;;
+
+const client = new Anthropic();
+
+// 1. Upload a file
+const uploaded = await client.beta.files.upload({
+  file: await toFile(createReadStream(&quot;sales_data.csv&quot;), undefined, {
+    type: &quot;text/csv&quot;,
+  }),
+  betas: [&quot;files-api-2025-04-14&quot;],
+});
+
+// 2. Pass to code execution
+// Code execution is GA; Files API is still beta (pass via RequestOptions)
+const response = await client.messages.create(
+  {
+    model: &quot;claude-opus-5&quot;,
+    max_tokens: 16000,
+    messages: [
+      {
+        role: &quot;user&quot;,
+        content: [
+          {
+            type: &quot;text&quot;,
+            text: &quot;Analyze this sales data. Show trends and create a visualization.&quot;,
+          },
+          { type: &quot;container_upload&quot;, file_id: uploaded.id },
+        ],
+      },
+    ],
+    tools: [{ type: &quot;code_execution_20260120&quot;, name: &quot;code_execution&quot; }],
+  },
+  { headers: { &quot;anthropic-beta&quot;: &quot;files-api-2025-04-14&quot; } },
+);</code></pre>
+<h3>Retrieve Generated Files</h3>
+<pre><code class="lang-typescript">import path from &quot;path&quot;;
+import fs from &quot;fs&quot;;
+
+const OUTPUT_DIR = &quot;./claude_outputs&quot;;
+await fs.promises.mkdir(OUTPUT_DIR, { recursive: true });
+
+for (const block of response.content) {
+  if (block.type === &quot;bash_code_execution_tool_result&quot;) {
+    const result = block.content;
+    if (result.type === &quot;bash_code_execution_result&quot; &amp;&amp; result.content) {
+      for (const fileRef of result.content) {
+        if (fileRef.type === &quot;bash_code_execution_output&quot;) {
+          const metadata = await client.beta.files.retrieveMetadata(
+            fileRef.file_id,
+          );
+          const downloadResponse = await client.beta.files.download(fileRef.file_id);
+          const fileBytes = Buffer.from(await downloadResponse.arrayBuffer());
+          const safeName = path.basename(metadata.filename);
+          if (!safeName || safeName === &quot;.&quot; || safeName === &quot;..&quot;) {
+            console.warn(`Skipping invalid filename: ${metadata.filename}`);
+            continue;
+          }
+          const outputPath = path.join(OUTPUT_DIR, safeName);
+          await fs.promises.writeFile(outputPath, fileBytes);
+          console.log(`Saved: ${outputPath}`);
+        }
+      }
+    }
+  }
+}</code></pre>
+<h3>Container Reuse</h3>
+<pre><code class="lang-typescript">// First request: set up environment
+const response1 = await client.messages.create({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  messages: [
+    {
+      role: &quot;user&quot;,
+      content: &quot;Install tabulate and create data.json with sample user data&quot;,
+    },
+  ],
+  tools: [{ type: &quot;code_execution_20260120&quot;, name: &quot;code_execution&quot; }],
+});
+
+// Reuse container
+// container is nullable — set only when using server-side code execution
+const containerId = response1.container!.id;
+
+const response2 = await client.messages.create({
+  container: containerId,
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  messages: [
+    {
+      role: &quot;user&quot;,
+      content: &quot;Read data.json and display as a formatted table&quot;,
+    },
+  ],
+  tools: [{ type: &quot;code_execution_20260120&quot;, name: &quot;code_execution&quot; }],
+});</code></pre>
+<hr>
+<h2>Memory Tool</h2>
+<h3>Basic Usage</h3>
+<pre><code class="lang-typescript">const response = await client.messages.create({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  messages: [
+    {
+      role: &quot;user&quot;,
+      content: &quot;Remember that my preferred language is TypeScript.&quot;,
+    },
+  ],
+  tools: [{ type: &quot;memory_20250818&quot;, name: &quot;memory&quot; }],
+});</code></pre>
+<h3>SDK Memory Helper</h3>
+<p>Use <code>betaMemoryTool</code> with a <code>MemoryToolHandlers</code> implementation:</p>
+<pre><code class="lang-typescript">import {
+  betaMemoryTool,
+  type MemoryToolHandlers,
+} from &quot;@anthropic-ai/sdk/helpers/beta/memory&quot;;
+
+const handlers: MemoryToolHandlers = {
+  async view(command) { ... },
+  async create(command) { ... },
+  async str_replace(command) { ... },
+  async insert(command) { ... },
+  async delete(command) { ... },
+  async rename(command) { ... },
+};
+
+const memory = betaMemoryTool(handlers);
+
+const runner = client.beta.messages.toolRunner({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  tools: [memory],
+  messages: [{ role: &quot;user&quot;, content: &quot;Remember my preferences&quot; }],
+});
+
+for await (const message of runner) {
+  console.log(message);
+}</code></pre>
+<p>For full implementation examples, use WebFetch:</p>
+<ul><li><code>https://github.com/anthropics/anthropic-sdk-typescript/blob/main/examples/tools-helpers-memory.ts</code></li></ul>
+<hr>
+<h2>Structured Outputs</h2>
+<h3>JSON Outputs (Zod — Recommended)</h3>
+<pre><code class="lang-typescript">import Anthropic from &quot;@anthropic-ai/sdk&quot;;
+import { z } from &quot;zod&quot;;
+import { zodOutputFormat } from &quot;@anthropic-ai/sdk/helpers/zod&quot;;
+
+const ContactInfoSchema = z.object({
+  name: z.string(),
+  email: z.string(),
+  plan: z.string(),
+  interests: z.array(z.string()),
+  demo_requested: z.boolean(),
+});
+
+const client = new Anthropic();
+
+const response = await client.messages.parse({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  messages: [
+    {
+      role: &quot;user&quot;,
+      content:
+        &quot;Extract: Jane Doe (jane@co.com) wants Enterprise, interested in API and SDKs, wants a demo.&quot;,
+    },
+  ],
+  output_config: {
+    format: zodOutputFormat(ContactInfoSchema),
+  },
+});
+
+// parsed_output is null if parsing failed — assert or guard
+console.log(response.parsed_output!.name); // &quot;Jane Doe&quot;</code></pre>
+<h3>Strict Tool Use</h3>
+<pre><code class="lang-typescript">const response = await client.messages.create({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  messages: [
+    {
+      role: &quot;user&quot;,
+      content: &quot;Book a flight to Tokyo for 2 passengers on March 15&quot;,
+    },
+  ],
+  tools: [
+    {
+      name: &quot;book_flight&quot;,
+      description: &quot;Book a flight to a destination&quot;,
+      strict: true,
+      input_schema: {
+        type: &quot;object&quot;,
+        properties: {
+          destination: { type: &quot;string&quot; },
+          date: { type: &quot;string&quot;, format: &quot;date&quot; },
+          passengers: {
+            type: &quot;integer&quot;,
+            enum: [1, 2, 3, 4, 5, 6, 7, 8],
+          },
+        },
+        required: [&quot;destination&quot;, &quot;date&quot;, &quot;passengers&quot;],
+        additionalProperties: false,
+      },
+    },
+  ],
+});</code></pre>
+<hr>
+<h2>Agent Skills</h2>
+<p>Enable an Anthropic-managed skill (e.g., <code>pptx</code>) via <code>container.skills</code> + the <code>code_execution</code> tool on the beta path. Both beta headers are required. Outputs land as files in the response content — download by file ID via the Files API.</p>
+<pre><code class="lang-typescript">const response = await client.beta.messages.create({
+  model: &quot;claude-opus-5&quot;,
+  max_tokens: 16000,
+  container: {
+    skills: [{ type: &quot;anthropic&quot;, skill_id: &quot;pptx&quot;, version: &quot;latest&quot; }],
+  },
+  tools: [{ type: &quot;code_execution_20260521&quot;, name: &quot;code_execution&quot; }],
+  betas: [&quot;code-execution-2025-08-25&quot;, &quot;skills-2025-10-02&quot;],
+  messages: [{ role: &quot;user&quot;, content: &quot;Create a 3-slide deck about X.&quot; }],
+});
+// Find the file_id in response.content, then:
+// await client.beta.files.download(fileId)</code></pre>
 <footer>
 <div class="fmap">
   <div><b>Build</b>

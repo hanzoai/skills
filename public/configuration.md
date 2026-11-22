@@ -1,184 +1,93 @@
-# Himalaya Configuration Reference
+# DDoS Configuration
 
-Configuration file location: `~/.config/himalaya/config.toml`
+## Dashboard Setup
 
-## Minimal IMAP + SMTP Setup
+1. Navigate to Security > DDoS
+2. Select HTTP DDoS or Network-layer DDoS
+3. Configure sensitivity & action per ruleset/category/rule
+4. Apply overrides with optional expressions (Enterprise Advanced)
+5. Enable Adaptive DDoS toggle (Enterprise/Enterprise Advanced, requires 7 days traffic history)
 
-```toml
-[accounts.default]
-email = "user@example.com"
-display-name = "Your Name"
-default = true
+## Rule Structure
 
-# IMAP backend for reading emails
-backend.type = "imap"
-backend.host = "imap.example.com"
-backend.port = 993
-backend.encryption.type = "tls"
-backend.login = "user@example.com"
-backend.auth.type = "password"
-backend.auth.raw = "your-password"
-
-# SMTP backend for sending emails
-message.send.backend.type = "smtp"
-message.send.backend.host = "smtp.example.com"
-message.send.backend.port = 587
-message.send.backend.encryption.type = "start-tls"
-message.send.backend.login = "user@example.com"
-message.send.backend.auth.type = "password"
-message.send.backend.auth.raw = "your-password"
+```typescript
+interface DDoSOverride {
+  description: string;
+  rules: Array<{
+    action: "execute";
+    expression: string; // Custom expression (Enterprise Advanced) or "true" for all
+    action_parameters: {
+      id: string; // Managed ruleset ID (discover via api.md)
+      overrides: {
+        sensitivity_level?: "default" | "medium" | "low" | "eoff";
+        action?: "block" | "managed_challenge" | "challenge" | "log"; // log = Enterprise Advanced only
+        categories?: Array<{
+          category: string; // e.g., "http-flood", "udp-flood"
+          sensitivity_level?: string;
+        }>;
+        rules?: Array<{
+          id: string;
+          action?: string;
+          sensitivity_level?: string;
+        }>;
+      };
+    };
+  }>;
+}
 ```
 
-## Password Options
+## Expression Availability
 
-### Raw password (testing only, not recommended)
+| Plan | Custom Expressions | Example |
+|------|-------------------|---------|
+| Free/Pro/Business | ✗ | Use `"true"` only |
+| Enterprise | ✗ | Use `"true"` only |
+| Enterprise Advanced | ✓ | `ip.src in {...}`, `http.request.uri.path matches "..."` |
 
-```toml
-backend.auth.raw = "your-password"
+## Sensitivity Mapping
+
+| UI | API | Threshold |
+|----|-----|-----------|
+| High | `default` | Most aggressive |
+| Medium | `medium` | Balanced |
+| Low | `low` | Less aggressive |
+| Essentially Off | `eoff` | Minimal mitigation |
+
+## Common Categories
+
+- `http-flood`, `http-anomaly` (L7)
+- `udp-flood`, `syn-flood`, `dns-flood` (L3/4)
+
+## Override Precedence
+
+Multiple override layers apply in this order (higher precedence wins):
+
+```
+Zone-level > Account-level
+Individual Rule > Category > Global sensitivity/action
 ```
 
-### Password from command (recommended)
+**Example**: Zone rule for `/api/*` overrides account-level global settings.
 
-```toml
-backend.auth.cmd = "pass show email/imap"
-# backend.auth.cmd = "security find-generic-password -a user@example.com -s imap -w"
-```
+## Adaptive DDoS Profiles
 
-### System keyring (requires keyring feature)
+**Availability**: Enterprise, Enterprise Advanced  
+**Learning period**: 7 days of traffic history required
 
-```toml
-backend.auth.keyring = "imap-example"
-```
+| Profile Type | Description | Detects |
+|--------------|-------------|---------|
+| **Origins** | Traffic patterns per origin server | Anomalous requests to specific origins |
+| **User-Agents** | Traffic patterns per User-Agent | Malicious/anomalous user agent strings |
+| **Locations** | Traffic patterns per geo-location | Attacks from specific countries/regions |
+| **Protocols** | Traffic patterns per protocol (L3/4) | Protocol-specific flood attacks |
 
-Then run `himalaya account configure <account>` to store the password.
+Configure by targeting specific adaptive rule IDs via API (see api.md#typed-override-examples).
 
-## Gmail Configuration
+## Alerting
 
-```toml
-[accounts.gmail]
-email = "you@gmail.com"
-display-name = "Your Name"
-default = true
+Configure via Notifications:
+- Alert types: `http_ddos_attack_alert`, `layer_3_4_ddos_attack_alert`, `advanced_*` variants
+- Filters: zones, hostnames, RPS/PPS/Mbps thresholds, IPs, protocols
+- Mechanisms: email, webhooks, PagerDuty
 
-backend.type = "imap"
-backend.host = "imap.gmail.com"
-backend.port = 993
-backend.encryption.type = "tls"
-backend.login = "you@gmail.com"
-backend.auth.type = "password"
-backend.auth.cmd = "pass show google/app-password"
-
-message.send.backend.type = "smtp"
-message.send.backend.host = "smtp.gmail.com"
-message.send.backend.port = 587
-message.send.backend.encryption.type = "start-tls"
-message.send.backend.login = "you@gmail.com"
-message.send.backend.auth.type = "password"
-message.send.backend.auth.cmd = "pass show google/app-password"
-```
-
-**Note:** Gmail requires an App Password if 2FA is enabled.
-
-## iCloud Configuration
-
-```toml
-[accounts.icloud]
-email = "you@icloud.com"
-display-name = "Your Name"
-
-backend.type = "imap"
-backend.host = "imap.mail.me.com"
-backend.port = 993
-backend.encryption.type = "tls"
-backend.login = "you@icloud.com"
-backend.auth.type = "password"
-backend.auth.cmd = "pass show icloud/app-password"
-
-message.send.backend.type = "smtp"
-message.send.backend.host = "smtp.mail.me.com"
-message.send.backend.port = 587
-message.send.backend.encryption.type = "start-tls"
-message.send.backend.login = "you@icloud.com"
-message.send.backend.auth.type = "password"
-message.send.backend.auth.cmd = "pass show icloud/app-password"
-```
-
-**Note:** Generate an app-specific password at appleid.apple.com
-
-## Folder Aliases
-
-Map custom folder names:
-
-```toml
-[accounts.default.folder.alias]
-inbox = "INBOX"
-sent = "Sent"
-drafts = "Drafts"
-trash = "Trash"
-```
-
-## Multiple Accounts
-
-```toml
-[accounts.personal]
-email = "personal@example.com"
-default = true
-# ... backend config ...
-
-[accounts.work]
-email = "work@company.com"
-# ... backend config ...
-```
-
-Switch accounts with `--account`:
-
-```bash
-himalaya --account work envelope list
-```
-
-## Notmuch Backend (local mail)
-
-```toml
-[accounts.local]
-email = "user@example.com"
-
-backend.type = "notmuch"
-backend.db-path = "~/.mail/.notmuch"
-```
-
-## OAuth2 Authentication (for providers that support it)
-
-```toml
-backend.auth.type = "oauth2"
-backend.auth.client-id = "your-client-id"
-backend.auth.client-secret.cmd = "pass show oauth/client-secret"
-backend.auth.access-token.cmd = "pass show oauth/access-token"
-backend.auth.refresh-token.cmd = "pass show oauth/refresh-token"
-backend.auth.auth-url = "https://provider.com/oauth/authorize"
-backend.auth.token-url = "https://provider.com/oauth/token"
-```
-
-## Additional Options
-
-### Signature
-
-```toml
-[accounts.default]
-signature = "Best regards,\nYour Name"
-signature-delim = "-- \n"
-```
-
-### Downloads directory
-
-```toml
-[accounts.default]
-downloads-dir = "~/Downloads/himalaya"
-```
-
-### Editor for composing
-
-Set via environment variable:
-
-```bash
-export EDITOR="vim"
-```
+See [api.md](./api.md#alert-configuration) for API examples.

@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>playwright-interactive</title>
+<style>
+/* Matches hanzo.ai's monochrome editorial aesthetic: light-first white canvas
+   with automatic light/dark color-scheme support, Zen sans display headings,
+   edge halftone dot framing, pill controls, and crisp dark terminal cards. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  color-scheme:light dark;
+  --ground-light:#ffffff; --ground-dark:#000000;
+  --panel-light:#fafafa; --panel-dark:#0f0f0f;
+  --panel-2-light:#f5f5f7; --panel-2-dark:#171717;
+  --ink-light:#0a0a0a; --ink-dark:#f5f5f7;
+  --soft-light:#6e6e73; --soft-dark:#a1a1a6;
+  --faint-light:#86868b; --faint-dark:#737378;
+  --line-light:#e5e5e5; --line-dark:#232323;
+  --line-hi-light:#d4d4d4; --line-hi-dark:#3a3a3a;
+  --solid-bg-light:#0a0a0a; --solid-bg-dark:#ffffff;
+  --solid-ink-light:#ffffff; --solid-ink-dark:#0a0a0a;
+  --solid-hover-light:#262626; --solid-hover-dark:#e5e5e5;
+  --dot-light:#d4d4d4; --dot-dark:#262626;
+
+  --ground:var(--ground-light); --panel:var(--panel-light); --panel-2:var(--panel-2-light);
+  --ink:var(--ink-light); --soft:var(--soft-light); --faint:var(--faint-light);
+  --line:var(--line-light); --line-hi:var(--line-hi-light);
+  --solid-bg:var(--solid-bg-light); --solid-ink:var(--solid-ink-light);
+  --solid-hover:var(--solid-hover-light); --dot:var(--dot-light);
+  --term-bg:#0a0a0a; --term-ink:#f5f5f7; --term-soft:#a1a1a6; --term-faint:#737378; --term-line:#232323;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  --r:999px; --r-soft:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:var(--ground-dark); --panel:var(--panel-dark); --panel-2:var(--panel-2-dark);
+    --ink:var(--ink-dark); --soft:var(--soft-dark); --faint:var(--faint-dark);
+    --line:var(--line-dark); --line-hi:var(--line-hi-dark);
+    --solid-bg:var(--solid-bg-dark); --solid-ink:var(--solid-ink-dark);
+    --solid-hover:var(--solid-hover-dark); --dot:var(--dot-dark);
+  }
+}
+@supports (color: light-dark(white, black)){
+  :root{
+    --ground:light-dark(var(--ground-light),var(--ground-dark));
+    --panel:light-dark(var(--panel-light),var(--panel-dark));
+    --panel-2:light-dark(var(--panel-2-light),var(--panel-2-dark));
+    --ink:light-dark(var(--ink-light),var(--ink-dark));
+    --soft:light-dark(var(--soft-light),var(--soft-dark));
+    --faint:light-dark(var(--faint-light),var(--faint-dark));
+    --line:light-dark(var(--line-light),var(--line-dark));
+    --line-hi:light-dark(var(--line-hi-light),var(--line-hi-dark));
+    --solid-bg:light-dark(var(--solid-bg-light),var(--solid-bg-dark));
+    --solid-ink:light-dark(var(--solid-ink-light),var(--solid-ink-dark));
+    --solid-hover:light-dark(var(--solid-hover-light),var(--solid-hover-dark));
+    --dot:light-dark(var(--dot-light),var(--dot-dark));
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--ground);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:1rem;line-height:1.58;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility}
+.wrap{max-width:68rem;margin:0 auto;padding:0 1.75rem}
+
+/* Edge halftone dot field framing the hero, matching hanzo.ai. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before,.hero::after{content:"";position:absolute;top:0;bottom:0;width:min(24vw,280px);
+  background-image:radial-gradient(var(--dot) 1.25px,transparent 1.25px);
+  background-size:9px 9px;pointer-events:none}
+.hero::before{inset-inline-start:0;
+  -webkit-mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero::after{inset-inline-end:0;
+  -webkit-mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero .wrap{position:relative;z-index:1;padding-top:4.5rem;padding-bottom:3.75rem}
+
+nav{position:sticky;top:0;z-index:40;border-bottom:1px solid var(--line);
+  background:var(--ground);background:color-mix(in srgb,var(--ground) 90%,transparent);
+  backdrop-filter:blur(16px)}
+nav .in{max-width:68rem;margin:0 auto;padding:.85rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--sans);font-size:.95rem;font-weight:600;letter-spacing:-.02em;
+  color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:.55rem}
+.brand i{font-style:normal;font-weight:400;color:var(--soft)}
+.mark{width:1.25em;height:1.25em;display:block;flex:0 0 auto}
+.nlinks{display:flex;align-items:center;gap:1.15rem}
+.nlinks a{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+.nlinks a:hover{color:var(--ink);text-decoration:none}
+nav a.up{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink);text-decoration:none}
+.ncta{display:inline-flex;align-items:center;justify-content:center;padding:.45rem 1rem;
+  border-radius:var(--r);background:var(--solid-bg);color:var(--solid-ink);font-size:.84rem;
+  font-weight:500;text-decoration:none;white-space:nowrap}
+.ncta:hover{background:var(--solid-hover);color:var(--solid-ink);text-decoration:none}
+
+h1{font-family:var(--sans);font-size:clamp(2.15rem,4.8vw,3.5rem);line-height:1.06;
+  letter-spacing:-.038em;margin:0 0 1.15rem;font-weight:600;text-wrap:balance;max-width:20ch}
+h1 em{font-style:normal;color:var(--soft);font-weight:500}
+.lede{color:var(--soft);font-size:1.0625rem;line-height:1.55;max-width:58ch;margin:0 0 2rem;text-wrap:pretty}
+
+.btns{display:flex;flex-wrap:wrap;gap:.55rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--sans);
+  font-size:.875rem;font-weight:500;letter-spacing:-.005em;
+  min-height:2.5rem;padding:.55rem 1.2rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:var(--ground);cursor:pointer;
+  line-height:1.2;transition:background .15s ease,border-color .15s ease}
+.btn:hover{background:var(--panel-2);text-decoration:none;border-color:var(--ink)}
+.btn.solid{background:var(--solid-bg);color:var(--solid-ink);border-color:var(--solid-bg)}
+.btn.solid:hover{background:var(--solid-hover);border-color:var(--solid-hover)}
+.btn .chev{width:.75em;height:.75em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--ground);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 16px 40px rgba(0,0,0,.18)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .4rem);
+  background:transparent;color:var(--ink);font-family:var(--sans);font-size:.86rem;
+  font-weight:500;text-decoration:none;cursor:pointer;line-height:1.3;white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:var(--panel-2);outline:none;text-decoration:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.08em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:68rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--sans);font-size:.8rem;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:500;flex:0 0 auto;font-family:var(--mono);font-size:.7rem;
+  letter-spacing:.1em;text-transform:uppercase;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .9rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;font-size:.82rem;font-weight:500;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--sans);font-size:1.35rem;letter-spacing:-.025em;margin:2.75rem 0 .75rem;font-weight:600;text-wrap:balance}
+h3{font-size:1.05rem;margin:2rem 0 .5rem;font-weight:600;letter-spacing:-.015em}
+h4,h5,h6{font-size:.95rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch;text-wrap:pretty}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.25rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.84em;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:6px;padding:.12em .4em}
+pre{color-scheme:dark;background:var(--term-bg);color:var(--term-ink);border:1px solid var(--term-line);
+  padding:1.05rem 1.2rem;border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.84rem;line-height:1.68;color:var(--term-ink)}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:2px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.55rem .75rem;text-align:left}
+
+.curl{color-scheme:dark;display:block;background:var(--term-bg);border:1px solid var(--term-line);
+  border-radius:var(--r-soft);padding:1rem 1.2rem;font-family:var(--mono);
+  font-size:.82rem;color:var(--term-soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.85}
+.curl b{color:var(--term-ink);font-weight:500}
+.curl i{font-style:normal;color:var(--term-faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.25rem;font-family:var(--sans);font-size:.95rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r);margin:2rem 0 .65rem}
+#q::placeholder{color:var(--faint)}
+#q:focus{outline:none;border-color:var(--ink);background:var(--ground)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.75rem 1rem;margin:0 -1rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none;transition:background .12s ease}
+.row:hover{background:var(--panel-2);text-decoration:none}
+.nm{font-family:var(--mono);font-size:.86rem;font-weight:500;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.92rem;display:block;margin-top:.15rem}
+footer{margin-top:4rem;padding:2.25rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft);text-decoration:none}
+footer a:hover{color:var(--ink);text-decoration:underline}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);font-weight:500;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3rem;padding-bottom:2.5rem}
+  .nlinks .nhide{display:none}
+  .btns{gap:.5rem}
+  .btn{padding:.55rem 1rem;font-size:.84rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/playwright-interactive">
+<link rel="alternate" type="text/markdown" href="/playwright-interactive.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/playwright-interactive.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> Hanzo <i>Skills</i></a>
+  <div class="nlinks"><a class="nhide" href="https://hanzo.sh">hanzo.sh</a><a class="nhide" href="https://docs.hanzo.ai">Docs</a><a class="nhide" href="https://hanzo.ai/security">Security</a><a class="up" href="/">All skills</a><a class="ncta" href="https://hanzo.app">Try Hanzo</a></div>
+</div></nav>
+
+<div class="wrap">
+<h1>playwright-interactive</h1><p class="lede">Persistent browser and Electron interaction through `js_repl` for fast iterative UI debugging.</p><h1>Playwright Interactive Skill</h1>
+<p>Use a persistent <code>js_repl</code> Playwright session to debug local web or Electron apps, keep the same handles alive across iterations, and run functional plus visual QA without restarting the whole toolchain unless the process ownership changed.</p>
+<h2>Preconditions</h2>
+<ul><li><code>js_repl</code> must be enabled for this skill.</li><li>If <code>js_repl</code> is missing, enable it in <code>~/.codex/config.toml</code>:</li></ul>
+<pre><code class="lang-toml">[features]
+js_repl = true</code></pre>
+<ul><li>You can also start a new session with <code>--enable js_repl</code> (equivalent to <code>-c features.js_repl=true</code>).</li><li>After enabling <code>js_repl</code>, start a new Codex session so the tool list refreshes.</li><li>For now, run this workflow with sandboxing disabled: start Codex with <code>--sandbox danger-full-access</code> (or the equivalent config for <code>sandbox_mode=danger-full-access</code>). This is a temporary requirement while <code>js_repl</code> + Playwright support inside the sandbox is still being completed.</li><li>Run setup from the same project directory you need to debug.</li><li>Treat <code>js_repl_reset</code> as a recovery tool, not routine cleanup. Resetting the kernel destroys your Playwright handles.</li></ul>
+<h2>One-time setup</h2>
+<pre><code class="lang-bash">test -f package.json || npm init -y
+npm install playwright
+# Web-only, for headed Chromium or mobile emulation:
+# npx playwright install chromium
+# Electron-only, and only if the target workspace is the app itself:
+# npm install --save-dev electron
+node -e &quot;import(&#x27;playwright&#x27;).then(() =&gt; console.log(&#x27;playwright import ok&#x27;)).catch((error) =&gt; { console.error(error); process.exit(1); })&quot;</code></pre>
+<p>If you switch to a different workspace later, repeat setup there.</p>
+<h2>Core Workflow</h2>
+<ol><li>Write a brief QA inventory before testing:</li></ol>
+<ul><li>Build the inventory from three sources: the user&#x27;s requested requirements, the user-visible features or behaviors you actually implemented, and the claims you expect to make in the final response.</li><li>Anything that appears in any of those three sources must map to at least one QA check before signoff.</li><li>List the user-visible claims you intend to sign off on.</li><li>List every meaningful user-facing control, mode switch, or implemented interactive behavior.</li><li>List the state changes or view changes each control or implemented behavior can cause.</li><li>Use this as the shared coverage list for both functional QA and visual QA.</li><li>For each claim or control-state pair, note the intended functional check, the specific state where the visual check must happen, and the evidence you expect to capture.</li><li>If a requirement is visually central but subjective, convert it into an observable QA check instead of leaving it implicit.</li><li>Add at least 2 exploratory or off-happy-path scenarios that could expose fragile behavior.</li></ul>
+<ol><li>Run the bootstrap cell once.</li><li>Start or confirm any required dev server in a persistent TTY session.</li><li>Launch the correct runtime and keep reusing the same Playwright handles.</li><li>After each code change, reload for renderer-only changes or relaunch for main-process/startup changes.</li><li>Run functional QA with normal user input.</li><li>Run a separate visual QA pass.</li><li>Verify viewport fit and capture the screenshots needed to support your claims.</li><li>Clean up the Playwright session only when the task is actually finished.</li></ol>
+<h2>Bootstrap (Run Once)</h2>
+<pre><code class="lang-javascript">var chromium;
+var electronLauncher;
+var browser;
+var context;
+var page;
+var mobileContext;
+var mobilePage;
+var electronApp;
+var appWindow;
+
+try {
+  ({ chromium, _electron: electronLauncher } = await import(&quot;playwright&quot;));
+  console.log(&quot;Playwright loaded&quot;);
+} catch (error) {
+  throw new Error(
+    `Could not load playwright from the current js_repl cwd. Run the setup commands from this workspace first. Original error: ${error}`
+  );
+}</code></pre>
+<p>Binding rules:</p>
+<ul><li>Use <code>var</code> for the shared top-level Playwright handles because later <code>js_repl</code> cells reuse them.</li><li>The setup cells below are intentionally short happy paths. If a handle looks stale, set that binding to <code>undefined</code> and rerun the cell instead of adding recovery logic everywhere.</li><li>Prefer one named handle per surface you care about (<code>page</code>, <code>mobilePage</code>, <code>appWindow</code>) over repeatedly rediscovering pages from the context.</li></ul>
+<p>Shared web helpers:</p>
+<pre><code class="lang-javascript">var resetWebHandles = function () {
+  context = undefined;
+  page = undefined;
+  mobileContext = undefined;
+  mobilePage = undefined;
+};
+
+var ensureWebBrowser = async function () {
+  if (browser &amp;&amp; !browser.isConnected()) {
+    browser = undefined;
+    resetWebHandles();
+  }
+
+  browser ??= await chromium.launch({ headless: false });
+  return browser;
+};
+
+var reloadWebContexts = async function () {
+  for (const currentContext of [context, mobileContext]) {
+    if (!currentContext) continue;
+    for (const p of currentContext.pages()) {
+      await p.reload({ waitUntil: &quot;domcontentloaded&quot; });
+    }
+  }
+  console.log(&quot;Reloaded existing web tabs&quot;);
+};</code></pre>
+<h2>Choose Session Mode</h2>
+<p>For web apps, use an explicit viewport by default and treat native-window mode as a separate validation pass.</p>
+<ul><li>Use an explicit viewport for routine iteration, breakpoint checks, reproducible screenshots, snapshot diffs, and model-assisted localization. This is the default because it is stable across machines and avoids host window-manager variability.</li><li>When you need deterministic high-DPI behavior, keep the explicit viewport and add <code>deviceScaleFactor</code> rather than switching straight to native-window mode.</li><li>Use native-window mode (<code>viewport: null</code>) for a separate headed pass when you need to validate launched window size, OS-level DPI behavior, browser chrome interactions, or bugs that may depend on the host display configuration.</li><li>For Electron, assume native-window behavior all the time. Electron launches through Playwright with <code>noDefaultViewport</code>, so treat it like a real desktop window and check the as-launched size and layout before resizing anything.</li><li>When signoff depends on both layout breakpoints and real desktop behavior, do both passes: explicit viewport first for deterministic QA, then native-window validation for final environment-specific checks.</li><li>Treat switching modes as a context reset. Do not reuse a viewport-emulated <code>context</code> for a native-window pass or vice versa; close the old <code>page</code> and <code>context</code>, then create a new one for the new mode.</li></ul>
+<h2>Start or Reuse Web Session</h2>
+<p>Desktop and mobile web sessions share the same <code>browser</code>, helpers, and QA flow. The main difference is which context and page pair you create.</p>
+<h3>Desktop Web Context</h3>
+<p>Set <code>TARGET_URL</code> to the app you are debugging. For local servers, prefer <code>127.0.0.1</code> over <code>localhost</code>.</p>
+<pre><code class="lang-javascript">var TARGET_URL = &quot;http://127.0.0.1:3000&quot;;
+
+if (page?.isClosed()) page = undefined;
+
+await ensureWebBrowser();
+context ??= await browser.newContext({
+  viewport: { width: 1600, height: 900 },
+});
+page ??= await context.newPage();
+
+await page.goto(TARGET_URL, { waitUntil: &quot;domcontentloaded&quot; });
+console.log(&quot;Loaded:&quot;, await page.title());</code></pre>
+<p>If <code>context</code> or <code>page</code> is stale, set <code>context = page = undefined</code> and rerun the cell.</p>
+<h3>Mobile Web Context</h3>
+<p>Reuse <code>TARGET_URL</code> when it already exists; otherwise set a mobile target directly.</p>
+<pre><code class="lang-javascript">var MOBILE_TARGET_URL = typeof TARGET_URL === &quot;string&quot;
+  ? TARGET_URL
+  : &quot;http://127.0.0.1:3000&quot;;
+
+if (mobilePage?.isClosed()) mobilePage = undefined;
+
+await ensureWebBrowser();
+mobileContext ??= await browser.newContext({
+  viewport: { width: 390, height: 844 },
+  isMobile: true,
+  hasTouch: true,
+});
+mobilePage ??= await mobileContext.newPage();
+
+await mobilePage.goto(MOBILE_TARGET_URL, { waitUntil: &quot;domcontentloaded&quot; });
+console.log(&quot;Loaded mobile:&quot;, await mobilePage.title());</code></pre>
+<p>If <code>mobileContext</code> or <code>mobilePage</code> is stale, set <code>mobileContext = mobilePage = undefined</code> and rerun the cell.</p>
+<h3>Native-Window Web Pass</h3>
+<pre><code class="lang-javascript">var TARGET_URL = &quot;http://127.0.0.1:3000&quot;;
+
+await ensureWebBrowser();
+
+await page?.close().catch(() =&gt; {});
+await context?.close().catch(() =&gt; {});
+page = undefined;
+context = undefined;
+
+browser ??= await chromium.launch({ headless: false });
+context = await browser.newContext({ viewport: null });
+page = await context.newPage();
+
+await page.goto(TARGET_URL, { waitUntil: &quot;domcontentloaded&quot; });
+console.log(&quot;Loaded native window:&quot;, await page.title());</code></pre>
+<h2>Start or Reuse Electron Session</h2>
+<p>Set <code>ELECTRON_ENTRY</code> to <code>.</code> when the current workspace is the Electron app and <code>package.json</code> points <code>main</code> to the right entry file. If you need to target a specific main-process file directly, use a path such as <code>./main.js</code> instead.</p>
+<pre><code class="lang-javascript">var ELECTRON_ENTRY = &quot;.&quot;;
+
+if (appWindow?.isClosed()) appWindow = undefined;
+
+if (!appWindow &amp;&amp; electronApp) {
+  await electronApp.close().catch(() =&gt; {});
+  electronApp = undefined;
+}
+
+electronApp ??= await electronLauncher.launch({
+  args: [ELECTRON_ENTRY],
+});
+
+appWindow ??= await electronApp.firstWindow();
+
+console.log(&quot;Loaded Electron window:&quot;, await appWindow.title());</code></pre>
+<p>If <code>js_repl</code> is not already running from the Electron app workspace, pass <code>cwd</code> explicitly when launching.</p>
+<p>If the app process looks stale, set <code>electronApp = appWindow = undefined</code> and rerun the cell.</p>
+<p>If you already have an Electron session but need a fresh process after a main-process, preload, or startup change, use the restart cell in the next section instead of rerunning this one.</p>
+<h2>Reuse Sessions During Iteration</h2>
+<p>Keep the same session alive whenever you can.</p>
+<p>Web renderer reload:</p>
+<pre><code class="lang-javascript">await reloadWebContexts();</code></pre>
+<p>Electron renderer-only reload:</p>
+<pre><code class="lang-javascript">await appWindow.reload({ waitUntil: &quot;domcontentloaded&quot; });
+console.log(&quot;Reloaded Electron window&quot;);</code></pre>
+<p>Electron restart after main-process, preload, or startup changes:</p>
+<pre><code class="lang-javascript">await electronApp.close().catch(() =&gt; {});
+electronApp = undefined;
+appWindow = undefined;
+
+electronApp = await electronLauncher.launch({
+  args: [ELECTRON_ENTRY],
+});
+
+appWindow = await electronApp.firstWindow();
+console.log(&quot;Relaunched Electron window:&quot;, await appWindow.title());</code></pre>
+<p>If your launch requires an explicit <code>cwd</code>, include the same <code>cwd</code> here.</p>
+<p>Default posture:</p>
+<ul><li>Keep each <code>js_repl</code> cell short and focused on one interaction burst.</li><li>Reuse the existing top-level bindings (<code>browser</code>, <code>context</code>, <code>page</code>, <code>electronApp</code>, <code>appWindow</code>) instead of redeclaring them.</li><li>If you need isolation, create a new page or a new context inside the same browser.</li><li>For Electron, use <code>electronApp.evaluate(...)</code> only for main-process inspection or purpose-built diagnostics.</li><li>Fix helper mistakes in place; do not reset the REPL unless the kernel is actually broken.</li></ul>
+<h2>Checklists</h2>
+<h3>Session Loop</h3>
+<ul><li>Bootstrap <code>js_repl</code> once, then keep the same Playwright handles alive across iterations.</li><li>Launch the target runtime from the current workspace.</li><li>Make the code change.</li><li>Reload or relaunch using the correct path for that change.</li><li>Update the shared QA inventory if exploration reveals an additional control, state, or visible claim.</li><li>Re-run functional QA.</li><li>Re-run visual QA.</li><li>Capture final artifacts only after the current state is the one you are evaluating.</li></ul>
+<h3>Reload Decision</h3>
+<ul><li>Renderer-only change: reload the existing page or Electron window.</li><li>Main-process, preload, or startup change: relaunch Electron.</li><li>New uncertainty about process ownership or startup code: relaunch instead of guessing.</li></ul>
+<h3>Functional QA</h3>
+<ul><li>Use real user controls for signoff: keyboard, mouse, click, touch, or equivalent Playwright input APIs.</li><li>Verify at least one end-to-end critical flow.</li><li>Confirm the visible result of that flow, not just internal state.</li><li>For realtime or animation-heavy apps, verify behavior under actual interaction timing.</li><li>Work through the shared QA inventory rather than ad hoc spot checks.</li><li>Cover every obvious visible control at least once before signoff, not only the main happy path.</li><li>For reversible controls or stateful toggles in the inventory, test the full cycle: initial state, changed state, and return to the initial state.</li><li>After the scripted checks pass, do a short exploratory pass using normal input for 30-90 seconds instead of following only the intended path.</li><li>If the exploratory pass reveals a new state, control, or claim, add it to the shared QA inventory and cover it before signoff.</li><li><code>page.evaluate(...)</code> and <code>electronApp.evaluate(...)</code> may inspect or stage state, but they do not count as signoff input.</li></ul>
+<h3>Visual QA</h3>
+<ul><li>Treat visual QA as separate from functional QA.</li><li>Use the same shared QA inventory defined before testing and updated during QA; do not start visual coverage from a different implicit list.</li><li>Restate the user-visible claims and verify each one explicitly; do not assume a functional pass proves a visual claim.</li><li>A user-visible claim is not signed off until it has been inspected in the specific state where it is meant to be perceived.</li><li>Inspect the initial viewport before scrolling.</li><li>Confirm that the initial view visibly supports the interface&#x27;s primary claims; if a core promised element is not clearly perceptible there, treat that as a bug.</li><li>Inspect all required visible regions, not just the main interaction surface.</li><li>Inspect the states and modes already enumerated in the shared QA inventory, including at least one meaningful post-interaction state when the task is interactive.</li><li>If motion or transitions are part of the experience, inspect at least one in-transition state in addition to the settled endpoints.</li><li>If labels, overlays, annotations, guides, or highlights are meant to track changing content, verify that relationship after the relevant state change.</li><li>For dynamic or interaction-dependent visuals, inspect long enough to judge stability, layering, and readability; do not rely on a single screenshot for signoff.</li><li>For interfaces that can become denser after loading or interaction, inspect the densest realistic state you can reach during QA, not only the empty, loading, or collapsed state.</li><li>If the product has a defined minimum supported viewport or window size, run a separate visual QA pass there; otherwise, choose a smaller but still realistic size and inspect it explicitly.</li><li>Distinguish presence from implementation: if an intended affordance is technically there but not clearly perceptible because of weak contrast, occlusion, clipping, or instability, treat that as a visual failure.</li><li>If any required visible region is clipped, cut off, obscured, or pushed outside the viewport in the state you are evaluating, treat that as a bug even if page-level scroll metrics appear acceptable.</li><li>Look for clipping, overflow, distortion, layout imbalance, inconsistent spacing, alignment problems, illegible text, weak contrast, broken layering, and awkward motion states.</li><li>Judge aesthetic quality as well as correctness. The UI should feel intentional, coherent, and visually pleasing for the task.</li><li>Prefer viewport screenshots for signoff. Use full-page captures only as secondary debugging artifacts, and capture a focused screenshot when a region needs closer inspection.</li><li>If motion makes a screenshot ambiguous, wait briefly for the UI to settle, then capture the image you are actually evaluating.</li><li>Before signoff, explicitly ask: what visible part of this interface have I not yet inspected closely?</li><li>Before signoff, explicitly ask: what visible defect would most likely embarrass this result if the user looked closely?</li></ul>
+<h3>Signoff</h3>
+<ul><li>The functional path passed with normal user input.</li><li>Coverage is explicit against the shared QA inventory: note which requirements, implemented features, controls, states, and claims were exercised, and call out any intentional exclusions.</li><li>The visual QA pass covered the whole relevant interface.</li><li>Each user-visible claim has a matching visual check and reviewed screenshot artifact from the state and viewport or window size where that claim matters.</li><li>The viewport-fit checks passed for the intended initial view and any required minimum supported viewport or window size.</li><li>If the product launches in a window, the as-launched size, placement, and initial layout were checked before any manual resize or repositioning.</li><li>The UI is not just functional; it is visually coherent and not aesthetically weak for the task.</li><li>Functional correctness, viewport fit, and visual quality must each pass on their own; one does not imply the others.</li><li>A short exploratory pass was completed for interactive products, and the response mentions what that pass covered.</li><li>If screenshot review and numeric checks disagreed at any point, the discrepancy was investigated before signoff; visible clipping in screenshots is a failure to resolve, not something metrics can overrule.</li><li>Include a brief negative confirmation of the main defect classes you checked for and did not find.</li><li>Cleanup was executed, or you intentionally kept the session alive for further work.</li></ul>
+<h2>Screenshot Examples</h2>
+<p>If you plan to emit a screenshot through <code>codex.emitImage(...)</code>, use the CSS-normalized paths in the next section by default. Those are the canonical examples for screenshots that will be interpreted by the model or used for coordinate-based follow-up actions. Keep raw captures as an exception for fidelity-sensitive debugging only; the raw exception examples appear after the normalization guidance.</p>
+<h3>Model-bound screenshots (default)</h3>
+<p>If you will emit a screenshot with <code>codex.emitImage(...)</code> for model interpretation, normalize it to CSS pixels for the exact region you captured before emitting. This keeps returned coordinates aligned with Playwright CSS pixels if the reply is later used for clicking, and it also reduces image payload size and model token cost.</p>
+<p>Do not emit raw native-window screenshots by default. Skip normalization only when you explicitly need device-pixel fidelity, such as Retina or DPI artifact debugging, pixel-accurate rendering inspection, or another fidelity-sensitive case where raw pixels matter more than payload size. For local-only inspection that will not be emitted to the model, raw capture is fine.</p>
+<p>Do not assume <code>page.screenshot({ scale: &quot;css&quot; })</code> is enough in native-window mode (<code>viewport: null</code>). In Chromium on macOS Retina displays, headed native-window screenshots can still come back at device-pixel size even when <code>scale: &quot;css&quot;</code> is requested. The same caveat applies to Electron windows launched through Playwright because Electron runs with <code>noDefaultViewport</code>, and <code>appWindow.screenshot({ scale: &quot;css&quot; })</code> may still return device-pixel output.</p>
+<p>Use separate normalization paths for web pages and Electron windows:</p>
+<ul><li>Web: prefer <code>page.screenshot({ scale: &quot;css&quot; })</code> directly. If native-window Chromium still returns device-pixel output, resize inside the current page with canvas; no scratch page is required.</li><li>Electron: do not use <code>appWindow.context().newPage()</code> or <code>electronApp.context().newPage()</code> as a scratch page. Electron contexts do not support that path reliably. Capture in the main process with <code>BrowserWindow.capturePage(...)</code>, resize with <code>nativeImage.resize(...)</code>, and emit those bytes directly.</li></ul>
+<p>Shared helpers and conventions:</p>
+<pre><code class="lang-javascript">var emitJpeg = async function (bytes) {
+  await codex.emitImage({
+    bytes,
+    mimeType: &quot;image/jpeg&quot;,
+    detail: &quot;original&quot;,
+  });
+};
+
+var emitWebJpeg = async function (surface, options = {}) {
+  await emitJpeg(await surface.screenshot({
+    type: &quot;jpeg&quot;,
+    quality: 85,
+    scale: &quot;css&quot;,
+    ...options,
+  }));
+};
+
+var clickCssPoint = async function ({ surface, x, y, clip }) {
+  await surface.mouse.click(
+    clip ? clip.x + x : x,
+    clip ? clip.y + y : y
+  );
+};
+
+var tapCssPoint = async function ({ page, x, y, clip }) {
+  await page.touchscreen.tap(
+    clip ? clip.x + x : x,
+    clip ? clip.y + y : y
+  );
+};</code></pre>
+<ul><li>Use <code>page</code> or <code>mobilePage</code> for web, or <code>appWindow</code> for Electron, as the <code>surface</code>.</li><li>Treat <code>clip</code> as CSS pixels from <code>getBoundingClientRect()</code> in the renderer.</li><li>Prefer JPEG at <code>quality: 85</code> unless lossless fidelity is specifically required.</li><li>For full-image captures, use returned <code>{ x, y }</code> directly.</li><li>For clipped captures, add the clip origin back when clicking.</li></ul>
+<h3>Web CSS normalization</h3>
+<p>Preferred web path for explicit-viewport contexts, and often for web in general:</p>
+<pre><code class="lang-javascript">await emitWebJpeg(page);</code></pre>
+<p>Mobile web uses the same path; substitute <code>mobilePage</code> for <code>page</code>:</p>
+<pre><code class="lang-javascript">await emitWebJpeg(mobilePage);</code></pre>
+<p>If the model returns <code>{ x, y }</code>, click it directly:</p>
+<pre><code class="lang-javascript">await clickCssPoint({ surface: page, x, y });</code></pre>
+<p>Mobile web click path:</p>
+<pre><code class="lang-javascript">await tapCssPoint({ page: mobilePage, x, y });</code></pre>
+<p>For web <code>clip</code> screenshots or element screenshots in this normal path, <code>scale: &quot;css&quot;</code> usually works directly. Add the region origin back when clicking.</p>
+<ul><li><code>await emitWebJpeg(page, { clip })</code></li><li><code>await emitWebJpeg(mobilePage, { clip })</code></li><li><code>await clickCssPoint({ surface: page, clip, x, y })</code></li><li><code>await tapCssPoint({ page: mobilePage, clip, x, y })</code></li><li><code>await clickCssPoint({ surface: page, clip: box, x, y })</code> after <code>const box = await locator.boundingBox()</code></li></ul>
+<p>Web native-window fallback when <code>scale: &quot;css&quot;</code> still comes back at device-pixel size:</p>
+<pre><code class="lang-javascript">var emitWebScreenshotCssScaled = async function ({ page, clip, quality = 0.85 } = {}) {
+  var NodeBuffer = (await import(&quot;node:buffer&quot;)).Buffer;
+  const target = clip
+    ? { width: clip.width, height: clip.height }
+    : await page.evaluate(() =&gt; ({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      }));
+
+  const screenshotBuffer = await page.screenshot({
+    type: &quot;png&quot;,
+    ...(clip ? { clip } : {}),
+  });
+
+  const bytes = await page.evaluate(
+    async ({ imageBase64, targetWidth, targetHeight, quality }) =&gt; {
+      const image = new Image();
+      image.src = `data:image/png;base64,${imageBase64}`;
+      await image.decode();
+
+      const canvas = document.createElement(&quot;canvas&quot;);
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+
+      const ctx = canvas.getContext(&quot;2d&quot;);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+      const blob = await new Promise((resolve) =&gt;
+        canvas.toBlob(resolve, &quot;image/jpeg&quot;, quality)
+      );
+
+      return new Uint8Array(await blob.arrayBuffer());
+    },
+    {
+      imageBase64: NodeBuffer.from(screenshotBuffer).toString(&quot;base64&quot;),
+      targetWidth: target.width,
+      targetHeight: target.height,
+      quality,
+    }
+  );
+
+  await emitJpeg(bytes);
+};</code></pre>
+<p>For a full viewport fallback capture, treat returned <code>{ x, y }</code> as direct CSS coordinates:</p>
+<pre><code class="lang-javascript">await emitWebScreenshotCssScaled({ page });
+await clickCssPoint({ surface: page, x, y });</code></pre>
+<p>For a clipped fallback capture, add the clip origin back:</p>
+<pre><code class="lang-javascript">await emitWebScreenshotCssScaled({ page, clip });
+await clickCssPoint({ surface: page, clip, x, y });</code></pre>
+<h3>Electron CSS normalization</h3>
+<p>For Electron, normalize in the main process instead of opening a scratch Playwright page. The helper below returns CSS-scaled bytes for the full content area or for a clipped CSS-pixel region. Treat <code>clip</code> as content-area CSS pixels, for example values taken from <code>getBoundingClientRect()</code> in the renderer.</p>
+<pre><code class="lang-javascript">var emitElectronScreenshotCssScaled = async function ({ electronApp, clip, quality = 85 } = {}) {
+  const bytes = await electronApp.evaluate(async ({ BrowserWindow }, { clip, quality }) =&gt; {
+    const win = BrowserWindow.getAllWindows()[0];
+    const image = clip ? await win.capturePage(clip) : await win.capturePage();
+
+    const target = clip
+      ? { width: clip.width, height: clip.height }
+      : (() =&gt; {
+          const [width, height] = win.getContentSize();
+          return { width, height };
+        })();
+
+    const resized = image.resize({
+      width: target.width,
+      height: target.height,
+      quality: &quot;best&quot;,
+    });
+
+    return resized.toJPEG(quality);
+  }, { clip, quality });
+
+  await emitJpeg(bytes);
+};</code></pre>
+<p>Full Electron window:</p>
+<pre><code class="lang-javascript">await emitElectronScreenshotCssScaled({ electronApp });
+await clickCssPoint({ surface: appWindow, x, y });</code></pre>
+<p>Clipped Electron region using CSS pixels from the renderer:</p>
+<pre><code class="lang-javascript">var clip = await appWindow.evaluate(() =&gt; {
+  const rect = document.getElementById(&quot;board&quot;).getBoundingClientRect();
+  return {
+    x: Math.round(rect.x),
+    y: Math.round(rect.y),
+    width: Math.round(rect.width),
+    height: Math.round(rect.height),
+  };
+});
+
+await emitElectronScreenshotCssScaled({ electronApp, clip });
+await clickCssPoint({ surface: appWindow, clip, x, y });</code></pre>
+<h3>Raw Screenshot Exception Examples</h3>
+<p>Use these only when raw pixels matter more than CSS-coordinate alignment, such as Retina or DPI artifact debugging, pixel-accurate rendering inspection, or other fidelity-sensitive review.</p>
+<p>Web desktop raw emit:</p>
+<pre><code class="lang-javascript">await codex.emitImage({
+  bytes: await page.screenshot({ type: &quot;jpeg&quot;, quality: 85 }),
+  mimeType: &quot;image/jpeg&quot;,
+  detail: &quot;original&quot;,
+});</code></pre>
+<p>Electron raw emit:</p>
+<pre><code class="lang-javascript">await codex.emitImage({
+  bytes: await appWindow.screenshot({ type: &quot;jpeg&quot;, quality: 85 }),
+  mimeType: &quot;image/jpeg&quot;,
+  detail: &quot;original&quot;,
+});</code></pre>
+<p>Mobile raw emit after the mobile web context is already running:</p>
+<pre><code class="lang-javascript">await codex.emitImage({
+  bytes: await mobilePage.screenshot({ type: &quot;jpeg&quot;, quality: 85 }),
+  mimeType: &quot;image/jpeg&quot;,
+  detail: &quot;original&quot;,
+});</code></pre>
+<h2>Viewport Fit Checks (Required)</h2>
+<p>Do not assume a screenshot is acceptable just because the main widget is visible. Before signoff, explicitly verify that the intended initial view matches the product requirement, using both screenshot review and numeric checks.</p>
+<ul><li>Define the intended initial view before signoff. For scrollable pages, this is the above-the-fold experience. For app-like shells, games, editors, dashboards, or tools, this is the full interactive surface plus the controls and status needed to use it.</li><li>Use screenshots as the primary evidence for fit. Numeric checks support the screenshots; they do not overrule visible clipping.</li><li>Signoff fails if any required visible region is clipped, cut off, obscured, or pushed outside the viewport in the intended initial view, even if page-level scroll metrics appear acceptable.</li><li>Scrolling is acceptable when the product is designed to scroll and the initial view still communicates the core experience and exposes the primary call to action or required starting context.</li><li>For fixed-shell interfaces, scrolling is not an acceptable workaround if it is needed to reach part of the primary interactive surface or essential controls.</li><li>Do not rely on document scroll metrics alone. Fixed-height shells, internal panes, and hidden-overflow containers can clip required UI while page-level scroll checks still look clean.</li><li>Check region bounds, not just document bounds. Verify that each required visible region fits within the viewport in the startup state.</li><li>For Electron or desktop apps, verify both the launched window size and placement and the renderer&#x27;s initial visible layout before any manual resize or repositioning.</li><li>Passing viewport-fit checks only proves that the intended initial view is visible without unintended clipping or scrolling. It does not prove that the UI is visually correct or aesthetically successful.</li></ul>
+<p>Web or renderer check:</p>
+<pre><code class="lang-javascript">console.log(await page.evaluate(() =&gt; ({
+  innerWidth: window.innerWidth,
+  innerHeight: window.innerHeight,
+  clientWidth: document.documentElement.clientWidth,
+  clientHeight: document.documentElement.clientHeight,
+  scrollWidth: document.documentElement.scrollWidth,
+  scrollHeight: document.documentElement.scrollHeight,
+  canScrollX: document.documentElement.scrollWidth &gt; document.documentElement.clientWidth,
+  canScrollY: document.documentElement.scrollHeight &gt; document.documentElement.clientHeight,
+})));</code></pre>
+<p>Electron check:</p>
+<pre><code class="lang-javascript">console.log(await appWindow.evaluate(() =&gt; ({
+  innerWidth: window.innerWidth,
+  innerHeight: window.innerHeight,
+  clientWidth: document.documentElement.clientWidth,
+  clientHeight: document.documentElement.clientHeight,
+  scrollWidth: document.documentElement.scrollWidth,
+  scrollHeight: document.documentElement.scrollHeight,
+  canScrollX: document.documentElement.scrollWidth &gt; document.documentElement.clientWidth,
+  canScrollY: document.documentElement.scrollHeight &gt; document.documentElement.clientHeight,
+})));</code></pre>
+<p>Augment the numeric check with <code>getBoundingClientRect()</code> checks for the required visible regions in your specific UI when clipping is a realistic failure mode; document-level metrics alone are not sufficient for fixed shells.</p>
+<h2>Dev Server</h2>
+<p>For local web debugging, keep the app running in a persistent TTY session. Do not rely on one-shot background commands from a short-lived shell.</p>
+<p>Use the project&#x27;s normal start command, for example:</p>
+<pre><code class="lang-bash">npm start</code></pre>
+<p>Before <code>page.goto(...)</code>, verify the chosen port is listening and the app responds.</p>
+<p>For Electron debugging, launch the app from <code>js_repl</code> through <code>_electron.launch(...)</code> so the same session owns the process. If the Electron renderer depends on a separate dev server (for example Vite or Next), keep that server running in a persistent TTY session and then relaunch or reload the Electron app from <code>js_repl</code>.</p>
+<h2>Cleanup</h2>
+<p>Only run cleanup when the task is actually finished:</p>
+<ul><li>This cleanup is manual. Exiting Codex, closing the terminal, or losing the <code>js_repl</code> session does not implicitly run <code>electronApp.close()</code>, <code>context.close()</code>, or <code>browser.close()</code>.</li><li>For Electron specifically, assume the app may keep running if you leave the session without executing the cleanup cell first.</li></ul>
+<pre><code class="lang-javascript">if (electronApp) {
+  await electronApp.close().catch(() =&gt; {});
+}
+
+if (mobileContext) {
+  await mobileContext.close().catch(() =&gt; {});
+}
+
+if (context) {
+  await context.close().catch(() =&gt; {});
+}
+
+if (browser) {
+  await browser.close().catch(() =&gt; {});
+}
+
+browser = undefined;
+context = undefined;
+page = undefined;
+mobileContext = undefined;
+mobilePage = undefined;
+electronApp = undefined;
+appWindow = undefined;
+
+console.log(&quot;Playwright session closed&quot;);</code></pre>
+<p>If you plan to exit Codex immediately after debugging, run the cleanup cell first and wait for the <code>&quot;Playwright session closed&quot;</code> log before quitting.</p>
+<h2>Common Failure Modes</h2>
+<ul><li><code>Cannot find module &#x27;playwright&#x27;</code>: run the one-time setup in the current workspace and verify the import before using <code>js_repl</code>.</li><li>Playwright package is installed but the browser executable is missing: run <code>npx playwright install chromium</code>.</li><li><code>page.goto: net::ERR_CONNECTION_REFUSED</code>: make sure the dev server is still running in a persistent TTY session, recheck the port, and prefer <code>http://127.0.0.1:&lt;port&gt;</code>.</li><li><code>electron.launch</code> hangs, times out, or exits immediately: verify the local <code>electron</code> dependency, confirm the <code>args</code> target, and make sure any renderer dev server is already running before launch.</li><li><code>Identifier has already been declared</code>: reuse the existing top-level bindings, choose a new name, or wrap the code in <code>{ ... }</code>. Use <code>js_repl_reset</code> only when the kernel is genuinely stuck.</li><li><code>browserContext.newPage: Protocol error (Target.createTarget): Not supported</code> while working with Electron: do not use <code>appWindow.context().newPage()</code> or <code>electronApp.context().newPage()</code> as a scratch page; use the Electron-specific screenshot normalization flow in the model-bound screenshots section.</li><li><code>js_repl</code> timed out or reset: rerun the bootstrap cell and recreate the session with shorter, more focused cells.</li><li>Browser launch or network operations fail immediately: confirm the session was started with <code>--sandbox danger-full-access</code> and restart that way if needed.</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/playwright-interactive.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>

@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>token-creation</title>
+<style>
+/* Matches hanzo.ai's monochrome editorial aesthetic: light-first white canvas
+   with automatic light/dark color-scheme support, Zen sans display headings,
+   edge halftone dot framing, pill controls, and crisp dark terminal cards. */
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen';src:url('/fonts/Zen-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Variable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Zen Mono';src:url('/fonts/ZenMono-Italic-Variable.woff2') format('woff2');font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:'Zen Pixel Square';src:url('/fonts/ZenPixel-Square.woff2') format('woff2');font-style:normal;font-display:swap}
+
+:root{
+  color-scheme:light dark;
+  --ground-light:#ffffff; --ground-dark:#000000;
+  --panel-light:#fafafa; --panel-dark:#0f0f0f;
+  --panel-2-light:#f5f5f7; --panel-2-dark:#171717;
+  --ink-light:#0a0a0a; --ink-dark:#f5f5f7;
+  --soft-light:#6e6e73; --soft-dark:#a1a1a6;
+  --faint-light:#86868b; --faint-dark:#737378;
+  --line-light:#e5e5e5; --line-dark:#232323;
+  --line-hi-light:#d4d4d4; --line-hi-dark:#3a3a3a;
+  --solid-bg-light:#0a0a0a; --solid-bg-dark:#ffffff;
+  --solid-ink-light:#ffffff; --solid-ink-dark:#0a0a0a;
+  --solid-hover-light:#262626; --solid-hover-dark:#e5e5e5;
+  --dot-light:#d4d4d4; --dot-dark:#262626;
+
+  --ground:var(--ground-light); --panel:var(--panel-light); --panel-2:var(--panel-2-light);
+  --ink:var(--ink-light); --soft:var(--soft-light); --faint:var(--faint-light);
+  --line:var(--line-light); --line-hi:var(--line-hi-light);
+  --solid-bg:var(--solid-bg-light); --solid-ink:var(--solid-ink-light);
+  --solid-hover:var(--solid-hover-light); --dot:var(--dot-light);
+  --term-bg:#0a0a0a; --term-ink:#f5f5f7; --term-soft:#a1a1a6; --term-faint:#737378; --term-line:#232323;
+  --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --font-zen-pixel-square:'Zen Pixel Square',monospace;
+  --mono:var(--font-zen-mono);
+  --sans:var(--font-zen-sans);
+  --r:999px; --r-soft:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:var(--ground-dark); --panel:var(--panel-dark); --panel-2:var(--panel-2-dark);
+    --ink:var(--ink-dark); --soft:var(--soft-dark); --faint:var(--faint-dark);
+    --line:var(--line-dark); --line-hi:var(--line-hi-dark);
+    --solid-bg:var(--solid-bg-dark); --solid-ink:var(--solid-ink-dark);
+    --solid-hover:var(--solid-hover-dark); --dot:var(--dot-dark);
+  }
+}
+@supports (color: light-dark(white, black)){
+  :root{
+    --ground:light-dark(var(--ground-light),var(--ground-dark));
+    --panel:light-dark(var(--panel-light),var(--panel-dark));
+    --panel-2:light-dark(var(--panel-2-light),var(--panel-2-dark));
+    --ink:light-dark(var(--ink-light),var(--ink-dark));
+    --soft:light-dark(var(--soft-light),var(--soft-dark));
+    --faint:light-dark(var(--faint-light),var(--faint-dark));
+    --line:light-dark(var(--line-light),var(--line-dark));
+    --line-hi:light-dark(var(--line-hi-light),var(--line-hi-dark));
+    --solid-bg:light-dark(var(--solid-bg-light),var(--solid-bg-dark));
+    --solid-ink:light-dark(var(--solid-ink-light),var(--solid-ink-dark));
+    --solid-hover:light-dark(var(--solid-hover-light),var(--solid-hover-dark));
+    --dot:light-dark(var(--dot-light),var(--dot-dark));
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--ground);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:1rem;line-height:1.58;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility}
+.wrap{max-width:68rem;margin:0 auto;padding:0 1.75rem}
+
+/* Edge halftone dot field framing the hero, matching hanzo.ai. */
+.hero{position:relative;border-bottom:1px solid var(--line)}
+.hero::before,.hero::after{content:"";position:absolute;top:0;bottom:0;width:min(24vw,280px);
+  background-image:radial-gradient(var(--dot) 1.25px,transparent 1.25px);
+  background-size:9px 9px;pointer-events:none}
+.hero::before{inset-inline-start:0;
+  -webkit-mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero::after{inset-inline-end:0;
+  -webkit-mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
+  mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
+.hero .wrap{position:relative;z-index:1;padding-top:4.5rem;padding-bottom:3.75rem}
+
+nav{position:sticky;top:0;z-index:40;border-bottom:1px solid var(--line);
+  background:var(--ground);background:color-mix(in srgb,var(--ground) 90%,transparent);
+  backdrop-filter:blur(16px)}
+nav .in{max-width:68rem;margin:0 auto;padding:.85rem 1.75rem;display:flex;
+  justify-content:space-between;align-items:center;gap:1rem}
+.brand{font-family:var(--sans);font-size:.95rem;font-weight:600;letter-spacing:-.02em;
+  color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:.55rem}
+.brand i{font-style:normal;font-weight:400;color:var(--soft)}
+.mark{width:1.25em;height:1.25em;display:block;flex:0 0 auto}
+.nlinks{display:flex;align-items:center;gap:1.15rem}
+.nlinks a{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+.nlinks a:hover{color:var(--ink);text-decoration:none}
+nav a.up{font-family:var(--sans);font-size:.875rem;font-weight:500;color:var(--soft);text-decoration:none}
+nav a.up:hover{color:var(--ink);text-decoration:none}
+.ncta{display:inline-flex;align-items:center;justify-content:center;padding:.45rem 1rem;
+  border-radius:var(--r);background:var(--solid-bg);color:var(--solid-ink);font-size:.84rem;
+  font-weight:500;text-decoration:none;white-space:nowrap}
+.ncta:hover{background:var(--solid-hover);color:var(--solid-ink);text-decoration:none}
+
+h1{font-family:var(--sans);font-size:clamp(2.15rem,4.8vw,3.5rem);line-height:1.06;
+  letter-spacing:-.038em;margin:0 0 1.15rem;font-weight:600;text-wrap:balance;max-width:20ch}
+h1 em{font-style:normal;color:var(--soft);font-weight:500}
+.lede{color:var(--soft);font-size:1.0625rem;line-height:1.55;max-width:58ch;margin:0 0 2rem;text-wrap:pretty}
+
+.btns{display:flex;flex-wrap:wrap;gap:.55rem;margin:0 0 .5rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.45rem;font-family:var(--sans);
+  font-size:.875rem;font-weight:500;letter-spacing:-.005em;
+  min-height:2.5rem;padding:.55rem 1.2rem;border:1px solid var(--line-hi);border-radius:var(--r);
+  color:var(--ink);text-decoration:none;background:var(--ground);cursor:pointer;
+  line-height:1.2;transition:background .15s ease,border-color .15s ease}
+.btn:hover{background:var(--panel-2);text-decoration:none;border-color:var(--ink)}
+.btn.solid{background:var(--solid-bg);color:var(--solid-ink);border-color:var(--solid-bg)}
+.btn.solid:hover{background:var(--solid-hover);border-color:var(--solid-hover)}
+.btn .chev{width:.75em;height:.75em;flex:0 0 auto;transition:transform .15s ease}
+.btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* Copy-prompt selector. Each row copies the prompt for its own target. */
+.copy{position:relative;display:inline-flex}
+.menu{position:absolute;top:calc(100% + .5rem);left:0;z-index:20;min-width:21rem;
+  background:var(--ground);border:1px solid var(--line-hi);border-radius:var(--r-soft);
+  padding:.4rem;display:flex;flex-direction:column;
+  box-shadow:0 16px 40px rgba(0,0,0,.18)}
+.menu[hidden]{display:none}
+.mi{display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+  padding:.62rem .8rem;border:0;border-radius:calc(var(--r-soft) - .4rem);
+  background:transparent;color:var(--ink);font-family:var(--sans);font-size:.86rem;
+  font-weight:500;text-decoration:none;cursor:pointer;line-height:1.3;white-space:nowrap}
+.mi:hover,.mi:focus-visible{background:var(--panel-2);outline:none;text-decoration:none}
+.mi .mark{width:1.05rem;height:1.05rem;color:var(--soft)}
+.mi:hover .mark{color:var(--ink)}
+.mi u{margin-left:auto;color:var(--faint);text-decoration:none;font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.08em;text-transform:uppercase}
+
+/* Works-with bar: one scrolling row, name and mark per agent. */
+.strip{border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .in{max-width:68rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+  align-items:center;gap:1.25rem;font-family:var(--sans);font-size:.8rem;color:var(--faint)}
+.strip b{color:var(--soft);font-weight:500;flex:0 0 auto;font-family:var(--mono);font-size:.7rem;
+  letter-spacing:.1em;text-transform:uppercase;
+  border-right:1px solid var(--line);padding-right:1.25rem;align-self:stretch;
+  display:flex;align-items:center}
+.bar{display:flex;align-items:center;gap:.5rem;flex:1 1 auto;min-width:0;
+  overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent);
+  mask-image:linear-gradient(90deg,#000000 calc(100% - 3rem),transparent)}
+.bar::-webkit-scrollbar{display:none}
+.agent{display:inline-flex;align-items:center;gap:.45rem;flex:0 0 auto;
+  padding:.4rem .9rem;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--soft);white-space:nowrap;scroll-snap-align:start;font-size:.82rem;font-weight:500;
+  text-decoration:none;background:var(--ground)}
+.agent:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.agent .mark{width:.95rem;height:.95rem}
+
+h2{font-family:var(--sans);font-size:1.35rem;letter-spacing:-.025em;margin:2.75rem 0 .75rem;font-weight:600;text-wrap:balance}
+h3{font-size:1.05rem;margin:2rem 0 .5rem;font-weight:600;letter-spacing:-.015em}
+h4,h5,h6{font-size:.95rem;margin:1.5rem 0 .5rem;font-weight:600}
+p{margin:0 0 1rem;max-width:70ch;text-wrap:pretty}
+ul,ol{margin:0 0 1rem;padding-left:1.35rem;max-width:70ch}
+li{margin:.25rem 0}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line-hi)}
+a:hover{text-decoration-color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+code{font-family:var(--mono);font-size:.84em;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:6px;padding:.12em .4em}
+pre{color-scheme:dark;background:var(--term-bg);color:var(--term-ink);border:1px solid var(--term-line);
+  padding:1.05rem 1.2rem;border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
+pre code{background:none;border:0;padding:0;font-size:.84rem;line-height:1.68;color:var(--term-ink)}
+blockquote{margin:0 0 1rem;padding-left:1rem;border-left:2px solid var(--line-hi);color:var(--soft)}
+hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}
+table{border-collapse:collapse;width:100%;margin:0 0 1.25rem;font-size:.92rem;
+  display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.55rem .75rem;text-align:left}
+
+.curl{color-scheme:dark;display:block;background:var(--term-bg);border:1px solid var(--term-line);
+  border-radius:var(--r-soft);padding:1rem 1.2rem;font-family:var(--mono);
+  font-size:.82rem;color:var(--term-soft);overflow-x:auto;margin:0 0 2.5rem;
+  white-space:pre;line-height:1.85}
+.curl b{color:var(--term-ink);font-weight:500}
+.curl i{font-style:normal;color:var(--term-faint)}
+
+/* index */
+#q{width:100%;padding:.85rem 1.25rem;font-family:var(--sans);font-size:.95rem;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r);margin:2rem 0 .65rem}
+#q::placeholder{color:var(--faint)}
+#q:focus{outline:none;border-color:var(--ink);background:var(--ground)}
+#count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 2rem}
+.cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
+  padding-bottom:.45rem}
+.row{display:block;padding:.75rem 1rem;margin:0 -1rem;border-bottom:1px solid var(--line);
+  border-radius:var(--r-soft);text-decoration:none;transition:background .12s ease}
+.row:hover{background:var(--panel-2);text-decoration:none}
+.nm{font-family:var(--mono);font-size:.86rem;font-weight:500;color:var(--ink);display:block}
+.ds{color:var(--soft);font-size:.92rem;display:block;margin-top:.15rem}
+footer{margin-top:4rem;padding:2.25rem 0 4rem;border-top:1px solid var(--line);
+  color:var(--faint);font-size:.85rem}
+footer a{color:var(--soft);text-decoration:none}
+footer a:hover{color:var(--ink);text-decoration:underline}
+.fmap{display:grid;gap:1.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));
+  margin:0 0 2rem;font-size:.85rem}
+.fmap b{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);font-weight:500;margin:0 0 .6rem;
+  border-bottom:1px solid var(--line);padding-bottom:.4rem}
+.fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
+.fmap a:hover{text-decoration:underline}
+.fmap div{color:var(--faint);line-height:1.5}
+.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+
+@media (max-width:640px){
+  .hero .wrap{padding-top:3rem;padding-bottom:2.5rem}
+  .nlinks .nhide{display:none}
+  .btns{gap:.5rem}
+  .btn{padding:.55rem 1rem;font-size:.84rem}
+  .copy,.copy .btn{width:100%;justify-content:center}
+  .menu{left:0;right:0;min-width:0}
+  .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
+  .strip b{border-right:0;padding-right:0}
+  .bar{width:100%}
+}
+</style>
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg">
+<link rel="canonical" href="https://hanzoskills.com/token-creation">
+<link rel="alternate" type="text/markdown" href="/token-creation.md">
+<script type="module" src="/webmcp.js"></script>
+</head>
+<!-- Reading this with a machine? Every page here is also plain markdown.
+     This one: https://hanzoskills.com/token-creation.md
+     Index:    https://hanzoskills.com/llms.txt
+     Corpus:   https://hanzoskills.com/all.md
+     Append .md to any path for the markdown twin. -->
+<body>
+<nav><div class="in">
+  <a class="brand" href="/"><svg class="mark" viewBox="0 0 67 67" fill="currentColor" aria-hidden="true"><path d="M22.21 67V44.6369H0V67H22.21Z"/><path d="M66.7038 22.3184H22.2534L0.0878906 44.6367H44.4634L66.7038 22.3184Z"/><path d="M22.21 0H0V22.3184H22.21V0Z"/><path d="M66.7198 0H44.5098V22.3184H66.7198V0Z"/><path d="M66.7198 67V44.6369H44.5098V67H66.7198Z"/></svg> Hanzo <i>Skills</i></a>
+  <div class="nlinks"><a class="nhide" href="https://hanzo.sh">hanzo.sh</a><a class="nhide" href="https://docs.hanzo.ai">Docs</a><a class="nhide" href="https://hanzo.ai/security">Security</a><a class="up" href="/">All skills</a><a class="ncta" href="https://hanzo.app">Try Hanzo</a></div>
+</div></nav>
+
+<div class="wrap">
+<h1>token-creation</h1><p class="lede">This document covers Phase 1: creating variable collections, modes, primitives, semantic aliases, scopes, code syntax, styles, and validation.</p><blockquote><p>Part of the <a href="../SKILL.md">figma-generate-library skill</a>.</p></blockquote>
+<h1>Token Creation Reference</h1>
+<p>This document covers Phase 1: creating variable collections, modes, primitives, semantic aliases, scopes, code syntax, styles, and validation. All code is copy-paste ready for <code>use_figma</code>.</p>
+<hr>
+<h2>1. Collection Architecture</h2>
+<p>Choose the pattern that matches your token count and complexity:</p>
+<h3>Simple Pattern (&lt; 50 tokens)</h3>
+<p>One collection, 2 modes. Appropriate for small projects or brand kits.</p>
+<pre><code>Collection: &quot;Tokens&quot;    modes: [&quot;Light&quot;, &quot;Dark&quot;]
+  color/bg/primary → Light: #FFFFFF, Dark: #1A1A1A
+  spacing/sm = 8</code></pre>
+<h3>Standard Pattern (50–200 tokens) — Recommended Starting Point</h3>
+<p>Separate primitives from semantics. The real-world reference is Figma&#x27;s Simple Design System (SDS): 7 collections, 368 variables, light/dark modes on semantic colors, single-mode primitives.</p>
+<pre><code>Collection: &quot;Primitives&quot;    modes: [&quot;Value&quot;]       ← raw hex values, no modes
+  blue/500 = #3B82F6
+  gray/900 = #111827
+  white/1000 = #FFFFFF
+
+Collection: &quot;Color&quot;         modes: [&quot;Light&quot;, &quot;Dark&quot;] ← aliases to Primitives
+  color/bg/primary → Light: alias Primitives/white/1000, Dark: alias Primitives/gray/900
+  color/text/primary → Light: alias Primitives/gray/900, Dark: alias Primitives/white/1000
+
+Collection: &quot;Spacing&quot;       modes: [&quot;Value&quot;]
+  spacing/xs = 4, spacing/sm = 8, spacing/md = 16, spacing/lg = 24, spacing/xl = 32
+
+Collection: &quot;Typography Primitives&quot;  modes: [&quot;Value&quot;]
+  family/sans = &quot;Inter&quot;, scale/01 = 12, scale/02 = 14, scale/03 = 16, weight/regular = 400
+
+Collection: &quot;Typography&quot;    modes: [&quot;Value&quot;]        ← aliases to Typography Primitives
+  body/font-family → alias family/sans
+  body/size-md → alias scale/03</code></pre>
+<h3>Advanced Pattern (200+ tokens) — M3 Model</h3>
+<p>Multiple semantic collections, 4–8 modes. Use when you need light/dark × contrast × brand or responsive breakpoints.</p>
+<pre><code>Collection: &quot;M3&quot;           modes: [&quot;Light&quot;, &quot;Dark&quot;, &quot;Light High Contrast&quot;, &quot;Dark High Contrast&quot;, ...]
+Collection: &quot;Typeface&quot;     modes: [&quot;Baseline&quot;, &quot;Wireframe&quot;]
+Collection: &quot;Typescale&quot;    modes: [&quot;Value&quot;]  ← aliases into Typeface
+Collection: &quot;Shape&quot;        modes: [&quot;Value&quot;]</code></pre>
+<p>Key insight from M3: ALL 196 semantic color variables live in a SINGLE collection with 8 modes. Switching a frame&#x27;s mode once updates every color simultaneously.</p>
+<hr>
+<h2>2. Creating Collections + Modes</h2>
+<h3>Creating a Primitives Collection</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const RUN_ID = &quot;ds-build-2024-001&quot;; // use the same RUN_ID throughout the build
+
+    // Create the collection
+    const primColl = figma.variables.createVariableCollection(&quot;Primitives&quot;);
+
+    // Rename the default &quot;Mode 1&quot; to &quot;Value&quot;
+    primColl.renameMode(primColl.modes[0].modeId, &quot;Value&quot;);
+    const valueMode = primColl.modes[0].modeId;
+
+    // Tag for idempotency
+    primColl.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+    primColl.setPluginData(&#x27;dsb_key&#x27;, &#x27;collection/primitives&#x27;);
+
+    figma.closePlugin(JSON.stringify({
+      collectionId: primColl.id,
+      modeId: valueMode,
+      name: primColl.name
+    }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Creating a Semantic Color Collection with Light/Dark Modes</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const RUN_ID = &quot;ds-build-2024-001&quot;;
+
+    const colorColl = figma.variables.createVariableCollection(&quot;Color&quot;);
+
+    // Rename default &quot;Mode 1&quot; to &quot;Light&quot;
+    colorColl.renameMode(colorColl.modes[0].modeId, &quot;Light&quot;);
+    const lightModeId = colorColl.modes[0].modeId;
+
+    // Add &quot;Dark&quot; mode — requires Professional plan or higher
+    // Throws &quot;in addMode: Limited to N modes only&quot; on Starter plan
+    const darkModeId = colorColl.addMode(&quot;Dark&quot;);
+
+    colorColl.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+    colorColl.setPluginData(&#x27;dsb_key&#x27;, &#x27;collection/color&#x27;);
+
+    figma.closePlugin(JSON.stringify({
+      collectionId: colorColl.id,
+      lightModeId,
+      darkModeId
+    }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p><strong>Mode plan limits:</strong> Starter = 1 mode, Professional = 4 modes, Organization/Enterprise = 40 modes. If <code>addMode</code> throws, the file is on a Starter plan — tell the user and ask how to proceed.</p>
+<h3>Creating a Spacing Collection (single mode)</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const RUN_ID = &quot;ds-build-2024-001&quot;;
+
+    const spacingColl = figma.variables.createVariableCollection(&quot;Spacing&quot;);
+    spacingColl.renameMode(spacingColl.modes[0].modeId, &quot;Value&quot;);
+    const valueMode = spacingColl.modes[0].modeId;
+
+    spacingColl.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+    spacingColl.setPluginData(&#x27;dsb_key&#x27;, &#x27;collection/spacing&#x27;);
+
+    figma.closePlugin(JSON.stringify({
+      collectionId: spacingColl.id,
+      modeId: valueMode
+    }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<hr>
+<h2>3. Creating All Variable Types</h2>
+<h3>hex → {r, g, b} Conversion Helper</h3>
+<p>Colors in the Figma Plugin API are 0–1 range, not 0–255. Embed this helper in any script that creates color variables:</p>
+<pre><code class="lang-javascript">function hexToRgb(hex) {
+  const clean = hex.replace(&#x27;#&#x27;, &#x27;&#x27;);
+  return {
+    r: parseInt(clean.substring(0, 2), 16) / 255,
+    g: parseInt(clean.substring(2, 4), 16) / 255,
+    b: parseInt(clean.substring(4, 6), 16) / 255
+  };
+}
+
+// With alpha channel (for semi-transparent primitives like Black/200 at 10%):
+function hexToRgba(hex) {
+  const clean = hex.replace(&#x27;#&#x27;, &#x27;&#x27;);
+  const hasAlpha = clean.length === 8;
+  return {
+    r: parseInt(clean.substring(0, 2), 16) / 255,
+    g: parseInt(clean.substring(2, 4), 16) / 255,
+    b: parseInt(clean.substring(4, 6), 16) / 255,
+    a: hasAlpha ? parseInt(clean.substring(6, 8), 16) / 255 : 1
+  };
+}
+
+// Usage:
+// hexToRgb(&#x27;#3B82F6&#x27;)        → {r: 0.231, g: 0.510, b: 0.965}
+// hexToRgb(&#x27;#14AE5C&#x27;)        → {r: 0.078, g: 0.682, b: 0.361}
+// hexToRgba(&#x27;#0c0c0d1a&#x27;)     → {r: 0.047, g: 0.047, b: 0.051, a: 0.102}</code></pre>
+<h3>Creating Primitive Color Variables (Real SDS Data)</h3>
+<p>This creates a subset of the Simple Design System&#x27;s <code>Color Primitives</code> collection (Blue family, from the Standard pattern used by real design systems):</p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    function hexToRgb(hex) {
+      const c = hex.replace(&#x27;#&#x27;, &#x27;&#x27;);
+      return { r: parseInt(c.slice(0,2),16)/255, g: parseInt(c.slice(2,4),16)/255, b: parseInt(c.slice(4,6),16)/255 };
+    }
+
+    const RUN_ID = &quot;ds-build-2024-001&quot;;
+
+    // Get the Primitives collection created in the previous step
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+    const primColl = collections.find(c =&gt; c.getPluginData(&#x27;dsb_key&#x27;) === &#x27;collection/primitives&#x27;);
+    if (!primColl) throw new Error(&quot;Primitives collection not found — run collection creation first&quot;);
+    const valueMode = primColl.modes[0].modeId;
+
+    // Define primitives — use real values from your codebase
+    const primitiveColors = [
+      // Blue scale
+      { name: &#x27;blue/100&#x27;, hex: &#x27;#EFF6FF&#x27; },
+      { name: &#x27;blue/200&#x27;, hex: &#x27;#DBEAFE&#x27; },
+      { name: &#x27;blue/300&#x27;, hex: &#x27;#93C5FD&#x27; },
+      { name: &#x27;blue/400&#x27;, hex: &#x27;#60A5FA&#x27; },
+      { name: &#x27;blue/500&#x27;, hex: &#x27;#3B82F6&#x27; },
+      { name: &#x27;blue/600&#x27;, hex: &#x27;#2563EB&#x27; },
+      { name: &#x27;blue/700&#x27;, hex: &#x27;#1D4ED8&#x27; },
+      { name: &#x27;blue/800&#x27;, hex: &#x27;#1E40AF&#x27; },
+      { name: &#x27;blue/900&#x27;, hex: &#x27;#1E3A8A&#x27; },
+      // Gray scale
+      { name: &#x27;gray/100&#x27;, hex: &#x27;#F9FAFB&#x27; },
+      { name: &#x27;gray/200&#x27;, hex: &#x27;#F3F4F6&#x27; },
+      { name: &#x27;gray/300&#x27;, hex: &#x27;#D1D5DB&#x27; },
+      { name: &#x27;gray/400&#x27;, hex: &#x27;#9CA3AF&#x27; },
+      { name: &#x27;gray/500&#x27;, hex: &#x27;#6B7280&#x27; },
+      { name: &#x27;gray/600&#x27;, hex: &#x27;#4B5563&#x27; },
+      { name: &#x27;gray/700&#x27;, hex: &#x27;#374151&#x27; },
+      { name: &#x27;gray/800&#x27;, hex: &#x27;#1F2937&#x27; },
+      { name: &#x27;gray/900&#x27;, hex: &#x27;#111827&#x27; },
+      // White / Black
+      { name: &#x27;white/1000&#x27;, hex: &#x27;#FFFFFF&#x27; },
+      { name: &#x27;black/1000&#x27;, hex: &#x27;#000000&#x27; },
+    ];
+
+    const created = [];
+    for (const { name, hex } of primitiveColors) {
+      const v = figma.variables.createVariable(name, primColl, &#x27;COLOR&#x27;);
+      v.setValueForMode(valueMode, hexToRgb(hex));
+      // Primitives: EMPTY scopes (hidden from all pickers — designers use semantics)
+      v.scopes = [];
+      // Code syntax from the actual CSS variable name
+      v.setVariableCodeSyntax(&#x27;WEB&#x27;, `var(--color-${name.replace(&#x27;/&#x27;, &#x27;-&#x27;)})`);
+      v.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+      v.setPluginData(&#x27;dsb_key&#x27;, `primitive/${name}`);
+      created.push({ name, id: v.id });
+    }
+
+    figma.closePlugin(JSON.stringify({ created, count: created.length }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p><strong>Critical scope rule for primitives:</strong> Set <code>v.scopes = []</code>. This hides primitives from every picker. Designers should only see semantic tokens. The exception is semi-transparent overlay primitives (Black/White with alpha) — those get <code>[&quot;EFFECT_COLOR&quot;]</code> so they appear in shadow pickers.</p>
+<h3>Creating FLOAT Variables (Spacing, Radius, Font Size)</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const RUN_ID = &quot;ds-build-2024-001&quot;;
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+    const spacingColl = collections.find(c =&gt; c.getPluginData(&#x27;dsb_key&#x27;) === &#x27;collection/spacing&#x27;);
+    if (!spacingColl) throw new Error(&quot;Spacing collection not found&quot;);
+    const valueMode = spacingColl.modes[0].modeId;
+
+    const spacingTokens = [
+      { name: &#x27;spacing/xs&#x27;,  value: 4,  scope: &#x27;GAP&#x27;, cssVar: &#x27;--spacing-xs&#x27; },
+      { name: &#x27;spacing/sm&#x27;,  value: 8,  scope: &#x27;GAP&#x27;, cssVar: &#x27;--spacing-sm&#x27; },
+      { name: &#x27;spacing/md&#x27;,  value: 16, scope: &#x27;GAP&#x27;, cssVar: &#x27;--spacing-md&#x27; },
+      { name: &#x27;spacing/lg&#x27;,  value: 24, scope: &#x27;GAP&#x27;, cssVar: &#x27;--spacing-lg&#x27; },
+      { name: &#x27;spacing/xl&#x27;,  value: 32, scope: &#x27;GAP&#x27;, cssVar: &#x27;--spacing-xl&#x27; },
+      { name: &#x27;spacing/2xl&#x27;, value: 48, scope: &#x27;GAP&#x27;, cssVar: &#x27;--spacing-2xl&#x27; },
+    ];
+
+    const radiusTokens = [
+      { name: &#x27;radius/none&#x27;, value: 0,    scope: &#x27;CORNER_RADIUS&#x27;, cssVar: &#x27;--radius-none&#x27; },
+      { name: &#x27;radius/sm&#x27;,   value: 4,    scope: &#x27;CORNER_RADIUS&#x27;, cssVar: &#x27;--radius-sm&#x27; },
+      { name: &#x27;radius/md&#x27;,   value: 8,    scope: &#x27;CORNER_RADIUS&#x27;, cssVar: &#x27;--radius-md&#x27; },
+      { name: &#x27;radius/lg&#x27;,   value: 16,   scope: &#x27;CORNER_RADIUS&#x27;, cssVar: &#x27;--radius-lg&#x27; },
+      { name: &#x27;radius/full&#x27;, value: 9999, scope: &#x27;CORNER_RADIUS&#x27;, cssVar: &#x27;--radius-full&#x27; },
+    ];
+
+    const created = [];
+    for (const { name, value, scope, cssVar } of [...spacingTokens, ...radiusTokens]) {
+      const v = figma.variables.createVariable(name, spacingColl, &#x27;FLOAT&#x27;);
+      v.setValueForMode(valueMode, value);
+      v.scopes = [scope];
+      v.setVariableCodeSyntax(&#x27;WEB&#x27;, `var(${cssVar})`);
+      v.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+      v.setPluginData(&#x27;dsb_key&#x27;, name);
+      created.push({ name, value, id: v.id });
+    }
+
+    figma.closePlugin(JSON.stringify({ created, count: created.length }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Creating STRING Variables (Font Family, Font Style)</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const RUN_ID = &quot;ds-build-2024-001&quot;;
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+    const typoPrimColl = collections.find(c =&gt; c.getPluginData(&#x27;dsb_key&#x27;) === &#x27;collection/typography-primitives&#x27;);
+    if (!typoPrimColl) throw new Error(&quot;Typography Primitives collection not found&quot;);
+    const valueMode = typoPrimColl.modes[0].modeId;
+
+    const fontTokens = [
+      { name: &#x27;family/sans&#x27;,  value: &#x27;Inter&#x27;,       scope: &#x27;FONT_FAMILY&#x27;, cssVar: &#x27;--font-family-sans&#x27; },
+      { name: &#x27;family/mono&#x27;,  value: &#x27;Roboto Mono&#x27;,  scope: &#x27;FONT_FAMILY&#x27;, cssVar: &#x27;--font-family-mono&#x27; },
+      // Font style strings — these are the Figma fontName.style values:
+      { name: &#x27;weight/regular&#x27;,  value: &#x27;Regular&#x27;,   scope: &#x27;FONT_STYLE&#x27;,  cssVar: &#x27;--font-weight-regular&#x27; },
+      { name: &#x27;weight/medium&#x27;,   value: &#x27;Medium&#x27;,    scope: &#x27;FONT_STYLE&#x27;,  cssVar: &#x27;--font-weight-medium&#x27; },
+      { name: &#x27;weight/semibold&#x27;, value: &#x27;Semi Bold&#x27;, scope: &#x27;FONT_STYLE&#x27;,  cssVar: &#x27;--font-weight-semibold&#x27; },
+      { name: &#x27;weight/bold&#x27;,     value: &#x27;Bold&#x27;,      scope: &#x27;FONT_STYLE&#x27;,  cssVar: &#x27;--font-weight-bold&#x27; },
+    ];
+
+    const created = [];
+    for (const { name, value, scope, cssVar } of fontTokens) {
+      const v = figma.variables.createVariable(name, typoPrimColl, &#x27;STRING&#x27;);
+      v.setValueForMode(valueMode, value);
+      v.scopes = [scope];
+      v.setVariableCodeSyntax(&#x27;WEB&#x27;, `var(${cssVar})`);
+      v.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+      v.setPluginData(&#x27;dsb_key&#x27;, `typo-prim/${name}`);
+      created.push({ name, value, id: v.id });
+    }
+
+    figma.closePlugin(JSON.stringify({ created, count: created.length }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Creating BOOLEAN Variables</h3>
+<p>BOOLEAN variables have no scopes (scopes are not supported for BOOLEAN type).</p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const RUN_ID = &quot;ds-build-2024-001&quot;;
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+    const coll = collections.find(c =&gt; c.getPluginData(&#x27;dsb_key&#x27;) === &#x27;collection/tokens&#x27;);
+    if (!coll) throw new Error(&quot;Collection not found&quot;);
+    const valueMode = coll.modes[0].modeId;
+
+    const v = figma.variables.createVariable(&#x27;feature-flags/show-beta-badge&#x27;, coll, &#x27;BOOLEAN&#x27;);
+    v.setValueForMode(valueMode, false);
+    // No scopes — BOOLEAN does not support scopes
+    v.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+    v.setPluginData(&#x27;dsb_key&#x27;, &#x27;feature-flags/show-beta-badge&#x27;);
+
+    figma.closePlugin(JSON.stringify({ id: v.id, name: v.name }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<hr>
+<h2>4. Variable Aliasing (VARIABLE_ALIAS) — Primitive → Semantic Chain</h2>
+<p>Semantic tokens reference primitives via <code>VARIABLE_ALIAS</code>. This is the core pattern that makes light/dark theming work.</p>
+<p><strong>Architecture:</strong></p>
+<pre><code>Color Primitives collection (1 mode: Value)
+  blue/500 = #3B82F6          ← raw value
+
+Color collection (2 modes: Light, Dark)
+  color/bg/accent/default:
+    Light → VARIABLE_ALIAS → Primitives/blue/500
+    Dark  → VARIABLE_ALIAS → Primitives/blue/300</code></pre>
+<h3>Complete Semantic Alias Creation Script (SDS-style)</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    function hexToRgb(hex) {
+      const c = hex.replace(&#x27;#&#x27;, &#x27;&#x27;);
+      return { r: parseInt(c.slice(0,2),16)/255, g: parseInt(c.slice(2,4),16)/255, b: parseInt(c.slice(4,6),16)/255 };
+    }
+
+    const RUN_ID = &quot;ds-build-2024-001&quot;;
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+
+    const primColl = collections.find(c =&gt; c.getPluginData(&#x27;dsb_key&#x27;) === &#x27;collection/primitives&#x27;);
+    const colorColl = collections.find(c =&gt; c.getPluginData(&#x27;dsb_key&#x27;) === &#x27;collection/color&#x27;);
+    if (!primColl || !colorColl) throw new Error(&quot;Collections not found — run primitive/color collection creation first&quot;);
+
+    const primValueMode = primColl.modes[0].modeId;
+    const lightModeId = colorColl.modes.find(m =&gt; m.name === &#x27;Light&#x27;).modeId;
+    const darkModeId = colorColl.modes.find(m =&gt; m.name === &#x27;Dark&#x27;).modeId;
+
+    // Load all primitive variables for lookup
+    const allVars = await figma.variables.getLocalVariablesAsync();
+    const primsByKey = {};
+    for (const v of allVars) {
+      if (v.variableCollectionId === primColl.id) {
+        primsByKey[v.getPluginData(&#x27;dsb_key&#x27;)] = v;
+      }
+    }
+
+    function getPrim(name) {
+      const v = primsByKey[`primitive/${name}`];
+      if (!v) throw new Error(`Primitive not found: primitive/${name}`);
+      return v;
+    }
+
+    // Define semantic → [lightPrimitiveName, darkPrimitiveName]
+    // Following the SDS pattern: Background/{Intent}/{Emphasis}
+    const semanticColors = [
+      // Background
+      { name: &#x27;color/bg/default/default&#x27;,   lightPrim: &#x27;white/1000&#x27;, darkPrim: &#x27;gray/900&#x27;,
+        cssVar: &#x27;--color-bg-default-default&#x27;, scopes: [&#x27;FRAME_FILL&#x27;, &#x27;SHAPE_FILL&#x27;] },
+      { name: &#x27;color/bg/default/secondary&#x27;, lightPrim: &#x27;gray/100&#x27;, darkPrim: &#x27;gray/800&#x27;,
+        cssVar: &#x27;--color-bg-default-secondary&#x27;, scopes: [&#x27;FRAME_FILL&#x27;, &#x27;SHAPE_FILL&#x27;] },
+      { name: &#x27;color/bg/brand/default&#x27;,     lightPrim: &#x27;blue/600&#x27;, darkPrim: &#x27;blue/300&#x27;,
+        cssVar: &#x27;--color-bg-brand-default&#x27;, scopes: [&#x27;FRAME_FILL&#x27;, &#x27;SHAPE_FILL&#x27;] },
+      // Text
+      { name: &#x27;color/text/default/default&#x27;, lightPrim: &#x27;gray/900&#x27;, darkPrim: &#x27;white/1000&#x27;,
+        cssVar: &#x27;--color-text-default-default&#x27;, scopes: [&#x27;TEXT_FILL&#x27;] },
+      { name: &#x27;color/text/default/secondary&#x27;, lightPrim: &#x27;gray/500&#x27;, darkPrim: &#x27;gray/400&#x27;,
+        cssVar: &#x27;--color-text-default-secondary&#x27;, scopes: [&#x27;TEXT_FILL&#x27;] },
+      { name: &#x27;color/text/brand/default&#x27;,   lightPrim: &#x27;blue/700&#x27;, darkPrim: &#x27;blue/200&#x27;,
+        cssVar: &#x27;--color-text-brand-default&#x27;, scopes: [&#x27;TEXT_FILL&#x27;] },
+      // Border
+      { name: &#x27;color/border/default/default&#x27;, lightPrim: &#x27;gray/300&#x27;, darkPrim: &#x27;gray/600&#x27;,
+        cssVar: &#x27;--color-border-default-default&#x27;, scopes: [&#x27;STROKE_COLOR&#x27;] },
+      { name: &#x27;color/border/brand/default&#x27;,   lightPrim: &#x27;blue/500&#x27;, darkPrim: &#x27;blue/400&#x27;,
+        cssVar: &#x27;--color-border-brand-default&#x27;, scopes: [&#x27;STROKE_COLOR&#x27;] },
+    ];
+
+    const created = [];
+    for (const { name, lightPrim, darkPrim, cssVar, scopes } of semanticColors) {
+      const v = figma.variables.createVariable(name, colorColl, &#x27;COLOR&#x27;);
+      // Alias to primitive in Light mode
+      v.setValueForMode(lightModeId, figma.variables.createVariableAlias(getPrim(lightPrim)));
+      // Alias to primitive in Dark mode
+      v.setValueForMode(darkModeId, figma.variables.createVariableAlias(getPrim(darkPrim)));
+      // Set scopes (semantic layer — these ARE shown in pickers)
+      v.scopes = scopes;
+      // Code syntax
+      v.setVariableCodeSyntax(&#x27;WEB&#x27;, `var(${cssVar})`);
+      v.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+      v.setPluginData(&#x27;dsb_key&#x27;, name);
+      created.push({ name, id: v.id });
+    }
+
+    figma.closePlugin(JSON.stringify({ created, count: created.length }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p><strong>Key API points:</strong></p>
+<ul><li><code>figma.variables.createVariableAlias(variable)</code> — takes a Variable object, returns <code>{type:&#x27;VARIABLE_ALIAS&#x27;, id: variable.id}</code></li><li>The aliased variable MUST have the same <code>resolvedType</code> as the semantic variable</li><li>Never duplicate raw values in the semantic layer — always alias</li></ul>
+<hr>
+<h2>5. Variable Scopes — Complete Reference Table</h2>
+<p>| Semantic Role | Recommended Scopes | Variable Type | |---|---|---| | Primitive colors (raw) | <code>[]</code> — empty, hidden from all pickers | COLOR | | Semi-transparent overlay primitives | <code>[&quot;EFFECT_COLOR&quot;]</code> | COLOR | | Background fills (frame, shape) | <code>[&quot;FRAME_FILL&quot;, &quot;SHAPE_FILL&quot;]</code> | COLOR | | Text color | <code>[&quot;TEXT_FILL&quot;]</code> | COLOR | | Icon / shape fill | <code>[&quot;SHAPE_FILL&quot;, &quot;STROKE_COLOR&quot;]</code> | COLOR | | Border / stroke color | <code>[&quot;STROKE_COLOR&quot;]</code> | COLOR | | Background + border combined | <code>[&quot;FRAME_FILL&quot;, &quot;SHAPE_FILL&quot;, &quot;STROKE_COLOR&quot;]</code> | COLOR | | Shadow color | <code>[&quot;EFFECT_COLOR&quot;]</code> | COLOR | | Spacing / gap between items | <code>[&quot;GAP&quot;]</code> | FLOAT | | Padding (if separate from gap) | <code>[&quot;GAP&quot;]</code> | FLOAT | | Corner radius | <code>[&quot;CORNER_RADIUS&quot;]</code> | FLOAT | | Width / height dimensions | <code>[&quot;WIDTH_HEIGHT&quot;]</code> | FLOAT | | Font size | <code>[&quot;FONT_SIZE&quot;]</code> | FLOAT | | Line height | <code>[&quot;LINE_HEIGHT&quot;]</code> | FLOAT | | Letter spacing | <code>[&quot;LETTER_SPACING&quot;]</code> | FLOAT | | Font weight (numeric) | <code>[&quot;FONT_WEIGHT&quot;]</code> | FLOAT | | Stroke width | <code>[&quot;STROKE_FLOAT&quot;]</code> | FLOAT | | Effect blur radius | <code>[&quot;EFFECT_FLOAT&quot;]</code> | FLOAT | | Opacity | <code>[&quot;OPACITY&quot;]</code> | FLOAT | | Font family | <code>[&quot;FONT_FAMILY&quot;]</code> | STRING | | Font style (e.g. &quot;Semi Bold&quot;) | <code>[&quot;FONT_STYLE&quot;]</code> | STRING | | Boolean flags | <em>(scopes not supported)</em> | BOOLEAN |</p>
+<p><strong>Never use <code>ALL_SCOPES</code></strong> on any variable. It pollutes every picker with irrelevant tokens. The Simple Design System (SDS), the gold standard, uses targeted scopes on every variable.</p>
+<p><strong><code>ALL_FILLS</code> note:</strong> <code>ALL_FILLS</code> is exclusive among fill scopes — it covers <code>FRAME_FILL</code>, <code>SHAPE_FILL</code>, and <code>TEXT_FILL</code> together. If set, you cannot also add individual fill scopes. Prefer specifying individual scopes for precision.</p>
+<h3>Batch Scope-Setting (After Variables are Created)</h3>
+<p>If you created variables without scopes and need to set them in batch:</p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const allVars = await figma.variables.getLocalVariablesAsync();
+
+    // Scope mapping: partial name match → scopes
+    const scopeRules = [
+      { match: &#x27;color/bg/&#x27;,     scopes: [&#x27;FRAME_FILL&#x27;, &#x27;SHAPE_FILL&#x27;] },
+      { match: &#x27;color/text/&#x27;,   scopes: [&#x27;TEXT_FILL&#x27;] },
+      { match: &#x27;color/icon/&#x27;,   scopes: [&#x27;SHAPE_FILL&#x27;, &#x27;STROKE_COLOR&#x27;] },
+      { match: &#x27;color/border/&#x27;, scopes: [&#x27;STROKE_COLOR&#x27;] },
+      { match: &#x27;spacing/&#x27;,      scopes: [&#x27;GAP&#x27;] },
+      { match: &#x27;radius/&#x27;,       scopes: [&#x27;CORNER_RADIUS&#x27;] },
+      { match: &#x27;blue/&#x27;,         scopes: [] },   // primitives — hide
+      { match: &#x27;gray/&#x27;,         scopes: [] },
+      { match: &#x27;white/&#x27;,        scopes: [] },
+      { match: &#x27;black/&#x27;,        scopes: [] },
+    ];
+
+    const updated = [];
+    for (const v of allVars) {
+      if (v.remote) continue; // skip library variables
+      for (const rule of scopeRules) {
+        if (v.name.startsWith(rule.match)) {
+          v.scopes = rule.scopes;
+          updated.push({ name: v.name, scopes: rule.scopes });
+          break;
+        }
+      }
+    }
+
+    figma.closePlugin(JSON.stringify({ updated, count: updated.length }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<hr>
+<h2>6. Code Syntax — WEB/ANDROID/iOS</h2>
+<p>Every variable must have code syntax set. This is what powers the developer handoff experience:</p>
+<p><strong>What code syntax does:</strong> When a developer inspects any element in Figma Dev Mode that has a variable-bound property (fill, padding, radius, etc.), the code snippet shown uses the variable&#x27;s code syntax name — not the Figma variable name. For example, a button&#x27;s background fill bound to <code>color/bg/primary</code> will show <code>background: var(--color-bg-primary)</code> in the CSS snippet, not <code>color/bg/primary</code>. Without code syntax set, Dev Mode shows raw hex values or nothing useful.</p>
+<p>You can set up to <strong>3 syntaxes per variable</strong> — one per platform (Web, iOS, Android). Set all three if the codebase targets multiple platforms; set only WEB if it&#x27;s a web-only project.</p>
+<pre><code class="lang-javascript">// WEB: MUST include the var() wrapper — this is the full CSS function syntax
+variable.setVariableCodeSyntax(&#x27;WEB&#x27;, &#x27;var(--color-bg-primary)&#x27;);
+//                                     ^^^^                   ^
+//                              var() wrapper is REQUIRED
+
+// ANDROID: Kotlin property name — camelCase, no wrapper
+variable.setVariableCodeSyntax(&#x27;ANDROID&#x27;, &#x27;colorBgPrimary&#x27;);
+
+// iOS: Swift property — dot-notation, no wrapper
+variable.setVariableCodeSyntax(&#x27;iOS&#x27;, &#x27;Color.bgPrimary&#x27;);</code></pre>
+<blockquote><p><strong>CRITICAL — WEB code syntax MUST use the <code>var()</code> wrapper.</strong> Setting just <code>--color-bg-primary</code> (without <code>var()</code>) will cause Dev Mode to show raw hex values instead of the CSS variable reference. Always use the full <code>var(--name)</code> form. ANDROID and iOS do NOT use a wrapper.</p></blockquote>
+<p><strong>Platform derivation rules from the CSS variable name:</strong></p>
+<p>| Platform | Pattern | Example | |---|---|---| | WEB | <strong><code>var(--{css-var-name})</code></strong> — <code>var()</code> wrapper required | <code>var(--sds-color-bg-primary)</code> | | ANDROID | camelCase, no wrapper, strip <code>--</code> prefix | <code>sdsColorBgPrimary</code> | | iOS | PascalCase after <code>.</code>, no wrapper, strip <code>--</code> prefix | <code>Color.SdsColorBgPrimary</code> or <code>Color.bgPrimary</code> |</p>
+<p><strong>Always use the actual CSS variable name from the codebase</strong> — do not derive it from the Figma variable name. If the code uses <code>--sds-color-background-brand-default</code>, that exact string is the WEB code syntax (minus the <code>var()</code> wrapper that you add).</p>
+<h3>Batch Code Syntax Setting</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const allVars = await figma.variables.getLocalVariablesAsync();
+    const updated = [];
+
+    for (const v of allVars) {
+      if (v.remote) continue;
+      // If code syntax already set, skip
+      if (v.codeSyntax[&#x27;WEB&#x27;]) continue;
+
+      // FALLBACK: derive from Figma name: color/bg/primary → var(--color-bg-primary)
+      // PREFERRED: pass in a cssVarMap built from actual codebase CSS variable names
+      // e.g. cssVarMap = { &#x27;color/bg/primary&#x27;: &#x27;--color-bg-primary&#x27;, ... }
+      const cssName = cssVarMap?.[v.name]
+        ?? v.name.replace(/\//g, &#x27;-&#x27;).replace(/\s/g, &#x27;-&#x27;).toLowerCase();
+      v.setVariableCodeSyntax(&#x27;WEB&#x27;, `var(--${cssName})`);
+      updated.push({ name: v.name, web: `var(--${cssName})` });
+    }
+
+    figma.closePlugin(JSON.stringify({ updated, count: updated.length }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p>Note: derived names are a fallback only. Always prefer overriding with actual CSS variable names from the codebase when they are known.</p>
+<hr>
+<h2>7. Effect Styles (Shadows) and Text Styles</h2>
+<p>Shadows and composite typography cannot be variables — they are Styles.</p>
+<h3>Creating Effect Styles (Shadows)</h3>
+<p>Reference from SDS (15 effect styles) and the SDS shadow pattern <code>Shadow/{Level}</code>:</p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const RUN_ID = &quot;ds-build-2024-001&quot;;
+
+    // Shadow definitions — CSS equivalent in comments
+    // CSS: 0 1px 2px rgba(0,0,0,0.05)
+    const shadows = [
+      {
+        name: &#x27;Shadow/Subtle&#x27;,
+        effects: [{
+          type: &#x27;DROP_SHADOW&#x27;,
+          color: { r: 0, g: 0, b: 0, a: 0.05 },
+          offset: { x: 0, y: 1 },
+          radius: 2,
+          spread: 0,
+          visible: true,
+          blendMode: &#x27;NORMAL&#x27;
+        }]
+      },
+      {
+        // CSS: 0 4px 6px -1px rgba(0,0,0,0.10), 0 2px 4px -1px rgba(0,0,0,0.06)
+        name: &#x27;Shadow/Medium&#x27;,
+        effects: [
+          {
+            type: &#x27;DROP_SHADOW&#x27;,
+            color: { r: 0, g: 0, b: 0, a: 0.10 },
+            offset: { x: 0, y: 4 },
+            radius: 6,
+            spread: -1,
+            visible: true,
+            blendMode: &#x27;NORMAL&#x27;
+          },
+          {
+            type: &#x27;DROP_SHADOW&#x27;,
+            color: { r: 0, g: 0, b: 0, a: 0.06 },
+            offset: { x: 0, y: 2 },
+            radius: 4,
+            spread: -1,
+            visible: true,
+            blendMode: &#x27;NORMAL&#x27;
+          }
+        ]
+      },
+      {
+        // CSS: 0 10px 15px -3px rgba(0,0,0,0.10), 0 4px 6px -2px rgba(0,0,0,0.05)
+        name: &#x27;Shadow/Strong&#x27;,
+        effects: [
+          {
+            type: &#x27;DROP_SHADOW&#x27;,
+            color: { r: 0, g: 0, b: 0, a: 0.10 },
+            offset: { x: 0, y: 10 },
+            radius: 15,
+            spread: -3,
+            visible: true,
+            blendMode: &#x27;NORMAL&#x27;
+          },
+          {
+            type: &#x27;DROP_SHADOW&#x27;,
+            color: { r: 0, g: 0, b: 0, a: 0.05 },
+            offset: { x: 0, y: 4 },
+            radius: 6,
+            spread: -2,
+            visible: true,
+            blendMode: &#x27;NORMAL&#x27;
+          }
+        ]
+      }
+    ];
+
+    // M3-style dual shadow (umbra + penumbra pattern):
+    const m3Shadows = [
+      {
+        name: &#x27;Elevation/1&#x27;,
+        effects: [
+          { type: &#x27;DROP_SHADOW&#x27;, color: {r:0,g:0,b:0,a:0.30}, offset:{x:0,y:1}, radius:2, spread:0, visible:true, blendMode:&#x27;NORMAL&#x27; },
+          { type: &#x27;DROP_SHADOW&#x27;, color: {r:0,g:0,b:0,a:0.15}, offset:{x:0,y:1}, radius:3, spread:1, visible:true, blendMode:&#x27;NORMAL&#x27; }
+        ]
+      },
+      {
+        name: &#x27;Elevation/2&#x27;,
+        effects: [
+          { type: &#x27;DROP_SHADOW&#x27;, color: {r:0,g:0,b:0,a:0.30}, offset:{x:0,y:1}, radius:2, spread:0, visible:true, blendMode:&#x27;NORMAL&#x27; },
+          { type: &#x27;DROP_SHADOW&#x27;, color: {r:0,g:0,b:0,a:0.15}, offset:{x:0,y:2}, radius:6, spread:2, visible:true, blendMode:&#x27;NORMAL&#x27; }
+        ]
+      },
+      {
+        name: &#x27;Elevation/3&#x27;,
+        effects: [
+          { type: &#x27;DROP_SHADOW&#x27;, color: {r:0,g:0,b:0,a:0.30}, offset:{x:0,y:1}, radius:3, spread:0, visible:true, blendMode:&#x27;NORMAL&#x27; },
+          { type: &#x27;DROP_SHADOW&#x27;, color: {r:0,g:0,b:0,a:0.15}, offset:{x:0,y:4}, radius:8, spread:3, visible:true, blendMode:&#x27;NORMAL&#x27; }
+        ]
+      }
+    ];
+
+    const created = [];
+    for (const { name, effects } of shadows) {
+      const style = figma.createEffectStyle();
+      style.name = name;
+      style.effects = effects;
+      style.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+      style.setPluginData(&#x27;dsb_key&#x27;, `effect-style/${name}`);
+      created.push({ name, id: style.id });
+    }
+
+    figma.closePlugin(JSON.stringify({ created, count: created.length }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Creating Text Styles</h3>
+<p>Fonts must be loaded before creating text styles.</p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const RUN_ID = &quot;ds-build-2024-001&quot;;
+
+    // Define text styles — based on SDS typography hierarchy
+    const textStyles = [
+      // Display / Hero
+      { name: &#x27;Display/Hero&#x27;,    family: &#x27;Inter&#x27;, style: &#x27;Bold&#x27;,      size: 72, lineHeight: 80, letterSpacing: -1.5 },
+      // Headings
+      { name: &#x27;Heading/H1&#x27;,      family: &#x27;Inter&#x27;, style: &#x27;Bold&#x27;,      size: 48, lineHeight: 56, letterSpacing: -1.0 },
+      { name: &#x27;Heading/H2&#x27;,      family: &#x27;Inter&#x27;, style: &#x27;Bold&#x27;,      size: 40, lineHeight: 48, letterSpacing: -0.5 },
+      { name: &#x27;Heading/H3&#x27;,      family: &#x27;Inter&#x27;, style: &#x27;Semi Bold&#x27;, size: 32, lineHeight: 40, letterSpacing: 0 },
+      { name: &#x27;Heading/H4&#x27;,      family: &#x27;Inter&#x27;, style: &#x27;Semi Bold&#x27;, size: 24, lineHeight: 32, letterSpacing: 0 },
+      // Body
+      { name: &#x27;Body/Large&#x27;,      family: &#x27;Inter&#x27;, style: &#x27;Regular&#x27;,   size: 18, lineHeight: 28, letterSpacing: 0 },
+      { name: &#x27;Body/Medium&#x27;,     family: &#x27;Inter&#x27;, style: &#x27;Regular&#x27;,   size: 16, lineHeight: 24, letterSpacing: 0 },
+      { name: &#x27;Body/Small&#x27;,      family: &#x27;Inter&#x27;, style: &#x27;Regular&#x27;,   size: 14, lineHeight: 20, letterSpacing: 0 },
+      // Label
+      { name: &#x27;Label/Large&#x27;,     family: &#x27;Inter&#x27;, style: &#x27;Medium&#x27;,    size: 14, lineHeight: 20, letterSpacing: 0.1 },
+      { name: &#x27;Label/Medium&#x27;,    family: &#x27;Inter&#x27;, style: &#x27;Medium&#x27;,    size: 12, lineHeight: 16, letterSpacing: 0.5 },
+      { name: &#x27;Label/Small&#x27;,     family: &#x27;Inter&#x27;, style: &#x27;Medium&#x27;,    size: 11, lineHeight: 16, letterSpacing: 0.5 },
+      // Code
+      { name: &#x27;Code/Base&#x27;,       family: &#x27;Roboto Mono&#x27;, style: &#x27;Regular&#x27;, size: 14, lineHeight: 20, letterSpacing: 0 },
+    ];
+
+    // Load all required fonts first
+    const fontSet = new Set(textStyles.map(s =&gt; JSON.stringify({ family: s.family, style: s.style })));
+    await Promise.all([...fontSet].map(f =&gt; figma.loadFontAsync(JSON.parse(f))));
+
+    const created = [];
+    for (const { name, family, style, size, lineHeight, letterSpacing } of textStyles) {
+      const ts = figma.createTextStyle();
+      ts.name = name;
+      ts.fontName = { family, style };
+      ts.fontSize = size;
+      ts.lineHeight = { value: lineHeight, unit: &#x27;PIXELS&#x27; };
+      ts.letterSpacing = { value: letterSpacing, unit: &#x27;PIXELS&#x27; };
+      ts.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+      ts.setPluginData(&#x27;dsb_key&#x27;, `text-style/${name}`);
+      created.push({ name, id: ts.id });
+    }
+
+    figma.closePlugin(JSON.stringify({ created, count: created.length }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<hr>
+<h2>8. Idempotency — Check-Before-Create Pattern</h2>
+<p>Every creation script should check whether the entity already exists before creating it. This prevents duplicates when a script is re-run after partial failure.</p>
+<h3>Check-Before-Create for Collections</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const DSB_KEY = &#x27;collection/primitives&#x27;;
+    const RUN_ID = &quot;ds-build-2024-001&quot;;
+
+    // Check if already exists
+    const existing = await figma.variables.getLocalVariableCollectionsAsync();
+    let primColl = existing.find(c =&gt; c.getPluginData(&#x27;dsb_key&#x27;) === DSB_KEY);
+
+    if (primColl) {
+      figma.closePlugin(JSON.stringify({ status: &#x27;already_exists&#x27;, collectionId: primColl.id, name: primColl.name }));
+      return;
+    }
+
+    // Create only if not found
+    primColl = figma.variables.createVariableCollection(&quot;Primitives&quot;);
+    primColl.renameMode(primColl.modes[0].modeId, &quot;Value&quot;);
+    primColl.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);
+    primColl.setPluginData(&#x27;dsb_key&#x27;, DSB_KEY);
+
+    figma.closePlugin(JSON.stringify({ status: &#x27;created&#x27;, collectionId: primColl.id }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Check-Before-Create for Variables</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const VARIABLE_KEY = &#x27;primitive/blue/500&#x27;;
+    const RUN_ID = &quot;ds-build-2024-001&quot;;
+
+    // Check if already exists by pluginData key
+    const allVars = await figma.variables.getLocalVariablesAsync();
+    const existing = allVars.find(v =&gt; v.getPluginData(&#x27;dsb_key&#x27;) === VARIABLE_KEY);
+
+    if (existing) {
+      figma.closePlugin(JSON.stringify({ status: &#x27;already_exists&#x27;, id: existing.id, name: existing.name }));
+      return;
+    }
+
+    // ... create the variable ...
+    figma.closePlugin(JSON.stringify({ status: &#x27;created&#x27; }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>pluginData Tagging Strategy</h3>
+<p>Tag every created node immediately after creation. The <code>dsb_key</code> is the stable logical identifier used for idempotency checks. The <code>dsb_run_id</code> identifies which build run created it (useful for cleanup).</p>
+<pre><code class="lang-javascript">node.setPluginData(&#x27;dsb_run_id&#x27;, RUN_ID);       // build run ID
+node.setPluginData(&#x27;dsb_phase&#x27;, &#x27;phase1&#x27;);       // which phase
+node.setPluginData(&#x27;dsb_key&#x27;, &#x27;color/bg/primary&#x27;); // stable logical key</code></pre>
+<p><strong>Cleanup by run ID (safe — targets only tagged nodes, never user-owned nodes):</strong></p>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const TARGET_RUN_ID = &quot;ds-build-2024-001&quot;; // run to remove
+    const allVars = await figma.variables.getLocalVariablesAsync();
+    const removed = [];
+    for (const v of allVars) {
+      if (v.getPluginData(&#x27;dsb_run_id&#x27;) === TARGET_RUN_ID) {
+        removed.push(v.name);
+        v.remove();
+      }
+    }
+    figma.closePlugin(JSON.stringify({ removed, count: removed.length }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p><strong>Never clean up by name prefix</strong> (e.g., deleting everything starting with <code>color/</code>). This will destroy user-created variables that happen to share the prefix.</p>
+<hr>
+<h2>9. Validation — Verify Counts, Aliases, and Scopes</h2>
+<p>Run these scripts after Phase 1 to verify everything was created correctly before proceeding to Phase 2.</p>
+<h3>Verify Collection and Variable Counts</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+    const allVars = await figma.variables.getLocalVariablesAsync();
+
+    const summary = collections.map(c =&gt; {
+      const vars = allVars.filter(v =&gt; v.variableCollectionId === c.id);
+      return {
+        name: c.name,
+        id: c.id,
+        modes: c.modes.map(m =&gt; m.name),
+        variableCount: vars.length,
+        missingScopes: vars.filter(v =&gt; v.scopes.length === 0 &amp;&amp; v.resolvedType !== &#x27;BOOLEAN&#x27;).length,
+        missingCodeSyntax: vars.filter(v =&gt; !v.codeSyntax[&#x27;WEB&#x27;] &amp;&amp; !v.remote).length,
+        sampleVariables: vars.slice(0, 3).map(v =&gt; v.name)
+      };
+    });
+
+    figma.closePlugin(JSON.stringify({
+      collectionCount: collections.length,
+      totalVariables: allVars.length,
+      collections: summary
+    }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p>Interpret: <code>missingScopes &gt; 0</code> (for non-primitives and non-BOOLEANs) → scope-setting failed, re-run scope script. <code>missingCodeSyntax &gt; 0</code> → code syntax not set, run batch code syntax script.</p>
+<p>Note: primitives correctly have <code>scopes = []</code> (empty, hidden). <code>missingScopes</code> above counts non-BOOLEAN variables with empty scopes — review the list to confirm they are all primitives.</p>
+<h3>Verify Aliases Resolve</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const allVars = await figma.variables.getLocalVariablesAsync();
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+
+    const brokenAliases = [];
+    const aliasedVars = [];
+
+    for (const v of allVars) {
+      if (v.remote) continue;
+      const coll = collections.find(c =&gt; c.id === v.variableCollectionId);
+      if (!coll) continue;
+
+      for (const [modeId, val] of Object.entries(v.valuesByMode)) {
+        if (val &amp;&amp; typeof val === &#x27;object&#x27; &amp;&amp; val.type === &#x27;VARIABLE_ALIAS&#x27;) {
+          aliasedVars.push({ name: v.name, aliasTargetId: val.id });
+          // Verify the target exists
+          const target = allVars.find(t =&gt; t.id === val.id);
+          if (!target) {
+            brokenAliases.push({ variable: v.name, modeId, missingTargetId: val.id });
+          }
+        }
+      }
+    }
+
+    figma.closePlugin(JSON.stringify({
+      totalAliased: aliasedVars.length,
+      brokenAliases,
+      brokenCount: brokenAliases.length,
+      status: brokenAliases.length === 0 ? &#x27;all_aliases_resolve&#x27; : &#x27;BROKEN_ALIASES_FOUND&#x27;
+    }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<p>Interpret: <code>brokenCount &gt; 0</code> means a semantic variable references a primitive that was deleted or not yet created. Create the missing primitives, then re-run alias creation for the affected semantic variables.</p>
+<h3>Verify Style Counts</h3>
+<pre><code class="lang-javascript">(async () =&gt; {
+  try {
+    const [textStyles, effectStyles] = await Promise.all([
+      figma.getLocalTextStylesAsync(),
+      figma.getLocalEffectStylesAsync()
+    ]);
+
+    figma.closePlugin(JSON.stringify({
+      textStyles: textStyles.map(s =&gt; ({ name: s.name, fontSize: s.fontSize, fontFamily: s.fontName.family })),
+      effectStyles: effectStyles.map(s =&gt; ({ name: s.name, effectCount: s.effects.length })),
+      counts: { text: textStyles.length, effect: effectStyles.length }
+    }));
+  } catch(e) { figma.closePluginWithFailure(e.toString()); }
+})();</code></pre>
+<h3>Phase 1 Exit Criteria Checklist</h3>
+<p>Before proceeding to Phase 2, verify all of the following:</p>
+<ul><li>Every planned collection exists with the correct number of modes</li><li>Primitive variables: <code>scopes = []</code>, code syntax set</li><li>Semantic variables: targeted scopes set, code syntax set, aliases pointing to primitives (not raw values)</li><li>All broken alias count = 0</li><li>All planned text styles exist with correct font family/size/weight</li><li>All planned effect styles exist with correct shadow values</li><li>No variable has <code>ALL_SCOPES</code> unless explicitly approved by the user</li></ul>
+<footer>
+<div class="fmap">
+  <div><b>Build</b>
+    <a href="https://hanzo.app">hanzo.app</a> app builder
+    <a href="https://hanzo.codes">hanzo.codes</a> code with an agent
+    <a href="https://hanzoskills.com">hanzoskills.com</a> what an agent reads</div>
+  <div><b>Run</b>
+    <a href="https://console.hanzo.ai">console.hanzo.ai</a> cloud console
+    <a href="https://api.hanzo.ai">api.hanzo.ai</a> the API</div>
+  <div><b>Account</b>
+    <a href="https://hanzo.id">hanzo.id</a> sign in
+    <a href="https://pay.hanzo.ai">pay.hanzo.ai</a> top up
+    <a href="https://billing.hanzo.ai">billing.hanzo.ai</a> invoices and usage</div>
+  <div><b>Company</b>
+    <a href="https://hanzo.ai">hanzo.ai</a> canonical
+    <a href="https://hanzo.ventures">hanzo.ventures</a> ventures</div>
+</div>
+<div class="fend"><a href="/token-creation.md">This page as plain text</a> · <a href="/llms.txt">Index for agents</a></div>
+</footer>
+</div></body></html>
