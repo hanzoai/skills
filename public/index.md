@@ -7,9 +7,9 @@ Run the open-source parts on your own machine, extend the cloud with /v1/*, and 
 
     curl -fsSL https://hanzo.sh | sh   # macOS, Linux, WSL
 
-Then run `hanzo`. It signs you in through the browser, links this machine to Hanzo Tabs, asks once which coding agent is your favourite, adds Hanzo's tools to it, and launches it accelerated. After that, `hanzo` launches your favourite, `hanzo dev --claude|--codex|--cursor|--agy` switches it, and `hanzo -- -c` continues the last conversation.
+Run `hanzo` — signs in, wires tools, launches your agent. `hanzo dev --claude|--codex|--cursor|--agy` switches agents; `hanzo -- -c` resumes.
 
-Or paste this into your agent (Claude Code, Codex, Cursor, Antigravity):
+Or paste this into your agent (Claude Code · Codex · Cursor · Antigravity):
 
     Set up Hanzo on this machine: follow https://hanzo.sh/setup.md
 

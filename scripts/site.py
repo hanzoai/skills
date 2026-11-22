@@ -256,18 +256,21 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
   text-rendering:optimizeLegibility}
 .wrap{max-width:68rem;margin:0 auto;padding:0 1.75rem}
 
-/* Edge halftone dot field framing the hero, matching hanzo.ai. */
-.hero{position:relative;border-bottom:1px solid var(--line)}
-.hero::before,.hero::after{content:"";position:absolute;top:0;bottom:0;width:min(24vw,280px);
-  background-image:radial-gradient(var(--dot) 1.25px,transparent 1.25px);
-  background-size:9px 9px;pointer-events:none}
-.hero::before{inset-inline-start:0;
-  -webkit-mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
-  mask-image:linear-gradient(90deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
-.hero::after{inset-inline-end:0;
-  -webkit-mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%);
-  mask-image:linear-gradient(270deg,#000000 0%,rgba(0,0,0,.55) 45%,transparent 100%)}
-.hero .wrap{position:relative;z-index:1;padding-top:4.5rem;padding-bottom:3.75rem}
+/* Organic 3D topological dot matrix behind the hero, matching hanzo.ai. */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hz-dots{position:absolute;inset:0;width:100%;height:100%;color:var(--ink);pointer-events:none;z-index:0}
+.hero .wrap{position:relative;z-index:1;padding-top:3.25rem;padding-bottom:2.75rem}
+
+.side-mark{display:none}
+@media (min-width:1240px){
+  .side-mark{position:fixed;left:1.25rem;bottom:2rem;z-index:30;width:2.25rem;height:2.25rem;
+    display:flex;align-items:center;justify-content:center;border-radius:var(--r);
+    border:1px solid var(--line);background:var(--ground);
+    background:color-mix(in srgb,var(--ground) 86%,transparent);backdrop-filter:blur(10px);
+    color:var(--ink);opacity:.6;text-decoration:none;transition:opacity .15s ease,border-color .15s ease}
+  .side-mark:hover{opacity:1;border-color:var(--line-hi);text-decoration:none}
+  .side-mark .mark{width:1rem;height:1rem}
+}
 
 nav{position:sticky;top:0;z-index:40;border-bottom:1px solid var(--line);
   background:var(--ground);background:color-mix(in srgb,var(--ground) 90%,transparent);
@@ -323,8 +326,8 @@ h1 em{font-style:normal;color:var(--soft);font-weight:500}
   letter-spacing:.08em;text-transform:uppercase}
 
 /* Works-with bar: one scrolling row, name and mark per agent. */
-.strip{border-bottom:1px solid var(--line);background:var(--panel)}
-.strip .in{max-width:68rem;margin:0 auto;padding:.9rem 1.75rem;display:flex;
+.strip{border-bottom:1px solid var(--line);background:var(--panel);overflow-x:clip}
+.strip .in{max-width:68rem;min-width:0;margin:0 auto;padding:.9rem 1.75rem;display:flex;
   align-items:center;gap:1.25rem;font-family:var(--sans);font-size:.8rem;color:var(--faint)}
 .strip b{color:var(--soft);font-weight:500;flex:0 0 auto;font-family:var(--mono);font-size:.7rem;
   letter-spacing:.1em;text-transform:uppercase;
@@ -354,7 +357,7 @@ a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
 a:hover{text-decoration-color:var(--ink)}
 a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 code{font-family:var(--mono);font-size:.84em;background:var(--panel-2);
-  border:1px solid var(--line);border-radius:6px;padding:.12em .4em}
+  border:1px solid var(--line);border-radius:6px;padding:.12em .4em;overflow-wrap:anywhere}
 pre{color-scheme:dark;background:var(--term-bg);color:var(--term-ink);border:1px solid var(--term-line);
   padding:1.05rem 1.2rem;border-radius:var(--r-soft);overflow-x:auto;margin:0 0 1.25rem}
 pre code{background:none;border:0;padding:0;font-size:.84rem;line-height:1.68;color:var(--term-ink)}
@@ -382,7 +385,7 @@ th,td{border:1px solid var(--line);padding:.55rem .75rem;text-align:left}
   text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
   padding-bottom:.45rem}
 .row{display:block;padding:.75rem 1rem;margin:0 -1rem;border-bottom:1px solid var(--line);
-  border-radius:var(--r-soft);text-decoration:none;transition:background .12s ease}
+  border-radius:var(--r-soft);text-decoration:none;transition:background .12s ease;overflow-wrap:anywhere}
 .row:hover{background:var(--panel-2);text-decoration:none}
 .nm{font-family:var(--mono);font-size:.86rem;font-weight:500;color:var(--ink);display:block}
 .ds{color:var(--soft);font-size:.92rem;display:block;margin-top:.15rem}
@@ -398,10 +401,19 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 .fmap a{display:inline-block;color:var(--ink);text-decoration:none;margin:.3rem .35rem 0 0}
 .fmap a:hover{text-decoration:underline}
 .fmap div{color:var(--faint);line-height:1.5}
-.fend{border-top:1px solid var(--line);padding-top:1.25rem;font-size:.82rem}
+.fend{border-top:1px solid var(--line);padding-top:1.35rem;font-size:.82rem;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1rem}
+.fcopy{order:1;color:var(--soft);justify-self:start;white-space:nowrap}
+.flegal{order:2;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.5rem 1.2rem;justify-self:center}
+.flegal a{color:var(--soft);text-decoration:none}
+.flegal a:hover{color:var(--ink);text-decoration:underline}
+.fmark{order:3;display:inline-flex;align-items:center;color:var(--ink);justify-self:end;text-decoration:none}
+.fmark:hover{opacity:.75;text-decoration:none}
+.fmark .mark{width:1.25rem;height:1.25rem}
+.fbar{display:contents}
 
 @media (max-width:640px){
-  .hero .wrap{padding-top:3rem;padding-bottom:2.5rem}
+  .hero .wrap{padding-top:2.5rem;padding-bottom:2rem}
   .nlinks .nhide{display:none}
   .btns{gap:.5rem}
   .btn{padding:.55rem 1rem;font-size:.84rem}
@@ -410,6 +422,9 @@ footer a:hover{color:var(--ink);text-decoration:underline}
   .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
   .strip b{border-right:0;padding-right:0}
   .bar{width:100%}
+  .fend{display:flex;flex-direction:column;align-items:stretch;gap:1rem}
+  .flegal{order:1;justify-content:center}
+  .fbar{order:2;display:flex;align-items:center;justify-content:space-between;width:100%}
 }
 """
 
@@ -419,15 +434,38 @@ CHEV = ('<svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor"
 
 def nav(up_href, up_text):
     return ('<nav><div class="in">\n'
-            '  <a class="brand" href="/">%s Hanzo <i>Skills</i></a>\n'
+            '  <a class="brand" href="/">Hanzo <i>Skills</i></a>\n'
             '  <div class="nlinks">'
             '<a class="nhide" href="https://hanzo.sh">hanzo.sh</a>'
             '<a class="nhide" href="https://docs.hanzo.ai">Docs</a>'
             '<a class="nhide" href="https://hanzo.ai/security">Security</a>'
             '<a class="up" href="%s">%s</a>'
-            '<a class="ncta" href="https://hanzo.app">Try Hanzo</a>'
+            '<a class="ncta" href="https://hanzo.ai/signup">Try Hanzo</a>'
             '</div>\n'
-            '</div></nav>' % (svg("hanzo"), up_href, up_text))
+            '</div></nav>' % (up_href, up_text))
+
+
+def side_mark():
+    return '<a class="side-mark" href="https://hanzo.ai" aria-label="Hanzo AI">%s</a>' % svg("hanzo")
+
+
+def fend(md_href):
+    return (
+        '<div class="fend">'
+        '<nav class="flegal" aria-label="Legal and machine links">'
+        '<a href="https://hanzo.ai/terms">Terms</a>'
+        '<a href="https://hanzo.ai/privacy">Privacy</a>'
+        '<a href="https://hanzo.ai/security">Security</a>'
+        '<a href="%s">Plain text</a>'
+        '<a href="/llms.txt">llms.txt</a>'
+        '</nav>'
+        '<div class="fbar">'
+        '<span class="fcopy">© 2026 Hanzo AI, Inc.</span>'
+        '<a class="fmark" href="https://hanzo.ai" aria-label="Hanzo AI">%s</a>'
+        '</div>'
+        '</div>'
+        % (html.escape(md_href), svg("hanzo"))
+    )
 
 
 def btns():
@@ -445,13 +483,9 @@ def btns():
         'aria-expanded="false" aria-controls="copymenu">Copy setup prompt %s</button>'
         '<div class="menu" id="copymenu" role="menu" aria-labelledby="copybtn" hidden>%s</div>'
         '</div>'
-        '<a class="btn" href="/hanzo-base">Upgrade to Native Go</a>'
-        '<a class="btn" href="/hanzo-migrate-backend-to-go">Migration Guide</a>'
-        '<a class="btn" href="/hanzo-coursework-fullstack-go-cloud">Go Coursework</a>'
-        '<a class="btn" href="/hanzo-tutorial-realtime-sse-backend">SSE Tutorial</a>'
-        '<a class="btn" href="/hanzo-examples-native-cloud">Code Examples</a>'
-        '<a class="btn" href="/llms.txt">Index for agents</a>'
-        '<a class="btn" href="https://hanzo.codes">Code with an agent</a>'
+        '<a class="btn" href="/skill">skill.md</a>'
+        '<a class="btn" href="/llms.txt">llms.txt</a>'
+        '<a class="btn" href="https://hanzo.sh">hanzo.sh</a>'
         '</div>'
         '<script type="application/json" id="prompts">%s</script>'
         % (CHEV, "".join(rows),
@@ -487,6 +521,117 @@ m.addEventListener('click',function(e){
 </script>"""
 
 
+DOTS_JS = """
+<script id="dotsjs">
+(function(){
+var hero=document.querySelector('.hero');if(!hero)return;
+var cv=hero.querySelector('canvas.hz-dots');if(!cv)return;
+var cx=cv.getContext('2d');if(!cx)return;
+var G=10,R=255,ZS=68,LZ=108;
+var mqM=matchMedia('(prefers-reduced-motion: reduce)'),mqD=matchMedia('(prefers-color-scheme: dark)');
+var calm=mqM.matches,anim=!calm,t0=performance.now();
+var W=0,H=0,cols=0,rows=0,raf=0,vis=true;
+var tx=-1e4,ty=-1e4,lx=-1e4,ly=-1e4,inside=false,energy=0,boost=0;
+var rgb='10,10,10',aA=[0.095,0.175,0.265],gA=[0.35,0.47,0.59,0.71,0.83,0.94],aS=[],gS=[];
+function tone(){
+  var m=getComputedStyle(cv).color.match(/[\\d.]+/g)||[10,10,10];
+  rgb=m[0]+','+m[1]+','+m[2];
+  aS=aA.map(function(a){return 'rgba('+rgb+','+a+')';});
+  gS=gA.map(function(a){return 'rgba('+rgb+','+a+')';});
+}
+tone();
+var amb=[[],[],[]],glm=[[],[],[],[],[],[]];
+function draw(now){
+  var t=anim?(now-t0)*0.00055:0;
+  cx.clearRect(0,0,W,H);
+  var b,j,i,k;
+  for(b=0;b<3;b++)amb[b].length=0;
+  for(b=0;b<6;b++)glm[b].length=0;
+  var gx1=W*(0.18+0.07*Math.sin(t*0.52)),gy1=H*(0.48+0.14*Math.cos(t*0.41));
+  var gx2=W*(0.82+0.07*Math.cos(t*0.47)),gy2=H*(0.52+0.14*Math.sin(t*0.37));
+  var invH=1/Math.max(1,H),wL=Math.max(1,W*0.3),wR=Math.max(1,W*0.34);
+  var lit=energy>0.01&&lx>-5e3,r2Max=R*R;
+  for(j=0;j<rows;j++){
+    var y=j*G,rawEy=0.3+y*invH*0.95,ey=rawEy<1?rawEy:1,dey=rawEy<1?invH*0.95:0;
+    for(i=0;i<cols;i++){
+      var x=i*G,lR=1-x/wL,rR=(x-W*0.66)/wR,ex=0.14,dex=0;
+      if(lR>=rR&&lR>0.14){ex=lR;dex=-1/wL;}else if(rR>0.14){ex=rR;dex=1/wR;}
+      var p1=x*0.012+y*0.006-t*1.25,p2=y*0.014-x*0.005+t*0.9,p3=(x+y)*0.007+t*0.65;
+      var w1=Math.sin(p1),c1=Math.cos(p1),w2=Math.cos(p2),s2=Math.sin(p2),w3=Math.sin(p3),c3=Math.cos(p3);
+      var wave=w1*w2*0.65+w3*0.35;
+      var dwx=0.65*(0.012*c1*w2+w1*0.005*s2)+0.35*0.007*c3;
+      var dwy=0.65*(0.006*c1*w2-w1*0.014*s2)+0.35*0.007*c3;
+      var n=0.56+0.44*wave,dnx=0.44*dwx,dny=0.44*dwy;
+      var f=ex*ey*n*1.3,dfx=(dex*ey*n+ex*ey*dnx)*1.3,dfy=(ex*dey*n+ex*ey*dny)*1.3;
+      var dx1=x-gx1,dy1=y-gy1,d1Sq=dx1*dx1+dy1*dy1;
+      if(d1Sq<57600){var d1=Math.sqrt(d1Sq)||1,k1=1-d1/240,gs1=(-0.56*k1)/(240*d1);f+=k1*k1*0.28;dfx+=gs1*dx1;dfy+=gs1*dy1;}
+      var dx2=x-gx2,dy2=y-gy2,d2Sq=dx2*dx2+dy2*dy2;
+      if(d2Sq<57600){var d2=Math.sqrt(d2Sq)||1,k2=1-d2/240,gs2=(-0.56*k2)/(240*d2);f+=k2*k2*0.28;dfx+=gs2*dx2;dfy+=gs2*dy2;}
+      var z=f<0?0:f>1?1:f;if(z<0.05)continue;
+      var sx=-dfx*ZS,sy=-dfy*ZS,invN=1/Math.sqrt(sx*sx+sy*sy+1);
+      var nx=sx*invN,ny=sy*invN,nz=invN;
+      var drawX=x+nx*z*2.6,drawY=y+ny*z*2.6,r=z*G*0.39,gb=-1;
+      if(lit){
+        var vx=lx-x,vy=ly-y,dSq=vx*vx+vy*vy;
+        if(dSq<r2Max){
+          var dist2=Math.sqrt(dSq),fall=1-dist2/R,atten=fall*fall*(3-2*fall);
+          var vz=LZ-z*44,invL=1/Math.sqrt(dSq+vz*vz);
+          var ldx=vx*invL,ldy=vy*invL,ldz=vz*invL;
+          var ndotl=Math.max(0,nx*ldx+ny*ldy+nz*ldz),hzf=ldz+1;
+          var invHlf=1/Math.sqrt(ldx*ldx+ldy*ldy+hzf*hzf);
+          var ndoth=Math.max(0,(nx*ldx+ny*ldy+nz*hzf)*invHlf);
+          var nh2=ndoth*ndoth,nh4=nh2*nh2,spec=nh4*nh4*nh4;
+          var crest=Math.max(0.06,Math.min(1,(wave+0.72)*0.68))*(0.2+0.8*z);
+          var gleam=atten*energy*crest*(0.42*ndotl+1.05*spec);
+          var lift=gleam*(0.35+0.65*z);
+          r=Math.min(G*0.49,r+lift*G*0.18);
+          drawX-=(vx/R)*z*2.4*atten*energy;drawY-=(vy/R)*z*2.4*atten*energy;
+          if(gleam>0.07)gb=Math.min(5,Math.floor((gleam-0.07)*7.2));
+        }
+      }
+      if(gb>=0){glm[gb].push(drawX,drawY,r);}
+      else{amb[z<0.28?0:z<0.56?1:2].push(drawX,drawY,r);}
+    }
+  }
+  for(b=0;b<3;b++){var arr=amb[b];if(!arr.length)continue;cx.fillStyle=aS[b];cx.beginPath();
+    for(k=0;k<arr.length;k+=3){cx.moveTo(arr[k]+arr[k+2],arr[k+1]);cx.arc(arr[k],arr[k+1],arr[k+2],0,6.2832);}cx.fill();}
+  for(b=0;b<6;b++){var g=glm[b];if(!g.length)continue;cx.fillStyle=gS[b];cx.beginPath();
+    for(k=0;k<g.length;k+=3){cx.moveTo(g[k]+g[k+2],g[k+1]);cx.arc(g[k],g[k+1],g[k+2],0,6.2832);}cx.fill();}
+}
+function tick(now){
+  boost*=0.9;var target=inside?Math.min(1,0.72+boost*0.28):0;
+  energy+=(target-energy)*(inside?0.18:0.08);
+  if(lx<-5e3&&tx>-5e3){lx=tx;ly=ty;}else if(tx>-5e3){lx+=(tx-lx)*0.28;ly+=(ty-ly)*0.28;}
+  draw(now);
+  raf=(anim||energy>0.01||inside)&&vis?requestAnimationFrame(tick):0;
+}
+function start(){if(!raf&&vis&&(anim||energy>0.01||inside))raf=requestAnimationFrame(tick);}
+function size(){
+  var r=hero.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);
+  W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';
+  cx.setTransform(dpr,0,0,dpr,0,0);cols=Math.ceil(W/G)+1;rows=Math.ceil(H/G)+1;draw(performance.now());
+}
+function move(e){
+  if(e.pointerType!=='mouse'&&e.pointerType!=='pen')return;
+  var r=cv.getBoundingClientRect(),nx=e.clientX-r.left,ny=e.clientY-r.top;
+  if(tx>-5e3){boost=Math.min(1,boost+Math.hypot(nx-tx,ny-ty)*0.025);}else{lx=nx;ly=ny;boost=0.6;}
+  tx=nx;ty=ny;inside=true;
+  if(calm){energy=0.85;lx=nx;ly=ny;draw(performance.now());}else start();
+}
+function leave(){inside=false;if(calm){energy=0;draw(performance.now());}else start();}
+size();start();
+if(typeof IntersectionObserver!=='undefined'){
+  new IntersectionObserver(function(es){vis=es[0].isIntersecting;if(vis)start();else if(raf){cancelAnimationFrame(raf);raf=0;}}).observe(cv);
+}
+if(typeof ResizeObserver!=='undefined'){new ResizeObserver(size).observe(hero);}else{addEventListener('resize',size);}
+hero.addEventListener('pointerenter',move);
+hero.addEventListener('pointermove',move);
+hero.addEventListener('pointerleave',leave);
+mqD.addEventListener('change',function(){tone();draw(performance.now());});
+})();
+</script>"""
+
+
 # The install command per OS, in tab order; the page opens on the visitor's OS.
 # Windows is one row here, once hanzo.sh/install.ps1 serves a script:
 #   ("win", "Windows", "irm hanzo.sh/install.ps1 | iex"),
@@ -496,13 +641,10 @@ INSTALL = [
     ("wsl", "WSL", "curl -fsSL https://hanzo.sh | sh"),
 ]
 PASTE = "Set up Hanzo on this machine: follow https://hanzo.sh/setup.md"
-PASTE_TO = "Claude Code, Codex, Cursor, Antigravity"
-NEXT = ("Then run <code>hanzo</code>. It signs you in through the browser, links this machine "
-        "to Hanzo Tabs, asks once which coding agent is your favourite, adds Hanzo's tools to it, "
-        "and launches it accelerated.")
-AFTER = ("After that, <code>hanzo</code> launches your favourite, "
-         "<code>hanzo dev --claude|--codex|--cursor|--agy</code> switches it, and "
-         "<code>hanzo -- -c</code> continues the last conversation.")
+PASTE_TO = "Claude Code · Codex · Cursor · Antigravity"
+NEXT = "Run <code>hanzo</code> — signs in, wires tools, launches your agent."
+AFTER = ("<code>hanzo dev --claude|--codex|--cursor|--agy</code> switches agents; "
+         "<code>hanzo -- -c</code> resumes.")
 
 GET_CSS = """
 .get{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:1rem;margin:0 0 2rem}
@@ -576,12 +718,12 @@ def get():
         '<section class="get" aria-label="Get started"><style>%s</style>'
         '<div class="gbox"><div class="ghead"><b>Install</b>'
         '<div class="tabs" role="tablist" aria-label="Operating system" hidden>%s</div></div>'
-        '%s<p class="next">%s</p><p class="next">%s</p></div>'
+        '%s<p class="next">%s</p></div>'
         '<div class="gbox"><div class="ghead"><b>Or paste into your agent</b><span>%s</span></div>'
         '<div class="cmd"><code>%s</code>'
         '<button class="cp" type="button" aria-label="Copy the setup line for your agent">Copy</button>'
         '</div></div>%s</section>'
-        % (GET_CSS, tabs, cmds, NEXT, AFTER, html.escape(PASTE_TO), html.escape(PASTE), GET_JS))
+        % (GET_CSS, tabs, cmds, NEXT, html.escape(PASTE_TO), html.escape(PASTE), GET_JS))
 
 
 def get_md():
@@ -608,9 +750,16 @@ def patch(path):
 
     up = re.search(r'<a class="up" href="([^"]+)">([^<]+)</a>', out)
     out = re.sub(r"<nav>.*?</nav>", lambda _: nav(up.group(1), up.group(2)), out, count=1, flags=re.S)
+    # Remove any prior side-mark before inserting cleanly after </nav>
+    out = re.sub(r'\s*<a class="side-mark"[^>]*>.*?</a>', "", out, flags=re.S)
+    out = re.sub(r"</nav>", lambda _: "</nav>\n" + side_mark(), out, count=1)
 
     name = os.path.basename(path)[:-5]
     slug = "" if name == "index" else name
+    md_href = "/%s.md" % name
+    # Align footer across all pages: copyright left, legal centered, H mark flush right opposite copyright.
+    out = re.sub(r'<div class="fend">.*?</div>(?=\s*</footer>)',
+                 lambda _: fend(md_href), out, count=1, flags=re.S)
     # Markdown is a twin file, not content negotiation: /<path>.md.
     out = out.replace(
         "     Send no Accept: text/html and any path returns markdown. -->",
@@ -630,13 +779,11 @@ def patch(path):
     if os.path.basename(path) == "index.html":
         # Anchored on markup outside each region so a rewritten page re-matches
         # exactly the same span.
+        out = re.sub(r'<canvas class="hz-dots"[^>]*></canvas>', "", out)
+        out = re.sub(r'<div class="hero">', '<div class="hero"><canvas class="hz-dots" aria-hidden="true"></canvas>', out, count=1)
         hero_h1_lede = (
-            '<h1>The native cloud in a single binary.<br>Go. Rust. C++. '
-            '<em>Zero interpreter bloat.</em></h1>'
-            '<p class="lede">Agents and bots can create a free account, get an API key, and test '
-            '<strong>Enso</strong>, <strong>Kai</strong>, <strong>Zen</strong> models and the API Platform via '
-            '<a href="/hanzo">hanzo.md</a> (<code>curl -fsSL https://hanzoskills.com/hanzo.md</code>) — or run the open-source '
-            'stack locally with <a href="/skill">skill.md</a>.</p>'
+            '<h1>Native cloud skills.<br><em>Drop into any agent.</em></h1>'
+            '<p class="lede">Plain markdown over HTTPS. <code>curl -fsSL https://hanzoskills.com/skill.md</code> — no auth, works everywhere.</p>'
         )
         out = re.sub(r'<h1>.*?(?=<div class="btns">)', lambda _: hero_h1_lede + get(), out,
                      count=1, flags=re.S)
@@ -645,7 +792,8 @@ def patch(path):
         out = re.sub(r'<div class="strip">.*?(?=\n<div class="wrap">)',
                      lambda _: strip(), out, count=1, flags=re.S)
         out = re.sub(r'\s*<script id="copyjs">.*?</script>', "", out, flags=re.S)
-        out = re.sub(r"\s*</body>", COPY_JS + "</body>", out, count=1)
+        out = re.sub(r'\s*<script id="dotsjs">.*?</script>', "", out, flags=re.S)
+        out = re.sub(r"\s*</body>", lambda _: COPY_JS + DOTS_JS + "</body>", out, count=1)
 
     if out != src:
         write(path, out)

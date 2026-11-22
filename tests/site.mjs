@@ -35,15 +35,18 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 await page.goto(BASE + '/', { waitUntil: 'load' });
 
-// 1 — the mark renders
-const mark = page.locator('nav .brand svg.mark');
+// 1 — the mark renders in footer (not stuck top-left in nav) and topology canvas mounts
+const navMark = page.locator('nav .brand svg.mark');
+ok('logo: no mark stuck top-left in nav', (await navMark.count()) === 0);
+const mark = page.locator('footer .fmark svg.mark');
 const markBox = await mark.boundingBox();
-ok('logo: one mark in nav', (await mark.count()) === 1);
+ok('logo: one mark in footer opposite copyright', (await mark.count()) === 1);
 ok('logo: mark has area', markBox && markBox.width > 8 && markBox.height > 8,
   markBox ? `${Math.round(markBox.width)}x${Math.round(markBox.height)}` : 'no box');
 ok('logo: mark has canonical geometry',
   (await mark.locator('path').count()) === 5,
   `${await mark.locator('path').count()} paths`);
+ok('topology: dot-matrix canvas mounted in hero', (await page.locator('.hero canvas.hz-dots').count()) === 1);
 ok('favicon: declared', (await page.locator('link[rel="icon"]').count()) === 1);
 const favStatus = (await page.request.get(BASE + '/favicon.svg')).status();
 ok('favicon: served', favStatus === 200, `HTTP ${favStatus}`);
@@ -182,7 +185,7 @@ console.log(`\nshots -> ${SHOTS}`);
 // a content page keeps the same chrome
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(BASE + '/hip-0026.html', { waitUntil: 'load' });
-ok('subpage: carries the mark', (await page.locator('nav .brand svg.mark path').count()) === 5);
+ok('subpage: carries the mark in footer', (await page.locator('footer .fmark svg.mark path').count()) === 5);
 ok('subpage: names its markdown twin',
   (await page.locator('link[rel="alternate"][type="text/markdown"]').getAttribute('href')) === '/hip-0026.md');
 await page.waitForFunction(() => window.__tools.length >= 2, null, { timeout: 5000 }).catch(() => {});
