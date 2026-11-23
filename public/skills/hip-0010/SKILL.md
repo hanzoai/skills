@@ -1,0 +1,612 @@
+---
+hip: "0010"
+title: Model Context Protocol (MCP) Integration Standards
+author: Hanzo AI Team
+type: Standards Track
+category: Interface
+status: Final
+implementation-rust: shipped
+created: 2025-01-09
+requires: HIP-0002, HIP-0009
+---
+
+
+# HIP-0010: Model Context Protocol (MCP) Integration Standards
+
+## Abstract
+
+This proposal defines the Model Context Protocol (MCP) integration standards for the Hanzo ecosystem. MCP enables seamless tool use, context management, and extensibility for AI models through a standardized protocol for connecting models to external tools and data sources.
+
+## Implementations
+
+Where the code is. How far it has got is the front matter's
+`implementation-go`, `implementation-cpp` and `implementation-rust`, which every
+HIP carries in the same three words and the index counts.
+
+| Language | Repository | Package |
+|----------|------------|---------|
+| **Python** | [github.com/hanzoai/mcp](https://github.com/hanzoai/mcp) | `hanzo-mcp` (PyPI) |
+| **TypeScript** | [github.com/hanzoai/mcp](https://github.com/hanzoai/mcp) | `@hanzoai/mcp` (NPM) |
+| **Rust** | [github.com/hanzoai/mcp/rust](https://github.com/hanzoai/mcp/tree/main/rust) | `hanzo-mcp` (crates.io) |
+| **Go** | [github.com/hanzoai/mcp/go](https://github.com/hanzoai/mcp/tree/main/go) | `github.com/hanzoai/mcp/go` |
+
+**CLI**: `hanzo-mcp`, the native Rust server, served over stdio when run bare (`-t sse` for HTTP).
+The canonical install is the unified `hanzo` package, on any OS: `npx -y hanzo mcp` runs it with
+nothing installed first, and after `npm i -g hanzo` (or `curl -fsSL https://hanzo.sh | sh`) it is
+`hanzo mcp`. The launcher downloads the release binary for the platform on first use and verifies
+it against the `.sha256` published beside it. A client registers it as
+`claude mcp add --scope user hanzo -- npx -y hanzo mcp`. The language packages in the table above
+remain for embedding.
+
+### Core Tools (All Implementations)
+
+| Tool | Python | Rust | TypeScript | Description |
+|------|--------|------|------------|-------------|
+| **proc** | ✅ | ✅ | ✅ | Process execution (shell, ps, kill) |
+| **fs** | ✅ | ✅ | ✅ | Filesystem (read, write, edit, search) |
+| **think** | ✅ | ✅ | ✅ | Reasoning (think, critic, review) |
+| **memory** | ✅ | ✅ | ✅ | Persistent memory & knowledge bases |
+| **browser** | ✅ | ⚠️ | ✅ | Browser automation (90+ Playwright actions) |
+| **ui** | ✅ | ✅ | ⚠️ | Native UI automation (click, type, screenshot) |
+| **mode** | ✅ | ✅ | ✅ | Developer personality modes |
+| **plan** | ✅ | ✅ | ✅ | Task/plan management |
+
+### Rust-Specific Features
+
+- **Tree-sitter AST search**: 8 languages (Rust, JS, TS, Python, Go, Java, C, C++)
+- **Native macOS UI**: Quartz backend for high-performance automation
+- **Process auto-backgrounding**: Commands exceeding 45s auto-background
+- **Unified search**: Multi-modal search (Text, AST, Symbol, Vector, Memory, File)
+- **Zero-copy parsing**: Efficient JSON-RPC handling
+
+The tool surface itself is whatever `hanzo/mcp` ships; this HIP governs the protocol, not the catalogue.
+
+## Specification
+
+### Protocol Overview
+
+```yaml
+MCP Architecture:
+  Transport Layer:
+    - JSON-RPC 2.0
+    - WebSocket/HTTP
+    - Bidirectional communication
+    
+  Session Management:
+    - Persistent connections
+    - Context preservation
+    - State synchronization
+    
+  Tool Registry:
+    - Dynamic discovery
+    - Capability negotiation
+    - Version management
+    
+  Security:
+    - Permission system
+    - Sandboxed execution
+    - Audit logging
+```
+
+### Core MCP Messages
+
+```typescript
+// Tool Registration
+interface ToolRegistration {
+  jsonrpc: "2.0";
+  method: "tools/register";
+  params: {
+    name: string;
+    description: string;
+    input_schema: JSONSchema;
+    output_schema: JSONSchema;
+    permissions: Permission[];
+  };
+}
+
+// Tool Execution
+interface ToolExecution {
+  jsonrpc: "2.0";
+  method: "tools/execute";
+  params: {
+    tool: string;
+    arguments: any;
+    context?: Context;
+  };
+}
+
+// Context Update
+interface ContextUpdate {
+  jsonrpc: "2.0";
+  method: "context/update";
+  params: {
+    entries: ContextEntry[];
+    merge_strategy: "replace" | "merge" | "append";
+  };
+}
+```
+
+### Tool Definition Standard
+
+```yaml
+# Tool manifest (mcp-tool.yaml)
+name: web_search
+version: 1.0.0
+description: Search the web for information
+
+input:
+  type: object
+  properties:
+    query:
+      type: string
+      description: Search query
+    max_results:
+      type: integer
+      default: 10
+  required: [query]
+
+output:
+  type: object
+  properties:
+    results:
+      type: array
+      items:
+        type: object
+        properties:
+          title: string
+          url: string
+          snippet: string
+
+permissions:
+  - network:http
+  - rate_limit:100/min
+
+implementation:
+  runtime: node
+  handler: ./search.js
+  timeout: 30000
+```
+
+### Hanzo MCP Server
+
+```python
+class HanzoMCPServer:
+    """
+    MCP server implementation for Hanzo
+    """
+    def __init__(self):
+        self.tools = {}
+        self.contexts = {}
+        self.sessions = {}
+        
+    async def handle_request(self, request):
+        """Route JSON-RPC requests"""
+        if request.method == "tools/list":
+            return self.list_tools()
+        elif request.method == "tools/execute":
+            return await self.execute_tool(request.params)
+        elif request.method == "context/get":
+            return self.get_context(request.params)
+        elif request.method == "context/update":
+            return self.update_context(request.params)
+            
+    async def execute_tool(self, params):
+        """Execute tool with sandboxing"""
+        tool = self.tools[params.tool]
+        
+        # Validate permissions
+        if not self.check_permissions(tool, params.session_id):
+            raise PermissionError(f"Tool {tool.name} not authorized")
+            
+        # Sandbox execution
+        sandbox = ToolSandbox(
+            memory_limit="512MB",
+            cpu_limit="1 core",
+            timeout=tool.timeout
+        )
+        
+        result = await sandbox.execute(
+            tool.handler,
+            params.arguments,
+            context=self.contexts[params.session_id]
+        )
+        
+        return result
+```
+
+### Built-in Tools
+
+```yaml
+Core Tools:
+  filesystem:
+    - read_file
+    - write_file
+    - list_directory
+    - create_directory
+    
+  network:
+    - http_request
+    - websocket_connect
+    - dns_lookup
+    
+  database:
+    - sql_query
+    - redis_get/set
+    - mongodb_find
+    
+  compute:
+    - execute_code
+    - run_notebook
+    - shell_command
+    
+  ai:
+    - call_model
+    - generate_embedding
+    - semantic_search
+```
+
+### Language Intelligence
+
+Language intelligence is one tool, not one tool per language. The `lsp` tool takes an action, a file, and a position, and returns the same shapes whichever server answers. The server for a file's language is installed and started on first use and reused for the rest of the session.
+
+| Language | Server | Features |
+|----------|--------|----------|
+| Go | `gopls` | Definition, references, rename, diagnostics, formatting |
+| Python | `pyright` | Type checking, definition, references, completions |
+| TypeScript/JavaScript | `typescript-language-server` | Full TS/JS intelligence |
+| Rust | `rust-analyzer` | Comprehensive Rust support |
+| Java | `jdtls` | Eclipse JDT-based Java support |
+| C/C++ | `clangd` | LLVM-based C/C++ intelligence |
+| Ruby | `solargraph` | Ruby language server |
+| Lua | `lua-language-server` | Lua intelligence |
+
+```python
+lsp(action="definition", file="main.go", line=42, character=15)
+# -> Starts gopls if not running
+# -> Returns: {"file": "handler.go", "line": 10, "character": 5}
+
+lsp(action="references", file="auth.py", line=20, character=8)
+# -> Starts pyright if not running
+# -> Returns: [{"file": "auth.py", "line": 20}, {"file": "test_auth.py", "line": 5}, ...]
+
+lsp(action="diagnostics", file="server.ts")
+# -> Returns: [{"line": 15, "message": "Type 'string' is not assignable to type 'number'", "severity": "error"}]
+```
+
+### Structural Search
+
+The `ast` tool parses with tree-sitter — incremental and error-tolerant, so a file that does not compile is still searchable — across Rust, JavaScript, TypeScript, Python, Go, Java, C and C++. Queries match syntax rather than text:
+
+```python
+# Find all async functions in Python files
+ast("async def", "./src", line_number=True)
+
+# Find all struct definitions in Go
+ast("type.*struct", "./pkg", line_number=True)
+
+# Find all test functions
+ast("func Test", "./tests")
+
+# Find all React components (capitalized function exports)
+ast("export.*function [A-Z]", "./components")
+```
+
+### Tool Implementation Examples
+
+#### Web Search Tool
+```javascript
+// search.js
+export default async function search({ query, max_results = 10 }) {
+  // Use Hanzo search service
+  const response = await fetch('https://api.hanzo.ai/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.HANZO_API_KEY}`
+    },
+    body: JSON.stringify({ query, limit: max_results })
+  });
+  
+  const data = await response.json();
+  
+  return {
+    results: data.results.map(r => ({
+      title: r.title,
+      url: r.url,
+      snippet: r.snippet
+    }))
+  };
+}
+```
+
+#### Code Execution Tool
+```python
+# code_executor.py
+import subprocess
+import tempfile
+import os
+
+async def execute_code(language: str, code: str, timeout: int = 30):
+    """Execute code in sandboxed environment"""
+    
+    # Create temporary file
+    with tempfile.NamedTemporaryFile(
+        mode='w',
+        suffix=_get_extension(language),
+        delete=False
+    ) as f:
+        f.write(code)
+        temp_file = f.name
+    
+    try:
+        # Execute based on language
+        if language == "python":
+            result = subprocess.run(
+                ["python", temp_file],
+                capture_output=True,
+                text=True,
+                timeout=timeout
+            )
+        elif language == "javascript":
+            result = subprocess.run(
+                ["node", temp_file],
+                capture_output=True,
+                text=True,
+                timeout=timeout
+            )
+        else:
+            raise ValueError(f"Unsupported language: {language}")
+            
+        return {
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode
+        }
+    finally:
+        os.unlink(temp_file)
+```
+
+### Context Management
+
+```python
+class MCPContext:
+    """
+    Manages context across tool executions
+    """
+    def __init__(self):
+        self.entries = {}
+        self.history = []
+        self.metadata = {}
+        
+    def add_entry(self, key: str, value: Any, type: str = "text"):
+        """Add context entry"""
+        entry = ContextEntry(
+            key=key,
+            value=value,
+            type=type,
+            timestamp=time.time()
+        )
+        self.entries[key] = entry
+        self.history.append(entry)
+        
+    def get_relevant_context(self, query: str, max_entries: int = 10):
+        """Retrieve relevant context for query"""
+        # Semantic search through context
+        embeddings = self.generate_embeddings([query] + [e.value for e in self.entries.values()])
+        
+        similarities = cosine_similarity(embeddings[0], embeddings[1:])
+        top_indices = np.argsort(similarities)[-max_entries:]
+        
+        return [list(self.entries.values())[i] for i in top_indices]
+```
+
+### The Agent Loop
+
+A model driving these tools follows one loop, and the server enforces the order rather than trusting the model to keep it:
+
+**1. Think**: Analyze the request. Identify constraints, dependencies, and risks. Use the `think` tool to record reasoning without taking action.
+
+**2. Plan**: Outline the sequence of changes. Identify files to read, edits to make, tests to run. Summarize the plan for human review.
+
+**3. Implement**: Execute the plan through tool calls. Make changes incrementally — one file at a time, one logical edit at a time. Prefer `edit` (surgical string replacement) over `write` (full file overwrite).
+
+**4. Validate**: Run tests, linters, type checkers and build commands. Observe the output. If validation fails, return to step 1 with the error context.
+
+**5. Learn**: Record insights, architectural decisions and project conventions in the memory system, so the next session starts where this one ended.
+
+Validation cannot be skipped and planning cannot be bypassed. The agent summarizes what it did and awaits confirmation before starting the next task.
+
+### Claude Desktop Integration
+
+```json
+// Claude Desktop config (~/.claude/config.json)
+{
+  "mcpServers": {
+    "hanzo": {
+      "command": "hanzo-mcp",
+      "args": ["serve"],
+      "env": {
+        "HANZO_API_KEY": "sk-hanzo-..."
+      }
+    }
+  }
+}
+```
+
+### Security Model
+
+```python
+class MCPSecurity:
+    """
+    Security layer for MCP
+    """
+    def __init__(self):
+        self.permissions = PermissionManager()
+        self.sandbox = Sandbox()
+        self.audit = AuditLogger()
+        
+    def check_permission(self, tool: str, action: str, session: Session):
+        """Check if action is permitted"""
+        # Default deny
+        if not session.authenticated:
+            return False
+            
+        # Check tool permissions
+        tool_perms = self.permissions.get_tool_permissions(tool)
+        if action not in tool_perms:
+            return False
+            
+        # Check user permissions
+        user_perms = self.permissions.get_user_permissions(session.user_id)
+        if not user_perms.can_execute(tool, action):
+            return False
+            
+        # Log for audit
+        self.audit.log(session.user_id, tool, action)
+        
+        return True
+```
+
+### Performance Optimization
+
+```yaml
+Caching:
+  Tool Results:
+    - Cache deterministic tool outputs
+    - TTL based on tool type
+    - Invalidation on context change
+    
+  Context:
+    - In-memory context cache
+    - Persistent context storage
+    - Lazy loading of large contexts
+    
+Connection Pooling:
+  - Reuse WebSocket connections
+  - Connection multiplexing
+  - Automatic reconnection
+  
+Batching:
+  - Batch multiple tool calls
+  - Parallel execution when possible
+  - Result aggregation
+```
+
+### SDK Usage
+
+#### Python SDK
+```python
+from hanzoai.mcp import MCPClient, Tool
+
+# Initialize client
+client = MCPClient("ws://localhost:3000/mcp")
+
+# Register custom tool
+@client.tool(
+    name="calculator",
+    description="Perform calculations"
+)
+async def calculator(expression: str) -> float:
+    return eval(expression)  # Simplified example
+
+# Use in agent
+result = await client.execute_tool(
+    "web_search",
+    {"query": "Hanzo AI"}
+)
+```
+
+#### TypeScript SDK
+```typescript
+import { MCPClient, Tool } from '@hanzoai/mcp';
+
+// Initialize client
+const client = new MCPClient('ws://localhost:3000/mcp');
+
+// Register tool
+client.registerTool({
+  name: 'calculator',
+  description: 'Perform calculations',
+  handler: async (expression: string) => {
+    return eval(expression); // Simplified
+  }
+});
+
+// Execute tool
+const result = await client.executeTool('web_search', {
+  query: 'Hanzo AI'
+});
+```
+
+#### Rust SDK
+```rust
+use hanzo_mcp::{MCPServer, Config};
+use hanzo_mcp::tools::{ShellTool, FsTool, ThinkTool, MemoryTool};
+
+// Initialize server with tools
+let config = Config::default();
+let mut server = MCPServer::new(config);
+
+// Add built-in tools
+server.add_tool(ShellTool::new());
+server.add_tool(FsTool::new());
+server.add_tool(ThinkTool::new());
+server.add_tool(MemoryTool::new());
+
+// Start server
+server.serve("127.0.0.1:3000").await?;
+```
+
+**Using tools directly:**
+```rust
+use hanzo_mcp::tools::{ShellTool, ProcToolArgs};
+use serde_json::Value;
+
+// Execute shell command
+let tool = ShellTool::new();
+let args = ProcToolArgs {
+    action: "exec".to_string(),
+    command: Some(Value::String("echo hello".to_string())),
+    ..Default::default()
+};
+
+let result = tool.execute(args).await?;
+let json: serde_json::Value = serde_json::from_str(&result)?;
+println!("stdout: {}", json["stdout"]);
+```
+
+**Search with modality detection:**
+```rust
+use hanzo_mcp::search::{detect_modalities, SearchModality, AstSearcher};
+
+// Auto-detect search modalities
+let modalities = detect_modalities("class UserService");
+assert!(modalities.contains(&SearchModality::Ast));
+assert!(modalities.contains(&SearchModality::Text));
+
+// AST search with tree-sitter
+let searcher = AstSearcher::new();
+let results = searcher
+    .search("handleClick", path, Some("typescript"), 10)
+    .await?;
+```
+
+**Cargo.toml:**
+```toml
+[dependencies]
+hanzo-mcp = "0.12"
+
+# Optional features
+[features]
+default = []
+vector-store = ["qdrant-client"]
+computer-control = ["enigo", "screenshots"]
+```
+
+3. [Claude Desktop MCP](https://claude.ai/docs/mcp)
+4. [HIP-0009: Agent SDK - Multi-Agent Orchestration Framework](./hip-0009-agent-sdk-multi-agent-orchestration-framework.md)
+5. [MCP Repository](https://github.com/hanzoai/mcp)
+
+## Copyright
+
+Copyright and related rights waived via [CC0](https://creativecommons.org/publicdomain/zero/1.0/).

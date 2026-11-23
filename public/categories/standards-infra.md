@@ -1,0 +1,120 @@
+# HIPs: Cloud & Infrastructure (113 skills)
+
+> Hanzo Improvement Proposals for compute, networking, storage, and cloud infrastructure.
+> Tier 0 catalog: [llms.txt](https://hanzoskills.com/llms.txt) · [catalog.json](https://hanzoskills.com/catalog.json) · [JSON](https://hanzoskills.com/categories/standards-infra.json)
+
+Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/SKILL.md`
+
+- [hip-0014](https://hanzoskills.com/skills/hip-0014/SKILL.md) — HIP-14: Application Deployment Standard. Status Final.
+- [hip-0033](https://hanzoskills.com/skills/hip-0033/SKILL.md) — HIP-33: Container Registry Standard. Status Final.
+- [hip-0036](https://hanzoskills.com/skills/hip-0036/SKILL.md) — HIP-36: CI/CD Build System Standard. Status Final.
+- [hip-0049](https://hanzoskills.com/skills/hip-0049/SKILL.md) — HIP-49: DNS Service Standard. Status Final.
+- [hip-0050](https://hanzoskills.com/skills/hip-0050/SKILL.md) — HIP-50: Hanzo Edge — Edge AI Runtime Standard. Status Final.
+- [hip-0053](https://hanzoskills.com/skills/hip-0053/SKILL.md) — HIP-53: Visor Monitoring & Supervision Standard. Status Draft.
+- [hip-0060](https://hanzoskills.com/skills/hip-0060/SKILL.md) — HIP-60: Serverless Functions (FaaS) Standard. Status Final.
+- [hip-0065](https://hanzoskills.com/skills/hip-0065/SKILL.md) — HIP-65: Backup & Disaster Recovery Standard. Status Final.
+- [hip-0068](https://hanzoskills.com/skills/hip-0068/SKILL.md) — HIP-68: Ingress Standard. Status Final.
+- [hip-0069](https://hanzoskills.com/skills/hip-0069/SKILL.md) — HIP-69: ZAP Mesh — One Bus for Every Node. Status Draft.
+- [hip-0074](https://hanzoskills.com/skills/hip-0074/SKILL.md) — HIP-74: Software Bill of Materials & Git Stamp Standard. Status Final.
+- [hip-0077](https://hanzoskills.com/skills/hip-0077/SKILL.md) — HIP-77: Mesh Identity, Gossip & Payments (PQ). Status Final.
+- [hip-0078](https://hanzoskills.com/skills/hip-0078/SKILL.md) — HIP-78: Z-Chain — Post-Quantum Identity & Attestation Rollup. Status Draft.
+- [hip-0079](https://hanzoskills.com/skills/hip-0079/SKILL.md) — HIP-79: Q-Chain — Quasar Finality Block Standard. Status Final.
+- [hip-0101](https://hanzoskills.com/skills/hip-0101/SKILL.md) — HIP-101: Hanzo-Lux Bridge Protocol Integration. Status Final.
+- [hip-0102](https://hanzoskills.com/skills/hip-0102/SKILL.md) — HIP-102: Omnichain Bridge Integration. Status Draft.
+- [hip-0103](https://hanzoskills.com/skills/hip-0103/SKILL.md) — HIP-103: Bridge PQ-Only Profile. Status Final.
+- [hip-0104](https://hanzoskills.com/skills/hip-0104/SKILL.md) — HIP-104: Contract Auth via Z-Chain Proof. Status Final.
+- [hip-0105](https://hanzoskills.com/skills/hip-0105/SKILL.md) — HIP-105: In-Process Extension Runtime Standard. Status Final.
+- [hip-0106](https://hanzoskills.com/skills/hip-0106/SKILL.md) — HIP-106: The Hanzo Plugin Contract. Status Final.
+- [hip-0107](https://hanzoskills.com/skills/hip-0107/SKILL.md) — HIP-107: Streaming Replication over VFS. Status Final.
+- [hip-0108](https://hanzoskills.com/skills/hip-0108/SKILL.md) — HIP-108: On-Demand Subsystem Supervisor + Warm Pool. Status Final.
+- [hip-0109](https://hanzoskills.com/skills/hip-0109/SKILL.md) — HIP-109: Hanzo ML Cloud Toolkit. Status Final.
+- [hip-0115](https://hanzoskills.com/skills/hip-0115/SKILL.md) — HIP-115: Hanzo Frontend Delivery. Status Draft.
+- [hip-0117](https://hanzoskills.com/skills/hip-0117/SKILL.md) — HIP-117: Cloud-in-a-Box — One Binary, Three Modes. Status Final.
+- [hip-0119](https://hanzoskills.com/skills/hip-0119/SKILL.md) — HIP-119: Hanzo Service Conventions. Status Final.
+- [hip-0122](https://hanzoskills.com/skills/hip-0122/SKILL.md) — HIP-122: zip — The ZAP-Native Application Server Core. Status Final.
+- [hip-0123](https://hanzoskills.com/skills/hip-0123/SKILL.md) — HIP-123: Visor — Fleet & Fabric Autoscaling Across Any Provider. Status Final.
+- [hip-0125](https://hanzoskills.com/skills/hip-0125/SKILL.md) — HIP-125: Consensus-Backed Plugin-Placement Platform. Status Final.
+- [hip-0129](https://hanzoskills.com/skills/hip-0129/SKILL.md) — HIP-129: Eval — A Score Over Model Output. Status Final.
+- [hip-0132](https://hanzoskills.com/skills/hip-0132/SKILL.md) — HIP-132: One Telemetry Plane — One Endpoint, One Schema, Many Lenses. Status Final.
+- [hip-0136](https://hanzoskills.com/skills/hip-0136/SKILL.md) — HIP-136: One Secret, One Path. Status Final.
+- [hip-0139](https://hanzoskills.com/skills/hip-0139/SKILL.md) — HIP-139: Capability. Status Final.
+- [hip-0142](https://hanzoskills.com/skills/hip-0142/SKILL.md) — HIP-142: One Manifest, Five Kinds. Status Draft.
+- [hip-0144](https://hanzoskills.com/skills/hip-0144/SKILL.md) — HIP-144: Where State Lives. Status Final.
+- [hip-0145](https://hanzoskills.com/skills/hip-0145/SKILL.md) — HIP-145: Go Repository Layout. Status Draft.
+- [hip-0200](https://hanzoskills.com/skills/hip-0200/SKILL.md) — HIP-200: Responsible AI Principles and Commitments. Status Living.
+- [hip-0201](https://hanzoskills.com/skills/hip-0201/SKILL.md) — HIP-201: Model Risk Management. Status Living.
+- [hip-0210](https://hanzoskills.com/skills/hip-0210/SKILL.md) — HIP-210: Safety Evaluation Framework. Status Living.
+- [hip-0220](https://hanzoskills.com/skills/hip-0220/SKILL.md) — HIP-220: Bias Detection & Mitigation. Status Living.
+- [hip-0230](https://hanzoskills.com/skills/hip-0230/SKILL.md) — HIP-230: AI Transparency & Explainability. Status Living.
+- [hip-0240](https://hanzoskills.com/skills/hip-0240/SKILL.md) — HIP-240: AI Incident Response. Status Living.
+- [hip-0250](https://hanzoskills.com/skills/hip-0250/SKILL.md) — HIP-250: Sustainability Standards Alignment Matrix. Status Living.
+- [hip-0251](https://hanzoskills.com/skills/hip-0251/SKILL.md) — HIP-251: AI Compute Carbon Footprint. Status Living.
+- [hip-0260](https://hanzoskills.com/skills/hip-0260/SKILL.md) — HIP-260: Efficient Model Practices. Status Living.
+- [hip-0270](https://hanzoskills.com/skills/hip-0270/SKILL.md) — HIP-270: AI Supply Chain Responsibility. Status Living.
+- [hip-0302](https://hanzoskills.com/skills/hip-0302/SKILL.md) — HIP-302: Hanzo Replicate: Encrypted SQLite Durability for Base Services. Status Final.
+- [hip-0305](https://hanzoskills.com/skills/hip-0305/SKILL.md) — HIP-305: esign: shared-DB tenancy via team-where, not file-per-tenant. Status Final.
+- [hip-0306](https://hanzoskills.com/skills/hip-0306/SKILL.md) — HIP-306: AML Transaction Monitoring, Screening and Case Management. Status Final.
+- [hip-0512](https://hanzoskills.com/skills/hip-0512/SKILL.md) — HIP-512: Experiment — The Evidence Plane. Status Final.
+- [hip-0519](https://hanzoskills.com/skills/hip-0519/SKILL.md) — HIP-519: One Identity Boundary. Status Final.
+- [hip-0520](https://hanzoskills.com/skills/hip-0520/SKILL.md) — HIP-520: Serving Topology — Three Tiers, Horizontally Scalable, Pinned Per Entity. Status Final.
+- [hip-1049](https://hanzoskills.com/skills/hip-1049/SKILL.md) — HIP-1049: Validator — A Token Redeemed for a Node. Status Final.
+- [hip-1060](https://hanzoskills.com/skills/hip-1060/SKILL.md) — HIP-1060: Pubsub — The Tenant Endpoint on the Bus. Status Final.
+- [hip-1061](https://hanzoskills.com/skills/hip-1061/SKILL.md) — HIP-1061: MQ — Queues and Streams. Status Final.
+- [hip-1062](https://hanzoskills.com/skills/hip-1062/SKILL.md) — HIP-1062: Workflow — The Durable Run. Status Final.
+- [hip-1100](https://hanzoskills.com/skills/hip-1100/SKILL.md) — HIP-1100: Ad — Paid Placement Under a Campaign. Status Final.
+- [hip-1101](https://hanzoskills.com/skills/hip-1101/SKILL.md) — HIP-1101: Allowance — The Free Lane's Ceiling. Status Final.
+- [hip-1103](https://hanzoskills.com/skills/hip-1103/SKILL.md) — HIP-1103: Audit — The Tamper-Evident Trail. Status Final.
+- [hip-1104](https://hanzoskills.com/skills/hip-1104/SKILL.md) — HIP-1104: Base — The Hosted Backend. Status Final.
+- [hip-1105](https://hanzoskills.com/skills/hip-1105/SKILL.md) — HIP-1105: Benchmark — The Measurement Arena. Status Final.
+- [hip-1107](https://hanzoskills.com/skills/hip-1107/SKILL.md) — HIP-1107: Bot — A Run on a Surface. Status Final.
+- [hip-1113](https://hanzoskills.com/skills/hip-1113/SKILL.md) — HIP-1113: Cloudflare — The Per-Org Asset Plane. Status Final.
+- [hip-1114](https://hanzoskills.com/skills/hip-1114/SKILL.md) — HIP-1114: Code — Search and Symbols. Status Final.
+- [hip-1117](https://hanzoskills.com/skills/hip-1117/SKILL.md) — HIP-1117: Crawl — A Page as Markdown. Status Final.
+- [hip-1122](https://hanzoskills.com/skills/hip-1122/SKILL.md) — HIP-1122: Deploy — The GitOps Plane. Status Final.
+- [hip-1123](https://hanzoskills.com/skills/hip-1123/SKILL.md) — HIP-1123: Domain — Name Registration. Status Final.
+- [hip-1124](https://hanzoskills.com/skills/hip-1124/SKILL.md) — HIP-1124: Engine — The Serving Runtime Lens. Status Final.
+- [hip-1127](https://hanzoskills.com/skills/hip-1127/SKILL.md) — HIP-1127: Gateway — Live Edge Policy. Status Final.
+- [hip-1132](https://hanzoskills.com/skills/hip-1132/SKILL.md) — HIP-1132: Index — Full-Text Search. Status Final.
+- [hip-1133](https://hanzoskills.com/skills/hip-1133/SKILL.md) — HIP-1133: Ingress — The Embedded Edge. Status Final.
+- [hip-1134](https://hanzoskills.com/skills/hip-1134/SKILL.md) — HIP-1134: KMS — Secret Custody. Status Final.
+- [hip-1140](https://hanzoskills.com/skills/hip-1140/SKILL.md) — HIP-1140: ML — Model Serving. Status Final.
+- [hip-1144](https://hanzoskills.com/skills/hip-1144/SKILL.md) — HIP-1144: Registry — The Artifact Control Plane. Status Final.
+- [hip-1145](https://hanzoskills.com/skills/hip-1145/SKILL.md) — HIP-1145: Research — The Experiment Record. Status Final.
+- [hip-1146](https://hanzoskills.com/skills/hip-1146/SKILL.md) — HIP-1146: Sandbox — A Lease on Isolated Compute. Status Final.
+- [hip-1151](https://hanzoskills.com/skills/hip-1151/SKILL.md) — HIP-1151: Settings — Per-Product Org Configuration. Status Final.
+- [hip-1152](https://hanzoskills.com/skills/hip-1152/SKILL.md) — HIP-1152: Share — A Public URL for a Local Service. Status Final.
+- [hip-1154](https://hanzoskills.com/skills/hip-1154/SKILL.md) — HIP-1154: Sync — Two Endpoints Kept in Step. Status Final.
+- [hip-1172](https://hanzoskills.com/skills/hip-1172/SKILL.md) — HIP-1172: Compute — Machines You Rent or Link. Status Draft.
+- [hip-1173](https://hanzoskills.com/skills/hip-1173/SKILL.md) — HIP-1173: Network — An Org-Scoped Overlay. Status Final.
+- [hip-1198](https://hanzoskills.com/skills/hip-1198/SKILL.md) — HIP-1198: Graph — The Assertion Plane. Status Final.
+- [hip-1211](https://hanzoskills.com/skills/hip-1211/SKILL.md) — HIP-1211: AI — The Model API. Status Draft.
+- [hip-1212](https://hanzoskills.com/skills/hip-1212/SKILL.md) — HIP-1212: Exec — The Code Interpreter. Status Final.
+- [hip-1213](https://hanzoskills.com/skills/hip-1213/SKILL.md) — HIP-1213: Tools — The Tool Plane. Status Final.
+- [hip-1230](https://hanzoskills.com/skills/hip-1230/SKILL.md) — HIP-1230: Platform — The Container Plane. Status Final.
+- [hip-1232](https://hanzoskills.com/skills/hip-1232/SKILL.md) — HIP-1232: Git — Repository Hosting. Status Final.
+- [hip-1240](https://hanzoskills.com/skills/hip-1240/SKILL.md) — HIP-1240: O11y — The Observability Plane. Status Final.
+- [hip-1241](https://hanzoskills.com/skills/hip-1241/SKILL.md) — HIP-1241: Metrics — One Native Store, Three Signals. Status Final.
+- [hip-1250](https://hanzoskills.com/skills/hip-1250/SKILL.md) — HIP-1250: Integrations — The Connection Registry. Status Final.
+- [hip-1251](https://hanzoskills.com/skills/hip-1251/SKILL.md) — HIP-1251: Websearch — The Live Web. Status Final.
+- [hip-1252](https://hanzoskills.com/skills/hip-1252/SKILL.md) — HIP-1252: Meet — The Join Decision. Status Final.
+- [hip-1253](https://hanzoskills.com/skills/hip-1253/SKILL.md) — HIP-1253: Explorer — Chain Data. Status Final.
+- [hip-1310](https://hanzoskills.com/skills/hip-1310/SKILL.md) — HIP-1310: Webhook — Delivery to an Endpoint You Own. Status Final.
+- [hip-1313](https://hanzoskills.com/skills/hip-1313/SKILL.md) — HIP-1313: Usage — The Metered Record. Status Final.
+- [hip-1320](https://hanzoskills.com/skills/hip-1320/SKILL.md) — HIP-1320: Admin — The Operator Console. Status Final.
+- [hip-1321](https://hanzoskills.com/skills/hip-1321/SKILL.md) — HIP-1321: DNS — Zones and Records. Status Final.
+- [hip-1323](https://hanzoskills.com/skills/hip-1323/SKILL.md) — HIP-1323: Kafka — A Wire Onto the One Bus. Status Final.
+- [hip-1324](https://hanzoskills.com/skills/hip-1324/SKILL.md) — HIP-1324: KV — Buckets of Versioned Values. Status Final.
+- [hip-1325](https://hanzoskills.com/skills/hip-1325/SKILL.md) — HIP-1325: Node — A Machine an Org Owns. Status Final.
+- [hip-1326](https://hanzoskills.com/skills/hip-1326/SKILL.md) — HIP-1326: AMQP — Exchanges, Queues and Bindings Onto the One Bus. Status Final.
+- [hip-1328](https://hanzoskills.com/skills/hip-1328/SKILL.md) — HIP-1328: Forge — The Meta Code Host. Status Draft.
+- [hip-1330](https://hanzoskills.com/skills/hip-1330/SKILL.md) — HIP-1330: Dev — The Agent Loop. Status Draft.
+- [hip-1333](https://hanzoskills.com/skills/hip-1333/SKILL.md) — HIP-1333: Train — One Endpoint for Training. Status Draft.
+- [hip-1334](https://hanzoskills.com/skills/hip-1334/SKILL.md) — HIP-1334: Research — The Unified Research Runtime. Status Draft.
+- [hip-1335](https://hanzoskills.com/skills/hip-1335/SKILL.md) — HIP-1335: Listings — One Market for Apps, Skills, Mods, Plugins, Automations and Packs. Status Draft.
+- [hip-1337](https://hanzoskills.com/skills/hip-1337/SKILL.md) — HIP-1337: Space — Sovereign Organization Workspaces, Virtual Drives & File Namespaces. Status Final.
+- [hip-1339](https://hanzoskills.com/skills/hip-1339/SKILL.md) — HIP-1339: Environment — Codebase Pre-Flight Environments, Sandboxed Scripts & Scoped Secrets. Status Final.
+- [hip-1342](https://hanzoskills.com/skills/hip-1342/SKILL.md) — HIP-1342: Disk — A Filesystem on an Object Store. Status Draft.
+- [hip-1343](https://hanzoskills.com/skills/hip-1343/SKILL.md) — HIP-1343: Visor — The Sandbox Runtime. Status Draft.
+- [hip-1344](https://hanzoskills.com/skills/hip-1344/SKILL.md) — HIP-1344: Agent-Optimized Storage and Recovery. Status Draft.
+- [hip-1345](https://hanzoskills.com/skills/hip-1345/SKILL.md) — HIP-1345: Agent-Aware Model Serving and Cache Reuse. Status Draft.
+- [hip-1403](https://hanzoskills.com/skills/hip-1403/SKILL.md) — HIP-1403: Autonomous Scientific Research Protocol. Status Draft.

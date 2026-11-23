@@ -102,6 +102,48 @@ groups = [g for g in re.split(r"\n\s*\n", read("robots.txt").decode("utf-8"))
 ok("robots.txt: every group states Content-Signal", groups and all(re.search(r"^Content-Signal: ", g, re.M) for g in groups),
    "%d groups" % len(groups))
 
+# 3-tier progressive disclosure: Tier 0 (llms.txt + catalog.json), Tier 1 (categories/*.{json,md} + search.json),
+# Tier 2 (skills/<id>/SKILL.md + skills/<id>.json).
+llms_raw = read("llms.txt")
+llms_text = llms_raw.decode("utf-8")
+ok("tier0 llms.txt: compact (< 16 KB)", 500 < len(llms_raw) < 16384, "%d bytes" % len(llms_raw))
+ok("tier0 llms.txt: teaches 3-tier discovery, HIPs, and detect API",
+   "/catalog.json" in llms_text and "/categories/" in llms_text
+   and "/skills/<id>/SKILL.md" in llms_text and "https://hips.hanzo.ai/llms.txt" in llms_text
+   and "/v1/tool/detect" in llms_text)
+
+cat_raw = read("catalog.json")
+cat_doc = json.loads(cat_raw)
+cats = cat_doc.get("categories") or []
+ok("tier0 catalog.json: compact (< 16 KB) with non-empty categories",
+   len(cat_raw) < 16384 and len(cats) >= 8 and cat_doc.get("total", 0) > 100,
+   "%d bytes, %d categories, %d skills" % (len(cat_raw), len(cats), cat_doc.get("total", 0)))
+ok("tier0 catalog.json: category counts sum to total",
+   sum(c["count"] for c in cats) == cat_doc["total"])
+
+missing_cats = []
+bad_skills = []
+for c in cats:
+    cj = os.path.join(ROOT, c["json"].lstrip("/"))
+    cm = os.path.join(ROOT, c["md"].lstrip("/"))
+    if not (os.path.isfile(cj) and os.path.isfile(cm)):
+        missing_cats.append(c["slug"])
+        continue
+    cd = json.loads(open(cj, encoding="utf-8").read())
+    if len(cd.get("skills", [])) != c["count"]:
+        missing_cats.append(c["slug"] + ":count")
+    for s in cd.get("skills", [])[:3]:
+        smd = os.path.join(ROOT, s["url"].lstrip("/"))
+        sjs = os.path.join(ROOT, s["json"].lstrip("/"))
+        fmd = os.path.join(ROOT, s["md"].lstrip("/"))
+        if not (os.path.isfile(smd) and os.path.isfile(sjs) and open(smd, "rb").read() == open(fmd, "rb").read()):
+            bad_skills.append(s["id"])
+ok("tier1 categories: every category json & md exists and matches count", not missing_cats, ", ".join(missing_cats[:5]))
+ok("tier2 skills: sampled SKILL.md and .json exist and match flat .md", not bad_skills, ", ".join(bad_skills[:5]))
+index_html = read("index.html")
+ok("tier0 index.html: compact (< 100 KB, no eager skill dump)",
+   len(index_html) < 102400 and b'class="row"' not in index_html, "%d bytes" % len(index_html))
+
 if BASE:
     for rel in DOCS:
         status, ctype, body = get(rel)
