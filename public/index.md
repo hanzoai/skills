@@ -32,13 +32,13 @@ The skills, over plain https:
 
 - [Hanzo Platform & Cloud](categories/hanzo.md) (165 skills · [JSON](categories/hanzo.json)) — Core Hanzo stack, native Go/Rust/C++ services, Base, Cloud, CLI, MCP, and migration guides.
 - [AI, ML & Agent Engineering](categories/ai-agents.md) (120 skills · [JSON](categories/ai-agents.json)) — LLM APIs, agent workflows, MCP servers, skill authoring, inference, audio, vision, and research.
-- [Systems & Core Engineering](categories/engineering.md) (538 skills · [JSON](categories/engineering.json)) — Languages, distributed systems, debugging, testing, code review, protocols, and build tools.
-- [Cloud, Containers & DevOps](categories/cloud-infra.md) (69 skills · [JSON](categories/cloud-infra.json)) — Kubernetes, containers, CI/CD, observability, edge deploys, and site architecture.
-- [Data, Databases & Analytics](categories/data-databases.md) (24 skills · [JSON](categories/data-databases.json)) — SQL, vector search, data engineering, streaming pipelines, and product analytics.
+- [Systems & Core Engineering](categories/engineering.md) (551 skills · [JSON](categories/engineering.json)) — Languages, distributed systems, debugging, testing, code review, protocols, and build tools.
+- [Cloud, Containers & DevOps](categories/cloud-infra.md) (71 skills · [JSON](categories/cloud-infra.json)) — Kubernetes, containers, CI/CD, observability, edge deploys, and site architecture.
+- [Data, Databases & Analytics](categories/data-databases.md) (21 skills · [JSON](categories/data-databases.json)) — SQL, vector search, data engineering, streaming pipelines, and product analytics.
 - [Security & Cryptography](categories/security.md) (33 skills · [JSON](categories/security.json)) — AppSec, threat modeling, OWASP guides, IAM, KMS, and applied cryptography.
-- [Frontend, UI & Design Systems](categories/frontend-design.md) (86 skills · [JSON](categories/frontend-design.json)) — React, CSS, design systems, Figma workflows, diagrams, mobile UI, and browser automation.
+- [Frontend, UI & Design Systems](categories/frontend-design.md) (85 skills · [JSON](categories/frontend-design.json)) — React, CSS, design systems, Figma workflows, diagrams, mobile UI, and browser automation.
 - [Mathematics & Formal Methods](categories/math-formal.md) (29 skills · [JSON](categories/math-formal.json)) — Category theory, algebra, proof assistants, formal verification, and optimization.
-- [Product, Growth & Operations](categories/growth-product.md) (108 skills · [JSON](categories/growth-product.json)) — SEO, CRO, pricing, copywriting, GTM, revops, email, and team operations.
+- [Product, Growth & Operations](categories/growth-product.md) (97 skills · [JSON](categories/growth-product.json)) — SEO, CRO, pricing, copywriting, GTM, revops, email, and team operations.
 - [HIPs: Core AI & Models](categories/standards-core.md) (61 skills · [JSON](categories/standards-core.json)) — Hanzo Improvement Proposals for core architecture, governance, and AI model standards.
 - [HIPs: Cloud & Infrastructure](categories/standards-infra.md) (113 skills · [JSON](categories/standards-infra.json)) — Hanzo Improvement Proposals for compute, networking, storage, and cloud infrastructure.
 - [HIPs: Interfaces & Protocols](categories/standards-interface.md) (54 skills · [JSON](categories/standards-interface.json)) — Hanzo Improvement Proposals for ZAP, MCP, SDKs, APIs, and realtime protocols.

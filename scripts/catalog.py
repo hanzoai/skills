@@ -293,29 +293,36 @@ def map_hip_category(cat, num_str):
 
 
 def build_source_lookup(source_dir):
-    """Map skill id -> (raw_cat, tags) from skills/ source tree."""
+    """Map skill id -> (raw_cat, tags) from skills/ source tree in deterministic order."""
     lookup = {}
     if not os.path.isdir(source_dir):
         return lookup
-    for dp, _, fn in os.walk(source_dir):
+    entries = []
+    for dp, dn, fn in os.walk(source_dir):
+        dn.sort()
         for f in sorted(fn):
             if not f.endswith(".md") or f in ("INDEX.md", "README.md", "SECURITY.md", "_SKILL_TEMPLATE.md"):
                 continue
-            p = os.path.join(dp, f)
-            try:
-                text = open(p, encoding="utf-8").read()
-            except OSError:
-                continue
-            fm, tags, _ = parse_frontmatter(text)
-            if fm.get("name"):
-                sid = re.sub(r"[^a-z0-9._-]+", "-", fm["name"].lower()).strip("-")
-            else:
-                sid = f[:-3].lower()
-            rel = os.path.relpath(dp, source_dir).split(os.sep)
-            raw_cat = rel[0] if rel and rel[0] != "." else "core"
-            if raw_cat == sid:
-                raw_cat = "core"
-            lookup.setdefault(sid, (raw_cat, tags))
+            full = os.path.join(dp, f)
+            rel = os.path.relpath(full, source_dir).replace(os.sep, "/")
+            # Prefer canonical SKILL.md definitions over reference docs, then lexicographical POSIX path.
+            entries.append((0 if f == "SKILL.md" else 1, rel, dp, f, full))
+    entries.sort(key=lambda item: (item[0], item[1]))
+    for _, _, dp, f, p in entries:
+        try:
+            text = open(p, encoding="utf-8").read()
+        except OSError:
+            continue
+        fm, tags, _ = parse_frontmatter(text)
+        if fm.get("name"):
+            sid = re.sub(r"[^a-z0-9._-]+", "-", fm["name"].lower()).strip("-")
+        else:
+            sid = f[:-3].lower()
+        rel_parts = os.path.relpath(dp, source_dir).split(os.sep)
+        raw_cat = rel_parts[0] if rel_parts and rel_parts[0] != "." else "core"
+        if raw_cat == sid:
+            raw_cat = "core"
+        lookup.setdefault(sid, (raw_cat, tags))
     return lookup
 
 
@@ -390,7 +397,7 @@ def collect_published(root, source_dir):
     lookup = build_source_lookup(source_dir)
     docs = []
     skip = {"index", "all", "auth"}
-    for path in sorted(glob.glob(os.path.join(root, "*.md"))):
+    for path in sorted(glob.glob(os.path.join(root, "*.md")), key=lambda p: os.path.basename(p)):
         sid = os.path.basename(path)[:-3]
         if sid in skip:
             continue
@@ -534,7 +541,7 @@ def emit_progressive(root, source_dir, get_md_text):
         })
 
     # Prune stale files in categories/
-    for existing in os.listdir(cat_dir):
+    for existing in sorted(os.listdir(cat_dir)):
         if existing not in active_cat_files:
             os.remove(os.path.join(cat_dir, existing))
 

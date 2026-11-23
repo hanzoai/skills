@@ -1,4 +1,4 @@
-# Frontend, UI & Design Systems (86 skills)
+# Frontend, UI & Design Systems (85 skills)
 
 > React, CSS, design systems, Figma workflows, diagrams, mobile UI, and browser automation.
 > Tier 0 catalog: [llms.txt](https://hanzoskills.com/llms.txt) · [catalog.json](https://hanzoskills.com/catalog.json) · [JSON](https://hanzoskills.com/categories/frontend-design.json)
@@ -37,7 +37,6 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [frontend-web-accessibility](https://hanzoskills.com/skills/frontend-web-accessibility/SKILL.md) — Building accessible web applications
 - [frontend-web-workers](https://hanzoskills.com/skills/frontend-web-workers/SKILL.md) — Offloading computation with Web Workers API, SharedArrayBuffer, and message passing patterns
 - [golden-hour](https://hanzoskills.com/skills/golden-hour/SKILL.md) — A rich and warm autumnal palette that creates an inviting and sophisticated atmosphere.
-- [gotchas](https://hanzoskills.com/skills/gotchas/SKILL.md) — - Component properties and variant creation pitfalls - Paint, color, and variable binding pitfalls - Page context and plugin lifecycle pitfalls - Auto Layout and sizing order pitfalls (including HUG/FILL interactions) -
 - [hosting](https://hanzoskills.com/skills/hosting/SKILL.md) — Classify the connection before troubleshooting.
 - [ios-networking](https://hanzoskills.com/skills/ios-networking/SKILL.md) — Building network layers for iOS/macOS apps
 - [ios-testing](https://hanzoskills.com/skills/ios-testing/SKILL.md) — Writing unit tests for iOS/macOS apps

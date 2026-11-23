@@ -1,4 +1,4 @@
-# Product, Growth & Operations (108 skills)
+# Product, Growth & Operations (97 skills)
 
 > SEO, CRO, pricing, copywriting, GTM, revops, email, and team operations.
 > Tier 0 catalog: [llms.txt](https://hanzoskills.com/llms.txt) · [catalog.json](https://hanzoskills.com/catalog.json) · [JSON](https://hanzoskills.com/categories/growth-product.json)
@@ -28,27 +28,22 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [collaboration-github-security-features](https://hanzoskills.com/skills/collaboration-github-security-features/SKILL.md) — Dependabot, code scanning, secret scanning, SBOM generation, security advisories, and security best practices
 - [company-newsletter](https://hanzoskills.com/skills/company-newsletter/SKILL.md) — Ideally it includes the following attributes: - Lots of links: pulling documents from Google Drive that are very relevant, linking to prominent Slack messages in announce channels and from executives, perhgaps referencin
 - [compliance](https://hanzoskills.com/skills/compliance/SKILL.md) — Comprehensive compliance reference for SMS marketing across major jurisdictions, opt-in copy templates, and STOP/HELP response templates.
-- [content-architecture](https://hanzoskills.com/skills/content-architecture/SKILL.md) — How to structure and maintain competitor data for scalable comparison pages.
 - [content-patterns](https://hanzoskills.com/skills/content-patterns/SKILL.md) — Reusable content block patterns optimized for answer engines and AI citation.
 - [content-refresh](https://hanzoskills.com/skills/content-refresh/SKILL.md) — Copy editing isn't just for new content.
 - [content-types](https://hanzoskills.com/skills/content-types/SKILL.md) — Tactical guidance for optimizing specific content types for AI search citation.
 - [conversion-tracking](https://hanzoskills.com/skills/conversion-tracking/SKILL.md) — How to set up conversion tracking pixels across ad platforms.
-- [copy-guidelines](https://hanzoskills.com/skills/copy-guidelines/SKILL.md) — 1. Hook: First line grabs attention 2.
 - [current-state-rubric](https://hanzoskills.com/skills/current-state-rubric/SKILL.md) — This 17-section rubric is the source of truth for Section 3 ("Current State") of every marketing plan.
 - [data-sources](https://hanzoskills.com/skills/data-sources/SKILL.md) — Tool selection guide for prospecting across all three branches.
 - [deck-frameworks](https://hanzoskills.com/skills/deck-frameworks/SKILL.md) — Detailed slide-by-slide guidance for building sales decks that tell a story and close deals.
 - [demo-scripts](https://hanzoskills.com/skills/demo-scripts/SKILL.md) — Scene-by-scene templates for different call types, with timing, talk tracks, and interaction guidance.
 - [directory-list](https://hanzoskills.com/skills/directory-list/SKILL.md) — Canonical list of directories organized by tier.
 - [dunning-playbook](https://hanzoskills.com/skills/dunning-playbook/SKILL.md) — Complete guide to recovering failed payments and reducing involuntary churn.
-- [email-types](https://hanzoskills.com/skills/email-types/SKILL.md) — A comprehensive guide to lifecycle and campaign emails.
 - [example-quietude](https://hanzoskills.com/skills/example-quietude/SKILL.md) — This is the canonical reference example for the /marketing-plan skill.
-- [examples](https://hanzoskills.com/skills/examples/SKILL.md) — Anonymized examples drawn from real engagements.
 - [experiments](https://hanzoskills.com/skills/experiments/SKILL.md) — Comprehensive list of A/B tests and experiments organized by page type.
 - [faq-answers](https://hanzoskills.com/skills/faq-answers/SKILL.md) — - Find questions that are big sources of confusion for lots of employees at the company, generally about things that affect a large portion of the employee base - Attempt to give a nice summarized answer to that question
 - [follow-up-sequences](https://hanzoskills.com/skills/follow-up-sequences/SKILL.md) — 55% of replies come from follow-ups, not the initial email.
 - [form](https://hanzoskills.com/skills/form/SKILL.md) — You are an expert in form optimization.
 - [format-guide](https://hanzoskills.com/skills/format-guide/SKILL.md) — Detailed creation guidance for each lead magnet format.
-- [frameworks](https://hanzoskills.com/skills/frameworks/SKILL.md) — Frameworks beat templates — they teach thinking patterns, not copy-paste shortcuts.
 - [funding-stage-unlocks](https://hanzoskills.com/skills/funding-stage-unlocks/SKILL.md) — Every marketing plan must include explicit "what changes when funding closes / when budget unlocks" reasoning.
 - [general-comms](https://hanzoskills.com/skills/general-comms/SKILL.md) — Before proceeding: 1.
 - [generative-tools](https://hanzoskills.com/skills/generative-tools/SKILL.md) — Reference for using AI image generators, video generators, and code-based video tools to produce ad visuals at scale.
@@ -85,7 +80,6 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [platforms](https://hanzoskills.com/skills/platforms/SKILL.md) — Deep-dive on the major SMS marketing platforms — features, pricing, A2P 10DLC support, and integration paths.
 - [playbooks](https://hanzoskills.com/skills/playbooks/SKILL.md) — Beyond mixing and matching data point permutations, these are the proven playbooks for programmatic SEO.
 - [positioning-variations](https://hanzoskills.com/skills/positioning-variations/SKILL.md) — Directory audiences respond to different framings.
-- [post-templates](https://hanzoskills.com/skills/post-templates/SKILL.md) — Ready-to-use templates for different platforms and content types.
 - [press-platforms](https://hanzoskills.com/skills/press-platforms/SKILL.md) — Journalists posting "I need a source for X" — you respond, sometimes you get quoted, sometimes you don't.
 - [product-prd-requirements-gathering](https://hanzoskills.com/skills/product-prd-requirements-gathering/SKILL.md) — Research methods, stakeholder interviews, prioritization frameworks, and requirements synthesis for PRDs
 - [product-prd-structure-templates](https://hanzoskills.com/skills/product-prd-structure-templates/SKILL.md) — PRD document structure, templates, and best practices for product requirements documentation
@@ -93,8 +87,6 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [product-prd-user-stories-acceptance](https://hanzoskills.com/skills/product-prd-user-stories-acceptance/SKILL.md) — Writing effective user stories, epics, acceptance criteria, and story mapping for product requirements
 - [program-examples](https://hanzoskills.com/skills/program-examples/SKILL.md) — Real-world examples of successful referral programs.
 - [report-template](https://hanzoskills.com/skills/report-template/SKILL.md) — Use this structure for all ASO audit reports.
-- [research-methods](https://hanzoskills.com/skills/research-methods/SKILL.md) — The Van Westendorp survey identifies the acceptable price range for your product.
-- [reverse-engineering](https://hanzoskills.com/skills/reverse-engineering/SKILL.md) — Instead of guessing what works, systematically analyze top-performing content in your niche and extract proven patterns.
 - [routing-rules](https://hanzoskills.com/skills/routing-rules/SKILL.md) — Decision trees, platform-specific configurations, territory routing, ABM routing, and speed-to-lead benchmarks.
 - [saas-prospecting](https://hanzoskills.com/skills/saas-prospecting/SKILL.md) — For when the user sells SaaS or digital services to other SaaS companies / digital businesses.
 - [sample-size-guide](https://hanzoskills.com/skills/sample-size-guide/SKILL.md) — Reference for calculating sample sizes and test duration.
@@ -102,14 +94,11 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [schema-examples](https://hanzoskills.com/skills/schema-examples/SKILL.md) — Complete JSON-LD examples for common schema types.
 - [scoring-criteria](https://hanzoskills.com/skills/scoring-criteria/SKILL.md) — Score each dimension 0-10 using the rubrics below.
 - [scoring-models](https://hanzoskills.com/skills/scoring-models/SKILL.md) — Detailed scoring templates, example models by business type, and calibration guidance.
-- [sequence-templates](https://hanzoskills.com/skills/sequence-templates/SKILL.md) — Full copy templates with character counts, timing, and segmentation logic for every major SMS flow.
 - [short-form-video](https://hanzoskills.com/skills/short-form-video/SKILL.md) — Detailed reference for creating short-form video content on TikTok, Instagram Reels, and YouTube Shorts.
 - [source-guides](https://hanzoskills.com/skills/source-guides/SKILL.md) — Detailed, source-by-source playbooks for gathering customer intelligence from online watering holes.
 - [subject-lines](https://hanzoskills.com/skills/subject-lines/SKILL.md) — The subject line determines whether the email gets read.
 - [team-and-agency-model](https://hanzoskills.com/skills/team-and-agency-model/SKILL.md) — The marketing operations stack (Section 11 of every plan) describes what gets done.
-- [templates](https://hanzoskills.com/skills/templates/SKILL.md) — Ready-to-use templates for competitor profile sections and the summary document.
 - [test-templates](https://hanzoskills.com/skills/test-templates/SKILL.md) — Templates for planning, documenting, and analyzing experiments.
-- [tier-structure](https://hanzoskills.com/skills/tier-structure/SKILL.md) — 2 tiers: Simple, clear choice - Works for: Clear SMB vs.
 - [tool-reference](https://hanzoskills.com/skills/tool-reference/SKILL.md) — Quick reference for the Firecrawl and DataForSEO MCP tools used in competitor profiling.
 - [tool-types](https://hanzoskills.com/skills/tool-types/SKILL.md) — Detailed guide to each type of marketing tool you can build.
 - [value-equation](https://hanzoskills.com/skills/value-equation/SKILL.md) — The single most useful frame for offer design.

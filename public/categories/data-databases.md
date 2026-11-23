@@ -1,4 +1,4 @@
-# Data, Databases & Analytics (24 skills)
+# Data, Databases & Analytics (21 skills)
 
 > SQL, vector search, data engineering, streaming pipelines, and product analytics.
 > Tier 0 catalog: [llms.txt](https://hanzoskills.com/llms.txt) · [catalog.json](https://hanzoskills.com/catalog.json) · [JSON](https://hanzoskills.com/categories/data-databases.json)
@@ -25,7 +25,4 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [database-postgres-schema-design](https://hanzoskills.com/skills/database-postgres-schema-design/SKILL.md) — Designing new database schemas
 - [database-redis-data-structures](https://hanzoskills.com/skills/database-redis-data-structures/SKILL.md) — Implementing caching layers
 - [duckdb-analytics](https://hanzoskills.com/skills/duckdb-analytics/SKILL.md) — Skill: duckdb-analytics Category: Data/Analytics Related: Python, SQL, Parquet, data pipelines
-- [event-library](https://hanzoskills.com/skills/event-library/SKILL.md) — Comprehensive list of events to track by business type and context.
-- [ga4-implementation](https://hanzoskills.com/skills/ga4-implementation/SKILL.md) — Detailed implementation guide for Google Analytics 4.
-- [gtm-implementation](https://hanzoskills.com/skills/gtm-implementation/SKILL.md) — Detailed guide for implementing tracking via Google Tag Manager.
 - [redpanda-streaming](https://hanzoskills.com/skills/redpanda-streaming/SKILL.md) — **Redpanda deployments**: Setting up Kafka-compatible streaming infrastructure
