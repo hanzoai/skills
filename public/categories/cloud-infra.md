@@ -1,4 +1,4 @@
-# Cloud, Containers & DevOps (69 skills)
+# Cloud, Containers & DevOps (71 skills)
 
 > Kubernetes, containers, CI/CD, observability, edge deploys, and site architecture.
 > Tier 0 catalog: [llms.txt](https://hanzoskills.com/llms.txt) · [catalog.json](https://hanzoskills.com/catalog.json) · [JSON](https://hanzoskills.com/categories/cloud-infra.json)
@@ -46,6 +46,8 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [dynamic-routing](https://hanzoskills.com/skills/dynamic-routing/SKILL.md) — Configure complex routing in dashboard without code changes.
 - [error-patterns](https://hanzoskills.com/skills/error-patterns/SKILL.md) — Use this to quickly map log signatures to likely causes and fixes.
 - [features](https://hanzoskills.com/skills/features/SKILL.md) — Dashboard: Settings → Cache Responses → Enable
+- [frameworks](https://hanzoskills.com/skills/frameworks/SKILL.md) — Frameworks beat templates — they teach thinking patterns, not copy-paste shortcuts.
+- [gotchas](https://hanzoskills.com/skills/gotchas/SKILL.md) — - Component properties and variant creation pitfalls - Paint, color, and variable binding pitfalls - Page context and plugin lifecycle pitfalls - Auto Layout and sizing order pitfalls (including HUG/FILL interactions) -
 - [implementation_summary](https://hanzoskills.com/skills/implementation_summary/SKILL.md) — Net effect: Task-specific loading reduces unnecessary content by 13-51% depending on use case.
 - [infrastructure-aws-serverless](https://hanzoskills.com/skills/infrastructure-aws-serverless/SKILL.md) — Building serverless APIs and backends
 - [infrastructure-cloudflare-workers](https://hanzoskills.com/skills/infrastructure-cloudflare-workers/SKILL.md) — Building serverless APIs at the edge (low latency globally)

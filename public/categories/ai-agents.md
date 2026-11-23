@@ -12,7 +12,6 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [ai-video-prompting](https://hanzoskills.com/skills/ai-video-prompting/SKILL.md) — How to write effective prompts for AI video generation models (Veo, Runway, Kling, Pika).
 - [analyzer](https://hanzoskills.com/skills/analyzer/SKILL.md) — Analyze blind comparison results to understand WHY the winner won and generate improvement suggestions.
 - [anthropic-cli](https://hanzoskills.com/skills/anthropic-cli/SKILL.md) — The ant CLI exposes every Claude API resource as a shell subcommand.
-- [api](https://hanzoskills.com/skills/api/SKILL.md) — - Input formats: mp3, mp4, mpeg, mpga, m4a, wav, webm.
 - [audio-api](https://hanzoskills.com/skills/audio-api/SKILL.md) — audio-api
 - [batches](https://hanzoskills.com/skills/batches/SKILL.md) — The Batches API (POST /v1/messages/batches) processes Messages API requests asynchronously at 50% of standard prices.
 - [beads-context-strategies](https://hanzoskills.com/skills/beads-context-strategies/SKILL.md) — Use this skill when: Managing Claude Code context while working with Beads, preventing context bloat, or preserving critical workflow state across sessions
@@ -36,6 +35,7 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [dspy-signatures](https://hanzoskills.com/skills/dspy-signatures/SKILL.md) — Defining input/output signatures for DSPy modules and language model tasks
 - [error-codes](https://hanzoskills.com/skills/error-codes/SKILL.md) — This file documents HTTP error codes returned by the Claude API, their common causes, and how to handle them.
 - [evaluation](https://hanzoskills.com/skills/evaluation/SKILL.md) — This document provides guidance on creating comprehensive evaluations for MCP servers.
+- [examples](https://hanzoskills.com/skills/examples/SKILL.md) — Anonymized examples drawn from real engagements.
 - [experiment-patterns](https://hanzoskills.com/skills/experiment-patterns/SKILL.md) — Use this structure for exploratory and experimental work:
 - [files-api](https://hanzoskills.com/skills/files-api/SKILL.md) — The Files API uploads files for use in Messages API requests.
 - [grader](https://hanzoskills.com/skills/grader/SKILL.md) — Evaluate expectations against an execution transcript and outputs.
