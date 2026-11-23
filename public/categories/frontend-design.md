@@ -1,0 +1,93 @@
+# Frontend, UI & Design Systems (86 skills)
+
+> React, CSS, design systems, Figma workflows, diagrams, mobile UI, and browser automation.
+> Tier 0 catalog: [llms.txt](https://hanzoskills.com/llms.txt) · [catalog.json](https://hanzoskills.com/catalog.json) · [JSON](https://hanzoskills.com/categories/frontend-design.json)
+
+Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/SKILL.md`
+
+- [anti-patterns](https://hanzoskills.com/skills/anti-patterns/SKILL.md) — ❌ Building custom components when design systems have them - Always check shadcn/ui, daisyUI, HeroUI first - Don't reinvent the wheel
+- [api-reference](https://hanzoskills.com/skills/api-reference/SKILL.md) — - Node Creation - Grouping and Boolean Operations - Library Imports - Variables API - Core Properties - Node Manipulation - Descriptions and Documentation Links - SVG and Images - Utilities and Plugin Lifecycle - Node Tr
+- [arctic-frost](https://hanzoskills.com/skills/arctic-frost/SKILL.md) — A cool and crisp winter-inspired theme that conveys clarity, precision, and professionalism.
+- [botanical-garden](https://hanzoskills.com/skills/botanical-garden/SKILL.md) — A fresh and organic theme featuring vibrant garden-inspired colors for lively presentations.
+- [chat-and-messaging](https://hanzoskills.com/skills/chat-and-messaging/SKILL.md) — Chat is a conversation, not a document.
+- [code-connect-setup](https://hanzoskills.com/skills/code-connect-setup/SKILL.md) — This reference covers all Code Connect tooling available to the figma-generate-library agent: the addcodeconnectmap tool, getcodeconnectmap for verification, sendcodeconnectmappings for bulk application, variable code sy
+- [colors-and-spacing](https://hanzoskills.com/skills/colors-and-spacing/SKILL.md) — Create semantic color tokens, not just raw colors.
+- [common-patterns](https://hanzoskills.com/skills/common-patterns/SKILL.md) — - Basic Script Structure - Create a Styled Shape - Create a Text Node - Create Frame with Auto-Layout - Create Variable Collections and Bindings - Create Components and Import by Key - Component Sets with Variable Modes
+- [component-creation](https://hanzoskills.com/skills/component-creation/SKILL.md) — Complete guide for Phase 3: building components with variant matrices, variable bindings, component properties, and documentation.
+- [component-patterns](https://hanzoskills.com/skills/component-patterns/SKILL.md) — - Creating a Component - Combining Components into a Component Set (Variants) - Laying Out Variants After combineAsVariants (Required) - Component Properties: addComponentProperty API - Linking Properties to Child Nodes
+- [components-and-accessibility](https://hanzoskills.com/skills/components-and-accessibility/SKILL.md) — Build from small to large: - Atoms: Buttons, inputs, labels - Molecules: Search bar (input + button), form field (label + input + error) - Organisms: Header, card, form - Templates: Page layouts - Pages: Specific instanc
+- [dashboards](https://hanzoskills.com/skills/dashboards/SKILL.md) — 1. Read the board. 2.
+- [desert-rose](https://hanzoskills.com/skills/desert-rose/SKILL.md) — A soft and sophisticated theme with dusty, muted tones perfect for elegant presentations.
+- [design-systems](https://hanzoskills.com/skills/design-systems/SKILL.md) — When to use: Most projects, especially with Tailwind CSS
+- [diffs-and-logs](https://hanzoskills.com/skills/diffs-and-logs/SKILL.md) — Version control UIs and log viewers need clarity and scannability.
+- [discovery-phase](https://hanzoskills.com/skills/discovery-phase/SKILL.md) — This document covers everything needed for Phase 0 of a design system build: analyzing the codebase for tokens, inspecting the Figma file for existing conventions, searching subscribed libraries, building the plan, and r
+- [documentation-creation](https://hanzoskills.com/skills/documentation-creation/SKILL.md) — This reference covers Phase 2 of the design system build: the cover page, foundations documentation page (color swatches, type specimens, spacing bars, shadow cards, radius demo), page layout dimensions, and inline compo
+- [effect-style-patterns](https://hanzoskills.com/skills/effect-style-patterns/SKILL.md) — - Listing Effect Styles - Creating a Drop Shadow Style - Applying Effect Styles to Nodes
+- [error-recovery](https://hanzoskills.com/skills/error-recovery/SKILL.md) — Protocol for handling failures, partial state, and incomplete runs across a 20–100+ call design system build.
+- [excalidraw-patterns](https://hanzoskills.com/skills/excalidraw-patterns/SKILL.md) — Envelope:
+- [forest-canopy](https://hanzoskills.com/skills/forest-canopy/SKILL.md) — A natural and grounded theme featuring earth tones inspired by dense forest environments.
+- [frontend-browser-concurrency](https://hanzoskills.com/skills/frontend-browser-concurrency/SKILL.md) — Service Workers, SharedWorkers, Worklets, and multi-threading patterns for advanced browser concurrency
+- [frontend-frontend-performance](https://hanzoskills.com/skills/frontend-frontend-performance/SKILL.md) — Optimizing application performance
+- [frontend-nextjs-app-router](https://hanzoskills.com/skills/frontend-nextjs-app-router/SKILL.md) — Building Next.js 13+ applications
+- [frontend-nextjs-seo](https://hanzoskills.com/skills/frontend-nextjs-seo/SKILL.md) — Implementing SEO for Next.js applications
+- [frontend-react-component-patterns](https://hanzoskills.com/skills/frontend-react-component-patterns/SKILL.md) — Designing component architecture
+- [frontend-react-data-fetching](https://hanzoskills.com/skills/frontend-react-data-fetching/SKILL.md) — Fetching data from APIs
+- [frontend-react-form-handling](https://hanzoskills.com/skills/frontend-react-form-handling/SKILL.md) — Building complex forms
+- [frontend-react-state-management](https://hanzoskills.com/skills/frontend-react-state-management/SKILL.md) — Choosing state management solution
+- [frontend-web-accessibility](https://hanzoskills.com/skills/frontend-web-accessibility/SKILL.md) — Building accessible web applications
+- [frontend-web-workers](https://hanzoskills.com/skills/frontend-web-workers/SKILL.md) — Offloading computation with Web Workers API, SharedArrayBuffer, and message passing patterns
+- [golden-hour](https://hanzoskills.com/skills/golden-hour/SKILL.md) — A rich and warm autumnal palette that creates an inviting and sophisticated atmosphere.
+- [gotchas](https://hanzoskills.com/skills/gotchas/SKILL.md) — - Component properties and variant creation pitfalls - Paint, color, and variable binding pitfalls - Page context and plugin lifecycle pitfalls - Auto Layout and sizing order pitfalls (including HUG/FILL interactions) -
+- [hosting](https://hanzoskills.com/skills/hosting/SKILL.md) — Classify the connection before troubleshooting.
+- [ios-networking](https://hanzoskills.com/skills/ios-networking/SKILL.md) — Building network layers for iOS/macOS apps
+- [ios-testing](https://hanzoskills.com/skills/ios-testing/SKILL.md) — Writing unit tests for iOS/macOS apps
+- [layout-patterns](https://hanzoskills.com/skills/layout-patterns/SKILL.md) — Standard for complex layouts:
+- [mapping-checklist](https://hanzoskills.com/skills/mapping-checklist/SKILL.md) — - Confirm Figma component is published - Convert URL node-id (-) to tool nodeId (:) - Check existing mappings first - Compare props/variants between design and code - Ask for confirmation when multiple matches are plausi
+- [mermaid-architecture-diagrams](https://hanzoskills.com/skills/mermaid-architecture-diagrams/SKILL.md) — Create C4 and block architecture diagrams with Mermaid for system design and infrastructure visualization
+- [mermaid-charts](https://hanzoskills.com/skills/mermaid-charts/SKILL.md) — Create data visualization charts with Mermaid including pie, XY, quadrant, and radar charts for metrics and analytics
+- [mermaid-class-state-diagrams](https://hanzoskills.com/skills/mermaid-class-state-diagrams/SKILL.md) — Create UML class diagrams and state machines with Mermaid for object-oriented design and state modeling
+- [mermaid-er-diagrams](https://hanzoskills.com/skills/mermaid-er-diagrams/SKILL.md) — Create entity-relationship diagrams with Mermaid for database schema design and data modeling
+- [mermaid-flowcharts](https://hanzoskills.com/skills/mermaid-flowcharts/SKILL.md) — Create process flow diagrams with Mermaid using nodes, arrows, decisions, and subgraphs for visual documentation
+- [mermaid-project-diagrams](https://hanzoskills.com/skills/mermaid-project-diagrams/SKILL.md) — Create Gantt charts and timeline diagrams with Mermaid for project planning and chronological visualization
+- [mermaid-sequence-diagrams](https://hanzoskills.com/skills/mermaid-sequence-diagrams/SKILL.md) — Create interaction and message flow diagrams with Mermaid showing communication between actors, services, and components over time
+- [mermaid-specialized](https://hanzoskills.com/skills/mermaid-specialized/SKILL.md) — Create specialized diagrams with Mermaid including Git graphs, Sankey flows, mindmaps, and other advanced visualization types
+- [midnight-galaxy](https://hanzoskills.com/skills/midnight-galaxy/SKILL.md) — A dramatic and cosmic theme with deep purples and mystical tones for impactful presentations.
+- [mobile-react-native-native-modules](https://hanzoskills.com/skills/mobile-react-native-native-modules/SKILL.md) — Accessing iOS-specific APIs not available in React Native
+- [mobile-react-native-navigation](https://hanzoskills.com/skills/mobile-react-native-navigation/SKILL.md) — Implementing multi-screen navigation in React Native apps
+- [mobile-react-native-performance](https://hanzoskills.com/skills/mobile-react-native-performance/SKILL.md) — App animations are dropping frames (not 60fps)
+- [mobile-react-native-setup](https://hanzoskills.com/skills/mobile-react-native-setup/SKILL.md) — Starting a new React Native project for iOS development
+- [modern-minimalist](https://hanzoskills.com/skills/modern-minimalist/SKILL.md) — A clean and contemporary theme with a sophisticated grayscale palette for maximum versatility.
+- [naming-conventions](https://hanzoskills.com/skills/naming-conventions/SKILL.md) — This reference documents every naming convention used in the figma-generate-library workflow.
+- [ocean-depths](https://hanzoskills.com/skills/ocean-depths/SKILL.md) — A professional and calming maritime theme that evokes the serenity of deep ocean waters.
+- [performance](https://hanzoskills.com/skills/performance/SKILL.md) — Fast interfaces feel better.
+- [plugin-api-patterns](https://hanzoskills.com/skills/plugin-api-patterns/SKILL.md) — - Execution Basics - Creating Nodes - Fills and Strokes - Auto Layout - Effects - Opacity and Blend Modes - Corner Radius and Clipping - Grouping and Organization - Components and Variants - Styles - Cloning, Finding Nod
+- [plugin-api-standalone.index](https://hanzoskills.com/skills/plugin-api-standalone.index/SKILL.md) — Variable (L10204): name, resolvedType, codeSyntax, scopes, hiddenFromPublishing, valuesByMode, variableCollectionId
+- [rule-template](https://hanzoskills.com/skills/rule-template/SKILL.md) — - Required flow (getdesigncontext -> getscreenshot) - Implementation conventions for this repo - Asset handling - Validation requirements
+- [session-archive](https://hanzoskills.com/skills/session-archive/SKILL.md) — Archiving preserves transcripts; a cleanup request does not authorize deletion.
+- [streaming-and-loading](https://hanzoskills.com/skills/streaming-and-loading/SKILL.md) — Content that appears instantly feels fast.
+- [sunset-boulevard](https://hanzoskills.com/skills/sunset-boulevard/SKILL.md) — A warm and vibrant theme inspired by golden hour sunsets, perfect for energetic and creative presentations.
+- [svg-template](https://hanzoskills.com/skills/svg-template/SKILL.md) — Copy this to a .html file and replace <!-- SVG -->.
+- [swift-concurrency](https://hanzoskills.com/skills/swift-concurrency/SKILL.md) — Working with async/await in Swift
+- [swiftdata-persistence](https://hanzoskills.com/skills/swiftdata-persistence/SKILL.md) — Building iOS/macOS apps with local persistence
+- [swiftui-architecture](https://hanzoskills.com/skills/swiftui-architecture/SKILL.md) — Building iOS/macOS apps with SwiftUI
+- [swiftui-navigation](https://hanzoskills.com/skills/swiftui-navigation/SKILL.md) — Implementing navigation in iOS 17+ apps
+- [tech-innovation](https://hanzoskills.com/skills/tech-innovation/SKILL.md) — A bold and modern theme with high-contrast colors perfect for cutting-edge technology presentations.
+- [terminals-and-code](https://hanzoskills.com/skills/terminals-and-code/SKILL.md) — Terminals and code blocks need to be readable, beautiful, and functional.
+- [testing-and-qa](https://hanzoskills.com/skills/testing-and-qa/SKILL.md) — -   Mobile (320px, 375px, 414px widths) -   Tablet (768px, 1024px widths) -   Desktop (1280px, 1920px widths) -   Both light and dark modes -   Different font sizes (browser zoom 100%, 125%, 150%) -   Slow 3G network sim
+- [text-style-patterns](https://hanzoskills.com/skills/text-style-patterns/SKILL.md) — - Listing Text Styles - Creating a Text Style - Probing Font Styles - Creating a Type Ramp (Multi-Step) - Applying Text Styles to Nodes
+- [token-creation](https://hanzoskills.com/skills/token-creation/SKILL.md) — This document covers Phase 1: creating variable collections, modes, primitives, semantic aliases, scopes, code syntax, styles, and validation.
+- [tools-and-libraries](https://hanzoskills.com/skills/tools-and-libraries/SKILL.md) — Prototyping: - Figma (https://figma.com) - Sketch (https://sketch.com) - Adobe XD
+- [typography](https://hanzoskills.com/skills/typography/SKILL.md) — Elegant, modern typography sets the foundation for professional interfaces.
+- [ui-port-parity](https://hanzoskills.com/skills/ui-port-parity/SKILL.md) — Renamed so every skill here reads the same way: subject first, two words.
+- [validation-and-recovery](https://hanzoskills.com/skills/validation-and-recovery/SKILL.md) — - getmetadata vs getscreenshot - Error Recovery After Failed usefigma - Cleanup Pattern - Recommended Workflow
+- [variable-patterns](https://hanzoskills.com/skills/variable-patterns/SKILL.md) — - Creating Variable Collections and Modes - Creating Variables (All Types) - Binding Variables to Node Properties - Variable Scopes: What They Are and How to Set Them - Variable Aliasing (VARIABLEALIAS) - Code Syntax (se
+- [workflows](https://hanzoskills.com/skills/workflows/SKILL.md) — Use the wrapper script and snapshot often.
+- [wwds](https://hanzoskills.com/skills/wwds/SKILL.md) — When working with design systems in Figma, there can be many nuances when deciding how to do the right thing.
+- [wwds-components](https://hanzoskills.com/skills/wwds-components/SKILL.md) — Components overlap a lot with the idea of components in a codebase, but with some gaps and other Figma-specific use cases.
+- [wwds-components--creating](https://hanzoskills.com/skills/wwds-components--creating/SKILL.md) — When creating Figma components, you need to start by understanding the source and its intent.
+- [wwds-components--using](https://hanzoskills.com/skills/wwds-components--using/SKILL.md) — When using Figma components, you need to start by understanding the state of the source and the state of Figma.
+- [wwds-effect-styles](https://hanzoskills.com/skills/wwds-effect-styles/SKILL.md) — Effect styles in Figma are named, reusable definitions of one or more visual effects — drop shadows, inner shadows, and blurs.
+- [wwds-text-styles](https://hanzoskills.com/skills/wwds-text-styles/SKILL.md) — Text styles in Figma are named, reusable typography definitions.
+- [wwds-variables](https://hanzoskills.com/skills/wwds-variables/SKILL.md) — Variables overlap a lot with the idea of tokens in a codebase, but with some gaps and other Figma-specific use cases.
+- [wwds-variables--creating](https://hanzoskills.com/skills/wwds-variables--creating/SKILL.md) — When creating Figma variables, you need to start by understanding the state of the source data.
+- [wwds-variables--using](https://hanzoskills.com/skills/wwds-variables--using/SKILL.md) — When using Figma variables, you need to start by understanding the state of the source and the state of Figma.

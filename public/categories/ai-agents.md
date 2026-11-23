@@ -1,0 +1,127 @@
+# AI, ML & Agent Engineering (120 skills)
+
+> LLM APIs, agent workflows, MCP servers, skill authoring, inference, audio, vision, and research.
+> Tier 0 catalog: [llms.txt](https://hanzoskills.com/llms.txt) · [catalog.json](https://hanzoskills.com/catalog.json) · [JSON](https://hanzoskills.com/categories/ai-agents.json)
+
+Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/SKILL.md`
+
+- [accessibility](https://hanzoskills.com/skills/accessibility/SKILL.md) — Instructions:  Voice Affect: Neutral and clear.
+- [agent-cli-patterns](https://hanzoskills.com/skills/agent-cli-patterns/SKILL.md) — Use this reference when designing the command surface for a new CLI Codex should run.
+- [agent-design](https://hanzoskills.com/skills/agent-design/SKILL.md) — This file covers decision heuristics for building agents on the Claude API: which primitives to reach for, how to design your tool surface, and how to manage context and cost over long runs.
+- [ai-image-prompting](https://hanzoskills.com/skills/ai-image-prompting/SKILL.md) — How to write effective prompts for AI image generation models (Gemini/Nano Banana, Flux, Ideogram, DALL-E, Midjourney).
+- [ai-video-prompting](https://hanzoskills.com/skills/ai-video-prompting/SKILL.md) — How to write effective prompts for AI video generation models (Veo, Runway, Kling, Pika).
+- [analyzer](https://hanzoskills.com/skills/analyzer/SKILL.md) — Analyze blind comparison results to understand WHY the winner won and generate improvement suggestions.
+- [anthropic-cli](https://hanzoskills.com/skills/anthropic-cli/SKILL.md) — The ant CLI exposes every Claude API resource as a shell subcommand.
+- [api](https://hanzoskills.com/skills/api/SKILL.md) — - Input formats: mp3, mp4, mpeg, mpga, m4a, wav, webm.
+- [audio-api](https://hanzoskills.com/skills/audio-api/SKILL.md) — audio-api
+- [batches](https://hanzoskills.com/skills/batches/SKILL.md) — The Batches API (POST /v1/messages/batches) processes Messages API requests asynchronously at 50% of standard prices.
+- [beads-context-strategies](https://hanzoskills.com/skills/beads-context-strategies/SKILL.md) — Use this skill when: Managing Claude Code context while working with Beads, preventing context bloat, or preserving critical workflow state across sessions
+- [beads-dependency-management](https://hanzoskills.com/skills/beads-dependency-management/SKILL.md) — Use this skill when: Creating relationships between issues, managing blockers, or organizing work hierarchies
+- [beads-multi-session-patterns](https://hanzoskills.com/skills/beads-multi-session-patterns/SKILL.md) — Use this skill when: Working on complex tasks spanning multiple sessions, managing long-horizon work chains, or coordinating parallel work streams
+- [beads-workflow](https://hanzoskills.com/skills/beads-workflow/SKILL.md) — Use this skill when: Starting a new session with Beads, running bd commands, or managing issue workflow state
+- [claude-platform-on-aws](https://hanzoskills.com/skills/claude-platform-on-aws/SKILL.md) — Anthropic-operated access to the Claude Developer Platform through AWS infrastructure — SigV4 authentication, AWS IAM access control, and AWS Marketplace billing.
+- [claude_md_updates](https://hanzoskills.com/skills/claude_md_updates/SKILL.md) — This document contains proposed updates to CLAUDE.md to integrate anti-slop awareness and prevention into Claude's core behavior.
+- [cli](https://hanzoskills.com/skills/cli/SKILL.md) — This file is for the fallback CLI mode only.
+- [code-patterns](https://hanzoskills.com/skills/code-patterns/SKILL.md) — Reference guide for detecting AI slop patterns in code including generic variable names, obvious comments, and unnecessary abstractions. Use as reference when reviewing code quality.
+- [codex-network](https://hanzoskills.com/skills/codex-network/SKILL.md) — This file is for the fallback CLI mode only.
+- [codexbar-cli](https://hanzoskills.com/skills/codexbar-cli/SKILL.md) — - App: Preferences -> Advanced -> Install CLI - Repo: ./bin/install-codexbar-cli.sh
+- [comparator](https://hanzoskills.com/skills/comparator/SKILL.md) — Compare two outputs WITHOUT knowing which skill produced them.
+- [design-patterns](https://hanzoskills.com/skills/design-patterns/SKILL.md) — Reference guide for detecting AI slop patterns in visual and UX design including generic gradients, cookie-cutter layouts, and buzzword-heavy copy. Use as reference when reviewing design quality.
+- [dspy-assertions](https://hanzoskills.com/skills/dspy-assertions/SKILL.md) — Adding constraints and validation to DSPy programs with assertions and suggestions
+- [dspy-evaluation](https://hanzoskills.com/skills/dspy-evaluation/SKILL.md) — Evaluating DSPy programs with metrics, Evaluate class, and performance analysis
+- [dspy-modules](https://hanzoskills.com/skills/dspy-modules/SKILL.md) — Building composable prediction modules with Predict, ChainOfThought, ReAct, and custom modules
+- [dspy-optimizers](https://hanzoskills.com/skills/dspy-optimizers/SKILL.md) — Optimizing DSPy programs with teleprompters, BootstrapFewShot, MIPROv2, and compilation
+- [dspy-rag](https://hanzoskills.com/skills/dspy-rag/SKILL.md) — Building Retrieval-Augmented Generation pipelines with DSPy and vector databases
+- [dspy-setup](https://hanzoskills.com/skills/dspy-setup/SKILL.md) — Installation, configuration, and language model setup for DSPy framework including Modal and HuggingFace
+- [dspy-signatures](https://hanzoskills.com/skills/dspy-signatures/SKILL.md) — Defining input/output signatures for DSPy modules and language model tasks
+- [error-codes](https://hanzoskills.com/skills/error-codes/SKILL.md) — This file documents HTTP error codes returned by the Claude API, their common causes, and how to handle them.
+- [evaluation](https://hanzoskills.com/skills/evaluation/SKILL.md) — This document provides guidance on creating comprehensive evaluations for MCP servers.
+- [experiment-patterns](https://hanzoskills.com/skills/experiment-patterns/SKILL.md) — Use this structure for exploratory and experimental work:
+- [files-api](https://hanzoskills.com/skills/files-api/SKILL.md) — The Files API uploads files for use in Messages API requests.
+- [grader](https://hanzoskills.com/skills/grader/SKILL.md) — Evaluate expectations against an execution transcript and outputs.
+- [graph-rag](https://hanzoskills.com/skills/graph-rag/SKILL.md) — Graph-based retrieval-augmented generation with entity extraction, community detection, and multihop reasoning
+- [hierarchical-rag](https://hanzoskills.com/skills/hierarchical-rag/SKILL.md) — Multi-level retrieval with recursive summarization and parent-child document structures for improved context selection
+- [hybrid-search-rag](https://hanzoskills.com/skills/hybrid-search-rag/SKILL.md) — Combining vector search with BM25 sparse retrieval using fusion algorithms for improved RAG accuracy
+- [image-api](https://hanzoskills.com/skills/image-api/SKILL.md) — This file is for the fallback CLI mode only.
+- [ir-query-understanding](https://hanzoskills.com/skills/ir-query-understanding/SKILL.md) — Query expansion, spell correction, semantic search, query classification, entity recognition, and autocomplete
+- [ir-ranking-reranking](https://hanzoskills.com/skills/ir-ranking-reranking/SKILL.md) — Learning to rank, cross-encoder reranking, ranking features, and evaluation metrics (nDCG, MAP, MRR)
+- [ir-recommendation-systems](https://hanzoskills.com/skills/ir-recommendation-systems/SKILL.md) — Collaborative filtering, content-based filtering, hybrid recommenders, matrix factorization, and cold start solutions
+- [ir-search-fundamentals](https://hanzoskills.com/skills/ir-search-fundamentals/SKILL.md) — Core information retrieval concepts including TF-IDF, BM25, inverted indexes, and Elasticsearch
+- [ir-vector-search](https://hanzoskills.com/skills/ir-vector-search/SKILL.md) — Dense retrieval using embeddings, vector databases, approximate nearest neighbors, and hybrid search
+- [ivr](https://hanzoskills.com/skills/ivr/SKILL.md) — Instructions:  Voice Affect: Clear and neutral.
+- [live-sources](https://hanzoskills.com/skills/live-sources/SKILL.md) — This file contains WebFetch URLs for fetching current information from platform.claude.com and Agent SDK repositories.
+- [managed-agents](https://hanzoskills.com/skills/managed-agents/SKILL.md) — Use these examples when the user needs raw HTTP requests or is working without an SDK.
+- [managed-agents-api-reference](https://hanzoskills.com/skills/managed-agents-api-reference/SKILL.md) — All endpoints require x-api-key and anthropic-version: 2023-06-01 headers.
+- [managed-agents-client-patterns](https://hanzoskills.com/skills/managed-agents-client-patterns/SKILL.md) — Patterns you'll write on the client side when driving a Managed Agent session, grounded in working SDK examples.
+- [managed-agents-core](https://hanzoskills.com/skills/managed-agents-core/SKILL.md) — Managed Agents is built around four core concepts:
+- [managed-agents-environments](https://hanzoskills.com/skills/managed-agents-environments/SKILL.md) — Creating a session requires an environmentid.
+- [managed-agents-events](https://hanzoskills.com/skills/managed-agents-events/SKILL.md) — Send events to a session via POST /v1/sessions/{id}/events.
+- [managed-agents-memory](https://hanzoskills.com/skills/managed-agents-memory/SKILL.md) — Sessions are ephemeral by default — when one ends, anything the agent learned is gone.
+- [managed-agents-multiagent](https://hanzoskills.com/skills/managed-agents-multiagent/SKILL.md) — A coordinator agent can delegate to other agents within one session.
+- [managed-agents-onboarding](https://hanzoskills.com/skills/managed-agents-onboarding/SKILL.md) — Claude Managed Agents is a hosted agent: Anthropic runs the agent loop and provisions a sandboxed container per session where the agent's tools execute (or your own worker, with a selfhosted environment — see shared/mana
+- [managed-agents-outcomes](https://hanzoskills.com/skills/managed-agents-outcomes/SKILL.md) — An outcome elevates a session from conversation to work: you state what "done" looks like, and the harness runs an iterate → grade → revise loop until the artifact meets the rubric, hits maxiterations, or is interrupted.
+- [managed-agents-overview](https://hanzoskills.com/skills/managed-agents-overview/SKILL.md) — Managed Agents provisions a container per session as the agent's workspace.
+- [managed-agents-scheduled-deployments](https://hanzoskills.com/skills/managed-agents-scheduled-deployments/SKILL.md) — A scheduled deployment runs an agent on a recurring cron schedule — each firing creates a session autonomously.
+- [managed-agents-self-hosted-sandboxes](https://hanzoskills.com/skills/managed-agents-self-hosted-sandboxes/SKILL.md) — With config.type: "selfhosted", the agent loop stays on Anthropic's orchestration layer but tool execution moves to infrastructure you control — bash, file ops, and code run inside your container, so filesystem contents
+- [managed-agents-tools](https://hanzoskills.com/skills/managed-agents-tools/SKILL.md) — Recommendation: Enable all prebuilt tools via agenttoolset20260401, then disable individually as needed.
+- [managed-agents-webhooks](https://hanzoskills.com/skills/managed-agents-webhooks/SKILL.md) — Anthropic can POST to your HTTPS endpoint when a Managed Agents resource changes state — an alternative to holding an SSE stream or polling.
+- [mcp_best_practices](https://hanzoskills.com/skills/mcp_best_practices/SKILL.md) — Follow these standardized naming patterns:
+- [ml-custom-llm-evaluation](https://hanzoskills.com/skills/ml-custom-llm-evaluation/SKILL.md) — Domain-specific LLM evaluation including custom metrics, RLHF evaluation, adversarial testing, bias detection, Arize Phoenix integration, and continuous evaluation patterns for production systems
+- [ml-diffusion-finetuning](https://hanzoskills.com/skills/ml-diffusion-finetuning/SKILL.md) — Fine-tuning diffusion models for custom styles or subjects
+- [ml-diffusion-model-basics](https://hanzoskills.com/skills/ml-diffusion-model-basics/SKILL.md) — Understanding diffusion model theory and mechanics (forward/reverse process)
+- [ml-huggingface-autotrain](https://hanzoskills.com/skills/ml-huggingface-autotrain/SKILL.md) — Need quick fine-tuning without writing training code
+- [ml-huggingface-datasets](https://hanzoskills.com/skills/ml-huggingface-datasets/SKILL.md) — Loading, processing, and managing datasets with HuggingFace datasets library
+- [ml-huggingface-hub](https://hanzoskills.com/skills/ml-huggingface-hub/SKILL.md) — Managing models, datasets, and Spaces on HuggingFace Hub
+- [ml-huggingface-spaces](https://hanzoskills.com/skills/ml-huggingface-spaces/SKILL.md) — Deploying Gradio and Streamlit apps on HuggingFace Spaces
+- [ml-huggingface-transformers](https://hanzoskills.com/skills/ml-huggingface-transformers/SKILL.md) — Loading models, pipelines, inference, and tokenization with transformers library
+- [ml-llm-as-judge](https://hanzoskills.com/skills/ml-llm-as-judge/SKILL.md) — Comprehensive guide to LLM-as-judge evaluation patterns including Prometheus 2 models, G-Eval framework, pairwise/pointwise/reference-guided methods, bias mitigation, and uncertainty quantification
+- [ml-llm-benchmarks-evaluation](https://hanzoskills.com/skills/ml-llm-benchmarks-evaluation/SKILL.md) — Comprehensive guide to evaluating LLMs using standard benchmarks including MMLU, HellaSwag, BBH, HumanEval, TruthfulQA, and GSM8K, with practical implementation using LightEval and lm-evaluation-harness
+- [ml-llm-dataset-preparation](https://hanzoskills.com/skills/ml-llm-dataset-preparation/SKILL.md) — Preparing training data for LLM fine-tuning
+- [ml-llm-evaluation-frameworks](https://hanzoskills.com/skills/ml-llm-evaluation-frameworks/SKILL.md) — Production-grade LLM evaluation using Arize Phoenix (OpenTelemetry tracing, self-hosted evals), Braintrust (86x faster search), LangSmith, and Langfuse with cost tracking and observability integration
+- [ml-llm-model-routing](https://hanzoskills.com/skills/ml-llm-model-routing/SKILL.md) — Intelligent LLM routing with RouteLLM, semantic routing, and cost optimization
+- [ml-llm-model-selection](https://hanzoskills.com/skills/ml-llm-model-selection/SKILL.md) — Choosing the right LLM based on capabilities, benchmarks, pricing, and use cases
+- [ml-lora-peft-techniques](https://hanzoskills.com/skills/ml-lora-peft-techniques/SKILL.md) — Fine-tuning large models with limited GPU memory
+- [ml-multi-model-orchestration](https://hanzoskills.com/skills/ml-multi-model-orchestration/SKILL.md) — Coordinating multiple LLMs in pipelines, ensembles, and cascading workflows
+- [ml-rag-evaluation-metrics](https://hanzoskills.com/skills/ml-rag-evaluation-metrics/SKILL.md) — Comprehensive guide to RAG evaluation using RAGAS (Faithfulness, Answer Relevancy, Context Precision/Recall), LLM-as-judge patterns, synthetic datasets, and integration with Arize Phoenix and Langfuse
+- [ml-stable-diffusion-deployment](https://hanzoskills.com/skills/ml-stable-diffusion-deployment/SKILL.md) — Deploying Stable Diffusion models to production environments
+- [ml-unsloth-finetuning](https://hanzoskills.com/skills/ml-unsloth-finetuning/SKILL.md) — Fine-tuning LLMs (Llama, Mistral, Qwen) efficiently
+- [modal-functions-basics](https://hanzoskills.com/skills/modal-functions-basics/SKILL.md) — Building serverless functions on Modal.com
+- [modal-gpu-workloads](https://hanzoskills.com/skills/modal-gpu-workloads/SKILL.md) — Running ML/AI inference on Modal
+- [modal-image-building](https://hanzoskills.com/skills/modal-image-building/SKILL.md) — Configuring Modal runtime environments
+- [modal-modal-common-errors](https://hanzoskills.com/skills/modal-modal-common-errors/SKILL.md) — Encountering Modal deployment or runtime errors
+- [modal-modal-performance-debugging](https://hanzoskills.com/skills/modal-modal-performance-debugging/SKILL.md) — Modal functions running slower than expected
+- [modal-scheduling](https://hanzoskills.com/skills/modal-scheduling/SKILL.md) — Running periodic tasks on Modal
+- [modal-volumes-secrets](https://hanzoskills.com/skills/modal-volumes-secrets/SKILL.md) — Persisting data across function invocations
+- [modal-web-endpoints](https://hanzoskills.com/skills/modal-web-endpoints/SKILL.md) — Creating HTTP APIs on Modal
+- [model-migration](https://hanzoskills.com/skills/model-migration/SKILL.md) — How to move existing code to newer Claude models.
+- [models](https://hanzoskills.com/skills/models/SKILL.md) — Only use exact model IDs listed in this file.
+- [narration](https://hanzoskills.com/skills/narration/SKILL.md) — Instructions:  Voice Affect: Warm and composed.
+- [node_mcp_server](https://hanzoskills.com/skills/node_mcp_server/SKILL.md) — This document provides Node/TypeScript-specific best practices and examples for implementing MCP servers using the MCP TypeScript SDK.
+- [notebook-structure](https://hanzoskills.com/skills/notebook-structure/SKILL.md) — Jupyter notebooks are JSON documents with this high-level shape:
+- [platform-availability](https://hanzoskills.com/skills/platform-availability/SKILL.md) — Which features work on which provider platform.
+- [plugin-json-spec](https://hanzoskills.com/skills/plugin-json-spec/SKILL.md) — - name (string): Plugin identifier (kebab-case, no spaces).
+- [prompt-audit](https://hanzoskills.com/skills/prompt-audit/SKILL.md) — Prompts, skills, and tool descriptions accumulate instructions tuned to older models: emphasis added because an old model under-triggered, step-by-step scripts added because an old model planned poorly, format scaffolds
+- [prompt-caching](https://hanzoskills.com/skills/prompt-caching/SKILL.md) — This file covers how to design prompt-building code for effective caching.
+- [prompting](https://hanzoskills.com/skills/prompting/SKILL.md) — These prompting principles are shared by both top-level modes of the skill: - built-in imagegen tool (default) - explicit scripts/imagegen.py CLI fallback
+- [python_mcp_server](https://hanzoskills.com/skills/python_mcp_server/SKILL.md) — This document provides Python-specific best practices and examples for implementing MCP servers using the MCP Python SDK.
+- [quality-checklist](https://hanzoskills.com/skills/quality-checklist/SKILL.md) — Before delivering a notebook:
+- [rag-reranking-techniques](https://hanzoskills.com/skills/rag-reranking-techniques/SKILL.md) — Multi-stage retrieval pipelines with cross-encoder and LLM-based reranking for improved RAG precision
+- [research-data-analysis](https://hanzoskills.com/skills/research-data-analysis/SKILL.md) — Master data analysis techniques including coding, statistical tests, visualization, interpretation, and reporting findings
+- [research-data-collection](https://hanzoskills.com/skills/research-data-collection/SKILL.md) — Master data collection methods including survey design, interview protocols, observation techniques, and measurement instruments
+- [research-qualitative-methods](https://hanzoskills.com/skills/research-qualitative-methods/SKILL.md) — Master qualitative research methods including interviews, ethnography, case studies, grounded theory, and thematic analysis
+- [research-quantitative-methods](https://hanzoskills.com/skills/research-quantitative-methods/SKILL.md) — Master quantitative research methods including statistical analysis, surveys, experiments, and hypothesis testing
+- [research-research-design](https://hanzoskills.com/skills/research-research-design/SKILL.md) — Master research study design including hypothesis formation, validity, sampling strategies, and experimental control
+- [research-research-writing](https://hanzoskills.com/skills/research-research-writing/SKILL.md) — Master academic and research writing including structure, citations, reporting standards, and peer review processes
+- [research-synthesis](https://hanzoskills.com/skills/research-synthesis/SKILL.md) — Master information synthesis, literature review, meta-analysis, and knowledge integration across sources
+- [sample-prompts](https://hanzoskills.com/skills/sample-prompts/SKILL.md) — These prompt recipes are shared across both top-level modes of the skill: - built-in imagegen tool (default) - explicit scripts/imagegen.py CLI fallback
+- [schemas](https://hanzoskills.com/skills/schemas/SKILL.md) — This document defines the JSON schemas used by skill-creator.
+- [sdk-upgrade](https://hanzoskills.com/skills/sdk-upgrade/SKILL.md) — anthropic 1.x is deliberately a small step from the last 0.x release: no method was restructured and no new pattern is required.
+- [streaming](https://hanzoskills.com/skills/streaming/SKILL.md) — for await (const event of stream) { if ( event.type === "contentblockdelta" && event.delta.type === "textdelta" ) { process.stdout.write(event.delta.text); } }
+- [text-patterns](https://hanzoskills.com/skills/text-patterns/SKILL.md) — Reference guide for detecting AI slop patterns in natural language text including overused phrases, buzzwords, and meta-commentary. Use as reference when reviewing text content for quality.
+- [token-counting](https://hanzoskills.com/skills/token-counting/SKILL.md) — Use the counttokens endpoint (POST /v1/messages/counttokens) for accurate token counts against Claude models.
+- [tool-use](https://hanzoskills.com/skills/tool-use/SKILL.md) — For conceptual overview (tool definitions, tool choice, tips), see shared/tool-use-concepts.md(../../shared/tool-use-concepts.md).
+- [tool-use-concepts](https://hanzoskills.com/skills/tool-use-concepts/SKILL.md) — This file covers the conceptual foundations of tool use with the Claude API.
+- [tutorial-patterns](https://hanzoskills.com/skills/tutorial-patterns/SKILL.md) — Use this structure for teaching and walkthroughs:
+- [voice-directions](https://hanzoskills.com/skills/voice-directions/SKILL.md) — voice-directions
+- [voiceover](https://hanzoskills.com/skills/voiceover/SKILL.md) — Instructions:  Voice Affect: Confident and composed.
+- [workflow-project-synthesis](https://hanzoskills.com/skills/workflow-project-synthesis/SKILL.md) — Synthesize scattered project artifacts (plans, docs, tests, logs) into unified roadmap. Use when projects have accumulated sprawl across multiple planning documents, inconsistent naming, orphaned tests, or Beads issue...

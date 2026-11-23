@@ -32,8 +32,32 @@ await ctx.addInitScript(() => {
 });
 const page = await ctx.newPage();
 const errors = [];
+const fetched = [];
 page.on('pageerror', (e) => errors.push(e.message));
+page.on('request', (req) => {
+  try { fetched.push(new URL(req.url()).pathname); } catch (_) {}
+});
 await page.goto(BASE + '/', { waitUntil: 'load' });
+await page.waitForTimeout(150);
+
+// 0 — Progressive disclosure: initial page load is Tier 0 ONLY (no eager search/category/skill fetches)
+const initialEager = fetched.filter((p) => p === '/search.json' || p.startsWith('/categories/') || p.startsWith('/skills/'));
+ok('progressive: initial load fetches zero Tier 1/2 payloads', initialEager.length === 0, initialEager.join(', '));
+const catCards = page.locator('#catgrid .catcard');
+const catCount = await catCards.count();
+ok('progressive: renders Tier 0 category grid', catCount >= 8, `${catCount} categories`);
+
+// Dark mode palette matches hanzo.app / hanzo.ai: pure #000000 black + rgba(255,255,255,0.08) hairline
+await page.emulateMedia({ colorScheme: 'dark' });
+await page.waitForTimeout(200);
+const darkTokens = await page.evaluate(() => ({
+  bg: getComputedStyle(document.body).backgroundColor,
+  border: getComputedStyle(document.querySelector('.tier')).borderTopColor,
+}));
+ok('theme: dark background is pure #000000', darkTokens.bg === 'rgb(0, 0, 0)', darkTokens.bg);
+ok('theme: dark hairline border is rgba(255, 255, 255, 0.08)',
+  darkTokens.border === 'rgba(255, 255, 255, 0.08)', darkTokens.border);
+await page.emulateMedia({ colorScheme: 'light' });
 
 // 1 — the mark renders in footer (not stuck top-left in nav) and topology canvas mounts
 const navMark = page.locator('nav .brand svg.mark');
@@ -153,6 +177,38 @@ ok('webmcp: get_skill("kai") returns the served kai.md',
   md.v === served && served.startsWith('---\nname: kai\n'), md.e || `${md.v.length} chars`);
 const miss = await run('get_skill', { name: 'no-such-skill' });
 ok('webmcp: an unknown name is refused', (miss.e || '').includes('no skill named'), miss.e || 'resolved');
+
+// 5b — Progressive disclosure interactions: Tier 1 category drill-down -> pagination -> Tier 2 SKILL.md inspect -> lazy search
+{
+  const beforeCat = fetched.length;
+  await page.locator('#catgrid .catcard[data-cat="hanzo"]').click();
+  await page.waitForSelector('#browser .srow', { timeout: 5000 });
+  const catReqs = fetched.slice(beforeCat);
+  ok('tier1: clicking hanzo fetches only /categories/hanzo.json',
+    catReqs.includes('/categories/hanzo.json') && !catReqs.some((p) => p.startsWith('/skills/')),
+    catReqs.join(', '));
+  const rowCount = await page.locator('#browser .srow').count();
+  ok('tier1: paginates category list (24 per page)', rowCount > 0 && rowCount <= 24, `${rowCount} rows`);
+
+  const beforeSkill = fetched.length;
+  const firstInspect = page.locator('#browser .srow .inspect').first();
+  const inspectId = await firstInspect.getAttribute('data-id');
+  await firstInspect.click();
+  await page.waitForSelector(`#dr-${inspectId} .dpre`, { timeout: 5000 });
+  const skillReqs = fetched.slice(beforeSkill);
+  ok('tier2: inspecting skill fetches only its SKILL.md',
+    skillReqs.includes(`/skills/${inspectId}/SKILL.md`), skillReqs.join(', '));
+
+  // Lazy search loads /search.json on first query and finds skills across categories
+  const beforeSearch = fetched.length;
+  await page.fill('#q', 'category-theory-foundations');
+  await page.waitForSelector('#browser .srow[data-id="category-theory-foundations"]', { timeout: 5000 });
+  const searchReqs = fetched.slice(beforeSearch);
+  ok('tier1: search lazily fetches /search.json and finds cross-category match',
+    searchReqs.includes('/search.json'), searchReqs.join(', '));
+  await page.locator('#clearbtn').click();
+  await page.waitForSelector('#catgrid:not([hidden])', { timeout: 3000 });
+}
 
 ok('no page errors', errors.length === 0, errors.join(' | '));
 

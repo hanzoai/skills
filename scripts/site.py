@@ -16,6 +16,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from catalog import BROWSER_JS, emit_progressive, render_index_body  # noqa: E402
 from marks import MARK  # noqa: E402
 
 ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "public")
@@ -50,30 +51,30 @@ def svg(name, cls="mark"):
 # tool, so one shared string would be wrong everywhere but one place.
 AGENTS = [
     ("claude-code", "Claude Code", "claude", """\
-Set up the Hanzo skills in this Claude Code session.
+Set up the Hanzo skills in this Claude Code session using progressive disclosure.
 
 1. Read https://hanzoskills.com/skill.md — the onboarding manifest.
-2. Fetch https://hanzoskills.com/llms.txt for the index of every document.
-3. Install a skill by writing https://hanzoskills.com/<name>.md to
+2. Fetch https://hanzoskills.com/llms.txt (~4 KB category tree) — pick only the category you need at https://hanzoskills.com/categories/<slug>.md.
+3. Install a skill on demand by writing https://hanzoskills.com/skills/<name>/SKILL.md to
    ~/.claude/skills/<name>/SKILL.md — one directory per skill.
 4. Verify with: ls ~/.claude/skills
 
 Everything is plain markdown over https and needs no auth."""),
 
     ("codex", "Codex", "codex", """\
-Set up the Hanzo skills in this Codex session.
+Set up the Hanzo skills in this Codex session using progressive disclosure.
 
 1. Read https://hanzoskills.com/skill.md — the onboarding manifest.
-2. Fetch https://hanzoskills.com/llms.txt for the index of every document.
+2. Fetch https://hanzoskills.com/llms.txt (~4 KB category tree) and browse only the category you need via https://hanzoskills.com/categories/<slug>.md.
 3. Codex reads AGENTS.md. Append the manifest to ./AGENTS.md for this repo,
    and to ~/.codex/AGENTS.md to load it in every project.
-4. Pull single skills from https://hanzoskills.com/<name>.md and append the
+4. Pull single skills on demand from https://hanzoskills.com/skills/<name>/SKILL.md and append the
    ones you need under a "Hanzo skills" heading.
 
 Everything is plain markdown over https and needs no auth."""),
 
     ("cursor", "Cursor", "cursor", """\
-Set up the Hanzo skills in this Cursor workspace.
+Set up the Hanzo skills in this Cursor workspace using progressive disclosure.
 
 1. Read https://hanzoskills.com/skill.md — the onboarding manifest.
 2. Write .cursor/rules/hanzo.mdc containing the manifest under this front
@@ -82,9 +83,9 @@ Set up the Hanzo skills in this Cursor workspace.
    description: Hanzo platform skills
    alwaysApply: true
    ---
-3. Add one .cursor/rules/<name>.mdc per skill from
-   https://hanzoskills.com/<name>.md, with alwaysApply: false so Cursor
-   attaches it by description.
+3. Browse https://hanzoskills.com/llms.txt -> /categories/<slug>.md and add one
+   .cursor/rules/<name>.mdc per skill from https://hanzoskills.com/skills/<name>/SKILL.md,
+   with alwaysApply: false so Cursor attaches it by description.
 
 Everything is plain markdown over https and needs no auth."""),
 
@@ -199,13 +200,13 @@ CSS = """
 :root{
   color-scheme:light dark;
   --ground-light:#ffffff; --ground-dark:#000000;
-  --panel-light:#fafafa; --panel-dark:#0f0f0f;
-  --panel-2-light:#f5f5f7; --panel-2-dark:#171717;
+  --panel-light:#fafafa; --panel-dark:#0a0a0a;
+  --panel-2-light:#f5f5f7; --panel-2-dark:#141414;
   --ink-light:#0a0a0a; --ink-dark:#f5f5f7;
   --soft-light:#6e6e73; --soft-dark:#a1a1a6;
   --faint-light:#86868b; --faint-dark:#737378;
-  --line-light:#e5e5e5; --line-dark:#232323;
-  --line-hi-light:#d4d4d4; --line-hi-dark:#3a3a3a;
+  --line-light:#e5e5e5; --line-dark:rgba(255,255,255,0.08);
+  --line-hi-light:#d4d4d4; --line-hi-dark:rgba(255,255,255,0.16);
   --solid-bg-light:#0a0a0a; --solid-bg-dark:#ffffff;
   --solid-ink-light:#ffffff; --solid-ink-dark:#0a0a0a;
   --solid-hover-light:#262626; --solid-hover-dark:#e5e5e5;
@@ -216,7 +217,7 @@ CSS = """
   --line:var(--line-light); --line-hi:var(--line-hi-light);
   --solid-bg:var(--solid-bg-light); --solid-ink:var(--solid-ink-light);
   --solid-hover:var(--solid-hover-light); --dot:var(--dot-light);
-  --term-bg:#0a0a0a; --term-ink:#f5f5f7; --term-soft:#a1a1a6; --term-faint:#737378; --term-line:#232323;
+  --term-bg:#000000; --term-ink:#f5f5f7; --term-soft:#a1a1a6; --term-faint:#737378; --term-line:rgba(255,255,255,0.08);
   --font-zen-sans:'Zen',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
   --font-zen-mono:'Zen Mono',ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
   --font-zen-pixel-square:'Zen Pixel Square',monospace;
@@ -374,21 +375,89 @@ th,td{border:1px solid var(--line);padding:.55rem .75rem;text-align:left}
 .curl b{color:var(--term-ink);font-weight:500}
 .curl i{font-style:normal;color:var(--term-faint)}
 
-/* index */
+/* progressive disclosure index */
+.tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.85rem;margin:2rem 0 0}
+.tier{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-soft);
+  padding:1rem 1.15rem;display:flex;flex-direction:column;gap:.45rem}
+.tmeta{display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.tmeta b{font-weight:500;color:var(--soft)}
+.tier h3{margin:0;font-size:.98rem;font-weight:600;letter-spacing:-.015em;color:var(--ink)}
+.tier p{margin:0;font-size:.84rem;line-height:1.48;color:var(--soft)}
+.tlinks{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:auto;padding-top:.35rem}
+.tlinks a{font-family:var(--mono);font-size:.7rem;color:var(--soft);text-decoration:none;
+  padding:.2rem .55rem;border:1px solid var(--line);border-radius:var(--r);background:var(--ground)}
+.tlinks a:hover{color:var(--ink);border-color:var(--line-hi);text-decoration:none}
+.searchbar{margin:1.75rem 0 1.25rem}
 #q{width:100%;padding:.85rem 1.25rem;font-family:var(--sans);font-size:.95rem;color:var(--ink);
-  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r);margin:2rem 0 .65rem}
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r);margin:0 0 .65rem}
 #q::placeholder{color:var(--faint)}
 #q:focus{outline:none;border-color:var(--ink);background:var(--ground)}
+.statusrow{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:1.6rem}
 #count{color:var(--faint);font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
-  text-transform:uppercase;margin:0 0 2rem}
+  text-transform:uppercase;margin:0}
+.clearbtn{border:1px solid var(--line-hi);background:transparent;color:var(--ink);
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;
+  padding:.3rem .8rem;border-radius:var(--r);cursor:pointer}
+.clearbtn:hover{background:var(--panel-2);border-color:var(--ink)}
+.clearbtn[hidden]{display:none}
+.catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(19rem,1fr));gap:.85rem;margin:0 0 1.5rem}
+.catgrid[hidden]{display:none}
+.catcard{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-soft);
+  padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:.55rem;cursor:pointer;color:var(--ink);
+  font-family:var(--sans);transition:border-color .15s ease,background .15s ease}
+.catcard:hover{border-color:var(--line-hi);background:var(--panel-2)}
+.cathead{display:flex;align-items:center;justify-content:space-between;gap:.75rem;width:100%}
+.catname{font-size:.96rem;font-weight:600;letter-spacing:-.015em;color:var(--ink)}
+.catcnt{font-family:var(--mono);font-size:.72rem;color:var(--soft);background:var(--ground);
+  border:1px solid var(--line);border-radius:var(--r);padding:.14rem .55rem;flex:0 0 auto}
+.catdesc{margin:0;font-size:.84rem;line-height:1.45;color:var(--soft)}
+.chips{display:flex;flex-wrap:wrap;gap:.32rem;margin-top:.15rem}
+.chip{font-family:var(--mono);font-size:.68rem;color:var(--faint);background:var(--ground);
+  border:1px solid var(--line);border-radius:6px;padding:.12rem .42rem}
+.catfoot{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:auto;
+  padding-top:.45rem;border-top:1px solid var(--line);font-family:var(--mono);font-size:.68rem;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.catfmt{color:var(--faint)}
+.browser[hidden]{display:none}
+.bhead{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:1rem;
+  margin:0 0 1.15rem;padding-bottom:.9rem;border-bottom:1px solid var(--line)}
+.bhead h2{margin:0 0 .25rem;font-size:1.25rem}
+.bsub{margin:0;font-size:.9rem;color:var(--soft)}
+.blinks{display:flex;flex-wrap:wrap;gap:.45rem;align-items:center}
+.slist{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.srow{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:.75rem 1.25rem;
+  padding:.9rem 0;border-bottom:1px solid var(--line)}
+.smain{flex:1 1 24rem;min-width:0}
+.shead{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+.nm{font-family:var(--mono);font-size:.88rem;font-weight:600;color:var(--ink);text-decoration:none}
+.nm:hover{text-decoration:underline}
+.stag{font-family:var(--mono);font-size:.66rem;color:var(--faint);border:1px solid var(--line);
+  border-radius:var(--r);padding:.08rem .5rem}
+.ds{color:var(--soft);font-size:.9rem;margin:.25rem 0 0;line-height:1.48}
+.tags{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.4rem}
+.tag{font-family:var(--mono);font-size:.66rem;color:var(--faint);background:var(--panel);
+  border:1px solid var(--line);border-radius:6px;padding:.08rem .4rem}
+.sact{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;flex:0 0 auto}
+.sbtn{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--mono);font-size:.7rem;
+  letter-spacing:.04em;color:var(--ink);background:var(--panel);border:1px solid var(--line-hi);
+  border-radius:var(--r);padding:.36rem .8rem;text-decoration:none;cursor:pointer;line-height:1.2}
+.sbtn:hover{background:var(--panel-2);border-color:var(--ink);text-decoration:none}
+.drawer{flex:1 0 100%;margin-top:.45rem;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-soft);padding:.85rem 1rem;min-width:0}
+.drawer[hidden]{display:none}
+.dbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem;margin:0 0 .75rem}
+.dbar code{font-size:.76rem}
+.dacts{display:flex;flex-wrap:wrap;gap:.35rem}
+.dpre{margin:0;max-height:24rem;overflow:auto;font-size:.8rem}
+.morewrap{display:flex;justify-content:center;margin:1.5rem 0 0}
+.loading,.empty{color:var(--soft);font-family:var(--mono);font-size:.82rem;padding:1.5rem 0;margin:0}
 .cat{margin:2.5rem 0 .5rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;
   text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line);
   padding-bottom:.45rem}
 .row{display:block;padding:.75rem 1rem;margin:0 -1rem;border-bottom:1px solid var(--line);
   border-radius:var(--r-soft);text-decoration:none;transition:background .12s ease;overflow-wrap:anywhere}
 .row:hover{background:var(--panel-2);text-decoration:none}
-.nm{font-family:var(--mono);font-size:.86rem;font-weight:500;color:var(--ink);display:block}
-.ds{color:var(--soft);font-size:.92rem;display:block;margin-top:.15rem}
 footer{margin-top:4rem;padding:2.25rem 0 4rem;border-top:1px solid var(--line);
   color:var(--faint);font-size:.85rem}
 footer a{color:var(--soft);text-decoration:none}
@@ -412,6 +481,7 @@ footer a:hover{color:var(--ink);text-decoration:underline}
 .fmark .mark{width:1.25rem;height:1.25rem}
 .fbar{display:contents}
 
+@media (max-width:860px){.tiers{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:640px){
   .hero .wrap{padding-top:2.5rem;padding-bottom:2rem}
   .nlinks .nhide{display:none}
@@ -422,6 +492,7 @@ footer a:hover{color:var(--ink);text-decoration:underline}
   .strip .in{flex-direction:column;align-items:flex-start;gap:.6rem;padding:.9rem 1.75rem}
   .strip b{border-right:0;padding-right:0}
   .bar{width:100%}
+  .catgrid{grid-template-columns:minmax(0,1fr)}
   .fend{display:flex;flex-direction:column;align-items:stretch;gap:1rem}
   .flegal{order:1;justify-content:center}
   .fbar{order:2;display:flex;align-items:center;justify-content:space-between;width:100%}
@@ -458,6 +529,8 @@ def fend(md_href):
         '<a href="https://hanzo.ai/security">Security</a>'
         '<a href="%s">Plain text</a>'
         '<a href="/llms.txt">llms.txt</a>'
+        '<a href="/catalog.json">catalog.json</a>'
+        '<a href="https://hips.hanzo.ai/llms.txt">HIPs</a>'
         '</nav>'
         '<div class="fbar">'
         '<span class="fcopy">© 2026 Hanzo AI, Inc.</span>'
@@ -485,6 +558,7 @@ def btns():
         '</div>'
         '<a class="btn" href="/skill">skill.md</a>'
         '<a class="btn" href="/llms.txt">llms.txt</a>'
+        '<a class="btn" href="/catalog.json">catalog.json</a>'
         '<a class="btn" href="https://hanzo.sh">hanzo.sh</a>'
         '</div>'
         '<script type="application/json" id="prompts">%s</script>'
@@ -742,7 +816,7 @@ def get_md():
 BEACON = re.compile(r'\s*<script[^>]*cloudflareinsights\.com[^>]*>\s*</script>', re.S)
 
 
-def patch(path):
+def patch(path, catalog_data=None):
     src = open(path, encoding="utf-8").read()
     # Cloudflare adds its analytics beacon at the edge; it is not ours to ship.
     out = BEACON.sub("", src)
@@ -783,7 +857,7 @@ def patch(path):
         out = re.sub(r'<div class="hero">', '<div class="hero"><canvas class="hz-dots" aria-hidden="true"></canvas>', out, count=1)
         hero_h1_lede = (
             '<h1>Native cloud skills.<br><em>Drop into any agent.</em></h1>'
-            '<p class="lede">Plain markdown over HTTPS. <code>curl -fsSL https://hanzoskills.com/skill.md</code> — no auth, works everywhere.</p>'
+            '<p class="lede">Progressive disclosure over plain HTTPS. Load <code>/llms.txt</code> (~4 KB), pick a category, fetch one <code>SKILL.md</code> on demand — zero context bloat.</p>'
         )
         out = re.sub(r'<h1>.*?(?=<div class="btns">)', lambda _: hero_h1_lede + get(), out,
                      count=1, flags=re.S)
@@ -791,9 +865,20 @@ def patch(path):
                      lambda _: btns(), out, count=1, flags=re.S)
         out = re.sub(r'<div class="strip">.*?(?=\n<div class="wrap">)',
                      lambda _: strip(), out, count=1, flags=re.S)
+        if catalog_data is not None:
+            out = re.sub(
+                r'(<div class="strip">.*?</div></div>\n<div class="wrap">).*?(?=\n<footer>)',
+                lambda m: m.group(1) + "\n" + render_index_body(catalog_data),
+                out,
+                count=1,
+                flags=re.S,
+            )
+        # Strip legacy eager filter script and re-attach modular landing scripts
+        out = re.sub(r"</div><script>const q=document\.getElementById\('q'\).*?</script>", "</div>", out, count=1, flags=re.S)
         out = re.sub(r'\s*<script id="copyjs">.*?</script>', "", out, flags=re.S)
         out = re.sub(r'\s*<script id="dotsjs">.*?</script>', "", out, flags=re.S)
-        out = re.sub(r"\s*</body>", lambda _: COPY_JS + DOTS_JS + "</body>", out, count=1)
+        out = re.sub(r'\s*<script id="browserjs">.*?</script>', "", out, flags=re.S)
+        out = re.sub(r"\s*</body>", lambda _: COPY_JS + DOTS_JS + BROWSER_JS + "</body>", out, count=1)
 
     if out != src:
         write(path, out)
@@ -942,20 +1027,15 @@ def skills_index(root, source=SOURCE):
 
 def main():
     write(os.path.join(ROOT, "favicon.svg"), FAVICON)
+    catalog_data = emit_progressive(ROOT, SOURCE, get_md())
     files = sorted(glob.glob(os.path.join(ROOT, "*.html")))
     write(os.path.join(ROOT, "sitemap.xml"), sitemap(files))
-    changed = sum(patch(f) for f in files)
-    md = os.path.join(ROOT, "index.md")
-    src = open(md, encoding="utf-8").read()
-    out = re.sub(r"    curl hanzoskills\.com/", "    curl -fsSL https://hanzoskills.com/", src)
-    out = re.sub(r"(?:## Install\n.*?)?(?=    curl -fsSL https://hanzoskills\.com/llms\.txt)",
-                 lambda _: get_md(), out, count=1, flags=re.S)
-    if out != src:
-        write(md, out)
+    changed = sum(patch(f, catalog_data=catalog_data) for f in files)
     index = os.path.join(ROOT, ".well-known", "agent-skills", "index.json")
     os.makedirs(os.path.dirname(index), exist_ok=True)
     write(index, skills_index(ROOT))
-    print("%d/%d pages rewritten" % (changed, len(files)))
+    print("%d/%d pages rewritten (%d skills in %d categories)" % (
+        changed, len(files), catalog_data["total"], len(catalog_data["categories"])))
 
 
 if __name__ == "__main__":

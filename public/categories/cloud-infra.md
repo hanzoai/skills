@@ -1,0 +1,76 @@
+# Cloud, Containers & DevOps (69 skills)
+
+> Kubernetes, containers, CI/CD, observability, edge deploys, and site architecture.
+> Tier 0 catalog: [llms.txt](https://hanzoskills.com/llms.txt) · [catalog.json](https://hanzoskills.com/catalog.json) · [JSON](https://hanzoskills.com/categories/cloud-infra.json)
+
+Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/SKILL.md`
+
+- [api-live](https://hanzoskills.com/skills/api-live/SKILL.md) — Live input creation, status checking, simulcast, and WebRTC streaming.
+- [blueprint-spec](https://hanzoskills.com/skills/blueprint-spec/SKILL.md) — Complete reference for render.yaml Blueprint files.
+- [cicd-cd-deployment-patterns](https://hanzoskills.com/skills/cicd-cd-deployment-patterns/SKILL.md) — Implementing zero-downtime deployment strategies
+- [cicd-ci-optimization](https://hanzoskills.com/skills/cicd-ci-optimization/SKILL.md) — CI pipelines are taking too long (>10 minutes for feedback)
+- [cicd-ci-security](https://hanzoskills.com/skills/cicd-ci-security/SKILL.md) — Managing secrets and credentials in CI/CD pipelines
+- [cicd-ci-testing-strategy](https://hanzoskills.com/skills/cicd-ci-testing-strategy/SKILL.md) — Designing test execution strategies for CI pipelines
+- [cli-commands](https://hanzoskills.com/skills/cli-commands/SKILL.md) — Quick reference for common Netlify CLI commands used in deployments.
+- [cloud-aws-api-gateway](https://hanzoskills.com/skills/cloud-aws-api-gateway/SKILL.md) — AWS API Gateway REST APIs, HTTP APIs, WebSocket APIs, authorization, and integration patterns
+- [cloud-aws-databases](https://hanzoskills.com/skills/cloud-aws-databases/SKILL.md) — AWS database services - RDS, DynamoDB, ElastiCache, Aurora, migration, backup, and optimization
+- [cloud-aws-ec2-compute](https://hanzoskills.com/skills/cloud-aws-ec2-compute/SKILL.md) — AWS EC2 instances, Auto Scaling, Load Balancing, AMIs, and instance lifecycle management
+- [cloud-aws-iam-security](https://hanzoskills.com/skills/cloud-aws-iam-security/SKILL.md) — AWS IAM policies, roles, Cognito authentication, Secrets Manager, KMS encryption, and security best practices
+- [cloud-aws-lambda-functions](https://hanzoskills.com/skills/cloud-aws-lambda-functions/SKILL.md) — AWS Lambda function development, runtime configuration, triggers, and optimization
+- [cloud-aws-networking](https://hanzoskills.com/skills/cloud-aws-networking/SKILL.md) — AWS networking - VPC, subnets, security groups, NACLs, Route53, CloudFront, Transit Gateway
+- [cloud-aws-storage](https://hanzoskills.com/skills/cloud-aws-storage/SKILL.md) — AWS storage services - S3, EBS, EFS, Glacier, lifecycle policies, encryption, and data transfer
+- [cloud-gcp-compute](https://hanzoskills.com/skills/cloud-gcp-compute/SKILL.md) — Google Cloud compute services including Compute Engine, Cloud Run, and GKE
+- [cloud-gcp-databases](https://hanzoskills.com/skills/cloud-gcp-databases/SKILL.md) — Google Cloud managed database services including Cloud SQL, Firestore, Bigtable, and Spanner
+- [cloud-gcp-iam-security](https://hanzoskills.com/skills/cloud-gcp-iam-security/SKILL.md) — Google Cloud IAM, service accounts, Secret Manager, and Cloud KMS security practices
+- [cloud-gcp-networking](https://hanzoskills.com/skills/cloud-gcp-networking/SKILL.md) — Google Cloud networking including VPC, firewall, DNS, CDN, and load balancing
+- [cloud-gcp-serverless](https://hanzoskills.com/skills/cloud-gcp-serverless/SKILL.md) — Google Cloud serverless services including Cloud Functions, Cloud Run, and App Engine
+- [cloud-gcp-storage](https://hanzoskills.com/skills/cloud-gcp-storage/SKILL.md) — Google Cloud storage services including Cloud Storage, Persistent Disk, and Filestore
+- [codebase-analysis](https://hanzoskills.com/skills/codebase-analysis/SKILL.md) — Use this reference for framework-specific detection and build/start command selection when preparing a Render deployment.
+- [comparison](https://hanzoskills.com/skills/comparison/SKILL.md) — This directory contains examples showing the impact of Docker optimization techniques.
+- [configuration](https://hanzoskills.com/skills/configuration/SKILL.md) — 1. Navigate to Security > DDoS 2.
+- [configuration-guide](https://hanzoskills.com/skills/configuration-guide/SKILL.md) — Common configuration patterns, best practices, and troubleshooting for Render deployments.
+- [containers-container-networking](https://hanzoskills.com/skills/containers-container-networking/SKILL.md) — Configuring container network connectivity
+- [containers-container-registry-management](https://hanzoskills.com/skills/containers-container-registry-management/SKILL.md) — Choosing a container registry (ECR/GCR/Harbor/Docker Hub)
+- [containers-container-security](https://hanzoskills.com/skills/containers-container-security/SKILL.md) — Hardening container images for production
+- [containers-docker-compose-development](https://hanzoskills.com/skills/containers-docker-compose-development/SKILL.md) — Setting up local development environments
+- [containers-dockerfile-optimization](https://hanzoskills.com/skills/containers-dockerfile-optimization/SKILL.md) — Writing Dockerfiles for production applications
+- [deployment-details](https://hanzoskills.com/skills/deployment-details/SKILL.md) — Use this reference for service discovery, configuration patterns, quick commands, and common issues.
+- [deployment-heroku-addons](https://hanzoskills.com/skills/deployment-heroku-addons/SKILL.md) — Adding databases (Postgres, MySQL, MongoDB) to Heroku apps
+- [deployment-heroku-deployment](https://hanzoskills.com/skills/deployment-heroku-deployment/SKILL.md) — Deploying web applications, APIs, or worker processes to Heroku
+- [deployment-heroku-troubleshooting](https://hanzoskills.com/skills/deployment-heroku-troubleshooting/SKILL.md) — Application crashes on Heroku with H10, H12, H13, H14 errors
+- [deployment-netlify-deployment](https://hanzoskills.com/skills/deployment-netlify-deployment/SKILL.md) — Deploying static sites, JAMstack apps, or frontend frameworks to Netlify
+- [deployment-netlify-functions](https://hanzoskills.com/skills/deployment-netlify-functions/SKILL.md) — Building API endpoints for JAMstack applications
+- [deployment-netlify-optimization](https://hanzoskills.com/skills/deployment-netlify-optimization/SKILL.md) — Improving site load times and Core Web Vitals
+- [deployment-patterns](https://hanzoskills.com/skills/deployment-patterns/SKILL.md) — Common deployment scenarios and best practices for the Netlify skill.
+- [direct-creation](https://hanzoskills.com/skills/direct-creation/SKILL.md) — Use this reference for MCP direct-creation examples and follow-on configuration.
+- [dynamic-routing](https://hanzoskills.com/skills/dynamic-routing/SKILL.md) — Configure complex routing in dashboard without code changes.
+- [error-patterns](https://hanzoskills.com/skills/error-patterns/SKILL.md) — Use this to quickly map log signatures to likely causes and fixes.
+- [features](https://hanzoskills.com/skills/features/SKILL.md) — Dashboard: Settings → Cache Responses → Enable
+- [implementation_summary](https://hanzoskills.com/skills/implementation_summary/SKILL.md) — Net effect: Task-specific loading reduces unnecessary content by 13-51% depending on use case.
+- [infrastructure-aws-serverless](https://hanzoskills.com/skills/infrastructure-aws-serverless/SKILL.md) — Building serverless APIs and backends
+- [infrastructure-cloudflare-workers](https://hanzoskills.com/skills/infrastructure-cloudflare-workers/SKILL.md) — Building serverless APIs at the edge (low latency globally)
+- [infrastructure-cost-optimization](https://hanzoskills.com/skills/infrastructure-cost-optimization/SKILL.md) — Cloud costs are growing unexpectedly
+- [infrastructure-infrastructure-security](https://hanzoskills.com/skills/infrastructure-infrastructure-security/SKILL.md) — Setting up IAM roles and policies
+- [infrastructure-kubernetes-basics](https://hanzoskills.com/skills/infrastructure-kubernetes-basics/SKILL.md) — Deploying containerized applications at scale
+- [infrastructure-terraform-patterns](https://hanzoskills.com/skills/infrastructure-terraform-patterns/SKILL.md) — Provisioning cloud infrastructure (AWS, GCP, Azure, Cloudflare)
+- [integration](https://hanzoskills.com/skills/integration/SKILL.md) — Web Analytics is dashboard-only - no programmatic API.
+- [mermaid-templates](https://hanzoskills.com/skills/mermaid-templates/SKILL.md) — Copy-paste-ready Mermaid diagrams for visual sitemaps.
+- [navigation-patterns](https://hanzoskills.com/skills/navigation-patterns/SKILL.md) — Detailed navigation patterns for different site types and contexts.
+- [netlify-toml](https://hanzoskills.com/skills/netlify-toml/SKILL.md) — Configuration file for Netlify builds and deployments.
+- [observability-alerting-strategy](https://hanzoskills.com/skills/observability-alerting-strategy/SKILL.md) — Setting up production monitoring and on-call rotation
+- [observability-cost-optimization](https://hanzoskills.com/skills/observability-cost-optimization/SKILL.md) — Optimizing observability costs through sampling, cardinality management, and retention strategies
+- [observability-dashboard-design](https://hanzoskills.com/skills/observability-dashboard-design/SKILL.md) — Building Grafana dashboards for service monitoring
+- [observability-distributed-tracing](https://hanzoskills.com/skills/observability-distributed-tracing/SKILL.md) — Debugging latency issues in microservices
+- [observability-metrics-instrumentation](https://hanzoskills.com/skills/observability-metrics-instrumentation/SKILL.md) — Instrumenting applications for observability
+- [observability-opentelemetry-integration](https://hanzoskills.com/skills/observability-opentelemetry-integration/SKILL.md) — Integrating OpenTelemetry for unified observability (traces, metrics, logs)
+- [observability-production-incident-debugging](https://hanzoskills.com/skills/observability-production-incident-debugging/SKILL.md) — Debugging production incidents using observability data (logs, metrics, traces)
+- [observability-prometheus-monitoring](https://hanzoskills.com/skills/observability-prometheus-monitoring/SKILL.md) — Production-ready Prometheus monitoring and alerting
+- [observability-structured-logging](https://hanzoskills.com/skills/observability-structured-logging/SKILL.md) — Setting up application logging infrastructure
+- [patterns](https://hanzoskills.com/skills/patterns/SKILL.md) — await client.accounts.rulesets.phases.entrypoint.update("ddosl7", { accountid: accountId, ...config, });
+- [post-deploy-checks](https://hanzoskills.com/skills/post-deploy-checks/SKILL.md) — Use this after any deploy or service creation.
+- [runtimes](https://hanzoskills.com/skills/runtimes/SKILL.md) — Complete guide to available runtimes on Render, including versions, configuration, and best practices for each language.
+- [sdk-integration](https://hanzoskills.com/skills/sdk-integration/SKILL.md) — const gateway = createAiGateway({ accountId: process.env.CFACCOUNTID, gateway: process.env.CFGATEWAYID, apiKey: process.env.CFAPITOKEN // Optional for auth gateways });
+- [service-types](https://hanzoskills.com/skills/service-types/SKILL.md) — Detailed explanation of each service type available on Render.
+- [site-type-templates](https://hanzoskills.com/skills/site-type-templates/SKILL.md) — Full page hierarchy templates with ASCII trees, URL maps, and navigation recommendations for common site types.
+- [troubleshooting](https://hanzoskills.com/skills/troubleshooting/SKILL.md) — Causes: - Different request params (temperature, etc.) - Streaming enabled - Caching disabled in settings
+- [troubleshooting-basics](https://hanzoskills.com/skills/troubleshooting-basics/SKILL.md) — Use this when a deploy fails, the service crashes on start, or health checks time out.
