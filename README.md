@@ -1,7 +1,3 @@
-## Compose Hanzo customer solutions
-
-Start with skills/hanzo-solution-composer/SKILL.md; combine hanzo-oss-legos, hanzo-decision-evaluation, hanzo-eu-deployment and hanzo-enterprise-blueprint. Rebuild the site with npm run build.
-
 <p align="center"><img src=".github/hero.svg" alt="skills" width="880"></p>
 
 # Atomic Skills for Claude Code
@@ -15,6 +11,10 @@ Start with skills/hanzo-solution-composer/SKILL.md; combine hanzo-oss-legos, han
 **Context-efficient development knowledge via progressive skill discovery**
 
 > **Claude Code Plugin**: Install with `/plugin install https://github.com/hanzoai/skills`
+
+## Compose Hanzo customer solutions
+
+Start with `skills/hanzo-solution-composer/SKILL.md`; combine `hanzo-oss-legos`, `hanzo-decision-evaluation`, `hanzo-eu-deployment`, and `hanzo-enterprise-blueprint`. Rebuild the site with `npm run build`.
 
 This repository solves a tradeoff problem: how to give Claude Code access to comprehensive development knowledge without overwhelming its context window on boot. The solution is atomic, composable skills organized through a multi-tier discovery system.
 

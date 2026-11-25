@@ -418,9 +418,12 @@ def main():
 
     order = sorted(cats, key=sort_key)
 
-    # Emit one page + one markdown file per document
+    # Emit one page + one markdown file per document (never overwrite hand-authored discovery docs like auth.md)
+    reserved_pages = {"auth"}
     print(f"Generating {len(docs)} individual pages (.html + .md)...")
     for d in docs:
+        if d['name'] in reserved_pages:
+            continue
         io.open(f"{OUT}/{d['name']}.md", 'w', encoding='utf-8').write(d['raw'])
         body = (f"<h1>{html.escape(d['name'])}</h1>"
                 f"<p class=\"lede\">{html.escape(d['desc'])}</p>"

@@ -1,4 +1,4 @@
-# Hanzo Platform & Cloud (165 skills)
+# Hanzo Platform & Cloud (170 skills)
 
 > Core Hanzo stack, native Go/Rust/C++ services, Base, Cloud, CLI, MCP, and migration guides.
 > Tier 0 catalog: [llms.txt](https://hanzoskills.com/llms.txt) · [catalog.json](https://hanzoskills.com/catalog.json) · [JSON](https://hanzoskills.com/categories/hanzo.json)
@@ -48,6 +48,7 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [hanzo-database](https://hanzoskills.com/skills/hanzo-database/SKILL.md) — Hanzo Database covers PostgreSQL (with pgvector), Redis, MongoDB, and Hanzo S3 configurations used across the Hanzo ecosystem.
 - [hanzo-dataroom](https://hanzoskills.com/skills/hanzo-dataroom/SKILL.md) — Hanzo Dataroom is the open-source DocSend alternative -- a document sharing platform with built-in analytics, custom domains, and secure link-based access.
 - [hanzo-datastore](https://hanzoskills.com/skills/hanzo-datastore/SKILL.md) — Hanzo Datastore provides a unified vector database abstraction for AI applications — embedding storage, similarity search, and RAG retrieval.
+- [hanzo-decision-evaluation](https://hanzoskills.com/skills/hanzo-decision-evaluation/SKILL.md) — Research and benchmark revenue, churn, pricing, propensity and collections decisions using rules, classical ML and Hanzo Kai; separate predictive quality from causal uplift and cost before deployment.
 - [hanzo-deploy](https://hanzoskills.com/skills/hanzo-deploy/SKILL.md) — Hanzo deploys all services via Kubernetes manifests stored in the universe repo (hanzoai/universe).
 - [hanzo-desktop](https://hanzoskills.com/skills/hanzo-desktop/SKILL.md) — Hanzo Desktop is a cross-platform desktop application for creating and managing AI agents without code.
 - [hanzo-dev](https://hanzoskills.com/skills/hanzo-dev/SKILL.md) — Hanzo Dev is an AI-powered development platform -- a monorepo containing a Rust-native CLI (dev, dev-tui, dev-exec), a Node.js wrapper CLI (@hanzo/dev), a legacy TypeScript CLI (codex-cli), and supporting infrastructure
@@ -57,6 +58,8 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [hanzo-edge](https://hanzoskills.com/skills/hanzo-edge/SKILL.md) — Hanzo Edge is an on-device AI inference runtime for running Zen models and any GGUF model locally on macOS, Linux, Web (WASM), and embedded devices.
 - [hanzo-editor](https://hanzoskills.com/skills/hanzo-editor/SKILL.md) — Hanzo Editor (hanzoai/code) is an open-source AI-native code editor -- a VS Code fork (originally "Void Editor") with LLM chat, autocomplete, inline diffs, and agent tool use built directly into the editor core.
 - [hanzo-engine](https://hanzoskills.com/skills/hanzo-engine/SKILL.md) — Hanzo Engine is Hanzo AI's high-performance, Rust-native inference and embedding engine that powers the entire Hanzo ecosystem.
+- [hanzo-enterprise-blueprint](https://hanzoskills.com/skills/hanzo-enterprise-blueprint/SKILL.md) — Reusable, industry-neutral Hanzo enterprise reference architecture for decision-driven workflows, isolated data, evaluation, human-approved actions and measurable outcomes; compose minimal OSS building blocks.
+- [hanzo-eu-deployment](https://hanzoskills.com/skills/hanzo-eu-deployment/SKILL.md) — Plan and verify customer-owned sovereign Hanzo deployments in EU cloud or private infrastructure; consent, data residency, IAM, KMS, GCP budgets, testing, rollback and handoff.
 - [hanzo-evm](https://hanzoskills.com/skills/hanzo-evm/SKILL.md) — Hanzo EVM is a Rust-based EVM execution engine — fork of paradigmxyz/reth v1.11.0, rebranded for the Hanzo ecosystem.
 - [hanzo-examples-native-cloud](https://hanzoskills.com/skills/hanzo-examples-native-cloud/SKILL.md) — This repository of code examples provides reference implementations for building, extending, and operating systems within the Hanzo ecosystem.
 - [hanzo-explorer](https://hanzoskills.com/skills/hanzo-explorer/SKILL.md) — Hanzo Explorer is an EVM blockchain explorer for inspecting and analyzing transactions, accounts, smart contracts, and tokens on Lux Network and other EVM-compatible chains.
@@ -108,6 +111,7 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [hanzo-operator](https://hanzoskills.com/skills/hanzo-operator/SKILL.md) — Hanzo Operator is a unified Kubernetes operator that manages all Hanzo production infrastructure declaratively via 7 CRDs under the hanzo.ai/v1alpha1 API group.
 - [hanzo-orm](https://hanzoskills.com/skills/hanzo-orm/SKILL.md) — Hanzo ORM is a Go generics-based ORM with automatic serialization, KV caching, and zero code generation.
 - [hanzo-oss](https://hanzoskills.com/skills/hanzo-oss/SKILL.md) — Complete progressive directory of all Hanzo Open-Source repositories (hanzoai/* and zap-proto/*) — core Go/Rust/C++ runtimes, AI inference, IAM, KMS, Base, UI design system, MCP, and business suite.
+- [hanzo-oss-legos](https://hanzoskills.com/skills/hanzo-oss-legos/SKILL.md) — Choose and assemble modular Hanzo open-source repositories like Legos; map capabilities, interface and ownership boundaries, repository evidence, licences and compatibility before proposing a customer stack.
 - [hanzo-paas](https://hanzoskills.com/skills/hanzo-paas/SKILL.md) — Deploy and manage applications on Hanzo PaaS. Manage projects, environments, deployments, domains, logs, and cloud services via the hanzo-tools-paas MCP tool or REST API.
 - [hanzo-payments](https://hanzoskills.com/skills/hanzo-payments/SKILL.md) — Hanzo Payments is an open-source payment orchestration switch written in Rust.
 - [hanzo-platform](https://hanzoskills.com/skills/hanzo-platform/SKILL.md) — Hanzo Platform is a Kubernetes-native PaaS (Platform as a Service) for deploying AI applications, APIs, and services.
@@ -127,6 +131,7 @@ Fetch a single skill on demand: `curl -fsSL https://hanzoskills.com/skills/<id>/
 - [hanzo-sho](https://hanzoskills.com/skills/hanzo-sho/SKILL.md) — Sho is a text diffusion engine that generates text using masked diffusion rather than autoregressive token prediction.
 - [hanzo-sign](https://hanzoskills.com/skills/hanzo-sign/SKILL.md) — Hanzo Sign is an open-source DocuSign alternative for electronic document signing.
 - [hanzo-skill](https://hanzoskills.com/skills/hanzo-skill/SKILL.md) — Hanzo Skill (@hanzo/skill) is a TypeScript CLI tool for installing, managing, and distributing AI agent skills.
+- [hanzo-solution-composer](https://hanzoskills.com/skills/hanzo-solution-composer/SKILL.md) — Design a real customer solution from Hanzo OSS building blocks; gather requirements, select minimal components, verify compatibility and licence, benchmark AI, then deliver a deployment blueprint and evidence.
 - [hanzo-sql](https://hanzoskills.com/skills/hanzo-sql/SKILL.md) — Hanzo SQL is a PostgreSQL fork with pre-built extensions for AI workloads: pgvector (vector similarity), pgcron (scheduled jobs), pgdocumentdb (MongoDB wire protocol), and PostGIS (geospatial).
 - [hanzo-stack](https://hanzoskills.com/skills/hanzo-stack/SKILL.md) — Hanzo Stack provides the complete integrated development environment for running all Hanzo services locally.
 - [hanzo-static](https://hanzoskills.com/skills/hanzo-static/SKILL.md) — Hanzo Static is a Traefik plugin that serves static files (SPAs, assets) directly from the ingress controller.
