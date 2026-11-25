@@ -1,6 +1,6 @@
 # Hanzo Skills
 
-Native compiled cloud skills (1472 skills across 14 categories). Progressive disclosure by default — load only what your task needs.
+Native compiled cloud skills (1477 skills across 14 categories). Progressive disclosure by default — load only what your task needs.
 
 ## Install
 
@@ -30,7 +30,7 @@ The skills, over plain https:
 
 ## Categories
 
-- [Hanzo Platform & Cloud](categories/hanzo.md) (165 skills · [JSON](categories/hanzo.json)) — Core Hanzo stack, native Go/Rust/C++ services, Base, Cloud, CLI, MCP, and migration guides.
+- [Hanzo Platform & Cloud](categories/hanzo.md) (170 skills · [JSON](categories/hanzo.json)) — Core Hanzo stack, native Go/Rust/C++ services, Base, Cloud, CLI, MCP, and migration guides.
 - [AI, ML & Agent Engineering](categories/ai-agents.md) (120 skills · [JSON](categories/ai-agents.json)) — LLM APIs, agent workflows, MCP servers, skill authoring, inference, audio, vision, and research.
 - [Systems & Core Engineering](categories/engineering.md) (551 skills · [JSON](categories/engineering.json)) — Languages, distributed systems, debugging, testing, code review, protocols, and build tools.
 - [Cloud, Containers & DevOps](categories/cloud-infra.md) (71 skills · [JSON](categories/cloud-infra.json)) — Kubernetes, containers, CI/CD, observability, edge deploys, and site architecture.
