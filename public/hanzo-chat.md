@@ -47,4 +47,4 @@ pnpm run frontend
 ## Upstream
 - Fork of: danny-avila/LibreChat
 - Behind upstream: ~3,200 commits
-- Branding: Hanzo red #fd4444, "Hanzo Chat" title, H logo
+- Branding: Monochrome (`@hanzo/tokens`), Zen font, "Hanzo Chat" title, block-H logo (`@hanzo/logo`)

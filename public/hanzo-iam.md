@@ -313,7 +313,7 @@ The server auto-discovers Redis in Kubernetes by trying DNS lookups for `hanzo-k
 
 | Entity | Defaults |
 |--------|----------|
-| Organization | `hanzo` (dark theme, primary color #fd4444) |
+| Organization | `hanzo` (monochrome light/dark theme via `@hanzo/tokens`) |
 | Applications | `app-hanzo`, `app-cloud`, `app-commerce` |
 | Admin user | `admin@hanzo.ai` with configurable balance |
 | Certificates | RSA certs for JWT signing |

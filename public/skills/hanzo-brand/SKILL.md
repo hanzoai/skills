@@ -12,49 +12,65 @@ Brand assets, color palette, typography, and guidelines for the Hanzo ecosystem.
 | Asset | Location | npm Package |
 |-------|----------|-------------|
 | Logo (all formats) | `github.com/hanzoai/logo` (`dist/` directory) | `@hanzo/logo` |
+| Design tokens | `github.com/hanzoai/tokens` | `@hanzo/tokens` |
+| Fonts (Zen / Zen Mono) | `github.com/hanzoai/font` | `@hanzo/font` |
 | Brand guidelines | `github.com/hanzoai/brand` | `@hanzo/brand` |
 | UI components | `github.com/hanzoai/ui` | `@hanzo/ui` |
 
 ## Colors
 
-| Color | Hex | Usage |
-|-------|-----|-------|
-| **Hanzo Red** | `#d81c33` | **Primary brand**, CTAs, active states |
-| Dark | `#0a0a0a` | Backgrounds |
-| Light | `#fafafa` | Text on dark backgrounds |
-| Muted | `#737373` | Secondary text |
-| Border | `#262626` | Card/container borders |
-| Chat accent | `#fd4444` | Chat UI accent (rebrand of OpenAI green `#10a37f`) |
+**Monochrome only — black and white, light and dark following the device.** There is **no Hanzo Red** (and no brand accent color, neon, or gradient glow). All surfaces consume `@hanzo/tokens`.
 
-**NOTE**: The primary brand color is `#d81c33`, NOT `#fd4444`. The `#fd4444` red is used specifically in Hanzo Chat (LibreChat rebrand) as an accent color.
+| Token | Light | Dark | Usage |
+|-------|-------|------|-------|
+| Background (`surface1`) | `#ffffff` | `#000000` | Primary page canvas |
+| Elevated (`surface2`) | `#fafafa` | `#111111` | Cards, panels, modals |
+| Foreground (`neutral1`) | `#0a0a0a` | `#fafafa` | Primary text and marks |
+| Primary CTA (`accent1`) | `#000000` | `#ffffff` | Primary buttons and active states |
+| Muted (`neutral2`) | `rgba(10,10,10,0.6)` | `rgba(250,250,250,0.6)` | Secondary text |
+| Border | `rgba(10,10,10,0.12)` | `#262626` | Hairline dividers and card borders |
+
+**NOTE**: Do not use `#d81c33`, `#fd4444`, cyan/purple glows, or custom brand accent colors. Hanzo is strictly monochrome across marketing, apps, chat, IAM, and docs.
 
 ### CSS Variables
 
 ```css
+/* Prefer importing semantic tokens directly from @hanzo/tokens */
 :root {
- --hanzo-red: #d81c33;
- --hanzo-dark: #0a0a0a;
- --hanzo-light: #fafafa;
- --hanzo-muted: #737373;
- --hanzo-border: #262626;
+  --background: #ffffff;
+  --surface: #fafafa;
+  --foreground: #0a0a0a;
+  --accent: #000000;
+  --muted: rgba(10, 10, 10, 0.6);
+  --border: rgba(10, 10, 10, 0.12);
+}
+
+.dark {
+  --background: #000000;
+  --surface: #111111;
+  --foreground: #fafafa;
+  --accent: #ffffff;
+  --muted: rgba(250, 250, 250, 0.6);
+  --border: #262626;
 }
 ```
 
 ### Tailwind Config
 
 ```typescript
-// tailwind.config.ts
+// tailwind.config.ts — consume @hanzo/tokens semantic variables
 export default {
- theme: {
- extend: {
- colors: {
- hanzo: {
- red: "#d81c33",
- dark: "#0a0a0a",
- },
- },
- },
- },
+  theme: {
+    extend: {
+      colors: {
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        surface: "var(--surface)",
+        muted: "var(--muted)",
+        border: "var(--border)",
+      },
+    },
+  },
 }
 ```
 
@@ -114,7 +130,7 @@ When rebranding a fork for the Hanzo ecosystem:
 
 1. **Display text only**: Replace user-visible strings, NOT code identifiers
 2. **Logo swap**: Direct SVG replacement, don't modify JS class names
-3. **Colors**: Update Tailwind config and CSS variables to `#d81c33`
+3. **Colors**: Map Tailwind config and CSS variables to monochrome `@hanzo/tokens` (black and white, light + dark)
 4. **Translations**: Update i18n/localization files
 5. **URLs**: Update documentation links and API endpoints
 6. **Internal names**: Keep internal package names if they're npm dependencies
@@ -129,7 +145,7 @@ When rebranding a fork for the Hanzo ecosystem:
 | Renaming npm package imports | Build failure | Keep internal package names |
 | Changing CSS class names | Broken styles | Only change Tailwind theme values |
 | sed on i18n keys | Missing translations | Only change i18n values, not keys |
-| Using `#fd4444` as primary | Wrong red | Use `#d81c33` (primary brand) |
+| Using `#d81c33`, `#fd4444`, or neon accents | Off-brand | Monochrome black & white via `@hanzo/tokens` |
 
 ## Product Names
 
@@ -153,6 +169,6 @@ When rebranding a fork for the Hanzo ecosystem:
 
 ---
 
-**Last Updated**: 2026-03-13
+**Last Updated**: 2026-11-26
 **Category**: Hanzo Ecosystem
 **Related**: brand, design, colors, logo, guidelines
