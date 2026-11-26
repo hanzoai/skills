@@ -35,35 +35,44 @@ Keep context small by loading skills **only when a task requires them**:
 - **Hosted Cloud MCP (Streamable HTTP, zero local setup)**: `https://api.hanzo.ai/v1/mcp` (`Authorization: Bearer $HANZO_API_KEY`).
 - **MCP schemas (progressive)**: `https://hanzoskills.com/mcp/index.json` -> `/mcp/<tool>.json` · Docs: https://docs.hanzo.ai/docs/mcp
 
-## 4. Hanzo Browser Extension (Chrome, Firefox, Safari, Edge)
+## 4. Install the Hanzo Browser Extension (Chrome, Firefox, Safari, Edge)
 
-Install the Hanzo Browser Extension so your agent gets live browser control (tabs, CDP, DOM snapshot, click, type, screenshot, social sessions) bridged over ZAP/MCP:
+Install the Browser Extension so agents get live tab inspection, CDP, DOM snapshots, click/type, screenshots, and social automation bridged over ZAP/MCP:
 
-- **Install & Downloads**: https://hanzo.ai/extension · https://hanzo.ai/chrome · Latest zips: https://github.com/hanzoai/extension/releases/latest
-- **Chrome / Chromium unpacked load**: download `hanzo-ai-chrome-*.zip` -> unzip -> open `chrome://extensions` -> enable **Developer mode** -> **Load unpacked** -> sign in via Hanzo ID (`https://hanzo.id`).
-- **Skill**: `https://hanzoskills.com/skills/hanzo-extension/SKILL.md`
+- **Download & unpack Chrome/Chromium extension**:
+  ```bash
+  mkdir -p ~/.hanzo/browser-extension && cd ~/.hanzo/browser-extension
+  URL=$(curl -fsSL https://api.github.com/repos/hanzoai/extension/releases/latest | grep -oE 'https://[^"]*hanzo-ai-chrome[^"]*\.zip' | head -1)
+  curl -fsSL "$URL" -o ext.zip && unzip -oq ext.zip && rm ext.zip
+  ```
+  Then open `chrome://extensions` -> enable **Developer mode** -> **Load unpacked** -> select `~/.hanzo/browser-extension` -> sign in via https://hanzo.id.
+- **All browsers & IDE plugins** (Chrome, Firefox, Safari, Edge, VS Code, Cursor, Windsurf, Antigravity, JetBrains): https://hanzo.ai/extension · https://hanzo.ai/chrome · https://hanzo.ai/download
 
-## 5. Hanzo CLI, Hanzo Dev & Hanzo Bot Agents
+## 5. Hanzo Desktop, CLI, Hanzo Dev, Hanzo Bot & Live Usage Visibility
 
-- **Install native stack** (CLI, Dev agent, MCP server, local inference engine): `curl -fsSL https://hanzo.sh | sh` (or `npm i -g hanzo`), then `hanzo auth login`.
-- **Hanzo Dev (coding agents)**: `hanzo dev` (native Rust coding agent), `hanzo code claude`, `hanzo code codex`, `hanzo engine serve <model>` (local inference), `hanzo up` (run Hanzo Cloud locally). Skill: `/skills/hanzo-dev/SKILL.md`.
-- **Hanzo Bot (resident autonomous agents — Slack, Discord, Telegram, WhatsApp, iMessage, browser + terminal + cron)**:
-  - Cloud (unlimited bots on paid plans): https://hanzo.bot · CLI: `hanzo bot runs list`
-  - Local open-source daemon: `npm i -g @hanzo/bot && hanzo-bot onboard --install-daemon`
-  - Skill: `https://hanzoskills.com/skills/hanzo-bot/SKILL.md` · Docs: https://docs.hanzo.bot
+- **Install native CLI + Dev + MCP + Engine**: `curl -fsSL https://hanzo.sh | sh` (or `npm i -g hanzo`), then `hanzo login` (or headless wallet signup via https://hanzoskills.com/hanzo.md).
+- **Install Hanzo Desktop** (macOS/Windows/Linux): https://hanzo.ai/download (or https://hanzo.ai/desktop) and sign in with the same Hanzo ID to see every local & cloud agent, live session, bot run, and spend in one control plane.
+- **Launch any agent through Hanzo CLI so sessions, tools & usage show up everywhere**:
+  `hanzo dev` · `hanzo --claude` · `hanzo --codex` · `hanzo --cursor` · `hanzo --agy` · `hanzo --gemini` (add `--cloud` to route the agent's model calls on your Hanzo plan).
+- **Check live usage, plan & balance**: `hanzo usage summary` · `hanzo billing tier` · `hanzo billing balance` · `hanzo billing topup` (or `GET /v1/billing/tier` & `GET /v1/allowance`).
+- **Hanzo Bot (resident autonomous agents — Slack, Discord, Telegram, WhatsApp, iMessage + browser/terminal/cron)**:
+  Cloud: https://hanzo.bot (`hanzo bot runs list`) · Local OSS daemon: `npm i -g @hanzo/bot && hanzo-bot onboard --install-daemon` · Docs: https://docs.hanzo.bot
 
-## 6. Full Hanzo Platform Fluency (`https://api.hanzo.ai/v1`)
+## 6. Full Platform Fluency & Business AI Operating System (OSS Business Apps)
 
-One OpenAI-compatible API, one key, same `/v1/<capability>` contract across cloud and local self-host:
+Every service shares one API (`https://api.hanzo.ai/v1`), one key (`export HANZO_API_KEY=...`), and one deploy contract (`hanzo deploy .` or self-host):
 
-- **Discover everything (zero auth)**: `GET https://api.hanzo.ai/v1`, `GET /v1/<capability>`, `GET /v1/openapi.json`.
-- **AI & Models**: `/v1/chat/completions` (`enso-auto`, `zen-free`, `zen-*`, 500+ models), **Kai** typed calibrated decisions (`POST /v1/decisions`), embeddings, audio/video/image.
-- **Cloud & Data**: IAM (`https://hanzo.id`), KMS (`/v1/kms`), Base realtime DB (`/v1/base`), SQL (`/v1/sql`), KV (`/v1/kv`), Vector (`/v1/vector`), S3/Storage (`/v1/storage`), PubSub, Tasks, Pipelines, Sandboxes, Deploy, Billing/USDC top-up, CRM, CMS, Post/Social.
-- **Headless agent signup & free API key (no human required)**: read https://hanzoskills.com/hanzo.md (or https://docs.hanzo.ai/docs/agents).
-- **Local-first runtime manifest**: https://hanzoskills.com/skill.md · **HIPs**: https://hips.hanzo.ai/llms.txt
+- **Zero-auth API discovery**: `GET https://api.hanzo.ai/v1`, `GET /v1/<capability>`, `GET /v1/openapi.json`.
+- **AI & Core**: `/v1/chat/completions` (`enso-auto`, `zen-free`, `zen-*`, 500+ models), **Kai** calibrated decisions (`POST /v1/decisions`), IAM (`hanzo.id`), KMS (`hanzo kms put`), Base (`/v1/base`), SQL, KV, Vector, S3, PubSub, Tasks, Sandboxes, Billing/USDC.
+- **Deploy OSS Business Apps for any company** (org setup guide: https://docs.hanzo.ai/docs/run-your-org):
+  - **Web Analytics** (`forge.hanzo.ai/hanzoai/analytics` · skill `/skills/hanzo-analytics/SKILL.md`): privacy-first, cookieless web & revenue analytics.
+  - **Product Insights** (`forge.hanzo.ai/hanzoai/insights` · skill `/skills/hanzo-insights/SKILL.md`): funnels, session replay, feature flags, A/B experiments.
+  - **Marketing, Social & Ads** (`hanzoai/post`, `hanzoai/ads` · skill `/skills/hanzo-post/SKILL.md` + `/categories/growth-product.md`: SEO, CRO, copy, campaigns).
+  - **Team, Commerce, Cal, Mail, Workflows & Studio**: `hanzoai/team`, `hanzoai/commerce`, `hanzoai/billing`, `hanzoai/cal`, `hanzoai/mail`, `hanzoai/flow`, `hanzoai/studio`, `hanzoai/o11y`.
 
-## 7. Forge Open Source Repositories (2,800+ Public Repos — Progressive Discovery)
+## 7. Forge Open Source Repositories (2,832+ Public Repos — Progressive Discovery)
 
 1. **Tier 0 (Org Directory)**: `curl -fsSL https://hanzoskills.com/oss/index.md` (or `/oss/index.json`).
 2. **Tier 1 (Single Org)**: `curl -fsSL https://hanzoskills.com/oss/<org>.md` (e.g. `hanzoai`, `hanzoskill`, `luxfi`, `zooai`, `zenlm`, `zap-proto`).
-3. **Tier 2 (Single Repo)**: `git clone https://forge.hanzo.ai/<org>/<repo>.git` (every public repo also serves `/<org>/<repo>/CLAUDE.md`).
+3. **Tier 2 (Single Repo)**: `git clone https://forge.hanzo.ai/<org>/<repo>.git` (every public repo serves `/<org>/<repo>/CLAUDE.md`).
+4. **Local-first runtime & HIPs**: https://hanzoskills.com/skill.md · https://hips.hanzo.ai/llms.txt
