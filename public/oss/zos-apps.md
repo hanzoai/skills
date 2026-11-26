@@ -1,0 +1,123 @@
+# zos-apps — Forge OSS Repositories (111)
+
+> Progressive Tier-1 repository index for `zos-apps` on [forge.hanzo.ai/zos-apps](https://forge.hanzo.ai/zos-apps).
+> Load only the repository you need. Install Hanzo skills progressively via [CLAUDE.md](https://hanzoskills.com/CLAUDE.md).
+
+```bash
+git clone https://forge.hanzo.ai/zos-apps/<repo>.git
+curl -fsSL https://hanzoskills.com/CLAUDE.md >> CLAUDE.md
+```
+
+## Repositories
+
+- [`zos-apps/2048`](https://forge.hanzo.ai/zos-apps/2048) — Join the numbers and get to 2048!
+- [`zos-apps/app-template`](https://forge.hanzo.ai/zos-apps/app-template) — Template for creating zOS applications
+- [`zos-apps/arcade`](https://forge.hanzo.ai/zos-apps/arcade) — Retro gaming arcade - NES, SNES, Genesis, GBA and more
+- [`zos-apps/assistant`](https://forge.hanzo.ai/zos-apps/assistant) — AI-powered chat assistant
+- [`zos-apps/books`](https://forge.hanzo.ai/zos-apps/books) — Read ebooks
+- [`zos-apps/calculator`](https://forge.hanzo.ai/zos-apps/calculator) — Beautiful calculator with standard and scientific modes
+- [`zos-apps/calendar`](https://forge.hanzo.ai/zos-apps/calendar) — Beautiful calendar with event support
+- [`zos-apps/chess`](https://forge.hanzo.ai/zos-apps/chess) — Classic chess with AI opponent
+- [`zos-apps/clock`](https://forge.hanzo.ai/zos-apps/clock) — World clock with multiple timezones
+- [`zos-apps/config`](https://forge.hanzo.ai/zos-apps/config) — Shared configuration for zOS apps
+- [`zos-apps/console`](https://forge.hanzo.ai/zos-apps/console) — View system logs and diagnostics
+- [`zos-apps/contacts`](https://forge.hanzo.ai/zos-apps/contacts) — Contact manager with social profiles
+- [`zos-apps/crypto`](https://forge.hanzo.ai/zos-apps/crypto) — Cryptocurrency tracker
+- [`zos-apps/files`](https://forge.hanzo.ai/zos-apps/files) — File manager
+- [`zos-apps/.github`](https://forge.hanzo.ai/zos-apps/.github) — Organization-level GitHub config and reusable workflows
+- [`zos-apps/grapher`](https://forge.hanzo.ai/zos-apps/grapher) — 2D and 3D equation graphing calculator
+- [`zos-apps/hanzo-ai`](https://forge.hanzo.ai/zos-apps/hanzo-ai) — Hanzo AI chat assistant for zOS
+- [`zos-apps/lux`](https://forge.hanzo.ai/zos-apps/lux) — zOS lux application
+- [`zos-apps/lux-wallet`](https://forge.hanzo.ai/zos-apps/lux-wallet) — Lux Wallet - Multi-consensus blockchain wallet for zOS
+- [`zos-apps/mail`](https://forge.hanzo.ai/zos-apps/mail) — Email composer with rich formatting
+- [`zos-apps/maps`](https://forge.hanzo.ai/zos-apps/maps) — Navigate the world
+- [`zos-apps/messages`](https://forge.hanzo.ai/zos-apps/messages) — Messaging application
+- [`zos-apps/minesweeper`](https://forge.hanzo.ai/zos-apps/minesweeper) — Classic mine-sweeping puzzle game
+- [`zos-apps/mud`](https://forge.hanzo.ai/zos-apps/mud) — Multiplayer text adventure with AI dungeon master
+- [`zos-apps/music`](https://forge.hanzo.ai/zos-apps/music) — Music player with playlist support
+- [`zos-apps/notes`](https://forge.hanzo.ai/zos-apps/notes) — Elegant note-taking with rich text support
+- [`zos-apps/photos`](https://forge.hanzo.ai/zos-apps/photos) — Photo viewer and gallery
+- [`zos-apps/podcasts`](https://forge.hanzo.ai/zos-apps/podcasts) — Listen to podcasts
+- [`zos-apps/preview`](https://forge.hanzo.ai/zos-apps/preview) — Quick Look file preview
+- [`zos-apps/reminders`](https://forge.hanzo.ai/zos-apps/reminders) — Task reminders
+- [`zos-apps/screenshot`](https://forge.hanzo.ai/zos-apps/screenshot) — Capture and annotate screenshots
+- [`zos-apps/settings`](https://forge.hanzo.ai/zos-apps/settings) — zOS settings application
+- [`zos-apps/snake`](https://forge.hanzo.ai/zos-apps/snake) — Classic snake game
+- [`zos-apps/solitaire`](https://forge.hanzo.ai/zos-apps/solitaire) — Classic Klondike solitaire card game
+- [`zos-apps/stocks`](https://forge.hanzo.ai/zos-apps/stocks) — Stock market tracker
+- [`zos-apps/sudoku`](https://forge.hanzo.ai/zos-apps/sudoku) — Classic number puzzle
+- [`zos-apps/template`](https://forge.hanzo.ai/zos-apps/template) — Template for creating zOS applications
+- [`zos-apps/terminal`](https://forge.hanzo.ai/zos-apps/terminal) — Command-line interface with zsh-like shell
+- [`zos-apps/textpad`](https://forge.hanzo.ai/zos-apps/textpad) — Simple text editor for quick edits
+- [`zos-apps/todo`](https://forge.hanzo.ai/zos-apps/todo) — Task list and reminders
+- [`zos-apps/weather`](https://forge.hanzo.ai/zos-apps/weather) — Real-time weather forecasts
+- [`zos-apps/z3d`](https://forge.hanzo.ai/zos-apps/z3d) — 3D modeling, animation, and rendering
+- [`zos-apps/zapi`](https://forge.hanzo.ai/zos-apps/zapi) — API development platform
+- [`zos-apps/zaudio`](https://forge.hanzo.ai/zos-apps/zaudio) — Audio editor
+- [`zos-apps/zaudiomidi`](https://forge.hanzo.ai/zos-apps/zaudiomidi) — Configure audio devices and MIDI settings
+- [`zos-apps/zbackup`](https://forge.hanzo.ai/zos-apps/zbackup) — Backup and restore utility
+- [`zos-apps/zband`](https://forge.hanzo.ai/zos-apps/zband) — Music creation studio
+- [`zos-apps/zblocks`](https://forge.hanzo.ai/zos-apps/zblocks) — Classic block-stacking puzzle game
+- [`zos-apps/zboard`](https://forge.hanzo.ai/zos-apps/zboard) — Virtual whiteboard for sketching hand-drawn diagrams
+- [`zos-apps/zbox`](https://forge.hanzo.ai/zos-apps/zbox) — Container management
+- [`zos-apps/zbrowser`](https://forge.hanzo.ai/zos-apps/zbrowser) — Web browser with search and navigation
+- [`zos-apps/zcall`](https://forge.hanzo.ai/zos-apps/zcall) — FaceTime video calling app for zOS
+- [`zos-apps/zcinema`](https://forge.hanzo.ai/zos-apps/zcinema) — Disney streaming service
+- [`zos-apps/zcode`](https://forge.hanzo.ai/zos-apps/zcode) — Code editor
+- [`zos-apps/zcollab`](https://forge.hanzo.ai/zos-apps/zcollab) — Business communication and collaboration
+- [`zos-apps/zcolor`](https://forge.hanzo.ai/zos-apps/zcolor) — Pick and analyze colors from anywhere on screen
+- [`zos-apps/zconvert`](https://forge.hanzo.ai/zos-apps/zconvert) — Video transcoder
+- [`zos-apps/zcut`](https://forge.hanzo.ai/zos-apps/zcut) — Professional video editing
+- [`zos-apps/zdaw`](https://forge.hanzo.ai/zos-apps/zdaw) — Professional digital audio workstation
+- [`zos-apps/zdesign`](https://forge.hanzo.ai/zos-apps/zdesign) — Collaborative design and prototyping
+- [`zos-apps/zdisk`](https://forge.hanzo.ai/zos-apps/zdisk) — Manage disks, partitions, and volumes
+- [`zos-apps/zdj`](https://forge.hanzo.ai/zos-apps/zdj) — DJ performance and music management
+- [`zos-apps/zdocs`](https://forge.hanzo.ai/zos-apps/zdocs) — Word processor
+- [`zos-apps/zdoom`](https://forge.hanzo.ai/zos-apps/zdoom) — Rip and tear, until it is done.
+- [`zos-apps/zdraw`](https://forge.hanzo.ai/zos-apps/zdraw) — Professional vector graphics editor
+- [`zos-apps/zdrop`](https://forge.hanzo.ai/zos-apps/zdrop) — Wireless file sharing
+- [`zos-apps/zfiles`](https://forge.hanzo.ai/zos-apps/zfiles) — File manager with sidebar navigation and quick look
+- [`zos-apps/zfilms`](https://forge.hanzo.ai/zos-apps/zfilms) — Amazon streaming service
+- [`zos-apps/zflix`](https://forge.hanzo.ai/zos-apps/zflix) — Streaming movies and TV shows
+- [`zos-apps/zflow`](https://forge.hanzo.ai/zos-apps/zflow) — Workflow automation tool
+- [`zos-apps/zfonts`](https://forge.hanzo.ai/zos-apps/zfonts) — Font management and preview
+- [`zos-apps/zgit`](https://forge.hanzo.ai/zos-apps/zgit) — Git GUI client
+- [`zos-apps/zgitstats`](https://forge.hanzo.ai/zos-apps/zgitstats) — View GitHub contribution statistics
+- [`zos-apps/zhangout`](https://forge.hanzo.ai/zos-apps/zhangout) — Voice, video, and text chat for communities
+- [`zos-apps/zide`](https://forge.hanzo.ai/zos-apps/zide) — Xcode - Code editor and IDE for zOS development
+- [`zos-apps/zisland`](https://forge.hanzo.ai/zos-apps/zisland) — A mysterious island appears in the fog...
+- [`zos-apps/zlive`](https://forge.hanzo.ai/zos-apps/zlive) — Live streaming platform
+- [`zos-apps/zmail`](https://forge.hanzo.ai/zos-apps/zmail) — Email by Google
+- [`zos-apps/zmeet`](https://forge.hanzo.ai/zos-apps/zmeet) — Video conferencing
+- [`zos-apps/zmessenger`](https://forge.hanzo.ai/zos-apps/zmessenger) — Secure messaging
+- [`zos-apps/zmodel`](https://forge.hanzo.ai/zos-apps/zmodel) — Professional 3D modeling application
+- [`zos-apps/zmonitor`](https://forge.hanzo.ai/zos-apps/zmonitor) — Activity Monitor - System performance monitoring for zOS
+- [`zos-apps/zmusic`](https://forge.hanzo.ai/zos-apps/zmusic) — Music streaming service
+- [`zos-apps/znetwork`](https://forge.hanzo.ai/zos-apps/znetwork) — Professional networking and career development
+- [`zos-apps/znotebook`](https://forge.hanzo.ai/zos-apps/znotebook) — Interactive data notebooks
+- [`zos-apps/zoo`](https://forge.hanzo.ai/zos-apps/zoo) — zOS zoo application
+- [`zos-apps/zpaint`](https://forge.hanzo.ai/zos-apps/zpaint) — Professional raster graphics editor with layers, blend modes, and filters
+- [`zos-apps/zpen`](https://forge.hanzo.ai/zos-apps/zpen) — Social development environment for front-end designers and developers
+- [`zos-apps/zphotoedit`](https://forge.hanzo.ai/zos-apps/zphotoedit) — Image editing
+- [`zos-apps/zretro`](https://forge.hanzo.ai/zos-apps/zretro) — Super Nintendo emulator - relive the classics
+- [`zos-apps/zsearch`](https://forge.hanzo.ai/zos-apps/zsearch) — Universal search and command launcher (⌘K)
+- [`zos-apps/zsecure`](https://forge.hanzo.ai/zos-apps/zsecure) — Private messaging
+- [`zos-apps/zsession`](https://forge.hanzo.ai/zos-apps/zsession) — Music production and performance
+- [`zos-apps/zsettings`](https://forge.hanzo.ai/zos-apps/zsettings) — Customize your zOS experience
+- [`zos-apps/zsheets`](https://forge.hanzo.ai/zos-apps/zsheets) — Spreadsheet application
+- [`zos-apps/zsketch`](https://forge.hanzo.ai/zos-apps/zsketch) — A tiny little drawing app
+- [`zos-apps/zslides`](https://forge.hanzo.ai/zos-apps/zslides) — Presentation software
+- [`zos-apps/zsocial`](https://forge.hanzo.ai/zos-apps/zsocial) — Real-time social media and news
+- [`zos-apps/zsticky`](https://forge.hanzo.ai/zos-apps/zsticky) — Desktop sticky notes
+- [`zos-apps/zstore`](https://forge.hanzo.ai/zos-apps/zstore) — Discover and install apps
+- [`zos-apps/zstream`](https://forge.hanzo.ai/zos-apps/zstream) — Streaming service
+- [`zos-apps/zstudio`](https://forge.hanzo.ai/zos-apps/zstudio) — Professional music production
+- [`zos-apps/ztalk`](https://forge.hanzo.ai/zos-apps/ztalk) — Secure messaging and calls
+- [`zos-apps/zteams`](https://forge.hanzo.ai/zos-apps/zteams) — Team collaboration
+- [`zos-apps/ztext`](https://forge.hanzo.ai/zos-apps/ztext) — zOS textedit application
+- [`zos-apps/ztube`](https://forge.hanzo.ai/zos-apps/ztube) — Video streaming platform
+- [`zos-apps/ztv`](https://forge.hanzo.ai/zos-apps/ztv) — Apple streaming service
+- [`zos-apps/zusage`](https://forge.hanzo.ai/zos-apps/zusage) — Monitor and manage screen usage
+- [`zos-apps/zvault`](https://forge.hanzo.ai/zos-apps/zvault) — Manage passwords and secure notes
+- [`zos-apps/zvector`](https://forge.hanzo.ai/zos-apps/zvector) — UI/UX design tool
+- [`zos-apps/zworkspace`](https://forge.hanzo.ai/zos-apps/zworkspace) — All-in-one workspace

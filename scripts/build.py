@@ -628,7 +628,16 @@ def main():
         ],
         "verification_note": "Repository URLs and visibility were checked on 2026-11-16; public visibility does not establish the licence of code, models/weights or dependencies, integration readiness, or production support. Review pinned revisions and licences before customer deployment.",
     }
-    io.open(os.path.join(oss_dir, "index.json"), "w", encoding="utf-8").write(json.dumps(oss_index, indent=2) + "\n")
+    oss_index_path = os.path.join(oss_dir, "index.json")
+    if os.path.isfile(oss_index_path):
+        try:
+            existing_oss = json.loads(io.open(oss_index_path, encoding="utf-8").read())
+            for k in ("forge", "claude_md", "docs", "total_public_repos", "total_orgs", "orgs", "progressive_disclosure"):
+                if k in existing_oss:
+                    oss_index[k] = existing_oss[k]
+        except Exception:
+            pass
+    io.open(oss_index_path, "w", encoding="utf-8").write(json.dumps(oss_index, indent=2) + "\n")
 
     print(f"Generated index: total_files={len(docs)} categories={len(cats)}")
 

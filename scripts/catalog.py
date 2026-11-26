@@ -396,7 +396,7 @@ def summarize(sid, fm, body):
 def collect_published(root, source_dir):
     lookup = build_source_lookup(source_dir)
     docs = []
-    skip = {"index", "all", "auth"}
+    skip = {"index", "all", "auth", "CLAUDE", "AGENTS"}
     for path in sorted(glob.glob(os.path.join(root, "*.md")), key=lambda p: os.path.basename(p)):
         sid = os.path.basename(path)[:-3]
         if sid in skip:
@@ -588,12 +588,17 @@ def emit_progressive(root, source_dir, get_md_text):
         ),
         "discovery": {
             "tier0": {
+                "claude_md": "https://hanzoskills.com/CLAUDE.md",
+                "agents_md": "https://hanzoskills.com/AGENTS.md",
                 "llms": "https://hanzoskills.com/llms.txt",
                 "catalog": "https://hanzoskills.com/catalog.json",
                 "manifest": "https://hanzoskills.com/skill.md",
                 "hips": "https://hips.hanzo.ai/llms.txt",
                 "mcp": "https://hanzoskills.com/mcp/index.json",
                 "oss": "https://hanzoskills.com/oss/index.json",
+                "oss_md": "https://hanzoskills.com/oss/index.md",
+                "forge": "https://forge.hanzo.ai",
+                "docs": "https://docs.hanzo.ai/docs/skills",
             },
             "tier1": {
                 "category_json": "https://hanzoskills.com/categories/{slug}.json",
@@ -631,13 +636,14 @@ def emit_progressive(root, source_dir, get_md_text):
         "2. **Tier 1 (category / ranking)**: Fetch ONLY the matching category `GET https://hanzoskills.com/categories/<slug>.md` (or `.json`), invoke `/skill`, or call `POST https://api.hanzo.ai/v1/tool/detect` to rank skills for a prompt.\n",
         "3. **Tier 2 (single skill)**: Fetch ONLY the skill you need via `GET https://hanzoskills.com/skills/<id>/SKILL.md` (or `/skills/<id>.json` or `/<id>.md`).\n\n",
         "## Hanzo Philosophy & Ecosystem\n\n",
+        "- [Canonical CLAUDE.md](https://hanzoskills.com/CLAUDE.md): drop-in progressive instructions for Claude Code, Codex (`AGENTS.md`), Cursor, Windsurf, and any agent (`curl -fsSL https://hanzoskills.com/CLAUDE.md >> CLAUDE.md`).\n",
         "- [Onboarding Manifest](https://hanzoskills.com/skill.md): what runs locally, commands to start each part, and hosted cloud boundaries.\n",
         "- [Install Hanzo](https://hanzo.sh): `curl -fsSL https://hanzo.sh | sh` installs the CLI, MCP server, and dev agent.\n",
         "- [HIP Specifications](https://hips.hanzo.ai/llms.txt): Hanzo Improvement Proposals progressive index.\n",
         "- [MCP Progressive Index](https://hanzoskills.com/mcp/index.json): 13 unified HIP-0300 tools (<1.5k tokens).\n",
-        "- [Open Source Repositories](https://hanzoskills.com/oss/index.json): build, fork, and mod any Hanzo repo.\n",
-        "- [API Reference](https://docs.hanzo.ai/llms.txt): api.hanzo.ai operations.\n",
-        "- [Company](https://hanzo.ai/llms.txt): what Hanzo builds and runs.\n\n",
+        "- [Forge Open Source Repositories](https://hanzoskills.com/oss/index.md) ([JSON](https://hanzoskills.com/oss/index.json)): progressive index of all public OSS repos on https://forge.hanzo.ai.\n",
+        "- [Documentation & Skills Guide](https://docs.hanzo.ai/docs/skills) ([API llms.txt](https://docs.hanzo.ai/llms.txt)): docs.hanzo.ai guides and api.hanzo.ai operations.\n",
+        "- [Hanzo AI](https://hanzo.ai) ([llms.txt](https://hanzo.ai/llms.txt)): the AI operating system for business.\n\n",
         "## Start Here\n\n",
     ]
     for f in featured[:6]:
@@ -660,6 +666,40 @@ def emit_progressive(root, source_dir, get_md_text):
         "- [Full Offline Corpus (16 MB — avoid unless indexing offline)](https://hanzoskills.com/all.md)\n",
     ])
     write_if_changed(os.path.join(root, "llms.txt"), "".join(llms_lines))
+
+    # Canonical progressive-disclosure CLAUDE.md and AGENTS.md
+    claude_md = (
+        "# Hanzo — Progressive Agent Instructions (`CLAUDE.md`)\n\n"
+        "> Canonical drop-in `CLAUDE.md` / `AGENTS.md` for Claude Code, Codex, Cursor, Windsurf, Gemini CLI, Antigravity, or any AI agent.\n"
+        "> Live at: https://hanzoskills.com/CLAUDE.md · https://hanzo.ai/CLAUDE.md · Docs: https://docs.hanzo.ai/docs/skills\n\n"
+        "## Progressive Skill Loading (3 Tiers — Never Load Everything Up Front)\n\n"
+        "Hanzo publishes **%d plain-markdown skills** across **%d categories** over HTTPS with zero auth.\n"
+        "Keep context small by loading skills **only when a task requires them**:\n\n"
+        "1. **Tier 0 (Category Tree, ~4 KB)**: `curl -fsSL https://hanzoskills.com/llms.txt` (or `https://hanzoskills.com/catalog.json`).\n"
+        "2. **Tier 1 (Single Category)**: Fetch ONLY the matching category `https://hanzoskills.com/categories/<slug>.md` (or rank via `POST https://api.hanzo.ai/v1/tool/detect`).\n"
+        "3. **Tier 2 (Single Skill)**: Fetch ONLY the skill you need via `https://hanzoskills.com/skills/<id>/SKILL.md` (or `/<id>.md`).\n"
+        "   - Claude Code local install on demand: save to `~/.claude/skills/<id>/SKILL.md`.\n"
+        "   - Never fetch `/all.md` (16 MB) into an active agent context.\n\n"
+        "## Forge Open Source Repositories (Progressive Discovery)\n\n"
+        "Hanzo hosts thousands of open-source repositories across Hanzo, Lux, Zoo, Zen, and ZAP on **https://forge.hanzo.ai**.\n"
+        "Discover and clone repos progressively instead of indexing everything up front:\n\n"
+        "1. **Tier 0 (Org Directory)**: `curl -fsSL https://hanzoskills.com/oss/index.md` (or `/oss/index.json`).\n"
+        "2. **Tier 1 (Single Org)**: `curl -fsSL https://hanzoskills.com/oss/<org>.md` (e.g. `hanzoai`, `hanzoskill`, `luxfi`, `zooai`, `zenlm`, `zap-proto`).\n"
+        "3. **Tier 2 (Single Repo)**: `git clone https://forge.hanzo.ai/<org>/<repo>.git`\n\n"
+        "## Quickstart: CLI, MCP & Free API Onboarding\n\n"
+        "- **Install native Hanzo CLI + MCP + Dev agent**: `curl -fsSL https://hanzo.sh | sh` (or `npm i -g hanzo` / `npx -y hanzo mcp`).\n"
+        "- **Headless agent signup & free API key (Enso, Zen, Kai, no human required)**: read https://hanzoskills.com/hanzo.md.\n"
+        "- **Local-first runtime manifest**: read https://hanzoskills.com/skill.md.\n"
+        "- **Architecture & HIP specs**: https://hips.hanzo.ai/llms.txt.\n\n"
+        "## Canonical Links\n\n"
+        "- Skills Registry: https://hanzoskills.com\n"
+        "- Progressive `CLAUDE.md`: https://hanzoskills.com/CLAUDE.md\n"
+        "- Documentation: https://docs.hanzo.ai (Skills guide: https://docs.hanzo.ai/docs/skills)\n"
+        "- Forge OSS: https://forge.hanzo.ai (Index: https://hanzoskills.com/oss/index.md)\n"
+        "- Platform & Cloud: https://hanzo.ai · https://api.hanzo.ai/v1\n"
+    ) % (len(docs), len(cat_summaries))
+    write_if_changed(os.path.join(root, "CLAUDE.md"), claude_md)
+    write_if_changed(os.path.join(root, "AGENTS.md"), claude_md)
 
     # Tier 0: compact /index.md
     idx_lines = [
@@ -719,9 +759,10 @@ def render_index_body(catalog_data):
         '<h3>Category Tree</h3>'
         '<p>Load the compact overview first — zero context bloat.</p>'
         '<div class="tlinks">'
+        '<a href="/CLAUDE.md">/CLAUDE.md</a>'
         '<a href="/llms.txt">/llms.txt</a>'
         '<a href="/catalog.json">/catalog.json</a>'
-        '<a href="https://hips.hanzo.ai/llms.txt">hips.hanzo.ai/llms.txt</a>'
+        '<a href="/oss/index.md">/oss/index.md</a>'
         '</div></div>'
         '<div class="tier">'
         '<div class="tmeta"><b>Tier 1 · Category</b><span>On demand</span></div>'

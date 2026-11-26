@@ -53,41 +53,40 @@ AGENTS = [
     ("claude-code", "Claude Code", "claude", """\
 Set up the Hanzo skills in this Claude Code session using progressive disclosure.
 
-1. Read https://hanzoskills.com/skill.md — the onboarding manifest.
+1. Read https://hanzoskills.com/CLAUDE.md and append it to ./CLAUDE.md (or ~/.claude/CLAUDE.md for every repo).
 2. Fetch https://hanzoskills.com/llms.txt (~4 KB category tree) — pick only the category you need at https://hanzoskills.com/categories/<slug>.md.
-3. Install a skill on demand by writing https://hanzoskills.com/skills/<name>/SKILL.md to
+3. For Hanzo OSS repos on https://forge.hanzo.ai, start with https://hanzoskills.com/oss/index.md and fetch only /oss/<org>.md on demand.
+4. Install a skill on demand by writing https://hanzoskills.com/skills/<name>/SKILL.md to
    ~/.claude/skills/<name>/SKILL.md — one directory per skill.
-4. Verify with: ls ~/.claude/skills
+5. Verify with: ls ~/.claude/skills
 
-Everything is plain markdown over https and needs no auth."""),
+Docs: https://docs.hanzo.ai/docs/skills — everything is plain markdown over https and needs no auth."""),
 
     ("codex", "Codex", "codex", """\
 Set up the Hanzo skills in this Codex session using progressive disclosure.
 
-1. Read https://hanzoskills.com/skill.md — the onboarding manifest.
+1. Read https://hanzoskills.com/AGENTS.md (or https://hanzoskills.com/CLAUDE.md) — the progressive onboarding guide.
 2. Fetch https://hanzoskills.com/llms.txt (~4 KB category tree) and browse only the category you need via https://hanzoskills.com/categories/<slug>.md.
-3. Codex reads AGENTS.md. Append the manifest to ./AGENTS.md for this repo,
+3. Codex reads AGENTS.md. Append https://hanzoskills.com/AGENTS.md to ./AGENTS.md for this repo,
    and to ~/.codex/AGENTS.md to load it in every project.
-4. Pull single skills on demand from https://hanzoskills.com/skills/<name>/SKILL.md and append the
-   ones you need under a "Hanzo skills" heading.
+4. Pull single skills on demand from https://hanzoskills.com/skills/<name>/SKILL.md and browse Forge OSS repos via https://hanzoskills.com/oss/index.md.
 
-Everything is plain markdown over https and needs no auth."""),
+Docs: https://docs.hanzo.ai/docs/skills — everything is plain markdown over https and needs no auth."""),
 
     ("cursor", "Cursor", "cursor", """\
 Set up the Hanzo skills in this Cursor workspace using progressive disclosure.
 
-1. Read https://hanzoskills.com/skill.md — the onboarding manifest.
-2. Write .cursor/rules/hanzo.mdc containing the manifest under this front
-   matter:
+1. Read https://hanzoskills.com/CLAUDE.md — the progressive onboarding guide.
+2. Write .cursor/rules/hanzo.mdc containing it under this front matter:
    ---
    description: Hanzo platform skills
    alwaysApply: true
    ---
-3. Browse https://hanzoskills.com/llms.txt -> /categories/<slug>.md and add one
+3. Browse https://hanzoskills.com/llms.txt -> /categories/<slug>.md (and /oss/index.md for Forge OSS repos) and add one
    .cursor/rules/<name>.mdc per skill from https://hanzoskills.com/skills/<name>/SKILL.md,
    with alwaysApply: false so Cursor attaches it by description.
 
-Everything is plain markdown over https and needs no auth."""),
+Docs: https://docs.hanzo.ai/docs/skills — everything is plain markdown over https and needs no auth."""),
 
     ("copilot", "Copilot", "copilot", """\
 Set up the Hanzo skills for GitHub Copilot in this repo.
@@ -528,8 +527,12 @@ def fend(md_href):
         '<a href="https://hanzo.ai/privacy">Privacy</a>'
         '<a href="https://hanzo.ai/security">Security</a>'
         '<a href="%s">Plain text</a>'
+        '<a href="/CLAUDE.md">CLAUDE.md</a>'
         '<a href="/llms.txt">llms.txt</a>'
         '<a href="/catalog.json">catalog.json</a>'
+        '<a href="/oss/index.md">OSS Index</a>'
+        '<a href="https://forge.hanzo.ai">Forge</a>'
+        '<a href="https://docs.hanzo.ai/docs/skills">Docs</a>'
         '<a href="https://hips.hanzo.ai/llms.txt">HIPs</a>'
         '</nav>'
         '<div class="fbar">'
@@ -556,9 +559,11 @@ def btns():
         'aria-expanded="false" aria-controls="copymenu">Copy setup prompt %s</button>'
         '<div class="menu" id="copymenu" role="menu" aria-labelledby="copybtn" hidden>%s</div>'
         '</div>'
+        '<a class="btn" href="/CLAUDE.md">CLAUDE.md</a>'
         '<a class="btn" href="/skill">skill.md</a>'
         '<a class="btn" href="/llms.txt">llms.txt</a>'
-        '<a class="btn" href="/catalog.json">catalog.json</a>'
+        '<a class="btn" href="/oss/index.md">OSS Index</a>'
+        '<a class="btn" href="https://docs.hanzo.ai/docs/skills">Docs</a>'
         '<a class="btn" href="https://hanzo.sh">hanzo.sh</a>'
         '</div>'
         '<script type="application/json" id="prompts">%s</script>'

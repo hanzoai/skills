@@ -1,0 +1,341 @@
+# hanzo-community — Forge OSS Repositories (329)
+
+> Progressive Tier-1 repository index for `hanzo-community` on [forge.hanzo.ai/hanzo-community](https://forge.hanzo.ai/hanzo-community).
+> Load only the repository you need. Install Hanzo skills progressively via [CLAUDE.md](https://hanzoskills.com/CLAUDE.md).
+
+```bash
+git clone https://forge.hanzo.ai/hanzo-community/<repo>.git
+curl -fsSL https://hanzoskills.com/CLAUDE.md >> CLAUDE.md
+```
+
+## Repositories
+
+- [`hanzo-community/a23_circle`](https://forge.hanzo.ai/hanzo-community/a23_circle) — Social platform UI — feed, profile and messaging screens.
+- [`hanzo-community/a23_synapse`](https://forge.hanzo.ai/hanzo-community/a23_synapse) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/agent-onboarding-test-9e5b1e_instrument-3`](https://forge.hanzo.ai/hanzo-community/agent-onboarding-test-9e5b1e_instrument-3) — Monospace portfolio website with interactive 3D project cards, command palette, live experimental lab (particles, spring physics, ASCII shaders), and procedural audio.
+- [`hanzo-community/agent-onboarding-test-9e5b1e_qalive1121`](https://forge.hanzo.ai/hanzo-community/agent-onboarding-test-9e5b1e_qalive1121)
+- [`hanzo-community/alexandreayedzi_kinetic-4`](https://forge.hanzo.ai/hanzo-community/alexandreayedzi_kinetic-4) — Creative portfolio driven by GSAP and smooth scroll — a project reel over case-study pages.
+- [`hanzo-community/ashleychristie11_mint`](https://forge.hanzo.ai/hanzo-community/ashleychristie11_mint) — Creative-studio portfolio — work index, about and contact behind a full-screen menu.
+- [`hanzo-community/aworring98_talk-to-me`](https://forge.hanzo.ai/hanzo-community/aworring98_talk-to-me)
+- [`hanzo-community/ayanmasood75_tensile-2`](https://forge.hanzo.ai/hanzo-community/ayanmasood75_tensile-2) — Architectural and editorial studio website theme built with Astro 5, TypeScript, and embedded Sanity v5 CMS studio with project case studies and journal publishing.
+- [`hanzo-community/chiscookeke11_tensile`](https://forge.hanzo.ai/hanzo-community/chiscookeke11_tensile) — Architectural and editorial studio website theme built with Astro 5, TypeScript, and embedded Sanity v5 CMS studio with project case studies and journal publishing.
+- [`hanzo-community/darkhorse7stars3_instrument-6`](https://forge.hanzo.ai/hanzo-community/darkhorse7stars3_instrument-6) — Monospace portfolio website with interactive 3D project cards, command palette, live experimental lab (particles, spring physics, ASCII shaders), and procedural audio.
+- [`hanzo-community/darkhorse7stars3_synapse-13`](https://forge.hanzo.ai/hanzo-community/darkhorse7stars3_synapse-13) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/daz_synapse-10`](https://forge.hanzo.ai/hanzo-community/daz_synapse-10) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/daz_synapse-6`](https://forge.hanzo.ai/hanzo-community/daz_synapse-6) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/dstein09262_aerva-2`](https://forge.hanzo.ai/hanzo-community/dstein09262_aerva-2) — Polished AI and SaaS landing page template built with React 19, Vite, and TypeScript featuring bento feature grids, interactive pricing toggles, and customer proof sections.
+- [`hanzo-community/elevenine00_instrument-2`](https://forge.hanzo.ai/hanzo-community/elevenine00_instrument-2) — Monospace portfolio website with interactive 3D project cards, command palette, live experimental lab (particles, spring physics, ASCII shaders), and procedural audio.
+- [`hanzo-community/fazopixludimilo_oasis-2`](https://forge.hanzo.ai/hanzo-community/fazopixludimilo_oasis-2) — Resort site — accommodation, dining, spa, weddings and tour booking, in four languages.
+- [`hanzo-community/fazopixludimilo_studio-3`](https://forge.hanzo.ai/hanzo-community/fazopixludimilo_studio-3) — Digital-agency portfolio — expertise, projects and articles behind an animated wordmark.
+- [`hanzo-community/fenghuawei66876_circle-4`](https://forge.hanzo.ai/hanzo-community/fenghuawei66876_circle-4) — Social platform UI — feed, profile and messaging screens.
+- [`hanzo-community/fenghuawei66876_kinetic-3`](https://forge.hanzo.ai/hanzo-community/fenghuawei66876_kinetic-3) — Creative portfolio driven by GSAP and smooth scroll — a project reel over case-study pages.
+- [`hanzo-community/fifthdelta_epsilon`](https://forge.hanzo.ai/hanzo-community/fifthdelta_epsilon)
+- [`hanzo-community/github_aerva-6`](https://forge.hanzo.ai/hanzo-community/github_aerva-6) — Polished AI and SaaS landing page template built with React 19, Vite, and TypeScript featuring bento feature grids, interactive pricing toggles, and customer proof sections.
+- [`hanzo-community/github_synapse-2`](https://forge.hanzo.ai/hanzo-community/github_synapse-2) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/github_synapse-3`](https://forge.hanzo.ai/hanzo-community/github_synapse-3) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/hairartistchanel_synapse-12`](https://forge.hanzo.ai/hanzo-community/hairartistchanel_synapse-12) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/hanzo_a`](https://forge.hanzo.ai/hanzo-community/hanzo_a)
+- [`hanzo-community/hanzo_ads`](https://forge.hanzo.ai/hanzo-community/hanzo_ads)
+- [`hanzo-community/hanzo_agency`](https://forge.hanzo.ai/hanzo-community/hanzo_agency)
+- [`hanzo-community/hanzo_aml-ui`](https://forge.hanzo.ai/hanzo-community/hanzo_aml-ui)
+- [`hanzo-community/hanzo-apps_annies-nails`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_annies-nails)
+- [`hanzo-community/hanzo-apps_aung-may-lika`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_aung-may-lika)
+- [`hanzo-community/hanzo-apps_benicia-boxing-martial-arts`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_benicia-boxing-martial-arts)
+- [`hanzo-community/hanzo-apps_benicia-coffee-company`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_benicia-coffee-company)
+- [`hanzo-community/hanzo-apps_benicia-poke-co`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_benicia-poke-co)
+- [`hanzo-community/hanzo-apps_bottom-of-the-5th`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_bottom-of-the-5th)
+- [`hanzo-community/hanzo-apps_brows-by-amber`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_brows-by-amber)
+- [`hanzo-community/hanzo-apps_chars-hotdogs`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_chars-hotdogs)
+- [`hanzo-community/hanzo-apps_drift-benicia`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_drift-benicia)
+- [`hanzo-community/hanzo-apps_ensenada-restaurant`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_ensenada-restaurant)
+- [`hanzo-community/hanzo-apps_fox-and-fawn-bakery`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_fox-and-fawn-bakery)
+- [`hanzo-community/hanzo-apps_hair-extensions-by-ana`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_hair-extensions-by-ana)
+- [`hanzo-community/hanzo-apps_hamburguesa-bar-sf`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_hamburguesa-bar-sf)
+- [`hanzo-community/hanzo-apps_honey-glow-beauty-bar`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_honey-glow-beauty-bar)
+- [`hanzo-community/hanzo-apps_inn-at-benicia-bay`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_inn-at-benicia-bay)
+- [`hanzo-community/hanzo-apps_jandii-sf`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_jandii-sf)
+- [`hanzo-community/hanzo-apps_kimono-restaurant`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_kimono-restaurant)
+- [`hanzo-community/hanzo-apps_lews-brake-shop`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_lews-brake-shop)
+- [`hanzo-community/hanzo-apps_mirchi-indian-cuisine`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_mirchi-indian-cuisine)
+- [`hanzo-community/hanzo-apps_modern-man`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_modern-man)
+- [`hanzo-community/hanzo-apps_molloys-colma`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_molloys-colma)
+- [`hanzo-community/hanzo-apps_palermos-benicia`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_palermos-benicia)
+- [`hanzo-community/hanzo-apps_sforno-sf`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_sforno-sf)
+- [`hanzo-community/hanzo-apps_shore-light-inn`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_shore-light-inn)
+- [`hanzo-community/hanzo-apps_the-dead-fish`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_the-dead-fish)
+- [`hanzo-community/hanzo-apps_tur-sf`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_tur-sf)
+- [`hanzo-community/hanzo-apps_union-hotel`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_union-hotel)
+- [`hanzo-community/hanzo-apps_united-methodist-church-vallejo`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_united-methodist-church-vallejo)
+- [`hanzo-community/hanzo-apps_wayside-united-methodist-church`](https://forge.hanzo.ai/hanzo-community/hanzo-apps_wayside-united-methodist-church)
+- [`hanzo-community/hanzo_base`](https://forge.hanzo.ai/hanzo-community/hanzo_base)
+- [`hanzo-community/hanzo_bootnode`](https://forge.hanzo.ai/hanzo-community/hanzo_bootnode)
+- [`hanzo-community/hanzo_bootnode-web`](https://forge.hanzo.ai/hanzo-community/hanzo_bootnode-web)
+- [`hanzo-community/hanzo_bot`](https://forge.hanzo.ai/hanzo-community/hanzo_bot)
+- [`hanzo-community/hanzo_bot-docs`](https://forge.hanzo.ai/hanzo-community/hanzo_bot-docs)
+- [`hanzo-community/hanzo_build`](https://forge.hanzo.ai/hanzo-community/hanzo_build)
+- [`hanzo-community/hanzo_build-a-one-page-site`](https://forge.hanzo.ai/hanzo-community/hanzo_build-a-one-page-site)
+- [`hanzo-community/hanzo_build-a-simple-saas`](https://forge.hanzo.ai/hanzo-community/hanzo_build-a-simple-saas)
+- [`hanzo-community/hanzo_build-vyoma-as-a`](https://forge.hanzo.ai/hanzo-community/hanzo_build-vyoma-as-a)
+- [`hanzo-community/hanzo_butter-bot`](https://forge.hanzo.ai/hanzo-community/hanzo_butter-bot)
+- [`hanzo-community/hanzo_cal-web`](https://forge.hanzo.ai/hanzo-community/hanzo_cal-web)
+- [`hanzo-community/hanzo_chat2`](https://forge.hanzo.ai/hanzo-community/hanzo_chat2)
+- [`hanzo-community/hanzo_circle`](https://forge.hanzo.ai/hanzo-community/hanzo_circle) — Social platform UI — feed, profile and messaging screens.
+- [`hanzo-community/hanzo_cloud-hanzo-ai`](https://forge.hanzo.ai/hanzo-community/hanzo_cloud-hanzo-ai) — cloud.hanzo.ai marketing site, the hanzo.ai export rooted at cloud.html
+- [`hanzo-community/hanzo_commerce-admin`](https://forge.hanzo.ai/hanzo-community/hanzo_commerce-admin)
+- [`hanzo-community/hanzo_computer`](https://forge.hanzo.ai/hanzo-community/hanzo_computer)
+- [`hanzo-community/hanzo_cursor-probe`](https://forge.hanzo.ai/hanzo-community/hanzo_cursor-probe)
+- [`hanzo-community/hanzo_dataroom`](https://forge.hanzo.ai/hanzo-community/hanzo_dataroom)
+- [`hanzo-community/hanzo_dev`](https://forge.hanzo.ai/hanzo-community/hanzo_dev)
+- [`hanzo-community/hanzo_dev-docs`](https://forge.hanzo.ai/hanzo-community/hanzo_dev-docs)
+- [`hanzo-community/hanzo_docs-hanzo-ai`](https://forge.hanzo.ai/hanzo-community/hanzo_docs-hanzo-ai)
+- [`hanzo-community/hanzo_download`](https://forge.hanzo.ai/hanzo-community/hanzo_download)
+- [`hanzo-community/hanzo_edge-site`](https://forge.hanzo.ai/hanzo-community/hanzo_edge-site)
+- [`hanzo-community/hanzo_engine`](https://forge.hanzo.ai/hanzo-community/hanzo_engine)
+- [`hanzo-community/hanzo_explorer-hanzo-network`](https://forge.hanzo.ai/hanzo-community/hanzo_explorer-hanzo-network)
+- [`hanzo-community/hanzo_faucet`](https://forge.hanzo.ai/hanzo-community/hanzo_faucet)
+- [`hanzo-community/hanzo_font-hanzo-ai`](https://forge.hanzo.ai/hanzo-community/hanzo_font-hanzo-ai)
+- [`hanzo-community/hanzo_font-lux-network`](https://forge.hanzo.ai/hanzo-community/hanzo_font-lux-network)
+- [`hanzo-community/hanzo_font-zoo-ngo`](https://forge.hanzo.ai/hanzo-community/hanzo_font-zoo-ngo)
+- [`hanzo-community/hanzo_forge-template`](https://forge.hanzo.ai/hanzo-community/hanzo_forge-template) — Forge — Hanzo template gallery demo
+- [`hanzo-community/hanzo_frames`](https://forge.hanzo.ai/hanzo-community/hanzo_frames)
+- [`hanzo-community/hanzo_gallery`](https://forge.hanzo.ai/hanzo-community/hanzo_gallery)
+- [`hanzo-community/hanzo_gui`](https://forge.hanzo.ai/hanzo-community/hanzo_gui)
+- [`hanzo-community/hanzo_hanzo-admin`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-admin)
+- [`hanzo-community/hanzo_hanzo-ai`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-ai) — hanzo.ai apex marketing site (Next.js static export)
+- [`hanzo-community/hanzo_hanzoai-site`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzoai-site)
+- [`hanzo-community/hanzo_hanzo-app`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-app) — hanzo.app landing and product catalog (Vite SPA)
+- [`hanzo-community/hanzo_hanzo-blog`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-blog)
+- [`hanzo-community/hanzo_hanzo-bot`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-bot) — hanzo.bot, the hanzo.ai export rooted at bot.html
+- [`hanzo-community/hanzo_hanzo-build`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-build)
+- [`hanzo-community/hanzo_hanzo-cloud`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-cloud)
+- [`hanzo-community/hanzo_hanzo-codes`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-codes)
+- [`hanzo-community/hanzo_hanzo-community`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-community) — Hanzo Community — hanzo.community
+- [`hanzo-community/hanzo_hanzo-console`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-console)
+- [`hanzo-community/hanzo_hanzo-crm`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-crm)
+- [`hanzo-community/hanzo_hanzo-help`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-help) — Hanzo Help — hanzo.help
+- [`hanzo-community/hanzo_hanzo-id`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-id)
+- [`hanzo-community/hanzo_hanzo-industries`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-industries)
+- [`hanzo-community/hanzo_hanzo-kms`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-kms)
+- [`hanzo-community/hanzo_hanzo-market`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-market)
+- [`hanzo-community/hanzo_hanzo-one`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-one)
+- [`hanzo-community/hanzo_hanzo-platform`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-platform)
+- [`hanzo-community/hanzo_hanzoskills`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzoskills)
+- [`hanzo-community/hanzo_hanzo-store`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-store)
+- [`hanzo-community/hanzo_hanzo-studio`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-studio)
+- [`hanzo-community/hanzo_hanzo-team`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-team) — hanzo.team, the hanzo.ai export rooted at team.html
+- [`hanzo-community/hanzo_hanzo-ventures`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-ventures)
+- [`hanzo-community/hanzo_hanzo-works`](https://forge.hanzo.ai/hanzo-community/hanzo_hanzo-works)
+- [`hanzo-community/hanzo_hi`](https://forge.hanzo.ai/hanzo-community/hanzo_hi)
+- [`hanzo-community/hanzo_hips`](https://forge.hanzo.ai/hanzo-community/hanzo_hips) — Hanzo Improvement Proposals (hips.hanzo.ai)
+- [`hanzo-community/hanzo_how-to-build-good-resume-for-web-develop`](https://forge.hanzo.ai/hanzo-community/hanzo_how-to-build-good-resume-for-web-develop)
+- [`hanzo-community/hanzo_ide`](https://forge.hanzo.ai/hanzo-community/hanzo_ide)
+- [`hanzo-community/hanzo_intel`](https://forge.hanzo.ai/hanzo-community/hanzo_intel)
+- [`hanzo-community/hanzo_intel-hub`](https://forge.hanzo.ai/hanzo-community/hanzo_intel-hub) — Security Operations Command & Dispatch Intel Hub
+- [`hanzo-community/hanzo_karma-style`](https://forge.hanzo.ai/hanzo-community/hanzo_karma-style)
+- [`hanzo-community/hanzo_karma-tryon`](https://forge.hanzo.ai/hanzo-community/hanzo_karma-tryon)
+- [`hanzo-community/hanzo_logo`](https://forge.hanzo.ai/hanzo-community/hanzo_logo)
+- [`hanzo-community/hanzo_lux-partners`](https://forge.hanzo.ai/hanzo-community/hanzo_lux-partners)
+- [`hanzo-community/hanzo_marketing`](https://forge.hanzo.ai/hanzo-community/hanzo_marketing)
+- [`hanzo-community/hanzo_meet`](https://forge.hanzo.ai/hanzo-community/hanzo_meet)
+- [`hanzo-community/hanzo_megashop`](https://forge.hanzo.ai/hanzo-community/hanzo_megashop)
+- [`hanzo-community/hanzo_mobile`](https://forge.hanzo.ai/hanzo-community/hanzo_mobile) — Expo Router tab starter — iOS, Android and web from one tree. Feed, search, settings and a dynamic detail route.
+- [`hanzo-community/hanzo_network`](https://forge.hanzo.ai/hanzo-community/hanzo_network)
+- [`hanzo-community/hanzo_o11y-site`](https://forge.hanzo.ai/hanzo-community/hanzo_o11y-site)
+- [`hanzo-community/hanzo_office`](https://forge.hanzo.ai/hanzo-community/hanzo_office)
+- [`hanzo-community/hanzo_openrouter`](https://forge.hanzo.ai/hanzo-community/hanzo_openrouter)
+- [`hanzo-community/hanzo_outlook`](https://forge.hanzo.ai/hanzo-community/hanzo_outlook)
+- [`hanzo-community/hanzo_papers`](https://forge.hanzo.ai/hanzo-community/hanzo_papers)
+- [`hanzo-community/hanzo_pay-hanzo-ai`](https://forge.hanzo.ai/hanzo-community/hanzo_pay-hanzo-ai)
+- [`hanzo-community/hanzo_pay-test`](https://forge.hanzo.ai/hanzo-community/hanzo_pay-test)
+- [`hanzo-community/hanzo_post`](https://forge.hanzo.ai/hanzo-community/hanzo_post)
+- [`hanzo-community/hanzo_proofs-hanzo-network`](https://forge.hanzo.ai/hanzo-community/hanzo_proofs-hanzo-network)
+- [`hanzo-community/hanzo_room`](https://forge.hanzo.ai/hanzo-community/hanzo_room)
+- [`hanzo-community/hanzo_sensei-group`](https://forge.hanzo.ai/hanzo-community/hanzo_sensei-group)
+- [`hanzo-community/hanzo_sh`](https://forge.hanzo.ai/hanzo-community/hanzo_sh)
+- [`hanzo-community/hanzo_social`](https://forge.hanzo.ai/hanzo-community/hanzo_social)
+- [`hanzo-community/hanzo_speak2hear`](https://forge.hanzo.ai/hanzo-community/hanzo_speak2hear) — Agent-assisted mediation for hard conversations. Built in hanzo.app with Enso.
+- [`hanzo-community/hanzo_team2`](https://forge.hanzo.ai/hanzo-community/hanzo_team2) — The tracker and the workspace, on @hanzo/gui
+- [`hanzo-community/hanzo_team-docs`](https://forge.hanzo.ai/hanzo-community/hanzo_team-docs)
+- [`hanzo-community/hanzo_templates`](https://forge.hanzo.ai/hanzo-community/hanzo_templates)
+- [`hanzo-community/hanzo_trust`](https://forge.hanzo.ai/hanzo-community/hanzo_trust)
+- [`hanzo-community/hanzo_ui`](https://forge.hanzo.ai/hanzo-community/hanzo_ui)
+- [`hanzo-community/hanzo_university`](https://forge.hanzo.ai/hanzo-community/hanzo_university)
+- [`hanzo-community/hanzo_vote`](https://forge.hanzo.ai/hanzo-community/hanzo_vote)
+- [`hanzo-community/hanzo_webby-ai`](https://forge.hanzo.ai/hanzo-community/hanzo_webby-ai) — Security Operations Command & Intel Hub
+- [`hanzo-community/hanzo_work-board`](https://forge.hanzo.ai/hanzo-community/hanzo_work-board)
+- [`hanzo-community/hanzo_yadota`](https://forge.hanzo.ai/hanzo-community/hanzo_yadota)
+- [`hanzo-community/hanzo_you-are-the-autonomous`](https://forge.hanzo.ai/hanzo-community/hanzo_you-are-the-autonomous)
+- [`hanzo-community/hanzo_zap-dev`](https://forge.hanzo.ai/hanzo-community/hanzo_zap-dev)
+- [`hanzo-community/hanzo_zap-io`](https://forge.hanzo.ai/hanzo-community/hanzo_zap-io)
+- [`hanzo-community/hanzo_zen`](https://forge.hanzo.ai/hanzo-community/hanzo_zen)
+- [`hanzo-community/hanzo_zerotrust`](https://forge.hanzo.ai/hanzo-community/hanzo_zerotrust)
+- [`hanzo-community/hanzo_zoo-ngo`](https://forge.hanzo.ai/hanzo-community/hanzo_zoo-ngo) — Zoo Labs Foundation site
+- [`hanzo-community/hiturunk_cipher-2`](https://forge.hanzo.ai/hanzo-community/hiturunk_cipher-2) — Bento card grid for crypto products — wallet keys, exchange and blockchain explainer cards.
+- [`hanzo-community/huyit2003_aerva-4`](https://forge.hanzo.ai/hanzo-community/huyit2003_aerva-4) — Polished AI and SaaS landing page template built with React 19, Vite, and TypeScript featuring bento feature grids, interactive pricing toggles, and customer proof sections.
+- [`hanzo-community/imsafari75_circle-6`](https://forge.hanzo.ai/hanzo-community/imsafari75_circle-6) — Social platform UI — feed, profile and messaging screens.
+- [`hanzo-community/iqbal-adr_circle-7`](https://forge.hanzo.ai/hanzo-community/iqbal-adr_circle-7) — Social platform UI — feed, profile and messaging screens.
+- [`hanzo-community/jamessburnss1313_analytics-dashboard-2`](https://forge.hanzo.ai/hanzo-community/jamessburnss1313_analytics-dashboard-2) — Analytics dashboard on @hanzo/ui — revenue, users and sales tiles over an overview chart.
+- [`hanzo-community/jamessburnss1313_jamessburnss1313-dev-guided-growth`](https://forge.hanzo.ai/hanzo-community/jamessburnss1313_jamessburnss1313-dev-guided-growth)
+- [`hanzo-community/joshuafl369_circle-3`](https://forge.hanzo.ai/hanzo-community/joshuafl369_circle-3) — Social platform UI — feed, profile and messaging screens.
+- [`hanzo-community/joshuafl369_i-am-building-a`](https://forge.hanzo.ai/hanzo-community/joshuafl369_i-am-building-a)
+- [`hanzo-community/joshuafl369_kart-racer`](https://forge.hanzo.ai/hanzo-community/joshuafl369_kart-racer) — A drivable arcade racer where one Catmull-Rom track curve drives the road mesh, the on-track test, the lap checkpoints and the autopilot line.
+- [`hanzo-community/joshuafl369_kart-racer-2`](https://forge.hanzo.ai/hanzo-community/joshuafl369_kart-racer-2) — A drivable arcade racer where one Catmull-Rom track curve drives the road mesh, the on-track test, the lap checkpoints and the autopilot line.
+- [`hanzo-community/joshuafl369_the-book`](https://forge.hanzo.ai/hanzo-community/joshuafl369_the-book)
+- [`hanzo-community/joshuafl369_voxel-craft`](https://forge.hanzo.ai/hanzo-community/joshuafl369_voxel-craft) — First-person voxel sandbox: procedural terrain, face-culled chunk meshing, place/break editing that re-meshes only what changed.
+- [`hanzo-community/joshuafl369_voxel-craft-2`](https://forge.hanzo.ai/hanzo-community/joshuafl369_voxel-craft-2) — First-person voxel sandbox: procedural terrain, face-culled chunk meshing, place/break editing that re-meshes only what changed.
+- [`hanzo-community/jpmartel98_circle-5`](https://forge.hanzo.ai/hanzo-community/jpmartel98_circle-5) — Social platform UI — feed, profile and messaging screens.
+- [`hanzo-community/ka7400658_apk`](https://forge.hanzo.ai/hanzo-community/ka7400658_apk)
+- [`hanzo-community/kelly952810_aerva`](https://forge.hanzo.ai/hanzo-community/kelly952810_aerva) — Polished AI and SaaS landing page template built with React 19, Vite, and TypeScript featuring bento feature grids, interactive pricing toggles, and customer proof sections.
+- [`hanzo-community/klaygomes_warp-shader`](https://forge.hanzo.ai/hanzo-community/klaygomes_warp-shader) — Domain-warped fractional Brownian motion (fBm) fluid shader written in Three.js TSL running natively on WebGPU with real-time parameter controls.
+- [`hanzo-community/lecce_lecce`](https://forge.hanzo.ai/hanzo-community/lecce_lecce) — FanOS Universal Fan Intelligence Demo — U.S. Lecce 3D Stadio Via del Mare powered by Hanzo IAM, Commerce, Analytics & Insights
+- [`hanzo-community/levos21178_fernline-2`](https://forge.hanzo.ai/hanzo-community/levos21178_fernline-2) — Full-featured AI agent operations UI kit and observability console built on Next.js 16 and React 19, including both marketing pages and a multi-route operator console.
+- [`hanzo-community/lolitit397_instrument-7`](https://forge.hanzo.ai/hanzo-community/lolitit397_instrument-7) — Monospace portfolio website with interactive 3D project cards, command palette, live experimental lab (particles, spring physics, ASCII shaders), and procedural audio.
+- [`hanzo-community/lux_art`](https://forge.hanzo.ai/hanzo-community/lux_art)
+- [`hanzo-community/lux_bank-admin`](https://forge.hanzo.ai/hanzo-community/lux_bank-admin)
+- [`hanzo-community/lux_dex-docs`](https://forge.hanzo.ai/hanzo-community/lux_dex-docs)
+- [`hanzo-community/lux_discover`](https://forge.hanzo.ai/hanzo-community/lux_discover)
+- [`hanzo-community/lux_exchange-wallet`](https://forge.hanzo.ai/hanzo-community/lux_exchange-wallet)
+- [`hanzo-community/lux_financial`](https://forge.hanzo.ai/hanzo-community/lux_financial)
+- [`hanzo-community/lux_foundation`](https://forge.hanzo.ai/hanzo-community/lux_foundation)
+- [`hanzo-community/lux_game`](https://forge.hanzo.ai/hanzo-community/lux_game)
+- [`hanzo-community/lux_industries-xyz`](https://forge.hanzo.ai/hanzo-community/lux_industries-xyz)
+- [`hanzo-community/lux_invest`](https://forge.hanzo.ai/hanzo-community/lux_invest)
+- [`hanzo-community/lux_link`](https://forge.hanzo.ai/hanzo-community/lux_link)
+- [`hanzo-community/lux_lux-exchange`](https://forge.hanzo.ai/hanzo-community/lux_lux-exchange)
+- [`hanzo-community/lux_lux-exchange-v1`](https://forge.hanzo.ai/hanzo-community/lux_lux-exchange-v1)
+- [`hanzo-community/lux_lux-ui`](https://forge.hanzo.ai/hanzo-community/lux_lux-ui)
+- [`hanzo-community/lux_lux-vote`](https://forge.hanzo.ai/hanzo-community/lux_lux-vote)
+- [`hanzo-community/lux_proofs`](https://forge.hanzo.ai/hanzo-community/lux_proofs)
+- [`hanzo-community/lux_quest`](https://forge.hanzo.ai/hanzo-community/lux_quest)
+- [`hanzo-community/lux_shop`](https://forge.hanzo.ai/hanzo-community/lux_shop)
+- [`hanzo-community/lux_standard`](https://forge.hanzo.ai/hanzo-community/lux_standard)
+- [`hanzo-community/lux_tokens`](https://forge.hanzo.ai/hanzo-community/lux_tokens)
+- [`hanzo-community/lux_zoo-exchange`](https://forge.hanzo.ai/hanzo-community/lux_zoo-exchange)
+- [`hanzo-community/lx84dnuovcii_paytest-proj`](https://forge.hanzo.ai/hanzo-community/lx84dnuovcii_paytest-proj)
+- [`hanzo-community/majornfts_tracking-3d`](https://forge.hanzo.ai/hanzo-community/majornfts_tracking-3d) — Signal-red 3D motion-tracking and computer-vision HUD overlay with real-time bounding-box telemetry, vector callouts, and spatial keypoint tracking.
+- [`hanzo-community/mmdamd140_thiqa-1`](https://forge.hanzo.ai/hanzo-community/mmdamd140_thiqa-1)
+- [`hanzo-community/muhammadsiddiq-code_aerva-5`](https://forge.hanzo.ai/hanzo-community/muhammadsiddiq-code_aerva-5) — Polished AI and SaaS landing page template built with React 19, Vite, and TypeScript featuring bento feature grids, interactive pricing toggles, and customer proof sections.
+- [`hanzo-community/nevsky-alexander_aerva-3`](https://forge.hanzo.ai/hanzo-community/nevsky-alexander_aerva-3) — Polished AI and SaaS landing page template built with React 19, Vite, and TypeScript featuring bento feature grids, interactive pricing toggles, and customer proof sections.
+- [`hanzo-community/nevsky-alexander_canvas-3`](https://forge.hanzo.ai/hanzo-community/nevsky-alexander_canvas-3) — Personal portfolio — animated name marquee over about, projects and contact.
+- [`hanzo-community/obrereto_blocks-3`](https://forge.hanzo.ai/hanzo-community/obrereto_blocks-3) — Bento card grid in four layouts (default, square, horizontal, background) for SaaS feature sections.
+- [`hanzo-community/obrereto_synapse-8`](https://forge.hanzo.ai/hanzo-community/obrereto_synapse-8) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/okokullc_circle`](https://forge.hanzo.ai/hanzo-community/okokullc_circle) — Social platform UI — feed, profile and messaging screens.
+- [`hanzo-community/okokullc_synapse-7`](https://forge.hanzo.ai/hanzo-community/okokullc_synapse-7) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/pars_exchange`](https://forge.hanzo.ai/hanzo-community/pars_exchange)
+- [`hanzo-community/pars_fund`](https://forge.hanzo.ai/hanzo-community/pars_fund)
+- [`hanzo-community/pars_markets`](https://forge.hanzo.ai/hanzo-community/pars_markets)
+- [`hanzo-community/pars_pips`](https://forge.hanzo.ai/hanzo-community/pars_pips)
+- [`hanzo-community/perciocastelo_synapse-9`](https://forge.hanzo.ai/hanzo-community/perciocastelo_synapse-9) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/raymori254_aerva-7`](https://forge.hanzo.ai/hanzo-community/raymori254_aerva-7) — Polished AI and SaaS landing page template built with React 19, Vite, and TypeScript featuring bento feature grids, interactive pricing toggles, and customer proof sections.
+- [`hanzo-community/raymori254_instrument-9`](https://forge.hanzo.ai/hanzo-community/raymori254_instrument-9) — Monospace portfolio website with interactive 3D project cards, command palette, live experimental lab (particles, spring physics, ASCII shaders), and procedural audio.
+- [`hanzo-community/raymori254_savor-3`](https://forge.hanzo.ai/hanzo-community/raymori254_savor-3) — Food-delivery storefront — menu, favourites and cart over a restaurant home page.
+- [`hanzo-community/roedyrustam-id_kinetic-5`](https://forge.hanzo.ai/hanzo-community/roedyrustam-id_kinetic-5) — Creative portfolio driven by GSAP and smooth scroll — a project reel over case-study pages.
+- [`hanzo-community/roedyrustam-id_kinetic-6`](https://forge.hanzo.ai/hanzo-community/roedyrustam-id_kinetic-6) — Creative portfolio driven by GSAP and smooth scroll — a project reel over case-study pages.
+- [`hanzo-community/roedyrustam-id_matrix-4`](https://forge.hanzo.ai/hanzo-community/roedyrustam-id_matrix-4) — Bento card grid on a binary-rain theme, in four layouts.
+- [`hanzo-community/roedyrustam-id_synapse-11`](https://forge.hanzo.ai/hanzo-community/roedyrustam-id_synapse-11) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/rohansesetti_fernline`](https://forge.hanzo.ai/hanzo-community/rohansesetti_fernline) — Full-featured AI agent operations UI kit and observability console built on Next.js 16 and React 19, including both marketing pages and a multi-route operator console.
+- [`hanzo-community/rupeshpandith1836_instrument`](https://forge.hanzo.ai/hanzo-community/rupeshpandith1836_instrument) — Monospace portfolio website with interactive 3D project cards, command palette, live experimental lab (particles, spring physics, ASCII shaders), and procedural audio.
+- [`hanzo-community/sametuca_matrix-3`](https://forge.hanzo.ai/hanzo-community/sametuca_matrix-3) — Bento card grid on a binary-rain theme, in four layouts.
+- [`hanzo-community/secretmenusf_menu`](https://forge.hanzo.ai/hanzo-community/secretmenusf_menu)
+- [`hanzo-community/solar_solar`](https://forge.hanzo.ai/hanzo-community/solar_solar) — Multi-tenant Solar CRM & HQ Back Office powered by Hanzo Base, Enso/Zen Agentic AI, Kai Lead Intelligence, and Hanzo Analytics
+- [`hanzo-community/tmdx7k2q9wq_blocks-2`](https://forge.hanzo.ai/hanzo-community/tmdx7k2q9wq_blocks-2) — Bento card grid in four layouts (default, square, horizontal, background) for SaaS feature sections.
+- [`hanzo-community/tmdx7k2q9wq_synapse-4`](https://forge.hanzo.ai/hanzo-community/tmdx7k2q9wq_synapse-4) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/tplsaxgjzquk_blog-platform`](https://forge.hanzo.ai/hanzo-community/tplsaxgjzquk_blog-platform) — Blog on @hanzo/ui — tag filters, post list and a writing view.
+- [`hanzo-community/tplsaxgjzquk_canvas-2`](https://forge.hanzo.ai/hanzo-community/tplsaxgjzquk_canvas-2) — Personal portfolio — animated name marquee over about, projects and contact.
+- [`hanzo-community/tplsaxgjzquk_kinetic-2`](https://forge.hanzo.ai/hanzo-community/tplsaxgjzquk_kinetic-2) — Creative portfolio driven by GSAP and smooth scroll — a project reel over case-study pages.
+- [`hanzo-community/tplsaxgjzquk_loop-2`](https://forge.hanzo.ai/hanzo-community/tplsaxgjzquk_loop-2) — Crypto-card product site — virtual card, NFT and metaverse pages with light and dark blog.
+- [`hanzo-community/tplsaxgjzquk_pixel-2`](https://forge.hanzo.ai/hanzo-community/tplsaxgjzquk_pixel-2) — Web-studio portfolio — work, expertise and a playground page.
+- [`hanzo-community/tplsaxgjzquk_portfolio`](https://forge.hanzo.ai/hanzo-community/tplsaxgjzquk_portfolio) — Personal developer portfolio — intro, about, projects and contact on one page.
+- [`hanzo-community/tplsaxgjzquk_prism`](https://forge.hanzo.ai/hanzo-community/tplsaxgjzquk_prism) — Creative-agency portfolio built on GSAP — one scroll through work, services and contact.
+- [`hanzo-community/tplsaxjxrxnk_hygge`](https://forge.hanzo.ai/hanzo-community/tplsaxjxrxnk_hygge) — Skincare storefront — category browsing, product pages and a slide-out cart.
+- [`hanzo-community/tplsaxjxrxnk_launch`](https://forge.hanzo.ai/hanzo-community/tplsaxjxrxnk_launch) — SaaS launch page — waitlist capture, feature tour and pricing.
+- [`hanzo-community/tplsaxjxrxnk_mosaic-2`](https://forge.hanzo.ai/hanzo-community/tplsaxjxrxnk_mosaic-2) — Bento card grid for component and analytics products, in four layouts.
+- [`hanzo-community/tplsaxjxrxnk_pixel-2`](https://forge.hanzo.ai/hanzo-community/tplsaxjxrxnk_pixel-2) — Web-studio portfolio — work, expertise and a playground page.
+- [`hanzo-community/tplsaxjxrxnk_studio-2`](https://forge.hanzo.ai/hanzo-community/tplsaxjxrxnk_studio-2) — Digital-agency portfolio — expertise, projects and articles behind an animated wordmark.
+- [`hanzo-community/tplsaxjxrxnk_voxel-craft`](https://forge.hanzo.ai/hanzo-community/tplsaxjxrxnk_voxel-craft) — First-person voxel sandbox: procedural terrain, face-culled chunk meshing, place/break editing that re-meshes only what changed.
+- [`hanzo-community/tplsesbisycr_lab-expo-auth`](https://forge.hanzo.ai/hanzo-community/tplsesbisycr_lab-expo-auth)
+- [`hanzo-community/tplsesbisycr_lab-expo-chat`](https://forge.hanzo.ai/hanzo-community/tplsesbisycr_lab-expo-chat)
+- [`hanzo-community/tplsesbisycr_lab-expo-shop`](https://forge.hanzo.ai/hanzo-community/tplsesbisycr_lab-expo-shop)
+- [`hanzo-community/tplsesbisycr_lab-flutter-chat`](https://forge.hanzo.ai/hanzo-community/tplsesbisycr_lab-flutter-chat)
+- [`hanzo-community/tplsesbisycr_lab-kart-racer`](https://forge.hanzo.ai/hanzo-community/tplsesbisycr_lab-kart-racer)
+- [`hanzo-community/tplsesbisycr_lab-voxel-craft`](https://forge.hanzo.ai/hanzo-community/tplsesbisycr_lab-voxel-craft)
+- [`hanzo-community/tplsingojuww_analytics-dashboard`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_analytics-dashboard) — Analytics dashboard on @hanzo/ui — revenue, users and sales tiles over an overview chart.
+- [`hanzo-community/tplsingojuww_blocks-2`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_blocks-2) — Bento card grid in four layouts (default, square, horizontal, background) for SaaS feature sections.
+- [`hanzo-community/tplsingojuww_circle`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_circle) — Social platform UI — feed, profile and messaging screens.
+- [`hanzo-community/tplsingojuww_circle-2`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_circle-2) — Social platform UI — feed, profile and messaging screens.
+- [`hanzo-community/tplsingojuww_crypto-portfolio`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_crypto-portfolio) — Crypto portfolio tracker on @hanzo/ui — holdings, performance and transaction history.
+- [`hanzo-community/tplsingojuww_launch`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_launch) — SaaS launch page — waitlist capture, feature tour and pricing.
+- [`hanzo-community/tplsingojuww_launch-2`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_launch-2) — SaaS launch page — waitlist capture, feature tour and pricing.
+- [`hanzo-community/tplsingojuww_markdown-editor`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_markdown-editor) — Markdown editor on @hanzo/ui — live preview, syntax highlighting, copy and export.
+- [`hanzo-community/tplsingojuww_saas-landing-2`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_saas-landing-2) — SaaS landing page on @hanzo/ui — hero, feature grid, social proof and pricing.
+- [`hanzo-community/tplsingojuww_savor`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_savor) — Food-delivery storefront — menu, favourites and cart over a restaurant home page.
+- [`hanzo-community/tplsingojuww_studio-2`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_studio-2) — Digital-agency portfolio — expertise, projects and articles behind an animated wordmark.
+- [`hanzo-community/tplsingojuww_vault-2`](https://forge.hanzo.ai/hanzo-community/tplsingojuww_vault-2) — Architecture-studio site — architecture, landscape and interior work with a studio profile.
+- [`hanzo-community/tplsjjvitxzh_desktop-editor`](https://forge.hanzo.ai/hanzo-community/tplsjjvitxzh_desktop-editor) — CodeMirror 6 code editor in a Tauri window — real filesystem tree, syntax highlighting, native folder picker, Cmd-S writes through.
+- [`hanzo-community/tplsjjvitxzh_desktop-electron`](https://forge.hanzo.ai/hanzo-community/tplsjjvitxzh_desktop-electron) — Electron 43 + Forge + Vite + React baseline — contextIsolated IPC allowlist, native dialogs, app metrics, frameless chrome.
+- [`hanzo-community/tplsjjvitxzh_desktop-notes`](https://forge.hanzo.ai/hanzo-community/tplsjjvitxzh_desktop-notes) — Local-first markdown notes — one .md file per note in the OS app-data dir, split editor/preview, autosave, optional Base sync.
+- [`hanzo-community/tplsjjvitxzh_flutter-chat`](https://forge.hanzo.ai/hanzo-community/tplsjjvitxzh_flutter-chat) — Streaming AI chat in Flutter, wired to the Hanzo /v1 API, with tests over the failure path.
+- [`hanzo-community/tplsjjvitxzh_unity-webgl`](https://forge.hanzo.ai/hanzo-community/tplsjjvitxzh_unity-webgl) — A real Unity WebGL build served cross-origin-isolated, so SharedArrayBuffer is available to multithreaded builds.
+- [`hanzo-community/tplskhroytkh_blocks-2`](https://forge.hanzo.ai/hanzo-community/tplskhroytkh_blocks-2) — Bento card grid in four layouts (default, square, horizontal, background) for SaaS feature sections.
+- [`hanzo-community/tplskhroytkh_kart-racer`](https://forge.hanzo.ai/hanzo-community/tplskhroytkh_kart-racer) — A drivable arcade racer where one Catmull-Rom track curve drives the road mesh, the on-track test, the lap checkpoints and the autopilot line.
+- [`hanzo-community/tplskhroytkh_mint-2`](https://forge.hanzo.ai/hanzo-community/tplskhroytkh_mint-2) — Creative-studio portfolio — work index, about and contact behind a full-screen menu.
+- [`hanzo-community/tplskhroytkh_oasis`](https://forge.hanzo.ai/hanzo-community/tplskhroytkh_oasis) — Resort site — accommodation, dining, spa, weddings and tour booking, in four languages.
+- [`hanzo-community/tplskhroytkh_three-webgpu`](https://forge.hanzo.ai/hanzo-community/tplskhroytkh_three-webgpu) — WebGPU-first Three.js scene with automatic WebGL2 fallback: TSL node materials and 900 instanced shards in one draw call.
+- [`hanzo-community/tplskhroytkh_unity-2`](https://forge.hanzo.ai/hanzo-community/tplskhroytkh_unity-2) — Creator admin app — products, campaigns, schedules, payouts, statements and insights.
+- [`hanzo-community/tplsmwykwpma_desktop-chat`](https://forge.hanzo.ai/hanzo-community/tplsmwykwpma_desktop-chat) — Desktop AI client — streaming SSE to any OpenAI-compatible gateway, threads and API key kept in the OS config dir, not web storage.
+- [`hanzo-community/tplsmwykwpma_desktop-tauri`](https://forge.hanzo.ai/hanzo-community/tplsmwykwpma_desktop-tauri) — Tauri v2 + React 19 desktop starter — Rust command round-trip, Hanzo Base backend, frameless chrome, one web preview build.
+- [`hanzo-community/tplsmwykwpma_desktop-tray`](https://forge.hanzo.ai/hanzo-community/tplsmwykwpma_desktop-tray) — Menubar/tray utility — resident clipboard history, global shortcut, close-hides-not-quits, background watcher thread in Rust.
+- [`hanzo-community/tplsmwykwpma_godot-arcade`](https://forge.hanzo.ai/hanzo-community/tplsmwykwpma_godot-arcade) — A complete 3D arcade game in ~150 lines of GDScript, exported to WebAssembly by Godot 4.
+- [`hanzo-community/tplsnpzmgiew_beta`](https://forge.hanzo.ai/hanzo-community/tplsnpzmgiew_beta) — Admin dashboard — projects, tasks, kanban, calendar, contacts, invoices and a file browser.
+- [`hanzo-community/tplsnpzmgiew_forge-template-2`](https://forge.hanzo.ai/hanzo-community/tplsnpzmgiew_forge-template-2) — SaaS product landing page — feature blocks, pricing, FAQ and light/dark toggle.
+- [`hanzo-community/tplsnpzmgiew_metrics-template`](https://forge.hanzo.ai/hanzo-community/tplsnpzmgiew_metrics-template) — Admin dashboard — sales, purchases and returns over a leaderboard, product list and transaction history.
+- [`hanzo-community/tplsnpzmgiew_serif`](https://forge.hanzo.ai/hanzo-community/tplsnpzmgiew_serif) — Editorial magazine — section fronts, article pages and a shop in a serif type system.
+- [`hanzo-community/tplsnpzmgiew_solo-2`](https://forge.hanzo.ai/hanzo-community/tplsnpzmgiew_solo-2) — Productivity-app landing page — tasks, lists and reminders with pricing and downloads.
+- [`hanzo-community/tplsnpzmgiew_video-streaming`](https://forge.hanzo.ai/hanzo-community/tplsnpzmgiew_video-streaming) — Video watch page on @hanzo/ui — player, chapters, transcript and channel subscribe.
+- [`hanzo-community/tplsqygsjbpu_expo-auth`](https://forge.hanzo.ai/hanzo-community/tplsqygsjbpu_expo-auth) — OAuth 2.0 + PKCE sign-in against Hanzo IAM in the system browser, with a one-place route guard.
+- [`hanzo-community/tplsqygsjbpu_expo-chat`](https://forge.hanzo.ai/hanzo-community/tplsqygsjbpu_expo-chat) — Streaming AI chat client on Expo Router, wired to the Hanzo /v1 API with run-time endpoint config.
+- [`hanzo-community/tplsqygsjbpu_expo-shop`](https://forge.hanzo.ai/hanzo-community/tplsqygsjbpu_expo-shop) — Storefront: product grid, detail route and a cart with a live tab badge.
+- [`hanzo-community/tplsqygsjbpu_flutter`](https://forge.hanzo.ai/hanzo-community/tplsqygsjbpu_flutter) — Material 3 starter — NavigationBar over an IndexedStack, search, detail route and widget tests.
+- [`hanzo-community/tplsqygsjbpu_mobile`](https://forge.hanzo.ai/hanzo-community/tplsqygsjbpu_mobile) — Expo Router tab starter — iOS, Android and web from one tree. Feed, search, settings and a dynamic detail route.
+- [`hanzo-community/tplsxkxcprac_cipher`](https://forge.hanzo.ai/hanzo-community/tplsxkxcprac_cipher) — Bento card grid for crypto products — wallet keys, exchange and blockchain explainer cards.
+- [`hanzo-community/tplsxkxcprac_desktop-monitor`](https://forge.hanzo.ai/hanzo-community/tplsxkxcprac_desktop-monitor) — Native system monitor — per-core CPU, memory, process table, disks and interfaces via sysinfo, sampled at 1 Hz.
+- [`hanzo-community/tplsxkxcprac_desktop-recorder`](https://forge.hanzo.ai/hanzo-community/tplsxkxcprac_desktop-recorder) — Screen recorder — desktopCapturer enumerates every screen and window with no OS prompt, MediaRecorder writes webm to disk.
+- [`hanzo-community/tplsxskgitic_changelog`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_changelog) — Product changelog — dated releases with tags, a version timeline and dark mode.
+- [`hanzo-community/tplsxskgitic_construct`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_construct) — App landing page — feature tour, screenshots and a download call-to-action.
+- [`hanzo-community/tplsxskgitic_construct-2`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_construct-2) — App landing page — feature tour, screenshots and a download call-to-action.
+- [`hanzo-community/tplsxskgitic_deploy`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_deploy) — Bento list cards — grouped task lists with per-card icon, colour and duplicate/delete.
+- [`hanzo-community/tplsxskgitic_ecommerce-storefront`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_ecommerce-storefront) — Storefront on @hanzo/ui — category filters, product grid and add-to-cart.
+- [`hanzo-community/tplsxskgitic_kanban-board`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_kanban-board) — Kanban board on @hanzo/ui — To Do / In Progress / Done with labelled, assigned cards.
+- [`hanzo-community/tplsxskgitic_metrics-template`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_metrics-template) — Admin dashboard — sales, purchases and returns over a leaderboard, product list and transaction history.
+- [`hanzo-community/tplsxskgitic_mint-2`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_mint-2) — Creative-studio portfolio — work index, about and contact behind a full-screen menu.
+- [`hanzo-community/tplsxskgitic_oasis`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_oasis) — Resort site — accommodation, dining, spa, weddings and tour booking, in four languages.
+- [`hanzo-community/tplsxskgitic_savor`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_savor) — Food-delivery storefront — menu, favourites and cart over a restaurant home page.
+- [`hanzo-community/tplsxskgitic_synapse-5`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_synapse-5) — AI chat workspace — conversation lists, prompt composer, subscription and settings screens.
+- [`hanzo-community/tplsxskgitic_unity-2`](https://forge.hanzo.ai/hanzo-community/tplsxskgitic_unity-2) — Creator admin app — products, campaigns, schedules, payouts, statements and insights.
+- [`hanzo-community/tplsyhiiobli_lab-desktop-chat`](https://forge.hanzo.ai/hanzo-community/tplsyhiiobli_lab-desktop-chat)
+- [`hanzo-community/tplsyhiiobli_lab-flutter`](https://forge.hanzo.ai/hanzo-community/tplsyhiiobli_lab-flutter)
+- [`hanzo-community/tplsyhiiobli_lab-godot-arcade`](https://forge.hanzo.ai/hanzo-community/tplsyhiiobli_lab-godot-arcade)
+- [`hanzo-community/tplsyhiiobli_lab-mobile`](https://forge.hanzo.ai/hanzo-community/tplsyhiiobli_lab-mobile)
+- [`hanzo-community/tplsyhiiobli_lab-rapier-physics`](https://forge.hanzo.ai/hanzo-community/tplsyhiiobli_lab-rapier-physics)
+- [`hanzo-community/tplsyhiiobli_lab-three-webgpu`](https://forge.hanzo.ai/hanzo-community/tplsyhiiobli_lab-three-webgpu)
+- [`hanzo-community/tplszndjysbr_drive-2`](https://forge.hanzo.ai/hanzo-community/tplszndjysbr_drive-2) — Electric-vehicle marketing site — models, technology, news and ordering.
+- [`hanzo-community/tplszndjysbr_folio`](https://forge.hanzo.ai/hanzo-community/tplszndjysbr_folio) — Creative portfolio kit — 26 pages of masonry and grid layouts plus agency, designer, developer and photography variants.
+- [`hanzo-community/tplszndjysbr_matrix-2`](https://forge.hanzo.ai/hanzo-community/tplszndjysbr_matrix-2) — Bento card grid on a binary-rain theme, in four layouts.
+- [`hanzo-community/tplszndjysbr_rapier-physics`](https://forge.hanzo.ai/hanzo-community/tplszndjysbr_rapier-physics) — Rigid-body sandbox where Rapier3D (Rust compiled to WASM) owns the simulation and three.js only draws it.
+- [`hanzo-community/tplszndjysbr_soar`](https://forge.hanzo.ai/hanzo-community/tplszndjysbr_soar) — Web-studio landing page — services, team and work, with a contact call-to-action.
+- [`hanzo-community/tplszndjysbr_vault-2`](https://forge.hanzo.ai/hanzo-community/tplszndjysbr_vault-2) — Architecture-studio site — architecture, landscape and interior work with a studio profile.
+- [`hanzo-community/vshanbhag_analytics-dashboard-3`](https://forge.hanzo.ai/hanzo-community/vshanbhag_analytics-dashboard-3) — Analytics dashboard on @hanzo/ui — revenue, users and sales tiles over an overview chart.
+- [`hanzo-community/wallet-evm-1ccd6f21ca788608_canary-i162611-kms-fork`](https://forge.hanzo.ai/hanzo-community/wallet-evm-1ccd6f21ca788608_canary-i162611-kms-fork)
+- [`hanzo-community/wallet-evm-5a491afeaaf15928_instrument-4`](https://forge.hanzo.ai/hanzo-community/wallet-evm-5a491afeaaf15928_instrument-4) — Monospace portfolio website with interactive 3D project cards, command palette, live experimental lab (particles, spring physics, ASCII shaders), and procedural audio.
+- [`hanzo-community/wallet-evm-5a491afeaaf15928_instrument-5`](https://forge.hanzo.ai/hanzo-community/wallet-evm-5a491afeaaf15928_instrument-5) — Monospace portfolio website with interactive 3D project cards, command palette, live experimental lab (particles, spring physics, ASCII shaders), and procedural audio.
+- [`hanzo-community/wallet-evm-5a491afeaaf15928_instrument-8`](https://forge.hanzo.ai/hanzo-community/wallet-evm-5a491afeaaf15928_instrument-8) — Monospace portfolio website with interactive 3D project cards, command palette, live experimental lab (particles, spring physics, ASCII shaders), and procedural audio.
+- [`hanzo-community/webase-global_savor-2`](https://forge.hanzo.ai/hanzo-community/webase-global_savor-2) — Food-delivery storefront — menu, favourites and cart over a restaurant home page.
+- [`hanzo-community/webby-ai_intel`](https://forge.hanzo.ai/hanzo-community/webby-ai_intel)
+- [`hanzo-community/zcajic_metrics-template-2`](https://forge.hanzo.ai/hanzo-community/zcajic_metrics-template-2) — Admin dashboard — sales, purchases and returns over a leaderboard, product list and transaction history.
+- [`hanzo-community/zoo_ai-chat`](https://forge.hanzo.ai/hanzo-community/zoo_ai-chat)
+- [`hanzo-community/zoo_exchange-testnet`](https://forge.hanzo.ai/hanzo-community/zoo_exchange-testnet)
+- [`hanzo-community/zoo_industries`](https://forge.hanzo.ai/hanzo-community/zoo_industries)
+- [`hanzo-community/zoo_labs-zoo-ngo`](https://forge.hanzo.ai/hanzo-community/zoo_labs-zoo-ngo)
+- [`hanzo-community/zoo_ngo`](https://forge.hanzo.ai/hanzo-community/zoo_ngo)
+- [`hanzo-community/zoo_research`](https://forge.hanzo.ai/hanzo-community/zoo_research)
+- [`hanzo-community/zoo_zips`](https://forge.hanzo.ai/hanzo-community/zoo_zips)

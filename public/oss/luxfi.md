@@ -1,0 +1,357 @@
+# luxfi — Forge OSS Repositories (345)
+
+> Progressive Tier-1 repository index for `luxfi` on [forge.hanzo.ai/luxfi](https://forge.hanzo.ai/luxfi).
+> Load only the repository you need. Install Hanzo skills progressively via [CLAUDE.md](https://hanzoskills.com/CLAUDE.md).
+
+```bash
+git clone https://forge.hanzo.ai/luxfi/<repo>.git
+curl -fsSL https://hanzoskills.com/CLAUDE.md >> CLAUDE.md
+```
+
+## Repositories
+
+- [`luxfi/accel`](https://forge.hanzo.ai/luxfi/accel)
+- [`luxfi/address`](https://forge.hanzo.ai/luxfi/address) — Bech32 address formatting for Lux blockchain
+- [`luxfi/age`](https://forge.hanzo.ai/luxfi/age) — A simple, modern and secure encryption tool (and Go library) with small explicit keys, no config options, and UNIX-style composability.
+- [`luxfi/ai`](https://forge.hanzo.ai/luxfi/ai) — Lux AI - Desktop app and mining node for AI inference on Lux network
+- [`luxfi/aivm`](https://forge.hanzo.ai/luxfi/aivm) — Lux AIVM (A-Chain) — attestation, AI provenance, audit anchors. GPU-native CUDA+Metal+WGSL.
+- [`luxfi/aml`](https://forge.hanzo.ai/luxfi/aml) — Real-time AML/CFT transaction monitoring, sanctions screening and case management
+- [`luxfi/android`](https://forge.hanzo.ai/luxfi/android)
+- [`luxfi/annulus`](https://forge.hanzo.ai/luxfi/annulus) — ARCHIVED — renamed to luxfi/pq. The strict post-quantum profile module.
+- [`luxfi/api`](https://forge.hanzo.ai/luxfi/api)
+- [`luxfi/app`](https://forge.hanzo.ai/luxfi/app) — Lux cross-platform app (Expo mobile + Tauri desktop) on @hanzo/gui
+- [`luxfi/appearance`](https://forge.hanzo.ai/luxfi/appearance)
+- [`luxfi/assets`](https://forge.hanzo.ai/luxfi/assets) — A comprehensive, up-to-date collection of information about all Lux supported blockchains and tokens.
+- [`luxfi/atomic`](https://forge.hanzo.ai/luxfi/atomic)
+- [`luxfi/audits`](https://forge.hanzo.ai/luxfi/audits) — ▼ LUX Independent security audits.
+- [`luxfi/bank`](https://forge.hanzo.ai/luxfi/bank) — Open source banking-as-a-service platform
+- [`luxfi/bank-admin`](https://forge.hanzo.ai/luxfi/bank-admin) — Lux Financial — white-label BaaS admin console (sandbox). @hanzo/ui + @hanzo/iam over bankd.
+- [`luxfi/bench`](https://forge.hanzo.ai/luxfi/bench) — Lux benchmarking harness
+- [`luxfi/benchlist`](https://forge.hanzo.ai/luxfi/benchlist)
+- [`luxfi/bft`](https://forge.hanzo.ai/luxfi/bft) — Lux BFT primitives: state machine replication interfaces and utilities for building Byzantine-tolerant Go services.
+- [`luxfi/binance-connector`](https://forge.hanzo.ai/luxfi/binance-connector) — lux custom node module @lux-wallet/binance-connector
+- [`luxfi/bitcoin`](https://forge.hanzo.ai/luxfi/bitcoin) — Lux Bitcoin - Bitcoin integration for Lux Network
+- [`luxfi/bitutil`](https://forge.hanzo.ai/luxfi/bitutil) — Bit manipulation utilities
+- [`luxfi/blst`](https://forge.hanzo.ai/luxfi/blst) — luxfi-maintained fork of supranational/blst (BLS12-381). See LUXFI-FORK.md.
+- [`luxfi/brand`](https://forge.hanzo.ai/luxfi/brand) — Official brand assets and design system for Lux Finance
+- [`luxfi/brand-rules`](https://forge.hanzo.ai/luxfi/brand-rules) — Per-org brand sovereignty banlists for LP-0010 / HIP-0303 / ZIP-0031 / PIP-0006 / LIP-0006 enforcement. Single source of truth for CI lint + local validators.
+- [`luxfi/brand-types`](https://forge.hanzo.ai/luxfi/brand-types) — Neutral TypeScript types for white-label brand identity (LP-0010 / HIP-0303 / ZIP-0031 schema). Zero brand data, zero runtime deps.
+- [`luxfi/bridge`](https://forge.hanzo.ai/luxfi/bridge) — ▼ Bridge, powered by trustless MPC network and privacy focused Teleport protocol.
+- [`luxfi/broker`](https://forge.hanzo.ai/luxfi/broker) — Federated broker: 16 providers, smart order routing, institutional trading
+- [`luxfi/bundler`](https://forge.hanzo.ai/luxfi/bundler)
+- [`luxfi/cache`](https://forge.hanzo.ai/luxfi/cache) — Lux cache package
+- [`luxfi/captable`](https://forge.hanzo.ai/luxfi/captable) — Reusable Go transfer agent engine for cap table management
+- [`luxfi/cash`](https://forge.hanzo.ai/luxfi/cash) — Lux Cash - Digital cash solutions
+- [`luxfi/cc`](https://forge.hanzo.ai/luxfi/cc)
+- [`luxfi/cdn`](https://forge.hanzo.ai/luxfi/cdn) — Lux CDN - Content delivery network
+- [`luxfi/cevm`](https://forge.hanzo.ai/luxfi/cevm) — Superseded by luxcpp/cevm (Apache-2.0). See https://github.com/luxcpp/cevm for the current implementation.
+- [`luxfi/cggmp21.rs`](https://forge.hanzo.ai/luxfi/cggmp21.rs) — State-of-art threshold ECDSA in Rust
+- [`luxfi/chains`](https://forge.hanzo.ai/luxfi/chains) — Independent VM plugin binaries for the Lux Network
+- [`luxfi/charts`](https://forge.hanzo.ai/luxfi/charts) — Helm charts for Lux blockchain infrastructure
+- [`luxfi/chat-v1`](https://forge.hanzo.ai/luxfi/chat-v1) — ▼ LUX AI Chat app trained on Lux Network and Lux Ecosystem.
+- [`luxfi/c-kzg-4844`](https://forge.hanzo.ai/luxfi/c-kzg-4844) — luxfi-maintained fork of ethereum/c-kzg-4844. See LUXFI-FORK.md.
+- [`luxfi/cli`](https://forge.hanzo.ai/luxfi/cli) — ▼ LUX Network CLI for launching and scaling blockchain clusters.
+- [`luxfi/codec`](https://forge.hanzo.ai/luxfi/codec) — Lux codec for serialization
+- [`luxfi/common`](https://forge.hanzo.ai/luxfi/common) — lux custom node module
+- [`luxfi/compliance`](https://forge.hanzo.ai/luxfi/compliance) — Regulated financial compliance: KYC/AML, identity verification, multi-jurisdiction regulatory framework
+- [`luxfi/compress`](https://forge.hanzo.ai/luxfi/compress)
+- [`luxfi/concurrent`](https://forge.hanzo.ai/luxfi/concurrent)
+- [`luxfi/config`](https://forge.hanzo.ai/luxfi/config)
+- [`luxfi/connect`](https://forge.hanzo.ai/luxfi/connect) — Multi-chain wallet connect and sign-in library for EVM, Solana, Bitcoin, TON, XRP, and Polkadot.
+- [`luxfi/consensus`](https://forge.hanzo.ai/luxfi/consensus) — Quasar consensus engine: Go implementations of consensus protocols for the Lux Network.
+- [`luxfi/const`](https://forge.hanzo.ai/luxfi/const) — Shared Go constants for Lux node networking, chains, and CLI tooling.
+- [`luxfi/constants`](https://forge.hanzo.ai/luxfi/constants) — Lux network constants and IDs
+- [`luxfi/container`](https://forge.hanzo.ai/luxfi/container)
+- [`luxfi/contracts`](https://forge.hanzo.ai/luxfi/contracts) — Lux Solidity contracts — PQAuth library + IPQVerify interface for native PQ precompile access
+- [`luxfi/coreth`](https://forge.hanzo.ai/luxfi/coreth)
+- [`luxfi/corona`](https://forge.hanzo.ai/luxfi/corona) — A 2-round lattice-based threshold signature from standard assumptions for public networks
+- [`luxfi/coronad`](https://forge.hanzo.ai/luxfi/coronad) — Corona R-LWE threshold signing daemon
+- [`luxfi/cosigner`](https://forge.hanzo.ai/luxfi/cosigner) — External-custodian co-signing (Fireblocks / Utila / Anchorage) — orthogonal stdlib-only leaf decomplected from luxfi/bridge
+- [`luxfi/credit`](https://forge.hanzo.ai/luxfi/credit)
+- [`luxfi/crypto`](https://forge.hanzo.ai/luxfi/crypto) — Core cryptographic primitives for Lux: high-performance hash functions (SHA-2/3), symmetric ciphers, ECDSA & BLS signatures, HKDF key derivation, and lattice-based post-quantum sch
+- [`luxfi/crystals-go`](https://forge.hanzo.ai/luxfi/crystals-go) — Implementation in Go of the post-quantum algorithms CRYSTALS-Kyber and -Dilithium
+- [`luxfi/czmq`](https://forge.hanzo.ai/luxfi/czmq) — Lux golang wrapper for CZMQ.
+- [`luxfi/dao`](https://forge.hanzo.ai/luxfi/dao) — ▼ LUX DAO governor contracts and software.
+- [`luxfi/database`](https://forge.hanzo.ai/luxfi/database) — Pluggable storage layer: adapters for BadgerDB, Pebble, Merkle-tree indexing, snapshots, and chain state persistence.
+- [`luxfi/datastore`](https://forge.hanzo.ai/luxfi/datastore) — Lux-native blockchain datastore — replication-log coordination via consensus2 (leaderless PQ Quasar), zero ZooKeeper, zero ZK. Parts on S-Chain.
+- [`luxfi/dealer`](https://forge.hanzo.ai/luxfi/dealer) — ARCHIVED — legacy trusted-dealer path, superseded by dealerless luxfi/pulsar. Not used.
+- [`luxfi/decryption-oracle-proto`](https://forge.hanzo.ai/luxfi/decryption-oracle-proto)
+- [`luxfi/design`](https://forge.hanzo.ai/luxfi/design) — Lux Design System — monochrome, dark-default tokens + components + brand assets. The single source of truth for every Lux surface.
+- [`luxfi/dex`](https://forge.hanzo.ai/luxfi/dex) — Lux DEX — pure-Go matching engine, JSON-RPC/WebSocket/gRPC SDKs. Commercial GPU acceleration via lux-private/dex.
+- [`luxfi/discussions`](https://forge.hanzo.ai/luxfi/discussions) — ▼ LUX Network discussions.
+- [`luxfi/dkg`](https://forge.hanzo.ai/luxfi/dkg)
+- [`luxfi/docs`](https://forge.hanzo.ai/luxfi/docs) — Documentation site for Lux Network's architecture, SDKs, and node operations.
+- [`luxfi/docsend`](https://forge.hanzo.ai/luxfi/docsend) — Open-source DocSend alternative with built-in analytics and custom domains.
+- [`luxfi/docsign`](https://forge.hanzo.ai/luxfi/docsign) — Open Source DocuSign Alternative.
+- [`luxfi/docs-template`](https://forge.hanzo.ai/luxfi/docs-template) — Documentation template for Lux Network projects
+- [`luxfi/dskr`](https://forge.hanzo.ai/luxfi/dskr) — ▼ LUX Digital SKR (DSKR) repository
+- [`luxfi/edwards25519`](https://forge.hanzo.ai/luxfi/edwards25519) — edwards25519
+- [`luxfi/electron-chrome-extensions`](https://forge.hanzo.ai/luxfi/electron-chrome-extensions) — lux custom node module  @lux-wallet/electron-chrome-extensions
+- [`luxfi/emp`](https://forge.hanzo.ai/luxfi/emp) — Jumping off point for launching a new EMP
+- [`luxfi/eoa-contracts`](https://forge.hanzo.ai/luxfi/eoa-contracts) — SCW contracts for Biconomy Smart Account
+- [`luxfi/erc20-go`](https://forge.hanzo.ai/luxfi/erc20-go) — Golang interacts with erc20
+- [`luxfi/erc-3643`](https://forge.hanzo.ai/luxfi/erc-3643) — Official suite of smart contracts implementing the EIP 3643.
+- [`luxfi/err`](https://forge.hanzo.ai/luxfi/err) — Error stacktrace helpers
+- [`luxfi/esign`](https://forge.hanzo.ai/luxfi/esign) — Permissive (Apache 2.0) eSign crypto core — PAdES, FROST, ML-DSA-65, Ed25519, ECDSA. Used by hanzoai/esign via ZAP RPC, also by ecosystem services directly.
+- [`luxfi/eth-coinbase-keyring`](https://forge.hanzo.ai/luxfi/eth-coinbase-keyring)
+- [`luxfi/eth-gnosis-keyring`](https://forge.hanzo.ai/luxfi/eth-gnosis-keyring) — lux custom node module @luxfi/eth-gnosis-keyring
+- [`luxfi/eth-lattice-keyring`](https://forge.hanzo.ai/luxfi/eth-lattice-keyring) — lux custom node module
+- [`luxfi/eth-simple-keyring`](https://forge.hanzo.ai/luxfi/eth-simple-keyring)
+- [`luxfi/eth-trezor-keyring`](https://forge.hanzo.ai/luxfi/eth-trezor-keyring) — lux custom node module
+- [`luxfi/eth-walletconnect-keyring`](https://forge.hanzo.ai/luxfi/eth-walletconnect-keyring) — lux custom node module
+- [`luxfi/eth-watch-keyring`](https://forge.hanzo.ai/luxfi/eth-watch-keyring) — lux custom node module
+- [`luxfi/evm`](https://forge.hanzo.ai/luxfi/evm) — ▼ LUX EVM: Launch your own Ethereum compatible EVM on Lux Network.
+- [`luxfi/evmgpu`](https://forge.hanzo.ai/luxfi/evmgpu) — Lux GPU-accelerated DAG-EVM: Block-STM parallel execution + GPU keccak/ecrecover. Go (geth fork).
+- [`luxfi/evmone`](https://forge.hanzo.ai/luxfi/evmone) — Fast EVM implementation with GPU acceleration (fork of ipsilon/evmone)
+- [`luxfi/exchange-api`](https://forge.hanzo.ai/luxfi/exchange-api) — Exchange API - GraphQL proxy for lux.exchange
+- [`luxfi/exchange-proxy`](https://forge.hanzo.ai/luxfi/exchange-proxy)
+- [`luxfi/explore`](https://forge.hanzo.ai/luxfi/explore) — Lux Network Blockchain Explorer.
+- [`luxfi/explorer`](https://forge.hanzo.ai/luxfi/explorer) — Lux Explorer
+- [`luxfi/explorer-v1`](https://forge.hanzo.ai/luxfi/explorer-v1) — Blockchain explorer for Ethereum based network and a tool for inspecting and analyzing EVM based blockchains.
+- [`luxfi/extension`](https://forge.hanzo.ai/luxfi/extension) — Lux Wallet Browser Extension - Multi-chain crypto wallet for the Lux ecosystem
+- [`luxfi/fasthttp`](https://forge.hanzo.ai/luxfi/fasthttp)
+- [`luxfi/festats`](https://forge.hanzo.ai/luxfi/festats) — lux custom node module
+- [`luxfi/fhe`](https://forge.hanzo.ai/luxfi/fhe) — Lux FHE (Fully Homomorphic Encryption) with GPU acceleration.
+- [`luxfi/fhe-coprocessor`](https://forge.hanzo.ai/luxfi/fhe-coprocessor)
+- [`luxfi/fhe-dapps`](https://forge.hanzo.ai/luxfi/fhe-dapps) — Lux FHE dApps: Example decentralized applications using FHE
+- [`luxfi/fhe-fft`](https://forge.hanzo.ai/luxfi/fhe-fft) — Lux FHE FFT: Fast Fourier Transform for FHE
+- [`luxfi/fhe-handbook`](https://forge.hanzo.ai/luxfi/fhe-handbook) — Lux FHE Handbook: Comprehensive guide to FHE development
+- [`luxfi/fhe-hardhat-template`](https://forge.hanzo.ai/luxfi/fhe-hardhat-template) — Lux FHE Hardhat template for smart contract development
+- [`luxfi/fhe-ml`](https://forge.hanzo.ai/luxfi/fhe-ml) — Lux FHE ML: Machine Learning on encrypted data
+- [`luxfi/fhe-next-template`](https://forge.hanzo.ai/luxfi/fhe-next-template) — Lux FHE Next.js template for web3 applications
+- [`luxfi/fhe-ntt`](https://forge.hanzo.ai/luxfi/fhe-ntt) — Lux FHE NTT: Number Theoretic Transform for FHE
+- [`luxfi/fhe-react-template`](https://forge.hanzo.ai/luxfi/fhe-react-template) — Lux FHE React template for web3 applications
+- [`luxfi/fhe-threshold`](https://forge.hanzo.ai/luxfi/fhe-threshold) — Lux FHE Threshold: Threshold FHE protocols
+- [`luxfi/fhe-vue-template`](https://forge.hanzo.ai/luxfi/fhe-vue-template) — Lux FHE Vue.js template for web3 applications
+- [`luxfi/fhe-workshop`](https://forge.hanzo.ai/luxfi/fhe-workshop) — Lux FHE Workshop: Tutorial materials and exercises
+- [`luxfi/filesystem`](https://forge.hanzo.ai/luxfi/filesystem)
+- [`luxfi/financial`](https://forge.hanzo.ai/luxfi/financial) — Lux Financial — regulated banking platform landing
+- [`luxfi/formatting`](https://forge.hanzo.ai/luxfi/formatting)
+- [`luxfi/forum`](https://forge.hanzo.ai/luxfi/forum) — Community discussion forum for Lux.
+- [`luxfi/foundation`](https://forge.hanzo.ai/luxfi/foundation) — Lux Foundation - Coming Soon
+- [`luxfi/fpga`](https://forge.hanzo.ai/luxfi/fpga) — Lux FPGA bitstreams + RTL — MOVED to lux-private/fpga (commercial license). Source available under Lux Ecosystem License. Contact licensing@lux.network.
+- [`luxfi/fs`](https://forge.hanzo.ai/luxfi/fs) — Small filesystem helpers
+- [`luxfi/fund`](https://forge.hanzo.ai/luxfi/fund) — Lux Fund - Investment fund platform
+- [`luxfi/futures`](https://forge.hanzo.ai/luxfi/futures) — Lux Futures
+- [`luxfi/genesis`](https://forge.hanzo.ai/luxfi/genesis) — Lux Network genesis for Mainnet, Testnet, Devnet, Local/Custom.
+- [`luxfi/geth`](https://forge.hanzo.ai/luxfi/geth) — ▼ Ethereum virtual machine without network/consensus, for building custom blockchain services.
+- [`luxfi/gitbook`](https://forge.hanzo.ai/luxfi/gitbook) — ▼ LUX Gitbook
+- [`luxfi/.github`](https://forge.hanzo.ai/luxfi/.github) — ▼ LUX Profile on GitHub
+- [`luxfi/.github-private`](https://forge.hanzo.ai/luxfi/.github-private) — ▼ LUX Organization README
+- [`luxfi/gnosis-sdk`](https://forge.hanzo.ai/luxfi/gnosis-sdk)
+- [`luxfi/go-bip32`](https://forge.hanzo.ai/luxfi/go-bip32) — BIP-32 HD key derivation library for Go: generate and manage hierarchical deterministic wallets.
+- [`luxfi/go-bip39`](https://forge.hanzo.ai/luxfi/go-bip39) — BIP-39 mnemonic generation and validation in pure Go, with multiple language wordlists and checksum support.
+- [`luxfi/go-ethereum`](https://forge.hanzo.ai/luxfi/go-ethereum) — Official Go implementation of the Ethereum protocol
+- [`luxfi/go-ipa`](https://forge.hanzo.ai/luxfi/go-ipa) — luxfi-maintained fork of crate-crypto/go-ipa. See LUXFI-FORK.md.
+- [`luxfi/gpu`](https://forge.hanzo.ai/luxfi/gpu) — Lux GPU: Go bindings for MLX array framework (Metal/CUDA)
+- [`luxfi/graph`](https://forge.hanzo.ai/luxfi/graph) — Single-binary GraphQL query layer for Lux blockchain — replaces The Graph's Graph Node
+- [`luxfi/gui`](https://forge.hanzo.ai/luxfi/gui) — Lux-branded UI chrome on top of @hanzo/gui (Tamagui). Shared header, footer, and primitives for every lux.* app.
+- [`luxfi/header`](https://forge.hanzo.ai/luxfi/header)
+- [`luxfi/help`](https://forge.hanzo.ai/luxfi/help) — Help center and support site for Lux.
+- [`luxfi/helper`](https://forge.hanzo.ai/luxfi/helper) — Lux CLI helper — sign in to Lux and use its AI models in Claude Code, Codex, and more
+- [`luxfi/hid`](https://forge.hanzo.ai/luxfi/hid) — Gopher Interface Devices (USB HID)
+- [`luxfi/homebrew-tap`](https://forge.hanzo.ai/luxfi/homebrew-tap) — Homebrew tap for Lux native libraries (lattice/crypto/fhe). brew tap luxfi/luxfi
+- [`luxfi/hsm`](https://forge.hanzo.ai/luxfi/hsm) — Unified HSM, KMS & custody for the Lux ecosystem — AWS KMS, GCP Cloud KMS, Azure Key Vault, Zymbit SCM, ML-DSA post-quantum
+- [`luxfi/id`](https://forge.hanzo.ai/luxfi/id) — 🛡️ Lux ID: Identity, access, and permission orchestration — secure, scalable access control for agents, apps, and users.
+- [`luxfi/identity`](https://forge.hanzo.ai/luxfi/identity) — Lux Network identity, soul, and values
+- [`luxfi/ids`](https://forge.hanzo.ai/luxfi/ids) — ID utilities: globally unique types and helper functions for chain IDs, transaction IDs, asset IDs, and namespace prefixes.
+- [`luxfi/indexer`](https://forge.hanzo.ai/luxfi/indexer) — ▼ LUX Network indexer and explorer.
+- [`luxfi/industries`](https://forge.hanzo.ai/luxfi/industries) — Lux Industries - Enterprise solutions
+- [`luxfi/intx`](https://forge.hanzo.ai/luxfi/intx) — luxfi-maintained fork of chfast/intx. See LUXFI-FORK.md.
+- [`luxfi/invest`](https://forge.hanzo.ai/luxfi/invest) — Lux Invest - Investment platform
+- [`luxfi/ios`](https://forge.hanzo.ai/luxfi/ios)
+- [`luxfi/issuer`](https://forge.hanzo.ai/luxfi/issuer) — @luxfi/issuer
+- [`luxfi/keychain`](https://forge.hanzo.ai/luxfi/keychain) — Shared keychain interfaces and implementations for the Lux ecosystem
+- [`luxfi/keys`](https://forge.hanzo.ai/luxfi/keys)
+- [`luxfi/kit`](https://forge.hanzo.ai/luxfi/kit) — Lux Kit multichain wallet SDK.
+- [`luxfi/kms`](https://forge.hanzo.ai/luxfi/kms) — Lux KMS is an open-source platform for secure credentials management.
+- [`luxfi/l2-template`](https://forge.hanzo.ai/luxfi/l2-template)
+- [`luxfi/lamport`](https://forge.hanzo.ai/luxfi/lamport) — Post-quantum secure Lamport one-time signatures for EVM smart contracts
+- [`luxfi/lattice`](https://forge.hanzo.ai/luxfi/lattice) — ▼ LUX Lattice is a multiparty homomorphic encryption designed for post quantum safety.
+- [`luxfi/lattice-analysis`](https://forge.hanzo.ai/luxfi/lattice-analysis) — lattice analysis rig
+- [`luxfi/lattice-estimator`](https://forge.hanzo.ai/luxfi/lattice-estimator) — An attempt at a new LWE estimator
+- [`luxfi/ledger`](https://forge.hanzo.ai/luxfi/ledger) — ▼ LUX Ledger app.
+- [`luxfi/ledger-go`](https://forge.hanzo.ai/luxfi/ledger-go) — Minimal Ledger HID library - forked from zondax/ledger-go without golem bloat
+- [`luxfi/ledger-js`](https://forge.hanzo.ai/luxfi/ledger-js) — Lux Ledger App JS clients
+- [`luxfi/ledger-lux-go`](https://forge.hanzo.ai/luxfi/ledger-lux-go) — ▼ LUX Ledger Go package.
+- [`luxfi/ledger-sdk`](https://forge.hanzo.ai/luxfi/ledger-sdk)
+- [`luxfi/lens`](https://forge.hanzo.ai/luxfi/lens) — Lux Lens — classical curve threshold kernel (FROST/Schnorr sister to Pulsar)
+- [`luxfi/license`](https://forge.hanzo.ai/luxfi/license) — Runtime license token verification API for Lux commercial features (BSD-3)
+- [`luxfi/light`](https://forge.hanzo.ai/luxfi/light) — Canonical source of the well-known Lux light dev mnemonic + deterministic BIP44 account keys (local-only, networkID 1337 / EVM 31337). Public by design.
+- [`luxfi/liquid`](https://forge.hanzo.ai/luxfi/liquid) — Liquid Protocol
+- [`luxfi/log`](https://forge.hanzo.ai/luxfi/log) — High-performance, structured, leveled logging library with context injection.
+- [`luxfi/login`](https://forge.hanzo.ai/luxfi/login) — Lux ID Login — custom authentication portal for lux.id. Monochrome dark theme, production LUX wordmark.
+- [`luxfi/logo`](https://forge.hanzo.ai/luxfi/logo) — Official Lux logo package with TypeScript/React components and utilities
+- [`luxfi/lpm`](https://forge.hanzo.ai/luxfi/lpm) — ▼ LUX Plugin Manager for Lux Network.
+- [`luxfi/lps-docs`](https://forge.hanzo.ai/luxfi/lps-docs) — @luxfi/lps-docs
+- [`luxfi/lux-api`](https://forge.hanzo.ai/luxfi/lux-api) — lux custom node module
+- [`luxfi/lux-apps`](https://forge.hanzo.ai/luxfi/lux-apps) — Lux apps landing page
+- [`luxfi/luxcpp`](https://forge.hanzo.ai/luxfi/luxcpp) — luxcpp landing page
+- [`luxfi/luxdefi`](https://forge.hanzo.ai/luxfi/luxdefi) — LuxDeFi landing page
+- [`luxfi/luxfhe`](https://forge.hanzo.ai/luxfi/luxfhe) — LuxFHE landing page
+- [`luxfi/luxfi`](https://forge.hanzo.ai/luxfi/luxfi) — Lux org landing page
+- [`luxfi/luxfi.github.io`](https://forge.hanzo.ai/luxfi/luxfi.github.io) — Lux Network Landing Page
+- [`luxfi/lux-finance`](https://forge.hanzo.ai/luxfi/lux-finance) — Lux Finance — Liquid Protocol DeFi landing (hanzoai/spa + @luxfi/gui)
+- [`luxfi/lux-gpu-ci`](https://forge.hanzo.ai/luxfi/lux-gpu-ci) — EKS GPU CI infrastructure for Lux EVM CUDA tests (Karpenter + ARC)
+- [`luxfi/lux-gpu-conformance`](https://forge.hanzo.ai/luxfi/lux-gpu-conformance) — GPU backend conformance tests
+- [`luxfi/lux-hip`](https://forge.hanzo.ai/luxfi/lux-hip) — HIP/ROCm GPU backend
+- [`luxfi/lux-network`](https://forge.hanzo.ai/luxfi/lux-network) — Lux Network - Landing page for the Lux blockchain network
+- [`luxfi/lux-security-engine`](https://forge.hanzo.ai/luxfi/lux-security-engine) — lux custom node module
+- [`luxfi/lux-sign`](https://forge.hanzo.ai/luxfi/lux-sign) — lux custom node module
+- [`luxfi/lux-swap`](https://forge.hanzo.ai/luxfi/lux-swap) — lux custom node module
+- [`luxfi/lux-testing`](https://forge.hanzo.ai/luxfi/lux-testing) — Kurtosis-based end-to-end testing for Lux Network
+- [`luxfi/lux-vulkan`](https://forge.hanzo.ai/luxfi/lux-vulkan) — Vulkan GPU backend
+- [`luxfi/luxwallet-invented`](https://forge.hanzo.ai/luxfi/luxwallet-invented)
+- [`luxfi/luxwallet.xyz`](https://forge.hanzo.ai/luxfi/luxwallet.xyz) — Lux Wallet website.
+- [`luxfi/luxweb`](https://forge.hanzo.ai/luxfi/luxweb)
+- [`luxfi/lx`](https://forge.hanzo.ai/luxfi/lx) — LX DEX - Planet-scale decentralized exchange with 581M+ orders/sec
+- [`luxfi/magnetar`](https://forge.hanzo.ai/luxfi/magnetar) — Magnetar — Lux threshold SLH-DSA (FIPS 205) hash-based PQ signature primitive
+- [`luxfi/maker`](https://forge.hanzo.ai/luxfi/maker)
+- [`luxfi/market`](https://forge.hanzo.ai/luxfi/market) — Web3 marketplace for real-world assets (RWAs)
+- [`luxfi/markets`](https://forge.hanzo.ai/luxfi/markets) — Lux Markets Liquidity Protocol
+- [`luxfi/math`](https://forge.hanzo.ai/luxfi/math) — Mathematical utilities library for the Lux ecosystem
+- [`luxfi/mcp`](https://forge.hanzo.ai/luxfi/mcp) — Lux MCP — read-only model-context-protocol sensory layer for AIVM governance (transport / evmread / governance)
+- [`luxfi/mdns`](https://forge.hanzo.ai/luxfi/mdns) — mDNS library for Lux network
+- [`luxfi/meet`](https://forge.hanzo.ai/luxfi/meet) — Lux Meet - Video conferencing
+- [`luxfi/metric`](https://forge.hanzo.ai/luxfi/metric) — Prometheus metrics helpers: standard counters, gauges, histograms, and instrumentation conventions for all Lux components.
+- [`luxfi/migrate`](https://forge.hanzo.ai/luxfi/migrate) — Generic blockchain data migration framework for Lux networks
+- [`luxfi/migration`](https://forge.hanzo.ai/luxfi/migration) — Lux network + DEX V3→V4 migration tooling (deterministic, replayable)
+- [`luxfi/mint`](https://forge.hanzo.ai/luxfi/mint) — Lux Mint - NFT minting platform
+- [`luxfi/mirrors`](https://forge.hanzo.ai/luxfi/mirrors)
+- [`luxfi/mlwe`](https://forge.hanzo.ai/luxfi/mlwe) — Shared Module-LWE base for Lux post-quantum signatures (Pulsar ML-DSA + Corona Ringtail)
+- [`luxfi/mock`](https://forge.hanzo.ai/luxfi/mock) — Mock utilities and testing helpers for the Lux ecosystem
+- [`luxfi/monitoring`](https://forge.hanzo.ai/luxfi/monitoring) — Lux Network monitoring dashboards and tooling
+- [`luxfi/mpc`](https://forge.hanzo.ai/luxfi/mpc) — ▼ LUX multi-party compute nodes / wallet service using CGGMP21, FROST protocol
+- [`luxfi/mpc-nodes`](https://forge.hanzo.ai/luxfi/mpc-nodes)
+- [`luxfi/mpcvm`](https://forge.hanzo.ai/luxfi/mpcvm) — Lux MPCVM (M-Chain) — FROST + CGGMP21 + Ringtail threshold ceremonies. GPU-native CUDA+Metal+WGSL.
+- [`luxfi/multi-party-ecdsa`](https://forge.hanzo.ai/luxfi/multi-party-ecdsa) — ▼ LUX Multi-Party {t,n}-threshold ECDSA (elliptic curve digital signature algorithm) for Teleport protocol.
+- [`luxfi/multi-party-eddsa`](https://forge.hanzo.ai/luxfi/multi-party-eddsa) — Rust implementation of multi party Ed25519 signature scheme.
+- [`luxfi/net`](https://forge.hanzo.ai/luxfi/net)
+- [`luxfi/netrunner`](https://forge.hanzo.ai/luxfi/netrunner) — ▼ LUX Network Runner tool
+- [`luxfi/netrunner-sdk`](https://forge.hanzo.ai/luxfi/netrunner-sdk) — ▼ LUX Netrunner SDK for launching and scaling Lux Network server groups.
+- [`luxfi/nginx`](https://forge.hanzo.ai/luxfi/nginx) — Old Production nginx configs
+- [`luxfi/node`](https://forge.hanzo.ai/luxfi/node) — Lux node — Go, Rust and C++ runtimes at parity behind one Makefile and one conformance corpus. ZAP-native, BSD-3-Clause.
+- [`luxfi/nukeyourself.app`](https://forge.hanzo.ai/luxfi/nukeyourself.app) — ⚛️ React UI frontend for NukeYourself.app
+- [`luxfi/onchain-id`](https://forge.hanzo.ai/luxfi/onchain-id) — Smart Contracts for secure Blockchain Identities, implementation of the ERC734 and ERC735 proposal standards.
+- [`luxfi/onnx-source-snapshot`](https://forge.hanzo.ai/luxfi/onnx-source-snapshot) — Source-only snapshot of lux/onnx
+- [`luxfi/onnx-source-snapshot-probe`](https://forge.hanzo.ai/luxfi/onnx-source-snapshot-probe)
+- [`luxfi/openapi`](https://forge.hanzo.ai/luxfi/openapi) — OpenAPI v3.1 specification for the Lux core protocol APIs (v1.0.0)
+- [`luxfi/opgen`](https://forge.hanzo.ai/luxfi/opgen) — One generator: zip typed ops become OpenAPI, MCP, a CLI and Go/Rust/C++ SDKs
+- [`luxfi/optimism`](https://forge.hanzo.ai/luxfi/optimism) — Optimism plugin
+- [`luxfi/oracle`](https://forge.hanzo.ai/luxfi/oracle) — Blockchain oracle which trustlessly records any verifiable data on the blockchain.
+- [`luxfi/oraclevm`](https://forge.hanzo.ai/luxfi/oraclevm) — ▼ LUX Oracle.
+- [`luxfi/ordering`](https://forge.hanzo.ai/luxfi/ordering)
+- [`luxfi/os`](https://forge.hanzo.ai/luxfi/os) — LuxOS is a secure, private mobile operating system and mobile device platform.
+- [`luxfi/p2p`](https://forge.hanzo.ai/luxfi/p2p) — P2P networking library for Lux blockchain
+- [`luxfi/p3q`](https://forge.hanzo.ai/luxfi/p3q)
+- [`luxfi/p3q-evm`](https://forge.hanzo.ai/luxfi/p3q-evm)
+- [`luxfi/p3q-prover`](https://forge.hanzo.ai/luxfi/p3q-prover) — P3Q prover
+- [`luxfi/packages`](https://forge.hanzo.ai/luxfi/packages)
+- [`luxfi/page-provider`](https://forge.hanzo.ai/luxfi/page-provider) — node module
+- [`luxfi/partners`](https://forge.hanzo.ai/luxfi/partners) — Lux Partners - Partnership portal
+- [`luxfi/password`](https://forge.hanzo.ai/luxfi/password)
+- [`luxfi/perpetual`](https://forge.hanzo.ai/luxfi/perpetual) — Jumping off point for launching a new Perpetual
+- [`luxfi/pics`](https://forge.hanzo.ai/luxfi/pics) — LUX anonymous image board.
+- [`luxfi/platformvm`](https://forge.hanzo.ai/luxfi/platformvm)
+- [`luxfi/plugins-core`](https://forge.hanzo.ai/luxfi/plugins-core) — ▼ LUX Core plugins for Lux Network.
+- [`luxfi/pool`](https://forge.hanzo.ai/luxfi/pool)
+- [`luxfi/pq`](https://forge.hanzo.ai/luxfi/pq) — Strict post-quantum profile for Quasar — policy, not primitives. One Profile value, one Refuse gate. Decomplected enforcement across consensus, EVM precompiles, and SNARK verifiers
+- [`luxfi/pqclean`](https://forge.hanzo.ai/luxfi/pqclean) — luxfi-maintained fork of PQClean/PQClean. See LUXFI-FORK.md.
+- [`luxfi/pq-profile-ids`](https://forge.hanzo.ai/luxfi/pq-profile-ids) — Canonical PQ profile and proof-policy IDs for Lux (Go + Solidity + TypeScript). Single source of truth for the strict-PQ profile gate.
+- [`luxfi/pqrns`](https://forge.hanzo.ai/luxfi/pqrns) — PQ-RNS: hybrid post-quantum profile (X25519+ML-KEM-768, Ed25519+ML-DSA-65) for the Reticulum Network Stack (LP-9701)
+- [`luxfi/pqsafe`](https://forge.hanzo.ai/luxfi/pqsafe) — PQSAFE-IL5-HYBRID-v1: crypto-agile hybrid post-quantum envelope encryption for DoD-grade file storage and transfer
+- [`luxfi/precompile`](https://forge.hanzo.ai/luxfi/precompile) — Lux EVM Precompiles for AI Mining, Teleport, and Quantum Signatures
+- [`luxfi/press`](https://forge.hanzo.ai/luxfi/press) — Lux Network press kit and media resources
+- [`luxfi/price`](https://forge.hanzo.ai/luxfi/price) — Cryptocurrency pricing API gateway with CoinGecko integration
+- [`luxfi/.profile`](https://forge.hanzo.ai/luxfi/.profile) — Organization profile README for Lux.
+- [`luxfi/proofs`](https://forge.hanzo.ai/luxfi/proofs) — Formal verification proofs for Lux consensus and contracts — proofs.lux.network
+- [`luxfi/proto`](https://forge.hanzo.ai/luxfi/proto)
+- [`luxfi/pubsub`](https://forge.hanzo.ai/luxfi/pubsub)
+- [`luxfi/pulsar`](https://forge.hanzo.ai/luxfi/pulsar) — Pulsar — lattice threshold signatures with dynamic resharing for Lux Quasar consensus
+- [`luxfi/pulsard`](https://forge.hanzo.ai/luxfi/pulsard) — Pulsar threshold ML-DSA signing daemon
+- [`luxfi/pvm`](https://forge.hanzo.ai/luxfi/pvm) — Lux PlatformVM — GPU-native validator/stake/slashing/epoch transitions
+- [`luxfi/quasar`](https://forge.hanzo.ai/luxfi/quasar) — Lux Quasar PQ consensus — umbrella spec + profile registry + cross-primitive composition proofs. Defines QuasarCert wire format and Pulsar/Aurora/Polaris cert profiles over Pulsar 
+- [`luxfi/quest`](https://forge.hanzo.ai/luxfi/quest) — Lux Quest - Gamified rewards
+- [`luxfi/qzmq`](https://forge.hanzo.ai/luxfi/qzmq) — Quantum-safe ZeroMQ transport with ML-KEM and ML-DSA
+- [`luxfi/regenesis`](https://forge.hanzo.ai/luxfi/regenesis) — Blockchain necromancy
+- [`luxfi/relay`](https://forge.hanzo.ai/luxfi/relay) — Lux relay operator daemon — wraps R-Chain (relayvm) for cross-chain message relay
+- [`luxfi/resource`](https://forge.hanzo.ai/luxfi/resource)
+- [`luxfi/rfc`](https://forge.hanzo.ai/luxfi/rfc) — ▼ Request for Comments (RFC) proposals.
+- [`luxfi/rpc`](https://forge.hanzo.ai/luxfi/rpc)
+- [`luxfi/runtime`](https://forge.hanzo.ai/luxfi/runtime)
+- [`luxfi/safe-cggmp21`](https://forge.hanzo.ai/luxfi/safe-cggmp21) — Safe smart-wallet variant: CGGMP21 threshold-ECDSA (verifier + EIP-1271 signer + ERC-4337 account) via the Lux cggmp21Verify precompile
+- [`luxfi/safe-cgw`](https://forge.hanzo.ai/luxfi/safe-cgw) — Minimal Safe Client Gateway for Lux/Zoo/Pars networks
+- [`luxfi/safe-corona`](https://forge.hanzo.ai/luxfi/safe-corona) — Safe smart-wallet variant: Corona Ring-LWE threshold signatures (verifier + EIP-1271 signer + ERC-4337 account) via the Lux coronaThreshold precompile 0x012206
+- [`luxfi/safe-frost`](https://forge.hanzo.ai/luxfi/safe-frost) — FROST Threshold Signatures for Safe Smart Accounts
+- [`luxfi/safe-ios`](https://forge.hanzo.ai/luxfi/safe-ios) — ▼ LUX Safe - Quantum Safe Multisig Wallet for iOS.
+- [`luxfi/safe-magnetar`](https://forge.hanzo.ai/luxfi/safe-magnetar) — Safe smart-wallet variant: Magnetar SLH-DSA threshold signatures (verifier + EIP-1271 signer + ERC-4337 account) via the Lux magnetarVerify precompile 0x012207
+- [`luxfi/safe-pulsar`](https://forge.hanzo.ai/luxfi/safe-pulsar) — Safe smart-wallet variant: Pulsar Module-LWE (ML-DSA) threshold signatures (verifier + EIP-1271 signer + ERC-4337 account) via the Lux pulsarVerify precompile 0x012204
+- [`luxfi/safe-wallet`](https://forge.hanzo.ai/luxfi/safe-wallet) — Safe{Wallet} fork with multi-brand (Safe / Lux / Hanzo) build targets — pnpm monorepo
+- [`luxfi/sampler`](https://forge.hanzo.ai/luxfi/sampler) — Uniform random sampling utilities
+- [`luxfi/scan`](https://forge.hanzo.ai/luxfi/scan) — LuxScan Explorer - Coming Soon
+- [`luxfi/scan-org`](https://forge.hanzo.ai/luxfi/scan-org) — LuxScan.org - Redirects to LuxScan.io
+- [`luxfi/sdk`](https://forge.hanzo.ai/luxfi/sdk) — ▼ LUX Chain SDK for building high performance blockchains on Lux Network.
+- [`luxfi/securities`](https://forge.hanzo.ai/luxfi/securities) — Go bindings + helpers for ONCHAINID + ERC-3643 (LP-SECURITIES)
+- [`luxfi/security`](https://forge.hanzo.ai/luxfi/security)
+- [`luxfi/session`](https://forge.hanzo.ai/luxfi/session) — SessionVM - Post-quantum secure messaging VM for Lux blockchain
+- [`luxfi/snapshots`](https://forge.hanzo.ai/luxfi/snapshots) — Daily snapshots for Lux blockchain networks
+- [`luxfi/staking`](https://forge.hanzo.ai/luxfi/staking) — TLS certificate loading for Lux staking
+- [`luxfi/status`](https://forge.hanzo.ai/luxfi/status) — Lux Network Status Dashboard
+- [`luxfi/store`](https://forge.hanzo.ai/luxfi/store) — Lux Store - Coming Soon
+- [`luxfi/styleguide`](https://forge.hanzo.ai/luxfi/styleguide) — Lux's delta on the shared estate style guide. Original, CC0.
+- [`luxfi/sudoamm`](https://forge.hanzo.ai/luxfi/sudoamm) — Internal copy of sudoAMM.
+- [`luxfi/sys`](https://forge.hanzo.ai/luxfi/sys)
+- [`luxfi/tee`](https://forge.hanzo.ai/luxfi/tee)
+- [`luxfi/tel`](https://forge.hanzo.ai/luxfi/tel) — Lux Tel - telecommunications and satellite connectivity
+- [`luxfi/teleport`](https://forge.hanzo.ai/luxfi/teleport) — Zero-knowledge MPC cross-chain bridge
+- [`luxfi/teleporter`](https://forge.hanzo.ai/luxfi/teleporter) — ▼ Teleport protocol Docker and Kubernetes orchestration.
+- [`luxfi/test`](https://forge.hanzo.ai/luxfi/test)
+- [`luxfi/threshold`](https://forge.hanzo.ai/luxfi/threshold) — ▼ LUX multiparty CGGMP21, FROST, LSS protocol and other threshold signature schemes.
+- [`luxfi/timer`](https://forge.hanzo.ai/luxfi/timer) — Mockable time utilities for Lux blockchain
+- [`luxfi/tls`](https://forge.hanzo.ai/luxfi/tls)
+- [`luxfi/tokenomics`](https://forge.hanzo.ai/luxfi/tokenomics) — Genesis NFT registry and token supply analysis
+- [`luxfi/torus-fft`](https://forge.hanzo.ai/luxfi/torus-fft) — Torus FFT: Fast Fourier Transform acceleration
+- [`luxfi/torus-ml`](https://forge.hanzo.ai/luxfi/torus-ml) — Torus ML: Machine Learning on encrypted data
+- [`luxfi/torus-ntt`](https://forge.hanzo.ai/luxfi/torus-ntt) — Torus NTT: Number Theoretic Transform acceleration
+- [`luxfi/trace`](https://forge.hanzo.ai/luxfi/trace) — High-performance distributed tracing library for Lux services; OpenTelemetry-compatible, with context propagation and customizable exporters.
+- [`luxfi/treasury`](https://forge.hanzo.ai/luxfi/treasury) — Treasury platform: 13 providers, banking, payments, FX, cards, compliance
+- [`luxfi/tss`](https://forge.hanzo.ai/luxfi/tss)
+- [`luxfi/tui`](https://forge.hanzo.ai/luxfi/tui)
+- [`luxfi/tw-typography`](https://forge.hanzo.ai/luxfi/tw-typography)
+- [`luxfi/uma`](https://forge.hanzo.ai/luxfi/uma) — UMA optimistic oracle (Solidity)
+- [`luxfi/units`](https://forge.hanzo.ai/luxfi/units) — Lux denomination and size unit constants
+- [`luxfi/uni-v2-subgraph`](https://forge.hanzo.ai/luxfi/uni-v2-subgraph) — Uniswap V2 subgraph 📊
+- [`luxfi/uni-v3-subgraph`](https://forge.hanzo.ai/luxfi/uni-v3-subgraph) — Subgraph for Uniswap V3
+- [`luxfi/uni-v4-subgraph`](https://forge.hanzo.ai/luxfi/uni-v4-subgraph) — Subgraph for Uniswap V4
+- [`luxfi/upgrade`](https://forge.hanzo.ai/luxfi/upgrade) — Lux network upgrade configuration and scheduling
+- [`luxfi/util`](https://forge.hanzo.ai/luxfi/util) — Shared Go utilities for Lux.
+- [`luxfi/utils`](https://forge.hanzo.ai/luxfi/utils) — Lux utils package
+- [`luxfi/utxo`](https://forge.hanzo.ai/luxfi/utxo)
+- [`luxfi/validators`](https://forge.hanzo.ai/luxfi/validators) — Validator management for Lux blockchain
+- [`luxfi/vault`](https://forge.hanzo.ai/luxfi/vault) — ▼ LUX Quantum Vault Project
+- [`luxfi/verkle`](https://forge.hanzo.ai/luxfi/verkle) — luxfi-maintained fork of ethereum/go-verkle. See LUXFI-FORK.md.
+- [`luxfi/version`](https://forge.hanzo.ai/luxfi/version)
+- [`luxfi/vm`](https://forge.hanzo.ai/luxfi/vm) — Virtual machine types and interfaces for Lux blockchain
+- [`luxfi/vms`](https://forge.hanzo.ai/luxfi/vms) — VM interfaces and components for Lux blockchain
+- [`luxfi/vote-zoo`](https://forge.hanzo.ai/luxfi/vote-zoo) — Zoo Labs Governance - Vote on proposals
+- [`luxfi/wallet`](https://forge.hanzo.ai/luxfi/wallet) — Open Source Lux DeFi Wallet.
+- [`luxfi/warp`](https://forge.hanzo.ai/luxfi/warp) — Warp Protocol v2.0
+- [`luxfi/warp-relayer`](https://forge.hanzo.ai/luxfi/warp-relayer) — Lux-native off-chain courier for cross-chain warp messages between Lux-derived L1s (asset-bridge teleport). NOT for validator-set management.
+- [`luxfi/wc-browser-utils`](https://forge.hanzo.ai/luxfi/wc-browser-utils) — lux custom node module
+- [`luxfi/wc-client`](https://forge.hanzo.ai/luxfi/wc-client) — lux custom node module
+- [`luxfi/wc-core`](https://forge.hanzo.ai/luxfi/wc-core) — lux custom node module
+- [`luxfi/wc-iso-crypto`](https://forge.hanzo.ai/luxfi/wc-iso-crypto) — lux custom node module
+- [`luxfi/wc-socket-transport`](https://forge.hanzo.ai/luxfi/wc-socket-transport) — lux custom node module
+- [`luxfi/wc-types`](https://forge.hanzo.ai/luxfi/wc-types) — lux custom node module
+- [`luxfi/wc-utils`](https://forge.hanzo.ai/luxfi/wc-utils) — lux custom node module
+- [`luxfi/widgets`](https://forge.hanzo.ai/luxfi/widgets) — lux custom node module
+- [`luxfi/work-board`](https://forge.hanzo.ai/luxfi/work-board) — Zoo DAO on-chain bounty board — live BountyV1/EscrowV1/ReputationV1 work-market over JSON-RPC
+- [`luxfi/xvm`](https://forge.hanzo.ai/luxfi/xvm) — Lux XVM — GPU-native UTXO transitions
+- [`luxfi/zap`](https://forge.hanzo.ai/luxfi/zap) — Zero-Allocation Protocol for high-performance AI agent communication
+- [`luxfi/zapcodec`](https://forge.hanzo.ai/luxfi/zapcodec) — ZAP-native little-endian reflection codec — extracted from luxfi/codec as part of Wave 2G-Archive
+- [`luxfi/zapdb`](https://forge.hanzo.ai/luxfi/zapdb) — Fast key-value DB in Go.
+- [`luxfi/zk`](https://forge.hanzo.ai/luxfi/zk) — Lux Z-Chain proof envelope, verifier dispatch, and account-ID registry. Strict-PQ STARK/FRI verification under ChainSecurityProfile.
+- [`luxfi/zkvm-benchmarks`](https://forge.hanzo.ai/luxfi/zkvm-benchmarks) — Benchmarks of popular zkVMs including Jolt
+- [`luxfi/zmq`](https://forge.hanzo.ai/luxfi/zmq) — Pure-Go implementation of ZeroMQ-4
+- [`luxfi/zpay`](https://forge.hanzo.ai/luxfi/zpay) — ▼ ZPay is an anonymous and private payment system secured by zero knowledge proofs.
+- [`luxfi/zwing`](https://forge.hanzo.ai/luxfi/zwing) — Z-Wing: canonical Lux post-quantum secure channel (X-Wing KEM + Ed25519/ML-DSA-65 hybrid identity + ChaCha20-Poly1305)
