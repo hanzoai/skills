@@ -51,40 +51,39 @@ def svg(name, cls="mark"):
 # tool, so one shared string would be wrong everywhere but one place.
 AGENTS = [
     ("claude-code", "Claude Code", "claude", """\
-Set up the Hanzo skills in this Claude Code session using progressive disclosure.
+Set up the complete Hanzo platform in this Claude Code session using native Claude config and progressive disclosure:
 
-1. Read https://hanzoskills.com/CLAUDE.md and append it to ./CLAUDE.md (or ~/.claude/CLAUDE.md for every repo).
-2. Fetch https://hanzoskills.com/llms.txt (~4 KB category tree) — pick only the category you need at https://hanzoskills.com/categories/<slug>.md.
-3. For Hanzo OSS repos on https://forge.hanzo.ai, start with https://hanzoskills.com/oss/index.md and fetch only /oss/<org>.md on demand.
-4. Install a skill on demand by writing https://hanzoskills.com/skills/<name>/SKILL.md to
-   ~/.claude/skills/<name>/SKILL.md — one directory per skill.
-5. Verify with: ls ~/.claude/skills
+1. Progressive instructions: fetch https://hanzoskills.com/CLAUDE.md and append to ./CLAUDE.md (and ~/.claude/CLAUDE.md for every repo).
+2. Native Hanzo MCP: run `claude mcp add --scope user hanzo -- npx -y hanzo mcp` (or hosted https://api.hanzo.ai/v1/mcp).
+3. Native CLI, Hanzo Dev & Hanzo Bot: install `curl -fsSL https://hanzo.sh | sh` (or `npm i -g hanzo`), sign in with `hanzo auth login` (or headless wallet signup via https://hanzoskills.com/hanzo.md), run `hanzo dev` or `npm i -g @hanzo/bot && hanzo-bot onboard --install-daemon` (cloud: https://hanzo.bot).
+4. Browser Extension (Chrome/Firefox/Safari/Edge): install from https://hanzo.ai/extension (or https://github.com/hanzoai/extension/releases/latest) so MCP browser/computer tools bridge live tabs.
+5. Progressive skills (never load /all.md): read https://hanzoskills.com/llms.txt -> /categories/<slug>.md -> save ONLY needed skills to ~/.claude/skills/<name>/SKILL.md.
+6. Forge OSS repos: browse https://hanzoskills.com/oss/index.md -> /oss/<org>.md -> clone from https://forge.hanzo.ai/<org>/<repo>.git.
 
 Docs: https://docs.hanzo.ai/docs/skills — everything is plain markdown over https and needs no auth."""),
 
     ("codex", "Codex", "codex", """\
-Set up the Hanzo skills in this Codex session using progressive disclosure.
+Set up the complete Hanzo platform in this Codex session using native Codex config and progressive disclosure:
 
-1. Read https://hanzoskills.com/AGENTS.md (or https://hanzoskills.com/CLAUDE.md) — the progressive onboarding guide.
-2. Fetch https://hanzoskills.com/llms.txt (~4 KB category tree) and browse only the category you need via https://hanzoskills.com/categories/<slug>.md.
-3. Codex reads AGENTS.md. Append https://hanzoskills.com/AGENTS.md to ./AGENTS.md for this repo,
-   and to ~/.codex/AGENTS.md to load it in every project.
-4. Pull single skills on demand from https://hanzoskills.com/skills/<name>/SKILL.md and browse Forge OSS repos via https://hanzoskills.com/oss/index.md.
+1. Progressive instructions: fetch https://hanzoskills.com/AGENTS.md and append to ./AGENTS.md (and ~/.codex/AGENTS.md for every project).
+2. Native Hanzo MCP: run `codex mcp add hanzo -- npx -y hanzo mcp` (or hosted https://api.hanzo.ai/v1/mcp).
+3. Native CLI, Hanzo Dev & Hanzo Bot: install `curl -fsSL https://hanzo.sh | sh` (or `npm i -g hanzo`), `hanzo auth login` (or headless signup via https://hanzoskills.com/hanzo.md), `hanzo dev`, and `npm i -g @hanzo/bot` (cloud: https://hanzo.bot).
+4. Browser Extension: install from https://hanzo.ai/extension (or https://github.com/hanzoai/extension/releases/latest) for live MCP browser/CDP automation.
+5. Progressive skills: fetch https://hanzoskills.com/llms.txt -> /categories/<slug>.md -> pull single skills on demand from https://hanzoskills.com/skills/<name>/SKILL.md. Browse Forge OSS via https://hanzoskills.com/oss/index.md.
 
 Docs: https://docs.hanzo.ai/docs/skills — everything is plain markdown over https and needs no auth."""),
 
     ("cursor", "Cursor", "cursor", """\
-Set up the Hanzo skills in this Cursor workspace using progressive disclosure.
+Set up the complete Hanzo platform in this Cursor workspace using native Cursor rules, MCP, and progressive disclosure:
 
-1. Read https://hanzoskills.com/CLAUDE.md — the progressive onboarding guide.
-2. Write .cursor/rules/hanzo.mdc containing it under this front matter:
+1. Progressive instructions: fetch https://hanzoskills.com/CLAUDE.md and write .cursor/rules/hanzo.mdc with front matter:
    ---
-   description: Hanzo platform skills
+   description: Hanzo platform, CLI, MCP, Dev, Bot & progressive skills
    alwaysApply: true
    ---
-3. Browse https://hanzoskills.com/llms.txt -> /categories/<slug>.md (and /oss/index.md for Forge OSS repos) and add one
-   .cursor/rules/<name>.mdc per skill from https://hanzoskills.com/skills/<name>/SKILL.md,
-   with alwaysApply: false so Cursor attaches it by description.
+2. Native Hanzo MCP: add {"mcpServers":{"hanzo":{"command":"npx","args":["-y","hanzo","mcp"]}}} to .cursor/mcp.json (or use hosted https://api.hanzo.ai/v1/mcp).
+3. CLI, Hanzo Dev, Hanzo Bot & Browser Extension: `curl -fsSL https://hanzo.sh | sh` (`hanzo auth login`, `hanzo dev`), `npm i -g @hanzo/bot` (https://hanzo.bot), and browser extension from https://hanzo.ai/extension.
+4. Progressive skills: browse https://hanzoskills.com/llms.txt -> /categories/<slug>.md (and /oss/index.md for Forge OSS) and add one .cursor/rules/<name>.mdc per needed skill from https://hanzoskills.com/skills/<name>/SKILL.md with alwaysApply: false.
 
 Docs: https://docs.hanzo.ai/docs/skills — everything is plain markdown over https and needs no auth."""),
 
